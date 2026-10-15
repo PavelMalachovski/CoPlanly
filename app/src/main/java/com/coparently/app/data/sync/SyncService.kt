@@ -6,6 +6,7 @@ import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.notification.toReminderEvent
@@ -111,21 +112,20 @@ class SyncService @Inject constructor(
             syncUserData(currentUser.uid)
 
             // Step 2: Name the family on rows written before there was one to name. After
-            // `syncUserData`, which is what brings a freshly accepted `partnerId` down, and
+            // `syncUserData`, which is what brings a freshly accepted co-parent down, and
             // before every upload below, so a row stamped here goes up carrying its family
-            // rather than waiting for the sync after next.
+            // rather than waiting for the sync after next. Given every co-parent, not the family
+            // on screen: with two there is no family to name, and it stamps nothing.
             familyIdBackfill.run(
                 userId = currentUser.uid,
-                partnerId = userDao.getUserById(currentUser.uid)?.partnerId?.takeIf {
-                    it.isNotBlank()
-                }
+                coParents = coParentsOf(currentUser.uid, userDao.getUserById(currentUser.uid))
             )
 
-            // Step 3: Sync events. Each of these two passes reports how many of this user's rows
-            // it re-queued for a new co-parent, so that the whole backfill is announced once
-            // at the end rather than once per record.
+            // Step 3: Sync events. Each of these two passes reports which newly arrived
+            // co-parents its quiet re-uploads were for, so that the whole backfill is announced
+            // once at the end rather than once per record.
             _syncStatus.value = SyncStatus.Syncing(40, 100)
-            val requeuedEvents = syncEvents(currentUser.uid)
+            val eventsSharedWith = syncEvents(currentUser.uid)
             // Event revisions (MON-4), after the events themselves so a create's revision goes up
             // behind the event it describes. Its own outbox, because the event paths' remote
             // writes are best-effort and a revision must not be lost with one.
@@ -133,7 +133,7 @@ class SyncService @Inject constructor(
 
             // Step 4: Sync child info
             _syncStatus.value = SyncStatus.Syncing(70, 100)
-            val requeuedChildren = syncChildInfo(currentUser.uid)
+            val childrenSharedWith = syncChildInfo(currentUser.uid)
 
             // Step 5: Sync pets. The repository handles upload, download and audience repair
             // itself (mirroring child info), so there is nothing to duplicate here.
@@ -168,8 +168,10 @@ class SyncService @Inject constructor(
             // One push for the whole backfill, after every pass that widens an audience has
             // run: what the co-parent's phone needs is a single wake-up once there is something
             // new for it to read, and what the co-parent needs is one sentence, not a tray full
-            // of years-old events each announcing itself as created.
-            if (requeuedEvents + requeuedChildren > 0) announceSharedRecords(currentUser.uid)
+            // of years-old events each announcing itself as created. Addressed to the co-parents
+            // the re-published records now name and did not before — never simply to the family
+            // on screen, which after a second pairing is usually the co-parent who gained nothing.
+            announceSharedRecords(currentUser.uid, eventsSharedWith + childrenSharedWith)
 
             // Step 7: Complete
             _syncStatus.value = SyncStatus.Success(LocalDateTime.now())
@@ -182,8 +184,15 @@ class SyncService @Inject constructor(
 
     /**
      * Syncs events between local database and Firestore.
+     *
+     * @return The co-parents the audience backfill ran for that a quiet re-upload now names — the
+     *   ones [announceSharedRecords] tells. Empty when the backfill did not run.
      */
-    private suspend fun syncEvents(userId: String): Int {
+    // Its size and nesting were baselined under the signature it had before it returned who to
+    // announce to (`detekt/baseline.xml` keys an entry on the exact signature); the body's shape
+    // did not change, so the findings move here rather than into a new baseline entry.
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    private suspend fun syncEvents(userId: String): Set<String> {
         val me = userDao.getUserById(userId)
         val partnerId = me?.partnerId?.takeIf { it.isNotBlank() }
         // Every live co-parent, so an event keeps its own family's audience whichever family the
@@ -195,11 +204,13 @@ class SyncService @Inject constructor(
         val queuedBefore = eventDao.getUnsyncedEvents().map { it.id }.toSet()
         // Before the read below, not after: the backfill's whole effect is to clear the flag
         // `getUnsyncedEvents` selects on, so a read taken first would not see it.
-        val requeued = backfillAudienceForPartner(userId, partnerId)
+        val backfill = backfillAudienceForPartner(userId, coParentsOf(userId, me))
 
         // Upload unsynced local events; private events never leave the device
         val unsynced = eventDao.getUnsyncedEvents().filterNot { it.isPrivate }
-        val quiet: Set<String> = if (requeued > 0) unsynced.map { it.id }.toSet() - queuedBefore else emptySet()
+        val quiet: Set<String> =
+            if (backfill.requeued > 0) unsynced.map { it.id }.toSet() - queuedBefore else emptySet()
+        val sharedWithNewCoParents = mutableSetOf<String>()
         val (pendingDeletions, unsyncedEvents) = unsynced.partition { it.deletedAtMillis != null }
 
         // Deletions first. They are the half of this queue that used to have no path at all:
@@ -242,8 +253,12 @@ class SyncService @Inject constructor(
                 eventDao.markAsSynced(entity.id)
 
                 // Notify everyone the event is shared with, except the uploader — unless this
-                // is a re-publication for a new co-parent, which `announceSharedRecords` covers.
-                if (entity.id in quiet) continue
+                // is a re-publication for a new co-parent, which `announceSharedRecords` covers:
+                // it is told once, and only if this event now names them.
+                if (entity.id in quiet) {
+                    sharedWithNewCoParents += audience.filter { it in backfill.newCoParents }
+                    continue
+                }
                 for (recipientId in audience) {
                     if (recipientId != userId) {
                         notifyEventUpdate(recipientId, entity.id, entity.title, "created")
@@ -402,7 +417,7 @@ class SyncService @Inject constructor(
                 encryptedPreferences.putString(sweepKey, startedAt.toString())
             }
         }
-        return requeued
+        return sharedWithNewCoParents
     }
 
     /**
@@ -421,93 +436,131 @@ class SyncService @Inject constructor(
     }
 
     /**
-     * Re-publishes this user's own events once per co-parent, so a pair formed after those
-     * events were created can actually read them.
+     * Re-publishes this user's own events when the account gains a co-parent, so a pair formed
+     * after those events were created can actually read them.
      *
      * `sharedWith` is computed at upload time and never recomputed for a row already marked
      * synced, so every event created while unpaired kept an audience of one. The accepter's
      * rows were re-flagged as a side effect of the parent-slot re-stamp
      * ([EventDao.reslotOwner]); the inviter's never were, because the inviter keeps their slot.
      *
-     * Keyed on the partner's uid rather than a boolean, so re-pairing with somebody else
-     * re-arms it: the new co-parent has received nothing.
+     * Keyed on the **set** of co-parents ([backfillForNewCoParents]), so re-pairing with somebody
+     * else re-arms it — the new co-parent has received nothing — while switching between families
+     * does not: the switch changes which family is on screen, not who this parent co-parents
+     * with. The marker used to name the family on screen, so every switch re-queued every event
+     * and announced them all again to the co-parent being looked at.
      *
      * The marker advances after the Room `UPDATE` commits and before the uploads it queues have
      * finished. A process death in that window is harmless — the rows stay flagged and the next
      * pass uploads them, because the marker guards the flagging and not the upload. Advancing it
      * only after the uploads would instead re-flag every event on every sync.
      */
-    private suspend fun backfillAudienceForPartner(userId: String, partnerId: String?): Int {
-        val key = "${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$userId"
-
-        // Unpaired: disarm the marker rather than simply doing nothing.
-        //
-        // `unpairCoParent`'s server-side sweep narrows every shared document's `sharedWith`,
-        // so the ex-partner loses access to everything. If the marker were left naming them,
-        // re-pairing with the *same* co-parent would find it already equal to their uid and
-        // skip the backfill — and the accepter's re-stamp would not cover it either, because
-        // the slots come out the same way round the second time and `ParentSlotMigrator.reslot`
-        // returns 0 on `from == to`. The pair would look correctly paired while everything
-        // created before the unpair stayed unreadable to one of them, with nothing said.
-        //
-        // Blank rather than a removed key: `EncryptedPreferences` has no generic remove, and
-        // blank can never equal a real uid, so it re-arms exactly the same way an absent
-        // marker does.
-        if (partnerId == null) {
-            if (!encryptedPreferences.getString(key).isNullOrBlank()) {
-                encryptedPreferences.putString(key, "")
-            }
-            return 0
+    private suspend fun backfillAudienceForPartner(userId: String, coParents: Set<String>): AudienceBackfill {
+        val backfill = backfillForNewCoParents(
+            key = "${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$userId",
+            coParents = coParents
+        ) { eventDao.markOwnEventsUnsynced(userId) }
+        if (backfill.newCoParents.isNotEmpty()) {
+            Log.i(
+                TAG,
+                "Audience backfill for $userId with new co-parent(s) ${backfill.newCoParents}: " +
+                    "re-queued ${backfill.requeued} event(s)"
+            )
         }
-        if (encryptedPreferences.getString(key) == partnerId) return 0
-
-        val requeued = eventDao.markOwnEventsUnsynced(userId)
-        encryptedPreferences.putString(key, partnerId)
-        Log.i(
-            TAG,
-            "Audience backfill for $userId with partner $partnerId: re-queued $requeued event(s)"
-        )
-        return requeued
+        return backfill
     }
 
     /**
-     * Re-publishes this user's own child info once per co-parent, so rows written before pairing
-     * become readable by that co-parent.
+     * Re-publishes this user's own child info when the account gains a co-parent, so rows written
+     * before pairing become readable by that co-parent.
      *
      * Without this, item 5 fails silently in the one case that matters most: a parent fills in
      * everything about their child, *then* invites the other parent, and the other parent sees an
      * empty screen with no error.
      *
-     * Two rules are copied deliberately from [backfillAudienceForPartner] rather than simplified:
-     *
-     * - The marker stores the **partner's UID**, not a flag. A flag never re-arms when the same
-     *   two people pair again after an unpair, and the pair then looks correctly linked while
-     *   everything from before stays invisible to one of them.
-     * - When unpaired the marker is **blanked**, not left alone. Leaving it naming an ex-partner
-     *   means re-pairing with that same person finds it already equal and skips the backfill.
-     *   `EncryptedPreferences` has no generic remove, and a blank value can never equal a real
-     *   UID, so it re-arms exactly as an absent marker does.
+     * The same marker rules as [backfillAudienceForPartner], under a key of its own, and the same
+     * reason it must not be keyed on the family on screen — here sharper: what a switch used to
+     * re-upload was every child's medical record, under the audience of the family being looked
+     * at. Each re-upload now names its own family's co-parent (`FamilyAudience.recordPartnerFor`),
+     * so what gets re-published for a new co-parent is only what is theirs to read.
      */
-    private suspend fun backfillChildInfoAudienceForPartner(userId: String, partnerId: String?): Int {
-        val key = "${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$userId"
-
-        if (partnerId == null) {
-            if (!encryptedPreferences.getString(key).isNullOrBlank()) {
-                encryptedPreferences.putString(key, "")
-            }
-            return 0
+    private suspend fun backfillChildInfoAudienceForPartner(
+        userId: String,
+        coParents: Set<String>
+    ): AudienceBackfill {
+        val backfill = backfillForNewCoParents(
+            key = "${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$userId",
+            coParents = coParents
+        ) { childInfoDao.markOwnChildInfoUnsynced(userId) }
+        if (backfill.newCoParents.isNotEmpty()) {
+            Log.i(
+                TAG,
+                "Child-info audience backfill for $userId with new co-parent(s) " +
+                    "${backfill.newCoParents}: re-queued ${backfill.requeued} row(s)"
+            )
         }
-        if (encryptedPreferences.getString(key) == partnerId) return 0
-
-        val requeued = childInfoDao.markOwnChildInfoUnsynced(userId)
-        encryptedPreferences.putString(key, partnerId)
-        Log.i(
-            TAG,
-            "Child-info audience backfill for $userId with partner $partnerId: " +
-                "re-queued $requeued row(s)"
-        )
-        return requeued
+        return backfill
     }
+
+    /**
+     * Re-queues one table's own rows when [coParents] holds somebody the marker under [key] does
+     * not name, and leaves the marker naming exactly [coParents].
+     *
+     * The rules each audience backfill has learned, stated once:
+     *
+     * - **The marker names co-parents, never a flag.** A flag never re-arms when the same two
+     *   people pair again after an unpair, and the pair then looks correctly linked while
+     *   everything from before stays invisible to one of them.
+     * - **It names the whole set, never the family on screen.** A parent with two co-parents has
+     *   two families and looks at one at a time; switching re-points `UserEntity.partnerId` and
+     *   changes nothing here. The set is written sorted and comma-joined, so one co-parent's set is
+     *   that uid alone — exactly what the marker held when it named a single partner — and an
+     *   existing one-family install reads its old marker as already done.
+     * - **It re-queues only when somebody arrived.** That is its whole purpose: records written
+     *   before a co-parent arrived become readable by them. A co-parent leaving re-publishes
+     *   nothing — `unpairCoParent` narrows the documents server-side — but the marker stops naming
+     *   them, or re-pairing with the same person would read as already done.
+     * - **Unpaired, the marker is blanked**, for the same reason, and only when it is not blank
+     *   already, so an unpaired account does not re-encrypt the same value on every tick.
+     *   `unpairCoParent`'s sweep narrows every shared document's `sharedWith`; a marker still
+     *   naming the ex-partner would skip the backfill on re-pairing with them — and the accepter's
+     *   re-stamp would not cover it either, because the slots come out the same way round and
+     *   `ParentSlotMigrator.reslot` returns 0 on `from == to`. Blank rather than a removed key:
+     *   `EncryptedPreferences` has no generic remove, and blank can never equal a real uid.
+     *
+     * @param key The marker's preference key, per table and per user.
+     * @param coParents Every co-parent this user has now ([coParentsOf]).
+     * @param requeue Marks this user's own rows of the table unsynced; returns how many.
+     */
+    private suspend fun backfillForNewCoParents(
+        key: String,
+        coParents: Set<String>,
+        requeue: suspend () -> Int
+    ): AudienceBackfill {
+        val stored = encryptedPreferences.getString(key)
+        if (coParents.isEmpty()) {
+            if (!stored.isNullOrBlank()) encryptedPreferences.putString(key, "")
+            return AudienceBackfill.NONE
+        }
+        val marker = coParents.sorted().joinToString(MARKER_SEPARATOR)
+        if (stored == marker) return AudienceBackfill.NONE
+
+        val arrived = coParents - stored.orEmpty().split(MARKER_SEPARATOR).filter { it.isNotBlank() }.toSet()
+        val requeued = if (arrived.isEmpty()) 0 else requeue()
+        encryptedPreferences.putString(key, marker)
+        return AudienceBackfill(requeued = requeued, newCoParents = arrived)
+    }
+
+    /**
+     * Every co-parent [userId] has now, read off their Room row the way the event paths read it:
+     * the stored list, and the family on screen ([FamilyAudience.coParents]).
+     */
+    private fun coParentsOf(userId: String, me: UserEntity?): Set<String> =
+        FamilyAudience.coParents(
+            myUid = userId,
+            livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
+            selectedPartner = me?.partnerId
+        )
 
     /**
      * Resolves the `sharedWith` audience for an event upload.
@@ -550,12 +603,26 @@ class SyncService @Inject constructor(
 
     /**
      * Syncs child information between local database and Firestore.
+     *
+     * Each child goes up naming **its own family's** co-parent
+     * ([FamilyAudience.recordPartnerFor]), never the family on screen: for a parent in two
+     * families the family on screen is often not the child's, and a child's record carries their
+     * medical details. Naming the family on screen is how one family's children reached the other
+     * family's parent after a switch and one sync.
+     *
+     * @return The co-parents the audience backfill ran for that a quiet re-upload now names — the
+     *   ones [announceSharedRecords] tells. Empty when the backfill did not run.
      */
-    private suspend fun syncChildInfo(userId: String): Int {
-        val partnerId = userDao.getUserById(userId)?.partnerId?.takeIf { it.isNotBlank() }
+    // `syncEvents`' twin: its size was baselined under the signature it had before it returned
+    // who to announce to, and moves here for the same reason.
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
+    private suspend fun syncChildInfo(userId: String): Set<String> {
+        val me = userDao.getUserById(userId)
+        val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
+        val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
         // See `syncEvents`: rows already waiting are new, rows the backfill adds are not.
         val queuedBefore = childInfoDao.getUnsyncedChildInfo().map { it.id }.toSet()
-        val requeued = backfillChildInfoAudienceForPartner(userId, partnerId)
+        val backfill = backfillChildInfoAudienceForPartner(userId, coParentsOf(userId, me))
 
         // Upload unsynced local child info. Deletions first, and they are *not* uploadable as
         // documents: `getUnsyncedChildInfo` is the outbox and carries pending tombstones, so
@@ -563,7 +630,9 @@ class SyncService @Inject constructor(
         // row that only still exists to record its own deletion, wiping the tombstone and
         // resurrecting the child on both phones.
         val allUnsynced = childInfoDao.getUnsyncedChildInfo()
-        val quiet: Set<String> = if (requeued > 0) allUnsynced.map { it.id }.toSet() - queuedBefore else emptySet()
+        val quiet: Set<String> =
+            if (backfill.requeued > 0) allUnsynced.map { it.id }.toSet() - queuedBefore else emptySet()
+        val sharedWithNewCoParents = mutableSetOf<String>()
         val (pendingDeletions, unsyncedChildInfo) = allUnsynced.partition { it.deletedAtMillis != null }
 
         for (entity in pendingDeletions) {
@@ -585,6 +654,12 @@ class SyncService @Inject constructor(
         }
 
         for (entity in unsyncedChildInfo) {
+            val coParent = FamilyAudience.recordPartnerFor(
+                familyId = entity.familyId,
+                myUid = userId,
+                livePartners = livePartners,
+                selectedPartner = selectedPartner
+            )
             val childInfoData = mapOf(
                 "id" to entity.id,
                 "childName" to entity.childName,
@@ -609,7 +684,7 @@ class SyncService @Inject constructor(
                 "sharedWith" to ChildInfoAudience.entitled(
                     userId = userId,
                     creatorUid = entity.createdByFirebaseUid,
-                    partnerId = partnerId,
+                    partnerId = coParent,
                     guestUids = GuestGrantPolicy
                         .active(guestsOf(entity).values.toList(), Instant.now())
                         .map { it.uid }
@@ -620,10 +695,15 @@ class SyncService @Inject constructor(
             if (result.isSuccess) {
                 childInfoDao.markAsSynced(entity.id)
 
-                // Notify partner — unless this is a re-publication for a new co-parent, which
-                // `announceSharedRecords` covers once for all of them.
-                if (partnerId != null && partnerId != userId && entity.id !in quiet) {
-                    notifyChildInfoUpdate(partnerId, entity.id, entity.childName)
+                // Tell the co-parent the record names — unless this is a re-publication for a new
+                // co-parent, which `announceSharedRecords` covers once for all of them. The push
+                // carries the child's name, so it goes to the record's own family and nowhere else.
+                val recipient = coParent?.takeIf { it != userId }
+                if (entity.id in quiet) {
+                    sharedWithNewCoParents += listOfNotNull(recipient).filter { it in backfill.newCoParents }
+                }
+                if (recipient != null && entity.id !in quiet) {
+                    notifyChildInfoUpdate(recipient, entity.id, entity.childName)
                 }
             }
         }
@@ -720,7 +800,7 @@ class SyncService @Inject constructor(
                 }
             }
         }
-        return requeued
+        return sharedWithNewCoParents
     }
 
     /**
@@ -848,18 +928,27 @@ class SyncService @Inject constructor(
             .getOrNull()
 
     /**
-     * Tells the co-parent, once, that this parent's records have been shared with them.
+     * Tells each of [recipients], once, that this parent's records have been shared with them.
      *
      * `RECORDS_SHARED` carries the actor's name and nothing else; the receiving device writes
      * the sentence (SEC-3) and runs the sync that downloads what it can now read.
+     *
+     * [recipients] are the co-parents an audience backfill ran for whom a re-published record now
+     * names — not the co-parent of the family on screen. That used to be the addressee, so a
+     * switch, which re-ran the backfill, told the family being looked at that records had been
+     * shared with them when nothing new had; and a second pairing told the first co-parent rather
+     * than the new one.
      */
-    private suspend fun announceSharedRecords(userId: String) {
+    private suspend fun announceSharedRecords(userId: String, recipients: Set<String>) {
+        val to = recipients.filter { it.isNotBlank() && it != userId }
+        if (to.isEmpty()) return
         val user = userDao.getUserById(userId) ?: return
-        val partnerId = user.partnerId?.takeIf { it.isNotBlank() && it != userId } ?: return
-        fcmService.queueNotificationForUser(
-            partnerId,
-            mapOf(PushPayload.TYPE to PushPayload.RECORDS_SHARED, PushPayload.ACTOR to user.name)
-        )
+        for (partnerId in to) {
+            fcmService.queueNotificationForUser(
+                partnerId,
+                mapOf(PushPayload.TYPE to PushPayload.RECORDS_SHARED, PushPayload.ACTOR to user.name)
+            )
+        }
     }
 
     /**
@@ -970,8 +1059,29 @@ class SyncService @Inject constructor(
         )
     }
 
+    /**
+     * What one audience backfill did in this pass.
+     *
+     * @property requeued How many of this user's rows it put back in the outbox.
+     * @property newCoParents The co-parents it ran for: those the account gained since its marker
+     *   was written. Empty when it did not run.
+     */
+    private data class AudienceBackfill(val requeued: Int, val newCoParents: Set<String>) {
+        companion object {
+            /** Nothing re-queued, for nobody. */
+            val NONE = AudienceBackfill(requeued = 0, newCoParents = emptySet())
+        }
+    }
+
     private companion object {
         const val TAG = "SyncService"
+
+        /**
+         * Joins the co-parents an audience-backfill marker names. Not a Firebase uid character,
+         * and not `FamilyKey.SEPARATOR` either: a marker naming two co-parents is not a family id,
+         * and must never read as one.
+         */
+        const val MARKER_SEPARATOR = ","
     }
 }
 

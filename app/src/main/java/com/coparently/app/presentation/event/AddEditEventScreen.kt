@@ -174,6 +174,24 @@ internal fun showParentOwnerSelector(
 ): Boolean = parentsLoaded && (isPaired || (parentOwner ?: currentUserSlot) == null)
 
 /**
+ * Whether a description typed now will be read by the co-parent when they answer (phase 2, spec
+ * §5.2): the same rule as [com.coparently.app.domain.events.EventAcceptanceTransition.required], for
+ * a new event — paired, not private, and on the co-parent's days. An edit never asks again, so it
+ * answers false; so does an owner or a slot not known yet.
+ *
+ * @param isNewEvent Whether the form creates an event rather than editing one.
+ * @param mySlot The signed-in parent's own slot.
+ */
+internal fun descriptionReachesCoParent(
+    isNewEvent: Boolean,
+    isPaired: Boolean,
+    isPrivate: Boolean,
+    parentOwner: String?,
+    mySlot: String?
+): Boolean = isNewEvent && isPaired && !isPrivate &&
+    !parentOwner.isNullOrBlank() && !mySlot.isNullOrBlank() && parentOwner != mySlot
+
+/**
  * Screen for adding or editing an event.
  * Modernized with Material 3 design, date/time pickers, and validation.
  * Based on Design Roadmap Day 3: Forms & Input.
@@ -790,15 +808,34 @@ fun AddEditEventScreen(
                     )
                 },
                 isError = descriptionError != null,
-                supportingText = if (descriptionError != null) {
-                    {
-                        Text(
-                            text = descriptionError ?: "",
-                            color = MaterialTheme.colorScheme.error
-                        )
+                supportingText = when {
+                    descriptionError != null -> {
+                        {
+                            Text(
+                                text = descriptionError ?: "",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
-                } else {
-                    null
+                    // The co-parent reads this when they answer the event (phase 2, spec §5.2),
+                    // so the parent writing it is told before they write for themselves alone.
+                    descriptionReachesCoParent(
+                        isNewEvent = eventId == null,
+                        isPaired = isPaired,
+                        isPrivate = isPrivate,
+                        parentOwner = parentOwner,
+                        mySlot = currentUser?.slot
+                    ) -> {
+                        {
+                            Text(
+                                stringResource(
+                                    R.string.event_form_description_coparent_hint,
+                                    parentNames.labelFor(parentOwner)
+                                )
+                            )
+                        }
+                    }
+                    else -> null
                 },
                 modifier = Modifier
                     .fillMaxWidth()

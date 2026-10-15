@@ -1,10 +1,15 @@
 package com.coparently.app.data.repository
 
+import com.coparently.app.domain.events.EventAcceptance
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.test.assertEquals
 
-/** What a professional's calendar decodes from raw `events` documents (MON-18). */
+/**
+ * What a professional's calendar decodes from raw `events` documents (MON-18) — and, since phase
+ * 2, a family friend's: both read the family's events from Firestore, never from Room.
+ */
 class ProfessionalEventsTest {
 
     private val from = LocalDate.of(2026, 10, 1)
@@ -54,6 +59,48 @@ class ProfessionalEventsTest {
             to
         )
         assertEquals(listOf("fine"), events.map { it.id })
+    }
+
+    @Test
+    fun `an event waiting for an answer or declined is not shown`() {
+        // Phase 2, Review Focus 3: the parents' own grid hides these (CalendarVisibility), and a
+        // reader outside the pair must not see an event the two have not agreed on.
+        val events = ProfessionalEvents.from(
+            listOf(
+                doc("pending", "2026-10-05T15:00:00", "acceptance" to "PENDING"),
+                doc("declined", "2026-10-06T15:00:00", "acceptance" to "DECLINED"),
+                doc("accepted", "2026-10-07T15:00:00", "acceptance" to "ACCEPTED"),
+                doc("plain", "2026-10-08T15:00:00"),
+                doc("newer", "2026-10-09T15:00:00", "acceptance" to "SOMETHING_NEWER")
+            ),
+            from,
+            to
+        )
+        assertEquals(listOf("accepted", "plain", "newer"), events.map { it.id })
+    }
+
+    @Test
+    fun `who takes part survives the mapping`() {
+        val event = ProfessionalEvents.from(
+            listOf(
+                doc(
+                    "with-friend",
+                    "2026-10-05T15:00:00",
+                    "friendParticipates" to "f1",
+                    "acceptance" to "ACCEPTED",
+                    "acceptedBy" to "b",
+                    "acceptedAt" to "2026-09-02T08:30:00",
+                    "lastModifiedBy" to "b"
+                )
+            ),
+            from,
+            to
+        ).single()
+        assertEquals("f1", event.friendParticipates)
+        assertEquals(EventAcceptance.ACCEPTED, event.acceptance)
+        assertEquals("b", event.acceptedBy)
+        assertEquals(LocalDateTime.of(2026, 9, 2, 8, 30), event.acceptedAt)
+        assertEquals("b", event.lastModifiedBy)
     }
 
     @Test

@@ -60,17 +60,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
-import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
-import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
+import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.rememberParentNames
@@ -139,63 +138,6 @@ internal fun queryRangeFor(
             startDate.atStartOfDay() to endDate.atTime(23, 59, 59)
         }
     }
-}
-
-/**
- * Events covering [date], including multi-day and overnight spans, in start order.
- *
- * The reference definition of "which day does this event belong to". The UI does not call this
- * per day any more — [eventsByDay] is the indexed form it uses — but this stays as the spec the
- * index is held to: `EventsByDayTest` asserts the two agree on every day they touch, so the
- * agenda card under the grid can never disagree with the dots above it.
- *
- * @param events Events already filtered by parent and type
- * @param date The day to collect
- */
-internal fun eventsOn(events: List<Event>, date: LocalDate): List<Event> {
-    val dayStart = date.atStartOfDay()
-    val dayEnd = date.plusDays(1).atStartOfDay()
-    return events
-        .filter { event ->
-            val end = event.endDateTime ?: event.startDateTime
-            event.startDateTime < dayEnd && end >= dayStart
-        }
-        .sortedBy { it.startDateTime }
-}
-
-/**
- * [events] bucketed by every day each one covers, each bucket in start order.
- *
- * Built once per event list so the month grid can index it instead of scanning: `dayContent`
- * runs for all 42 cells on every recomposition — a day tap, a filter change, any repository
- * emission — and a per-cell filter+sort made that O(42·N) over a list the ±3-month query window
- * grew by roughly 1.7×.
- *
- * A multi-day or overnight event is bucketed under each day of its span, not only its start day:
- * matching by start date alone is a bug this project has already shipped once (see the
- * range/day-query note in CLAUDE.md). Equivalent to calling [eventsOn] per day, which is what
- * `EventsByDayTest` checks.
- *
- * @param events Events already filtered by parent and type
- */
-internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
-    val buckets = mutableMapOf<LocalDate, MutableList<Event>>()
-    for (event in events) {
-        val firstDay = event.startDateTime.toLocalDate()
-        // `eventsOn` keeps an event whose end lands exactly on a day's 00:00 (`end >= dayStart`),
-        // so the last covered day is the end's own date, not the day before it.
-        val lastDay = (event.endDateTime ?: event.startDateTime).toLocalDate()
-        var day = firstDay
-        // An end before the start covers nothing, and this loop yields nothing for it — same
-        // answer `eventsOn` gives such an event on every date.
-        while (!day.isAfter(lastDay)) {
-            buckets.getOrPut(day) { mutableListOf() }.add(event)
-            day = day.plusDays(1)
-        }
-    }
-    // sortedBy is stable, so events sharing a start time keep the incoming order, exactly as the
-    // filter-then-sort in eventsOn did.
-    return buckets.mapValues { (_, dayEvents) -> dayEvents.sortedBy { it.startDateTime } }
 }
 
 /**
@@ -569,18 +511,13 @@ fun CalendarScreen(
         }
     }
 
-    val pendingChangeRequests by changeRequestViewModel.pendingIncomingCount.collectAsState()
-
-    // Day swaps live on the custody document, not in `change_requests`, so the banner count
-    // must add them explicitly — an incoming swap used to raise no banner at all, leaving the
-    // co-parent no visible route to the inbox that answers it. Pending events count too, and a
-    // swap counts once per offer: the same number Home's "Awaiting your answer" row shows for the
-    // same inbox (`AwaitingAnswers`), where the banner used to say 2 beside Home's 6.
-    val inboxUserId by changeRequestViewModel.currentUserId.collectAsState()
-    val eventsAwaitingMe by changeRequestViewModel.eventsAwaitingMe.collectAsState()
-    val pendingInboxCount = remember(pendingChangeRequests, dayOverrides, eventsAwaitingMe, inboxUserId, today) {
-        AwaitingAnswers.count(pendingChangeRequests, dayOverrides, eventsAwaitingMe, inboxUserId, today)
-    }
+    // What waits on this parent in the family on screen: change requests, day swaps (they live on
+    // the custody document, not in `change_requests`, and count once per offer) and pending events.
+    // Read from the source Home's Requests row reads (`RequestsSource`), so the two never disagree;
+    // the custody proposal is left out because it draws a banner of its own below.
+    val inboxRequests by changeRequestViewModel.requests.collectAsState()
+    val pendingInboxCount =
+        (inboxRequests as? RequestsState.Ready)?.inbox?.waitingOnMe?.countWithoutProposal ?: 0
 
     // A custody-pattern proposal draws two different banners (item 7): the parent who must
     // answer gets a Review into the inbox; the one who proposed it gets a passive "waiting".

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="friend_section_title">Друг с доступом к календарю</string>
-    <string name="friend_section_supporting">Опекун, друг, бабушка или дедушка, которые видят календарь</string>
-    <string name="friend_invite_action">Пригласить друга</string>
+    <string name="friend_section_title">Друзья семьи</string>
+    <string name="friend_section_supporting">Бабушка, дедушка, няня или друг, которые только смотрят календарь — столько, сколько вы решите</string>
+    <string name="friend_invite_action">Пригласить друга семьи</string>
     <string name="friend_invite_code_label">Передайте этот код</string>
     <string name="friend_access_until">Доступ до %1$s</string>
     <string name="friend_access_several">Семьи: %1$d · первый доступ заканчивается %2$s</string>
@@ -23,4 +23,40 @@
     <string name="friend_empty">Ни у кого вне семьи нет доступа к календарю.</string>
     <string name="friend_revoke_failed">Не удалось закрыть доступ. Проверьте подключение и попробуйте ещё раз.</string>
     <string name="friend_redeem_code_label">Введите полученный код</string>
+    <string name="friend_calendar_title">Календарь семьи</string>
+    <string name="friend_calendar_family">%1$s и %2$s</string>
+    <string name="friend_calendar_read_only">Только просмотр. Личные события никогда не передаются.</string>
+    <string name="friend_calendar_added_by">Добавлено: %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">Вы участвуете</string>
+    <string name="friend_calendar_access_ended">Ваш доступ к этому календарю закончился</string>
+    <string name="friend_calendar_failed">Не удалось загрузить календарь</string>
+    <string name="friend_intro">Друг семьи — это бабушка, дедушка, няня или друг, которым нужно знать, где дети. Они только смотрят календарь и ничего не могут изменить.</string>
+    <string name="friend_compare_column_coparent">Второй родитель</string>
+    <string name="friend_compare_column_friend">Друг семьи</string>
+    <string name="friend_compare_calendar">Календарь</string>
+    <string name="friend_compare_custody">График опеки</string>
+    <string name="friend_compare_expenses">Расходы</string>
+    <string name="friend_compare_chat">Чат</string>
+    <string name="friend_compare_children">Информация о детях</string>
+    <string name="friend_compare_how_long">Как долго</string>
+    <string name="friend_compare_views_and_changes">Смотрит и меняет</string>
+    <string name="friend_compare_only_views">Только смотрит</string>
+    <string name="friend_compare_yes">Да</string>
+    <string name="friend_compare_no">Нет</string>
+    <string name="friend_compare_while_linked">Пока вы связаны</string>
+    <string name="friend_compare_duration_choice">%1$s или %2$s</string>
+    <string name="friend_compare_row_desc">%1$s: второй родитель — %2$s, друг семьи — %3$s</string>
+    <string name="friend_invite_will_see_lead">Увидит</string>
+    <string name="friend_invite_will_see_body">события семьи в календаре, кроме личных. Только просмотр — изменить ничего нельзя.</string>
+    <string name="friend_invite_wont_see_lead">Не увидит</string>
+    <string name="friend_invite_wont_see_body">график опеки, расходы, чат и информацию о детях.</string>
+    <string name="friend_invite_where_to_enter">Его вводят в своём CoPlanly: «Настройки» → «Друзья семьи» → «У меня есть код от родителей».</string>
+    <string name="friend_invite_share">Поделиться кодом</string>
+    <string name="friend_invite_done">Готово</string>
+    <string name="friend_share_message">%1$s приглашает вас в календарь семьи в CoPlanly. Ваш код: %2$s. В CoPlanly откройте «Настройки» → «Друзья семьи» → «У меня есть код от родителей». Приложение: %3$s</string>
+    <string name="friend_redeem_row_title">У меня есть код от родителей</string>
+    <string name="friend_redeem_row_supporting">Если вас пригласили как друга семьи</string>
+    <string name="friend_redeem_open_calendar">Открыть календарь семьи</string>
+    <string name="friend_calendar_row_supporting">%1$s и %2$s · доступ до %3$s</string>
 </resources>

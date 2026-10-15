@@ -110,7 +110,7 @@ parents of that family can download them; we never create a public link to one.
 **Photographs attached to a record** — an event's photo, a receipt, and the photographs on a
 child's medical notes or a pet's record — are stored the same way: in Cloud Storage under your
 family, with their size, type and SHA-256 fingerprint, downloadable by the two parents of that
-family only, and never through a public link. **A guest, a calendar friend or a professional
+family only, and never through a public link. **A guest, a family friend or a professional
 never sees them**, even where they can read the record itself. A photograph you add before you
 have linked a co-parent is stored in a folder only you can read; when you link, our server moves
 it into your family's folder so your co-parent can see it too.
@@ -120,10 +120,11 @@ with you (Art. 6(1)(b)).
 
 **Your child's health details** are health data (Art. 9 GDPR). We process them only with your
 **explicit consent** (Art. 9(2)(a)), which you give as your child's parent. The first time you
-open a child's medical section, the app tells you what it is, who will see it (your co-parent,
-and any guest you let see that child's record) and that it is optional, and asks you to agree. We
-record when you agreed and to which wording; if the wording changes, we ask again. The app works
-fully without these details.
+open a child's medical section, the app tells you what it is, who will see it (the child's other
+parent — the co-parent of the family the child belongs to, never a co-parent you have in another
+family — and any guest you let see that child's record) and that it is optional, and asks you to
+agree. We record when you agreed and to which wording; if the wording changes, we ask again. The
+app works fully without these details.
 
 You can **withdraw your consent** at any time in Settings. Withdrawing deletes the medical details
 of the children's records you created. Details your co-parent entered stay: they rest on your
@@ -158,8 +159,10 @@ an export remaining verifiable (Art. 6(1)(f)); see "How long we keep it".
 
 A child does not hold an account and never signs in. What is recorded about them is entered by
 a parent, and only their parents — and anyone a parent explicitly grants access to — can read
-it. CoPlanly is for adults: accounts are for people aged 18 or over, and the sign-in screen says
-so. We rely on the parents' authority to act for their child, not on the child's own consent.
+it. If you co-parent in two families, each child's and each pet's record is shared only with the
+other parent of the family it belongs to, never with your co-parent in the other family.
+CoPlanly is for adults: accounts are for people aged 18 or over, and the sign-in screen says so.
+We rely on the parents' authority to act for their child, not on the child's own consent.
 
 **The child's own rights.** The information is about the child, so the rights below are the
 child's. While the child is a minor, their parents exercise them. A young person who wants to see
@@ -176,7 +179,11 @@ or have deleted what was recorded about them — or an adult who was that child 
   details.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record — without its photographs.
-- **A calendar friend** whom you grant time-limited read access to the family calendar.
+- **A family friend** (for example a grandparent or a nanny) whom you grant time-limited read
+  access to the family calendar. Their account can read the family's shared events — never
+  private ones, which never leave your phone — and their app shows the ones both parents have
+  agreed to, with the two parents' first names, which name the family and who added each event.
+  They never see the custody schedule, your messages, expenses or records about your child.
 - **A professional** — a mediator, lawyer, guardian ad litem or therapist — whom **both** parents
   let read the family calendar, custody schedule and parenting plan, read-only, for at most 180
   days. They never see your messages, expenses or records about your child. Access starts only
@@ -327,7 +334,7 @@ We do not sell personal data, and we do not use it for advertising.
 | Recipient | What they process | Why |
 | --- | --- | --- |
 | **Your co-parent** | Everything you share — which is most of it | The purpose of the service |
-| **Guests and calendar friends you invite** | Only the record or calendar you granted, until the grant expires — never its photographs | Because you granted it |
+| **Guests and family friends you invite** | A guest: only the child's record you granted. A family friend: the family's shared events and the two parents' first names. Each until the grant expires, never photographs | Because you granted it |
 | **Whoever holds a calendar link you created** | Custody days and shared events, read-only, until you revoke the link | Because you created and shared it |
 | **Anyone holding an export you made, or its record ID** | Whether it was registered, when, the period, the format and the size — never who made it | So the export can be verified |
 | **A professional both parents admit** | The calendar, custody schedule and parenting plan of that one family, read-only, until the grant expires | Because both of you consented |
@@ -366,7 +373,7 @@ daily on our servers, not by hand.
 | Your account and everything you entered | Until you delete it, or delete the record |
 | A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
 | A photograph you remove or replace | Deleted from our servers when you save the change |
-| A guest's, calendar friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A calendar friend's or professional's access to a family also ends when its two parents unlink |
+| A guest's, family friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A family friend's or professional's access to a family also ends when its two parents unlink |
 | An invitation nobody accepted | Deleted **30 days** after it expired (**90 days** after it was made, if it had no expiry) |
 | A read-only calendar link | Until revoked; deleted after **90 days** without use |
 | Notifications waiting to be delivered | **30 days** |

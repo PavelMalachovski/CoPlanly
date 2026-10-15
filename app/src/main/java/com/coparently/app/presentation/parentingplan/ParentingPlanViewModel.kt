@@ -3,6 +3,8 @@ package com.coparently.app.presentation.parentingplan
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.chat.ChatPartner
+import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentingPlanPair
@@ -16,6 +18,8 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.observeSignedInUser
+import com.coparently.app.presentation.common.projectedCoParentUid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,12 +29,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /** What the parenting-plan screen is showing. */
@@ -110,11 +117,18 @@ class ParentingPlanViewModel @Inject constructor(
      * Built from the pairing state rather than from [Parents.coParent], which is null for a pair
      * that predates slot assignment — gating on it would hide the feature from exactly the
      * long-standing pairs most likely to want it.
+     *
+     * **The family on screen**, by the rule the chat and the names follow
+     * ([ChatPartnerSource.resolve]): the pairing state says whether there is a co-parent, the
+     * family switcher's projection on the signed-in row says which. The pairing state's own
+     * partner is the *first* co-parent whatever the switcher says, so a parent showing their second
+     * family was shown the first family's plan beside the second family's custody proposal.
      */
     private val scope: Flow<PlanScope?> = combine(
         userRepository.observeCurrentUserId(),
-        pairingRepository.observePairingState()
-    ) { uid, pairing -> scopeFor(uid, pairing) }.distinctUntilChanged()
+        pairingRepository.observePairingState(),
+        userRepository.observeSignedInUser().map { it?.projectedCoParentUid() }
+    ) { uid, pairing, projected -> scopeFor(uid, pairing, projected) }.distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ParentingPlanUiState> = scope
@@ -172,7 +186,16 @@ class ParentingPlanViewModel @Inject constructor(
     private fun edit(change: (ParentingPlanEntry, Long) -> ParentingPlanEntry) {
         viewModelScope.launch {
             try {
-                val planScope = scope.first() ?: return@launch
+                // The first family a fresh collection of [scope] builds is none: every collection
+                // of the pairing state starts at Loading, whatever the screen has already drawn.
+                // Taking that first value returned here on every save, before the pairing listener
+                // had answered, so answers and agreements were dropped without a word. Wait for the
+                // family instead; a phone that cannot learn it in time has nowhere to save to.
+                val planScope = withTimeoutOrNull(SCOPE_WAIT_MS) { scope.filterNotNull().first() }
+                if (planScope == null) {
+                    report("save parenting plan answer", IllegalStateException("No family to save the plan to"))
+                    return@launch
+                }
                 // The on-screen value when there is one; otherwise a fresh read, never an empty
                 // entry. `uiState` is `WhileSubscribed` (CLAUDE.md item 17): if an answer were
                 // saved before the plan had loaded, starting from `ParentingPlanEntry()` would
@@ -200,9 +223,9 @@ class ParentingPlanViewModel @Inject constructor(
     /** The family a plan belongs to, and which half of it is this parent's. */
     private data class PlanScope(val familyId: String, val myUid: String, val partnerUid: String)
 
-    private fun scopeFor(uid: String?, pairing: PairingState): PlanScope? {
+    private fun scopeFor(uid: String?, pairing: PairingState, projected: String?): PlanScope? {
         val myUid = uid?.takeIf { it.isNotBlank() }
-        val partnerUid = (pairing as? PairingState.Paired)?.partner?.id?.takeIf { it.isNotBlank() }
+        val partnerUid = (ChatPartnerSource.resolve(pairing, projected) as? ChatPartner.Linked)?.partnerUid
         // One exit rather than three guard clauses: `FamilyKey.orNull` already answers null for
         // every case the guards would have caught, so the checks here exist only to smart-cast.
         return if (myUid != null && partnerUid != null) {
@@ -219,5 +242,8 @@ class ParentingPlanViewModel @Inject constructor(
 
         /** Matches the other shared sources, so a rotation does not tear the listener down. */
         private const val SUBSCRIPTION_TIMEOUT_MS = 5_000L
+
+        /** How long a save waits for the pairing state to name the family before giving up. */
+        private const val SCOPE_WAIT_MS = 10_000L
     }
 }

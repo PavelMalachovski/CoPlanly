@@ -314,6 +314,12 @@ class PairingViewModel @Inject constructor(
      * patterns then turn out to agree, disagree, or be unknowable. It depends on nothing the rest
      * of this method produces: [slotChanged] comes from the callable and `mine` is a Room read.
      *
+     * **`mine` is the schedule this parent holds on their own**
+     * ([CustodyModelRepository.getUnsharedModelSync]), never the schedule of a family that has
+     * ended. The phone still shows that one while unpaired, but it does not move into the new
+     * household (CLAUDE.md items 18 and 41), and reading it through the calendar's own lookup
+     * made the outcome depend on whether the pairing had reached Room before this line ran.
+     *
      * Ordering it after [awaitPairingVisibleLocally] and [CustodyModelRepository.readShared] —
      * a five-second wait and an untimed Firestore `get()` — put the one write that must not be
      * lost behind both, in a coroutine [withSlotReslot] detaches and `launchAction` has already
@@ -358,8 +364,9 @@ class PairingViewModel @Inject constructor(
      */
     private suspend fun reconcileCustody(slotChanged: Boolean, mySlot: String) {
         runCatching {
-            // First, and before anything that can wait, fail or be cancelled. See the KDoc.
-            val mine = custodyModelRepository.getActiveModelSync()
+            // First, and before anything that can wait, fail or be cancelled. See the KDoc. Only
+            // a schedule this parent holds on their own: an ended family's is not carried in.
+            val mine = custodyModelRepository.getUnsharedModelSync()
             val mineAfterFlip = if (slotChanged) mine?.complemented() else mine
             if (slotChanged && mineAfterFlip != null) {
                 custodyModelRepository.saveReslotted(mineAfterFlip)

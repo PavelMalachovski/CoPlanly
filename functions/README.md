@@ -277,17 +277,38 @@ GOOGLE_OAUTH_CLIENT_SECRET=<its secret, from Google Cloud console → Credential
 With either missing the callables answer `failed-precondition` / `oauth-not-configured` rather
 than failing obscurely — the same posture `sendEmailInvitation` takes for its mail provider.
 
-Two things worth knowing before touching this:
+Four things worth knowing before touching this:
 
-- **`google_oauth/{uid}` stores a SHA-256 of the refresh token, never the token.** It exists so
-  the refresh callable is not an oracle: without it, moving the secret out of the APK would leave
-  a function that would happily refresh *any* stolen refresh token for *any* signed-in caller,
-  which is exactly the capability the secret's removal takes away. `firestore.rules` denies every
-  client both reads and writes; only the callables, which run as Admin, touch it.
-- **Anyone whose Calendar was connected before this shipped re-consents once.** Their refresh
-  token predates the fingerprint, and an unknown token is refused rather than trusted on first
-  use — trusting it would let whoever presents a stolen token first bind it to themselves. The
-  app already prompts to reconnect when a refresh fails, so this surfaces as that prompt.
+- **`google_oauth/{uid}` stores SHA-256 fingerprints of refresh tokens, never a token.** It exists
+  so the refresh callable is not an oracle: without it, moving the secret out of the APK would
+  leave a function that would happily refresh *any* stolen refresh token for *any* signed-in
+  caller, which is exactly the capability the secret's removal takes away. `firestore.rules`
+  denies every client both reads and writes; only the callables, which run as Admin, touch it.
+- **It keeps the five newest** (October 2026, `GOOGLE_REFRESH_TOKENS_KEPT`): `refreshTokenHashes`,
+  newest first, written in one transaction so two phones connecting at once cannot lose each
+  other, and the newest alone under `refreshTokenHash` too — the field the functions deployed
+  before the list read, so a rollback still accepts the device that connected last. A document
+  written before the list is read as a list of one. It used to hold a single fingerprint, and
+  every exchange replaced it: connecting Calendar on a second phone, reinstalling or switching
+  Google accounts silently refused the other phone's token about an hour later.
+- **A token the document does not list is refused, and the refusal asks for a reconnect.**
+  Anyone whose Calendar was connected before the fingerprint shipped re-consents once, and so does
+  a device whose token fell off the five: an unknown token is refused rather than trusted on first
+  use, because trusting it would let whoever presents a stolen token first bind it to themselves.
+  The refusal is `permission-denied` with `details.reason: 'reconnect'` (cause
+  `unknown-refresh-token`, the reason a backend before October 2026 sent alone, which the app still
+  reads the same way). The app drops the tokens, keeps the address, and its Settings row reads
+  "Access expired or was revoked" with a **Reconnect** button. This line used to say the app
+  "already prompts to reconnect"; before October 2026 a failed refresh surfaced only as "Not
+  connected", or as "Not signed in" after a relaunch, and never as a reconnect.
+- **Google's own refusals are typed by what the app can do about them** (`googleTokenFailure`).
+  `invalid_grant` — a revoked grant, a token unused for six months or already redeemed, or one
+  seven days old while the consent screen is in Testing (`docs/google-oauth-testing-mode.md`) — is
+  `failed-precondition` with `reason: 'reconnect'`, and the app offers Reconnect. No answer within
+  15 seconds, a 429 or a 5xx is `unavailable` / `google-unavailable`: the app keeps the token and
+  says to try again. Any other refusal (`invalid_client` after a rotated secret, …) is `internal` /
+  `google-refused`, which also keeps the token, so correcting the deployment needs no parent to
+  reconnect. Google's own words go to the log, never to the app.
 
 ## Calendar feed (MON-17)
 
@@ -555,6 +576,38 @@ on their own records naming that family is copied to `{prefix}/{familyId}/{recor
 included), the reference on the record rewritten, and the personal copy deleted. Idempotent; the
 summary's `photos` counts `moved`, `rewritten` and `missing` (a reference whose object was in
 neither place, left as it is).
+
+### repairChildAndPetAudiences (October 2026, once)
+
+Operator-only on the same `BACKFILL_ADMIN_UIDS` allow-list, with 540 seconds like the other
+one-off passes. It undoes what the cross-family leak already wrote (CLAUDE.md item 38): a parent in
+two families who switched their phone to the second family and synced re-uploaded every child
+they had entered for the first with the second family's parent in `sharedWith` — medical profile
+included — and each pet pull added that parent beside the first family's.
+
+For every `child_info` and `pets` document whose `familyId` names a family, it drops from
+`sharedWith` every uid that is neither of the family's two parents (read from the id) nor, on a
+child's record, a guest its `guests` map names — a grant's expiry is not judged here,
+`sweepExpiredGuests` does that — and puts the family's other parent back when missing, **only while
+the family is live** (both profiles name each other), so an unpair's narrowing is never undone. It
+writes `sharedWith` and nothing else: never `updatedAt`, never a tombstone's deletion fields. It
+skips and counts a record whose family is blank (which of a parent's families it is about is
+exactly what the server cannot say), a malformed family id, and one whose family does not name its
+creator.
+
+1. After `firebase deploy --only functions` has shipped it, invoke it with **`{dryRun: true}`**.
+   It writes nothing and returns the counts — the scope of the leak, which the breach assessment
+   needs (`docs/legal/DPIA.md` R20, `docs/legal/BREACH-PROCEDURE.md` §3). Record them in the ops
+   log.
+2. `firebase deploy --only firestore:rules` with the `child_info`/`pets` family bound
+   (`onlyFamilyAddedToItsFamily`), so no client — an older build included — can write the leak
+   again.
+3. Invoke it without `dryRun`. It is idempotent: a dry run afterwards reports `repaired: 0`.
+
+It returns and logs counts only — `{scanned, repaired, removed, readded, dryRun, perCollection,
+skipped: {blankFamily, malformedFamily, creatorOutsideFamily}}` — never a uid, a name or a record
+id. Tests: `test/child-pet-audience-repair.test.js` here, `rules/child-pet-family-audience.test.js`
+in `firestore-tests/`; `tools/e2e/coverage.json` exempts it as operator-run.
 
 ### purgeLegacyPhotoPaths (L-4, once)
 

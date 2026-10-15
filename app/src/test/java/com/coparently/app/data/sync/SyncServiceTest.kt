@@ -91,8 +91,23 @@ class SyncServiceTest {
     private lateinit var petRepository: PetRepository
     private lateinit var accountSwitchGuard: AccountSwitchGuard
     private lateinit var custodyModelRepository: CustodyModelRepository
+    private lateinit var familyIdBackfill: FamilyIdBackfill
     private val reminderScheduler: ReminderScheduler = mockk(relaxed = true)
     private lateinit var syncService: SyncService
+
+    /**
+     * Every remote write lands unless a test says otherwise: the service reads each `Result` now,
+     * and a relaxed mock's answer for one is not something to depend on.
+     */
+    private fun stubRemoteWritesLand() {
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns Result.success(Unit)
+        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.updateChildInfo(any(), any()) } returns Result.success(Unit)
+        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns Result.success(Unit)
+    }
 
     @Before
     fun setup() {
@@ -109,6 +124,10 @@ class SyncServiceTest {
         petRepository = mockk(relaxed = true)
         accountSwitchGuard = mockk(relaxed = true)
         custodyModelRepository = mockk(relaxed = true)
+        // Relaxed rather than real: it stamps a column no assertion here reads, and a real one
+        // would need four more DAOs wired up to do nothing. A field, so a test can check what it
+        // is handed.
+        familyIdBackfill = mockk(relaxed = true)
 
         val firebaseUser = mockk<FirebaseUser>(relaxed = true)
         every { firebaseUser.uid } returns ALICE
@@ -130,15 +149,7 @@ class SyncServiceTest {
             flowOf(EventDownload(emptyList(), null))
         every { firestoreChildInfoDataSource.getChildInfoForParent(any()) } returns
             flowOf(emptyList())
-        // Every remote write lands unless a test says otherwise: the service reads each `Result`
-        // now, and a relaxed mock's answer for one is not something to depend on.
-        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreEventDataSource.updateEvent(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreEventDataSource.deleteEvent(any()) } returns Result.success(Unit)
-        coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.updateChildInfo(any(), any()) } returns Result.success(Unit)
-        coEvery { firestoreChildInfoDataSource.tombstoneChildInfo(any(), any(), any()) } returns Result.success(Unit)
+        stubRemoteWritesLand()
 
         syncService = SyncService(
             eventDao,
@@ -161,9 +172,7 @@ class SyncServiceTest {
             mockk(relaxed = true),
             mockk(relaxed = true),
             mockk(relaxed = true),
-            // The family-id backfill. Relaxed rather than real: it stamps a column no assertion
-            // here reads, and a real one would need four more DAOs wired up to do nothing.
-            mockk(relaxed = true),
+            familyIdBackfill,
             // The selected-family source. Relaxed for the same reason: `reconcile()` re-points
             // a column these tests never assert on, and a real one would need Firebase Auth.
             mockk(relaxed = true),
@@ -259,6 +268,9 @@ class SyncServiceTest {
 
     @Test
     fun `the audience backfill does not run twice for the same partner`() = runTest {
+        // The marker names the co-parent *set* now, and a set of one is written as that uid
+        // alone — exactly what the marker held when it named a single partner. So a one-family
+        // install that already ran the backfill reads its old marker as done, not as a change.
         pairWith(partnerId = BOB)
         every {
             encryptedPreferences.getString(
@@ -275,7 +287,13 @@ class SyncServiceTest {
     fun `the audience backfill runs again for a different partner`() = runTest {
         // Alice unpaired from Bob and re-paired with Carol: Carol has never received any of
         // Alice's history, so the marker must re-arm rather than read as "already done".
-        pairWith(partnerId = CAROL)
+        //
+        // Adapted when the marker stopped naming the family on screen: this is **re-pairing**,
+        // so the row says so — Bob is gone from Alice's co-parents and Carol is in them. It used
+        // to be enough to point `partnerId` at Carol, which is also exactly what a *switch*
+        // between two families does, and a switch must not re-arm anything (see "switching
+        // families alone re-queues and announces nothing", below).
+        inFamilies(partners = listOf(CAROL), selected = CAROL)
         every {
             encryptedPreferences.getString(
                 "${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$ALICE"
@@ -622,7 +640,11 @@ class SyncServiceTest {
     fun `the child-info audience backfill runs again for a different partner`() = runTest {
         // Alice unpaired from Bob and re-paired with Carol: Carol has never received any of
         // Alice's child-info history, so the marker must re-arm rather than read as "done".
-        pairWith(partnerId = CAROL)
+        //
+        // Adapted for the same reason as the events case above: the row states a re-pairing —
+        // Carol in Alice's co-parents, Bob gone — because a selection moving to Carol on its own
+        // is a switch, and a switch re-queues no child at all.
+        inFamilies(partners = listOf(CAROL), selected = CAROL)
         every {
             encryptedPreferences.getString(
                 "${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$ALICE"
@@ -694,6 +716,189 @@ class SyncServiceTest {
         syncService.performFullSync()
 
         assertEquals(listOf(ALICE, BOB), uploaded.captured["sharedWith"])
+    }
+
+    // ---- One parent, two families (M-8): a child's record stays in its own family ----------
+
+    @Test
+    fun `a child of the Bob family goes up naming Bob while the Carol family is on screen`() = runTest {
+        // The leak: Alice switched to the Carol family and one sync re-uploaded every child she
+        // had entered for the Bob family with `sharedWith: [alice, carol]` — medical profile,
+        // allergies and medications readable by Carol, gone from Bob.
+        inFamilies(partners = listOf(BOB, CAROL), selected = CAROL)
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(
+            childInfoEntity(updatedAt = now, synced = false).copy(familyId = BOB_FAMILY)
+        )
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), capture(uploaded)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        val audience = (uploaded.captured["sharedWith"] as List<*>).toSet()
+        assertTrue(audience.containsAll(listOf(ALICE, BOB)), "the family's own co-parent is named")
+        assertEquals(setOf(ALICE, BOB), audience, "nobody outside the Bob family is named")
+    }
+
+    @Test
+    fun `the push for a Bob-family child's edit goes to Bob, never to the family on screen`() =
+        runTest {
+            // The push carries the child's name. It went to `partnerId` — the family on screen.
+            inFamilies(partners = listOf(BOB, CAROL), selected = CAROL)
+            coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(
+                childInfoEntity(updatedAt = now, synced = false).copy(familyId = BOB_FAMILY)
+            )
+
+            syncService.performFullSync()
+
+            coVerify(exactly = 1) { fcmService.queueNotificationForUser(BOB, any()) }
+            coVerify(exactly = 0) { fcmService.queueNotificationForUser(CAROL, any()) }
+        }
+
+    @Test
+    fun `a child that names no family names no co-parent while there are two`() = runTest {
+        // Written before Alice paired, never stamped: it may be either family's, and a guess
+        // hands a child's health details to an adult it was never about. Alice keeps it.
+        inFamilies(partners = listOf(BOB, CAROL), selected = CAROL)
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(
+            childInfoEntity(updatedAt = now, synced = false)
+        )
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), capture(uploaded)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(listOf(ALICE), uploaded.captured["sharedWith"])
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+    }
+
+    @Test
+    fun `a child of a family that has ended goes up naming nobody from another family`() = runTest {
+        // Alice and Bob unpaired; Carol is her only co-parent now. The child is still the Bob
+        // family's — re-pairing never moves a child (item 18) — so Carol is not its audience.
+        inFamilies(partners = listOf(CAROL), selected = CAROL)
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(
+            childInfoEntity(updatedAt = now, synced = false).copy(familyId = BOB_FAMILY)
+        )
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), capture(uploaded)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(listOf(ALICE), uploaded.captured["sharedWith"])
+    }
+
+    @Test
+    fun `switching families alone re-queues and announces nothing`() = runTest {
+        // Two passes over one preference store: the first with the Bob family on screen, the
+        // second after a switch to the Carol family. The markers used to name the family on
+        // screen, so the second pass re-queued every event and child and told Carol that Alice
+        // had shared her records — none of which was new.
+        val store = mutableMapOf<String, String>()
+        backPreferencesWith(store)
+        coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 3
+        coEvery { childInfoDao.markOwnChildInfoUnsynced(ALICE) } returns 2
+
+        inFamilies(partners = listOf(BOB, CAROL), selected = BOB)
+        syncService.performFullSync()
+        coVerify(exactly = 1) { eventDao.markOwnEventsUnsynced(ALICE) }
+        coVerify(exactly = 1) { childInfoDao.markOwnChildInfoUnsynced(ALICE) }
+
+        inFamilies(partners = listOf(BOB, CAROL), selected = CAROL)
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { eventDao.markOwnEventsUnsynced(ALICE) }
+        coVerify(exactly = 1) { childInfoDao.markOwnChildInfoUnsynced(ALICE) }
+        coVerify(exactly = 0) {
+            fcmService.queueNotificationForUser(
+                any(),
+                match { it[PushPayload.TYPE] == PushPayload.RECORDS_SHARED }
+            )
+        }
+        assertEquals("$BOB,$CAROL", store["${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$ALICE"])
+        assertEquals("$BOB,$CAROL", store["${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$ALICE"])
+    }
+
+    @Test
+    fun `a second co-parent re-queues once and is told only what now names them`() = runTest {
+        // Adding a co-parent is what the backfill is for. The re-uploads each name their own
+        // family, so the Carol-family child reaches Carol and the Bob-family child stays Bob's —
+        // and the one summary push goes to Carol, who gained something, not to Bob on screen.
+        inFamilies(partners = listOf(BOB, CAROL), selected = BOB)
+        every {
+            encryptedPreferences.getString("${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$ALICE")
+        } returns BOB
+        every {
+            encryptedPreferences.getString("${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$ALICE")
+        } returns BOB
+        val bobsChild = childInfoEntity(updatedAt = now, synced = false).copy(familyId = BOB_FAMILY)
+        val carolsChild = childInfoEntity(updatedAt = now, synced = false)
+            .copy(id = "child-2", familyId = CAROL_FAMILY)
+        // Nothing was waiting before the backfill; both rows are re-publications.
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns emptyList<ChildInfoEntity>() andThen listOf(
+            bobsChild,
+            carolsChild
+        )
+        coEvery { childInfoDao.markOwnChildInfoUnsynced(ALICE) } returns 2
+        val uploads = mutableMapOf<String, Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } answers {
+            uploads[firstArg<String>()] = secondArg<Map<String, Any?>>()
+            Result.success(Unit)
+        }
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { childInfoDao.markOwnChildInfoUnsynced(ALICE) }
+        verify {
+            encryptedPreferences.putString(
+                "${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$ALICE",
+                "$BOB,$CAROL"
+            )
+        }
+        assertEquals(listOf(ALICE, BOB), uploads.getValue(CHILD_ID)["sharedWith"])
+        assertEquals(listOf(ALICE, CAROL), uploads.getValue("child-2")["sharedWith"])
+        val queued = mutableListOf<Map<String, String>>()
+        coVerify { fcmService.queueNotificationForUser(CAROL, capture(queued)) }
+        assertEquals(listOf(PushPayload.RECORDS_SHARED), queued.map { it[PushPayload.TYPE] })
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(BOB, any()) }
+    }
+
+    @Test
+    fun `a co-parent leaving re-queues nothing, and coming back re-queues again`() = runTest {
+        // Unpairing from Carol shrinks the set: nothing to re-publish — `unpairCoParent` narrows
+        // the documents server-side — but the marker must stop naming her (item 16's rule, for a
+        // set), or re-pairing with Carol would read as already done.
+        val store = mutableMapOf(
+            "${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$ALICE" to "$BOB,$CAROL",
+            "${PreferenceKeys.CHILD_INFO_AUDIENCE_BACKFILL_PREFIX}$ALICE" to "$BOB,$CAROL"
+        )
+        backPreferencesWith(store)
+
+        inFamilies(partners = listOf(BOB), selected = BOB)
+        syncService.performFullSync()
+
+        coVerify(exactly = 0) { eventDao.markOwnEventsUnsynced(any()) }
+        coVerify(exactly = 0) { childInfoDao.markOwnChildInfoUnsynced(any()) }
+        assertEquals(BOB, store["${PreferenceKeys.EVENT_AUDIENCE_BACKFILL_PREFIX}$ALICE"])
+
+        inFamilies(partners = listOf(BOB, CAROL), selected = BOB)
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { eventDao.markOwnEventsUnsynced(ALICE) }
+        coVerify(exactly = 1) { childInfoDao.markOwnChildInfoUnsynced(ALICE) }
+    }
+
+    @Test
+    fun `the family-id backfill is given every co-parent, not the family on screen`() = runTest {
+        // With two co-parents it stamps nothing (`FamilyIdBackfillTest`); handed the selection
+        // alone, it would stamp every unstamped row into whichever family was being looked at.
+        inFamilies(partners = listOf(BOB, CAROL), selected = CAROL)
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { familyIdBackfill.run(ALICE, setOf(BOB, CAROL)) }
     }
 
     @Test
@@ -1155,7 +1360,13 @@ class SyncServiceTest {
             "imageUrl" to entity.imageUrl
         )
 
-    /** Gives Alice's Room row the supplied co-parent (or none). */
+    /**
+     * Gives Alice's Room row the supplied co-parent (or none).
+     *
+     * The selection alone, with the co-parent list left at its `[]` default: the shape a row from
+     * before the list existed has (schema 31), which `FamilyAudience.coParents` counts as one
+     * co-parent. For a parent in more than one family, use [inFamilies].
+     */
     private fun pairWith(partnerId: String?) {
         coEvery { userDao.getUserById(ALICE) } returns UserEntity(
             id = ALICE,
@@ -1165,6 +1376,33 @@ class SyncServiceTest {
             colorCode = "#FF4081",
             partnerId = partnerId
         )
+    }
+
+    /**
+     * Gives Alice's Room row [partners] as her co-parents and [selected]'s family on screen — the
+     * shape `syncUserData` and `SelectedFamilySource` leave it in.
+     */
+    private fun inFamilies(partners: List<String>, selected: String?) {
+        coEvery { userDao.getUserById(ALICE) } returns UserEntity(
+            id = ALICE,
+            email = "alice@example.test",
+            name = "Alice",
+            role = "mom",
+            colorCode = "#FF4081",
+            partnerId = selected,
+            partnerIdsJson = gson.toJson(partners)
+        )
+    }
+
+    /** Backs [encryptedPreferences] with [store], so what one pass writes the next one reads. */
+    private fun backPreferencesWith(store: MutableMap<String, String>) {
+        every { encryptedPreferences.getString(any()) } answers { store[firstArg<String>()] }
+        every { encryptedPreferences.getString(any(), any()) } answers {
+            store[firstArg<String>()] ?: secondArg<String?>()
+        }
+        every { encryptedPreferences.putString(any(), any()) } answers {
+            store[firstArg<String>()] = secondArg<String>()
+        }
     }
 
     private fun eventEntity(createdByFirebaseUid: String, sharedWith: List<String>) = EventEntity(
@@ -1225,6 +1463,12 @@ class SyncServiceTest {
         const val ALICE = "alice-uid"
         const val BOB = "bob-uid"
         const val CAROL = "carol-uid"
+
+        // Spelled out rather than built with `FamilyKey.of`, as `FamilyIdBackfillTest` does: the
+        // id names stored documents, so computing it the way the code does would agree with any
+        // future change to the format instead of catching it.
+        const val BOB_FAMILY = "alice-uid__bob-uid"
+        const val CAROL_FAMILY = "alice-uid__carol-uid"
         const val CHILD_ID = "child-1"
         const val EVENT_ID = "event-1"
         const val HOUR_MS = 60L * 60 * 1000

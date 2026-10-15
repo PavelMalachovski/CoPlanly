@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="friend_section_title">Přítel s přístupem ke kalendáři</string>
-    <string name="friend_section_supporting">Opatrovník, přítel nebo prarodič, který vidí kalendář</string>
-    <string name="friend_invite_action">Pozvat přítele</string>
+    <string name="friend_section_title">Přátelé rodiny</string>
+    <string name="friend_section_supporting">Prarodič, chůva nebo přítel, který kalendář jen prohlíží, a to tak dlouho, jak určíte</string>
+    <string name="friend_invite_action">Pozvat přítele rodiny</string>
     <string name="friend_invite_code_label">Předejte jim tento kód</string>
     <string name="friend_access_until">Přístup do %1$s</string>
     <string name="friend_access_several">Rodiny: %1$d · první přístup končí %2$s</string>
@@ -23,4 +23,40 @@
     <string name="friend_empty">Nikdo mimo rodinu nemá přístup ke kalendáři.</string>
     <string name="friend_revoke_failed">Přístup se nepodařilo odebrat. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="friend_redeem_code_label">Zadejte kód, který jste dostali</string>
+    <string name="friend_calendar_title">Kalendář rodiny</string>
+    <string name="friend_calendar_family">%1$s a %2$s</string>
+    <string name="friend_calendar_read_only">Jen k prohlížení. Soukromé události se nikdy nesdílejí.</string>
+    <string name="friend_calendar_added_by">Přidal(a) %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">Účastníte se</string>
+    <string name="friend_calendar_access_ended">Váš přístup k tomuto kalendáři skončil</string>
+    <string name="friend_calendar_failed">Kalendář se nepodařilo načíst</string>
+    <string name="friend_intro">Přítel rodiny je prarodič, chůva nebo přítel, který potřebuje vědět, kde děti jsou. Kalendář jen prohlíží a nic v něm nemůže změnit.</string>
+    <string name="friend_compare_column_coparent">Druhý rodič</string>
+    <string name="friend_compare_column_friend">Přítel rodiny</string>
+    <string name="friend_compare_calendar">Kalendář</string>
+    <string name="friend_compare_custody">Rozvrh péče</string>
+    <string name="friend_compare_expenses">Výdaje</string>
+    <string name="friend_compare_chat">Chat</string>
+    <string name="friend_compare_children">Informace o dětech</string>
+    <string name="friend_compare_how_long">Jak dlouho</string>
+    <string name="friend_compare_views_and_changes">Prohlíží a mění</string>
+    <string name="friend_compare_only_views">Jen prohlíží</string>
+    <string name="friend_compare_yes">Ano</string>
+    <string name="friend_compare_no">Ne</string>
+    <string name="friend_compare_while_linked">Dokud jste propojeni</string>
+    <string name="friend_compare_duration_choice">%1$s nebo %2$s</string>
+    <string name="friend_compare_row_desc">%1$s: druhý rodič %2$s, přítel rodiny %3$s</string>
+    <string name="friend_invite_will_see_lead">Uvidí</string>
+    <string name="friend_invite_will_see_body">události rodiny v kalendáři kromě soukromých. Jen k prohlížení – nic nemůže změnit.</string>
+    <string name="friend_invite_wont_see_lead">Neuvidí</string>
+    <string name="friend_invite_wont_see_body">rozvrh péče, výdaje, chat ani informace o dětech.</string>
+    <string name="friend_invite_where_to_enter">Zadá ho ve své aplikaci CoPlanly: Nastavení → Přátelé rodiny → Mám kód od rodičů.</string>
+    <string name="friend_invite_share">Sdílet kód</string>
+    <string name="friend_invite_done">Hotovo</string>
+    <string name="friend_share_message">%1$s vás zve do rodinného kalendáře v CoPlanly. Váš kód: %2$s. V CoPlanly otevřete Nastavení → Přátelé rodiny → Mám kód od rodičů. Aplikace: %3$s</string>
+    <string name="friend_redeem_row_title">Mám kód od rodičů</string>
+    <string name="friend_redeem_row_supporting">Pokud vás pozvali jako přítele rodiny</string>
+    <string name="friend_redeem_open_calendar">Otevřít kalendář rodiny</string>
+    <string name="friend_calendar_row_supporting">%1$s a %2$s · přístup do %3$s</string>
 </resources>

@@ -101,9 +101,6 @@ private const val MONTH_PAGER_RANGE = 24L
 /** Days per week for the weekday header. */
 private const val DAYS_PER_WEEK = 7L
 
-/** Public-holiday tint strength, drawn over the cell's base fill. */
-private const val HOLIDAY_TINT_ALPHA = 0.10f
-
 /** Full-hue edge marking the first day of a custody run. */
 
 /**
@@ -436,25 +433,12 @@ private fun DayCell(
         previousSwapped = previousSwapped,
         isSchoolVacation = isSchoolVacation
     )
-    val baseColor = when (fill.base) {
-        DayCellBase.WEEKEND ->
-            if (isDarkTheme) {
-                CoPlanlyColors.WeekendBackgroundDark
-            } else {
-                CoPlanlyColors.WeekendBackgroundLight
-            }
-        DayCellBase.SURFACE -> MaterialTheme.colorScheme.surface
-    }
+    val baseColor = dayCellBaseColor(fill.base)
     // One alpha for the whole custody channel of this cell, so the band and the handover
     // triangle cannot come out at different strengths. A day borrowed from a neighbouring month
     // keeps the band and gets it recessively — see `ADJACENT_MONTH_TINT_SCALE`.
     val custodyAlpha = ParentColors.custodyTintAlpha * adjacentScale(fill.isAdjacentMonth)
-    val overlayColor = when (fill.overlay) {
-        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom", alpha = custodyAlpha)
-        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad", alpha = custodyAlpha)
-        DayCellOverlay.PUBLIC_HOLIDAY -> CoPlanlyColors.HolidayRed.copy(alpha = HOLIDAY_TINT_ALPHA)
-        DayCellOverlay.TODAY, DayCellOverlay.NONE -> Color.Transparent
-    }
+    val overlayColor = dayCellOverlayColor(fill)
 
     // The parent the child is coming *from* on a handover day, at the same custody alpha as the
     // overlay: the two triangles must read as one system, not as a tint and a competing block.
@@ -871,41 +855,6 @@ private fun DayCell(
 }
 
 /**
- * Dot colour for an event, dimmed on days outside the shown month.
- *
- * Full-strength parent hue — a dot is a fill, not text, so the AA floor that forces the event
- * *chip* onto the darker `MomChipFill`/`DadChipFill` variants does not apply here.
- *
- * An event a calendar friend takes part in wears the friend's teal instead (item 16). It still
- * belongs to a parent — `parentOwner` is untouched, because whose day it falls on is a fact
- * about custody — but the dot answers the question the friend's presence actually raises:
- * *somebody outside the two of us is involved in this one*.
- */
-@Composable
-private fun eventDotColor(
-    parentOwner: String,
-    isCurrentMonth: Boolean,
-    friendParticipates: Boolean = false
-): Color {
-    val base = when {
-        friendParticipates -> CoPlanlyColors.FriendTeal
-        parentOwner == "mom" -> ParentColors.fill("mom")
-        parentOwner == "dad" -> ParentColors.fill("dad")
-        else -> MaterialTheme.colorScheme.tertiary
-    }
-    return if (isCurrentMonth) base else base.copy(alpha = OUTSIDE_MONTH_DOT_ALPHA)
-}
-
-/**
- * How much of the custody tint a cell gets, given whether it belongs to a neighbouring month.
- *
- * A function rather than an `if` inside the cell composable, which is long enough that detekt
- * counts its branches: this is a lookup, not a decision the cell makes.
- */
-private fun adjacentScale(isAdjacentMonth: Boolean): Float =
-    if (isAdjacentMonth) CoPlanlyColors.ADJACENT_MONTH_TINT_SCALE else 1f
-
-/**
  * Settles the pager onto a month boundary with one deliberate, direction-independent tween.
  *
  * The fling velocity decides *which* month wins — a real fling turns the page the way it was
@@ -941,20 +890,8 @@ private fun CalendarState.isSettledOnBoundary(): Boolean {
 /** Release velocity (px/s) below which a swipe settles to the nearest month, not the thrown one. */
 private const val MONTH_SETTLE_FLING_THRESHOLD = 300f
 
-/** Most event dots a cell shows before collapsing the rest into a "+". */
-private const val MAX_EVENT_DOTS = 3
-
-/** Diameter of an event dot in a month cell. */
-private val EVENT_DOT_SIZE = 6.dp
-
-/** Width of the ring of the cell's base around an event dot, which keeps it 3:1 on any wash. */
-private val EVENT_DOT_HALO = 1.dp
-
 /**
  * The pending-swap arrows. Small enough not to compete with the day number or the event dots —
  * a swap under discussion is a footnote on the cell, not its headline.
  */
 private val SWAP_ARROW_SIZE = 10.dp
-
-/** Dot opacity on leading/trailing days from the neighbouring months. */
-private const val OUTSIDE_MONTH_DOT_ALPHA = 0.4f

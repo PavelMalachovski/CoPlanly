@@ -185,4 +185,23 @@ class DaySwapInboxTest {
         assertEquals(1, groups.single().dayCount)
         assertEquals(LocalDate.of(2026, 9, 2), groups.single().firstDate)
     }
+
+    @Test
+    fun `allGroups keeps past days and groups them like groups()`() {
+        val week = swap(DayOverrideStatus.ACCEPTED).copy(groupId = "week")
+
+        val groups = DaySwapInbox.allGroups(
+            mapOf(
+                "2026-09-03" to swap(DayOverrideStatus.PENDING),
+                "2026-08-21" to week,
+                "2026-08-20" to week
+            )
+        )
+
+        assertEquals(
+            listOf(LocalDate.of(2026, 8, 20) to 2, LocalDate.of(2026, 9, 3) to 1),
+            groups.map { it.firstDate to it.dayCount }
+        )
+        assertEquals(listOf("week", "single:2026-09-03"), groups.map { it.key })
+    }
 }

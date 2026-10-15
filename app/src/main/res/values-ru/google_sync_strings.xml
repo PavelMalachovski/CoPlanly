@@ -33,12 +33,15 @@
         <item quantity="other">Синхронизированы первые %1$d событий (%2$s – %3$s). В этом периоде их больше, чем вмещает один импорт.</item>
     </plurals>
     <string name="sync_google_error_not_connected">Нет подключения к Google. Войдите через Google, чтобы синхронизировать.</string>
+    <string name="sync_google_error_reconnect">Доступ к Google Calendar истёк или был отозван. Подключите его заново, чтобы продолжить синхронизацию.</string>
     <string name="sync_google_error_signed_out">Вы вышли из CoPlanly. Войдите и попробуйте ещё раз.</string>
     <string name="sync_google_error_authentication">Срок входа в Google истёк. Подключите Google Calendar заново.</string>
     <string name="sync_google_error_access_denied">У CoPlanly нет доступа к вашему Google Calendar. Проверьте разрешение в аккаунте Google.</string>
     <string name="sync_google_error_calendar_not_found">Ваш Google Calendar не найден.</string>
     <string name="sync_google_error_rate_limited">Google Calendar сейчас перегружен. Попробуйте через несколько минут.</string>
     <string name="sync_google_error_unavailable">Google Calendar сейчас недоступен. Попробуйте позже.</string>
+    <string name="sync_google_error_unreachable">Не удалось связаться с Google. Подключение сохранено, попробуйте ещё раз чуть позже.</string>
     <string name="sync_google_error_network">Не удалось связаться с Google Calendar. Проверьте подключение к интернету.</string>
     <string name="sync_google_error_unknown">Не удалось синхронизировать Google Calendar. Попробуйте ещё раз.</string>
+    <string name="sync_google_reconnect">Подключить Google Calendar заново</string>
 </resources>

@@ -24,7 +24,8 @@
       "e2e": [
         "TwoParentEventsTest",
         "MultiFamilyTest",
-        "OneParentOnScreenTest"
+        "OneParentOnScreenTest",
+        "TwoParentAccessTest#aFamilyFriendSeesTheFamilysCalendarThroughTheApp"
       ],
       "checklist": [
         "5.2"
@@ -112,7 +113,8 @@
         "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther",
         "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement",
         "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat",
-        "OnScreenAgreementsTest"
+        "OnScreenAgreementsTest",
+        "MultiFamilyCustodyTest#eachOfAlicesFamiliesKeepsItsOwnScheduleAndNeitherReachesTheOther"
       ],
       "checklist": [
         "3.11"
@@ -130,13 +132,15 @@
         "TwoParentFamilyRecordsTest#aChildAliceSavesReachesBobIntactAndItsDeletionArrivesAsATombstone",
         "TwoParentFamilyRecordsTest#aChildEditTheSyncUploadsQueuesChildInfoUpdatedForBob",
         "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce",
-        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse"
+        "TwoParentAccessTest#aGuestReadsTheOneChildRecordSheWasInvitedToAndNothingElse",
+        "MultiFamilyRecordsTest#aBobFamilyChildStaysOutOfCarolsReadsAfterAliceSwitchesAndSyncs"
       ]
     },
     "pets": {
       "e2e": [
         "TwoParentFamilyRecordsTest#aPetAliceSavesReachesBobAndItsDeletionArrivesAsATombstone",
-        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger"
+        "TwoParentRecordPhotosTest#eachKindOfRecordPhotoOpensForBobWithItsDigestAndIsRefusedToAStranger",
+        "MultiFamilyRecordsTest#aBobFamilyPetStaysOutOfCarolsReadsAfterAliceSwitchesAndSyncs"
       ]
     },
     "budgets": {
@@ -145,7 +149,8 @@
     "calendar_friends": {
       "e2e": [
         "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant",
-        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes"
+        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes",
+        "TwoParentAccessTest#aFamilyFriendSeesTheFamilysCalendarThroughTheApp"
       ],
       "checklist": [
         "5.6"
@@ -404,13 +409,17 @@
     "purgeParentHealthFields": {
       "exempt": "Operator-run one-off cleanup of the removed parent health keys, not a phone-to-phone feature; functions/test covers it."
     },
+    "repairChildAndPetAudiences": {
+      "exempt": "Operator-run one-off repair of child and pet audiences the cross-family leak widened, not a phone-to-phone feature; functions/test/child-pet-audience-repair.test.js covers it, and MultiFamilyRecordsTest covers the client writes it repairs."
+    },
     "backfillParentSlots": {
       "exempt": "Operator-only maintenance callable, not a phone-to-phone feature; functions/test covers it."
     },
     "acceptCalendarFriendInvitation": {
       "e2e": [
         "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant",
-        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes"
+        "TwoParentAccessTest#aCalendarFriendOfTwoFamiliesReadsBothAndLosesOnlyTheOneThatRevokes",
+        "TwoParentAccessTest#aFamilyFriendSeesTheFamilysCalendarThroughTheApp"
       ],
       "checklist": [
         "5.6"

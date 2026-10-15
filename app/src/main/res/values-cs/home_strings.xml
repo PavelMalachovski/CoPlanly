@@ -48,7 +48,6 @@
     <string name="home_activity_change_requested">Žádost o změnu: %1$s</string>
     <string name="home_activity_review">Zkontrolovat</string>
 
-    <string name="home_awaiting_title">Čekají na vaši odpověď</string>
     <string name="home_dialog_swap_title">Výměna dnů</string>
     <string name="home_dialog_swap_message">%1$s navrhuje změnit, u koho bude dítě: %2$s.</string>
     <string name="home_dialog_requests_title">Žádosti o změnu</string>
@@ -64,4 +63,30 @@
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Přidat událost</string>
+    <string name="home_requests_title">Žádosti</string>
+    <plurals name="home_requests_waiting_on_you">
+        <item quantity="one">%1$d čeká na vaši odpověď</item>
+        <item quantity="few">%1$d čekají na vaši odpověď</item>
+        <item quantity="many">%1$d čeká na vaši odpověď</item>
+        <item quantity="other">%1$d čeká na vaši odpověď</item>
+    </plurals>
+    <plurals name="home_requests_waiting_on_them">
+        <item quantity="one">%1$d čeká na odpověď: %2$s</item>
+        <item quantity="few">%1$d čekají na odpověď: %2$s</item>
+        <item quantity="many">%1$d čeká na odpověď: %2$s</item>
+        <item quantity="other">%1$d čeká na odpověď: %2$s</item>
+    </plurals>
+    <!-- A noun phrase and the name in brackets, not "X přijal(a)": a name cannot agree with a gendered verb. -->
+    <string name="home_requests_answer_accepted">%1$s: vaše žádost přijata (%2$s)</string>
+    <string name="home_requests_answer_declined">%1$s: vaše žádost odmítnuta (%2$s)</string>
+    <string name="home_requests_day_today">Dnes</string>
+    <string name="home_requests_day_yesterday">Včera</string>
+    <string name="home_requests_none">Zatím žádné žádosti</string>
+    <string name="home_requests_all">Všechny žádosti a odpovědi</string>
+    <string name="home_activity_accepted_new_time">Přijat váš nový čas: %1$s</string>
+    <string name="home_activity_declined_new_time">Odmítnut váš nový čas: %1$s</string>
+    <string name="home_activity_accepted_swap">Přijata vaše výměna dnů: %1$s</string>
+    <string name="home_activity_declined_swap">Odmítnuta vaše výměna dnů: %1$s</string>
+    <string name="home_activity_accepted_event">Přijato: %1$s</string>
+    <string name="home_activity_declined_event">Odmítnuto: %1$s</string>
 </resources>

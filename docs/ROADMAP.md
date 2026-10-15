@@ -136,6 +136,7 @@ invocation is yours.
 | **MON-21 deploy** | `firebase deploy --only firestore:rules` (`planCitationValid`, `planCitationKeptOrDropped`, the key in both `hasOnly` lists) | Without it a cited proposal is refused outright and saved locally instead — the one failure in this item that changes what a parent sees. Rules order as for MON-4: after REL-3's record backfill. |
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. **MON-23 needs the same deploy**: the vault and chat attachments live under `family_documents/` and `chat_attachments/`, which the live bucket refuses outright until it runs. |
 | **MON-23 deploy** | `firebase deploy --only storage`, `firebase deploy --only firestore:rules,firestore:indexes` (the `family_documents` block and its index, the `messages` attachment cap), `firebase deploy --only functions` (the vault in account deletion and the tombstone sweep, chat files erased with the chat) | Rules order as for MON-4: after REL-3's record backfill. Without the storage deploy nothing can be uploaded; without the rules the vault list and every filing are refused; without the functions an erased account leaves its vault files and chat files in the bucket. |
+| **Cross-family leak repair** (October 2026) | `firebase deploy --only functions` → invoke `repairChildAndPetAudiences` with `{dryRun: true}` → `firebase deploy --only firestore:rules` (the `child_info`/`pets` family bound) → invoke it without `dryRun` | The dry run's counts are the leak's scope for the breach assessment (DPIA R20, `BREACH-PROCEDURE.md` §3) — record them. Until the rules are deployed an older build in a two-family account can still write the leak; the real run removes the other family's parent from every child's and pet's audience. `functions/README.md` has the runbook. See §11, October 2026. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
 | **REL-4 (legal)** | Fill the "Owner must fill" tables (identity, contact, Firestore region, dates, liability, law); a lawyer reads the drafts; the three pages get hosted; the URL goes into `publishedPrivacyPolicyUrl` | This app processes a child's health data. No template survives that unread. |
@@ -521,10 +522,14 @@ original.
    an access token for any signed-in caller, which is precisely the capability that taking the
    secret out of the APK removes. So the exchange records a SHA-256 of the refresh token against
    the caller's uid (`google_oauth/{uid}`, denied to every client in both directions) and the
-   refresh grant refuses a token that is not the one this account was issued. An unknown token is
-   refused rather than trusted on first use, because trust-on-first-use hands the account to
-   whoever presents a stolen token first; the cost is one re-consent for anybody whose Calendar
-   was connected before this shipped, surfacing as the reconnect prompt the app already has.
+   refresh grant refuses a token that is not one this account was issued — any of the five newest
+   since October 2026 (`refreshTokenHashes`; a single fingerprint let every new connection end the
+   previous device's). An unknown token is refused rather than trusted on first use, because
+   trust-on-first-use hands the account to whoever presents a stolen token first; the cost is one
+   re-consent for anybody whose Calendar was connected before this shipped, surfacing as Settings'
+   **Reconnect** button. (This line used to call it "the reconnect prompt the app already has";
+   until October 2026 a failed refresh surfaced only as "Not connected", or as "Not signed in"
+   after a relaunch, and never as a reconnect.)
 
    PKCE is untouched and still absent. It is the *other* half of this line and it is not the half
    that was leaking a credential.
@@ -2365,8 +2370,9 @@ In short:
   their profile, nothing else — so the professional gets a list-shaped agenda (four weeks at a
   time, whose day it is **named** rather than coloured, the family's shared events) and a
   read-only parenting plan with both halves side by side. Both read Firestore live and write
-  nothing to Room: a professional's phone holds no copy of the family. Building the friend's
-  view on the same pieces is now a small change.
+  nothing to Room: a professional's phone holds no copy of the family. *(October 2026: the friend's
+  view was then built on the same pieces — `FriendCalendarScreen`, phase 2 of the tester feedback,
+  §11 — and since then neither reader is shown an event still waiting for an answer or declined.)*
 - **A push, server-only**: `professional_access_requested` to both parents when a code is
   redeemed. It says consent is being asked for, never that access began.
 
@@ -2795,7 +2801,9 @@ about the child and must be shared.
   would switch to the newer one's family), and `MainActivity.readLaunchIntent` switches through
   `SelectedFamilySource.select` **before** it arms any deep link, since `NavGraph` navigates the
   moment one appears. `select` refuses a family the account is not in, so a stale notification
-  opens on whatever is showing.
+  opens on whatever is showing — and since October 2026 a family this device has not learnt of
+  yet (a second family's `pairing_accepted`, tapped before the listener or a sync brought it in)
+  is switched to by the reconcile that brings it, within a minute (CLAUDE.md item 39).
 - **Done (September 2026) — chat follows the selected family.** This was step (1) of the order
   the badges bullet used to give, and a defect in its own right: `ChatViewModel.unreadCount`,
   `coParentLink` and `ChatMirror` keyed on `PairingRepository.observePairingState()`, which reads
@@ -2952,6 +2960,92 @@ job that runs the one thing it cannot.
 
 Kept rather than deleted, because the reasoning is what stops each one coming back. Full arguments
 in `docs/AUDIT-2026-08.md` under the § numbers cited.
+
+### October 2026
+
+**Tester feedback, phases 0 and 1** (PR #130). A tester who co-parents in two families walked
+through the app with the owner and left eleven notes; these are the defects among them. Phase 2 is
+`docs/superpowers/specs/2026-10-14-zuzana-feedback-phase-2-design.md`.
+
+- **A child's or a pet's record stays in its own family** (phase 0). Every writer of a
+  `child_info` or `pets` audience named the co-parent of the family on screen, so a parent in two
+  families who switched and synced handed the first family's children — medical details included —
+  to the second family's parent, and the rules accepted it. Fixed in the client
+  (`FamilyAudience.recordPartnerFor`, audience-backfill markers keyed on the co-parent set,
+  `FamilyIdBackfill` and saves never stamping a family by guess) and in `firestore.rules` (a write
+  adds to a stamped record's `sharedWith` only that family's two parents, or a guest it names);
+  `repairChildAndPetAudiences` undoes what was written. CLAUDE.md items 16, 18, 23 and 38; DPIA
+  R20. Left: the deploy and the repair, dry run first (§1, 💻).
+- **A second family reaches the inviter's open phone at once** (#4): the pairing mirror keys on
+  the co-parent set, not `partnerId`, and the tap on a new family's `pairing_accepted` push waits up
+  to a minute for the family to arrive. CLAUDE.md item 39.
+- **Names and colours follow the family on screen** (#11): `ParentsSource`, `FamilyKindSource`,
+  Home, the export and the parenting plan follow `CoParentOnScreen`'s rule, never the pairing
+  state's partner (the first co-parent). CLAUDE.md design refresh item 12.
+- **Google Calendar stays connected** (#9): "connected" is a stored refresh token, a 401 renews
+  once, Google's `invalid_grant` and an unknown token become a **Reconnect** button, the server
+  keeps five refresh-token fingerprints per account, the sync switch is stored, and "Sign out from
+  Calendar sync" removes Google's keys only. `functions/README.md` "Google OAuth";
+  `docs/google-oauth-testing-mode.md` for Testing's 7-day expiry.
+- **Parenting plan answers and agreements are saved.** Every save read the pairing state's first
+  value, which is always `Loading`, and returned. CLAUDE.md item 17.
+- **A chat card about an event opens that event** — its preview, the inbox while it waits on the
+  reader, or "That event no longer exists." — rather than the change-request inbox. UX/UI item 5.
+
+**Tester feedback, phase 2** (PR #130; spec `docs/superpowers/specs/2026-10-14-zuzana-feedback-phase-2-design.md`,
+plan `docs/superpowers/plans/2026-10-14-zuzana-feedback-phase-2.md`). Three of the notes, built
+after the owner's answers:
+
+- **Family friends, and what they see** (item 1). Settings → Family names the two roles ("Co-parent",
+  "Family friends", each with a line saying what it is); the Friends screen says who a family
+  friend is and tabulates what each role can do, cell by cell from the rules; the invite sheet says
+  what the friend will and won't see and shares the code with the path to type it in. A family
+  friend now has a **calendar of her own** — four weeks of the family's agreed events, who added
+  each, "You take part" — read live from Firestore and never stored (`FriendCalendarScreen`), named
+  by the parents' first names the callable puts on her grant; a redeemed code opens it, a revoke
+  ends it. CLAUDE.md's calendar-friend rule; checklist §5.6.
+- **What the co-parent wrote, and on which day** (item 2). The card of an event waiting for an
+  answer shows the creator's words beside their initial, the time on the reader's clock and a
+  `MiniMonth` with the day ringed; the event form tells the creator their description will be read
+  there. Design item 1, CLAUDE.md item 40.
+- **Requests and their history** (item 3). One source for the family on screen feeds the inbox
+  (now **Requests**: waiting for your answer, waiting for the co-parent, History), Home's
+  always-present **Requests** row, its swap pop-up and the co-parent's answers in Home's feed, and
+  the calendar banner — all counted from one inbox (the banner leaves out a custody proposal, which
+  has a banner of its own), with swaps from the family's own custody document, and a History
+  derived from the records rather than stored. CLAUDE.md item 40; checklist §5.8.
+
+**A custody schedule per family** (schema 45, found in phase 2's final review). The phone kept one
+active custody row for every family. With a second family on screen, the mirror, every sync and the
+pattern editor could write the first family's schedule, seasonal layers and children's overrides
+into the second family's document. Each row now names its family, and every read answers for the
+family on screen. CLAUDE.md item 41; checklist §5.2. Left: the device look, and one manual repair.
+On the live project, a family whose document an older build already overwrote sets its schedule
+again, because nothing says which pattern was which family's.
+
+Left: the device runs (§5.6, §5.8), the functions deploy (`parentNames` on new grants; existing
+grants name nobody until re-invited — no backfill, spec §4.4, the feature has only closed-test
+users), and phase 3 (day swaps, which
+reuse `MiniMonth`).
+
+**Still open**, found on the way and older than these fixes:
+
+- An **event** with no `familyId` on a two-family account still takes the family on screen
+  (`FamilyAudience.partnerFor`'s fallback) — the rule children and pets now follow is not applied
+  to events.
+- A **pet with no family** can still let anybody into `sharedWith` as a "guest" under the rules
+  (`isMyGuestlessAudience` subtracts a `guests` map's keys; the family bound starts once a pet names
+  a family).
+- The `child_info` update rule's **non-creator branch does not pin `familyId`** (the creator's
+  requires `familyIsMineOrBlank`); what it adds is still bounded by the family named before the
+  write.
+- **Unpair with two families** answers `ambiguous-partner`: `PairingFunctions` calls
+  `unpairCoParent` naming nobody.
+- `ProfileViewModel`'s co-parent card and the pairing screen's `PairedPartnerCard` still show the
+  **first** co-parent (`PairingState.Paired.partner`).
+- **Google import semantics** (M-7's neighbour): an event deleted in Google stays in CoPlanly, one
+  deleted in CoPlanly comes back on the next import, and a CoPlanly edit is overwritten by it — the
+  import writes by Google's event id with `REPLACE` and never reconciles by absence.
 
 ### September 2026
 

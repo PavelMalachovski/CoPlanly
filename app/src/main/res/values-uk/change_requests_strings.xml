@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="change_request_inbox_title">Запити на зміну</string>
+    <string name="change_request_inbox_title">Запити</string>
     <string name="change_request_back">Назад</string>
-    <string name="change_request_empty_title">Поки немає запитів на зміну</string>
+    <string name="change_request_empty_title">Поки немає запитів</string>
     <string name="change_request_empty_hint">Відкрийте подію та натисніть «Запропонувати зміну», щоб запропонувати другому з батьків новий час.</string>
-    <string name="change_request_incoming">Вхідні</string>
-    <string name="change_request_outgoing">Вихідні</string>
     <string name="change_request_status_pending">Очікує</string>
     <string name="change_request_status_accepted">Прийнято</string>
     <string name="change_request_status_declined">Відхилено</string>
@@ -42,4 +40,22 @@
     <string name="change_request_error_signed_out">Ви вийшли з акаунта. Увійдіть і спробуйте ще раз.</string>
     <string name="change_request_error_not_paired">Спершу зʼєднайтеся з другим із батьків, щоб надсилати запити на зміну.</string>
     <string name="change_request_error_send_failed">Не вдалося надіслати запит на зміну. Спробуйте ще раз.</string>
+    <string name="request_section_waiting_on_you">Чекають на вашу відповідь</string>
+    <string name="request_section_waiting_on_them">Чекають на відповідь: %1$s</string>
+    <string name="request_section_history">Історія</string>
+    <string name="request_history_new_time">Новий час: %1$s</string>
+    <string name="request_history_day_swap">Обмін днями: %1$s</string>
+    <string name="request_history_custody">Новий графік опіки</string>
+    <!-- Noun phrases and "ви", not "X відповів(ла)": a name cannot agree with a gendered verb. -->
+    <string name="request_history_yours_answered">Ваш запит · відповідь: %1$s</string>
+    <string name="request_history_theirs_answered">Запит: %1$s · ви відповіли</string>
+    <string name="request_history_withdrawn_by_you">Ви відкликали запит</string>
+    <string name="request_history_withdrawn_by">%1$s: запит відкликано</string>
+    <string name="request_history_when">%1$s · %2$s</string>
+    <plurals name="request_swap_first_and_more">
+        <item quantity="one">%1$s і ще %2$d день</item>
+        <item quantity="few">%1$s і ще %2$d дні</item>
+        <item quantity="many">%1$s і ще %2$d днів</item>
+        <item quantity="other">%1$s і ще %2$d дня</item>
+    </plurals>
 </resources>

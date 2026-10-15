@@ -17,13 +17,14 @@
     <string name="parent_color_custom_hue">Оттенок</string>
     <string name="settings_signed_in_as">Вы вошли как: %1$s</string>
     <string name="settings_gcal_not_signed_in">Вход не выполнен</string>
+    <string name="settings_gcal_needs_reconnect">Доступ истёк или был отозван</string>
     <string name="settings_unknown">Неизвестно</string>
     <string name="settings_calendar_sign_out">Выйти из синхронизации календаря</string>
     <string name="settings_account">Аккаунт</string>
     <string name="settings_account_description">Полный выход из приложения. Для доступа к аккаунту потребуется войти снова.</string>
     <string name="settings_account_sign_out">Выйти из приложения</string>
-    <string name="settings_pairing_title">Связь со вторым родителем</string>
-    <string name="settings_pairing_description">Пригласите второго родителя или управляйте связью</string>
+    <string name="settings_pairing_title">Второй родитель</string>
+    <string name="settings_pairing_description">Второй родитель вашего ребёнка: общий календарь, график опеки, расходы и чат</string>
     <string name="settings_child_info_title">Информация о ребёнке</string>
     <string name="settings_child_info_description">Лекарства, занятия, аллергии</string>
     <string name="settings_pets_title">Питомцы</string>

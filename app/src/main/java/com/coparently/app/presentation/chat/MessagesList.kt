@@ -55,7 +55,6 @@ import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
-import com.coparently.app.domain.model.MessageType
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
@@ -156,8 +155,9 @@ private fun buildThread(messages: List<Message>): List<ThreadEntry> {
  *   DELIVERED/READ by `ChatViewModel` via `ChatReadState.statusFor`
  * @param currentUserId Firebase uid of the signed-in parent, to side the bubbles
  * @param onRefresh Pull-to-refresh handler, or null to disable the gesture
- * @param onEventLinkClick Handler for tapping a change-request card, given the linked event id,
- *   or null to render such cards inert (e.g. while the destination is not wired up yet)
+ * @param onEventLinkClick Handler for tapping a change-request card, given the event id it names,
+ *   or null to render such cards inert (e.g. while the destination is not wired up yet). A card
+ *   about an event itself opens through [LocalChatEventCard] instead — see [ChatCardTarget]
  * @param modifier Modifier for the list
  * @param revealMessageId A message to scroll to and briefly highlight — a chat search result
  *   (MON-15) — or null. It may not be loaded yet: the caller widens the window, and the scroll
@@ -443,8 +443,9 @@ private fun DaySeparator(date: LocalDate) {
  * @param isCurrentUser Whether this parent sent it, which sides and colours the bubble
  * @param startsGroup First of a run by the same sender — takes the larger top gap
  * @param endsGroup Last of a run — carries the tail corner
- * @param onEventLinkClick Handler for tapping a change-request card, given the linked event id,
- *   or null to render such cards inert
+ * @param onEventLinkClick Handler for tapping a change-request card — an `EVENT_LINK` message or a
+ *   change-request announcement — given the event id it names, or null to render such cards inert.
+ *   Not for a card about an event itself, which opens the event through [LocalChatEventCard]
  * @param onOpenInbox Opens the change-request inbox with nothing highlighted — the tap target
  *   for a day-swap card, whose entity is a date and not an event id, or null to render it inert
  * @param onRetryFailed Re-sends everything still queued, from a tap on a failed message, or null
@@ -464,23 +465,18 @@ fun MessageItem(
     onOpenInbox: (() -> Unit)? = null,
     onRetryFailed: (() -> Unit)? = null
 ) {
-    // A change-request card is the one bubble that goes somewhere. It carries the event id in
-    // `attachments`; the inbox resolves that to the request itself.
-    //
-    // An announcement about an event or a change request goes to the same place, by the same id.
-    // A day-swap announcement opens the same inbox unhighlighted — its entity is a date, which
-    // the route's event-id argument would misread as a request that no longer exists. An
-    // expense announcement stays inert: expenses have no route reachable from chat, and a
-    // bubble that looks tappable and does nothing is worse than one that plainly is not.
+    // Where a tap leads is `ChatCardTarget`'s decision: a change-request card opens the inbox on
+    // its request, a day-swap card the inbox unhighlighted, and a card about an event the event
+    // itself, through the thread's `ChatEventCardHost`. A card whose destination is not wired here
+    // stays inert rather than showing a chevron that does nothing.
     val activity = message.activity
-    val onCardTap: (() -> Unit)? = when {
-        message.messageType == MessageType.EVENT_LINK ->
-            message.attachments.firstOrNull()?.let { id -> onEventLinkClick?.let { { it(id) } } }
-        activity?.entityType == ActivityEntityType.EVENT ||
-            activity?.entityType == ActivityEntityType.CHANGE_REQUEST ->
-            onEventLinkClick?.let { { it(activity.entityId) } }
-        activity?.entityType == ActivityEntityType.DAY_SWAP -> onOpenInbox
-        else -> null
+    val target = ChatCardTarget.of(message)
+    val openEvent = LocalChatEventCard.current
+    val onCardTap: (() -> Unit)? = when (target) {
+        is ChatCardTarget.ChangeRequest -> onEventLinkClick?.let { open -> { open(target.eventId) } }
+        is ChatCardTarget.Event -> openEvent?.let { open -> { open(target.eventId) } }
+        ChatCardTarget.Inbox -> onOpenInbox
+        null -> null
     }
 
     // The sentence is composed **here**, on the reading device, from the facts the sender put in
@@ -511,7 +507,10 @@ fun MessageItem(
         if (message.attachments.any { it.startsWith(ChatAttachmentCodec.PREFIX) }) {
             LocalChatAttachments.current?.invoke(message, isCurrentUser)
         }
-        val openLabel = stringResource(R.string.chat_open_change_request)
+        // What TalkBack says the tap does: an event card opens the event, not a change request.
+        val openLabel = stringResource(
+            if (target is ChatCardTarget.Event) R.string.chat_open_event else R.string.chat_open_change_request
+        )
         // A co-parent's own words can be reported with a long press (play-final audit F-10); a
         // card the app composed cannot, and nothing changes while no support address is set.
         ReportableBubble(message = message, isCurrentUser = isCurrentUser) {
@@ -737,7 +736,7 @@ private const val META_ALPHA = 0.78f
 /** Size of the delivery-receipt glyph under an outgoing bubble. */
 private val RECEIPT_ICON_SIZE = 13.dp
 
-/** How much larger the change-request card's chevron is than the delivery-receipt glyph. */
+/** How much larger a tappable card's chevron is than the delivery-receipt glyph. */
 private const val CHEVRON_SCALE = 1.4f
 
 /** Opacity of the wash behind a message a search result jumped to. */

@@ -3,6 +3,7 @@ package com.coparently.app.domain.repository
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.PartnerSummary
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -23,6 +24,21 @@ interface PairingRepository {
      * briefly on a cold start before Firebase Auth restores its session.
      */
     fun observePairingState(): Flow<PairingState>
+
+    /**
+     * [partnerUid]'s profile, every time their own `users/{uid}` document changes — a rename, a
+     * new photo, a slot, a colour.
+     *
+     * For a co-parent [observePairingState] does not carry. That state names the co-parent the
+     * server pins `partnerId` to, which `acceptPairingInvitation` keeps on the *first* one, so a
+     * parent showing their second family needs this to name the co-parent actually on screen
+     * (`presentation/common/CoParentOnScreen.kt`). Only a co-parent's document is readable
+     * (`firestore.rules`' `isPartnerOf`); anybody else's reads as a profile with no fields.
+     *
+     * [PartnerSummary.pairedSinceMillis] is null in every summary: `users/{uid}.pairedAt` is when
+     * this account's *latest* link was made, which says nothing about this one.
+     */
+    fun observeCoParentProfile(partnerUid: String): Flow<PartnerSummary>
 
     /**
      * Returns this user's outstanding code/QR/link invite, creating one only

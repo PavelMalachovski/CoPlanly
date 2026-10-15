@@ -43,9 +43,10 @@ import javax.inject.Singleton
  *
  * Three triggers, each for a fact the widget shows:
  * - **Room** ([start]): an event or the custody schedule changed — a parent's own edit, the
- *   co-parent's arriving by sync, an accepted swap. Observed through Room's invalidation tracker
- *   rather than by re-running the day's query on every write, and debounced, because a sync
- *   writes rows in bursts.
+ *   co-parent's arriving by sync, an accepted swap — or the signed-in parent's row did, whose
+ *   family on screen decides which family's schedule is drawn (schema 45). Observed through
+ *   Room's invalidation tracker rather than by re-running the day's query on every write, and
+ *   debounced, because a sync writes rows in bursts.
  * - **The parents' names** ([followParents]): while the app is on screen, the names and colours
  *   [ParentsSource] loads are remembered for the widget by [TodayWidgetNames], and a change
  *   redraws it. Only while on screen, because that source attaches Firestore listeners and must
@@ -123,8 +124,11 @@ class TodayWidgetRefresher @Inject constructor(
         /** Long enough to fold a sync's burst of writes into one redraw. */
         const val REDRAW_DEBOUNCE_MS = 2_000L
 
-        /** The tables the widget's day is computed from: events, and the pattern with its swaps. */
-        val WATCHED_TABLES = arrayOf("events", "custody_models")
+        /**
+         * The tables the widget's day is computed from: events, the pattern with its swaps, and the
+         * signed-in parent's row, which says whose family's pattern that is (schema 45).
+         */
+        val WATCHED_TABLES = arrayOf("events", "custody_models", "users")
     }
 }
 

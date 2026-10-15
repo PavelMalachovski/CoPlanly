@@ -18,13 +18,14 @@
     <string name="parent_color_custom_hue">Shade</string>
     <string name="settings_signed_in_as">Signed in as: %1$s</string>
     <string name="settings_gcal_not_signed_in">Not signed in</string>
+    <string name="settings_gcal_needs_reconnect">Access expired or was revoked</string>
     <string name="settings_unknown">Unknown</string>
     <string name="settings_calendar_sign_out">Sign out from Calendar sync</string>
     <string name="settings_account">Account</string>
     <string name="settings_account_description">Sign out of the app completely. This will require you to sign in again to access your account.</string>
     <string name="settings_account_sign_out">Sign out of app</string>
-    <string name="settings_pairing_title">Co-parent pairing</string>
-    <string name="settings_pairing_description">Invite or manage your co-parent</string>
+    <string name="settings_pairing_title">Co-parent</string>
+    <string name="settings_pairing_description">Your child\'s other parent: shared calendar, custody schedule, expenses and chat</string>
     <string name="settings_child_info_title">Child information</string>
     <string name="settings_child_info_description">Medications, activities, allergies</string>
     <string name="settings_pets_title">Pets</string>

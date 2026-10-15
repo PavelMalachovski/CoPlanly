@@ -15,6 +15,7 @@ import com.coparently.app.domain.export.RecordId
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.CalendarFriendPolicy
+import com.coparently.app.domain.friends.FriendCalendarRead
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.model.ChildInfo
@@ -70,8 +71,10 @@ import java.util.UUID
  *
  * What it cannot do: deliver a push (FCM has no emulator — the queued document is asserted), open
  * the feed in a calendar app, or render any of the screens. The friend's event query is the shape
- * `firestore-tests/rules/friend-calendar.test.js` names as the one a friend client must run: no
- * screen in the app issues it yet, so it is run here directly on the friend's Firestore client.
+ * `firestore-tests/rules/friend-calendar.test.js` names as the one a friend client must run. Since
+ * phase 2 the app issues it, through `FriendRepository.observeFamilyEvents` (the friend calendar's
+ * source), and [aFamilyFriendSeesTheFamilysCalendarThroughTheApp] reads through that; the older
+ * cases run it directly on the friend's Firestore client.
  */
 @RunWith(AndroidJUnit4::class)
 class TwoParentAccessTest : TwoParentTest() {
@@ -197,6 +200,63 @@ class TwoParentAccessTest : TwoParentTest() {
             friendsEventIds(grandma, aliceFamily, aliceParents)
         }
         assertTrue(daveEvent.id in friendsEventIds(grandma, daveFamily, daveParents))
+    }
+
+    /**
+     * Phase 2: a family friend reads the family's calendar the way the app does — through
+     * `FriendRepository.observeFamilyEvents`, the friend calendar screen's source — with the two
+     * parents named on her grant; never a private event, and never one from the inviting parent's
+     * other family; and a revoke ends the read with "access ended", which is what the screen says.
+     */
+    @Test
+    fun aFamilyFriendSeesTheFamilysCalendarThroughTheApp() = runBlocking<Unit> {
+        val carol = newParent("Carol")
+        // Not `pair()`: Alice's pairing state keeps naming Bob, her first co-parent, so it can never
+        // name Carol. Her phone learns the second family from the set, as MultiFamilyTest waits for it.
+        val carolsCode = alice.pairingRepository.createOrReuseInviteCode().getOrThrow()
+        carol.pairingRepository.redeem(carolsCode.code).getOrThrow()
+        carol.awaitPairedWith(alice.uid)
+        alice.awaitFamilyWith(carol.uid)
+        val bobFamily = FamilyKey.of(alice.uid, bob.uid)
+        val carolFamily = FamilyKey.of(alice.uid, carol.uid)
+
+        EmulatorEnvironment.step("Alice adds a shared and a private event in Bob's family, and one in Carol's")
+        checkNotNull(alice.selectedFamilySource.select(bobFamily)) { "Alice cannot select Bob's family" }
+        val shared = insertEvent(alice, "Swimming lesson")
+        val private = insertEvent(alice, "Therapy", isPrivate = true)
+        checkNotNull(alice.selectedFamilySource.select(carolFamily)) { "Alice cannot select Carol's family" }
+        val otherFamily = insertEvent(alice, "Dinner with Carol's family")
+        checkNotNull(alice.selectedFamilySource.select(bobFamily)) { "Alice cannot select Bob's family again" }
+
+        EmulatorEnvironment.step("Alice invites a family friend with Bob's family on screen; Grandma redeems")
+        val invite = alice.friendRepository.inviteFriend(System.currentTimeMillis() + MONTH_MS).getOrThrow()
+        val grandma = newParent("Grandma")
+        grandma.friendRepository.acceptFriendInvite(invite.code).getOrThrow()
+        val grant = grandma.friendRepository.myGrants().single()
+        assertEquals(bobFamily, grant.familyId)
+        assertEquals(mapOf(alice.uid to "Alice", bob.uid to "Bob"), grant.parentNames)
+
+        EmulatorEnvironment.step("Grandma's calendar holds the shared event and nothing else of Alice's")
+        val today = LocalDate.now()
+        val lastDay = today.plusDays(FRIEND_WINDOW_DAYS)
+        val read = withTimeout(EmulatorParent.WAIT_MS) {
+            grandma.friendRepository.observeFamilyEvents(grant.familyId, today, lastDay).first()
+        }
+        assertTrue("Grandma's calendar read was $read", read is FriendCalendarRead.Events)
+        val ids = (read as FriendCalendarRead.Events).events.map { it.id }
+        assertTrue("the shared event is missing from $ids", shared.id in ids)
+        assertFalse("a private event reached the friend", private.id in ids)
+        assertFalse("the other family's event reached the friend", otherFamily.id in ids)
+
+        EmulatorEnvironment.step("Bob revokes; Grandma's calendar says her access ended")
+        bob.friendRepository.revokeFriend(grandma.uid).getOrThrow()
+        // The first answer that is not a list of events: a stale cached list may come first, but
+        // what the read ends in is the refusal.
+        val after = withTimeout(EmulatorParent.WAIT_MS) {
+            grandma.friendRepository.observeFamilyEvents(grant.familyId, today, lastDay)
+                .first { it !is FriendCalendarRead.Events }
+        }
+        assertEquals(FriendCalendarRead.AccessEnded, after)
     }
 
     @Test
@@ -653,6 +713,9 @@ class TwoParentAccessTest : TwoParentTest() {
 
     private companion object {
         const val MONTH_MS = 30L * 24 * 60 * 60 * 1000
+
+        /** The friend calendar's four-week window, as its ViewModel reads it. */
+        const val FRIEND_WINDOW_DAYS = 28L
         const val PERIOD_DAYS = 30L
         const val POLL_MS = 250L
 

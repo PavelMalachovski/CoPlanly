@@ -9,6 +9,7 @@ import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.ChildInfo
 import com.google.firebase.auth.FirebaseUser
+import com.google.gson.Gson
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -22,6 +23,7 @@ import org.junit.Test
 import java.io.IOException
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * Unit tests for [ChildInfoRepositoryImpl]'s Firestore write path.
@@ -109,6 +111,87 @@ class ChildInfoRepositoryImplTest {
         val uploaded = slot<Map<String, Any?>>()
         coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
         assertEquals(listOf(ALICE), uploaded.captured["sharedWith"])
+    }
+
+    // ---- One parent, two families (M-8) -----------------------------------------------------
+
+    @Test
+    fun `editing a Bob-family child while the Carol family is on screen publishes to Bob only`() =
+        runTest {
+            // The edit path of the leak: `upsertChildInfo` named the co-parent of the family on
+            // screen, so editing — or withdrawing health consent over, or revoking a guest from —
+            // a Bob-family child with the Carol family selected handed it to Carol.
+            coEvery { userDao.getUserById(ALICE) } returns
+                userEntity(partnerId = CAROL, partnerIds = listOf(BOB, CAROL))
+            coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
+                Result.success(Unit)
+
+            repository.upsertChildInfo(childInfo(createdByFirebaseUid = ALICE).copy(familyId = BOB_FAMILY))
+
+            val uploaded = slot<Map<String, Any?>>()
+            coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
+            assertEquals(listOf(ALICE, BOB), uploaded.captured["sharedWith"])
+            assertEquals(BOB_FAMILY, uploaded.captured["familyId"], "a child keeps its family")
+        }
+
+    @Test
+    fun `a child created with two co-parents belongs to the family on screen`() = runTest {
+        // Created now, on this screen: the family it is made in is the one being looked at.
+        coEvery { userDao.getUserById(ALICE) } returns
+            userEntity(partnerId = CAROL, partnerIds = listOf(BOB, CAROL))
+        coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns null
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
+            Result.success(Unit)
+
+        repository.upsertChildInfo(childInfo(createdByFirebaseUid = ALICE))
+
+        val uploaded = slot<Map<String, Any?>>()
+        coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
+        assertEquals(CAROL_FAMILY, uploaded.captured["familyId"])
+        assertEquals(listOf(ALICE, CAROL), uploaded.captured["sharedWith"])
+    }
+
+    @Test
+    fun `an existing child with no family keeps none and names no co-parent while there are two`() =
+        runTest {
+            // Written before Alice paired, never stamped. Stamping the family on screen at this
+            // edit would be the guess FamilyIdBackfill and the server both refuse, and would put
+            // the child's health details in front of that family's parent.
+            coEvery { userDao.getUserById(ALICE) } returns
+                userEntity(partnerId = CAROL, partnerIds = listOf(BOB, CAROL))
+            val stored = with(repository) { childInfo(createdByFirebaseUid = ALICE).toEntity() }
+            coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns stored
+            coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
+                Result.success(Unit)
+
+            repository.upsertChildInfo(childInfo(createdByFirebaseUid = ALICE).copy(medicalNotes = "Asthma"))
+
+            val uploaded = slot<Map<String, Any?>>()
+            coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
+            assertEquals(listOf(ALICE), uploaded.captured["sharedWith"])
+            assertEquals("", uploaded.captured["familyId"])
+            val written = slot<ChildInfoEntity>()
+            coVerify { childInfoDao.insertChildInfo(capture(written)) }
+            assertNull(written.captured.familyId, "the row stays unstamped")
+        }
+
+    @Test
+    fun `the pull's upload names each child's own family, not the one on screen`() = runTest {
+        coEvery { userDao.getUserById(ALICE) } returns
+            userEntity(partnerId = CAROL, partnerIds = listOf(BOB, CAROL))
+        val bobsChild = with(repository) {
+            childInfo(createdByFirebaseUid = ALICE).copy(familyId = BOB_FAMILY).toEntity()
+        }
+        coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(bobsChild)
+        coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
+            Result.success(Unit)
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns flowOf(emptyList())
+
+        repository.pullOnce()
+
+        val uploaded = slot<Map<String, Any?>>()
+        coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
+        assertEquals(listOf(ALICE, BOB), uploaded.captured["sharedWith"])
     }
 
     @Test
@@ -229,18 +312,26 @@ class ChildInfoRepositoryImplTest {
         syncedToFirestore = false
     )
 
-    private fun userEntity(partnerId: String?) = UserEntity(
+    /**
+     * Alice's row with [partnerId]'s family on screen; [partnerIds] is her co-parent list, left at
+     * its `[]` default unless a test is about more than one family.
+     */
+    private fun userEntity(partnerId: String?, partnerIds: List<String> = emptyList()) = UserEntity(
         id = ALICE,
         email = "alice@example.test",
         name = "Alice",
         role = "mom",
         colorCode = "#FF4081",
-        partnerId = partnerId
+        partnerId = partnerId,
+        partnerIdsJson = Gson().toJson(partnerIds)
     )
 
     private companion object {
         const val ALICE = "alice-uid"
         const val BOB = "bob-uid"
+        const val CAROL = "carol-uid"
+        const val BOB_FAMILY = "alice-uid__bob-uid"
+        const val CAROL_FAMILY = "alice-uid__carol-uid"
         const val CHILD_ID = "child-1"
         val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 1, 12, 0)
     }

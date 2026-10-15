@@ -17,13 +17,14 @@
     <string name="parent_color_custom_hue">Відтінок</string>
     <string name="settings_signed_in_as">Ви ввійшли як: %1$s</string>
     <string name="settings_gcal_not_signed_in">Вхід не виконано</string>
+    <string name="settings_gcal_needs_reconnect">Доступ закінчився або його відкликано</string>
     <string name="settings_unknown">Невідомо</string>
     <string name="settings_calendar_sign_out">Вийти із синхронізації календаря</string>
     <string name="settings_account">Обліковий запис</string>
     <string name="settings_account_description">Повний вихід із застосунку. Щоб отримати доступ до акаунта, потрібно буде ввійти знову.</string>
     <string name="settings_account_sign_out">Вийти із застосунку</string>
-    <string name="settings_pairing_title">Звʼязок із другим із батьків</string>
-    <string name="settings_pairing_description">Запросіть другого з батьків або керуйте звʼязком</string>
+    <string name="settings_pairing_title">Другий із батьків</string>
+    <string name="settings_pairing_description">Другий із батьків вашої дитини: спільний календар, графік опіки, витрати й чат</string>
     <string name="settings_child_info_title">Інформація про дитину</string>
     <string name="settings_child_info_description">Ліки, заняття, алергії</string>
     <string name="settings_pets_title">Улюбленці</string>

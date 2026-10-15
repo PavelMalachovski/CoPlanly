@@ -4,14 +4,18 @@ import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.domain.usecase.UpdateEventUseCase
@@ -27,6 +31,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -40,8 +45,8 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -64,16 +69,27 @@ class ChangeRequestViewModelTest {
     private val custodyModelRepository = mockk<CustodyModelRepository>(relaxed = true) {
         every { observeDayOverrides() } returns flowOf(emptyMap())
         every { observeShared() } returns flowOf(null)
+        every { observeSharedOf(any()) } returns flowOf(null)
     }
     private val planReferences = mockk<PlanReferenceSource>()
+    private val olya = User(
+        id = "u1",
+        email = "olya@example.com",
+        name = "Olya",
+        role = "mom",
+        colorCode = "",
+        partnerId = "u2"
+    )
     private val userRepository = mockk<UserRepository>(relaxed = true) {
-        coEvery { getCurrentUser() } returns User(
-            id = "u1",
-            email = "olya@example.com",
-            name = "Olya",
-            role = "mom",
-            colorCode = "",
-            partnerId = "u2"
+        coEvery { getCurrentUser() } returns olya
+        every { observeCurrentUserId() } returns flowOf("u1")
+        every { getAllUsers() } returns flowOf(listOf(olya))
+    }
+    private val pairingRepository = mockk<PairingRepository> {
+        every { observePairingState() } returns flowOf(
+            PairingState.Paired(
+                PartnerSummary(id = "u2", name = "Pavel", email = "pavel@example.com", pairedSinceMillis = 1L)
+            )
         )
     }
 
@@ -113,7 +129,14 @@ class ChangeRequestViewModelTest {
         userRepository = userRepository,
         custodyModelRepository = custodyModelRepository,
         parentsSource = testParentsSource(),
-        planReferenceSource = planReferences
+        planReferenceSource = planReferences,
+        requestsSource = RequestsSource(
+            changeRequestRepository = changeRequestRepository,
+            eventRepository = eventRepository,
+            custodyModelRepository = custodyModelRepository,
+            userRepository = userRepository,
+            pairingRepository = pairingRepository
+        )
     )
 
     @Before
@@ -194,17 +217,83 @@ class ChangeRequestViewModelTest {
     }
 
     @Test
-    fun `an empty inbox is told apart from one that has not loaded`() = runTest(dispatcher) {
+    fun `the inbox is Loading until its sources answer, then Ready even when empty`() = runTest(dispatcher) {
         val vm = viewModel()
-        backgroundScope.launch { vm.changeRequests.collect {} }
+        backgroundScope.launch { vm.requests.collect {} }
         advanceUntilIdle()
-        assertFalse(vm.hasLoaded.value)
+        assertEquals(RequestsState.Loading, vm.requests.value)
 
         requests.emit(emptyList())
         advanceUntilIdle()
 
-        assertTrue(vm.hasLoaded.value)
-        assertEquals(emptyList<ChangeRequest>(), vm.changeRequests.value)
+        val ready = vm.requests.value as RequestsState.Ready
+        assertTrue(ready.inbox.isEmpty)
+    }
+
+    @Test
+    fun `a waiting event gets a mini month of its own month`() = runTest(dispatcher) {
+        val waiting = event.copy(
+            id = "e-waiting",
+            startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
+            endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30),
+            createdByFirebaseUid = "u2",
+            familyId = "u1__u2",
+            acceptance = EventAcceptance.PENDING
+        )
+        every { eventRepository.getAllEvents() } returns flowOf(listOf(waiting))
+        every { custodyModelRepository.getActiveModel() } returns flowOf(null)
+        val vm = viewModel()
+        backgroundScope.launch { vm.miniMonths.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+
+        // Computed off the main thread, so waited for in real time rather than on the test clock.
+        val months = vm.miniMonths.first { it.isNotEmpty() }
+
+        assertEquals(setOf("e-waiting"), months.keys)
+        assertEquals(YearMonth.of(2026, 10), months.getValue("e-waiting").month)
+    }
+
+    /** An event Pavel created on 21 October, waiting for Olya's answer. */
+    private val waitingInOctober = event.copy(
+        id = "e-waiting",
+        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
+        endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30),
+        createdByFirebaseUid = "u2",
+        familyId = "u1__u2",
+        acceptance = EventAcceptance.PENDING
+    )
+
+    @Test
+    fun `a family with no custody document gets no other family's days on its mini months`() =
+        runTest(dispatcher) {
+            every { eventRepository.getAllEvents() } returns flowOf(listOf(waitingInOctober))
+            // Room's one active model is another family's: this family has no document of its own.
+            every { custodyModelRepository.getActiveModel() } returns
+                flowOf(CustodyModel.weekOnWeekOff(id = "elsewhere", startDate = LocalDate.of(2026, 9, 7)))
+            val vm = viewModel()
+            backgroundScope.launch { vm.miniMonths.collect {} }
+            advanceUntilIdle()
+            requests.emit(emptyList())
+
+            val months = vm.miniMonths.first { it.isNotEmpty() }
+
+            assertEquals(emptyMap(), months.getValue("e-waiting").custody)
+        }
+
+    @Test
+    fun `the family's own custody document colours its mini months`() = runTest(dispatcher) {
+        every { eventRepository.getAllEvents() } returns flowOf(listOf(waitingInOctober))
+        every { custodyModelRepository.observeSharedOf("u1__u2") } returns flowOf(sharedWithProposal("u2", null))
+        val vm = viewModel()
+        backgroundScope.launch { vm.miniMonths.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+
+        val months = vm.miniMonths.first { it.isNotEmpty() }
+
+        // Every day of October 2026's grid, Monday 28 September to Sunday 1 November.
+        assertEquals(35, months.getValue("e-waiting").custody.size)
     }
 
     private fun sharedWithProposal(by: String, citation: String?): SharedCustody {

@@ -959,6 +959,25 @@ function rekeyedLegacyCalendarFriendGrant(docId, data) {
 exports.rekeyedLegacyCalendarFriendGrant = rekeyedLegacyCalendarFriendGrant;
 
 /**
+ * The two parents' first names, as a friend's grant carries them (phase 2): the friend's calendar
+ * names whose day it is and who added an event, and a friend may not read `users/{uid}`. Each name
+ * goes through [previewFirstName], so an address is never copied and a missing one is left out.
+ *
+ * @param {!Object<string, ?Object>} profilesByUid Each parent's stored profile, or null.
+ * @return {?Object<string, string>} uid → first name, or null when neither has one to give.
+ */
+function grantParentNames(profilesByUid) {
+  const names = {};
+  for (const [uid, profile] of Object.entries(profilesByUid)) {
+    const first = previewFirstName(profile && profile.name);
+    if (first) names[uid] = first;
+  }
+  return Object.keys(names).length > 0 ? names : null;
+}
+
+exports.grantParentNames = grantParentNames;
+
+/**
  * Body of the `acceptCalendarFriendInvitation` callable — lets a trusted third person read the
  * family's calendar without occupying a parent slot.
  *
@@ -979,6 +998,9 @@ exports.rekeyedLegacyCalendarFriendGrant = rekeyedLegacyCalendarFriendGrant;
  * The inviter must be a **paired parent**: `partnerId` is what proves they hold a slot, and it
  * also supplies the second uid the grant records, so a friend admitted by one parent can read
  * both parents' events — which is what "see the calendar" means for a family of two.
+ *
+ * The grant also carries the two parents' first names ([grantParentNames]) as they stood at
+ * redemption: the friend reads no parent's profile, and her calendar has to say whose day it is.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} acceptingUserId The signed-in caller's UID.
@@ -1097,6 +1119,12 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
       typeof legacy.data.expiresAtMillis === 'number' && legacy.data.expiresAtMillis > Date.now();
     const legacyTargetRef = legacyLive ? db.collection('calendar_friends').doc(legacy.id) : null;
     const legacyTargetTaken = legacyTargetRef ? (await tx.get(legacyTargetRef)).exists : false;
+    // The co-parent's name for the grant: the friend cannot read either parent's profile.
+    const partnerSnap = await tx.get(db.collection('users').doc(partnerId));
+    const parentNames = grantParentNames({
+      [invite.fromUserId]: inviter,
+      [partnerId]: partnerSnap.exists ? partnerSnap.data() : null,
+    });
 
     const name = await guestName(accepterRef, acceptingEmail);
     const photo = await accepterPhoto(accepterRef);
@@ -1115,7 +1143,7 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
           grantedBy: invite.fromUserId,
           grantedAtMillis,
           expiresAtMillis,
-        }, photo));
+        }, photo, parentNames ? {parentNames} : {}));
     // A legacy grant that names no family honestly is left where it is, as the backfill leaves
     // it: it admits nothing, and deciding what it meant is a person's call.
     if (legacy !== null) {
@@ -3703,6 +3731,172 @@ exports.purgeParentHealthFields = regional.runWith({timeoutSeconds: 540}).https.
 );
 
 /**
+ * The collections [repairChildAndPetAudiencesImpl] bounds to their own family. `child_info` and
+ * `pets` are the per-document audiences a phone used to widen with the co-parent of whichever
+ * family it was showing; events took their family's co-parent already (`FamilyAudience`).
+ */
+const FAMILY_BOUND_AUDIENCE_COLLECTIONS = ['child_info', 'pets'];
+
+/** Firestore caps a batched write at 500 operations; stay clear of the edge. */
+const AUDIENCE_REPAIR_BATCH_LIMIT = 400;
+
+/**
+ * The part of a child's or a pet's audience that may stay, given the two parents its family id
+ * names: every uid of `sharedWith` that is one of [members] or — on a child's record — a guest its
+ * `guests` map names, in stored order and once each. A pet has no guests, so a `guests` key on a
+ * pet document admits nobody.
+ *
+ * @param {string} collection `child_info` or `pets`.
+ * @param {!Object} data The record.
+ * @param {!Array<string>} members The family's two parents.
+ * @return {!Array<string>} The uids of `sharedWith` that may stay.
+ */
+function familyBoundAudience(collection, data, members) {
+  const guests = collection === 'child_info' && data.guests && typeof data.guests === 'object' &&
+    !Array.isArray(data.guests) ? Object.keys(data.guests) : [];
+  const stored = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+  return Array.from(new Set(stored.filter((uid) =>
+    typeof uid === 'string' && (members.includes(uid) || guests.includes(uid)))));
+}
+
+/**
+ * Body of the `repairChildAndPetAudiences` callable — takes the parent of another family out of
+ * every child's and pet's record, and puts the record's own co-parent back where they were lost.
+ *
+ * **The leak it repairs.** A parent in two families (M-8) switched their phone to the second
+ * family, and the next sync re-uploaded every child they had entered for the first with
+ * `sharedWith: [them, the second family's parent]` — medical profile, allergies and medications
+ * readable by that parent, and gone from the first family's — while a pet's audience repair added
+ * the second family's parent beside the first's. `firestore.rules` let it through, because it bounded
+ * an audience by the writer's co-parents rather than by the record's family. The client and the
+ * rules no longer allow it; this pass undoes what was already written.
+ *
+ * For every `child_info` and `pets` document whose `familyId` names a family:
+ *
+ * - every uid of `sharedWith` that is neither one of the family's two parents — the id is
+ *   `FamilyKey.of`'s two uids sorted and joined — nor, on a child's record, a guest its `guests`
+ *   map names is dropped. A guest's grant is not judged here; `sweepExpiredGuests` does that.
+ * - the family's other parent is put back if missing — **only while the family is live**
+ *   ([liveFamily]: both profiles exist and name each other). An unpair's sweep narrowed the
+ *   record on purpose, and re-admitting an ex-partner is not a repair.
+ *
+ * What it never does: write anything but `sharedWith` — never a tombstone's deletion fields,
+ * never `updatedAt`, so no phone's conflict comparison changes its answer; touch a record whose
+ * family is blank (which of a parent's families it is about is exactly what the server cannot say
+ * — `stampOwnBlankFamilyIds` declines the same guess); or "repair" a record whose family does not
+ * name its own creator, which the create rule never admits and which is left for a person. A
+ * tombstone is repaired like any record: it keeps the record's data until the 90-day sweep.
+ *
+ * Idempotent: a second run finds every audience already inside its family and writes nothing.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {{dryRun: (boolean|undefined)}=} options `dryRun` counts what would change and writes
+ *     nothing — the scope of the leak, for the breach assessment, before anything is touched.
+ * @return {!Promise<{scanned: number, repaired: number, removed: number, readded: number,
+ *     dryRun: boolean, perCollection: !Object<string, number>, skipped: {blankFamily: number,
+ *     malformedFamily: number, creatorOutsideFamily: number}}>} `repaired` counts records whose
+ *     audience changed (or would), `removed` the uids taken out, `readded` the records that got
+ *     their own co-parent back.
+ */
+async function repairChildAndPetAudiencesImpl(db, options) {
+  const dryRun = Boolean(options && options.dryRun === true);
+  const summary = {
+    scanned: 0,
+    repaired: 0,
+    removed: 0,
+    readded: 0,
+    dryRun,
+    perCollection: {},
+    skipped: {blankFamily: 0, malformedFamily: 0, creatorOutsideFamily: 0},
+  };
+  // One liveness check per family, however many of its records there are.
+  const liveness = new Map();
+  const isLive = (familyId, uid) => {
+    if (!liveness.has(familyId)) {
+      liveness.set(familyId, liveFamily(db, familyId, uid).then((family) => family !== null));
+    }
+    return liveness.get(familyId);
+  };
+
+  for (const collection of FAMILY_BOUND_AUDIENCE_COLLECTIONS) {
+    summary.perCollection[collection] = 0;
+    const snap = await db.collection(collection).get();
+    let batch = db.batch();
+    let pending = 0;
+
+    for (const doc of snap.docs) {
+      summary.scanned++;
+      const data = doc.data() || {};
+      if (isBlankFamilyId(data.familyId)) {
+        summary.skipped.blankFamily++;
+        continue;
+      }
+      const members = data.familyId.split('__');
+      if (members.length !== 2 || members.some((uid) => uid === '') || members[0] === members[1]) {
+        summary.skipped.malformedFamily++;
+        continue;
+      }
+      const creator = data.createdByFirebaseUid;
+      if (!members.includes(creator)) {
+        summary.skipped.creatorOutsideFamily++;
+        continue;
+      }
+
+      const stored = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+      const next = familyBoundAudience(collection, data, members);
+      const removed = stored.filter((uid) => !next.includes(uid)).length;
+      const otherParent = members[0] === creator ? members[1] : members[0];
+      const readd = !next.includes(otherParent) && await isLive(data.familyId, creator);
+      if (readd) next.push(otherParent);
+      if (next.length === stored.length && next.every((uid, i) => uid === stored[i])) continue;
+
+      summary.repaired++;
+      summary.perCollection[collection]++;
+      summary.removed += removed;
+      if (readd) summary.readded++;
+      if (dryRun) continue;
+
+      batch.update(doc.ref, {sharedWith: next});
+      pending++;
+      if (pending === AUDIENCE_REPAIR_BATCH_LIMIT) {
+        await batch.commit();
+        batch = db.batch();
+        pending = 0;
+      }
+    }
+    if (pending > 0) await batch.commit();
+  }
+  return summary;
+}
+
+exports.repairChildAndPetAudiencesImpl = repairChildAndPetAudiencesImpl;
+
+/**
+ * Takes another family's parent out of every child's and pet's record — the server half of the
+ * cross-family leak's fix (see [repairChildAndPetAudiencesImpl]).
+ *
+ * Operator-only on the same allow-list as the other backfills, and 540 seconds for the same reason:
+ * one pass over two bounded collections. Run it with `{dryRun: true}` first — the counts are the
+ * scope of the leak — then without, once `firestore.rules` with the family bound on `child_info` and
+ * `pets` is deployed (from then on no client can write the leak again). Idempotent, so a second run
+ * is harmless. Logs the counts and nothing else: never a uid, a name or a record id.
+ *
+ * @return {!Promise<!Object>} See [repairChildAndPetAudiencesImpl].
+ */
+exports.repairChildAndPetAudiences = regional.runWith({timeoutSeconds: 540}).https.onCall(
+    async (data, context) => {
+      if (!isBackfillOperator(context)) {
+        throw new functions.https.HttpsError(
+            'permission-denied', 'Operator access only', {reason: 'not-operator'});
+      }
+      const summary = await repairChildAndPetAudiencesImpl(
+          admin.firestore(), {dryRun: Boolean(data && data.dryRun === true)});
+      console.log(`repairChildAndPetAudiences: ${JSON.stringify(summary)}`);
+      return summary;
+    },
+);
+
+/**
  * Creates the `families/{id}` document for pairs that formed before pairing wrote one.
  *
  * Operator-only on the same allow-list as [backfillParentSlots] and for the same reason, only
@@ -4643,8 +4837,57 @@ const GOOGLE_TOKEN_HOST = 'oauth2.googleapis.com';
 /** The path on [GOOGLE_TOKEN_HOST]. */
 const GOOGLE_TOKEN_PATH = '/token';
 
-/** Where a uid's refresh-token fingerprint is recorded. Nothing but Admin ever reads it. */
+/** Where a uid's refresh-token fingerprints are recorded. Nothing but Admin ever reads it. */
 const GOOGLE_OAUTH_COLLECTION = 'google_oauth';
+
+/**
+ * How many refresh tokens one account keeps working: the newest five connections, so a second
+ * phone — or a reinstall — does not end the first one's. Bounded, so an account that reconnects
+ * every week does not keep every token it was ever issued.
+ */
+const GOOGLE_REFRESH_TOKENS_KEPT = 5;
+
+/** How long Google's token endpoint may stay silent before it counts as unreachable. */
+const GOOGLE_TOKEN_TIMEOUT_MS = 15000;
+
+/**
+ * A failure at Google's token endpoint: what Google answered, or that it did not answer.
+ *
+ * The message carries Google's own description for the log; it never reaches the app, which is
+ * told only what [googleTokenFailure] makes of [status] and [oauthError].
+ */
+class GoogleTokenError extends Error {
+  /**
+   * @param {string} message For the log.
+   * @param {number} status The HTTP status, 0 when no usable answer arrived.
+   * @param {string} oauthError The `error` field of Google's answer (`invalid_grant`, …), or ''.
+   */
+  constructor(message, status, oauthError) {
+    super(message);
+    this.name = 'GoogleTokenError';
+    this.status = status || 0;
+    this.oauthError = oauthError || '';
+  }
+}
+
+exports.GoogleTokenError = GoogleTokenError;
+
+/**
+ * The OAuth `error` code in the body of a refusal from Google's token endpoint, or ''.
+ *
+ * @param {string} body What Google answered.
+ * @return {string} `invalid_grant`, `invalid_client`, … — '' when the body is not an OAuth error.
+ */
+function googleOAuthErrorOf(body) {
+  try {
+    const parsed = JSON.parse(body);
+    return parsed && typeof parsed.error === 'string' ? parsed.error : '';
+  } catch (err) {
+    return '';
+  }
+}
+
+exports.googleOAuthErrorOf = googleOAuthErrorOf;
 
 /**
  * The OAuth client this deployment speaks for, or null when it is not configured.
@@ -4672,6 +4915,10 @@ exports.googleOAuthConfig = googleOAuthConfig;
  * the dependency graph, and the body is drained on failure so the error says what Google said
  * rather than only its status code.
  *
+ * Every failure is a [GoogleTokenError]: a refusal carries Google's status and OAuth error code,
+ * and no answer — a network error, a silence longer than [GOOGLE_TOKEN_TIMEOUT_MS], a success
+ * that is not JSON — carries status 0.
+ *
  * @param {!Object<string, string>} form The form fields to post.
  * @return {!Promise<!Object>} Google's parsed JSON response.
  */
@@ -4697,17 +4944,97 @@ function postToGoogleToken(form) {
           try {
             resolve(JSON.parse(body));
           } catch (err) {
-            reject(new Error(`Google returned a body that is not JSON: ${body}`));
+            // Not echoed: a success body is where tokens travel.
+            reject(new GoogleTokenError('Google returned a body that is not JSON', 0, ''));
           }
           return;
         }
-        reject(new Error(`Google token endpoint said ${response.statusCode}: ${body}`));
+        reject(new GoogleTokenError(
+            `Google token endpoint said ${response.statusCode}: ${body}`,
+            response.statusCode, googleOAuthErrorOf(body)));
       });
     });
-    request.on('error', reject);
+    request.setTimeout(GOOGLE_TOKEN_TIMEOUT_MS, () => {
+      request.destroy(new GoogleTokenError('Google token endpoint did not answer in time', 0, ''));
+    });
+    request.on('error', (err) => reject(err instanceof GoogleTokenError ?
+      err : new GoogleTokenError(`Could not reach Google: ${err.message}`, 0, '')));
     request.write(payload);
     request.end();
   });
+}
+
+/**
+ * What the app is told when Google's token endpoint fails, by whether anything but a new
+ * connection can help.
+ *
+ * - **`invalid_grant`** is Google saying this refresh token or code is dead: revoked in the Google
+ *   account, unused for six months, already redeemed, or — while the consent screen is in
+ *   Testing — seven days old. `failed-precondition` / `reconnect`: the app drops the token and
+ *   offers Reconnect. It used to reach the app as a bare `internal`, which no client could tell
+ *   from a network blip, so the app went on refreshing a token Google had ended.
+ * - **No answer, a 429 or a 5xx**: Google could not be reached or is struggling.
+ *   `unavailable` / `google-unavailable`: the app keeps the token and says to try again.
+ * - **Any other refusal** names this deployment's client or request (`invalid_client` after a
+ *   rotated secret, `unauthorized_client`, …). The token may be fine and the owner has to fix the
+ *   configuration, so the app is told `internal` / `google-refused`, which it also reads as "try
+ *   again" — a corrected deployment then finds every connection still in place.
+ *
+ * Google's own words go to the log, never to the app.
+ *
+ * @param {*} err What the post rejected with.
+ * @return {!functions.https.HttpsError} The error the callable throws.
+ */
+function googleTokenFailure(err) {
+  const status = err && Number.isInteger(err.status) ? err.status : 0;
+  const oauthError = err && typeof err.oauthError === 'string' ? err.oauthError : '';
+  console.warn(`Google token endpoint failed (status ${status}, error ${oauthError || 'none'}):`,
+      err && err.message);
+  if (oauthError === 'invalid_grant') {
+    return new functions.https.HttpsError(
+        'failed-precondition',
+        'Google no longer accepts this connection; connect Google Calendar again',
+        {reason: 'reconnect', cause: 'invalid_grant'});
+  }
+  if (status === 0 || status === 429 || status >= 500) {
+    return new functions.https.HttpsError(
+        'unavailable', 'Google could not be reached; try again', {reason: 'google-unavailable'});
+  }
+  return new functions.https.HttpsError(
+      'internal', 'Google refused the request',
+      {reason: 'google-refused', cause: oauthError || String(status)});
+}
+
+/**
+ * Posts [form] through [post], turning a failure into the error the app can act on.
+ *
+ * @param {function(!Object<string, string>): !Promise<!Object>} post Posts to Google.
+ * @param {!Object<string, string>} form The form fields to post.
+ * @return {!Promise<!Object>} Google's parsed JSON response.
+ */
+async function requestGoogleTokens(post, form) {
+  try {
+    return await post(form);
+  } catch (err) {
+    throw googleTokenFailure(err);
+  }
+}
+
+/**
+ * The refresh-token fingerprints a `google_oauth/{uid}` document accepts, newest first.
+ *
+ * Reads both shapes: the `refreshTokenHashes` list, and the single `refreshTokenHash` that a
+ * document written before the list carries — an account connected then keeps working without
+ * reconnecting, and its fingerprint is the oldest.
+ *
+ * @param {?Object|undefined} data The stored document, or nothing when there is none.
+ * @return {!Array<string>} Fingerprints, newest first, each once.
+ */
+function recordedFingerprints(data) {
+  const stored = data || {};
+  const listed = Array.isArray(stored.refreshTokenHashes) ? stored.refreshTokenHashes : [];
+  return [...new Set([...listed, stored.refreshTokenHash])]
+      .filter((hash) => typeof hash === 'string' && hash);
 }
 
 /**
@@ -4733,7 +5060,15 @@ exports.refreshTokenFingerprint = refreshTokenFingerprint;
  * oracle turning any stolen refresh token into an access token, which is precisely the
  * capability the secret's removal takes away from an attacker. So the exchange records a hash
  * of the refresh token against the caller's uid, and the refresh grant refuses a token that is
- * not the one this account was issued.
+ * not one this account was issued.
+ *
+ * **A list, not one fingerprint.** The document used to hold a single `refreshTokenHash`, so
+ * every exchange replaced the one before: connecting Calendar on a second phone, reinstalling,
+ * or switching Google accounts silently refused the other phone's token on its next refresh,
+ * about an hour later. It now keeps the [GOOGLE_REFRESH_TOKENS_KEPT] newest, under
+ * `refreshTokenHashes`, newest first — and the newest alone under `refreshTokenHash` too, the
+ * field the functions deployed before the list read, so a rollback still accepts the device that
+ * connected last. One transaction, so two phones connecting at once cannot lose each other.
  *
  * The auth code itself needs no such check: Google issues it for this project's client and to
  * whoever completed the consent screen, so a caller can only ever redeem their own.
@@ -4753,7 +5088,7 @@ async function exchangeGoogleAuthCodeImpl(db, config, post, uid, authCode) {
   // answer `unauthorized_client` for a code that the identical request without the field
   // redeems. A code obtained through the native Android sign-in flow has no redirect URI to
   // match, so there is nothing to send.
-  const response = await post({
+  const response = await requestGoogleTokens(post, {
     code: authCode,
     client_id: config.clientId,
     client_secret: config.clientSecret,
@@ -4768,9 +5103,17 @@ async function exchangeGoogleAuthCodeImpl(db, config, post, uid, authCode) {
   }
 
   if (refreshToken) {
-    await db.collection(GOOGLE_OAUTH_COLLECTION).doc(uid).set({
-      refreshTokenHash: refreshTokenFingerprint(refreshToken),
-      updatedAtMillis: Date.now(),
+    const ref = db.collection(GOOGLE_OAUTH_COLLECTION).doc(uid);
+    const fingerprint = refreshTokenFingerprint(refreshToken);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const earlier = recordedFingerprints(snap.exists ? snap.data() : null)
+          .filter((hash) => hash !== fingerprint);
+      tx.set(ref, {
+        refreshTokenHashes: [fingerprint, ...earlier].slice(0, GOOGLE_REFRESH_TOKENS_KEPT),
+        refreshTokenHash: fingerprint,
+        updatedAtMillis: Date.now(),
+      });
     });
   }
 
@@ -4784,12 +5127,13 @@ async function exchangeGoogleAuthCodeImpl(db, config, post, uid, authCode) {
 exports.exchangeGoogleAuthCodeImpl = exchangeGoogleAuthCodeImpl;
 
 /**
- * Refreshes an access token, but only for the refresh token this account was issued.
+ * Refreshes an access token, but only for a refresh token this account was issued — any of the
+ * [GOOGLE_REFRESH_TOKENS_KEPT] newest, so each device it connected keeps working.
  *
  * A token with no recorded fingerprint is refused rather than trusted on first use: trusting it
  * would let whoever presents a stolen token first bind it to themselves. The cost is one
- * re-consent for anybody whose Calendar was connected before this shipped, which is a screen
- * they have already seen once and the app already prompts for when a refresh fails.
+ * re-consent for anybody whose Calendar was connected before this shipped, or whose token fell
+ * off the list. The refusal says `reconnect`, which the app turns into its Reconnect button.
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {!{clientId: string, clientSecret: string}} config The OAuth client.
@@ -4800,15 +5144,15 @@ exports.exchangeGoogleAuthCodeImpl = exchangeGoogleAuthCodeImpl;
  */
 async function refreshGoogleAccessTokenImpl(db, config, post, uid, refreshToken) {
   const snap = await db.collection(GOOGLE_OAUTH_COLLECTION).doc(uid).get();
-  const recorded = snap.exists && snap.data() ? snap.data().refreshTokenHash : '';
-  if (!recorded || recorded !== refreshTokenFingerprint(refreshToken)) {
+  const recorded = recordedFingerprints(snap.exists ? snap.data() : null);
+  if (!recorded.includes(refreshTokenFingerprint(refreshToken))) {
     throw new functions.https.HttpsError(
         'permission-denied',
         'This refresh token was not issued to this account',
-        {reason: 'unknown-refresh-token'});
+        {reason: 'reconnect', cause: 'unknown-refresh-token'});
   }
 
-  const response = await post({
+  const response = await requestGoogleTokens(post, {
     refresh_token: refreshToken,
     client_id: config.clientId,
     client_secret: config.clientSecret,

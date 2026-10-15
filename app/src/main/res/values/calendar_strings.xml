@@ -117,4 +117,9 @@
     <!-- MON-6b: a contact window on Home's today card. %1$s/%2$s are the start and end
          times, %3$s the parent's name from ParentLabels (never a role word). -->
     <string name="calendar_agenda_contact_window">%1$s–%2$s · contact with %3$s</string>
+    <!-- The mini month (phase 2): its legend, and what TalkBack reads for a marked day -->
+    <string name="mini_month_legend_new_event">New event</string>
+    <string name="mini_month_mark_new_event">new event</string>
+    <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
+    <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 </resources>

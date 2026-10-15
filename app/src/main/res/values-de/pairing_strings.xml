@@ -77,7 +77,7 @@
     <string name="pairing_share_link">Link teilen</string>
     <string name="pairing_trust_title">Was beim Verknüpfen geteilt wird</string>
     <string name="pairing_trust_body">Gemeinsamer Kalender und Betreuungsplan, gemeinsame Ausgaben und Salden sowie der Chat. Private Termine verlassen dein Gerät nie. Du kannst die Verknüpfung jederzeit aufheben.</string>
-    <string name="pairing_error_friend_invitation">Das ist eine Freundeseinladung. Öffne Einstellungen → Freund mit Kalenderzugriff.</string>
+    <string name="pairing_error_friend_invitation">Das ist eine Einladung für Freunde der Familie. Öffne Einstellungen → Freunde der Familie → Ich habe einen Code von den Eltern.</string>
     <string name="pairing_error_not_friend_invitation">Das ist keine Freundeseinladung.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->

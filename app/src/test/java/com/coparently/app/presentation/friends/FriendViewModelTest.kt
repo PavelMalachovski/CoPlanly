@@ -1,12 +1,14 @@
 package com.coparently.app.presentation.friends
 
 import com.coparently.app.R
+import com.coparently.app.data.remote.firebase.AcceptCalendarFriendResult
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.FriendRepository
+import com.coparently.app.presentation.common.testParentsSource
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -26,6 +28,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The calendar friend's two ends (item 16): a parent revoking access, and the friend redeeming a
@@ -61,9 +64,54 @@ class FriendViewModelTest {
     }
 
     @Test
+    fun `a redeemed code opens the calendar of the family it names`() = runTest(dispatcher) {
+        // Phase 2, spec §4.2: the button says "Open the family calendar", so it has to.
+        coEvery { repository.acceptFriendInvite("K7Q49P2M") } returns
+            Result.success(AcceptCalendarFriendResult(familyParents = listOf("u2", "u1"), expiresAtMillis = 99L))
+        val vm = FriendViewModel(repository, testParentsSource())
+
+        vm.expandRedeem()
+        vm.updateCode("k7q49p2m")
+        vm.redeemCode()
+        advanceUntilIdle()
+
+        assertEquals("u1__u2", vm.redeem.value.openFamilyId)
+
+        vm.calendarOpened()
+
+        assertNull(vm.redeem.value.openFamilyId)
+    }
+
+    @Test
+    fun `the redeem field opens in place`() {
+        val vm = FriendViewModel(repository, testParentsSource())
+        assertFalse(vm.redeem.value.isExpanded)
+
+        vm.expandRedeem()
+
+        assertTrue(vm.redeem.value.isExpanded)
+    }
+
+    @Test
+    fun `a failed redeem opens no calendar`() = runTest(dispatcher) {
+        coEvery { repository.acceptFriendInvite(any()) } returns
+            Result.failure(PairingException(PairingError.NotFound))
+        val vm = FriendViewModel(repository, testParentsSource())
+
+        vm.expandRedeem()
+        vm.updateCode("K7Q49P2M")
+        vm.redeemCode()
+        advanceUntilIdle()
+
+        assertNull(vm.redeem.value.openFamilyId)
+        assertEquals(R.string.pairing_error_not_found, vm.redeem.value.errorRes)
+        assertTrue(vm.redeem.value.isExpanded)
+    }
+
+    @Test
     fun `a refused revoke is reported as a failure, so the screen stays open`() = runTest(dispatcher) {
         coEvery { repository.revokeFriend("f1") } returns Result.failure(IllegalStateException("denied"))
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
         var result: Boolean? = null
 
         vm.revoke("f1") { result = it }
@@ -75,7 +123,7 @@ class FriendViewModelTest {
     @Test
     fun `a revoke that landed is reported as success`() = runTest(dispatcher) {
         coEvery { repository.revokeFriend("f1") } returns Result.success(Unit)
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
         var result: Boolean? = null
 
         vm.revoke("f1") { result = it }
@@ -90,7 +138,7 @@ class FriendViewModelTest {
         // reading its `.value` here would send an empty `familyParents` — the read gate itself.
         val saved = slot<FriendProfile>()
         coEvery { repository.saveMyProfile(capture(saved)) } returns Result.success(Unit)
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
 
         vm.saveProfile(
             name = "  Grandma  ",
@@ -120,7 +168,7 @@ class FriendViewModelTest {
         coEvery { repository.myGrants() } returns listOf(second, grant)
         val saved = slot<FriendProfile>()
         coEvery { repository.saveMyProfile(capture(saved)) } returns Result.success(Unit)
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
 
         vm.saveProfile("Grandma", FriendRole.GRANDPARENT, emptyList(), null, null)
         advanceUntilIdle()
@@ -132,7 +180,7 @@ class FriendViewModelTest {
     fun `a friend's grants in every family are exposed, not only one`() = runTest(dispatcher) {
         val second = grant.copy(familyParents = listOf("u3", "u4"), familyId = "u3__u4")
         every { repository.observeMyGrants() } returns flowOf(listOf(grant, second))
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
         backgroundScope.launch { vm.myGrants.collect {} }
         advanceUntilIdle()
 
@@ -148,7 +196,7 @@ class FriendViewModelTest {
         )
         val saved = slot<FriendProfile>()
         coEvery { repository.saveMyProfile(capture(saved)) } returns Result.success(Unit)
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
         backgroundScope.launch { vm.myProfile.collect {} }
         advanceUntilIdle()
 
@@ -162,7 +210,7 @@ class FriendViewModelTest {
     fun `a parent's code offered as a friend code is named, not a generic failure`() = runTest(dispatcher) {
         coEvery { repository.acceptFriendInvite("ABC234") } returns
             Result.failure(PairingException(PairingError.NotFriendInvitation))
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
 
         vm.updateCode("abc234")
         vm.redeemCode()
@@ -179,7 +227,7 @@ class FriendViewModelTest {
     fun `a failed profile save is surfaced`() = runTest(dispatcher) {
         coEvery { repository.saveMyProfile(any()) } returns
             Result.failure(PairingException(PairingError.Network))
-        val vm = FriendViewModel(repository)
+        val vm = FriendViewModel(repository, testParentsSource())
 
         vm.saveProfile("Grandma", FriendRole.FRIEND, emptyList(), null, null)
         advanceUntilIdle()

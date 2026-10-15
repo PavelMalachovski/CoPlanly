@@ -289,6 +289,13 @@ fun NavGraph(
                         onOpenChangeRequests = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
                         },
+                        onOpenRequestHistory = {
+                            navController.navigate(
+                                Screen.ChangeRequests.createRoute(
+                                    section = com.coparently.app.presentation.changerequests.InboxSection.HISTORY
+                                )
+                            )
+                        },
                         onOpenContacts = {
                             navController.navigate(Screen.Contacts.route)
                         },
@@ -416,11 +423,16 @@ fun NavGraph(
                     )
                 }
 
-                // Event change requests inbox (MVP 2)
+                // The requests inbox (MVP 2; three sections since phase 2)
                 pane(
                     route = Screen.ChangeRequests.route,
                     arguments = listOf(
                         navArgument(Screen.ChangeRequests.ARG_EVENT_ID) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument(Screen.ChangeRequests.ARG_SECTION) {
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
@@ -439,7 +451,10 @@ fun NavGraph(
                         onOpenEvent = { eventId ->
                             navController.navigate(Screen.EditEvent.createRoute(eventId))
                         },
-                        linkedEventId = linkedEventId
+                        linkedEventId = linkedEventId,
+                        openSection = com.coparently.app.presentation.changerequests.InboxSection.fromRoute(
+                            backStackEntry.arguments?.getString(Screen.ChangeRequests.ARG_SECTION)
+                        )
                     )
                 }
 
@@ -844,7 +859,10 @@ fun NavGraph(
                         onOpenFriend = { uid ->
                             navController.navigate(Screen.FriendDetail.createRoute(uid))
                         },
-                        onOpenMyProfile = { navController.navigate(Screen.FriendProfile.route) }
+                        onOpenMyProfile = { navController.navigate(Screen.FriendProfile.route) },
+                        onOpenFriendCalendar = { familyId ->
+                            navController.navigate(Screen.FriendCalendar.createRoute(familyId))
+                        }
                     )
                 }
 
@@ -869,6 +887,18 @@ fun NavGraph(
 
                 pane(route = Screen.FriendProfile.route) {
                     com.coparently.app.presentation.friends.FriendProfileScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                // A family friend's read-only calendar (phase 2), keyed by the family it reads.
+                pane(
+                    route = Screen.FriendCalendar.route,
+                    arguments = listOf(
+                        navArgument(Screen.FriendCalendar.ARG_FAMILY_ID) { type = NavType.StringType }
+                    )
+                ) {
+                    com.coparently.app.presentation.friends.FriendCalendarScreen(
                         onNavigateUp = { navController.popBackStack() }
                     )
                 }
@@ -997,10 +1027,16 @@ fun NavGraph(
                         onOpenChangeRequest = { eventId ->
                             navController.navigate(Screen.ChangeRequests.createRoute(eventId))
                         },
-                        // A day-swap chat card: the inbox with nothing highlighted — its
+                        // A day-swap chat card, and a card about an event still waiting on this
+                        // parent's answer: the inbox with nothing highlighted — a day swap's
                         // entity is a date the event-id argument would misread.
                         onOpenInbox = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        // A card about an event opens its preview over the thread; the preview's
+                        // Edit opens the editor, as Home's and the calendar's previews do.
+                        onEditEvent = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
                         },
                         // The banner over a thread kept after the co-parent deleted their account:
                         // the same export screen Settings → Family opens, naming that thread.
@@ -1047,10 +1083,16 @@ fun NavGraph(
                         onOpenChangeRequest = { eventId ->
                             navController.navigate(Screen.ChangeRequests.createRoute(eventId))
                         },
-                        // A day-swap chat card: the inbox with nothing highlighted — its
+                        // A day-swap chat card, and a card about an event still waiting on this
+                        // parent's answer: the inbox with nothing highlighted — a day swap's
                         // entity is a date the event-id argument would misread.
                         onOpenInbox = {
                             navController.navigate(Screen.ChangeRequests.createRoute())
+                        },
+                        // A card about an event opens its preview over the thread; the preview's
+                        // Edit opens the editor, as Home's and the calendar's previews do.
+                        onEditEvent = { eventId ->
+                            navController.navigate(Screen.EditEvent.createRoute(eventId))
                         },
                         // The banner over a thread kept after the co-parent deleted their account:
                         // the same export screen Settings → Family opens, naming that thread.
@@ -1641,6 +1683,15 @@ sealed class Screen(val route: String) {
     /** The friend's own profile, authored by them and read by the two parents. */
     data object FriendProfile : Screen("friend_profile")
 
+    /** A family friend's read-only calendar of one family, by family id (phase 2). */
+    data object FriendCalendar : Screen("friend_calendar/{familyId}") {
+        /** Which family; read by `FriendCalendarViewModel` from its `SavedStateHandle`. */
+        const val ARG_FAMILY_ID = "familyId"
+
+        /** Builds the route for [familyId]. */
+        fun createRoute(familyId: String): String = "friend_calendar/$familyId"
+    }
+
     /** Professional access (MON-18): the parents' grants and a professional's families. */
     data object Professionals : Screen("professionals")
 
@@ -1764,12 +1815,22 @@ sealed class Screen(val route: String) {
      */
     data object Contacts : Screen("contacts")
 
-    data object ChangeRequests : Screen("change_requests?eventId={eventId}") {
+    /**
+     * The requests inbox. The route keeps its old name; the screen holds more than change
+     * requests now (phase 2).
+     */
+    data object ChangeRequests : Screen("change_requests?eventId={eventId}&section={section}") {
         const val ARG_EVENT_ID = "eventId"
+        const val ARG_SECTION = "section"
 
-        /** @param eventId Event whose request should be highlighted, or null for the plain inbox. */
-        fun createRoute(eventId: String? = null): String =
-            "change_requests?eventId=${eventId ?: "null"}"
+        /**
+         * @param eventId Event whose request should be highlighted, or null for the plain inbox.
+         * @param section A section to scroll to on arrival, or null.
+         */
+        fun createRoute(
+            eventId: String? = null,
+            section: com.coparently.app.presentation.changerequests.InboxSection? = null
+        ): String = "change_requests?eventId=${eventId ?: "null"}&section=${section?.routeValue ?: "null"}"
     }
 
     /**

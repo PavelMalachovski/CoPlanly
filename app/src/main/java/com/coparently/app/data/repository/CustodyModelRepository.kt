@@ -23,7 +23,6 @@ import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
-import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
@@ -60,6 +59,14 @@ import javax.inject.Singleton
  * document, whose id is derived from the two UIDs by [CustodyKey], so both devices reach it
  * without a query and creating it is idempotent. An unpaired user writes Room and nothing else:
  * there is no second parent to share a document with.
+ *
+ * **Room holds one active row per family** (schema 45), each stamped with the family it is the
+ * schedule of, and every read answers for the family on screen through [ActiveCustodyRow]. A row
+ * reaches a family's document only if it is that family's — stamped with it, or naming no family
+ * while the parent has exactly one co-parent. The phone used to hold one active row for every
+ * family, and a parent in two families had the first family's schedule, seasonal layers and
+ * children's overrides written into the second family's document by the mirror, the sync and the
+ * pattern editor alike.
  *
  * Two over detekt's function threshold, and deliberately so: the overflow is the four `create*`
  * pattern helpers, which are one-liners over [saveAndActivate] and belong beside it. Splitting
@@ -136,6 +143,9 @@ class CustodyModelRepository(
         defaultScope()
     )
 
+    /** The signed-in parent's families: which is on screen, and every co-parent (schema 45). */
+    private val familyReader = SignedInFamiliesReader(userRepository)
+
     /**
      * The shared remote stream. **Every subscriber gets this one flow**, because each raw
      * collection would attach its own Firestore snapshot listener, and there are two collectors
@@ -149,8 +159,10 @@ class CustodyModelRepository(
      *
      * `by lazy` so that merely constructing this singleton does not reach for the user
      * repository or start anything.
+     *
+     * Each value names the family it was read for, for [observeSharedOf].
      */
-    private val shared: Flow<SharedCustody?> by lazy {
+    private val tagged: Flow<FamilyDocument> by lazy {
         sharedUpstream().shareIn(
             scope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS, replayExpirationMillis = 0),
@@ -158,15 +170,21 @@ class CustodyModelRepository(
         )
     }
 
+    /** [tagged] without the family: the document of whichever family this device follows. */
+    private val shared: Flow<SharedCustody?> by lazy { tagged.map { it.custody } }
+
     /**
-     * Gets the active custody model as a Flow.
+     * The family on screen's custody pattern, as a Flow.
      *
      * Room decides what the caller sees; the remote branch is merged in purely for its side
      * effect of folding the shared document into Room (see [mirrorOnly]). Without that branch a
      * change made on the co-parent's phone would never reach this device's calendar.
+     *
+     * Follows the family on screen: a switch re-picks the row ([ActiveCustodyRow]), and a family
+     * that has no schedule yet reads null rather than another family's.
      */
     fun getActiveModel(): Flow<CustodyModel?> {
-        val local = custodyModelDao.getActiveModel().map { entity -> entity?.toDomainModel() }
+        val local = activeRow().map { entity -> entity?.toDomainModel() }
         return merge(shared.mirrorOnly(), local)
     }
 
@@ -183,17 +201,31 @@ class CustodyModelRepository(
      * the two through `CustodyResolver`, which is the one place the precedence lives.
      */
     fun observeDayOverrides(): Flow<Map<String, DayOverride>> {
-        val local = custodyModelDao.getActiveModel()
+        val local = activeRow()
             .map { entity -> DayOverrideJson.decode(entity?.dayOverridesJson) }
             .distinctUntilChanged()
         return merge(shared.mirrorOnly(), local)
     }
 
-    /**
-     * Gets the active custody model synchronously.
-     */
+    /** The family on screen's custody pattern, read once — the same row [getActiveModel] reads. */
     suspend fun getActiveModelSync(): CustodyModel? {
-        return custodyModelDao.getActiveModelSync()?.toDomainModel()
+        return activeRowNow()?.toDomainModel()
+    }
+
+    /**
+     * The schedule this parent holds on their own — the newest active row that names no family —
+     * or null, and always null while they have two co-parents or more.
+     *
+     * What a pairing reconciles against the co-parent's document (`PairingViewModel.
+     * reconcileCustody`), rather than [getActiveModelSync]: while unpaired that also falls back to
+     * the schedule of a family that has ended, which must never move into the new family
+     * (CLAUDE.md item 18), and whether the fallback applied would depend on whether the pairing had
+     * reached Room yet — the same accept could carry it or not. With two co-parents a row naming no
+     * family is nobody's.
+     */
+    suspend fun getUnsharedModelSync(): CustodyModel? {
+        if (currentFamilies().coParents.size > 1) return null
+        return ActiveCustodyRow.unshared(custodyModelDao.getActiveModelsSync())?.toDomainModel()
     }
 
     /**
@@ -205,7 +237,7 @@ class CustodyModelRepository(
      * holds, which is what Home draws a moment after it opens.
      */
     suspend fun storedCustody(): Pair<CustodyModel?, Map<String, DayOverride>> {
-        val entity = custodyModelDao.getActiveModelSync()
+        val entity = activeRowNow()
         return entity?.toDomainModel() to DayOverrideJson.decode(entity?.dayOverridesJson)
     }
 
@@ -222,10 +254,14 @@ class CustodyModelRepository(
      * how a co-parent's schedule gets replaced by a device that merely failed to read it.
      */
     suspend fun publishLocalIfMissing() {
-        val entity = custodyModelDao.getActiveModelSync() ?: return
-        if (readShared() != SharedCustodyRead.Absent) return
+        val families = currentFamilies()
+        val pair = families.pair ?: return
+        // The family on screen's row, never another family's: a family with no document yet is
+        // not given the schedule of the family the phone showed before (schema 45).
+        val entity = activeRowNow(families) ?: return
+        if (readShared(pair) != SharedCustodyRead.Absent) return
         Log.i(TAG, "Publishing the custody pattern this device held before the pair had one")
-        pushToFirestore(entity.toDomainModel(), entity)
+        pushToFirestore(entity.toDomainModel(), entity, families)
     }
 
     /**
@@ -254,6 +290,22 @@ class CustodyModelRepository(
     fun observeShared(): Flow<SharedCustody?> = shared
 
     /**
+     * The shared document of [familyId], and null while that is not the family this device
+     * follows, or has no document.
+     *
+     * For a screen that speaks for one family (phase 2 review): the requests inbox, Home's swap
+     * pop-up and the mini months. [observeShared] follows the family on screen, but it replays the
+     * previous family's document until the next one's listener answers. Asked by family id, the
+     * replay never reaches the wrong family. ([observeDayOverrides] read Room's one active model,
+     * which kept the previous family's swaps while the next family had no document; it reads the
+     * family on screen's row since schema 45.)
+     *
+     * @param familyId `FamilyKey.of` the two parents, which is also the document's id.
+     */
+    fun observeSharedOf(familyId: String): Flow<SharedCustody?> =
+        tagged.map { document -> document.custody.takeIf { document.documentId == familyId } }
+
+    /**
      * The pair's shared pattern, read once.
      *
      * The one-shot counterpart of [observeShared], for the question a stream cannot answer:
@@ -270,8 +322,11 @@ class CustodyModelRepository(
      * `PERMISSION_DENIED` kills the process instead of failing the read. Cancellation is
      * rethrown — it is not a failure.
      */
-    suspend fun readShared(): SharedCustodyRead {
-        val pair = currentPair() ?: return SharedCustodyRead.Unavailable
+    suspend fun readShared(): SharedCustodyRead =
+        currentPair()?.let { readShared(it) } ?: SharedCustodyRead.Unavailable
+
+    /** [readShared] for [pair]'s document, so a caller reads the family it already decided on. */
+    private suspend fun readShared(pair: CustodyPair): SharedCustodyRead {
         return try {
             firestoreCustodyDataSource.getCustody(pair.documentId)
                 ?.let { SharedCustodyRead.Found(it) }
@@ -300,11 +355,15 @@ class CustodyModelRepository(
      * write-through point — a pattern that synced from one entry point and not another would be
      * worse than one that did not sync at all.
      */
-    suspend fun saveAndActivate(model: CustodyModel) {
-        val entity = model.toEntity().copy(isActive = true)
-        custodyModelDao.deactivateAllModels()
+    suspend fun saveAndActivate(model: CustodyModel) = saveAndActivate(model, currentFamilies())
+
+    /** [saveAndActivate] for the [families] a caller has already decided on, read once. */
+    private suspend fun saveAndActivate(model: CustodyModel, families: SignedInFamilies) {
+        // The family on screen's schedule, stamped as such; no family while unpaired.
+        val entity = model.toEntity().copy(isActive = true, familyId = families.pair?.documentId)
+        custodyModelDao.deactivateFamily(entity.familyId)
         custodyModelDao.insertModel(entity)
-        pushToFirestore(model, entity)
+        pushToFirestore(model, entity, families)
     }
 
     /**
@@ -332,13 +391,22 @@ class CustodyModelRepository(
      *   which.
      */
     suspend fun submitPattern(model: CustodyModel, planCitation: String? = null): PatternSubmission =
-        submit(model, planCitation)
+        submit(model, planCitation, currentFamilies())
 
+    /**
+     * [submitPattern] for the [families] read once when the change began, so every step of it —
+     * the read, the proposal, the activation — lands in one family even if the switcher moves on
+     * while it runs (a push tap mid-save).
+     */
     @Suppress("ReturnCount") // one road per answer: activated, refused, unsent, proposed
-    private suspend fun submit(model: CustodyModel, planCitation: String?): PatternSubmission {
-        val pair = currentPair()
+    private suspend fun submit(
+        model: CustodyModel,
+        planCitation: String?,
+        families: SignedInFamilies
+    ): PatternSubmission {
+        val pair = families.pair
         if (pair == null) {
-            saveAndActivate(model)
+            saveAndActivate(model, families)
             return PatternSubmission.ACTIVATED
         }
         // Guarded: an unguarded read threw straight out of the caller's `viewModelScope.launch`.
@@ -352,7 +420,7 @@ class CustodyModelRepository(
         val existing = when (read) {
             is SharedCustodyRead.Found -> read.custody
             SharedCustodyRead.Absent -> {
-                saveAndActivate(model)
+                saveAndActivate(model, families)
                 return PatternSubmission.ACTIVATED
             }
             SharedCustodyRead.Unavailable -> return PatternSubmission.NOT_SENT
@@ -420,7 +488,7 @@ class CustodyModelRepository(
         guarded("decide-proposal") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, next)
         } ?: return Result.failure(IllegalStateException("The decision could not be written"))
-        mirrorIntoRoom(next)
+        mirrorIntoRoom(pair.documentId, next)
         return Result.success(Unit)
     }
 
@@ -492,9 +560,9 @@ class CustodyModelRepository(
         val entity = model.toEntity(
             createdAt = existing?.createdAt ?: nowIso(),
             lastModifiedAtMillis = existing?.lastModifiedAtMillis ?: nowMillis()
-        ).copy(isActive = true, repeatYearly = existing?.repeatYearly ?: true)
+        ).copy(isActive = true, repeatYearly = existing?.repeatYearly ?: true, familyId = existing?.familyId)
         if (entity == existing) return
-        custodyModelDao.deactivateAllModels()
+        custodyModelDao.deactivateFamily(entity.familyId)
         custodyModelDao.insertModel(entity)
     }
 
@@ -515,7 +583,7 @@ class CustodyModelRepository(
         val entity = model.toEntity(
             createdAt = original?.createdAt ?: nowIso(),
             lastModifiedAtMillis = original?.lastModifiedAtMillis ?: nowMillis()
-        ).copy(id = UUID.randomUUID().toString(), isActive = false)
+        ).copy(id = UUID.randomUUID().toString(), isActive = false, familyId = original?.familyId)
         custodyModelDao.insertModel(entity)
     }
 
@@ -537,7 +605,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -562,7 +630,7 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -579,7 +647,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -596,7 +664,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -615,7 +683,7 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -626,6 +694,12 @@ class CustodyModelRepository(
     private fun CustodyModel.withWindows(windows: List<ContactWindow>): CustodyModel =
         copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
 
+    /** A fresh pattern from the editor, with the family's layers, for the family on screen now. */
+    private suspend fun submitNew(model: CustodyModel, planCitation: String?): PatternSubmission {
+        val families = currentFamilies()
+        return submit(withActiveLayers(model, families), planCitation, families)
+    }
+
     /**
      * [model] carrying the active pattern's seasonal layers (MON-14) and each child's own schedule
      * (FAM-4).
@@ -635,8 +709,8 @@ class CustodyModelRepository(
      * would propose deleting every layer and every override the pair agreed — a change nobody
      * asked for, riding on one somebody did. Unreadable entries travel too.
      */
-    private suspend fun withActiveLayers(model: CustodyModel): CustodyModel {
-        val active = getActiveModelSync() ?: return model
+    private suspend fun withActiveLayers(model: CustodyModel, families: SignedInFamilies): CustodyModel {
+        val active = activeRowNow(families)?.toDomainModel() ?: return model
         return model.copy(
             seasonalLayers = active.seasonalLayers,
             unreadableLayers = active.unreadableLayers,
@@ -658,9 +732,10 @@ class CustodyModelRepository(
      * @return How the change landed, or null when there is no family schedule to override.
      */
     suspend fun submitChildOverride(childId: String, override: ChildScheduleOverride?): PatternSubmission? {
-        val active = getActiveModelSync() ?: return null
+        val families = currentFamilies()
+        val active = activeRowNow(families)?.toDomainModel() ?: return null
         val others = active.childOverrides.filterNot { it.childId == childId }
-        return submitPattern(active.copy(childOverrides = others + listOfNotNull(override)))
+        return submit(active.copy(childOverrides = others + listOfNotNull(override)), null, families)
     }
 
     /**
@@ -676,8 +751,9 @@ class CustodyModelRepository(
      * @return How the change landed, or null when there is no base pattern to layer on.
      */
     suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>, planCitation: String? = null): PatternSubmission? {
-        val active = getActiveModelSync() ?: return null
-        return submitPattern(active.copy(seasonalLayers = layers), planCitation)
+        val families = currentFamilies()
+        val active = activeRowNow(families)?.toDomainModel() ?: return null
+        return submit(active.copy(seasonalLayers = layers), planCitation, families)
     }
 
     /**
@@ -708,16 +784,17 @@ class CustodyModelRepository(
      * safe reset when the failure could have come from any stage.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun sharedUpstream(): Flow<SharedCustody?> =
+    private fun sharedUpstream(): Flow<FamilyDocument> =
         observePair()
             .flatMapLatest { pair ->
                 if (pair == null) {
-                    flowOf(null)
+                    flowOf(FamilyDocument(documentId = null, custody = null))
                 } else {
                     firestoreCustodyDataSource.observeCustody(pair.documentId)
+                        .map { custody -> FamilyDocument(pair.documentId, custody) }
                 }
             }
-            .onEach { remote -> mirrorIntoRoom(remote) }
+            .onEach { document -> document.documentId?.let { mirrorIntoRoom(it, document.custody) } }
             .retryWhen { cause, attempt ->
                 Log.w(
                     TAG,
@@ -743,19 +820,25 @@ class CustodyModelRepository(
      * re-emit to every observer, and do it again on the next echo.
      *
      * **The staleness guard is what stops this function from undoing the user's own save.**
-     * [saveAndActivate] deactivates every model before inserting the new one, so a previously
-     * mirrored row is left `isActive = false`; if the remote write behind it was then swallowed
-     * by [guarded], the document still holds the old pattern. The equality guard alone does not
-     * fire on the replay — the stored row differs from the computed one precisely in `isActive`
+     * [saveAndActivate] deactivates the family's rows before inserting the new one, so a
+     * previously mirrored row is left `isActive = false`; if the remote write behind it was then
+     * swallowed by [guarded], the document still holds the old pattern. The equality guard alone
+     * does not fire on the replay — the stored row differs from the computed one precisely in `isActive`
      * — so the mirror used to deactivate the model the user had just chosen and re-activate the
      * stale one, silently, with no error anywhere: `CustodySetupViewModel` only catches what
      * [saveAndActivate] rethrows, and it rethrows nothing. Comparing `lastModifiedAtMillis` is the
      * same last-write-wins rule the shared document already runs on, applied in the one
      * direction it was missing.
      */
-    private suspend fun mirrorIntoRoom(remote: SharedCustody?) {
+    private suspend fun mirrorIntoRoom(familyId: String, remote: SharedCustody?) {
         if (remote == null) return
+        val families = currentFamilies()
+        // A row under the same id is this family's only if it says so, or names no family while
+        // this is the parent's only one: the old republish could copy one family's model, id and
+        // all, into the other's document, and the keys an older build leaves out must never be
+        // filled in from the other family's row.
         val existing = custodyModelDao.getModelById(remote.model.id)
+            ?.takeIf { ActiveCustodyRow.belongsTo(it, familyId, families.soleFamily) }
         val entity = remote.model.toEntity(
             createdAt = remote.createdAt.ifBlank { existing?.createdAt ?: nowIso() },
             lastModifiedAtMillis = remote.lastModifiedAtMillis
@@ -782,17 +865,26 @@ class CustodyModelRepository(
                 SeasonalLayerJson.encode(remote.model.seasonalLayers, remote.model.unreadableLayers)
             },
             // And for each child's own schedule (FAM-4).
-            childOverridesJson = ChildOverrideJson.mirrored(remote, existing?.childOverridesJson)
+            childOverridesJson = ChildOverrideJson.mirrored(remote, existing?.childOverridesJson),
+            // The family whose document this is — not the family on screen, which a switch may
+            // already have moved on from by the time this document arrives.
+            familyId = familyId
         )
         if (entity == existing) return
 
-        val localActive = custodyModelDao.getActiveModelSync()
+        // Compared with this family's row only. Another family's row is often newer, and the
+        // winner is re-pushed over the loser: that is how one family's schedule overwrote the
+        // other family's document.
+        val localActive = ActiveCustodyRow.pick(
+            custodyModelDao.getActiveModelsSync(),
+            CustodyScope(familyId, families.soleFamily)
+        )
         if (localActive != null && isNewer(localActive.lastModifiedAtMillis, entity.lastModifiedAtMillis)) {
-            republish(localActive)
+            republish(localActive, families)
             return
         }
 
-        custodyModelDao.deactivateAllModels()
+        custodyModelDao.deactivateFamily(familyId)
         custodyModelDao.insertModel(entity)
     }
 
@@ -809,8 +901,8 @@ class CustodyModelRepository(
      * This cannot loop. The re-push echoes back carrying the same instant the local row
      * holds, so the next pass finds neither side newer and mirrors normally.
      */
-    private suspend fun republish(local: CustodyModelEntity) {
-        pushToFirestore(local.toDomainModel(), local)
+    private suspend fun republish(local: CustodyModelEntity, families: SignedInFamilies) {
+        pushToFirestore(local.toDomainModel(), local, families)
     }
 
     /**
@@ -838,9 +930,12 @@ class CustodyModelRepository(
      * `createdAt` comes from the existing document when there is one, so an update does not
      * re-date the pair's arrangement, and `lastModifiedBy` is the signed-in uid on every write:
      * it is what tells the co-parent's device that the change was not its own echo.
+     *
+     * **The document is the row's own family's** ([SignedInFamilies.pairFor]), never simply the
+     * family on screen: a mirror pass can republish a row a moment after the switcher moves on.
      */
-    private suspend fun pushToFirestore(model: CustodyModel, entity: CustodyModelEntity) {
-        val pair = currentPair() ?: return
+    private suspend fun pushToFirestore(model: CustodyModel, entity: CustodyModelEntity, families: SignedInFamilies) {
+        val pair = families.pairFor(entity) ?: return
         guarded("write") {
             val existing = firestoreCustodyDataSource.getCustody(pair.documentId)
             val existingCreatedAt = existing?.createdAt?.takeIf { it.isNotBlank() }
@@ -1113,48 +1208,19 @@ class CustodyModelRepository(
     }
 
     /**
-     * The pair this device currently belongs to, or null when nobody is signed in or nobody is
-     * paired.
-     *
-     * The two UIDs come from [UserRepository], the domain interface for exactly this lookup.
-     * Never from the UI-layer `ParentsSource`, whose `observe()` would drag a whole pairing
-     * subscription in here across a layer boundary this class has no business crossing —
-     * `CalendarSyncRepository` had the tree's last such edge and it was removed one task ago.
+     * The pair this device currently belongs to — the family on screen — or null when nobody is
+     * signed in or nobody is paired.
      */
-    private suspend fun currentPair(): CustodyPair? =
-        userRepository.getCurrentUserId()?.let { uid ->
-            custodyPairOf(uid, userRepository.getUserById(uid)?.partnerId)
-        }
+    private suspend fun currentPair(): CustodyPair? = familyReader.current().pair
+
+    /** [currentPair] together with every co-parent of the signed-in parent, read once. */
+    private suspend fun currentFamilies(): SignedInFamilies = familyReader.current()
 
     /**
-     * The pair as a stream: re-derived on sign-in, sign-out, account switch, and on the pairing
-     * being mirrored into the local profile row, so the listener follows the account rather than
-     * whichever pairing happened to exist when the first screen opened.
+     * The pair as a stream, so the listener follows the account and the family on screen rather
+     * than whichever pairing happened to exist when the first screen opened.
      */
-    private fun observePair(): Flow<CustodyPair?> = combine(
-        userRepository.observeCurrentUserId(),
-        userRepository.getAllUsers()
-    ) { uid, users ->
-        // Matched by uid, never "the only row": sign-out does not clear Room, so a device where
-        // two accounts have signed in over time holds two rows.
-        custodyPairOf(uid, uid?.let { id -> users.firstOrNull { it.id == id }?.partnerId })
-    }.distinctUntilChanged()
-
-    /**
-     * The document id and the sorted participants for [uid]/[partnerId], or null when there is
-     * no pair to share anything with.
-     *
-     * [CustodyKey.of] rejects a blank, self-referential or separator-bearing uid by throwing;
-     * that is a programming error at its own call sites but merely bad stored data here, so it
-     * degrades to "no shared document" rather than taking down whatever collected the flow.
-     */
-    private fun custodyPairOf(uid: String?, partnerId: String?): CustodyPair? {
-        if (uid.isNullOrBlank() || partnerId.isNullOrBlank()) return null
-        val documentId = runCatching { CustodyKey.of(uid, partnerId) }
-            .onFailure { Log.w(TAG, "Cannot derive a custody document id for this pair", it) }
-            .getOrNull() ?: return null
-        return CustodyPair(documentId, listOf(uid, partnerId).sorted(), uid)
-    }
+    private fun observePair(): Flow<CustodyPair?> = familyReader.observe().map { it.pair }.distinctUntilChanged()
 
     /**
      * Runs a remote call, degrading a failure to null with a log.
@@ -1183,75 +1249,23 @@ class CustodyModelRepository(
     // ---- helpers ----------------------------------------------------------
 
     /**
+     * The family on screen's active row ([ActiveCustodyRow.pick]), re-picked when the family on
+     * screen, the set of co-parents or the rows change.
+     */
+    private fun activeRow(): Flow<CustodyModelEntity?> = combine(
+        familyReader.observe().map { it.scope }.distinctUntilChanged(),
+        custodyModelDao.observeActiveModels()
+    ) { scope, rows -> ActiveCustodyRow.pick(rows, scope) }.distinctUntilChanged()
+
+    /** [activeRow], read once, for [families] when the caller has already read it. */
+    private suspend fun activeRowNow(families: SignedInFamilies? = null): CustodyModelEntity? =
+        ActiveCustodyRow.pick(custodyModelDao.getActiveModelsSync(), (families ?: currentFamilies()).scope)
+
+    /**
      * Turns the mirroring flow into one that never emits, so exactly one of the two branches
      * merged by [getActiveModel] — Room — decides what the caller sees.
      */
     private fun <T> Flow<*>.mirrorOnly(): Flow<T> = transform { }
-
-    /**
-     * Converts CustodyModelEntity to CustodyModel domain model.
-     */
-    private fun CustodyModelEntity.toDomainModel(): CustodyModel {
-        val momDays = momDaysPattern
-            .removeSurrounding("[", "]")
-            .split(",")
-            .filter { it.isNotBlank() }
-            .map { it.trim().toInt() }
-            .toSet()
-
-        val layers = SeasonalLayerJson.decode(seasonalLayersJson)
-        val children = ChildOverrideJson.decode(childOverridesJson)
-        return CustodyModel(
-            id = id,
-            modelType = CustodyModelType.fromString(modelType),
-            patternDays = patternDays,
-            momDayIndices = momDays,
-            startDate = LocalDate.parse(startDate),
-            isActive = isActive,
-            contactWindows = ContactWindowJson.decode(contactWindowsJson),
-            seasonalLayers = layers.layers,
-            unreadableLayers = layers.unreadable,
-            childOverrides = children.overrides,
-            unreadableChildOverrides = children.unreadable
-        )
-    }
-
-    /**
-     * Converts CustodyModel domain model to CustodyModelEntity.
-     *
-     * @param createdAt ISO date-time to stamp; defaults to now for a locally created model and
-     *   is supplied from the document when mirroring, so a synced row keeps the pair's dates.
-     * @param lastModifiedAtMillis Instant of the change, epoch millis; defaults to now. Not a
-     *   wall clock, and not derived from [createdAt]: this is the value that decides which
-     *   phone's schedule survives, so it has to mean the same thing in both zones (SEC-4).
-     */
-    private fun CustodyModel.toEntity(
-        createdAt: String = nowIso(),
-        lastModifiedAtMillis: Long = nowMillis(),
-        dayOverrides: Map<String, DayOverride> = emptyMap()
-    ): CustodyModelEntity {
-        val momDaysJson = momDayIndices.sorted().joinToString(",", "[", "]")
-
-        return CustodyModelEntity(
-            id = id,
-            modelType = CustodyModelType.toString(modelType),
-            patternDays = patternDays,
-            momDaysPattern = momDaysJson,
-            startDate = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-            isActive = isActive,
-            repeatYearly = true,
-            createdAt = createdAt,
-            lastModifiedAtMillis = lastModifiedAtMillis,
-            // Null rather than "{}" for none, so a row that has never carried a swap is
-            // byte-identical to one written before the column existed — which the equality
-            // guard in `mirrorIntoRoom` depends on to stay quiet.
-            dayOverridesJson = DayOverrideJson.encode(dayOverrides),
-            // Null for none, for the same reason.
-            contactWindowsJson = ContactWindowJson.encode(contactWindows),
-            seasonalLayersJson = SeasonalLayerJson.encode(seasonalLayers, unreadableLayers),
-            childOverridesJson = ChildOverrideJson.encode(childOverrides, unreadableChildOverrides)
-        )
-    }
 
     private fun nowIso(): String =
         LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
@@ -1260,18 +1274,12 @@ class CustodyModelRepository(
     private fun nowMillis(): Long = System.currentTimeMillis()
 
     /**
-     * The two parents behind one custody document.
+     * The shared document as it arrived, with the family it was read for.
      *
-     * @property documentId The derived id, from [CustodyKey.of].
-     * @property participants Both UIDs, sorted — the order `firestore.rules` requires the stored
-     *   array to be in, and to stay in for every later update.
-     * @property myUid The signed-in parent, stamped as `lastModifiedBy`.
+     * @property documentId The family's id, or null while this device follows no pair.
+     * @property custody The document, or null while it does not exist.
      */
-    private data class CustodyPair(
-        val documentId: String,
-        val participants: List<String>,
-        val myUid: String
-    )
+    private data class FamilyDocument(val documentId: String?, val custody: SharedCustody?)
 
     private companion object {
         const val TAG = "CustodyModelRepo"

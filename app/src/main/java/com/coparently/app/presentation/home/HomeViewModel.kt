@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyResolver
@@ -24,17 +23,22 @@ import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
-import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.changerequests.RequestsSource
+import com.coparently.app.presentation.changerequests.RequestsState
+import com.coparently.app.presentation.common.CoParentOnScreen
 import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.coParentOnScreen
+import com.coparently.app.presentation.common.observeSignedInUser
+import com.coparently.app.presentation.common.projectedCoParentUid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -44,33 +48,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
-
-/**
- * Kind of change surfaced on the home dashboard.
- */
-enum class ActivityKind { EVENT_CREATED, EVENT_UPDATED, PICKUP_CONFIRMED, CHANGE_REQUESTED }
-
-/**
- * One entry in the "recent changes the co-parent made" feed.
- */
-data class ActivityItem(
-    val id: String,
-    val kind: ActivityKind,
-    val title: String,
-    val timestamp: LocalDateTime,
-    val eventId: String,
-    val isChangeRequest: Boolean
-)
 
 /** A per-currency subtotal of this month's spending. */
 data class CurrencyAmount(val currency: String, val amount: Double)
@@ -102,10 +89,10 @@ data class MonthSpendDependencies @Inject constructor(
  * bundled into one constructor-injected value for the same reason as
  * [MonthSpendDependencies]: [HomeViewModel] was already at the constructor-parameter
  * limit, and task 9 (the realtime pairing CTA) needed [PairingRepository] alongside the
- * existing [UserRepository] — [UserRepository] feeds `_userId`/`_partnerId`, [PairingRepository]
- * feeds [HomeViewModel.paired], and neither is used anywhere else in the class. Bundling
- * keeps the real dependency count visible (no `@Suppress`, no widened detekt threshold)
- * rather than hiding it behind a wider limit.
+ * existing [UserRepository] — [UserRepository] feeds `_userId` and the family on screen,
+ * [PairingRepository] the pairing state and the co-parent's profile, and neither is used anywhere
+ * else in the class. Bundling keeps the real dependency count visible (no `@Suppress`, no widened
+ * detekt threshold) rather than hiding it behind a wider limit.
  *
  * Unlike [MonthSpendDependencies], the dependencies here don't feed one shared
  * computed value — they feed independent flows. The grouping is by usage locality
@@ -180,7 +167,9 @@ sealed interface HomeUiState {
      *   first. Owner ask (Aug 2026 walkthrough, items 4/13): an incoming swap must be visible —
      *   and answerable — from the main page, not only from an inbox nothing pointed at.
      * @property awaitingRequestCount Incoming event change requests and pending events still
-     *   waiting for this parent's answer, for the same reason.
+     *   waiting for this parent's answer, in the family on screen — what the pop-ups count.
+     * @property requests What the Requests row says: what waits on each parent and the
+     *   co-parent's latest answer (phase 2, spec §6.1).
      * @property childrenToday Each child with the parent they are with today, on a day the
      *   children are not all with the same one (FAM-4) — empty on every other day and in every
      *   family without two children and an override, so the hero stays the one family sentence.
@@ -196,7 +185,8 @@ sealed interface HomeUiState {
         val unreadCount: Int,
         val awaitingSwaps: List<DaySwapGroup> = emptyList(),
         val awaitingRequestCount: Int = 0,
-        val childrenToday: List<ChildWithParent> = emptyList()
+        val childrenToday: List<ChildWithParent> = emptyList(),
+        val requests: RequestsRowState = RequestsRowState()
     ) : HomeUiState
 }
 
@@ -209,7 +199,7 @@ sealed interface HomeUiState {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     eventRepository: EventRepository,
-    changeRequestRepository: ChangeRequestRepository,
+    requestsSource: RequestsSource,
     custodyModelRepository: CustodyModelRepository,
     monthSpendDependencies: MonthSpendDependencies,
     messageRepository: MessageRepository,
@@ -268,31 +258,47 @@ class HomeViewModel @Inject constructor(
         monthSpendDependencies.preferencesRepository.getDefaultCurrencyFlow()
             .stateIn(viewModelScope, SharingStarted.Eagerly, SupportedCurrency.DEFAULT)
 
-    private val _partnerId = MutableStateFlow<String?>(null)
     private val _userId = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
-            val userRepository = homeIdentityDependencies.userRepository
-            val user = userRepository.getCurrentUser()
-            _userId.value = userRepository.getCurrentUserId().orEmpty()
-            _partnerId.value = user?.partnerId?.takeIf { it.isNotEmpty() }
+            _userId.value = homeIdentityDependencies.userRepository.getCurrentUserId().orEmpty()
         }
     }
 
-    /**
-     * Realtime pairing state, shared by [paired] and [partner] so one Firestore listener
-     * feeds both instead of two.
-     */
+    /** Realtime pairing state, for [uiState] and [coParent]. */
     private val pairingState = homeIdentityDependencies.pairingRepository.observePairingState()
 
     /**
-     * The linked co-parent, or null while unpaired. Names the activity feed ("Alex changed")
-     * and the chat tile, so the dashboard talks about a person rather than "the co-parent".
+     * The co-parent of the family on screen, with their profile: the one [partner] and
+     * [partnerId] both follow, so the changes header and the unread tile cannot name two
+     * different families.
+     *
+     * Not the pairing state's partner, which is the *first* co-parent whatever the family
+     * switcher says, and not the Room projection read once at construction, which is what the
+     * unread count and the changes feed used to key on: after a switch, both stayed on the family
+     * the parent had just left (tester report #11).
      */
-    private val partner: StateFlow<PartnerSummary?> = pairingState
-        .map { (it as? PairingState.Paired)?.partner }
+    private val coParent: StateFlow<CoParentOnScreen> = coParentOnScreen(
+        pairing = pairingState,
+        projectedPartnerUid = homeIdentityDependencies.userRepository.observeSignedInUser()
+            .map { it?.projectedCoParentUid() },
+        profileOf = homeIdentityDependencies.pairingRepository::observeCoParentProfile
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), CoParentOnScreen.Resolving)
+
+    /**
+     * The co-parent of the family on screen, or null while unpaired. Names the activity feed
+     * ("Alex changed") and the chat tile, so the dashboard talks about a person rather than "the
+     * co-parent".
+     */
+    private val partner: StateFlow<PartnerSummary?> = coParent
+        .map { (it as? CoParentOnScreen.Linked)?.profile }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /** The uid of the co-parent of the family on screen, for the unread count and the changes feed. */
+    private val partnerId: Flow<String?> = coParent
+        .map { (it as? CoParentOnScreen.Linked)?.uid }
+        .distinctUntilChanged()
 
     /**
      * Whether a co-parent is linked. Driven by the pairing repository's realtime state, so
@@ -524,7 +530,7 @@ class HomeViewModel @Inject constructor(
      * now reads. It is the one subscription that has to stay, and CQ-8 explains why untangling
      * it is a separate job.
      */
-    private val unreadCount: StateFlow<Int> = combine(_userId, _partnerId) { userId, partnerId ->
+    private val unreadCount: StateFlow<Int> = combine(_userId, partnerId) { userId, partnerId ->
         userId to partnerId
     }
         .flatMapLatest { (userId, partnerId) ->
@@ -542,40 +548,47 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
 
     /**
-     * Up to [MAX_ITEMS] most recent changes made by the co-parent, newest first.
+     * The family on screen's requests (phase 2): one upstream for the Requests row, the answers in
+     * the feed and the pop-ups' count, the same source the inbox and the calendar banner read.
+     */
+    private val requests: StateFlow<RequestsState> = requestsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), RequestsState.Loading)
+
+    /**
+     * Up to [MAX_ITEMS] most recent things the co-parent did, newest first: their event writes,
+     * their change requests and their answers to this parent's requests ([HomeFeed]).
      */
     private val recentChanges: StateFlow<List<ActivityItem>> = combine(
         eventRepository.getAllEvents(),
-        changeRequestRepository.getAllChangeRequests(),
-        _partnerId
-    ) { events, changeRequests, partnerId ->
+        requests,
+        partnerId
+    ) { events, state, partnerId ->
         if (partnerId == null) return@combine emptyList()
-
-        val eventItems = events
-            .filter { !it.isPrivate && it.lastModifiedBy == partnerId }
-            .map { it.toActivityItem() }
-
-        val requestItems = changeRequests
-            .filter { it.requestedBy == partnerId }
-            .map { request ->
-                ActivityItem(
-                    id = "cr_${request.id}",
-                    kind = ActivityKind.CHANGE_REQUESTED,
-                    title = request.eventTitle,
-                    timestamp = request.createdAt,
-                    eventId = request.eventId,
-                    isChangeRequest = true
-                )
-            }
-
-        (eventItems + requestItems)
-            .sortedByDescending { it.timestamp }
-            .take(MAX_ITEMS)
+        val ready = state as? RequestsState.Ready
+        HomeFeed.items(
+            events = events,
+            changeRequests = ready?.changeRequests.orEmpty(),
+            history = ready?.inbox?.history.orEmpty(),
+            partnerId = partnerId,
+            maxItems = MAX_ITEMS
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         initialValue = emptyList()
     )
+
+    /** What the Requests row says, or nothing while the family's requests are still loading. */
+    private val requestsRow: StateFlow<RequestsRowState> = requests
+        .map { state ->
+            val ready = state as? RequestsState.Ready ?: return@map RequestsRowState()
+            RequestsRowState(
+                waitingOnMe = ready.inbox.waitingOnMe.count,
+                waitingOnThem = ready.inbox.waitingOnThem.count,
+                latestAnswer = RequestsRowText.latestAnswer(ready.inbox.history, ready.scope, LocalDateTime.now())
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), RequestsRowState())
 
     /**
      * Whether this family's app offers child records, pet records, or both.
@@ -587,36 +600,28 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), FamilyKind.ALL)
 
     /**
-     * Day swaps still waiting for this parent's answer, soonest first.
+     * Day swaps still waiting for this parent's answer in the family on screen, soonest first.
      *
-     * Same source and same filter as the inbox (`DaySwapInbox`), so the main page can never
-     * disagree with the screen that answers them. `LocalDate.now()` is read per emission for
-     * the reason `ChangeRequestViewModel.daySwaps` documents: this flow outlives midnight.
+     * The inbox's own list, from [requests], so the main page can never disagree with the screen
+     * that answers them — grouped, so a week offered as one agreement raises one dialog rather
+     * than seven in a row. It used to read Room's one active custody model, which keeps the
+     * previous family's swaps while the family on screen has no custody document, so another
+     * family's swap popped up here (phase 2 review).
      */
-    private val awaitingSwaps: StateFlow<List<DaySwapGroup>> = combine(
-        custodyModelRepository.observeDayOverrides(),
-        _userId
-    ) { overrides, uid ->
-        // Grouped, so a week offered as one agreement raises one dialog rather than seven in a
-        // row — each dismissal revealing the next, which is what the reporter saw.
-        AwaitingAnswers.swapOffers(overrides, uid, LocalDate.now())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+    private val awaitingSwaps: StateFlow<List<DaySwapGroup>> = requests
+        .map { state -> (state as? RequestsState.Ready)?.inbox?.waitingOnMe?.swaps.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
-     * Incoming change requests plus pending events still waiting for this parent's answer.
-     *
-     * The event half mirrors the inbox's `eventsAwaitingMe`: `getAllEvents` is deliberately not
-     * acceptance-filtered, and only events this parent did not create count — the creator cannot
-     * decide their own.
+     * Incoming change requests plus pending events still waiting for this parent's answer, in the
+     * family on screen — what the pop-ups count. Read from [requests], so it counts what the inbox
+     * lists and nothing from another family.
      */
-    private val awaitingRequestCount: StateFlow<Int> = combine(
-        _userId.flatMapLatest { uid ->
-            if (uid.isEmpty()) flowOf(0) else changeRequestRepository.getPendingIncomingCount(uid)
-        },
-        combine(eventRepository.getAllEvents(), _userId) { events, uid ->
-            AwaitingAnswers.eventCount(events, uid)
+    private val awaitingRequestCount: StateFlow<Int> = requests
+        .map { state ->
+            val waiting = (state as? RequestsState.Ready)?.inbox?.waitingOnMe
+            waiting?.let { it.changeRequests.size + it.events.size } ?: 0
         }
-    ) { requests, events -> requests + events }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
 
     /**
@@ -636,8 +641,8 @@ class HomeViewModel @Inject constructor(
             Triple(spend, balances, unread)
         },
         combine(recentChanges, childrenToday) { changes, children -> changes to children },
-        combine(awaitingSwaps, awaitingRequestCount) { swaps, requests -> swaps to requests }
-    ) { (coParent, handover, sections), (spend, balances, unread), (changes, children), (swaps, requests) ->
+        combine(awaitingSwaps, awaitingRequestCount, requestsRow) { swaps, count, row -> Triple(swaps, count, row) }
+    ) { (coParent, handover, sections), (spend, balances, unread), (changes, children), (swaps, count, row) ->
         HomeUiState.Dashboard(
             partner = coParent,
             nextHandover = handover,
@@ -648,8 +653,9 @@ class HomeViewModel @Inject constructor(
             monthBalances = balances,
             unreadCount = unread,
             awaitingSwaps = swaps,
-            awaitingRequestCount = requests,
-            childrenToday = children
+            awaitingRequestCount = count,
+            childrenToday = children,
+            requests = row
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), EMPTY_DASHBOARD)
 
@@ -688,25 +694,6 @@ class HomeViewModel @Inject constructor(
     private fun conversationIdOrNull(userId: String, partnerId: String): String? =
         runCatching { ConversationKey.of(userId, partnerId) }.getOrNull()
 
-    private fun Event.toActivityItem(): ActivityItem {
-        val kind = when {
-            pickupConfirmedBy != null && pickupConfirmedAt != null &&
-                Duration.between(pickupConfirmedAt, updatedAt).abs() <= NEAR_THRESHOLD ->
-                ActivityKind.PICKUP_CONFIRMED
-            Duration.between(createdAt, updatedAt).abs() <= NEAR_THRESHOLD ->
-                ActivityKind.EVENT_CREATED
-            else -> ActivityKind.EVENT_UPDATED
-        }
-        return ActivityItem(
-            id = "ev_${id}_$updatedAt",
-            kind = kind,
-            title = title,
-            timestamp = updatedAt,
-            eventId = id,
-            isChangeRequest = false
-        )
-    }
-
     private companion object {
         /** Today's agenda before any repository has answered: today, empty, no custody. */
         val EMPTY_TODAY = TodayAgenda(
@@ -740,7 +727,6 @@ class HomeViewModel @Inject constructor(
          */
         const val PAIRING_SETTLE_TIMEOUT_MS = 3000L
         const val TAG = "HomeViewModel"
-        val NEAR_THRESHOLD: Duration = Duration.ofSeconds(2)
     }
 }
 

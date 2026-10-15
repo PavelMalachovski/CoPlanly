@@ -7,24 +7,23 @@ import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
+import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverrideTransition
-import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
-import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.events.EventAcceptanceTransition
-import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
+import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,10 +34,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -46,9 +45,11 @@ import javax.inject.Inject
 private const val TAG = "ChangeRequestViewModel"
 
 /**
- * ViewModel for the inbox: event change requests, one-off day swaps, and the actions on both.
+ * ViewModel for the requests inbox: the family on screen's requests in three sections
+ * ([requests]), the month of each event waiting for an answer ([miniMonths]), and the answers —
+ * to change requests, day swaps, pending events and the custody proposal.
  *
- * The two live together because the inbox is one screen and one back-stack entry — a parent
+ * They live together because the inbox is one screen and one back-stack entry — a parent
  * answering "what is waiting for me" should not have to look in two places. They stay separate
  * *types* all the way down, though: a change request points at an event and moves its times, a
  * swap points at a date and moves nothing but who has it. See `DayOverride` for why folding one
@@ -64,7 +65,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val custodyModelRepository: CustodyModelRepository,
     parentsSource: ParentsSource,
-    private val planReferenceSource: PlanReferenceSource
+    private val planReferenceSource: PlanReferenceSource,
+    requestsSource: RequestsSource
 ) : ViewModel() {
 
     /**
@@ -88,95 +90,45 @@ class ChangeRequestViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<UiText?>(null)
     val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
-    // `changeRequests` starts at `initialValue = emptyList()` before Room's flow has emitted
-    // even once, and that placeholder is structurally identical to a real, confirmed-empty
-    // result — a genuinely empty inbox also settles on `emptyList()`. A reader that needs to
-    // know "has the real data arrived yet" (the chat-card deep link's highlight/"already
-    // closed" decision in ChangeRequestsScreen) cannot tell the two apart from the list value
-    // alone, so this flips once the underlying flow has produced its first real emission,
-    // whatever that emission is.
-    private val _hasLoaded = MutableStateFlow(false)
-    val hasLoaded: StateFlow<Boolean> = _hasLoaded.asStateFlow()
+    /**
+     * The family on screen's requests (phase 2): what the inbox draws in its three sections, and
+     * what the calendar's banner counts — one source, so the two cannot disagree with each other or
+     * with Home's Requests row.
+     */
+    val requests: StateFlow<RequestsState> = requestsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RequestsState.Loading)
 
-    val changeRequests: StateFlow<List<ChangeRequest>> =
-        changeRequestRepository.getAllChangeRequests()
-            .onEach { _hasLoaded.value = true }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
-
-    val pendingIncomingCount: StateFlow<Int> = _currentUserId
-        .flatMapLatest { userId ->
-            changeRequestRepository.getPendingIncomingCount(userId)
+    /**
+     * The mini month of every event waiting for an answer, either way, by event id: the event's
+     * month, drawn with the family's custody and the family's visible events (spec §5.3).
+     *
+     * The custody is the family's own document ([RequestsState.Ready.custody]), never Room's one
+     * active model, which still holds the previous family's schedule while the family on screen
+     * has none: a family without a schedule gets mini months without custody days (phase 2 review).
+     *
+     * Computed off the main thread — every waiting event expands the family's recurring events
+     * over its own month's grid — but collected on the ViewModel's own: only the computation
+     * hops to `Dispatchers.Default`. A `flowOn` producer there kept [requests] subscribed from a
+     * background thread, and when the sharing stopped, that producer finished on its own thread
+     * and resumed this scope after its dispatcher had gone — in the unit tests, after `resetMain`,
+     * which surfaced as an uncaught exception in whichever test ran next.
+     */
+    val miniMonths: StateFlow<Map<String, MiniMonthModel>> = requests
+        .mapLatest { state ->
+            val ready = state as? RequestsState.Ready ?: return@mapLatest emptyMap()
+            withContext(Dispatchers.Default) {
+                val custody = ready.custody
+                val custodyFor = CustodyResolver.resolver(
+                    custody?.model,
+                    custody?.dayOverrides.orEmpty(),
+                    legacy = { null }
+                )
+                (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
+                    event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
+                }
+            }
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
-        )
-
-    /**
-     * The one-off day swaps worth showing, soonest first.
-     *
-     * Bounded by the date rather than by the status: nothing deletes an answered swap, because
-     * the answer is the record the parent who offered it reads, and filtering on "still pending"
-     * would make a refusal vanish without them ever being told. See [DaySwapInbox].
-     *
-     * `LocalDate.now()` is read per emission rather than once: this flow outlives midnight on a
-     * phone left open, and a boundary computed at subscription time would keep yesterday's swaps
-     * in the list until the process died.
-     */
-    val daySwaps: StateFlow<List<DaySwap>> = custodyModelRepository.observeDayOverrides()
-        .map { overrides -> DaySwapInbox.visible(overrides, LocalDate.now()) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
-    /**
-     * The same swaps, folded into the offers they were made as.
-     *
-     * A run of days offered together is one agreement and gets one card. Before grouping, a week
-     * of swapped days produced seven cards asking the same question seven times — and seven modal
-     * dialogs on Home behind them.
-     */
-    val daySwapGroups: StateFlow<List<DaySwapGroup>> = custodyModelRepository.observeDayOverrides()
-        .map { overrides -> DaySwapInbox.groups(overrides, LocalDate.now()) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
-    /**
-     * Events the co-parent created for this parent that are still waiting on an answer.
-     *
-     * Read from `getAllEvents`, which is deliberately **not** acceptance-filtered — the calendar
-     * queries are, and this is the one screen that has to see what they hide. Without it a pending
-     * event would be invisible on both phones, which is worse than not having the feature.
-     *
-     * Only events this parent did not create appear: `EventAcceptanceTransition` and the
-     * repository both refuse a creator deciding their own, so offering the buttons here would
-     * promise an action that is rejected. The creator sees theirs on the event list instead.
-     */
-    val eventsAwaitingMe: StateFlow<List<Event>> = combine(
-        eventRepository.getAllEvents(),
-        _currentUserId
-    ) { events, uid ->
-        if (uid.isEmpty()) {
-            emptyList()
-        } else {
-            events.filter { it.acceptance.isPending && it.createdByFirebaseUid != uid }
-                .sortedBy { it.startDateTime }
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         viewModelScope.launch {

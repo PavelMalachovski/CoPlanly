@@ -3,6 +3,7 @@ package com.coparently.app.presentation.common
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -56,5 +57,16 @@ class ParentNamesTest {
     fun `labelForUid falls back to unknown for a null uid`() {
         val names = parentNames(Parents(me = me, coParent = coParent))
         assertEquals("Parent", names.labelForUid(null))
+    }
+
+    @Test
+    fun `slotForUid answers each parent's slot and null for a stranger`() {
+        // What an author's colour is looked up by: a request's creator is a uid, a colour a slot.
+        val names = parentNames(Parents(me = me, coParent = coParent))
+
+        assertEquals("mom", names.slotForUid("u1"))
+        assertEquals("dad", names.slotForUid("u2"))
+        assertNull(names.slotForUid("u3"))
+        assertNull(names.slotForUid(null))
     }
 }

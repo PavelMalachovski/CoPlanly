@@ -1094,7 +1094,9 @@ service cloud.firestore {
                       isValidLength(request.resource.data.childName, 1, 100) &&
                       // The audience minus the guests it names must be the writer's own family.
                       isMyGuestlessAudience(request.resource.data) &&
-                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
+                      familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                      // …and, once the record names a family, that family's two parents.
+                      audienceWithinItsFamily(request.resource.data, guestUidsOf(request.resource.data));
 
       // Being in the audience is not permission to write. `sharedWith` is what makes the
       // document *readable*, and package G2 puts a guest — a grandparent, for a weekend — into
@@ -1115,6 +1117,13 @@ service cloud.firestore {
       // any uid at all. A parent's own edit may admit only their family and the guests it names,
       // the bound `create` places on the whole list applied to what the edit adds; the
       // co-parent's may add nothing but the keys of the `guests` map they are writing.
+      //
+      // **"Their family" is the record's own, once it names one.** `onlyFamilyOrGuestsAdded`
+      // accepts any of the writer's co-parents, and a parent in two families has two: switching
+      // the phone to the second family and syncing re-uploaded every child of the first with the
+      // second family's parent in `sharedWith`, medical details and all, and the write passed.
+      // `onlyFamilyAddedToItsFamily` bounds what a write adds to the parents the record's family id
+      // names, before and after the write.
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
                       resource.data.createdByFirebaseUid in request.resource.data.sharedWith &&
@@ -1126,10 +1135,62 @@ service cloud.firestore {
                          request.auth.uid in request.resource.data.sharedWith &&
                          onlyGuestsAdded(resource.data, request.resource.data))
                       ) &&
+                      onlyFamilyAddedToItsFamily(resource.data, request.resource.data,
+                                                 guestUidsOf(request.resource.data)) &&
                       request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
+    }
+
+    // The uids a child record's write lets in as guests: the keys of the `guests` map it carries.
+    // A pet has no guests, so its rules pass `noGuests()` where a child's pass this.
+    function guestUidsOf(data) {
+      return data.get('guests', {}).keys().toSet();
+    }
+
+    function noGuests() {
+      return [].toSet();
+    }
+
+    // True when [familyId] names no family — the blank an unpaired parent's records carry, which
+    // has no parents to bound by — or names exactly two people and every uid in [uids] (a Set) is
+    // one of them.
+    //
+    // The two parents come from the id itself, `FamilyKey.of`'s two uids sorted and joined with
+    // `__` — the same reading `isFamilyMember` and the vault's audience bound make, so no document
+    // is read. Exactly two, not "any part": an id with a third part would otherwise admit whoever
+    // it names. A non-string id is refused here as it is by `familyIsMineOrBlank`.
+    function withinFamily(uids, familyId) {
+      return familyId == '' ||
+             (familyId is string &&
+              familyId.split('__').size() == 2 &&
+              uids.difference(familyId.split('__').toSet()).size() == 0);
+    }
+
+    // On create: the whole audience of a child or pet record, its guests taken out, is the
+    // record's own family when it names one.
+    function audienceWithinItsFamily(data, guestUids) {
+      return withinFamily(data.get('sharedWith', []).toSet().difference(guestUids),
+                          data.get('familyId', ''));
+    }
+
+    // On update: every uid a write adds to a child or pet record's `sharedWith`, its guests
+    // excepted, is a parent of the family the record named before the write **and** of the one it
+    // names after. Both, because a record keeps its family (CLAUDE.md item 18) and a bound on the
+    // new id alone is walked around by re-stamping the record into the other family. On the
+    // additions only, for the reason `onlyFamilyAdded` gives: a removal is never refused, which is
+    // also what lets a leaked uid be taken out by whichever parent writes next.
+    function onlyFamilyAddedToItsFamily(before, after, guestUids) {
+      return withinFamily(addedToAudience(before, after, guestUids), before.get('familyId', '')) &&
+             withinFamily(addedToAudience(before, after, guestUids), after.get('familyId', ''));
+    }
+
+    // The uids a write adds to `sharedWith`, as a Set, [guestUids] taken out.
+    function addedToAudience(before, after, guestUids) {
+      return after.get('sharedWith', []).toSet()
+        .difference(before.get('sharedWith', []).toSet())
+        .difference(guestUids);
     }
 
     // True when the audience of a child or pet record, with its guests taken out, is the
@@ -1175,15 +1236,18 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                     request.auth.uid in resource.data.get('sharedWith', []);
 
+      // The family bound is `child_info`'s with no guest exception: a pet has no guests, so a
+      // `guests` map on a pet document admits nobody once the pet names a family.
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.auth.uid in request.resource.data.sharedWith &&
                       request.resource.data.keys().hasAll(['name', 'createdByFirebaseUid', 'sharedWith']) &&
                       isValidLength(request.resource.data.name, 1, 100) &&
                       isMyGuestlessAudience(request.resource.data) &&
-                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
+                      familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                      audienceWithinItsFamily(request.resource.data, noGuests());
 
-      // Same two bounds as `child_info`, and read its comment for why.
+      // Same three bounds as `child_info`, and read its comment for why.
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
                       resource.data.createdByFirebaseUid in request.resource.data.sharedWith &&
@@ -1195,6 +1259,7 @@ service cloud.firestore {
                          request.auth.uid in request.resource.data.sharedWith &&
                          onlyGuestsAdded(resource.data, request.resource.data))
                       ) &&
+                      onlyFamilyAddedToItsFamily(resource.data, request.resource.data, noGuests()) &&
                       request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
 
       allow delete: if isAuthenticated() &&

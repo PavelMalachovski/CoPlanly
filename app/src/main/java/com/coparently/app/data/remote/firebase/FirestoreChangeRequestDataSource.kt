@@ -23,6 +23,11 @@ class FirestoreChangeRequestDataSource @Inject constructor(
     /**
      * Observes change requests where [userId] participates on either side.
      * Emits the merged, deduplicated document list on every snapshot of either query.
+     *
+     * Each document carries its id under `"id"` and, under [HAS_PENDING_WRITES], whether it holds
+     * a write of this phone's that the server has not confirmed. Firestore echoes a write to the
+     * listener before the server has it, so without the mark an answer given offline would look
+     * exactly like one that left.
      */
     fun observeChangeRequestsForUser(userId: String): Flow<List<Map<String, Any>>> = callbackFlow {
         val latest = HashMap<String, List<Map<String, Any>>>()
@@ -45,7 +50,9 @@ class FirestoreChangeRequestDataSource @Inject constructor(
                     }
                     if (snapshot != null) {
                         latest[field] = snapshot.documents.mapNotNull { doc ->
-                            doc.data?.plus("id" to doc.id)
+                            doc.data?.plus(
+                                listOf("id" to doc.id, HAS_PENDING_WRITES to doc.metadata.hasPendingWrites())
+                            )
                         }
                         emitMerged()
                     }
@@ -98,8 +105,11 @@ class FirestoreChangeRequestDataSource @Inject constructor(
         collection.document(requestId).set(data).await()
     }
 
-    private companion object {
+    companion object {
+        /** Whether this phone wrote the document and the server has not confirmed it yet. */
+        const val HAS_PENDING_WRITES = "__hasPendingWrites__"
+
         /** `ChangeRequestStatus.PENDING.name`, as `ChangeRequestRepositoryImpl` writes it. */
-        const val PENDING = "PENDING"
+        private const val PENDING = "PENDING"
     }
 }

@@ -416,15 +416,48 @@ class EncryptedPreferences internal constructor(
     }
 
     /**
+     * Forgets the Google access and refresh tokens and their expiry, and keeps the address.
+     *
+     * What a connection Google has refused for good leaves behind: the tokens are worthless, and
+     * the address is how the app knows to offer a reconnect rather than a first connect.
+     */
+    fun removeGoogleTokens() {
+        store.edit()
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_TOKEN_EXPIRY)
+            .apply()
+    }
+
+    /**
+     * Forgets everything Google Calendar keeps here — the tokens, their expiry, the address, and
+     * the unused calendar id and id token — and nothing else, in one write.
+     *
+     * What "Sign out from Calendar sync" removes. It used to call [clear], which also took the
+     * push opt-out, the telemetry answer, the family on screen, the sync cursors and the calendar
+     * filters: disconnecting one calendar quietly reset the app.
+     */
+    fun removeGoogleCalendarAccount() {
+        store.edit()
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_TOKEN_EXPIRY)
+            .remove(KEY_USER_EMAIL)
+            .remove(KEY_CALENDAR_ID)
+            .remove(KEY_GOOGLE_ID_TOKEN)
+            .apply()
+    }
+
+    /**
      * Clears stored preferences — **except** the per-user parent-slot markers
      * ([PreferenceKeys.PARENT_SLOT_MARKER_PREFIX]) and the school connections
      * ([PreferenceKeys.SCHOOL_CONNECTION_PREFIX], whose KDoc says who clears them instead).
      *
      * This is no longer literally "all", and that is deliberate, not an oversight: this method
      * is reached from the app's own Sign out (`SettingsScreen`'s confirm dialog runs
-     * `SyncViewModel.signOut` — which calls this via `CredentialManagerService`/
-     * immediately before `AuthStateViewModel.signOut`) as well as from
-     * disconnecting Google Calendar alone (`onCalendarSignOut`). Neither of those touches Room,
+     * `SyncViewModel.signOut` — which calls this via `CredentialManagerService.signOut` —
+     * immediately before `AuthStateViewModel.signOut`), from an account switch
+     * (`AccountSwitchGuard`) and from account deletion. Sign out does not touch Room,
      * where `users`/`events` rows deliberately survive sign-out so a returning parent's history
      * is still there. Before this exemption, signing out during the window between a
      * server-side slot backfill and this device's next sync wiped the one record
@@ -433,11 +466,10 @@ class EncryptedPreferences internal constructor(
      * take the "nothing to do" branch on sign back in, permanently, the same damage this
      * marker exists to prevent, reintroduced through where it lives.
      *
-     * A Google Calendar disconnect has no business wiping a parent-slot marker in the first
-     * place — the two describe unrelated things — so this exemption is arguably correct on its
-     * own terms, not merely a patch. See [PreferenceKeys.PARENT_SLOT_MARKER_PREFIX]'s own KDoc
-     * for why the marker is keyed per-UID: it is what stops a second account that later signs
-     * in on this device from reading the first account's now-surviving marker as its own.
+     * Disconnecting Google Calendar alone does not come here: it removes Google's own keys
+     * through [removeGoogleCalendarAccount]. See [PreferenceKeys.PARENT_SLOT_MARKER_PREFIX]'s own
+     * KDoc for why the marker is keyed per-UID: it is what stops a second account that later
+     * signs in on this device from reading the first account's now-surviving marker as its own.
      */
     fun clear() {
         val preservedMarkers = store.all

@@ -85,6 +85,13 @@ data class ParentNames(
     }
 
     /**
+     * The slot of whoever holds [uid], or null for anybody else — what a uid-keyed author's colour
+     * is looked up by, since `ParentColors` resolves slots. A pair still sharing one slot answers
+     * the same slot for both, as [Parents.roleByUid] does.
+     */
+    fun slotForUid(uid: String?): String? = uid?.let { parents.roleByUid[it] }
+
+    /**
      * Whether [slot] resolves to a named person rather than to the unknown fallback.
      *
      * [parentLabel] itself is not asked this — it already gives the correct answer to "who is

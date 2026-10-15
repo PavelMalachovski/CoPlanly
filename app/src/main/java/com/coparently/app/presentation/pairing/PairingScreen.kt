@@ -380,18 +380,6 @@ private fun rememberNotPairedActions(
 }
 
 /**
- * Where a recipient without the app installed goes to get it.
- *
- * **This listing does not exist yet** (REL-6 in `docs/BACKLOG.md` is the Play Console work), so
- * the link answers "item not found" until the app is published. Shipped anyway, on the owner's
- * decision: the deep link alone strands exactly the person an invitation is for — someone who
- * does not have the app — and the code in the same message still works by hand. When the listing
- * goes live nothing here needs to change, which is why the URL is built from the applicationId
- * rather than pasted.
- */
-private const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.coplanly"
-
-/**
  * Builds the share-sheet intent for an outstanding invite.
  *
  * With the web link the message is short: the page it opens carries the Play Store link and the

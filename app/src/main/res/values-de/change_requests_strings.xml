@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="change_request_inbox_title">Änderungsanfragen</string>
+    <string name="change_request_inbox_title">Anfragen</string>
     <string name="change_request_back">Zurück</string>
-    <string name="change_request_empty_title">Noch keine Änderungsanfragen</string>
+    <string name="change_request_empty_title">Noch keine Anfragen</string>
     <string name="change_request_empty_hint">Öffne einen Termin und tippe auf „Änderung anfragen“, um dem anderen Elternteil eine neue Zeit vorzuschlagen.</string>
-    <string name="change_request_incoming">Eingehend</string>
-    <string name="change_request_outgoing">Ausgehend</string>
     <string name="change_request_status_pending">Ausstehend</string>
     <string name="change_request_status_accepted">Angenommen</string>
     <string name="change_request_status_declined">Abgelehnt</string>
@@ -42,4 +40,19 @@
     <string name="change_request_error_signed_out">Du bist abgemeldet. Melde dich an und versuche es erneut.</string>
     <string name="change_request_error_not_paired">Verknüpfe dich zuerst mit dem anderen Elternteil, um Änderungsanfragen zu senden.</string>
     <string name="change_request_error_send_failed">Die Änderungsanfrage konnte nicht gesendet werden. Bitte versuche es erneut.</string>
+    <string name="request_section_waiting_on_you">Warten auf deine Antwort</string>
+    <string name="request_section_waiting_on_them">Warten auf %1$s</string>
+    <string name="request_section_history">Verlauf</string>
+    <string name="request_history_new_time">Neue Zeit für %1$s</string>
+    <string name="request_history_day_swap">Tagestausch: %1$s</string>
+    <string name="request_history_custody">Neuer Betreuungsplan</string>
+    <string name="request_history_yours_answered">Deine Anfrage · %1$s hat geantwortet</string>
+    <string name="request_history_theirs_answered">Anfrage von %1$s · du hast geantwortet</string>
+    <string name="request_history_withdrawn_by_you">Du hast sie zurückgezogen</string>
+    <string name="request_history_withdrawn_by">%1$s hat sie zurückgezogen</string>
+    <string name="request_history_when">%1$s · %2$s</string>
+    <plurals name="request_swap_first_and_more">
+        <item quantity="one">%1$s und %2$d weiterer Tag</item>
+        <item quantity="other">%1$s und %2$d weitere Tage</item>
+    </plurals>
 </resources>

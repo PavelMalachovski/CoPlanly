@@ -3,6 +3,7 @@ package com.coparently.app.presentation.friends
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.CalendarFriendPolicy
 import com.coparently.app.domain.friends.FriendProfile
@@ -10,6 +11,7 @@ import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.repository.FriendRepository
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.pairing.pairingMessageRes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -55,12 +58,19 @@ data class FriendInviteState(
  * @property isBusy A call is in flight.
  * @property accepted The grant landed; the screen switches to showing it.
  * @property errorRes Why the last attempt failed, as a resource the composable resolves.
+ * @property isExpanded The "I have a code from the parents" row has been opened into its field
+ *   (phase 2, spec §4.2) — in place, rather than in a dialog.
+ * @property openFamilyId The family whose calendar the code just opened, until the screen has
+ *   navigated there ([FriendViewModel.calendarOpened]): the button says "Open the family
+ *   calendar", so a redeem that lands has to.
  */
 data class FriendRedeemState(
     val code: String = "",
     val isBusy: Boolean = false,
     val accepted: Boolean = false,
-    @StringRes val errorRes: Int? = null
+    @StringRes val errorRes: Int? = null,
+    val isExpanded: Boolean = false,
+    val openFamilyId: String? = null
 )
 
 /**
@@ -73,8 +83,17 @@ data class FriendRedeemState(
  */
 @HiltViewModel
 class FriendViewModel @Inject constructor(
-    private val friendRepository: FriendRepository
+    private val friendRepository: FriendRepository,
+    parentsSource: ParentsSource
 ) : ViewModel() {
+
+    /**
+     * The signed-in parent's own name, for the message an invite is shared with ("Olya invited
+     * you to the family calendar"); null until it is known.
+     */
+    val myName: StateFlow<String?> = parentsSource.observe()
+        .map { parents -> parents.me?.name?.takeIf { it.isNotBlank() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     /** The family's live friends, for the parents' "who can see this" list. */
     val friends: StateFlow<List<CalendarFriendGrant>> = friendRepository.observeFamilyFriends()
@@ -136,6 +155,16 @@ class FriendViewModel @Inject constructor(
     /** The friend's own "I have a code" state. */
     val redeem: StateFlow<FriendRedeemState> = _redeem.asStateFlow()
 
+    /** Opens the "I have a code from the parents" row into its field. */
+    fun expandRedeem() {
+        _redeem.update { it.copy(isExpanded = true) }
+    }
+
+    /** The screen has opened the calendar a redeem named; forgets it so Back does not reopen it. */
+    fun calendarOpened() {
+        _redeem.update { it.copy(openFamilyId = null) }
+    }
+
     /** Types into the code field. */
     fun updateCode(code: String) {
         _redeem.update { it.copy(code = code.uppercase(), errorRes = null, accepted = false) }
@@ -155,7 +184,15 @@ class FriendViewModel @Inject constructor(
         _redeem.value = state.copy(isBusy = true, errorRes = null)
         viewModelScope.launch {
             friendRepository.acceptFriendInvite(state.code).fold(
-                onSuccess = { _redeem.value = FriendRedeemState(accepted = true) },
+                onSuccess = { result ->
+                    _redeem.value = FriendRedeemState(
+                        accepted = true,
+                        openFamilyId = FamilyKey.orNull(
+                            result.familyParents.getOrNull(0),
+                            result.familyParents.getOrNull(1)
+                        )
+                    )
+                },
                 onFailure = { e ->
                     _redeem.update { it.copy(isBusy = false, errorRes = errorRes(e)) }
                 }

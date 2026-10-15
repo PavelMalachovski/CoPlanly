@@ -3,19 +3,20 @@ package com.coparently.app.presentation.changerequests
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,298 +40,271 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.ChangeRequestHighlight
+import com.coparently.app.domain.changerequests.RequestScope
+import com.coparently.app.domain.custody.CustodyPatternDiff
+import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
-import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.parentingplan.CitationStatus
+import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
-import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.dateWithTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 /**
- * Inbox of event change requests: incoming ones the user must respond to,
- * and outgoing ones the user sent to the co-parent.
+ * The requests inbox of the family on screen (phase 2, spec §6.2), in three sections: what waits
+ * on this parent's answer, what this parent sent and waits on the co-parent, and the history of
+ * everything answered or withdrawn. A section with nothing in it is not drawn; an inbox with
+ * nothing at all says so.
+ *
+ * Everything comes from [ChangeRequestViewModel.requests], the source the calendar's banner and
+ * Home's Requests row read too, and is drawn from one flat list ([InboxItems]) — the same list a
+ * scroll target is looked up in.
  *
  * @param onBack Up navigation
- * @param onOpenEvent Opens the event a card refers to
- * @param linkedEventId Event id carried by a tapped chat card, or null for the plain inbox.
- *   When set, the newest request for that event ([ChangeRequestHighlight.forEvent]) is
- *   highlighted and scrolled into view; if the event has no request at all, a snackbar says so
- *   once the inbox has actually finished loading.
+ * @param onOpenEvent Opens the event a change request is about
+ * @param linkedEventId Event id carried by a tapped chat card, or null. When set, the newest request
+ *   for that event ([ChangeRequestHighlight.forEvent]) is highlighted — its card while pending, its
+ *   history row once answered — and scrolled into view; when the event has no request at all, a
+ *   snackbar says so once the inbox has loaded.
+ * @param openSection A section to scroll to on arrival, or null — Home opens History this way.
  * @param viewModel Change-request state
  */
-@Suppress("LongMethod") // Compose screen: empty state + two list sections
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeRequestsScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,
     linkedEventId: String? = null,
+    openSection: InboxSection? = null,
     viewModel: ChangeRequestViewModel = hiltViewModel()
 ) {
-    val requests by viewModel.changeRequests.collectAsState()
-    val hasLoaded by viewModel.hasLoaded.collectAsState()
-    val currentUserId by viewModel.currentUserId.collectAsState()
+    val state by viewModel.requests.collectAsState()
+    val miniMonths by viewModel.miniMonths.collectAsState()
+    val proposalDiff by viewModel.pendingProposalDiff.collectAsState()
+    val proposalCitation by viewModel.pendingProposalCitation.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val context = LocalContext.current
-    val appMessages = LocalAppMessages.current
-
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            appMessages?.show(it.asString(context))
-            viewModel.clearError()
-        }
-    }
-
-    val incoming = requests.filter { it.requestedTo == currentUserId }
-    val outgoing = requests.filter { it.requestedBy == currentUserId }
-
-    val daySwapGroups by viewModel.daySwapGroups.collectAsState()
-    val pendingProposal by viewModel.pendingProposal.collectAsState()
-    val pendingProposalDiff by viewModel.pendingProposalDiff.collectAsState()
-    val pendingProposalCitation by viewModel.pendingProposalCitation.collectAsState()
     val parents by viewModel.parents.collectAsState()
     val parentNames = rememberParentNames(parents)
-    // Header plus one card per swap, or nothing at all. `indexInInbox` needs the count because
-    // this section renders above the incoming one and every index below it shifts.
-    val swapItemCount = if (daySwapGroups.isEmpty()) 0 else 1 + daySwapGroups.size
+    ShowErrorOnce(errorMessage, onShown = viewModel::clearError)
 
-    val eventsAwaitingMe by viewModel.eventsAwaitingMe.collectAsState()
-    val awaitingItemCount = if (eventsAwaitingMe.isEmpty()) 0 else 1 + eventsAwaitingMe.size
-
-    val highlighted = remember(requests, linkedEventId) {
-        linkedEventId?.let { ChangeRequestHighlight.forEvent(requests, it) }
+    val ready = state as? RequestsState.Ready
+    val inboxItems = remember(ready?.inbox) { ready?.let { InboxItems.of(it.inbox) }.orEmpty() }
+    val highlighted = remember(ready?.changeRequests, linkedEventId) {
+        linkedEventId?.let { eventId -> ready?.let { ChangeRequestHighlight.forEvent(it.changeRequests, eventId) } }
     }
+    val answers = remember(viewModel, onOpenEvent) { InboxAnswers.of(viewModel, onOpenEvent) }
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val missingMessage = stringResource(R.string.change_request_link_missing)
 
-    // Arriving from a chat card: scroll the request into view, or say why there is nothing to
-    // see. Gated on `hasLoaded`, not on `requests` being non-empty: `changeRequests` is seeded
-    // with `initialValue = emptyList()` before Room's flow has emitted for real, and that
-    // placeholder is indistinguishable from a genuinely empty result by list contents alone —
-    // gating on emptiness fired the "already closed" snackbar on every cold arrival, before the
-    // real data had a chance to load. `hasLoaded` (ChangeRequestViewModel) flips true on the
-    // first real emission, whatever it is, so the check below only runs once that has happened;
-    // a linked event that truly has no request still gets the snackbar, just not prematurely.
-    // Also gated on `currentUserId`, which is populated by a separate, unordered coroutine
-    // (`ChangeRequestViewModel.getCurrentUser()`) and is not sequenced against the requests flow
-    // that drives `hasLoaded`. `incoming`/`outgoing` above are filtered on `currentUserId`, so if
-    // the requests flow emits first, both sections would still be empty and the scroll index
-    // would silently resolve to -1. Keyed on `currentUserId` too, this effect re-runs once that
-    // settles — but `currentUserId` is set once and never changes again for the lifetime of the
-    // screen, so the effect still runs exactly once per arrival: accepting or declining the
-    // highlighted card afterwards changes `requests` but must not scroll the list again out from
-    // under the user.
-    LaunchedEffect(linkedEventId, hasLoaded, currentUserId) {
-        if (linkedEventId == null || !hasLoaded || currentUserId.isEmpty()) return@LaunchedEffect
-        val target = highlighted
-        if (target == null) {
-            snackbarHostState.showSnackbar(missingMessage)
-        } else {
-            val index = ChangeRequestHighlight.indexInInbox(
-                incoming = incoming,
-                outgoing = outgoing,
-                requestId = target.id,
-                precedingItems = awaitingItemCount + swapItemCount
-            )
-            if (index >= 0) listState.animateScrollToItem(index)
+    // Arriving from a chat card, or for a section: scroll once the inbox is Ready — never on its
+    // lists merely being empty, which a loading inbox and an empty one both are. Keyed on
+    // `ready != null`, which flips once, so answering the highlighted card afterwards does not
+    // scroll the list out from under the parent. The target is looked up in the list the column
+    // draws, so a pending proposal above it no longer leaves the scroll one card short.
+    LaunchedEffect(linkedEventId, openSection, ready != null) {
+        if (ready == null) return@LaunchedEffect
+        when (val arrival = InboxItems.arrival(inboxItems, linkedEventId, highlighted?.id, openSection)) {
+            InboxArrival.Missing -> snackbarHostState.showSnackbar(missingMessage)
+            is InboxArrival.ScrollTo -> listState.animateScrollToItem(arrival.index)
+            InboxArrival.Stay -> Unit
         }
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.change_request_inbox_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            stringResource(R.string.change_request_back)
-                        )
-                    }
-                }
-            )
-        }
+        topBar = { InboxTopBar(onBack) }
     ) { padding ->
-        if (incoming.isEmpty() && outgoing.isEmpty() && daySwapGroups.isEmpty() &&
-            eventsAwaitingMe.isEmpty() && pendingProposal == null
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(Spacing.XXL),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.change_request_empty_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(Spacing.S))
-                Text(
-                    text = stringResource(R.string.change_request_empty_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.L),
-                verticalArrangement = Arrangement.spacedBy(Spacing.M)
-            ) {
-                // A custody-pattern proposal leads: it is the largest change the inbox can carry
-                // — the whole schedule, not one day — and until it is answered the co-parent's
-                // calendar is held at the old pattern (item 7).
-                pendingProposal?.let { proposal ->
-                    item {
-                        CustodyProposalCard(
-                            proposal = proposal,
-                            diff = pendingProposalDiff,
-                            citation = pendingProposalCitation,
-                            parentNames = parentNames,
-                            onAccept = { viewModel.acceptProposal() },
-                            onDecline = { viewModel.declineProposal() }
-                        )
-                    }
-                }
-                // An event waiting on this parent comes first of all: until they answer it, it
-                // is in nobody's calendar, so this screen is the only place it exists at all.
-                if (eventsAwaitingMe.isNotEmpty()) {
-                    item { SectionHeader(stringResource(R.string.event_acceptance_section)) }
-                    items(eventsAwaitingMe, key = { it.id }) { event ->
-                        AwaitingEventCard(
-                            event = event,
-                            parentNames = parentNames,
-                            onAccept = { viewModel.acceptEvent(event.id) },
-                            onDecline = { viewModel.declineEvent(event.id) }
-                        )
-                    }
-                }
-                // Day swaps next: a pending swap is the most actionable thing the inbox can
-                // hold — a date is about to arrive whether or not it is answered — and unlike a
-                // change request it has no second home anywhere else in the app.
-                if (daySwapGroups.isNotEmpty()) {
-                    item { SectionHeader(stringResource(R.string.day_swap_inbox_section)) }
-                    items(daySwapGroups, key = { it.key }) { group ->
-                        DaySwapCard(
-                            group = group,
-                            currentUserId = currentUserId,
-                            parentNames = parentNames,
-                            onAccept = { viewModel.decideSwapGroup(group, accept = true) },
-                            onDecline = { viewModel.decideSwapGroup(group, accept = false) }
-                        )
-                    }
-                }
-                if (incoming.isNotEmpty()) {
-                    item { SectionHeader(stringResource(R.string.change_request_incoming)) }
-                    items(incoming, key = { it.id }) { request ->
-                        ChangeRequestCard(
-                            request = request,
-                            isIncoming = true,
-                            onOpenEvent = onOpenEvent,
-                            onAccept = { viewModel.accept(request.id) },
-                            onDecline = { viewModel.decline(request.id) },
-                            onCancel = {},
-                            isHighlighted = request.id == highlighted?.id
-                        )
-                    }
-                }
-                if (outgoing.isNotEmpty()) {
-                    item { SectionHeader(stringResource(R.string.change_request_outgoing)) }
-                    items(outgoing, key = { it.id }) { request ->
-                        ChangeRequestCard(
-                            request = request,
-                            isIncoming = false,
-                            onOpenEvent = onOpenEvent,
-                            onAccept = {},
-                            onDecline = {},
-                            onCancel = { viewModel.cancel(request.id) },
-                            isHighlighted = request.id == highlighted?.id
-                        )
-                    }
-                }
-            }
+        val modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+        when {
+            // Nothing is drawn before the inbox is Ready: an empty state now would be a guess.
+            ready == null -> Unit
+            ready.inbox.isEmpty -> EmptyState(
+                icon = Icons.Default.SwapHoriz,
+                title = stringResource(R.string.change_request_empty_title),
+                description = stringResource(R.string.change_request_empty_hint),
+                modifier = modifier
+            )
+            else -> InboxList(
+                inboxItems = inboxItems,
+                cards = InboxCards(
+                    scope = ready.scope,
+                    miniMonths = miniMonths,
+                    parentNames = parentNames,
+                    proposalDiff = proposalDiff,
+                    proposalCitation = proposalCitation,
+                    highlightedRequestId = highlighted?.id
+                ),
+                answers = answers,
+                listState = listState,
+                modifier = modifier
+            )
         }
     }
 }
 
-/**
- * An event the co-parent created for this parent, waiting on an answer.
- *
- * It says plainly that the event is in nobody's calendar yet. Without that line the card reads as
- * a notification about something that already happened, and a parent would reasonably assume the
- * event is on their day whether they answer or not.
- *
- * @param event The event awaiting a decision.
- * @param parentNames Resolves a uid to that person's name — never "Mom" or "Dad".
- * @param onAccept Takes it up; it then enters both calendars.
- * @param onDecline Turns it down; it stays out, and the creator learns the answer.
- */
+/** Shows why the last answer did not go through, once, then clears it. */
 @Composable
-private fun AwaitingEventCard(
-    event: Event,
-    parentNames: ParentNames,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(Spacing.L),
-            verticalArrangement = Arrangement.spacedBy(Spacing.S)
-        ) {
-            Text(text = event.title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = event.startDateTime.format(dateWithTime("MMMEd")),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(
-                    R.string.event_acceptance_offered_to_you,
-                    parentNames.labelForUid(event.createdByFirebaseUid)
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.event_acceptance_hidden_note),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                Button(onClick = onAccept) {
-                    Text(stringResource(R.string.event_acceptance_accept))
-                }
-                TextButton(onClick = onDecline) {
-                    Text(stringResource(R.string.event_acceptance_decline))
-                }
-            }
+private fun ShowErrorOnce(message: UiText?, onShown: () -> Unit) {
+    val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
+    LaunchedEffect(message) {
+        message?.let {
+            appMessages?.show(it.asString(context))
+            onShown()
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InboxTopBar(onBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.change_request_inbox_title)) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    stringResource(R.string.change_request_back)
+                )
+            }
+        }
+    )
+}
+
+/** The inbox's sections, one card per item, keyed so an answered card leaves without a jump. */
+@Composable
+private fun InboxList(
+    inboxItems: List<InboxItem>,
+    cards: InboxCards,
+    answers: InboxAnswers,
+    listState: LazyListState,
+    modifier: Modifier
+) {
+    LazyColumn(
+        state = listState,
+        modifier = modifier,
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
+    ) {
+        items(inboxItems, key = { it.key }) { item -> InboxCard(item, cards, answers) }
+    }
+}
+
+/**
+ * What the inbox's cards are drawn from, collected once by the screen.
+ *
+ * @property scope The family on screen: who "you" are and who the co-parent is.
+ * @property miniMonths Each waiting event's month, by event id.
+ * @property proposalDiff What the co-parent's proposal would change; null for this parent's own.
+ * @property proposalCitation Where the co-parent's proposal came from (MON-21).
+ * @property highlightedRequestId The request a chat card arrived for, or null.
+ */
+private data class InboxCards(
+    val scope: RequestScope,
+    val miniMonths: Map<String, MiniMonthModel>,
+    val parentNames: ParentNames,
+    val proposalDiff: CustodyPatternDiff?,
+    val proposalCitation: CitationStatus,
+    val highlightedRequestId: String?
+)
+
+/** How the inbox's cards answer, open and withdraw, bound once to the ViewModel. */
+private data class InboxAnswers(
+    val openEvent: (String) -> Unit,
+    val answerRequest: (requestId: String, accept: Boolean) -> Unit,
+    val withdrawRequest: (requestId: String) -> Unit,
+    val answerSwap: (group: DaySwapGroup, accept: Boolean) -> Unit,
+    val answerEvent: (eventId: String, accept: Boolean) -> Unit,
+    val answerProposal: (accept: Boolean) -> Unit
+) {
+    companion object {
+        fun of(viewModel: ChangeRequestViewModel, onOpenEvent: (String) -> Unit) = InboxAnswers(
+            openEvent = onOpenEvent,
+            answerRequest = { id, accept -> if (accept) viewModel.accept(id) else viewModel.decline(id) },
+            withdrawRequest = viewModel::cancel,
+            answerSwap = viewModel::decideSwapGroup,
+            answerEvent = { id, accept -> if (accept) viewModel.acceptEvent(id) else viewModel.declineEvent(id) },
+            answerProposal = { accept -> if (accept) viewModel.acceptProposal() else viewModel.declineProposal() }
+        )
+    }
+}
+
+/** One item of the inbox's list, drawn as the card its kind is. */
+@Composable
+private fun InboxCard(item: InboxItem, cards: InboxCards, answers: InboxAnswers) {
+    when (item) {
+        is InboxItem.Header -> GroupLabel(text = sectionTitle(item.section, cards))
+        is InboxItem.Proposal -> CustodyProposalCard(
+            proposal = item.proposal,
+            diff = cards.proposalDiff,
+            citation = cards.proposalCitation,
+            parentNames = cards.parentNames,
+            onAccept = { answers.answerProposal(true) }.takeUnless { item.mine },
+            onDecline = { answers.answerProposal(false) }.takeUnless { item.mine }
+        )
+        is InboxItem.AwaitingEvent -> AwaitingEventCard(
+            event = item.event,
+            miniMonth = cards.miniMonths[item.event.id],
+            parentNames = cards.parentNames,
+            actions = AwaitingEventActions(
+                onAccept = { answers.answerEvent(item.event.id, true) },
+                onDecline = { answers.answerEvent(item.event.id, false) }
+            ).takeUnless { item.mine }
+        )
+        is InboxItem.Swap -> DaySwapCard(
+            group = item.group,
+            currentUserId = cards.scope.myUid,
+            parentNames = cards.parentNames,
+            onAccept = { answers.answerSwap(item.group, true) },
+            onDecline = { answers.answerSwap(item.group, false) }
+        )
+        is InboxItem.Request -> ChangeRequestCard(
+            request = item.request,
+            isIncoming = item.request.requestedTo == cards.scope.myUid,
+            onOpenEvent = answers.openEvent,
+            onAccept = { answers.answerRequest(item.request.id, true) },
+            onDecline = { answers.answerRequest(item.request.id, false) },
+            onCancel = { answers.withdrawRequest(item.request.id) },
+            isHighlighted = item.request.id == cards.highlightedRequestId
+        )
+        is InboxItem.History -> RequestHistoryGroup(
+            entries = item.entries,
+            parentNames = cards.parentNames,
+            myUid = cards.scope.myUid,
+            highlightedKey = cards.highlightedRequestId?.let { "cr_$it" }
+        )
+    }
+}
+
+/** A section's heading; the co-parent's section names them. */
+@Composable
+private fun sectionTitle(section: InboxSection, cards: InboxCards): String = when (section) {
+    InboxSection.WAITING_ON_ME -> stringResource(R.string.request_section_waiting_on_you)
+    InboxSection.WAITING_ON_THEM -> stringResource(
+        R.string.request_section_waiting_on_them,
+        cards.parentNames.labelForUid(cards.scope.coParentUid)
+    )
+    InboxSection.HISTORY -> stringResource(R.string.request_section_history)
 }
 
 /**
@@ -339,10 +313,10 @@ private fun AwaitingEventCard(
  * Three states, and the difference between them is who is being asked. A swap the co-parent
  * offered carries Accept and Decline; one this parent offered carries neither, because
  * `DayOverrideTransition` and `firestore.rules` both refuse a parent deciding their own offer —
- * rendering the buttons anyway would promise an action the server rejects. A swap that has been
- * answered carries the answer, which is the whole reason an answered swap stays in this list.
+ * rendering the buttons anyway would promise an action the server rejects. An offer answered in
+ * part shows the answer so far; once every day is answered it leaves for the history.
  *
- * @param swap The day and where its offer stands.
+ * @param group The offer and where each of its days stands.
  * @param currentUserId This device's own uid, for telling "offered to you" from "offered by you".
  * @param parentNames Resolves a uid or a slot to that person's name — never "Mom" or "Dad".
  * @param onAccept Takes the offer up.
@@ -429,18 +403,25 @@ private fun DaySwapCard(
 }
 
 /**
- * A pending custody-pattern proposal from the co-parent, with Accept/Decline. Only ever shown
- * to the parent who must answer — the ViewModel filters out one's own proposal (item 7).
+ * A pending custody-pattern proposal.
+ *
+ * The co-parent's carries what it would change, where it came from, and Accept and Decline. This
+ * parent's own, under "Waiting for <name>", says only that it waits: nobody decides their own
+ * proposal (the transition and `firestore.rules` both refuse it), and the change and the citation
+ * are derived for the co-parent's alone.
+ *
+ * @param onAccept Accepts it; null for this parent's own proposal.
+ * @param onDecline Declines it; null for this parent's own proposal.
  */
 @Composable
 @Suppress("LongParameterList") // the proposal, what it changes, where it came from, two answers
 private fun CustodyProposalCard(
-    proposal: com.coparently.app.domain.custody.CustodyProposal,
-    diff: com.coparently.app.domain.custody.CustodyPatternDiff?,
+    proposal: CustodyProposal,
+    diff: CustodyPatternDiff?,
     citation: CitationStatus,
     parentNames: ParentNames,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit
+    onAccept: (() -> Unit)?,
+    onDecline: (() -> Unit)?
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -451,52 +432,68 @@ private fun CustodyProposalCard(
                 text = stringResource(R.string.custody_proposal_inbox_title),
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                text = stringResource(
-                    R.string.custody_proposal_inbox_body,
-                    parentNames.labelForUid(proposal.proposedBy)
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            // What it would actually change. Answering a schedule without being told which days
-            // move is the complaint this card and the Home dialog both existed to produce.
-            custodyDiffDescription(diff, parentNames)?.let { description ->
+            if (onAccept == null || onDecline == null) {
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            // Where it came from (MON-21): the agreed plan answer it cites, or that the answer has
-            // changed since. A proposal citing nothing — an older build's — shows nothing here.
-            planCitationLine(citation)?.let { line ->
-                Text(
-                    text = line,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.custody_proposal_inbox_body_yours),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                Button(onClick = onAccept) {
-                    Text(stringResource(R.string.custody_proposal_accept))
-                }
-                TextButton(onClick = onDecline) {
-                    Text(stringResource(R.string.custody_proposal_decline))
-                }
+                Text(
+                    text = stringResource(R.string.event_acceptance_waiting),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                ProposalToAnswer(proposal, diff, citation, parentNames, onAccept, onDecline)
             }
         }
     }
 }
 
+/** The co-parent's proposal: who proposed it, what it changes, where it came from, two answers. */
 @Composable
-private fun SectionHeader(title: String) {
+@Suppress("LongParameterList") // the proposal, what it changes, where it came from, two answers
+private fun ProposalToAnswer(
+    proposal: CustodyProposal,
+    diff: CustodyPatternDiff?,
+    citation: CitationStatus,
+    parentNames: ParentNames,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit
+) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmallEmphasized,
-        color = MaterialTheme.colorScheme.primary,
-        // A heading, so TalkBack can jump between the inbox's sections (D-17).
-        modifier = Modifier.semantics { heading() }
+        text = stringResource(
+            R.string.custody_proposal_inbox_body,
+            parentNames.labelForUid(proposal.proposedBy)
+        ),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+    // What it would actually change. Answering a schedule without being told which days
+    // move is the complaint this card and the Home dialog both existed to produce.
+    custodyDiffDescription(diff, parentNames)?.let { description ->
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+    // Where it came from (MON-21): the agreed plan answer it cites, or that the answer has
+    // changed since. A proposal citing nothing — an older build's — shows nothing here.
+    planCitationLine(citation)?.let { line ->
+        Text(
+            text = line,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        Button(onClick = onAccept) {
+            Text(stringResource(R.string.custody_proposal_accept))
+        }
+        TextButton(onClick = onDecline) {
+            Text(stringResource(R.string.custody_proposal_decline))
+        }
+    }
 }
 
 /**

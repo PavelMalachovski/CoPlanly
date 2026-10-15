@@ -6,14 +6,17 @@ import com.coparently.app.data.remote.firebase.AcceptCalendarFriendResult
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.CalendarFriendPolicy
+import com.coparently.app.domain.friends.FriendCalendarRead
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.repository.FriendRepository
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -218,6 +222,34 @@ class FriendRepositoryImpl @Inject constructor(
         observeDocument(FRIEND_PROFILES, friendUid)
             .map { data -> FriendMappers.profileFrom(friendUid, data) }
 
+    override fun observeFamilyEvents(
+        familyId: String,
+        from: LocalDate,
+        to: LocalDate
+    ): Flow<FriendCalendarRead> {
+        val parents = FamilyKey.membersOf(familyId) ?: return flowOf(FriendCalendarRead.Failed)
+        return callbackFlow {
+            // The query `firestore-tests/rules/friend-calendar.test.js` pins: `familyId` is what
+            // the rule builds the grant's path from, and the creator filter is what lets Firestore
+            // prove the creator is one of that family's parents from the query alone (M-6). The
+            // by-creator query alone is refused outright.
+            val registration = firestore.collection(EVENTS)
+                .whereEqualTo(FIELD_FAMILY_ID, familyId)
+                .whereIn(FIELD_CREATOR, parents.toList())
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.w(TAG, "The family's events could not be read", error)
+                        trySend(friendCalendarReadFor(error))
+                        close()
+                        return@addSnapshotListener
+                    }
+                    val documents = snapshot?.documents.orEmpty().map { it.data.orEmpty() }
+                    trySend(FriendCalendarRead.Events(ProfessionalEvents.from(documents, from, to)))
+                }
+            awaitClose { registration.remove() }
+        }
+    }
+
     /** One document as a flow, degrading a failed listener to null rather than closing. */
     private fun observeDocument(collection: String, id: String): Flow<Map<String, Any?>?> =
         callbackFlow {
@@ -251,6 +283,9 @@ class FriendRepositoryImpl @Inject constructor(
         const val INVITATIONS = "invitations"
         const val CALENDAR_FRIENDS = "calendar_friends"
         const val FRIEND_PROFILES = "friend_profiles"
+        const val EVENTS = "events"
+        const val FIELD_FAMILY_ID = "familyId"
+        const val FIELD_CREATOR = "createdByFirebaseUid"
         const val STATUS_PENDING = "pending"
 
         /** Marks the document as a friend invitation; matches `FRIEND_INVITATION` server-side. */
@@ -266,3 +301,17 @@ class FriendRepositoryImpl @Inject constructor(
         const val INVITE_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000
     }
 }
+
+/**
+ * What a failed read of the family's events means to a calendar friend (phase 2). The rules
+ * refusing her is the one failure a retry cannot fix — her grant was revoked or it lapsed — so it
+ * is told apart from every other, which she can retry.
+ */
+internal fun friendCalendarReadFor(error: Throwable): FriendCalendarRead =
+    if (error is FirebaseFirestoreException &&
+        error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+    ) {
+        FriendCalendarRead.AccessEnded
+    } else {
+        FriendCalendarRead.Failed
+    }

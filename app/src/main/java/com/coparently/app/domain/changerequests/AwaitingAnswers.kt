@@ -7,17 +7,13 @@ import com.coparently.app.domain.model.Event
 import java.time.LocalDate
 
 /**
- * What waits in the change-request inbox for one parent's answer, counted the way the inbox
- * shows it.
+ * The rules for what waits in the change-request inbox for one parent's answer.
  *
- * Home's "Awaiting your answer" row and the calendar's change-request banner both open that
- * inbox, and both print a number. They used to count it differently — the banner left out the
- * events the co-parent added that still need an answer, and counted a swap offered for a week as
- * seven — so the UI tour showed 6 on Home and 2 on the calendar for the same inbox. Both read
- * this object now.
- *
- * A custody-pattern proposal is not counted here: the calendar raises its own banner for it, and
- * Home adds it to its row itself.
+ * Home's Requests row and the calendar's change-request banner used to count that inbox
+ * differently — the banner left out the events the co-parent added that still need an answer, and
+ * counted a swap offered for a week as seven — so the UI tour showed 6 on Home and 2 on the
+ * calendar for the same inbox. Both print [RequestInbox]'s count now, which is built from these
+ * rules; a chat card about an event reads [eventAwaitsAnswerFrom] to decide where it opens.
  */
 object AwaitingAnswers {
 
@@ -41,21 +37,14 @@ object AwaitingAnswers {
      * creator cannot decide their own (`EventAcceptanceTransition`), so the inbox never lists
      * them for the creator.
      */
-    fun eventCount(events: List<Event>, uid: String): Int =
-        if (uid.isEmpty()) 0 else events.count { it.acceptance.isPending && it.createdByFirebaseUid != uid }
+    fun eventCount(events: List<Event>, uid: String): Int = events.count { eventAwaitsAnswerFrom(it, uid) }
 
     /**
-     * Everything the inbox asks [uid] to answer: incoming change requests, day-swap offers and
-     * pending events.
-     *
-     * @param pendingChangeRequests Incoming change requests still pending, as the repository
-     *   counts them.
+     * Whether [event] waits for [uid]'s answer: still pending, and created by somebody else. The
+     * rule [eventCount] counts by, and the one a chat card about an event reads to decide whether
+     * the inbox is where it opens — so a card never sends a parent to an inbox that does not list
+     * the event. False while [uid] is not known yet (empty), as everything in this object is.
      */
-    fun count(
-        pendingChangeRequests: Int,
-        overrides: Map<String, DayOverride>,
-        events: List<Event>,
-        uid: String,
-        today: LocalDate
-    ): Int = pendingChangeRequests + swapOffers(overrides, uid, today).size + eventCount(events, uid)
+    fun eventAwaitsAnswerFrom(event: Event, uid: String): Boolean =
+        uid.isNotEmpty() && event.acceptance.isPending && event.createdByFirebaseUid != uid
 }

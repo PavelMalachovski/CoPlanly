@@ -175,7 +175,7 @@ class TwoParentCustodyTest : TwoParentTest() {
             assertEquals("nothing moves before the answer", agreed.id, beforeAnswer)
             bob.custodyRepository.acceptProposal().getOrThrow()
             assertEquals(proposed.id, awaitActivePattern(bob, proposed.id).id)
-            checkNotNull(bob.database.custodyModelDao().getActiveModelSync()).lastModifiedAtMillis
+            checkNotNull(bob.database.custodyModelDao().getModelById(proposed.id)).lastModifiedAtMillis
         }
         EmulatorEnvironment.awaitQueuedPush(alice.uid, "custody_proposal_accepted")
         inZone(ALICE_ZONE) {
@@ -184,7 +184,7 @@ class TwoParentCustodyTest : TwoParentTest() {
             assertEquals(bob.uid, shared.lastModifiedBy)
             awaitActivePattern(alice, proposed.id)
             // SEC-4: the same instant on both phones, read back from the wire in another zone.
-            val alicesRow = checkNotNull(alice.database.custodyModelDao().getActiveModelSync())
+            val alicesRow = checkNotNull(alice.database.custodyModelDao().getModelById(proposed.id))
             assertEquals(acceptedAt, alicesRow.lastModifiedAtMillis)
         }
     }

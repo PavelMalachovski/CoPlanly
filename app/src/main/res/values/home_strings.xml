@@ -57,7 +57,6 @@
     <string name="home_activity_review">Review</string>
 
     <!-- Parent identity labels. -->
-    <string name="home_awaiting_title">Awaiting your answer</string>
     <string name="home_dialog_swap_title">Day swap</string>
     <string name="home_dialog_swap_message">%1$s proposes changing who has the child on %2$s.</string>
     <string name="home_dialog_requests_title">Change requests</string>
@@ -71,4 +70,28 @@
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Add event</string>
+    <!-- The Requests row (phase 2): always there while paired. Its line is parts joined by " · ";
+         an answer's day leads, as a label, so no language needs a preposition before it. -->
+    <string name="home_requests_title">Requests</string>
+    <plurals name="home_requests_waiting_on_you">
+        <item quantity="one">%1$d waiting for your answer</item>
+        <item quantity="other">%1$d waiting for your answer</item>
+    </plurals>
+    <plurals name="home_requests_waiting_on_them">
+        <item quantity="one">%1$d waiting for %2$s</item>
+        <item quantity="other">%1$d waiting for %2$s</item>
+    </plurals>
+    <string name="home_requests_answer_accepted">%1$s: %2$s accepted your request</string>
+    <string name="home_requests_answer_declined">%1$s: %2$s declined your request</string>
+    <string name="home_requests_day_today">Today</string>
+    <string name="home_requests_day_yesterday">Yesterday</string>
+    <string name="home_requests_none">No requests yet</string>
+    <string name="home_requests_all">All requests and answers</string>
+    <!-- The co-parent's answers to this parent's requests, in the feed headed by their name. -->
+    <string name="home_activity_accepted_new_time">Accepted your new time for %1$s</string>
+    <string name="home_activity_declined_new_time">Declined your new time for %1$s</string>
+    <string name="home_activity_accepted_swap">Accepted your day swap: %1$s</string>
+    <string name="home_activity_declined_swap">Declined your day swap: %1$s</string>
+    <string name="home_activity_accepted_event">Accepted %1$s</string>
+    <string name="home_activity_declined_event">Declined %1$s</string>
 </resources>

@@ -16,7 +16,6 @@ import com.google.android.gms.tasks.Task
 import com.google.api.services.calendar.CalendarScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,7 +49,12 @@ class CredentialManagerService @Inject constructor(
             val webClientId = getWebClientId()
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(webClientId)
-                .requestServerAuthCode(webClientId)
+                // `true` (forceCodeForRefreshToken): a refresh token on every connect. Without it
+                // Google issues one only at an account's first consent, so a reinstall, a second
+                // phone, another Google account or an exchange whose answer was lost connected
+                // with an access token alone — and dropped off an hour later. The price is the
+                // consent screen on every connect, which is a deliberate act in Settings.
+                .requestServerAuthCode(webClientId, true)
                 .requestEmail()
                 .requestScopes(Scope(CalendarScopes.CALENDAR))
                 .build()
@@ -87,6 +91,12 @@ class CredentialManagerService @Inject constructor(
          * value as "already expired" and refreshing on every single call.
          */
         private const val DEFAULT_TOKEN_LIFETIME_SECONDS = 3600L
+
+        /**
+         * How long before its expiry an access token is renewed rather than used: five minutes,
+         * so a token is never sent that runs out during the call it was sent with.
+         */
+        private const val REFRESH_MARGIN_MILLIS = 5 * 60 * 1000L
     }
 
     /**
@@ -176,10 +186,17 @@ class CredentialManagerService @Inject constructor(
             throw e
         }
 
+        // A refresh token kept from an earlier connection belongs to the Google account that made
+        // it. A connection that comes back as somebody else without a new one must not inherit it:
+        // the next renewal would read the first account's calendar under the second's address.
+        if (tokens.refreshToken.isEmpty() && encryptedPreferences.getUserEmail() != email) {
+            encryptedPreferences.removeGoogleTokens()
+        }
         encryptedPreferences.putAccessToken(tokens.accessToken)
         // Only when one came back. Google omits the refresh token when the account has already
         // granted consent, and blanking the stored one there would cost the parent a re-consent
-        // for nothing.
+        // for nothing. Connecting asks for one every time now (`forceCodeForRefreshToken`), so
+        // this is the exception, not the rule.
         if (tokens.refreshToken.isNotEmpty()) {
             encryptedPreferences.putRefreshToken(tokens.refreshToken)
         }
@@ -195,84 +212,107 @@ class CredentialManagerService @Inject constructor(
             (expiresInSeconds.takeIf { it > 0L } ?: DEFAULT_TOKEN_LIFETIME_SECONDS) * 1000
 
     /**
-     * Получает access token, проверяя срок действия и обновляя при необходимости.
-     * Использует сохраненные токены и refresh токен для обновления.
+     * Whether Google Calendar is connected on this device, from what it stores and without asking
+     * Google — so Settings can say it truthfully on every launch.
      *
-     * @return Pair of (accessToken?, errorMessage?)
+     * A stored refresh token is a connection, whatever the access token's expiry says: renewing
+     * the access token is [accessToken]'s job. This used to be `isSignedIn()`, "the access token is
+     * good for five more minutes", which every connection stopped being about 55 minutes after it
+     * was made — Settings then said "not signed in", and the import refused to start.
      */
-    suspend fun getAccessToken(): Pair<String?, String?> {
-        return try {
-            val storedToken = encryptedPreferences.getAccessToken()
-            val expiryTime = encryptedPreferences.getTokenExpiry()
-            val refreshToken = encryptedPreferences.getRefreshToken()
-
-            // Проверяем, истек ли токен (с запасом в 5 минут)
-            if (storedToken != null && expiryTime != null &&
-                expiryTime > System.currentTimeMillis() + 300000
-            ) {
-                Log.d(TAG, "Using stored access token")
-                return Pair(storedToken, null)
-            }
-
-            // Если токен истек или отсутствует, обновляем
-            if (refreshToken.isNullOrEmpty()) {
-                Log.e(TAG, "No refresh token available")
-                return Pair(null, "No refresh token available. Please sign in again.")
-            }
-
-            Log.d(TAG, "Refreshing access token")
-            refreshAccessToken()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting access token: ${e.message}", e)
-            Pair(null, "Error getting access token: ${e.message}")
+    fun connection(): GoogleCalendarConnection {
+        val accessToken = encryptedPreferences.getAccessToken()
+        val expiresAt = encryptedPreferences.getTokenExpiry() ?: 0L
+        return when {
+            !encryptedPreferences.getRefreshToken().isNullOrEmpty() -> GoogleCalendarConnection.CONNECTED
+            accessToken != null && expiresAt > System.currentTimeMillis() -> GoogleCalendarConnection.CONNECTED
+            // Connected here once, and nothing left to renew with: Google ended it.
+            encryptedPreferences.getUserEmail() != null -> GoogleCalendarConnection.NEEDS_RECONNECT
+            else -> GoogleCalendarConnection.NOT_CONNECTED
         }
     }
 
     /**
-     * Обновляет access token используя refresh токен.
+     * An access token to call Google with, renewed through the token function when the stored one
+     * has run out, is about to, or [forceRefresh] says Google has just refused it.
      *
-     * @return Pair of (accessToken?, errorMessage?)
+     * Each way this can fail asks something different of the parent, so each is typed:
+     * [GoogleAccessFailure.NEEDS_RECONNECT] drops the dead tokens (keeping the address, so the
+     * connection reads as one to reconnect), [GoogleAccessFailure.UNAVAILABLE] keeps everything for
+     * a later try, and [GoogleAccessFailure.NOT_CONNECTED] means nothing was ever stored here.
+     *
+     * @param forceRefresh Renew even though the stored expiry says the token is still good — what a
+     *   caller does once after the Calendar API refused it (401).
      */
-    private suspend fun refreshAccessToken(): Pair<String?, String?> {
-        return try {
-            val refreshToken = encryptedPreferences.getRefreshToken()
-                ?: return Pair(null, "No refresh token available")
-
-            // Through the Cloud Function, which holds the client secret this grant needs.
-            // It refuses a refresh token it did not issue to this account, so a failure here
-            // can mean "connect Google Calendar again" rather than only "no network" — which
-            // is true of every account connected before SEC-1 §2 shipped.
-            val tokens = googleOAuthFunctions.refreshAccessToken(refreshToken)
-                .getOrElse { e ->
-                    Log.e(TAG, "Error refreshing token: ${e.message}", e)
-                    return Pair(null, "Error refreshing token: ${e.message}")
-                }
-
-            encryptedPreferences.putAccessToken(tokens.accessToken)
-            encryptedPreferences.putTokenExpiry(expiryFrom(tokens.expiresInSeconds))
-
-            Log.d(TAG, "Access token refreshed successfully")
-            Pair(tokens.accessToken, null)
-        } catch (e: IOException) {
-            Log.e(TAG, "Error refreshing token: ${e.message}", e)
-            Pair(null, "Network error refreshing token: ${e.message}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error refreshing token: ${e.message}", e)
-            Pair(null, "Error refreshing token: ${e.message}")
+    suspend fun accessToken(forceRefresh: Boolean = false): GoogleAccess {
+        val stored = encryptedPreferences.getAccessToken()
+        val expiresAt = encryptedPreferences.getTokenExpiry() ?: 0L
+        val now = System.currentTimeMillis()
+        val refreshToken = encryptedPreferences.getRefreshToken()?.takeIf { it.isNotEmpty() }
+        return when {
+            !forceRefresh && stored != null && expiresAt > now + REFRESH_MARGIN_MILLIS ->
+                GoogleAccess.Granted(stored)
+            refreshToken != null -> refresh(refreshToken)
+            // Nothing to renew with: a token that has not run out is still good for what is left
+            // of it — unless Google has just refused it.
+            !forceRefresh && stored != null && expiresAt > now -> GoogleAccess.Granted(stored)
+            else -> nothingToRenewWith()
         }
     }
 
-    /**
-     * Проверяет, есть ли активная сессия с валидными токенами.
-     */
-    fun isSignedIn(): Boolean {
-        val token = encryptedPreferences.getAccessToken()
-        val expiry = encryptedPreferences.getTokenExpiry()
-        return token != null && expiry != null && expiry > System.currentTimeMillis() + 300000
+    /** Trades [refreshToken] for a new access token, through the function that holds the secret. */
+    private suspend fun refresh(refreshToken: String): GoogleAccess {
+        val tokens = googleOAuthFunctions.refreshAccessToken(refreshToken).getOrElse { e ->
+            return renewalFailed(e)
+        }
+        encryptedPreferences.putAccessToken(tokens.accessToken)
+        encryptedPreferences.putTokenExpiry(expiryFrom(tokens.expiresInSeconds))
+        Log.d(TAG, "Access token refreshed successfully")
+        return GoogleAccess.Granted(tokens.accessToken)
     }
 
     /**
-     * Выполняет выход из аккаунта, очищая все сохраненные токены и завершая Google Sign-In сессию.
+     * What a failed renewal leaves behind. A refusal for good — Google's `invalid_grant`, or a
+     * token the function holds no fingerprint for — drops the tokens, because no later try can
+     * bring them back. Anything else keeps them: dropping a token that still works would cost the
+     * parent a consent screen for a network blip.
+     */
+    private fun renewalFailed(e: Throwable): GoogleAccess {
+        val failure = (e as? GoogleAccessException)?.failure ?: GoogleAccessFailure.UNAVAILABLE
+        Log.w(TAG, "Could not renew the Google access token: $failure", e)
+        if (failure == GoogleAccessFailure.NEEDS_RECONNECT) {
+            markNeedsReconnect()
+        }
+        return GoogleAccess.Denied(failure)
+    }
+
+    /**
+     * No usable access token and no refresh token. On a device that was connected — the address
+     * is still stored — that is a connection Google ended: what is left of it is dropped, and it
+     * reads as one to reconnect rather than one never made.
+     */
+    private fun nothingToRenewWith(): GoogleAccess =
+        if (encryptedPreferences.getUserEmail() == null) {
+            GoogleAccess.Denied(GoogleAccessFailure.NOT_CONNECTED)
+        } else {
+            markNeedsReconnect()
+            GoogleAccess.Denied(GoogleAccessFailure.NEEDS_RECONNECT)
+        }
+
+    /**
+     * Ends a connection Google refused for good — a revoked or expired grant, a token the function
+     * no longer recognises, a Calendar permission the account never granted. Forgets the tokens and
+     * keeps the address, so [connection] reads [GoogleCalendarConnection.NEEDS_RECONNECT] and
+     * Settings offers Reconnect.
+     */
+    fun markNeedsReconnect() {
+        encryptedPreferences.removeGoogleTokens()
+    }
+
+    /**
+     * Signs the whole app out of Google on this device: clears every stored preference
+     * ([EncryptedPreferences.clear], with its exemptions) and ends the Google sign-in. What "Sign
+     * out of app" runs; disconnecting Google Calendar alone is [disconnect].
      */
     suspend fun signOut(): Pair<Boolean, String?> {
         // The local credential goes first, unconditionally. `revokeAccess()` is a network call,
@@ -281,16 +321,36 @@ class CredentialManagerService @Inject constructor(
         // sign in on this phone and find its Settings saying "connected as" the previous one,
         // and its import pulling that person's calendar into this family.
         encryptedPreferences.clear()
-        return try {
+        endGoogleSignIn()
+        return Pair(true, null)
+    }
+
+    /**
+     * Disconnects Google Calendar on this device and nothing else: Google's own keys go
+     * ([EncryptedPreferences.removeGoogleCalendarAccount]), then the Google sign-in ends. What
+     * "Sign out from Calendar sync" runs.
+     *
+     * It used to be [signOut], whose `clear()` also took the push opt-out, the telemetry answer,
+     * the family on screen, the sync cursors and the calendar filters with it — and the "Enable
+     * sync" switch, which now stays to be found as it was on a reconnect.
+     */
+    suspend fun disconnect() {
+        // Local first, for the reason [signOut] gives.
+        encryptedPreferences.removeGoogleCalendarAccount()
+        endGoogleSignIn()
+    }
+
+    /**
+     * Ends the Google sign-in and revokes the grant, best effort: the credential is already gone
+     * from this device, and the token expires on its own.
+     */
+    private suspend fun endGoogleSignIn() {
+        try {
             _googleSignInClient?.signOut()?.await()
             _googleSignInClient?.revokeAccess()?.await()
             Log.d(TAG, "User signed out successfully")
-            Pair(true, null)
-        } catch (e: Exception) {
-            // The credential is already gone from this device; the revocation on Google's side
-            // is best-effort and the token expires on its own.
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Log.e(TAG, "Google revoke failed after the local credential was cleared", e)
-            Pair(true, null)
         }
     }
 

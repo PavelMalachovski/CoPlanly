@@ -273,16 +273,23 @@ class ExportViewModel @Inject constructor(
         // The pairing half can arrive a moment after the profile half; a record that named the
         // co-parent "Parent" because it was built in that moment would be a worse document. A
         // departed co-parent has no pairing half to wait for: their name is the thread's.
+        //
+        // Waited for by uid, not merely for somebody: the names follow the family on screen, and
+        // a moment after a switch they can still be the previous family's — a record of Pavel's
+        // thread must not be signed with Barbora's name (tester report #11).
         val observed = if (departed != null) {
             parentsSource.observe().first()
         } else {
             withTimeoutOrNull(NAMES_WAIT_MS) {
-                parentsSource.observe().first { partnerUid == null || it.coParent != null }
+                parentsSource.observe().first { partnerUid == null || it.coParent?.uid == partnerUid }
             } ?: parentsSource.observe().first()
         }
-        // With a departed co-parent the profile side's co-parent — if any — belongs to another
-        // family, and must not be named in this one's record.
-        val parents = if (departed != null) observed.copy(coParent = null) else observed
+        // A co-parent the profile side names who is not this record's counterpart belongs to
+        // another family — the one a departed co-parent's thread is not, or the one on screen a
+        // moment ago — and must not be named in this one's record.
+        val parents = observed.copy(
+            coParent = observed.coParent?.takeIf { departed == null && it.uid == partnerUid }
+        )
         val gathered = source.gather(
             myUid = myUid,
             conversationId = partnerUid?.let { ConversationKey.of(myUid, it) },

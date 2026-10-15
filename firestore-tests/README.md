@@ -49,6 +49,7 @@ npm run test:only                                                    # terminal 
 | `rules/notification-queue.test.js` | The enqueue allow path (co-parent target) and the phishing denials |
 | `rules/events.test.js` | `events` read/create/update/delete and the `sharedWith` sync query |
 | `rules/child-info.test.js` | `child_info`, including a document whose `sharedWith` was stripped |
+| `rules/child-pet-family-audience.test.js` | October 2026: a child's or pet's record stays in its own family — for a parent in two families, the leak writes (the other family's parent added to `sharedWith`, a create naming them, re-stamping into the other family, a malformed family id, a "guest" on a pet) are refused; the creator, the family's other parent, a named guest, narrowing, a record that predates pairing and a blank family are still allowed |
 | `rules/invitations.test.js` | Pairing invitations: mint, withdraw, decline, and the queries the listeners run |
 | `rules/conversations-messages.test.js` | Chat: membership immutability and the `isRead`-only message update |
 | `rules/budgets-change-requests.test.js` | `budgets`, `expenses` (non-delete) and `change_requests` |

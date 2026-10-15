@@ -354,7 +354,10 @@ class MainActivity : AppCompatActivity() {
      *
      * [SelectedFamilySource.select] refuses a family the signed-in account is not in, so a
      * stale notification — from a family since left, or for an account since signed out — opens
-     * on whatever is showing rather than blanking the co-parent every screen reads. The extra is
+     * on whatever is showing rather than blanking the co-parent every screen reads. A family this
+     * device has not learnt of yet — the `pairing_accepted` push of a second family, tapped before
+     * the pairing listener or a sync brought it in — is switched to a moment later, by the
+     * reconcile that brings it; the links are armed at once all the same. The extra is
      * removed once read, so a configuration change cannot replay the switch after the parent has
      * chosen another family.
      */

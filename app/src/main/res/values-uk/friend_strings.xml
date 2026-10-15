@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="friend_section_title">Друг із доступом до календаря</string>
-    <string name="friend_section_supporting">Опікун, друг, бабуся чи дідусь, які можуть бачити календар</string>
-    <string name="friend_invite_action">Запросити друга</string>
+    <string name="friend_section_title">Друзі родини</string>
+    <string name="friend_section_supporting">Бабуся, дідусь, няня чи друг, які лише переглядають календар — стільки, скільки ви вирішите</string>
+    <string name="friend_invite_action">Запросити друга родини</string>
     <string name="friend_invite_code_label">Передайте цей код</string>
     <string name="friend_access_until">Доступ до %1$s</string>
     <string name="friend_access_several">Родини: %1$d · перший доступ закінчується %2$s</string>
@@ -23,4 +23,40 @@
     <string name="friend_empty">Ні в кого поза родиною немає доступу до календаря.</string>
     <string name="friend_revoke_failed">Не вдалося закрити доступ. Перевірте підключення та спробуйте ще раз.</string>
     <string name="friend_redeem_code_label">Введіть отриманий код</string>
+    <string name="friend_calendar_title">Календар родини</string>
+    <string name="friend_calendar_family">%1$s і %2$s</string>
+    <string name="friend_calendar_read_only">Лише перегляд. Приватні події ніколи не передаються.</string>
+    <string name="friend_calendar_added_by">Додано: %1$s</string>
+    <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
+    <string name="friend_calendar_you_take_part">Ви берете участь</string>
+    <string name="friend_calendar_access_ended">Ваш доступ до цього календаря завершився</string>
+    <string name="friend_calendar_failed">Не вдалося завантажити календар</string>
+    <string name="friend_intro">Друг родини — це бабуся, дідусь, няня чи друг, яким потрібно знати, де діти. Вони лише переглядають календар і нічого не можуть змінити.</string>
+    <string name="friend_compare_column_coparent">Другий із батьків</string>
+    <string name="friend_compare_column_friend">Друг родини</string>
+    <string name="friend_compare_calendar">Календар</string>
+    <string name="friend_compare_custody">Графік опіки</string>
+    <string name="friend_compare_expenses">Витрати</string>
+    <string name="friend_compare_chat">Чат</string>
+    <string name="friend_compare_children">Інформація про дітей</string>
+    <string name="friend_compare_how_long">Як довго</string>
+    <string name="friend_compare_views_and_changes">Переглядає і змінює</string>
+    <string name="friend_compare_only_views">Лише переглядає</string>
+    <string name="friend_compare_yes">Так</string>
+    <string name="friend_compare_no">Ні</string>
+    <string name="friend_compare_while_linked">Поки ви повʼязані</string>
+    <string name="friend_compare_duration_choice">%1$s або %2$s</string>
+    <string name="friend_compare_row_desc">%1$s: другий із батьків — %2$s, друг родини — %3$s</string>
+    <string name="friend_invite_will_see_lead">Побачить</string>
+    <string name="friend_invite_will_see_body">події родини в календарі, крім приватних. Лише перегляд — змінити нічого не можна.</string>
+    <string name="friend_invite_wont_see_lead">Не побачить</string>
+    <string name="friend_invite_wont_see_body">графік опіки, витрати, чат та інформацію про дітей.</string>
+    <string name="friend_invite_where_to_enter">Його вводять у своєму CoPlanly: «Налаштування» → «Друзі родини» → «У мене є код від батьків».</string>
+    <string name="friend_invite_share">Поділитися кодом</string>
+    <string name="friend_invite_done">Готово</string>
+    <string name="friend_share_message">%1$s запрошує вас до календаря родини в CoPlanly. Ваш код: %2$s. У CoPlanly відкрийте «Налаштування» → «Друзі родини» → «У мене є код від батьків». Застосунок: %3$s</string>
+    <string name="friend_redeem_row_title">У мене є код від батьків</string>
+    <string name="friend_redeem_row_supporting">Якщо вас запросили як друга родини</string>
+    <string name="friend_redeem_open_calendar">Відкрити календар родини</string>
+    <string name="friend_calendar_row_supporting">%1$s і %2$s · доступ до %3$s</string>
 </resources>

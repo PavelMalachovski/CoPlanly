@@ -48,7 +48,6 @@
     <string name="home_activity_change_requested">Запрошено изменение: %1$s</string>
     <string name="home_activity_review">Посмотреть</string>
 
-    <string name="home_awaiting_title">Ждут вашего ответа</string>
     <string name="home_dialog_swap_title">Обмен днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "г.", and a sentence ending in
          an abbreviation takes no second period (it read "2026 г.." — docs/AUDIT-2026-10-design.md
@@ -67,4 +66,30 @@
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Добавить событие</string>
+    <string name="home_requests_title">Запросы</string>
+    <plurals name="home_requests_waiting_on_you">
+        <item quantity="one">%1$d ждёт вашего ответа</item>
+        <item quantity="few">%1$d ждут вашего ответа</item>
+        <item quantity="many">%1$d ждут вашего ответа</item>
+        <item quantity="other">%1$d ждут вашего ответа</item>
+    </plurals>
+    <plurals name="home_requests_waiting_on_them">
+        <item quantity="one">%1$d ждёт ответа: %2$s</item>
+        <item quantity="few">%1$d ждут ответа: %2$s</item>
+        <item quantity="many">%1$d ждут ответа: %2$s</item>
+        <item quantity="other">%1$d ждут ответа: %2$s</item>
+    </plurals>
+    <!-- A noun phrase and the name in brackets, not "X принял(а)": a name cannot agree with a gendered verb. -->
+    <string name="home_requests_answer_accepted">%1$s: ваш запрос принят (%2$s)</string>
+    <string name="home_requests_answer_declined">%1$s: ваш запрос отклонён (%2$s)</string>
+    <string name="home_requests_day_today">Сегодня</string>
+    <string name="home_requests_day_yesterday">Вчера</string>
+    <string name="home_requests_none">Пока нет запросов</string>
+    <string name="home_requests_all">Все запросы и ответы</string>
+    <string name="home_activity_accepted_new_time">Ваше новое время принято: %1$s</string>
+    <string name="home_activity_declined_new_time">Ваше новое время отклонено: %1$s</string>
+    <string name="home_activity_accepted_swap">Ваш обмен днями принят: %1$s</string>
+    <string name="home_activity_declined_swap">Ваш обмен днями отклонён: %1$s</string>
+    <string name="home_activity_accepted_event">Принято: %1$s</string>
+    <string name="home_activity_declined_event">Отклонено: %1$s</string>
 </resources>

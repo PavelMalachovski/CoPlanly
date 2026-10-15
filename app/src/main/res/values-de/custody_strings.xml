@@ -101,4 +101,5 @@
     <string name="custody_window_add_confirm">Hinzufügen</string>
     <string name="custody_diff_windows_only">Nur die Umgangszeiten würden sich ändern.</string>
     <string name="custody_diff_windows_too">Auch die Umgangszeiten ändern sich.</string>
+    <string name="custody_proposal_inbox_body_yours">Du hast einen neuen Betreuungsplan vorgeschlagen</string>
 </resources>

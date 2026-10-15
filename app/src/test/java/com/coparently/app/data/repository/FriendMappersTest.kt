@@ -78,6 +78,45 @@ class FriendMappersTest {
     }
 
     @Test
+    fun `reads the parents' first names`() {
+        // Phase 2: the friend's calendar names whose day it is, and a friend reads no parent's
+        // profile, so the callable copies their first names onto the grant.
+        val grant = FriendMappers.grantFrom(
+            GRANT_ID,
+            goodGrant + ("parentNames" to mapOf("mom" to "Alice", "dad" to "Bob"))
+        )
+        assertEquals(mapOf("mom" to "Alice", "dad" to "Bob"), grant?.parentNames)
+    }
+
+    @Test
+    fun `ignores names that are not a map, values that are not text, and uids outside the family`() {
+        // A malformed name never costs the friend her grant: the names are a label, not access.
+        assertEquals(
+            emptyMap(),
+            FriendMappers.grantFrom(GRANT_ID, goodGrant + ("parentNames" to "Alice,Bob"))?.parentNames
+        )
+        assertEquals(
+            mapOf("mom" to "Alice"),
+            FriendMappers.grantFrom(
+                GRANT_ID,
+                goodGrant + ("parentNames" to mapOf("mom" to "Alice", "dad" to 7L, "stranger" to "Eve"))
+            )?.parentNames
+        )
+        assertEquals(
+            mapOf("dad" to "Bob"),
+            FriendMappers.grantFrom(
+                GRANT_ID,
+                goodGrant + ("parentNames" to mapOf<Any?, Any?>("mom" to "  ", 1 to "One", "dad" to "Bob"))
+            )?.parentNames
+        )
+    }
+
+    @Test
+    fun `an older grant without names reads as none`() {
+        assertEquals(emptyMap(), FriendMappers.grantFrom(GRANT_ID, goodGrant)?.parentNames)
+    }
+
+    @Test
     fun `a grant naming other than two parents is dropped`() {
         // The events query is a `whereIn` over this list: one uid under-fetches, three reach
         // past the family. Neither is a grant.

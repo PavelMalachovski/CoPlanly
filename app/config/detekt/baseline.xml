@@ -2,7 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>ComplexCondition:ChangeRequestsScreen.kt$incoming.isEmpty() &amp;&amp; outgoing.isEmpty() &amp;&amp; daySwapGroups.isEmpty() &amp;&amp; eventsAwaitingMe.isEmpty() &amp;&amp; pendingProposal == null</ID>
     <ID>ComplexCondition:DayWeekView.kt$onDragDrop != null &amp;&amp; draggable &amp;&amp; columnWidthPx &gt; 0f &amp;&amp; hourHeightPx &gt; 0f</ID>
     <ID>ComplexCondition:DayWeekView.kt$showTime &amp;&amp; totalMinutes &gt;= 45 || isResizingStart || isResizingEnd</ID>
     <ID>CyclomaticComplexMethod:ActivityCardText.kt$ActivityCardText$@StringRes fun resourceFor(kind: ActivityKind): Int</ID>
@@ -12,15 +11,12 @@
     <ID>CyclomaticComplexMethod:AddEditPetScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddEditPetScreen( petId: String?, onNavigateBack: () -&gt; Unit, viewModel: PetsViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:AddExpenseScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddExpenseScreen( onBack: () -&gt; Unit, expenseId: String? = null, viewModel: ExpenseViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:AuthScreen.kt$@Composable fun AuthScreen( onAuthSuccess: () -&gt; Unit, onViewModelReady: ((AuthViewModel) -&gt; Unit)? = null, viewModel: AuthViewModel = hiltViewModel() )</ID>
-    <ID>CyclomaticComplexMethod:ChangeRequestsScreen.kt$@Suppress("LongMethod") // Compose screen: empty state + two list sections @OptIn(ExperimentalMaterial3Api::class) @Composable fun ChangeRequestsScreen( onBack: () -&gt; Unit, onOpenEvent: (String) -&gt; Unit, linkedEventId: String? = null, viewModel: ChangeRequestViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:ConflictResolver.kt$ConflictResolver$private fun countNonNullFields(childInfo: ChildInfoEntity): Int</ID>
     <ID>CyclomaticComplexMethod:CustodySetupScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun CustodySetupScreen( onNavigateBack: () -&gt; Unit, viewModel: CustodySetupViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:DayWeekView.kt$private fun layoutDayEvents(events: List&lt;Event&gt;, date: LocalDate): List&lt;EventSegment&gt;</ID>
     <ID>CyclomaticComplexMethod:MessagesList.kt$@Composable // Already over detekt's LongMethod threshold before this task added the clickable chevron (the // codebase's own baseline records that); explicit like the other screen composables that carry // the same suppression rather than relying on a baseline entry keyed to an exact signature. @Suppress("LongMethod") fun MessageItem( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>CyclomaticComplexMethod:PairingFunctions.kt$PairingFunctions.Companion$fun toPairingError(e: Throwable): PairingError</ID>
     <ID>CyclomaticComplexMethod:RecurrenceExpander.kt$RecurrenceExpander$fun expand(event: Event, rangeStart: LocalDateTime, rangeEnd: LocalDateTime): List&lt;Event&gt;</ID>
-    <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
-    <ID>CyclomaticComplexMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>Filename:Color.kt$com.coparently.app.presentation.theme.Color.kt</ID>
     <ID>LongMethod:ActivityEditor.kt$@Composable private fun ActivityCard( activity: Activity, onEdit: () -&gt; Unit, onDelete: () -&gt; Unit )</ID>
     <ID>LongMethod:ActivityEditor.kt$@Composable private fun ActivityForm( activity: Activity? = null, onSave: (Activity) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
@@ -42,16 +38,11 @@
     <ID>LongMethod:DaySwapSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun DaySwapSheet( dates: List&lt;LocalDate&gt;, custodyFor: (LocalDate) -&gt; String?, parentNames: ParentNames, onOffer: (dates: List&lt;LocalDate&gt;, note: String?) -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
     <ID>LongMethod:EmergencyContactEditor.kt$@Composable private fun EmergencyContactForm( contact: EmergencyContact? = null, onSave: (EmergencyContact) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:FriendDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendDetailScreen( friendUid: String, onNavigateUp: () -&gt; Unit, onRevoked: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:FriendInviteSheet.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendInviteSheet( state: FriendInviteState, onChooseDuration: (GuestAccessDuration) -&gt; Unit, onCreate: () -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
     <ID>LongMethod:FriendProfileScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun FriendProfileScreen( onNavigateUp: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
-    <ID>LongMethod:FriendsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FriendsScreen( onNavigateUp: () -&gt; Unit, onOpenFriend: (String) -&gt; Unit, onOpenMyProfile: () -&gt; Unit, viewModel: FriendViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
     <ID>LongMethod:MedicationEditor.kt$@Composable private fun MedicationForm( medication: Medication? = null, onSave: (Medication) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
     <ID>LongMethod:PetsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PetsScreen( onNavigateBack: () -&gt; Unit, onEditPet: (String) -&gt; Unit, viewModel: PetsViewModel = hiltViewModel() )</ID>
     <ID>LongMethod:SchoolInfoEditor.kt$@Composable fun SchoolInfoEditor( schoolInfo: SchoolInfo?, onSave: (SchoolInfo?) -&gt; Unit, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:SettingsScreen.kt$@Composable @Suppress("LongParameterList") // one call site; splitting it would only add a wrapper type private fun GoogleCalendarActions( isSignedIn: Boolean, isSyncEnabled: Boolean, onToggleSync: (Boolean) -&gt; Unit, syncState: GoogleCalendarSyncState, onSignIn: () -&gt; Unit, onSyncNow: () -&gt; Unit, onCalendarSignOut: () -&gt; Unit )</ID>
-    <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncChildInfo(userId: String): Int</ID>
-    <ID>LongMethod:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>LongParameterList:AddEditEventScreen.kt$( eventId: String?, initialDate: LocalDate? = null, initialHour: Int? = null, onSave: () -&gt; Unit, onCancel: () -&gt; Unit, onRequestChange: ((String) -&gt; Unit)? = null, viewModel: EventViewModel = hiltViewModel(), friendViewModel: com.coparently.app.presentation.friends.FriendViewModel = hiltViewModel() )</ID>
     <ID>LongParameterList:AddEditPetScreen.kt$( name: String, onName: (String) -&gt; Unit, species: PetSpecies, onSpecies: (PetSpecies) -&gt; Unit, breed: String, onBreed: (String) -&gt; Unit, dateOfBirth: LocalDateTime?, onPickDate: () -&gt; Unit, enabled: Boolean )</ID>
     <ID>LongParameterList:AddExpenseScreen.kt$( agreedRatio: SplitRatio, shared: Boolean, onSharedChange: (Boolean) -&gt; Unit, overrideMomPercent: Int?, onOverrideChange: (Int?) -&gt; Unit, enabled: Boolean )</ID>
@@ -62,7 +53,7 @@
     <ID>LongParameterList:ExpenseViewModel.kt$ExpenseViewModel$( private val expenseRepository: ExpenseRepository, private val userRepository: UserRepository, private val receiptStorage: RecordPhotoStorage, private val preferencesRepository: PreferencesRepository, private val receiptTextRecognizer: ReceiptTextRecognizer, private val familySettingsRepository: FamilySettingsRepository, private val parentsSource: ParentsSource, familyMembersSource: FamilyMembersSource )</ID>
     <ID>LongParameterList:GoogleCalendarApi.kt$GoogleCalendarApi$( credential: Credential, calendarId: String = "primary", eventId: String, title: String, description: String?, startDateTime: LocalDateTime, endDateTime: LocalDateTime? )</ID>
     <ID>LongParameterList:GoogleCalendarApi.kt$GoogleCalendarApi$( credential: Credential, calendarId: String = "primary", title: String, description: String?, startDateTime: LocalDateTime, endDateTime: LocalDateTime? )</ID>
-    <ID>LongParameterList:HomeViewModel.kt$HomeViewModel$( eventRepository: EventRepository, changeRequestRepository: ChangeRequestRepository, custodyModelRepository: CustodyModelRepository, monthSpendDependencies: MonthSpendDependencies, messageRepository: MessageRepository, familyKindSource: FamilyKindSource, homeIdentityDependencies: HomeIdentityDependencies )</ID>
+    <ID>LongParameterList:HomeViewModel.kt$HomeViewModel$( eventRepository: EventRepository, requestsSource: RequestsSource, custodyModelRepository: CustodyModelRepository, monthSpendDependencies: MonthSpendDependencies, messageRepository: MessageRepository, familyKindSource: FamilyKindSource, homeIdentityDependencies: HomeIdentityDependencies )</ID>
     <ID>LongParameterList:MessagesList.kt$( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>LongParameterList:PairingRepositoryImpl.kt$PairingRepositoryImpl$( private val firestore: FirebaseFirestore, private val authService: FirebaseAuthService, private val pairingFunctions: PairingFunctions, private val postPairingConversationSetup: PostPairingConversationSetup, private val userDao: UserDao, private val selectedFamilySource: SelectedFamilySource, private val syncRequester: SyncRequester, // Application context only, for the localized conversation-title fallback. This is a // repository, not a ViewModel, so it is allowed to resolve resources directly. @ApplicationContext private val context: Context )</ID>
     <ID>LongParameterList:ParentLabels.kt$( slot: String, me: NamedParent?, coParent: NamedParent?, youFallback: String, coParentFallback: String, unknownFallback: String )</ID>
@@ -96,7 +87,6 @@
     <ID>MagicNumber:CredentialManagerService.kt$CredentialManagerService$12500</ID>
     <ID>MagicNumber:CredentialManagerService.kt$CredentialManagerService$12501</ID>
     <ID>MagicNumber:CredentialManagerService.kt$CredentialManagerService$12502</ID>
-    <ID>MagicNumber:CredentialManagerService.kt$CredentialManagerService$300000</ID>
     <ID>MagicNumber:CustodyModel.kt$CustodyModel.Companion$10</ID>
     <ID>MagicNumber:CustodyModel.kt$CustodyModel.Companion$11</ID>
     <ID>MagicNumber:CustodyModel.kt$CustodyModel.Companion$12</ID>
@@ -171,7 +161,6 @@
     <ID>MaximumLineLength:CalendarScreen.kt$ </ID>
     <ID>MaximumLineLength:DatabaseMigrations.kt$DatabaseMigrations.&lt;no name provided&gt;$ </ID>
     <ID>MaximumLineLength:SyncService.kt$SyncService$ </ID>
-    <ID>NestedBlockDepth:SyncService.kt$SyncService$private suspend fun syncEvents(userId: String): Int</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.material3.*</ID>
     <ID>NoWildcardImports:ActivityEditor.kt$import androidx.compose.runtime.*</ID>

@@ -1142,6 +1142,47 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 44-to-45 lets a custody row name its family (schema 45): the pattern and everything on it
+     * come through untouched, and the new column is null — every existing row honestly predates
+     * it, and the migration cannot tell which family a row was. What the column then decides is
+     * `CustodyModelDaoTest`'s. Needs `45.json`, which the Regenerate workflow exports
+     * (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration44To45_keepsThePatternAndNamesNoFamily() {
+        val db = helper.createDatabase(TEST_DB, VERSION_44)
+        db.execSQL(
+            """
+            INSERT INTO custody_models (id, modelType, patternDays, momDaysPattern, startDate,
+                                        isActive, repeatYearly, createdAt, lastModifiedAt,
+                                        lastModifiedAtMillis, dayOverridesJson, contactWindowsJson,
+                                        seasonalLayersJson, childOverridesJson)
+            VALUES ('m1', 'week_on_week_off', 14, '[0,1,2,3,4,5,6]',
+                    '2026-08-03', 1, 1, '2026-08-01T09:00:00', '', 1785578400000, NULL,
+                    '["2|15:00|19:00|dad"]', NULL, '["C1;child:baby-1;2026-09-07;1;0;"]')
+            """.trimIndent()
+        )
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_45,
+            true,
+            DatabaseMigrations.MIGRATION_44_45
+        )
+
+        migrated.query(
+            "SELECT momDaysPattern, contactWindowsJson, childOverridesJson, familyId FROM custody_models"
+        ).use {
+            assertTrue(it.moveToFirst())
+            assertEquals("[0,1,2,3,4,5,6]", it.getString(0))
+            assertEquals("[\"2|15:00|19:00|dad\"]", it.getString(1))
+            assertEquals("[\"C1;child:baby-1;2026-09-07;1;0;\"]", it.getString(2))
+            assertTrue("no family is guessed for a row from before the column", it.isNull(3))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -1168,6 +1209,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_42 = 42
         const val VERSION_43 = 43
         const val VERSION_44 = 44
+        const val VERSION_45 = 45
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L

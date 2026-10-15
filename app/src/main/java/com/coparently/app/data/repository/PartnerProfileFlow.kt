@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * signed-in account's own listeners, so the co-parent's new colour or name reached this phone
  * only when something unrelated changed here — in practice when the app was opened again
  * (October 2026). `PairingRepositoryImpl.observePairingState` attaches it for as long as the link
- * names this co-parent.
+ * names this co-parent, and `PairingRepositoryImpl.observeCoParentProfile` for a co-parent of
+ * another family the device is showing, which that link does not name.
  *
  * A failed listener keeps what was already read: the likeliest failure is a read denied a moment
  * before the account's own document reports an unpair, and blanking a name and a colour that

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- German translations of event_acceptance_strings.xml. -->
 <resources>
-    <string name="event_acceptance_section">Termine, die auf dich warten</string>
     <string name="event_acceptance_offered_to_you">%1$s hat das in deine Tage eingetragen</string>
     <string name="event_acceptance_offered_by_you">Du hast das in die Tage von %1$s eingetragen</string>
     <string name="event_acceptance_waiting">Wartet auf eine Antwort</string>
@@ -11,4 +10,7 @@
     <string name="event_acceptance_decline">Ablehnen</string>
     <string name="event_acceptance_withdraw">Zurückziehen</string>
     <string name="event_acceptance_hidden_note">Der Termin erscheint in keinem der beiden Kalender, bis eine Antwort da ist.</string>
+    <string name="event_acceptance_when">%1$s · %2$s–%3$s</string>
+    <string name="event_acceptance_when_start">%1$s · %2$s</string>
+    <string name="event_acceptance_when_span">%1$s – %2$s</string>
 </resources>

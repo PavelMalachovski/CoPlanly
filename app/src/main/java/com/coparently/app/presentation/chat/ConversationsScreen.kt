@@ -81,6 +81,8 @@ import com.coparently.app.utils.dateWithTime
  * @param onOpenChangeRequest Opens the change-request inbox with the request for the given
  *   event id highlighted; forwarded to the inlined [ChatScreen]
  * @param onOpenInbox Opens the change-request inbox; forwarded to the inlined [ChatScreen]
+ * @param onEditEvent Opens the editor for an event id; forwarded to the inlined [ChatScreen], whose
+ *   event cards open the event's preview, and the preview's Edit calls this
  * @param onOpenExport Opens the export screen; forwarded to the inlined [ChatScreen], whose banner
  *   offers it over a thread kept after the co-parent deleted their account
  * @param onBlock Opens the unpair confirmation; forwarded to the inlined [ChatScreen]'s header
@@ -99,6 +101,7 @@ fun ConversationsScreen(
     onRequestChangeForEvent: (eventId: String) -> Unit = {},
     onOpenChangeRequest: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
+    onEditEvent: ((eventId: String) -> Unit)? = null,
     onOpenExport: ((conversationId: String) -> Unit)? = null,
     onBlock: (() -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel()
@@ -145,6 +148,7 @@ fun ConversationsScreen(
             onOpenSettings = onOpenSettings,
             onOpenChangeRequest = onOpenChangeRequest,
             onOpenInbox = onOpenInbox,
+            onEditEvent = onEditEvent,
             onOpenExport = onOpenExport,
             onBlock = onBlock
         )

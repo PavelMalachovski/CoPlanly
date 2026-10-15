@@ -57,7 +57,7 @@ import com.coparently.app.data.local.entity.UserEntity
         JournalEntryEntity::class,
         FamilyDocumentCacheEntity::class
     ],
-    version = 44,
+    version = 45,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

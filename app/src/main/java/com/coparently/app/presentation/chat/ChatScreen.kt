@@ -92,7 +92,10 @@ import kotlinx.coroutines.delay
  *   tab's own gear action would otherwise be lost
  * @param onOpenChangeRequest Opens the change-request inbox with the request for the given
  *   event id highlighted; tapping a change-request card in the thread calls this
- * @param onOpenInbox Opens the change-request inbox with nothing highlighted (a day-swap card)
+ * @param onOpenInbox Opens the change-request inbox with nothing highlighted: a day-swap card, and
+ *   a card about an event that still waits on this parent's answer
+ * @param onEditEvent Opens the editor for the given event id. A card about an event opens that
+ *   event's preview over the thread ([ChatEventCardHost]), and the preview's Edit calls this
  * @param onOpenExport Opens the export screen for a thread; offered by the banner over a thread
  *   kept after the co-parent deleted their account ([DepartedThreadBanner]), and by nothing else
  * @param onBlock Opens the existing unpair confirmation from the header's "Block and stop sharing"
@@ -117,6 +120,7 @@ fun ChatScreen(
     onOpenSettings: (() -> Unit)? = null,
     onOpenChangeRequest: ((String) -> Unit)? = null,
     onOpenInbox: (() -> Unit)? = null,
+    onEditEvent: ((eventId: String) -> Unit)? = null,
     onOpenExport: ((conversationId: String) -> Unit)? = null,
     onBlock: (() -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel(),
@@ -273,21 +277,30 @@ fun ChatScreen(
                 ChatAttachmentsHost {
                     // Long-press "Report message" on the co-parent's bubbles (F-10).
                     ChatReportHost {
-                        MessagesList(
-                            messages = messages,
-                            currentUserId = currentUserId,
-                            canLoadEarlier = canLoadEarlier,
-                            onLoadEarlier = viewModel::loadEarlier,
-                            onRefresh = {
-                                viewModel.refreshThread()
-                            },
-                            onEventLinkClick = onOpenChangeRequest,
-                            onOpenInbox = onOpenInbox,
-                            onRetryFailed = { viewModel.resendFailedMessages() },
-                            modifier = Modifier.weight(1f),
-                            revealMessageId = revealTarget,
-                            onRevealed = { revealTarget = null }
-                        )
+                        // A card about an event opens that event — its preview, or the inbox while
+                        // it waits on this parent — never the change-request inbox on a request
+                        // that does not exist.
+                        ChatEventCardHost(
+                            parentNames = parentNames,
+                            onEditEvent = onEditEvent,
+                            onOpenInbox = onOpenInbox
+                        ) {
+                            MessagesList(
+                                messages = messages,
+                                currentUserId = currentUserId,
+                                canLoadEarlier = canLoadEarlier,
+                                onLoadEarlier = viewModel::loadEarlier,
+                                onRefresh = {
+                                    viewModel.refreshThread()
+                                },
+                                onEventLinkClick = onOpenChangeRequest,
+                                onOpenInbox = onOpenInbox,
+                                onRetryFailed = { viewModel.resendFailedMessages() },
+                                modifier = Modifier.weight(1f),
+                                revealMessageId = revealTarget,
+                                onRevealed = { revealTarget = null }
+                            )
+                        }
                     }
                 }
             }

@@ -66,16 +66,32 @@ object DaySwapInbox {
      * @param today The day to measure "already passed" against.
      * @return Groups ordered by their first day, each group's days ordered within it.
      */
-    fun groups(overrides: Map<String, DayOverride>, today: LocalDate): List<DaySwapGroup> {
-        val visible = visible(overrides, today)
+    fun groups(overrides: Map<String, DayOverride>, today: LocalDate): List<DaySwapGroup> =
+        group(visible(overrides, today))
+
+    /**
+     * Every offer, whatever its days' dates — the inbox's history, where a swap of a day already
+     * lived is still the record of how it was answered. Grouped exactly as [groups] groups.
+     *
+     * @param overrides The pair's swaps, keyed by ISO date. A key that is not a date is dropped,
+     *   as [visible] drops it.
+     */
+    fun allGroups(overrides: Map<String, DayOverride>): List<DaySwapGroup> =
+        group(
+            overrides.entries.mapNotNull { (iso, override) ->
+                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, override) }
+            }
+        )
+
+    /** One group per offer, ordered by its first day, each group's days ordered within it. */
+    private fun group(swaps: List<DaySwap>): List<DaySwapGroup> =
         // A null id must not collapse every ungrouped swap into one card, so each such day keys
         // on its own date instead.
-        return visible
+        swaps
             .groupBy { it.override.groupId ?: "single:${it.date}" }
             .values
             .map { DaySwapGroup(it.sortedBy { swap -> swap.date }) }
             .sortedBy { it.firstDate }
-    }
 }
 
 /**

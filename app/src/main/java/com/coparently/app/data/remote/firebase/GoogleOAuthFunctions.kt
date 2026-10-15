@@ -1,6 +1,9 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.data.remote.google.GoogleAccessException
+import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -34,9 +37,12 @@ data class GoogleTokens(
  * their storage server-side is a larger change and a separate decision; this one closes the hole
  * the secret was.
  *
- * Failures come back as a plain [Result] with the underlying exception. Unlike [PairingFunctions]
- * there is no error table: the caller's only two responses are "retry" and "ask the parent to
- * connect Google Calendar again", and both are decided by whether a token came back at all.
+ * **Failures say whether the connection survives.** Each comes back as a [GoogleAccessException]
+ * carrying [GoogleAccessFailure.NEEDS_RECONNECT] or [GoogleAccessFailure.UNAVAILABLE] — the
+ * caller's only two responses, "ask the parent to connect again" and "try again later". This
+ * used to be decided by whether a token came back at all, which answered "try again" for a token
+ * Google had revoked: the app kept refreshing it and never offered a reconnect. See [failureOf]
+ * for the table, two reasons long.
  */
 @Singleton
 class GoogleOAuthFunctions @Inject constructor(
@@ -61,9 +67,10 @@ class GoogleOAuthFunctions @Inject constructor(
     /**
      * Trades a refresh token for a fresh access token.
      *
-     * The callable refuses a refresh token it did not issue to this account, so a failure here
-     * can mean "reconnect", not only "network". That includes every account whose Calendar was
-     * connected before this shipped: their token predates the fingerprint the function checks
+     * The callable refuses a refresh token it did not issue to this account, and passes on
+     * Google's own refusal of a revoked or expired one; both fail with
+     * [GoogleAccessFailure.NEEDS_RECONNECT]. That includes every account whose Calendar was
+     * connected before SEC-1 §2 shipped: their token predates the fingerprints the function checks
      * against, and they consent once more.
      *
      * @param refreshToken The stored refresh token.
@@ -91,6 +98,35 @@ class GoogleOAuthFunctions @Inject constructor(
         // away mid-call would otherwise surface a spurious error.
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Result.failure(e)
+        Result.failure(GoogleAccessException(failureOf(e), e))
+    }
+
+    companion object {
+        /**
+         * The `reason`s that mean a refresh token or code can never work again.
+         *
+         * `reconnect` is what the callables send for Google's `invalid_grant` (revoked, expired,
+         * already redeemed — or seven days old while the consent screen is in Testing) and for a
+         * token they hold no fingerprint for. `unknown-refresh-token` is what a backend deployed
+         * before `reconnect` existed says for the latter.
+         */
+        private val RECONNECT_REASONS = setOf("reconnect", "unknown-refresh-token")
+
+        /**
+         * What a failed call means for the connection.
+         *
+         * Only a refusal the server names ends it. Everything else — `unavailable`, a deadline,
+         * `internal` (Google refusing this deployment's own client among it), an unconfigured
+         * backend, a malformed answer — keeps the token to be tried again, because dropping one that
+         * still works costs the parent a fresh consent for nothing.
+         */
+        fun failureOf(e: Throwable): GoogleAccessFailure {
+            val reason = ((e as? FirebaseFunctionsException)?.details as? Map<*, *>)?.get("reason") as? String
+            return if (reason != null && reason in RECONNECT_REASONS) {
+                GoogleAccessFailure.NEEDS_RECONNECT
+            } else {
+                GoogleAccessFailure.UNAVAILABLE
+            }
+        }
     }
 }

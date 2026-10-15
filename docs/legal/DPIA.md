@@ -95,6 +95,8 @@ code today.
 | R17 | **The co-parent's messages are processed at the other parent's request** (AI reply suggestion, MON-12): the author of the words did not ask for the processing and may object to it. | 3 | 2 | 6 | Opt-in consent of the requester, recorded with its version (`users/{uid}.aiConsent`), withdrawable. Legitimate interest of the requester in answering correspondence addressed to them (Art. 6(1)(f)), stated in the policy with a right to object. **Minimisation**: the last 20 messages only, attachment names only, the co-parent named by display name, nothing stored or logged by us. EU processing on Vertex AI under Google's DPA. The server checks the requester is a participant of a live pairing, as the chat rules do. Open: an in-app way for the co-parent to opt their messages out (owner decision); counsel's view on incidental Art. 9 data in messages. | Low / Medium |
 | R18 | **Prompt injection**: the co-parent writes a message meant to steer the model (make it insult, disclose, or put words in the requester's mouth). | 3 | 2 | 6 | Messages are sent as inert JSON inside delimiting tags that a message cannot close (`<`, `>`, `&` escaped); the system prompt says their content is data and any instruction inside it is to be ignored. The model has **no tools and no data** beyond those 20 messages, so an injection can only change the draft. The draft goes to the requester alone and is never sent automatically. Tested in `functions/test/ai-assist.test.js`. | Low |
 | R19 | **The model drafts something harmful** — hostile, inaccurate, inventing a commitment, or reading like legal advice — and a parent sends it in a dispute. | 2 | 3 | 6 | The parent always edits and sends the draft themselves; nothing is posted by the model. The prompt asks for brief, neutral, BIFF-style text, forbids invented facts (placeholders instead), legal, medical or financial advice and blame. A small output cap, and a low temperature where the chosen model accepts one (`AI_TEMPERATURE`). The summary is restricted to validated numbers. The app is to present it as a suggestion in the message box, never as a sent message (client contract). Messages may mention a child's health: counsel to confirm the basis for that incidental Art. 9 data (see ROPA P15). | Low |
+| R20 | **A parent in two families exposes one family's child records, health data included, to the other family's parent.** Found in the October 2026 closed test, by a tester who co-parents in two families: every writer of a child's or a pet's audience named the co-parent of the family the phone was *showing*, so after a switch to the second family one sync re-uploaded the first family's children with that family's parent in `sharedWith` (medical profile, allergies, medications), and the rules accepted it because they bounded an audience by the writer's co-parents, not by the record's family. | 2 | 4 | 8 | **Fixed in code (October 2026):** a child's or pet's record names only its own family's other parent (`FamilyAudience.recordPartnerFor`), never the family on screen; a record that belongs to no family names nobody while its parent has two co-parents; neither the phone's backfill nor a save assigns a family by guess. `firestore.rules` lets a write add to a child's or pet's `sharedWith` only the two parents its family id names, or a guest the same write names on a child's record, checked against the family before and after the write. Tested offline (`child-pet-family-audience.test.js`), between three accounts on the emulators (`MultiFamilyRecordsTest`) and in unit tests. **Operator actions:** deploy the rules; run `repairChildAndPetAudiences` with `{dryRun: true}` and record its counts — on the live project a count above zero is assessed under `BREACH-PROCEDURE.md` §3 and entered in its register (§6), notified or not; then run it for real, which removes the other family's parent and restores the record's own while that family is live. | **Low** once the rules are deployed and the repair has run; high on the live project until then |
+| R21 | **A parent in two families has one family's custody schedule written into the other family's document**, readable by that family's co-parent: the pattern of days, the seasonal layers with the names the parents gave them, and which child follows a schedule of its own (by record id). Found while reviewing the October 2026 closed-test fixes: the phone kept one active custody row for every family, and with the second family on screen every sync, the Room mirror and the pattern editor took it for that family's. | 2 | 3 | 6 | **Fixed in code (October 2026, schema 45):** each custody row names its family, every read answers for the family on screen, and a row reaches only its own family's document (`ActiveCustodyRow`, `SignedInFamilies.pairFor`); a row from before the change counts as the family's only while its parent has one co-parent. Tested between three accounts on the emulators (`MultiFamilyCustodyTest`), on a real database (`CustodyModelDaoTest`) and in unit tests. **No automatic repair:** nothing says which family's pattern a document held before the fix, and no rule can tell one family's pattern from another's. A family whose document was overwritten sets its schedule again; on the live project, a two-family account that used the custody schedule is assessed under `BREACH-PROCEDURE.md` §3. | **Low** once the two-family accounts run this build; an older build in such an account can still write it |
 
 ## 5. Measures summary
 
@@ -131,12 +133,18 @@ Record the answers here before the public release.
 
 ## 7. Residual risk and conclusion
 
-With **L-4 fixed** and **the Firestore location confirmed in the EU**, no residual risk is high.
-Prior consultation of the ÚOOÚ under Art. 36 is then **not required**.
+With **L-4 fixed**, **R20's rules deployed and its repair run**, and **the Firestore location
+confirmed in the EU**, no residual risk is high. Prior consultation of the ÚOOÚ under Art. 36 is
+then **not required**.
 
 L-4 is fixed in the code (September 2026). **Until `storage.rules` is deployed and
 `purgeLegacyPhotoPaths` has run, R2 remains high on the live bucket** and the processing should
 not be offered to the public.
+
+R20 is fixed in the code (October 2026). **Until the `firestore.rules` that bound a child's and a
+pet's audience to its family are deployed and `repairChildAndPetAudiences` has run, R20 remains
+high on the live project**: an older build in a two-family account can still write the leak, and
+what was written stays readable by the other family's parent.
 
 The two medium residual risks, R5 (coercive control, inherent in the use case) and R11 (account
 takeover), are accepted, with the second factor planned (L-18).
@@ -147,6 +155,10 @@ takeover), are accepted, with the second factor planned (L-18).
 | --- | --- | --- | --- |
 | Photos behind family-keyed rules, no download URLs (L-4) | R2 | Engineering | **Done** (code, September 2026) |
 | Deploy `storage.rules` and the functions; run `purgeLegacyPhotoPaths` once | R2 | Ops | Before public release |
+| A child's and a pet's audience bound to its own family, in the client and the rules | R20 | Engineering | **Done** (code, October 2026) |
+| Deploy the functions and `firestore.rules`; run `repairChildAndPetAudiences` with `{dryRun: true}`, assess its counts under `BREACH-PROCEDURE.md`, then run it for real | R20 | Ops, owner | Now: the closed test already has an account in two families |
+| A custody schedule kept per family on the phone (schema 45) | R21 | Engineering | **Done** (code, October 2026) |
+| Ask the closed test's two-family accounts to update; check each of their families' schedules, assess under `BREACH-PROCEDURE.md` §3, and set any overwritten schedule again | R21 | Owner | Now: the closed test already has an account in two families |
 | Confirm the Firestore location; new EU project if it is in the US | R3, R8 | Ops | Before public release |
 | Run `purgeParentHealthFields` after the L-1 build ships | L-1 | Ops | At release |
 | Second factor | R11 | Engineering | Within 6 months of release |

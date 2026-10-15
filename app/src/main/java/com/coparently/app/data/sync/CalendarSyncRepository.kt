@@ -4,6 +4,8 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.remote.google.CredentialProvider
+import com.coparently.app.data.remote.google.GoogleAccessException
+import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
@@ -41,10 +43,6 @@ class CalendarSyncRepository @Inject constructor(
         try {
             emit(SyncResult.Progress(SyncStage.STARTING))
 
-            val credential = credentialProvider.getCredential()
-                ?: throw SyncFailureException(SyncFailure.NOT_SIGNED_IN_GOOGLE)
-            // Token refresh is now handled automatically in getCredential()
-
             // A Google Calendar import is created by whoever pulled it in - the same "yours by
             // default" rule AddEditEventScreen applies. UserRepository is the domain interface
             // for exactly this lookup (no pairing subscription, just this device's own Room
@@ -63,13 +61,18 @@ class CalendarSyncRepository @Inject constructor(
 
             emit(SyncResult.Progress(SyncStage.FETCHING))
 
-            // Execute API call on IO dispatcher to avoid NetworkOnMainThreadException
-            val imported = withContext(Dispatchers.IO) {
-                googleCalendarApi.listEvents(
-                    credential = credential,
-                    timeMin = startDate,
-                    timeMax = endDate
-                )
+            // The credential comes with the call: `withCredential` renews an expired token first,
+            // renews a refused one once, and ends a connection Google refuses for good - each
+            // failure arriving as a `GoogleAccessException` below. The API call itself runs on the
+            // IO dispatcher to avoid NetworkOnMainThreadException.
+            val imported = credentialProvider.withCredential { credential ->
+                withContext(Dispatchers.IO) {
+                    googleCalendarApi.listEvents(
+                        credential = credential,
+                        timeMin = startDate,
+                        timeMax = endDate
+                    )
+                }
             }
 
             emit(SyncResult.Progress(SyncStage.FOUND, found = imported.events.size))
@@ -100,6 +103,10 @@ class CalendarSyncRepository @Inject constructor(
         } catch (e: SyncFailureException) {
             android.util.Log.e("CalendarSync", "Sync refused: ${e.failure}", e)
             emit(SyncResult.Error(e.failure))
+        } catch (e: GoogleAccessException) {
+            // No usable connection: never made, ended by Google, or out of reach this time.
+            android.util.Log.w("CalendarSync", "No Google access: ${e.failure}", e)
+            emit(SyncResult.Error(SyncFailure.forAccess(e.failure)))
         } catch (e: IllegalStateException) {
             android.util.Log.e("CalendarSync", "Authentication error: ${e.message}", e)
             emit(SyncResult.Error(SyncFailure.AUTHENTICATION))
@@ -267,6 +274,12 @@ enum class SyncFailure {
     /** No Google credential: the user has to connect Google Calendar again. */
     NOT_SIGNED_IN_GOOGLE,
 
+    /**
+     * Google refused the connection for good — access revoked or expired, or the Calendar
+     * permission missing. Its tokens are gone; the user reconnects.
+     */
+    RECONNECT,
+
     /** Nobody is signed in to the app, so there is no one to attribute the import to. */
     NOT_SIGNED_IN_APP,
 
@@ -285,6 +298,12 @@ enum class SyncFailure {
     /** Google's side failed (5xx). */
     SERVICE_UNAVAILABLE,
 
+    /**
+     * The access token could not be renewed this time: Google, or the function that renews it,
+     * was out of reach. The connection is kept, and the next try may well work.
+     */
+    GOOGLE_UNREACHABLE,
+
     /** The device could not reach Google. */
     NETWORK,
 
@@ -292,6 +311,13 @@ enum class SyncFailure {
     UNKNOWN;
 
     companion object {
+        /** Maps why there was no Google access to what the user is told. */
+        fun forAccess(failure: GoogleAccessFailure): SyncFailure = when (failure) {
+            GoogleAccessFailure.NOT_CONNECTED -> NOT_SIGNED_IN_GOOGLE
+            GoogleAccessFailure.NEEDS_RECONNECT -> RECONNECT
+            GoogleAccessFailure.UNAVAILABLE -> GOOGLE_UNREACHABLE
+        }
+
         /** Maps an HTTP status from the Calendar API to a failure. */
         fun forStatus(statusCode: Int): SyncFailure = when (statusCode) {
             HTTP_UNAUTHORIZED -> AUTHENTICATION

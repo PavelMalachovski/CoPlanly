@@ -70,6 +70,19 @@ object PreferenceKeys {
     const val CHAT_PAUSE_BEFORE_SENDING = "chat_pause_before_sending"
 
     /**
+     * Whether this person turned on Google Calendar sync in Settings: `true` when on. It gates
+     * the "Sync from Google Calendar" button, and used to live in `SyncViewModel` alone, so it
+     * read off — the button greyed — after every restart.
+     *
+     * **Survives "Sign out from Calendar sync"**, which removes Google's own keys and nothing else
+     * (`EncryptedPreferences.removeGoogleCalendarAccount`): reconnecting finds the switch as it was
+     * left. **Not exempt from `EncryptedPreferences.clear()`**, for the reason [PUSH_ENABLED] gives:
+     * signing out of the app takes the Google connection too, and the next account on this device
+     * connects its own calendar and starts with sync off.
+     */
+    const val GOOGLE_CALENDAR_SYNC_ENABLED = "google_calendar_sync_enabled"
+
+    /**
      * Whether this person picked the default currency themselves in Settings: `true` when they
      * did, absent otherwise. Until then the stored default is a guess — the device region's on
      * first launch — which the country they give for the calendar replaces
@@ -162,9 +175,14 @@ object PreferenceKeys {
     const val PARENT_SLOT_MARKER_PREFIX = "parent_slot_marker_"
 
     /**
-     * Prefix for the per-user key recording which co-parent this device has already re-published
+     * Prefix for the per-user key recording which co-parents this device has already re-published
      * its own events for — the actual key is this prefix plus the Firebase UID, and the value is
-     * the partner's UID.
+     * every co-parent's UID, sorted and comma-joined (`SyncService.backfillForNewCoParents`).
+     *
+     * The **set**, never the family on screen: switching families must not re-publish anything,
+     * and a marker naming the selection re-armed on every switch. A set of one is that UID alone,
+     * which is what this key held when it named a single partner, so an existing one-family
+     * install reads its old value as already done.
      *
      * Scoped per user for the same reason [PARENT_SLOT_MARKER_PREFIX] is: Room's `users` and
      * `events` rows survive sign-out, so a second account signing in on the same device must not
@@ -178,15 +196,15 @@ object PreferenceKeys {
     const val EVENT_AUDIENCE_BACKFILL_PREFIX = "event_audience_backfill_"
 
     /**
-     * Prefix for the per-user key recording which co-parent this device has already re-published
+     * Prefix for the per-user key recording which co-parents this device has already re-published
      * its own **child info** for — the actual key is this prefix plus the Firebase UID, and the
-     * value is the partner's UID.
+     * value is the co-parent set in the same form as [EVENT_AUDIENCE_BACKFILL_PREFIX]'s.
      *
      * Separate from [EVENT_AUDIENCE_BACKFILL_PREFIX] rather than shared with it: the two backfills
      * were introduced at different times, so on an install that already ran the events one a
      * shared key would read as "child info is done too" and skip it forever.
      *
-     * The value is the partner's UID and never a boolean, for the reason spelled out on
+     * The value names co-parents and is never a boolean, for the reason spelled out on
      * [EVENT_AUDIENCE_BACKFILL_PREFIX]: a boolean never re-arms when the same two people pair
      * again.
      */
@@ -201,7 +219,9 @@ object PreferenceKeys {
      * [CHILD_INFO_AUDIENCE_BACKFILL_PREFIX] gives: an install that already ran one of those would
      * read a shared key as "done" and never stamp anything.
      *
-     * The partner's UID and never a boolean — same rule again. Losing this key to
+     * The partner's UID and never a boolean — same rule again. One partner, because the backfill
+     * stamps only while there is exactly one co-parent; with two it stamps nothing and leaves this
+     * key as it was (`FamilyIdBackfill`). Losing this key to
      * `EncryptedPreferences.clear()` costs one `UPDATE ... WHERE familyId IS NULL` per table that
      * matches no rows, so it does not need the slot marker's exemption.
      */
@@ -227,10 +247,11 @@ object PreferenceKeys {
      * username, the child it imports for, and the school's rotating refresh and access tokens.
      * **Never the password**, which is used once to sign in and not kept anywhere.
      *
-     * **Exempt from `EncryptedPreferences.clear()`**, like [PARENT_SLOT_MARKER_PREFIX], because a
-     * Google Calendar disconnect reaches `clear()` too, and a parent who disconnects one calendar
-     * has not asked to be signed out of their child's school. The three places that must forget
-     * it do so explicitly through `SchoolConnectionStore.clearAll()`: the app's own sign-out
+     * **Exempt from `EncryptedPreferences.clear()`**, like [PARENT_SLOT_MARKER_PREFIX]. That was
+     * decided while a Google Calendar disconnect reached `clear()` too — a parent who disconnects
+     * one calendar has not asked to be signed out of their child's school — and the disconnect now
+     * removes Google's own keys only. The three places that must forget it do so explicitly
+     * through `SchoolConnectionStore.clearAll()`: the app's own sign-out
      * (`AuthStateViewModel.signOut`), an account switch (`AccountSwitchGuard`) and account
      * deletion (`AccountDeletionService`). Each value also names the Firebase uid it belongs to,
      * and the store refuses it to any other account.
