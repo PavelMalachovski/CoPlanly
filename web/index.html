@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoPlanly — the shared calendar for parents who live apart</title>
+<meta name="description" content="CoPlanly is a shared calendar for separated parents: the custody schedule, the children's events, messages and shared expenses in one place.">
+<!--
+  The site's home page, https://coparently-a39c9.web.app/. Google's verification of the OAuth
+  consent screen asks for one: a public page on the same domain as the privacy policy that says
+  what the app is, what it does, and what it does with Google user data. The privacy policy's
+  "Google Calendar, if you connect it" section says the same at length.
+
+  English is written here, in the markup, so the page reads without JavaScript (and to Google's
+  reviewer); the script reads it back as its English table before translating anything, so it
+  exists once. The four other languages are the TEXT table below. Like every page in web/, it
+  loads nothing from anywhere: no external script, style, font or image, and no request.
+
+  Three things to keep true:
+  - **The permission named is the one the app asks for.** `GoogleCalendarAccess.SCOPE` in the
+    app, the privacy policy and this page name the same scope; `tools/check-invariants.js` fails
+    when they part.
+  - **Only what the app does today.** The feature list is the Play listing's approved captions
+    (`docs/play-listing/README.md`), under the same rule: no "AI", no price, nothing that says the
+    export proves what happened.
+  - **The status line is true.** It says the app is in testing; change it, in five languages,
+    when CoPlanly reaches Google Play.
+
+  web-tests/home-page.spec.js drives it in Chromium.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1b1b21;
+    --muted: #55555f;
+    --rule: #e2e2e8;
+    --accent: #4f46b8;
+    --field: #f4f4f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1b21;
+      --fg: #ecebf0;
+      --muted: #a9a8b3;
+      --rule: #33333c;
+      --accent: #c2c1ff;
+      --field: #26262e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 1.5rem 1rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main, footer { max-width: 40rem; margin: 0 auto; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0; }
+  h2 { font-size: 1.2rem; margin: 2.25rem 0 .5rem; }
+  p { margin: .5rem 0; }
+  ul { margin: .5rem 0; padding-left: 1.3rem; }
+  li { margin: .45rem 0; }
+  a { color: var(--accent); }
+  .lang { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 .25rem; font-size: .875rem; margin-bottom: 1rem; }
+  .lang button { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: .2rem .3rem; }
+  .lang button[aria-pressed="true"] { color: var(--fg); font-weight: 600; cursor: default; }
+  .brand { display: flex; align-items: center; gap: .9rem; }
+  .brand svg { width: 3.5rem; height: 3.5rem; border-radius: 1rem; flex: none; }
+  .tagline { font-size: 1.2rem; margin: 1rem 0 .25rem; }
+  .lede { color: var(--muted); }
+  .status { background: var(--field); border-radius: .75rem; padding: .7rem 1rem; margin: 1rem 0; font-size: .95rem; }
+  .features { list-style: none; padding: 0; }
+  .features li { margin: .9rem 0; }
+  .features strong { display: block; }
+  .features span { color: var(--muted); }
+  .note { background: var(--field); border-radius: .75rem; padding: .9rem 1.1rem; margin: 1rem 0; }
+  footer { color: var(--muted); font-size: .875rem; margin-top: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+  footer ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; }
+  footer li { margin: 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">English</button>
+    <button type="button" data-lang="cs" aria-pressed="false">Čeština</button>
+    <button type="button" data-lang="de" aria-pressed="false">Deutsch</button>
+    <button type="button" data-lang="ru" aria-pressed="false">Русский</button>
+    <button type="button" data-lang="uk" aria-pressed="false">Українська</button>
+  </div>
+
+  <header>
+    <div class="brand">
+      <!-- The app's icon, as on Google Play: docs/play-listing/icon-512.svg. -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="18 18 72 72" aria-hidden="true" focusable="false">
+        <rect x="0" y="0" width="108" height="108" fill="#4F46E5"/>
+        <g transform="translate(54.0,56.0) scale(0.667) translate(-54.0,-56.0)" fill="#FFFFFF">
+          <path d="M40,28 A3,3 0 0 1 43,31 V39 A3,3 0 0 1 37,39 V31 A3,3 0 0 1 40,28 Z"/>
+          <path d="M68,28 A3,3 0 0 1 71,31 V39 A3,3 0 0 1 65,39 V31 A3,3 0 0 1 68,28 Z"/>
+          <path fill-rule="evenodd" d="M35,34 H73 A9,9 0 0 1 82,43 V75 A9,9 0 0 1 73,84 H35 A9,9 0 0 1 26,75 V43 A9,9 0 0 1 35,34 Z M35,38 H73 A5,5 0 0 1 78,43 V75 A5,5 0 0 1 73,80 H35 A5,5 0 0 1 30,75 V43 A5,5 0 0 1 35,38 Z"/>
+          <path d="M35,38 H73 A5,5 0 0 1 78,43 V49 H30 V43 A5,5 0 0 1 35,38 Z"/>
+          <path d="M38.5,54 H41.5 A1.5,1.5 0 0 1 43,55.5 V58.5 A1.5,1.5 0 0 1 41.5,60 H38.5 A1.5,1.5 0 0 1 37,58.5 V55.5 A1.5,1.5 0 0 1 38.5,54 Z"/>
+          <path d="M52.5,54 H55.5 A1.5,1.5 0 0 1 57,55.5 V58.5 A1.5,1.5 0 0 1 55.5,60 H52.5 A1.5,1.5 0 0 1 51,58.5 V55.5 A1.5,1.5 0 0 1 52.5,54 Z"/>
+          <path d="M66.5,54 H69.5 A1.5,1.5 0 0 1 71,55.5 V58.5 A1.5,1.5 0 0 1 69.5,60 H66.5 A1.5,1.5 0 0 1 65,58.5 V55.5 A1.5,1.5 0 0 1 66.5,54 Z"/>
+          <path d="M38.5,63 H41.5 A1.5,1.5 0 0 1 43,64.5 V67.5 A1.5,1.5 0 0 1 41.5,69 H38.5 A1.5,1.5 0 0 1 37,67.5 V64.5 A1.5,1.5 0 0 1 38.5,63 Z"/>
+          <path d="M52.5,63 H55.5 A1.5,1.5 0 0 1 57,64.5 V67.5 A1.5,1.5 0 0 1 55.5,69 H52.5 A1.5,1.5 0 0 1 51,67.5 V64.5 A1.5,1.5 0 0 1 52.5,63 Z"/>
+          <path d="M66.5,63 H69.5 A1.5,1.5 0 0 1 71,64.5 V67.5 A1.5,1.5 0 0 1 69.5,69 H66.5 A1.5,1.5 0 0 1 65,67.5 V64.5 A1.5,1.5 0 0 1 66.5,63 Z"/>
+          <path d="M38.5,72 H41.5 A1.5,1.5 0 0 1 43,73.5 V76.5 A1.5,1.5 0 0 1 41.5,78 H38.5 A1.5,1.5 0 0 1 37,76.5 V73.5 A1.5,1.5 0 0 1 38.5,72 Z"/>
+          <path d="M52.5,72 H55.5 A1.5,1.5 0 0 1 57,73.5 V76.5 A1.5,1.5 0 0 1 55.5,78 H52.5 A1.5,1.5 0 0 1 51,76.5 V73.5 A1.5,1.5 0 0 1 52.5,72 Z"/>
+          <path d="M66.5,72 H69.5 A1.5,1.5 0 0 1 71,73.5 V76.5 A1.5,1.5 0 0 1 69.5,78 H66.5 A1.5,1.5 0 0 1 65,76.5 V73.5 A1.5,1.5 0 0 1 66.5,72 Z"/>
+        </g>
+      </svg>
+      <h1 translate="no">CoPlanly</h1>
+    </div>
+    <p class="tagline" data-t="tagline">The shared calendar for parents who live apart.</p>
+    <p class="lede" data-t="lede">The custody schedule, the children’s events, your messages and shared expenses in one place, so both homes work from the same plan.</p>
+    <p class="status" data-t="status">CoPlanly is an Android app, currently tested with a small group of families.</p>
+  </header>
+
+  <section id="features">
+    <h2 data-t="featuresHead">What it does</h2>
+    <ul class="features">
+      <li><strong data-t="f1Head">One custody calendar for both homes</strong> <span data-t="f1Body">Each parent has a colour, so you can see whose day it is at a glance.</span></li>
+      <li><strong data-t="f2Head">A schedule that fits your agreement</strong> <span data-t="f2Body">Week on / week off, 2-2-3, 3-4-4-3 or a pattern of your own.</span></li>
+      <li><strong data-t="f3Head">Today at a glance</strong> <span data-t="f3Body">Who has the children and when the next handover is.</span></li>
+      <li><strong data-t="f4Head">Swap a day, only when you both agree</strong> <span data-t="f4Body">The other parent accepts or declines the request.</span></li>
+      <li><strong data-t="f5Head">Messages nobody can rewrite</strong> <span data-t="f5Body">A sent message can’t be edited or deleted.</span></li>
+      <li><strong data-t="f6Head">Shared expenses, clearly split</strong> <span data-t="f6Body">Who paid for what, and who owes whom.</span></li>
+      <li><strong data-t="f7Head">Everything about the kids in one place</strong> <span data-t="f7Body">Medication, allergies, activities and emergency contacts.</span></li>
+      <li><strong data-t="f8Head">A record for your lawyer or mediator</strong> <span data-t="f8Body">A PDF or CSV of what you both recorded and wrote.</span></li>
+    </ul>
+  </section>
+
+  <section id="google-calendar">
+    <h2 data-t="googleHead">Google Calendar, if you connect it</h2>
+    <p data-t="googleIntro">Connecting Google Calendar is optional. If you connect it, CoPlanly asks Google for one permission: to see the events on the calendars you own (calendar.events.owned.readonly). It uses it to copy the events of your primary calendar for the next twelve months into CoPlanly on your phone, when you switch the sync on or tap to sync.</p>
+    <ul>
+      <li data-t="googlePrivate">Imported events stay on your phone. They are marked private, so they are not uploaded to our servers and your co-parent does not see them, unless you open one and make it a shared event yourself.</li>
+      <li data-t="googleNoWrite">CoPlanly never creates, changes or deletes anything in your Google Calendar, and never reads a calendar somebody else shares with you.</li>
+      <li data-t="googleEnd">You can disconnect at any time in Settings → Sync, or remove CoPlanly’s access in your Google Account.</li>
+    </ul>
+    <div class="note">
+      <p data-t="limitedUse">CoPlanly’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+      <p><a id="google-policy" href="https://developers.google.com/terms/api-services-user-data-policy" translate="no">Google API Services User Data Policy</a></p>
+    </div>
+  </section>
+
+  <section id="data">
+    <h2 data-t="dataHead">Your data</h2>
+    <ul>
+      <li data-t="data1">No advertising, and your data is never sold.</li>
+      <li data-t="data2">Analytics and crash reports are sent only if you agree, and you can change your answer in Settings → App.</li>
+      <li data-t="data3">You can delete your account in the app, in Settings → Account, or without the app on this website.</li>
+    </ul>
+    <p><a href="privacy/" data-t="readPolicy">Read the privacy policy</a></p>
+  </section>
+</main>
+
+<footer>
+  <ul>
+    <li><a id="privacy" href="privacy/" data-t="privacyLink">Privacy policy</a></li>
+    <li><a id="terms" href="terms/" data-t="termsLink">Terms of service</a></li>
+    <li><a id="delete-account" href="delete-account/" data-t="deleteLink">Delete your account</a></li>
+    <li><a id="verify" href="verify/" data-t="verifyLink">Verify an exported record</a></li>
+  </ul>
+</footer>
+
+<script>
+'use strict';
+
+/**
+ * Every language but English, which is the page as written (read back below). The feature
+ * captions are the Play listing's (`docs/play-listing/README.md`), Czech included; the Settings
+ * names are the app's own (`settings_group_*`).
+ */
+const TEXT = {
+  cs: {
+    pageTitle: 'CoPlanly – sdílený kalendář pro rodiče, kteří spolu nežijí',
+    tagline: 'Sdílený kalendář pro rodiče, kteří spolu nežijí.',
+    lede: 'Rozvrh péče, akce dětí, vaše zprávy i společné výdaje na jednom místě, aby obě domácnosti vycházely ze stejného plánu.',
+    status: 'CoPlanly je aplikace pro Android, kterou zatím testuje malá skupina rodin.',
+    featuresHead: 'Co umí',
+    f1Head: 'Jeden kalendář péče pro obě domácnosti',
+    f1Body: 'Každý rodič má svou barvu, takže hned vidíte, čí je který den.',
+    f2Head: 'Rozvrh péče podle vaší dohody',
+    f2Body: 'Střídání po týdnu, 2-2-3, 3-4-4-3 i vlastní vzor.',
+    f3Head: 'Dnešek na první pohled',
+    f3Body: 'U koho jsou děti a kdy je další předání.',
+    f4Head: 'Výměna dne, jen když souhlasíte oba',
+    f4Body: 'Druhý rodič návrh přijme, nebo odmítne.',
+    f5Head: 'Zprávy, které nikdo nepřepíše',
+    f5Body: 'Odeslanou zprávu nelze upravit ani smazat.',
+    f6Head: 'Společné výdaje bez dohadování',
+    f6Body: 'Kdo co zaplatil a kdo komu kolik dluží.',
+    f7Head: 'Vše o dětech na jednom místě',
+    f7Body: 'Léky, alergie, kroužky i nouzové kontakty.',
+    f8Head: 'Záznam pro advokáta nebo mediátora',
+    f8Body: 'PDF nebo CSV s tím, co jste si zapsali a napsali.',
+    googleHead: 'Google Kalendář, pokud ho připojíte',
+    googleIntro: 'Připojení Google Kalendáře je nepovinné. Když ho připojíte, CoPlanly požádá Google o jediné oprávnění: vidět události v kalendářích, které vlastníte (calendar.events.owned.readonly). Použije ho ke zkopírování událostí z vašeho hlavního kalendáře na příštích dvanáct měsíců do CoPlanly ve vašem telefonu – když synchronizaci zapnete nebo ji spustíte ručně.',
+    googlePrivate: 'Importované události zůstávají ve vašem telefonu. Jsou označené jako soukromé, takže se nenahrávají na naše servery a druhý rodič je nevidí – dokud některou sami neotevřete a neuděláte z ní sdílenou událost.',
+    googleNoWrite: 'CoPlanly ve vašem Google Kalendáři nic nevytváří, nemění ani nemaže a nikdy nečte kalendář, který s vámi sdílí někdo jiný.',
+    googleEnd: 'Odpojit ho můžete kdykoli v Nastavení → Synchronizace, nebo přístup CoPlanly odebrat ve svém účtu Google.',
+    limitedUse: 'Používání informací získaných z rozhraní Google API a jejich předávání jiným aplikacím se v CoPlanly řídí zásadami Google API Services User Data Policy, včetně požadavků na omezené použití (Limited Use).',
+    dataHead: 'Vaše data',
+    data1: 'Žádné reklamy a vaše data nikdy neprodáváme.',
+    data2: 'Analytická data a hlášení o pádech se odesílají, jen pokud souhlasíte. Odpověď můžete změnit v Nastavení → Aplikace.',
+    data3: 'Účet můžete smazat v aplikaci v Nastavení → Účet, nebo bez aplikace na tomto webu.',
+    readPolicy: 'Přečtěte si zásady ochrany osobních údajů',
+    privacyLink: 'Zásady ochrany osobních údajů',
+    termsLink: 'Podmínky používání',
+    deleteLink: 'Smazat účet',
+    verifyLink: 'Ověřit exportovaný záznam',
+  },
+  de: {
+    pageTitle: 'CoPlanly – der gemeinsame Kalender für Eltern, die getrennt leben',
+    tagline: 'Der gemeinsame Kalender für Eltern, die getrennt leben.',
+    lede: 'Betreuungsplan, Termine der Kinder, eure Nachrichten und gemeinsame Ausgaben an einem Ort – damit beide Haushalte nach demselben Plan gehen.',
+    status: 'CoPlanly ist eine Android-App, die gerade mit einer kleinen Gruppe von Familien getestet wird.',
+    featuresHead: 'Was die App kann',
+    f1Head: 'Ein Betreuungskalender für beide Zuhause',
+    f1Body: 'Jeder Elternteil hat eine Farbe – so siehst du auf einen Blick, wessen Tag es ist.',
+    f2Head: 'Ein Plan, der zu eurer Vereinbarung passt',
+    f2Body: 'Wochenweise im Wechsel, 2-2-3, 3-4-4-3 oder ein eigenes Muster.',
+    f3Head: 'Der heutige Tag auf einen Blick',
+    f3Body: 'Bei wem die Kinder sind und wann die nächste Übergabe ist.',
+    f4Head: 'Einen Tag tauschen – nur wenn ihr beide zustimmt',
+    f4Body: 'Der andere Elternteil nimmt die Anfrage an oder lehnt sie ab.',
+    f5Head: 'Nachrichten, die niemand umschreibt',
+    f5Body: 'Eine gesendete Nachricht lässt sich weder bearbeiten noch löschen.',
+    f6Head: 'Gemeinsame Ausgaben, klar aufgeteilt',
+    f6Body: 'Wer was bezahlt hat und wer wem wie viel schuldet.',
+    f7Head: 'Alles über die Kinder an einem Ort',
+    f7Body: 'Medikamente, Allergien, Aktivitäten und Notfallkontakte.',
+    f8Head: 'Eine Aufzeichnung für Anwalt oder Mediation',
+    f8Body: 'Ein PDF oder CSV mit dem, was ihr beide eingetragen und geschrieben habt.',
+    googleHead: 'Google Kalender, wenn du ihn verbindest',
+    googleIntro: 'Google Kalender zu verbinden ist freiwillig. Wenn du ihn verbindest, bittet CoPlanly Google um eine einzige Berechtigung: die Termine in den Kalendern zu sehen, die dir gehören (calendar.events.owned.readonly). Damit kopiert CoPlanly die Termine deines Hauptkalenders für die nächsten zwölf Monate in die App auf deinem Handy – wenn du die Synchronisierung einschaltest oder von Hand startest.',
+    googlePrivate: 'Importierte Termine bleiben auf deinem Handy. Sie sind als privat markiert: Sie werden nicht auf unsere Server hochgeladen, und der andere Elternteil sieht sie nicht – außer du öffnest einen und machst ihn selbst zu einem gemeinsamen Termin.',
+    googleNoWrite: 'CoPlanly erstellt, ändert oder löscht nichts in deinem Google Kalender und liest nie einen Kalender, den jemand anderes mit dir teilt.',
+    googleEnd: 'Du kannst die Verbindung jederzeit unter Einstellungen → Sync trennen oder den Zugriff von CoPlanly in deinem Google-Konto entfernen.',
+    limitedUse: 'Die Nutzung von Informationen, die CoPlanly über Google-APIs erhält, und ihre Weitergabe an andere Apps erfolgen gemäß der Google API Services User Data Policy, einschließlich der Anforderungen zur eingeschränkten Nutzung (Limited Use).',
+    dataHead: 'Deine Daten',
+    data1: 'Keine Werbung, und deine Daten werden nie verkauft.',
+    data2: 'Analyse- und Absturzberichte werden nur gesendet, wenn du zustimmst. Deine Antwort kannst du unter Einstellungen → App ändern.',
+    data3: 'Dein Konto kannst du in der App unter Einstellungen → Konto löschen – oder ohne die App auf dieser Website.',
+    readPolicy: 'Datenschutzerklärung lesen',
+    privacyLink: 'Datenschutzerklärung',
+    termsLink: 'Nutzungsbedingungen',
+    deleteLink: 'Konto löschen',
+    verifyLink: 'Exportierte Aufzeichnung prüfen',
+  },
+  ru: {
+    pageTitle: 'CoPlanly — общий календарь для родителей, которые живут раздельно',
+    tagline: 'Общий календарь для родителей, которые живут раздельно.',
+    lede: 'График опеки, события детей, ваша переписка и общие расходы в одном месте — чтобы оба дома жили по одному плану.',
+    status: 'CoPlanly — приложение для Android. Сейчас его тестирует небольшая группа семей.',
+    featuresHead: 'Что умеет приложение',
+    f1Head: 'Один календарь опеки для двух домов',
+    f1Body: 'У каждого родителя свой цвет — сразу видно, чей сегодня день.',
+    f2Head: 'График по вашей договорённости',
+    f2Body: 'Неделя через неделю, 2-2-3, 3-4-4-3 или свой порядок.',
+    f3Head: 'Сегодняшний день с первого взгляда',
+    f3Body: 'У кого дети и когда следующая передача.',
+    f4Head: 'Обмен днями — только по обоюдному согласию',
+    f4Body: 'Второй родитель принимает или отклоняет запрос.',
+    f5Head: 'Сообщения, которые никто не перепишет',
+    f5Body: 'Отправленное сообщение нельзя изменить или удалить.',
+    f6Head: 'Общие расходы, понятно разделённые',
+    f6Body: 'Кто за что заплатил и кто кому сколько должен.',
+    f7Head: 'Всё о детях в одном месте',
+    f7Body: 'Лекарства, аллергии, кружки и экстренные контакты.',
+    f8Head: 'Запись для адвоката или медиатора',
+    f8Body: 'PDF или CSV с тем, что вы оба записали и написали.',
+    googleHead: 'Google Календарь, если вы его подключите',
+    googleIntro: 'Подключать Google Календарь необязательно. Если вы его подключите, CoPlanly попросит у Google одно разрешение — видеть события в календарях, владельцем которых вы являетесь (calendar.events.owned.readonly). С его помощью приложение копирует события вашего основного календаря на ближайшие двенадцать месяцев в CoPlanly на вашем телефоне — когда вы включаете синхронизацию или запускаете её вручную.',
+    googlePrivate: 'Импортированные события остаются на вашем телефоне. Они помечены как личные: не загружаются на наши серверы, и второй родитель их не видит — пока вы сами не откроете событие и не сделаете его общим.',
+    googleNoWrite: 'CoPlanly ничего не создаёт, не изменяет и не удаляет в вашем Google Календаре и никогда не читает календари, которыми с вами поделился кто-то другой.',
+    googleEnd: 'Отключить его можно в любой момент в разделе «Настройки → Синхронизация» или отозвать доступ CoPlanly в своём аккаунте Google.',
+    limitedUse: 'Использование информации, полученной CoPlanly через API Google, и её передача другим приложениям соответствуют правилам Google API Services User Data Policy, включая требования об ограниченном использовании (Limited Use).',
+    dataHead: 'Ваши данные',
+    data1: 'Никакой рекламы, и ваши данные никогда не продаются.',
+    data2: 'Аналитика и отчёты о сбоях отправляются, только если вы согласны. Ответ можно изменить в разделе «Настройки → Приложение».',
+    data3: 'Удалить аккаунт можно в приложении, в разделе «Настройки → Аккаунт», или без приложения — на этом сайте.',
+    readPolicy: 'Прочитать политику конфиденциальности',
+    privacyLink: 'Политика конфиденциальности',
+    termsLink: 'Условия использования',
+    deleteLink: 'Удалить аккаунт',
+    verifyLink: 'Проверить экспортированную запись',
+  },
+  uk: {
+    pageTitle: 'CoPlanly — спільний календар для батьків, які живуть окремо',
+    tagline: 'Спільний календар для батьків, які живуть окремо.',
+    lede: 'Графік опіки, події дітей, ваше листування і спільні витрати в одному місці — щоб обидва доми жили за одним планом.',
+    status: 'CoPlanly — застосунок для Android. Зараз його тестує невелика група родин.',
+    featuresHead: 'Що вміє застосунок',
+    f1Head: 'Один календар опіки для двох домів',
+    f1Body: 'У кожного з батьків свій колір — одразу видно, чий сьогодні день.',
+    f2Head: 'Графік за вашою домовленістю',
+    f2Body: 'Тиждень через тиждень, 2-2-3, 3-4-4-3 або власний порядок.',
+    f3Head: 'Сьогоднішній день з першого погляду',
+    f3Body: 'У кого діти і коли наступна передача.',
+    f4Head: 'Обмін днями — лише за згодою обох',
+    f4Body: 'Другий із батьків приймає або відхиляє запит.',
+    f5Head: 'Повідомлення, які ніхто не перепише',
+    f5Body: 'Надіслане повідомлення не можна змінити чи видалити.',
+    f6Head: 'Спільні витрати, зрозуміло розподілені',
+    f6Body: 'Хто за що заплатив і хто кому скільки винен.',
+    f7Head: 'Усе про дітей в одному місці',
+    f7Body: 'Ліки, алергії, гуртки й екстрені контакти.',
+    f8Head: 'Запис для адвоката чи медіатора',
+    f8Body: 'PDF або CSV з тим, що ви обоє записали й написали.',
+    googleHead: 'Google Календар, якщо ви його підключите',
+    googleIntro: 'Підключати Google Календар необовʼязково. Якщо ви його підключите, CoPlanly попросить у Google один дозвіл — бачити події в календарях, власником яких ви є (calendar.events.owned.readonly). За його допомогою застосунок копіює події вашого основного календаря на найближчі дванадцять місяців у CoPlanly на вашому телефоні — коли ви вмикаєте синхронізацію або запускаєте її вручну.',
+    googlePrivate: 'Імпортовані події залишаються на вашому телефоні. Вони позначені як особисті: не завантажуються на наші сервери, і другий із батьків їх не бачить — доки ви самі не відкриєте подію й не зробите її спільною.',
+    googleNoWrite: 'CoPlanly нічого не створює, не змінює й не видаляє у вашому Google Календарі та ніколи не читає календарі, якими з вами поділився хтось інший.',
+    googleEnd: 'Відключити його можна будь-коли в розділі «Налаштування → Синхронізація» або відкликати доступ CoPlanly у своєму акаунті Google.',
+    limitedUse: 'Використання інформації, отриманої CoPlanly через API Google, і її передавання іншим застосункам відповідають правилам Google API Services User Data Policy, зокрема вимогам щодо обмеженого використання (Limited Use).',
+    dataHead: 'Ваші дані',
+    data1: 'Жодної реклами, і ваші дані ніколи не продаються.',
+    data2: 'Аналітика і звіти про збої надсилаються, лише якщо ви погоджуєтеся. Відповідь можна змінити в розділі «Налаштування → Застосунок».',
+    data3: 'Видалити акаунт можна в застосунку, у розділі «Налаштування → Акаунт», або без застосунку — на цьому сайті.',
+    readPolicy: 'Прочитати політику конфіденційності',
+    privacyLink: 'Політика конфіденційності',
+    termsLink: 'Умови використання',
+    deleteLink: 'Видалити акаунт',
+    verifyLink: 'Перевірити експортований запис',
+  },
+};
+
+/**
+ * English is the page as written: read before anything is translated, with the markup's line
+ * breaks folded, so the text lives in one place and the page reads without this script.
+ */
+TEXT.en = {pageTitle: document.title};
+document.querySelectorAll('[data-t]').forEach((el) => {
+  TEXT.en[el.dataset.t] = el.textContent.replace(/\s+/g, ' ').trim();
+});
+
+/** @return {string} The first of the reader's languages this page speaks, else English. */
+function preferredLanguage() {
+  const wanted = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'])
+      .map((l) => String(l).toLowerCase().slice(0, 2));
+  for (const l of wanted) {
+    if (TEXT[l]) return l;
+    if (l === 'sk') return 'cs';
+  }
+  return 'en';
+}
+
+let lang = preferredLanguage();
+
+/** Writes every text in the current language. Text only: nothing here is read as HTML. */
+function render() {
+  const t = TEXT[lang];
+  document.documentElement.lang = lang;
+  document.title = t.pageTitle;
+  document.querySelectorAll('[data-t]').forEach((el) => {
+    el.textContent = t[el.dataset.t];
+  });
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  });
+}
+
+document.querySelectorAll('[data-lang]').forEach((b) => {
+  b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>

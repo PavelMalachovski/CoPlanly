@@ -806,7 +806,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   request. `pair-page.spec.js` drives `web/pair/` (item 37) through `firebase.json`'s own rewrite
   and headers, which `support/static-server.js` reads: the code from the address, the Android
   `intent:` link, the iPhone and computer notes, a bad link, five languages, no request leaving the
-  page and no name on it. `calendar-feed.spec.js` validates `.ics` as a client would, not as `calendar-feed.js`
+  page and no name on it. `home-page.spec.js` drives the site's home page (Legal item 10): no
+  request, indexable, the Calendar section and Google's Limited Use wording, every link resolving,
+  the same English with and without JavaScript, five complete languages. `calendar-feed.spec.js` validates `.ics` as a client would, not as `calendar-feed.js`
   intends: `buildFeed` in all five languages and the real `calendarFeed` endpoint behind a link
   `createCalendarFeed` minted, through `ical.js` plus our own octet-level RFC 5545 check (CRLF,
   75-octet folds never inside a UTF-8 character, TEXT escaping, required properties, DTEND after
@@ -2389,6 +2391,25 @@ below hold what it fixed in place.
    departing parent *accepted* keep `acceptedBy` (the sender's evidence of an earlier
    relationship; don't delete them) and lose `toEmail`; a departing guest leaves a child record's
    `guests` map as well as its `sharedWith`.
+10. **Google Calendar is read, never written, and what is read stays on the phone** (October 2026,
+    ahead of Google's verification of the OAuth consent screen). `GoogleCalendarAccess.SCOPE` is
+    `calendar.events.owned.readonly`: the events of calendars the parent owns, which the primary
+    calendar, the only one imported, always is. `GoogleCalendarApi` has one call, `listEvents`.
+    Its create, update and delete had no caller and went with the full `calendar` scope.
+    `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
+    easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
+    an event shared. Three things not to undo.
+    - **The code, the privacy policy, its hosted copy and the home page name one scope.**
+      `tools/check-invariants.js` check 6 fails when they part. `GoogleCalendarAccessTest` fails on
+      a wider scope or on a public method beside `listEvents`. Writing to Google, or reading a
+      calendar the parent does not own, takes a new consent from every connected parent, those
+      texts, the consent screen's Data access and a new verification. It is an owner decision
+      first.
+    - **The Limited Use disclosure stays**, verbatim in English on the home page and in the policy.
+      Google requires it of every app it verifies.
+    - **The home page is `web/index.html`.** It says what the app does and what it does with Google
+      data, in five languages, and links the policy on the same host. Whether Google accepts the
+      `*.web.app` host is the owner's open question (`web/README.md`).
 
 ## Known issues / do not "fix" silently
 
