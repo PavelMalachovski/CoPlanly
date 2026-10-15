@@ -2229,7 +2229,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - every sync's `publishLocalIfMissing`, while the second family had no document;
     - the pattern editor's `withActiveLayers`.
 
-    Four things not to undo.
+    Five things not to undo.
     - **A row is stamped once and never re-derived.** `saveAndActivate` stamps the family on
       screen. The mirror stamps the family whose document arrived, not the family on screen, which
       a switch may already have changed. `saveReslotted` and `archiveRejected` keep the row's own
@@ -2241,13 +2241,28 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       the row.
     - **A row reaches only its own family's document** (`SignedInFamilies.pairFor`): a stamped row
       while that family is still live, an unstamped one only while there is one family. A
-      republish goes to the row's own family even when the switcher has moved on.
+      republish goes to the row's own family even when the switcher has moved on. A save reads the
+      family once, at its start, and `submit` carries that answer through the read, the proposal
+      and the activation, so a switch mid-save cannot land one family's pattern in the other's
+      document.
+    - **An ended family's schedule never moves into another household** (item 18). Its row answers
+      for no live family, on either side of a pairing. The sync publishes only the family's own
+      row or an unstamped one. The accepter's reconciliation reads only a schedule that names no
+      family (`getUnsharedModelSync`), so its outcome does not depend on whether the pairing
+      reached Room first. While unpaired, the calendar still shows the ended family's schedule
+      when no row names no family, so a parent carrying on alone keeps it. Re-pairing with the
+      same co-parent makes it that family's again. After an unpair, Room keeps the old family on
+      screen until the next sync (item 39); a schedule saved in that window is stamped with the
+      family that just ended, and stays out of the next family too.
     - **A family's write takes only that family's rows and the unstamped ones out of force**
       (`CustodyModelDao.deactivateFamily`). Another family's schedule stays active. Two families'
       documents may carry one model id, because the old republish copied it with the pattern. The
       mirror therefore borrows nothing from a row of another family under the same id. A REPLACE
-      may swap the two rows back and forth on each switch, which is harmless: each family's mirror
-      restores its own row.
+      may swap the two rows back and forth on each switch. Each family's mirror restores its own
+      row from the family's document, so what the document holds comes back. What only the row
+      held does not: contact windows, seasonal layers or children's overrides that an older build
+      left out of the document (items 24, 30 and 33), and the date of an undated document. Such a
+      family sets those again, as it sets an overwritten schedule again.
 
     Unpaired, the calendar reads a row saved without a family, else the newest row it had. That is
     what unpairing always left on screen. `MultiFamilyCustodyTest` (e2e), `CustodyModelDaoTest` and

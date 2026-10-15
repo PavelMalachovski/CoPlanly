@@ -59,10 +59,10 @@ class CustodyConflictViewModel @Inject constructor(
      * every later comparison — unlike the re-slot, which only re-expresses an arrangement.
      *
      * The rejected pattern is deactivated rather than deleted — `saveAndActivate` deactivates
-     * every model before inserting this one — so it stays in `getAllModels()` and nobody's
-     * schedule disappears because of a choice made in one moment. When the two patterns share an
-     * id, deactivation is not enough: Room's insert REPLACEs on the primary key, so a copy is
-     * archived first.
+     * this family's rows and those that name no family before inserting this one — so it stays
+     * in `getAllModels()` and nobody's schedule disappears because of a choice made in one moment.
+     * When the two patterns share an id, deactivation is not enough: Room's insert REPLACEs on the
+     * primary key, so a copy is archived first.
      *
      * **A failure keeps the screen open and says so.** Closing silently would tell a user who
      * chose "keep the schedule on this phone" that they had, while Room held something else.

@@ -647,6 +647,78 @@ class CustodyModelRepositoryTest {
     }
 
     @Test
+    fun `a save lands in the family it was decided for, even if the screen moves on mid-save`() =
+        runTest(dispatcher) {
+            // uidC's family is on screen when the save starts; a push tap switches to uidB's
+            // before it finishes. Every step reads the family once, at the start: uidC's layers,
+            // uidC's document, uidC's stamp — never uidC's pattern over uidB's document.
+            val carolOnScreen = signedInWith(OTHER_PARTNER_UID)
+                .copy(partnerIds = listOf(PARTNER_UID, OTHER_PARTNER_UID))
+            coEvery { userRepository.getUserById(MY_UID) } returnsMany
+                listOf(carolOnScreen, carolOnScreen.copy(partnerId = PARTNER_UID))
+            val entity = slot<CustodyModelEntity>()
+            coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+            repository.createWeekOnWeekOff(START_DATE)
+
+            coVerify(exactly = 1) {
+                firestoreCustodyDataSource.setCustody(OTHER_DOCUMENT_ID, listOf(MY_UID, OTHER_PARTNER_UID), any())
+            }
+            coVerify(exactly = 0) { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) }
+            coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) }
+            assertEquals(OTHER_DOCUMENT_ID, entity.captured.familyId)
+        }
+
+    @Test
+    fun `an ended family's schedule is not the next family's`() = runTest(dispatcher) {
+        // uidA unpaired from uidB and now has uidC alone. The uidA–uidB row never moves into the
+        // new household (CLAUDE.md item 18): not read as its schedule, not published to it.
+        pairedWith(OTHER_PARTNER_UID)
+        activeRows(bobFamilyRow())
+        coEvery { firestoreCustodyDataSource.getCustody(OTHER_DOCUMENT_ID) } returns null
+
+        assertNull(repository.getActiveModelSync())
+        repository.publishLocalIfMissing()
+
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a first pairing reconciles the schedule this parent holds on their own`() = runTest(dispatcher) {
+        pairedWith(partnerUid = null)
+        val mine = mirroredEntity().copy(id = LOCAL_MODEL_ID)
+        activeRows(mine)
+        assertEquals(LOCAL_MODEL_ID, repository.getUnsharedModelSync()?.id)
+
+        // The same answer once the pairing reaches Room, so the accept path does not depend on
+        // which of the two lands first.
+        pairedWith(PARTNER_UID)
+        activeRows(mine, bobFamilyRow(lastModifiedAtMillis = RECENTLY))
+        assertEquals(LOCAL_MODEL_ID, repository.getUnsharedModelSync()?.id)
+    }
+
+    @Test
+    fun `no family's schedule is ever the one a pairing reconciles`() = runTest(dispatcher) {
+        // An ended family's row is what the calendar shows while unpaired, and it is still
+        // never carried into the next family by the accept path.
+        pairedWith(partnerUid = null)
+        activeRows(bobFamilyRow())
+        assertEquals(REMOTE_MODEL_ID, repository.getActiveModelSync()?.id)
+        assertNull(repository.getUnsharedModelSync())
+
+        pairedWith(OTHER_PARTNER_UID)
+        assertNull(repository.getUnsharedModelSync())
+    }
+
+    @Test
+    fun `with two co-parents no schedule is unshared`() = runTest(dispatcher) {
+        inTwoFamilies(onScreen = PARTNER_UID)
+        activeRows(mirroredEntity())
+
+        assertNull(repository.getUnsharedModelSync())
+    }
+
+    @Test
     fun `a one-family phone's row from before schema 45 is stamped by the next echo`() = runTest(dispatcher) {
         // The same schedule the document holds, stored before rows named their family. The echo
         // is not "unchanged": it is what tells this row which family it is.

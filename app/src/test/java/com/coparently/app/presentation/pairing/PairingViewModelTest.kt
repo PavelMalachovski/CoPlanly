@@ -457,7 +457,7 @@ class PairingViewModelTest {
         every { parentSlotMigrator.knownSlot("user-a") } returns "dad"
         coEvery { userRepository.getCurrentUser() } returns userWithRole("mom")
         coEvery { repository.acceptIncoming("invite-1") } returns Result.success("dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns
             pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Absent
 
@@ -548,11 +548,29 @@ class PairingViewModelTest {
     // co-parent's document.
 
     @Test
+    fun `an ended family's schedule is not carried into the new family`() = runTest(dispatcher) {
+        // The accepter co-parented before; their phone still shows that family's schedule while
+        // unpaired. It is not this family's: nothing is complemented, nothing is published, and
+        // the outcome cannot depend on whether the pairing reached Room before this read.
+        pairedFrom("mom", to = "dad")
+        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "ended-family")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns null
+        coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Absent
+
+        viewModel.acceptIncoming("invite-1")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 0) { custodyModelRepository.saveReslotted(any()) }
+        coVerify(exactly = 0) { custodyModelRepository.saveAndActivate(any()) }
+        assertNull(pendingCustodyConflict.prompt.value)
+    }
+
+    @Test
     fun `the local pattern is complemented before the two are compared`() = runTest(dispatcher) {
         // Slot 1 with days 0-6, moving to slot 2 - so "my days" become 7-13, which is exactly
         // what the co-parent's slot-1 pattern already says. Same arrangement, no question to ask.
         pairedFrom("mom", to = "dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns found(pattern((7..13).toSet(), "theirs"))
 
         viewModel.acceptIncoming("invite-1")
@@ -570,7 +588,7 @@ class PairingViewModelTest {
     @Test
     fun `two disagreeing patterns are put to the user, and nothing is published`() = runTest(dispatcher) {
         pairedFrom("mom", to = "dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns
             found(pattern(setOf(0, 1, 4, 5, 6, 9, 10), "theirs"))
 
@@ -599,7 +617,7 @@ class PairingViewModelTest {
         // flip that pattern is not merely unreconciled: it hands the accepter's own days to the
         // co-parent, on their own calendar, with nothing to say so.
         pairedFrom("mom", to = "dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns
             found(pattern(setOf(0, 1, 4, 5, 6, 9, 10), "theirs"))
 
@@ -614,7 +632,7 @@ class PairingViewModelTest {
     @Test
     fun `the conflict screen is asked for exactly once`() = runTest(dispatcher) {
         pairedFrom("mom", to = "dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns
             found(pattern(setOf(0, 1, 4, 5, 6, 9, 10), "theirs"))
 
@@ -634,7 +652,7 @@ class PairingViewModelTest {
         // one rather than replacing anything. Without it, pairing would leave the arrangement
         // stranded on a single phone.
         pairedFrom("mom", to = "dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Absent
 
         viewModel.acceptIncoming("invite-1")
@@ -652,7 +670,7 @@ class PairingViewModelTest {
         // failed read replaces a co-parent's pattern that is merely unreadable right now - and
         // it would do so with no screen shown and nobody asked.
         pairedFrom("mom", to = "dad")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Unavailable
 
         viewModel.acceptIncoming("invite-1")
@@ -674,7 +692,7 @@ class PairingViewModelTest {
             // must complete rather than hang, and must not read an unanswerable read as an
             // absent document.
             neverPairedLocally(from = "mom", to = "dad")
-            coEvery { custodyModelRepository.getActiveModelSync() } returns
+            coEvery { custodyModelRepository.getUnsharedModelSync() } returns
                 pattern((0..6).toSet(), "mine")
             coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Unavailable
 
@@ -715,7 +733,7 @@ class PairingViewModelTest {
             // `get()`, in a detached coroutine, while the screen already says "Paired" - and
             // popping the Pairing entry, the natural next tap, cancels it.
             neverPairedLocally(from = "mom", to = "dad")
-            coEvery { custodyModelRepository.getActiveModelSync() } returns
+            coEvery { custodyModelRepository.getUnsharedModelSync() } returns
                 pattern((0..6).toSet(), "mine")
             coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Absent
 
@@ -740,7 +758,7 @@ class PairingViewModelTest {
             // slot marker had already advanced, so the periodic detector sees no change - leaving
             // the accepter's own days assigned to their co-parent, on their own calendar, forever.
             neverPairedLocally(from = "mom", to = "dad")
-            coEvery { custodyModelRepository.getActiveModelSync() } returns
+            coEvery { custodyModelRepository.getUnsharedModelSync() } returns
                 pattern((0..6).toSet(), "mine")
 
             viewModel.acceptIncoming("invite-1")
@@ -759,7 +777,7 @@ class PairingViewModelTest {
         // Nothing moved, so the stored pattern already means "my days"; complementing it here
         // would invert a schedule nobody asked to change.
         pairedFrom("mom", to = "mom")
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns SharedCustodyRead.Absent
 
         viewModel.acceptIncoming("invite-1")
@@ -776,7 +794,7 @@ class PairingViewModelTest {
         // With no reported slot there is no way to know whether the pattern needs complementing,
         // and comparing an un-complemented pattern is worse than not comparing at all.
         pairedFrom("mom", to = null)
-        coEvery { custodyModelRepository.getActiveModelSync() } returns pattern((0..6).toSet(), "mine")
+        coEvery { custodyModelRepository.getUnsharedModelSync() } returns pattern((0..6).toSet(), "mine")
         coEvery { custodyModelRepository.readShared() } returns found(pattern((7..13).toSet(), "theirs"))
 
         viewModel.acceptIncoming("invite-1")

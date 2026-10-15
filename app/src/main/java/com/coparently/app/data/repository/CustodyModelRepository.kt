@@ -23,7 +23,6 @@ import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
-import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
@@ -214,6 +213,22 @@ class CustodyModelRepository(
     }
 
     /**
+     * The schedule this parent holds on their own — the newest active row that names no family —
+     * or null, and always null while they have two co-parents or more.
+     *
+     * What a pairing reconciles against the co-parent's document (`PairingViewModel.
+     * reconcileCustody`), rather than [getActiveModelSync]: while unpaired that also falls back to
+     * the schedule of a family that has ended, which must never move into the new family
+     * (CLAUDE.md item 18), and whether the fallback applied would depend on whether the pairing had
+     * reached Room yet — the same accept could carry it or not. With two co-parents a row naming no
+     * family is nobody's.
+     */
+    suspend fun getUnsharedModelSync(): CustodyModel? {
+        if (currentFamilies().coParents.size > 1) return null
+        return ActiveCustodyRow.unshared(custodyModelDao.getActiveModelsSync())?.toDomainModel()
+    }
+
+    /**
      * The stored pattern and its accepted swaps, from Room alone and from one row, so the two
      * cannot come from different writes.
      *
@@ -340,8 +355,10 @@ class CustodyModelRepository(
      * write-through point — a pattern that synced from one entry point and not another would be
      * worse than one that did not sync at all.
      */
-    suspend fun saveAndActivate(model: CustodyModel) {
-        val families = currentFamilies()
+    suspend fun saveAndActivate(model: CustodyModel) = saveAndActivate(model, currentFamilies())
+
+    /** [saveAndActivate] for the [families] a caller has already decided on, read once. */
+    private suspend fun saveAndActivate(model: CustodyModel, families: SignedInFamilies) {
         // The family on screen's schedule, stamped as such; no family while unpaired.
         val entity = model.toEntity().copy(isActive = true, familyId = families.pair?.documentId)
         custodyModelDao.deactivateFamily(entity.familyId)
@@ -374,13 +391,22 @@ class CustodyModelRepository(
      *   which.
      */
     suspend fun submitPattern(model: CustodyModel, planCitation: String? = null): PatternSubmission =
-        submit(model, planCitation)
+        submit(model, planCitation, currentFamilies())
 
+    /**
+     * [submitPattern] for the [families] read once when the change began, so every step of it —
+     * the read, the proposal, the activation — lands in one family even if the switcher moves on
+     * while it runs (a push tap mid-save).
+     */
     @Suppress("ReturnCount") // one road per answer: activated, refused, unsent, proposed
-    private suspend fun submit(model: CustodyModel, planCitation: String?): PatternSubmission {
-        val pair = currentPair()
+    private suspend fun submit(
+        model: CustodyModel,
+        planCitation: String?,
+        families: SignedInFamilies
+    ): PatternSubmission {
+        val pair = families.pair
         if (pair == null) {
-            saveAndActivate(model)
+            saveAndActivate(model, families)
             return PatternSubmission.ACTIVATED
         }
         // Guarded: an unguarded read threw straight out of the caller's `viewModelScope.launch`.
@@ -394,7 +420,7 @@ class CustodyModelRepository(
         val existing = when (read) {
             is SharedCustodyRead.Found -> read.custody
             SharedCustodyRead.Absent -> {
-                saveAndActivate(model)
+                saveAndActivate(model, families)
                 return PatternSubmission.ACTIVATED
             }
             SharedCustodyRead.Unavailable -> return PatternSubmission.NOT_SENT
@@ -579,7 +605,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -604,7 +630,7 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -621,7 +647,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -638,7 +664,7 @@ class CustodyModelRepository(
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -657,7 +683,7 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitPattern(withActiveLayers(model.withWindows(contactWindows)), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation)
     }
 
     /**
@@ -668,6 +694,12 @@ class CustodyModelRepository(
     private fun CustodyModel.withWindows(windows: List<ContactWindow>): CustodyModel =
         copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
 
+    /** A fresh pattern from the editor, with the family's layers, for the family on screen now. */
+    private suspend fun submitNew(model: CustodyModel, planCitation: String?): PatternSubmission {
+        val families = currentFamilies()
+        return submit(withActiveLayers(model, families), planCitation, families)
+    }
+
     /**
      * [model] carrying the active pattern's seasonal layers (MON-14) and each child's own schedule
      * (FAM-4).
@@ -677,8 +709,8 @@ class CustodyModelRepository(
      * would propose deleting every layer and every override the pair agreed — a change nobody
      * asked for, riding on one somebody did. Unreadable entries travel too.
      */
-    private suspend fun withActiveLayers(model: CustodyModel): CustodyModel {
-        val active = getActiveModelSync() ?: return model
+    private suspend fun withActiveLayers(model: CustodyModel, families: SignedInFamilies): CustodyModel {
+        val active = activeRowNow(families)?.toDomainModel() ?: return model
         return model.copy(
             seasonalLayers = active.seasonalLayers,
             unreadableLayers = active.unreadableLayers,
@@ -700,9 +732,10 @@ class CustodyModelRepository(
      * @return How the change landed, or null when there is no family schedule to override.
      */
     suspend fun submitChildOverride(childId: String, override: ChildScheduleOverride?): PatternSubmission? {
-        val active = getActiveModelSync() ?: return null
+        val families = currentFamilies()
+        val active = activeRowNow(families)?.toDomainModel() ?: return null
         val others = active.childOverrides.filterNot { it.childId == childId }
-        return submitPattern(active.copy(childOverrides = others + listOfNotNull(override)))
+        return submit(active.copy(childOverrides = others + listOfNotNull(override)), null, families)
     }
 
     /**
@@ -718,8 +751,9 @@ class CustodyModelRepository(
      * @return How the change landed, or null when there is no base pattern to layer on.
      */
     suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>, planCitation: String? = null): PatternSubmission? {
-        val active = getActiveModelSync() ?: return null
-        return submitPattern(active.copy(seasonalLayers = layers), planCitation)
+        val families = currentFamilies()
+        val active = activeRowNow(families)?.toDomainModel() ?: return null
+        return submit(active.copy(seasonalLayers = layers), planCitation, families)
     }
 
     /**
@@ -786,10 +820,10 @@ class CustodyModelRepository(
      * re-emit to every observer, and do it again on the next echo.
      *
      * **The staleness guard is what stops this function from undoing the user's own save.**
-     * [saveAndActivate] deactivates every model before inserting the new one, so a previously
-     * mirrored row is left `isActive = false`; if the remote write behind it was then swallowed
-     * by [guarded], the document still holds the old pattern. The equality guard alone does not
-     * fire on the replay — the stored row differs from the computed one precisely in `isActive`
+     * [saveAndActivate] deactivates the family's rows before inserting the new one, so a
+     * previously mirrored row is left `isActive = false`; if the remote write behind it was then
+     * swallowed by [guarded], the document still holds the old pattern. The equality guard alone
+     * does not fire on the replay — the stored row differs from the computed one precisely in `isActive`
      * — so the mirror used to deactivate the model the user had just chosen and re-activate the
      * stale one, silently, with no error anywhere: `CustodySetupViewModel` only catches what
      * [saveAndActivate] rethrows, and it rethrows nothing. Comparing `lastModifiedAtMillis` is the
@@ -1232,71 +1266,6 @@ class CustodyModelRepository(
      * merged by [getActiveModel] — Room — decides what the caller sees.
      */
     private fun <T> Flow<*>.mirrorOnly(): Flow<T> = transform { }
-
-    /**
-     * Converts CustodyModelEntity to CustodyModel domain model.
-     */
-    private fun CustodyModelEntity.toDomainModel(): CustodyModel {
-        val momDays = momDaysPattern
-            .removeSurrounding("[", "]")
-            .split(",")
-            .filter { it.isNotBlank() }
-            .map { it.trim().toInt() }
-            .toSet()
-
-        val layers = SeasonalLayerJson.decode(seasonalLayersJson)
-        val children = ChildOverrideJson.decode(childOverridesJson)
-        return CustodyModel(
-            id = id,
-            modelType = CustodyModelType.fromString(modelType),
-            patternDays = patternDays,
-            momDayIndices = momDays,
-            startDate = LocalDate.parse(startDate),
-            isActive = isActive,
-            contactWindows = ContactWindowJson.decode(contactWindowsJson),
-            seasonalLayers = layers.layers,
-            unreadableLayers = layers.unreadable,
-            childOverrides = children.overrides,
-            unreadableChildOverrides = children.unreadable
-        )
-    }
-
-    /**
-     * Converts CustodyModel domain model to CustodyModelEntity.
-     *
-     * @param createdAt ISO date-time to stamp; defaults to now for a locally created model and
-     *   is supplied from the document when mirroring, so a synced row keeps the pair's dates.
-     * @param lastModifiedAtMillis Instant of the change, epoch millis; defaults to now. Not a
-     *   wall clock, and not derived from [createdAt]: this is the value that decides which
-     *   phone's schedule survives, so it has to mean the same thing in both zones (SEC-4).
-     */
-    private fun CustodyModel.toEntity(
-        createdAt: String = nowIso(),
-        lastModifiedAtMillis: Long = nowMillis(),
-        dayOverrides: Map<String, DayOverride> = emptyMap()
-    ): CustodyModelEntity {
-        val momDaysJson = momDayIndices.sorted().joinToString(",", "[", "]")
-
-        return CustodyModelEntity(
-            id = id,
-            modelType = CustodyModelType.toString(modelType),
-            patternDays = patternDays,
-            momDaysPattern = momDaysJson,
-            startDate = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-            isActive = isActive,
-            repeatYearly = true,
-            createdAt = createdAt,
-            lastModifiedAtMillis = lastModifiedAtMillis,
-            // Null rather than "{}" for none, so a row that has never carried a swap is
-            // byte-identical to one written before the column existed — which the equality
-            // guard in `mirrorIntoRoom` depends on to stay quiet.
-            dayOverridesJson = DayOverrideJson.encode(dayOverrides),
-            // Null for none, for the same reason.
-            contactWindowsJson = ContactWindowJson.encode(contactWindows),
-            seasonalLayersJson = SeasonalLayerJson.encode(seasonalLayers, unreadableLayers),
-            childOverridesJson = ChildOverrideJson.encode(childOverrides, unreadableChildOverrides)
-        )
-    }
 
     private fun nowIso(): String =
         LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)

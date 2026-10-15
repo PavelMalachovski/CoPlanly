@@ -49,6 +49,14 @@ internal object ActiveCustodyRow {
     }
 
     /**
+     * The newest active row that names no family: the schedule a parent holds on their own, which
+     * is the only kind a pairing may take into a family. A family's row — live or ended — never
+     * is: an ended family's schedule does not move into the next household (CLAUDE.md item 18).
+     */
+    fun unshared(rows: List<CustodyModelEntity>): CustodyModelEntity? =
+        rows.filter { it.isActive && it.familyId == null }.maxWithOrNull(NEWEST)
+
+    /**
      * Whether [row] is [familyId]'s schedule: stamped with it, or naming no family while the
      * parent has exactly one ([soleFamily]). With two, nothing says which family an unstamped row
      * was, and a guess is how one family's schedule reaches the other's document — the rule

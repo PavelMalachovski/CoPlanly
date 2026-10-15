@@ -80,6 +80,17 @@ class ActiveCustodyRowTest {
     }
 
     @Test
+    fun `the unshared row is the newest that names no family, never a family's`() {
+        val older = row("older", null, at = 1)
+        val newer = row("newer", null, at = 2)
+        val family = row("bob", BOB_FAMILY, at = 3)
+
+        assertEquals(newer, ActiveCustodyRow.unshared(listOf(older, newer, family)))
+        assertNull(ActiveCustodyRow.unshared(listOf(family)))
+        assertNull(ActiveCustodyRow.unshared(listOf(newer.copy(isActive = false))))
+    }
+
+    @Test
     fun `a row belongs to its own family, and one naming none only to a sole family`() {
         assertTrue(ActiveCustodyRow.belongsTo(row("b", BOB_FAMILY, at = 1), BOB_FAMILY, soleFamily = false))
         assertFalse(ActiveCustodyRow.belongsTo(row("c", CAROL_FAMILY, at = 1), BOB_FAMILY, soleFamily = true))

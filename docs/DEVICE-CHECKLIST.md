@@ -1385,6 +1385,10 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   - A phone upgraded from an older build may show C's family **B's old schedule** if the old
     build had already written it into C's document: the fix stops new writes, it cannot tell
     which family a stored pattern was. Set the schedule again in that family.
+  - **An ended family's schedule stays behind.** Unpair A from C and pull to refresh: A's calendar
+    still shows C's schedule. Then pair A with a new account, with A **accepting** the code once
+    and **inviting** once: the new family starts without C's schedule both times. Pairing A with C
+    again brings C's schedule back.
   - **If it fails:** tag `CustodyModelRepo`; `data/repository/CustodyModelRepository.kt`,
     `ActiveCustodyRow.kt`, `SignedInFamilies.kt`.
 
