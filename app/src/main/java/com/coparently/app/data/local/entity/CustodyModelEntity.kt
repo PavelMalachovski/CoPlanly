@@ -83,5 +83,21 @@ data class CustodyModelEntity(
      * reason [contactWindowsJson] is: a row with no overrides must be byte-identical to one written
      * before this column existed (schema 42).
      */
-    val childOverridesJson: String? = null
+    val childOverridesJson: String? = null,
+    /**
+     * The family this row is the schedule of — `FamilyKey.of` the two parents, which is also the
+     * id of the family's `custody_models` document — or null for a row that names no family
+     * (schema 45).
+     *
+     * A parent in two families holds one active row per family, and
+     * `CustodyModelRepository` reads the one for the family on screen. Before this column the
+     * phone held **one** active row for every family, so with a second family on screen the
+     * mirror's republish, `publishLocalIfMissing` and the pattern editor could write the first
+     * family's schedule, seasonal layers and children's overrides into the second family's
+     * document. A row is stamped when it is saved in a family or mirrored from a family's
+     * document, and never re-derived. Null is a row saved while unpaired, or written before this
+     * column existed: the family's own while the parent has exactly one co-parent, as it always
+     * was, and nobody's while they have two, because nothing says which family it was.
+     */
+    val familyId: String? = null
 )

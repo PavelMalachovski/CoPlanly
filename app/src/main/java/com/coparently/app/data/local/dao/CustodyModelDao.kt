@@ -16,17 +16,28 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CustodyModelDao {
     /**
-     * Gets the active custody model.
-     * There should only be one active model at a time.
+     * Every active row: one per family this phone has followed, plus any that names no family
+     * (schema 45). `CustodyModelRepository` picks the family on screen's through
+     * `ActiveCustodyRow`; nothing reads this list whole.
      */
-    @Query("SELECT * FROM custody_models WHERE isActive = 1 LIMIT 1")
-    fun getActiveModel(): Flow<CustodyModelEntity?>
+    @Query("SELECT * FROM custody_models WHERE isActive = 1")
+    fun observeActiveModels(): Flow<List<CustodyModelEntity>>
+
+    /** [observeActiveModels], read once. */
+    @Query("SELECT * FROM custody_models WHERE isActive = 1")
+    suspend fun getActiveModelsSync(): List<CustodyModelEntity>
 
     /**
-     * Gets the active custody model synchronously (for calculations).
+     * Deactivates [familyId]'s rows and every row that names no family, before that family's new
+     * row is inserted; with a null [familyId], only the rows that name none.
+     *
+     * Other families' rows stay active: each is the schedule of a family this phone is not
+     * showing. A row that names no family goes with any family's write, because it answers for a
+     * family only while the parent has exactly one, and left active it would come back as that
+     * family's the day the parent is down to one again — with the other family's pattern in it.
      */
-    @Query("SELECT * FROM custody_models WHERE isActive = 1 LIMIT 1")
-    suspend fun getActiveModelSync(): CustodyModelEntity?
+    @Query("UPDATE custody_models SET isActive = 0 WHERE familyId IS NULL OR familyId = :familyId")
+    suspend fun deactivateFamily(familyId: String?)
 
     /**
      * Gets all custody models (including inactive).
@@ -57,13 +68,6 @@ interface CustodyModelDao {
      */
     @Delete
     suspend fun deleteModel(model: CustodyModelEntity)
-
-    /**
-     * Deactivates all models.
-     * Call this before activating a new model.
-     */
-    @Query("UPDATE custody_models SET isActive = 0")
-    suspend fun deactivateAllModels()
 
     /**
      * Activates a specific model by ID.

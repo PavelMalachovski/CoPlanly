@@ -1006,6 +1006,25 @@ object DatabaseMigrations {
     }
 
     /**
+     * v44 -> v45: a custody row names the family it is the schedule of.
+     *
+     * One nullable column, `custody_models.familyId`, added bare, as Room generates it for
+     * `CustodyModelEntity`'s `String?`. Null on every existing row, which is what each honestly
+     * is: written before rows carried their family. Nothing is stamped here — the migration cannot
+     * tell which family a row was, and a guess is the defect this column exists to end (a parent
+     * in two families had one family's schedule written into the other's document). On a phone in
+     * one family, the next echo of the family's document stamps the row; with two, an unstamped
+     * row answers for neither (`ActiveCustodyRow`), and each family reads its own document's row.
+     * `CoPlanlyDatabaseMigrationTest` checks the result against `45.json` once the Regenerate
+     * workflow has exported it.
+     */
+    val MIGRATION_44_45 = object : Migration(44, 45) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE custody_models ADD COLUMN familyId TEXT")
+        }
+    }
+
+    /**
      * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
      *
      * Reads every value out first and writes afterwards — nothing iterates a cursor while
@@ -1070,6 +1089,7 @@ object DatabaseMigrations {
         MIGRATION_40_41,
         MIGRATION_41_42,
         MIGRATION_42_43,
-        MIGRATION_43_44
+        MIGRATION_43_44,
+        MIGRATION_44_45
     )
 }

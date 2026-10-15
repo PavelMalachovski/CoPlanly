@@ -113,7 +113,8 @@
         "TwoParentCustodyTest#aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther",
         "TwoParentCustodyTest#aGroupSwapIsOfferedAndAnsweredAsOneAgreement",
         "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat",
-        "OnScreenAgreementsTest"
+        "OnScreenAgreementsTest",
+        "MultiFamilyCustodyTest#eachOfAlicesFamiliesKeepsItsOwnScheduleAndNeitherReachesTheOther"
       ],
       "checklist": [
         "3.11"

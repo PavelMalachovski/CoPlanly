@@ -9,6 +9,7 @@ import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyTimestamp
+import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
@@ -101,7 +102,7 @@ class CustodyModelRepositoryTest {
 
         pairedWith(PARTNER_UID)
         coEvery { custodyModelDao.getModelById(any()) } returns null
-        coEvery { custodyModelDao.getActiveModelSync() } returns null
+        activeRows()
         coEvery { firestoreCustodyDataSource.getCustody(any()) } returns null
         coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } returns Unit
         every { firestoreCustodyDataSource.observeCustody(any()) } returns flowOf(null)
@@ -125,11 +126,14 @@ class CustodyModelRepositoryTest {
 
         // Room is the source of truth: the remote write is what happens *after* the local one
         // has already succeeded, never instead of it.
+        val entity = slot<CustodyModelEntity>()
         coVerifyOrder {
-            custodyModelDao.deactivateAllModels()
-            custodyModelDao.insertModel(any())
+            custodyModelDao.deactivateFamily(DOCUMENT_ID)
+            custodyModelDao.insertModel(capture(entity))
             firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
         }
+        // Stamped with the family it was saved in (schema 45), so no other family reads it.
+        assertEquals(DOCUMENT_ID, entity.captured.familyId)
         assertEquals(MY_UID, custody.captured.lastModifiedBy)
         assertEquals(LOCAL_MODEL_ID, custody.captured.model.id)
     }
@@ -182,6 +186,8 @@ class CustodyModelRepositoryTest {
 
         coVerify(exactly = 1) { custodyModelDao.insertModel(capture(entity)) }
         assertEquals(LOCAL_MODEL_ID, entity.captured.id)
+        assertNull(entity.captured.familyId)
+        coVerify(exactly = 1) { custodyModelDao.deactivateFamily(null) }
         coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
     }
 
@@ -212,7 +218,8 @@ class CustodyModelRepositoryTest {
         // pattern rewritten for their new slot — into an unattributed overwrite of the
         // co-parent's schedule. Not pushing matters for the same reason from the other side: the
         // shared document may hold a pattern the user is at that moment being asked about.
-        val stored = localEntity(lastModifiedAtMillis = LONG_AGO).copy(createdAt = PRE_EXISTING_CREATED_AT)
+        val stored = localEntity(lastModifiedAtMillis = LONG_AGO)
+            .copy(createdAt = PRE_EXISTING_CREATED_AT, familyId = DOCUMENT_ID)
         coEvery { custodyModelDao.getModelById(LOCAL_MODEL_ID) } returns stored
         val entity = slot<CustodyModelEntity>()
 
@@ -221,6 +228,9 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 1) { custodyModelDao.insertModel(capture(entity)) }
         assertEquals(stored.createdAt, entity.captured.createdAt)
         assertEquals(stored.lastModifiedAtMillis, entity.captured.lastModifiedAtMillis)
+        // The same family's schedule, re-expressed: it stays that family's (schema 45).
+        assertEquals(DOCUMENT_ID, entity.captured.familyId)
+        coVerify(exactly = 1) { custodyModelDao.deactivateFamily(DOCUMENT_ID) }
         // The complement itself did land, so this is not passing by writing nothing at all.
         assertEquals("[7,8,9,10,11,12,13]", entity.captured.momDaysPattern)
         assertTrue(entity.captured.isActive)
@@ -235,7 +245,7 @@ class CustodyModelRepositoryTest {
             // kept for the same reason as above: an inactive row is never pushed, but it can be
             // re-activated from `getAllModels()`, and it must not come back claiming to be newer.
             val stored = localEntity(lastModifiedAtMillis = LONG_AGO)
-                .copy(createdAt = PRE_EXISTING_CREATED_AT)
+                .copy(createdAt = PRE_EXISTING_CREATED_AT, familyId = DOCUMENT_ID)
             coEvery { custodyModelDao.getModelById(LOCAL_MODEL_ID) } returns stored
             val entity = slot<CustodyModelEntity>()
 
@@ -244,9 +254,10 @@ class CustodyModelRepositoryTest {
             coVerify(exactly = 1) { custodyModelDao.insertModel(capture(entity)) }
             assertNotEquals(LOCAL_MODEL_ID, entity.captured.id)
             assertFalse(entity.captured.isActive)
+            assertEquals(DOCUMENT_ID, entity.captured.familyId)
             assertEquals(stored.createdAt, entity.captured.createdAt)
             assertEquals(stored.lastModifiedAtMillis, entity.captured.lastModifiedAtMillis)
-            coVerify(exactly = 0) { custodyModelDao.deactivateAllModels() }
+            coVerify(exactly = 0) { custodyModelDao.deactivateFamily(any()) }
             coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
         }
 
@@ -265,7 +276,7 @@ class CustodyModelRepositoryTest {
 
             // Room now holds the user's choice — and only Room does, because the push was
             // swallowed. The document still holds the pattern that was mirrored before it.
-            coEvery { custodyModelDao.getActiveModelSync() } returns saved.captured
+            activeRows(saved.captured)
             every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
                 flowOf(remoteCustody(lastModifiedAtMillis = LONG_AGO))
 
@@ -276,15 +287,14 @@ class CustodyModelRepositoryTest {
             // does not fire on the replay — without the staleness check the mirror would
             // reactivate the stale pattern and the user's setup would silently revert.
             coVerify(exactly = 1) { custodyModelDao.insertModel(any()) }
-            coVerify(exactly = 1) { custodyModelDao.deactivateAllModels() }
+            coVerify(exactly = 1) { custodyModelDao.deactivateFamily(DOCUMENT_ID) }
             assertEquals(LOCAL_MODEL_ID, saved.captured.id)
         }
 
     @Test
     fun `a local model newer than the document is sent again rather than discarded`() =
         runTest(dispatcher) {
-            coEvery { custodyModelDao.getActiveModelSync() } returns
-                localEntity(lastModifiedAtMillis = RECENTLY)
+            activeRows(localEntity(lastModifiedAtMillis = RECENTLY))
             every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
                 flowOf(remoteCustody(lastModifiedAtMillis = LONG_AGO))
             val custody = slot<SharedCustody>()
@@ -306,8 +316,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `a document newer than the local model still wins`() = runTest(dispatcher) {
-        coEvery { custodyModelDao.getActiveModelSync() } returns
-            localEntity(lastModifiedAtMillis = LONG_AGO)
+        activeRows(localEntity(lastModifiedAtMillis = LONG_AGO))
         every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
             flowOf(remoteCustody(lastModifiedAtMillis = RECENTLY))
         val entity = slot<CustodyModelEntity>()
@@ -330,7 +339,7 @@ class CustodyModelRepositoryTest {
             // the mirror re-publishes only over a document that exists, and the accepter's
             // reconciliation writes only when the accepter has a pattern — so the other phone's
             // calendar stayed blank until this pass existed.
-            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            activeRows(mirroredEntity())
             coEvery { firestoreCustodyDataSource.getCustody(any()) } returns null
 
             repository.publishLocalIfMissing()
@@ -340,7 +349,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `nothing is published over a document the pair already has`() = runTest(dispatcher) {
-        coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+        activeRows(mirroredEntity())
         coEvery { firestoreCustodyDataSource.getCustody(any()) } returns remoteCustody()
 
         repository.publishLocalIfMissing()
@@ -352,7 +361,7 @@ class CustodyModelRepositoryTest {
     fun `nothing is published when the pair's document could not be read`() = runTest(dispatcher) {
         // Unavailable is not Absent: publishing on the strength of a failed read is how a
         // co-parent's schedule gets replaced by a device that merely could not see it.
-        coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+        activeRows(mirroredEntity())
         coEvery { firestoreCustodyDataSource.getCustody(any()) } throws permissionDenied()
 
         repository.publishLocalIfMissing()
@@ -450,12 +459,14 @@ class CustodyModelRepositoryTest {
             repository.observeShared().first()
 
             coVerifyOrder {
-                custodyModelDao.deactivateAllModels()
+                custodyModelDao.deactivateFamily(DOCUMENT_ID)
                 custodyModelDao.insertModel(capture(entity))
             }
             // The writer's id, not a freshly generated one: otherwise the two devices accumulate
             // a copy of the same schedule per sync instead of converging on one row.
             assertEquals(REMOTE_MODEL_ID, entity.captured.id)
+            // And the family whose document it came from, never the family on screen's guess.
+            assertEquals(DOCUMENT_ID, entity.captured.familyId)
             assertTrue(entity.captured.isActive)
             assertEquals("[0,1,2,3,4,5,6]", entity.captured.momDaysPattern)
             assertEquals(REMOTE_CREATED_AT, entity.captured.createdAt)
@@ -466,14 +477,14 @@ class CustodyModelRepositoryTest {
     fun `an unchanged remote document is not written to Room again`() = runTest(dispatcher) {
         every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
             flowOf(remoteCustody())
-        coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns mirroredEntity()
+        coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns mirroredEntity().copy(familyId = DOCUMENT_ID)
 
         repository.observeShared().first()
 
         // Firestore echoes this device's own writes straight back; re-inserting an identical
         // row would tick Room's invalidation tracker and re-emit to every observer for nothing.
         coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
-        coVerify(exactly = 0) { custodyModelDao.deactivateAllModels() }
+        coVerify(exactly = 0) { custodyModelDao.deactivateFamily(any()) }
     }
 
     // ---- the family on screen's own document (phase 2 review) ----------------
@@ -505,6 +516,168 @@ class CustodyModelRepositoryTest {
         // The shared stream replays uidB's document until uidC's answers. Read for uidC's family,
         // that replay is "not known yet", never uidB's schedule.
         assertTrue("saw $seen", seen.all { it == null })
+    }
+
+    // ---- one parent in two families: a schedule per family (schema 45) ------------------------
+    //
+    // The phone used to keep one active row for every family. With the uidA–uidC family on screen,
+    // the mirror, the sync's publish and the pattern editor all read the uidA–uidB family's row as
+    // the family on screen's, and wrote it into uidA–uidC's document.
+
+    @Test
+    fun `another family's newer schedule is never sent into this family's document`() = runTest(dispatcher) {
+        inTwoFamilies(onScreen = PARTNER_UID)
+        activeRows(carolFamilyRow(lastModifiedAtMillis = RECENTLY))
+        every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+            flowOf(remoteCustody(lastModifiedAtMillis = LONG_AGO))
+        val entity = slot<CustodyModelEntity>()
+        coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+        repository.observeShared().first()
+
+        // uidC's schedule is newer than uidB's document, which is what made the mirror push it
+        // over that document. It is not uidB's family's to compare with.
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+        assertEquals(REMOTE_MODEL_ID, entity.captured.id)
+        assertEquals(DOCUMENT_ID, entity.captured.familyId)
+    }
+
+    @Test
+    fun `a republish goes to the row's own family even when the screen has just moved on`() =
+        runTest(dispatcher) {
+            // uidB's document arrives as the switch to uidC's family lands: the stream still
+            // follows uidB's family, the one-shot read of the profile already says uidC's.
+            val bobOnScreen = signedInWith(PARTNER_UID).copy(partnerIds = listOf(PARTNER_UID, OTHER_PARTNER_UID))
+            every { userRepository.getAllUsers() } returns flowOf(listOf(bobOnScreen))
+            coEvery { userRepository.getUserById(MY_UID) } returns bobOnScreen.copy(partnerId = OTHER_PARTNER_UID)
+            activeRows(bobFamilyRow(lastModifiedAtMillis = RECENTLY))
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+                flowOf(remoteCustody(lastModifiedAtMillis = LONG_AGO))
+
+            repository.observeShared().first()
+
+            coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any()) }
+            coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(OTHER_DOCUMENT_ID, any(), any()) }
+        }
+
+    @Test
+    fun `a family with no document is never given another family's schedule`() = runTest(dispatcher) {
+        inTwoFamilies(onScreen = OTHER_PARTNER_UID)
+        activeRows(bobFamilyRow())
+        coEvery { firestoreCustodyDataSource.getCustody(OTHER_DOCUMENT_ID) } returns null
+
+        repository.publishLocalIfMissing()
+
+        // Every sync runs this. uidC's family has no schedule yet, and uidB's is not a stand-in.
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a schedule set in one family carries none of another family's layers or children`() =
+        runTest(dispatcher) {
+            inTwoFamilies(onScreen = OTHER_PARTNER_UID)
+            activeRows(
+                bobFamilyRow().copy(
+                    seasonalLayersJson = """["$SUMMER_WIRE"]""",
+                    childOverridesJson = """["$BABY_WIRE"]"""
+                )
+            )
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            repository.createWeekOnWeekOff(START_DATE)
+
+            coVerify(exactly = 1) {
+                firestoreCustodyDataSource.setCustody(OTHER_DOCUMENT_ID, listOf(MY_UID, OTHER_PARTNER_UID), any())
+            }
+            assertEquals(emptyList<String>(), custody.captured.seasonalLayersWire)
+            assertEquals(emptyList<String>(), custody.captured.childOverridesWire)
+        }
+
+    @Test
+    fun `layers and a child's schedule are never laid over another family's pattern`() = runTest(dispatcher) {
+        inTwoFamilies(onScreen = OTHER_PARTNER_UID)
+        activeRows(bobFamilyRow())
+
+        // uidC's family has no pattern of its own to layer on, so there is nothing to submit.
+        assertNull(repository.submitSeasonalLayers(listOf(SUMMER)))
+        assertNull(repository.submitChildOverride("baby-1", baby()))
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+        coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+    }
+
+    @Test
+    fun `the calendar reads the schedule of the family on screen`() = runTest(dispatcher) {
+        inTwoFamilies(onScreen = OTHER_PARTNER_UID)
+        val swap = DayOverride(toParent = "dad", requestedBy = PARTNER_UID, requestedAt = "2026-08-01T09:00:00")
+        activeRows(
+            bobFamilyRow(lastModifiedAtMillis = RECENTLY)
+                .copy(dayOverridesJson = DayOverrideJson.encode(mapOf("2026-08-10" to swap))),
+            carolFamilyRow(lastModifiedAtMillis = LONG_AGO)
+        )
+
+        assertEquals(CAROL_MODEL_ID, repository.getActiveModelSync()?.id)
+        assertEquals(CAROL_MODEL_ID, repository.getActiveModel().first()?.id)
+        assertEquals(CAROL_MODEL_ID, repository.storedCustody().first?.id)
+        // uidB's family's swap is not a day of uidC's family's.
+        assertEquals(emptyMap<String, DayOverride>(), repository.observeDayOverrides().first())
+        assertEquals(emptyMap<String, DayOverride>(), repository.storedCustody().second)
+    }
+
+    @Test
+    fun `with two co-parents a schedule that names no family is nobody's`() = runTest(dispatcher) {
+        inTwoFamilies(onScreen = PARTNER_UID)
+        // Saved before rows named their family; nothing says which family it was.
+        activeRows(mirroredEntity())
+        coEvery { firestoreCustodyDataSource.getCustody(any()) } returns null
+
+        assertNull(repository.getActiveModelSync())
+        repository.publishLocalIfMissing()
+
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+    }
+
+    @Test
+    fun `an unpaired parent still reads the schedule they last had`() = runTest(dispatcher) {
+        // Characterises what unpairing always did: the calendar keeps the last schedule.
+        pairedWith(partnerUid = null)
+        activeRows(bobFamilyRow())
+
+        assertEquals(REMOTE_MODEL_ID, repository.getActiveModelSync()?.id)
+    }
+
+    @Test
+    fun `a one-family phone's row from before schema 45 is stamped by the next echo`() = runTest(dispatcher) {
+        // The same schedule the document holds, stored before rows named their family. The echo
+        // is not "unchanged": it is what tells this row which family it is.
+        coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns mirroredEntity()
+        every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns flowOf(remoteCustody())
+        val entity = slot<CustodyModelEntity>()
+        coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+        repository.observeShared().first()
+
+        assertEquals(mirroredEntity().copy(familyId = DOCUMENT_ID), entity.captured)
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+    }
+
+    @Test
+    fun `another family's row under the same model id lends this family nothing`() = runTest(dispatcher) {
+        // The old republish could copy one family's model, id and all, into the other's
+        // document, so two families' rows can share an id. A document an older build wrote
+        // without `contactWindows` keeps the row's own windows — never the other family's.
+        inTwoFamilies(onScreen = PARTNER_UID)
+        coEvery { custodyModelDao.getModelById(REMOTE_MODEL_ID) } returns
+            mirroredEntity().copy(familyId = OTHER_DOCUMENT_ID, contactWindowsJson = """["2|15:00|19:00|dad"]""")
+        every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns
+            flowOf(remoteCustody(lastModifiedAtMillis = RECENTLY))
+        val entity = slot<CustodyModelEntity>()
+        coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
+
+        repository.observeShared().first()
+
+        assertEquals(DOCUMENT_ID, entity.captured.familyId)
+        assertNull(entity.captured.contactWindowsJson)
     }
 
     // ---- contact windows (MON-6b) -------------------------------------------
@@ -560,8 +733,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `a stored row's windows come back on the model`() = runTest(dispatcher) {
-        coEvery { custodyModelDao.getActiveModelSync() } returns
-            mirroredEntity().copy(contactWindowsJson = """["9|15:00|19:00|dad","2|15:00|19:00|dad"]""")
+        activeRows(mirroredEntity().copy(contactWindowsJson = """["9|15:00|19:00|dad","2|15:00|19:00|dad"]"""))
 
         val model = repository.getActiveModelSync()
 
@@ -620,8 +792,7 @@ class CustodyModelRepositoryTest {
     @Test
     fun `saving the base pattern carries the agreed layers, unreadable ones included`() =
         runTest(dispatcher) {
-            coEvery { custodyModelDao.getActiveModelSync() } returns
-                mirroredEntity().copy(seasonalLayersJson = """["$SUMMER_WIRE","$FUTURE"]""")
+            activeRows(mirroredEntity().copy(seasonalLayersJson = """["$SUMMER_WIRE","$FUTURE"]"""))
             val entity = slot<CustodyModelEntity>()
             coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
 
@@ -632,10 +803,10 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `submitting layers keeps the base pattern and refuses without one`() = runTest(dispatcher) {
-        coEvery { custodyModelDao.getActiveModelSync() } returns null
+        activeRows()
         assertNull(repository.submitSeasonalLayers(listOf(SUMMER)))
 
-        coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+        activeRows(mirroredEntity())
         val entity = slot<CustodyModelEntity>()
         coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
 
@@ -697,8 +868,7 @@ class CustodyModelRepositoryTest {
     @Test
     fun `saving the base pattern carries the agreed overrides, unreadable ones included`() =
         runTest(dispatcher) {
-            coEvery { custodyModelDao.getActiveModelSync() } returns
-                mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE","$CHILD_FUTURE"]""")
+            activeRows(mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE","$CHILD_FUTURE"]"""))
             val entity = slot<CustodyModelEntity>()
             coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
 
@@ -709,11 +879,10 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `a child's override replaces only that child's and keeps the base pattern`() = runTest(dispatcher) {
-        coEvery { custodyModelDao.getActiveModelSync() } returns null
+        activeRows()
         assertNull(repository.submitChildOverride("baby-1", baby()))
 
-        coEvery { custodyModelDao.getActiveModelSync() } returns
-            mirroredEntity().copy(childOverridesJson = """["$TEEN_WIRE","$CHILD_FUTURE"]""")
+        activeRows(mirroredEntity().copy(childOverridesJson = """["$TEEN_WIRE","$CHILD_FUTURE"]"""))
         val entity = slot<CustodyModelEntity>()
         coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
 
@@ -728,8 +897,7 @@ class CustodyModelRepositoryTest {
     @Test
     fun `sending a child back to the family schedule removes only that child's override`() =
         runTest(dispatcher) {
-            coEvery { custodyModelDao.getActiveModelSync() } returns
-                mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE","$TEEN_WIRE"]""")
+            activeRows(mirroredEntity().copy(childOverridesJson = """["$BABY_WIRE","$TEEN_WIRE"]"""))
             val entity = slot<CustodyModelEntity>()
             coEvery { custodyModelDao.insertModel(capture(entity)) } returns Unit
 
@@ -741,7 +909,7 @@ class CustodyModelRepositoryTest {
     @Test
     fun `a paired family's override change is a proposal that leaves the agreed list verbatim`() =
         runTest(dispatcher) {
-            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            activeRows(mirroredEntity())
             val agreed = remoteCustody().copy(childOverridesWire = listOf(CHILD_FUTURE))
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns agreed
             val custody = slot<SharedCustody>()
@@ -780,7 +948,7 @@ class CustodyModelRepositoryTest {
             assertEquals(PatternSubmission.COPARENT_PROPOSAL_WAITING, result)
             coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
             coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
-            coVerify(exactly = 0) { custodyModelDao.deactivateAllModels() }
+            coVerify(exactly = 0) { custodyModelDao.deactivateFamily(any()) }
         }
 
     @Test
@@ -850,7 +1018,7 @@ class CustodyModelRepositoryTest {
     @Test
     fun `seasonal layers from the plan cite it too, and a plain save cites nothing`() =
         runTest(dispatcher) {
-            coEvery { custodyModelDao.getActiveModelSync() } returns mirroredEntity()
+            activeRows(mirroredEntity())
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
             val custody = slot<SharedCustody>()
             coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
@@ -905,12 +1073,33 @@ class CustodyModelRepositoryTest {
         partnerId = partnerUid
     )
 
-    private fun pairedWith(partnerUid: String?) {
-        val me = signedInWith(partnerUid)
+    private fun pairedWith(partnerUid: String?, partnerIds: List<String> = emptyList()) {
+        val me = signedInWith(partnerUid).copy(partnerIds = partnerIds)
         coEvery { userRepository.getCurrentUserId() } returns MY_UID
         coEvery { userRepository.getUserById(MY_UID) } returns me
         every { userRepository.observeCurrentUserId() } returns flowOf(MY_UID)
         every { userRepository.getAllUsers() } returns flowOf(listOf(me))
+    }
+
+    /** uidA in two families, uidB's and uidC's, with [onScreen]'s family on screen (M-8). */
+    private fun inTwoFamilies(onScreen: String) = pairedWith(onScreen, listOf(PARTNER_UID, OTHER_PARTNER_UID))
+
+    /** The uidA–uidB family's schedule as this device stores it: stamped with the family. */
+    private fun bobFamilyRow(lastModifiedAtMillis: Long = REMOTE_MODIFIED_AT) =
+        mirroredEntity().copy(familyId = DOCUMENT_ID, lastModifiedAtMillis = lastModifiedAtMillis)
+
+    /** The uidA–uidC family's schedule: another pattern, under another id. */
+    private fun carolFamilyRow(lastModifiedAtMillis: Long = RECENTLY) = mirroredEntity().copy(
+        id = CAROL_MODEL_ID,
+        momDaysPattern = "[7,8,9,10,11,12,13]",
+        familyId = OTHER_DOCUMENT_ID,
+        lastModifiedAtMillis = lastModifiedAtMillis
+    )
+
+    /** Room's active rows, for both the one-shot and the streaming read. */
+    private fun activeRows(vararg rows: CustodyModelEntity) {
+        coEvery { custodyModelDao.getActiveModelsSync() } returns rows.toList()
+        every { custodyModelDao.observeActiveModels() } returns flowOf(rows.toList())
     }
 
     private fun localModel() = CustodyModel(
@@ -988,6 +1177,9 @@ class CustodyModelRepositoryTest {
         /** uidA's second co-parent, and their family's document. */
         const val OTHER_PARTNER_UID = "uidC"
         const val OTHER_DOCUMENT_ID = "uidA__uidC"
+
+        /** The id of the uidA–uidC family's pattern. */
+        const val CAROL_MODEL_ID = "carol-model-1"
         val PARTICIPANTS = listOf("uidA", "uidB")
 
         const val LOCAL_MODEL_ID = "local-model-1"
