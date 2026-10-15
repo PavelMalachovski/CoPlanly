@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
@@ -195,11 +196,15 @@ class EventViewModel @Inject constructor(
 
     /**
      * Creates a new event.
+     *
+     * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
+     *   for none. The use case starts a clock only if the event waits for the co-parent, so the form
+     *   may pass the pick for any new event.
      */
-    fun createEvent(event: Event) {
+    fun createEvent(event: Event, answerBy: AnswerByPick? = null) {
         viewModelScope.launch {
             _uiState.value = EventUiState.Loading
-            val result = eventUseCases.createEvent(event)
+            val result = eventUseCases.createEvent(event, answerBy = answerBy)
             result.onSuccess {
                 _uiState.value = EventUiState.OperationSuccess(EventOperation.CREATED)
                 kotlinx.coroutines.delay(2000)

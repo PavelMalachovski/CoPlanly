@@ -273,13 +273,6 @@ class EmulatorParent private constructor(
         firestorePetDataSource = FirestorePetDataSource(firestore)
     )
 
-    val changeRequestRepository = ChangeRequestRepositoryImpl(
-        changeRequestDao = database.changeRequestDao(),
-        firestoreDataSource = FirestoreChangeRequestDataSource(firestore),
-        firebaseAuthService = authService,
-        fcmService = fcmService
-    )
-
     /**
      * Every step a request clock asks this phone to schedule (phase 3a), recorded instead of handed
      * to WorkManager: a test runs a step when it wants one rather than waiting for its time.
@@ -291,6 +284,14 @@ class EmulatorParent private constructor(
         dataSource = FirestoreRequestDeadlineDataSource(firestore),
         authService = authService,
         scheduler = requestScheduler
+    )
+
+    val changeRequestRepository = ChangeRequestRepositoryImpl(
+        changeRequestDao = database.changeRequestDao(),
+        firestoreDataSource = FirestoreChangeRequestDataSource(firestore),
+        firebaseAuthService = authService,
+        fcmService = fcmService,
+        requestDeadlines = requestDeadlineRepository
     )
 
     val custodyRepository = CustodyModelRepository(

@@ -2,6 +2,8 @@ package com.coparently.app.presentation.event
 
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.error.ErrorHandler
 import com.coparently.app.domain.model.Event
@@ -111,6 +113,29 @@ class EventViewModelTest {
     fun `loadEvents populates events state`() = runTest {
         advanceUntilIdle()
         assertEquals(listOf(sampleEvent), viewModel.events.value)
+    }
+
+    @Test
+    fun `createEvent passes the deadline to the use case`() = runTest {
+        coEvery { createEvent.invoke(any(), any(), any()) } returns Result.success(sampleEvent)
+        val aWeek = AnswerByPick.Preset(AnswerByPreset.WEEK)
+
+        viewModel.createEvent(sampleEvent, aWeek)
+        advanceUntilIdle()
+
+        // The pick travels as chosen: the use case resolves it once it knows whether the event
+        // waits for the co-parent, and what its cap is.
+        coVerify(exactly = 1) { createEvent.invoke(sampleEvent, true, aWeek) }
+    }
+
+    @Test
+    fun `createEvent without a deadline asks for none`() = runTest {
+        coEvery { createEvent.invoke(any(), any(), any()) } returns Result.success(sampleEvent)
+
+        viewModel.createEvent(sampleEvent)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { createEvent.invoke(sampleEvent, true, null) }
     }
 
     @Test

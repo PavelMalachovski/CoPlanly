@@ -1,5 +1,6 @@
 package com.coparently.app.domain.repository
 
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +19,18 @@ interface ChangeRequestRepository {
 
     suspend fun getChangeRequestById(id: String): ChangeRequest?
 
-    /** Creates the request locally, syncs it to Firestore and notifies the other parent. */
-    suspend fun createChangeRequest(request: ChangeRequest)
+    /**
+     * Creates the request locally, syncs it to Firestore and notifies the other parent.
+     *
+     * @param answerBy The deadline the requesting parent chose for the answer (phase 3a), or null for
+     *   none, which is the request exactly as it was before deadlines: no clock, and the push says
+     *   nothing of one. A pick is turned into a time when the request is sent, against the request's
+     *   own cap ([com.coparently.app.domain.changerequests.RequestCap.forChange]). Once the request
+     *   is on the server its clock is started, and the push that tells the co-parent says when the
+     *   answer is due. A clock that cannot be written leaves the request as one without a clock, and
+     *   a request that waits in the outbox and is sent later (see [flushOutbox]) goes without one.
+     */
+    suspend fun createChangeRequest(request: ChangeRequest, answerBy: AnswerByPick? = null)
 
     /**
      * Transitions [requestId] to [status] (accept/decline/cancel), stamps `respondedAt`,

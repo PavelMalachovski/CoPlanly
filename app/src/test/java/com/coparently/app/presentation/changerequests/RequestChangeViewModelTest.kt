@@ -4,6 +4,8 @@ import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.User
@@ -30,8 +32,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * Proposing a new time for an event: who it goes to, what the co-parent's thread is told, and a
- * localised error — never the exception's text — when it cannot be recorded.
+ * Proposing a new time for an event: who it goes to, what the co-parent's thread is told, the
+ * deadline the parent chose (phase 3a), and a localised error — never the exception's text — when
+ * it cannot be recorded.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequestChangeViewModelTest {
@@ -123,6 +126,37 @@ class RequestChangeViewModelTest {
         // The event's id, not the request's: one event collects several requests over its life.
         assertEquals("e1", announcement.captured.entityId)
         coVerify(exactly = 1) { announcer.announce(any(), "Olya", any()) }
+    }
+
+    @Test
+    fun `submit passes the deadline on`() = runTest(dispatcher) {
+        coEvery { userRepository.getCurrentUser() } returns me
+        coEvery { changeRequestRepository.createChangeRequest(any(), any()) } returns Unit
+        val aWeek = AnswerByPick.Preset(AnswerByPreset.WEEK)
+        val vm = viewModel()
+
+        vm.submit(event, proposedStart, null, null, answerBy = aWeek)
+        advanceUntilIdle()
+
+        // The pick travels as chosen: the repository resolves it when the request is sent, because
+        // what a deadline is depends on that moment and on the request's cap.
+        assertEquals(RequestChangeUiState.Saved, vm.uiState.value)
+        coVerify(exactly = 1) {
+            changeRequestRepository.createChangeRequest(match { it.eventId == "e1" && it.requestedTo == "u2" }, aWeek)
+        }
+    }
+
+    @Test
+    fun `submit without a deadline asks for none`() = runTest(dispatcher) {
+        coEvery { userRepository.getCurrentUser() } returns me
+        coEvery { changeRequestRepository.createChangeRequest(any(), any()) } returns Unit
+        val vm = viewModel()
+
+        vm.submit(event, proposedStart, null, null)
+        advanceUntilIdle()
+
+        // Null is today's behaviour exactly: no clock, and the push unchanged.
+        coVerify(exactly = 1) { changeRequestRepository.createChangeRequest(any(), null) }
     }
 
     @Test

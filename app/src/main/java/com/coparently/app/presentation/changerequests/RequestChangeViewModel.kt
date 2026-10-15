@@ -8,6 +8,7 @@ import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.ChangeRequestRepository
@@ -87,12 +88,17 @@ class RequestChangeViewModel @Inject constructor(
      * the chat screen — so a change proposed from the calendar reached the thread silently, or
      * rather did not reach it at all. `ActivityAnnouncer` resolves the pair's thread itself, from
      * the two uids, so there is nothing left for a caller to supply or to forget.
+     *
+     * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
+     *   for none. The pick goes to the repository as it was chosen: what a deadline is depends on
+     *   the moment the request is sent and on the request's cap, which the repository works out.
      */
     fun submit(
         event: Event,
         proposedStart: LocalDateTime,
         proposedEnd: LocalDateTime?,
-        note: String?
+        note: String?,
+        answerBy: AnswerByPick? = null
     ) {
         if (_uiState.value is RequestChangeUiState.Sending) return
 
@@ -124,7 +130,8 @@ class RequestChangeViewModel @Inject constructor(
                         proposedEndDateTime = proposedEnd,
                         note = note?.takeIf { it.isNotBlank() },
                         createdAt = LocalDateTime.now()
-                    )
+                    ),
+                    answerBy = answerBy
                 )
                 // The card is now a payload the *reader* renders in their own language, posted
                 // by the one announcer every other change goes through. It used to be a sentence
