@@ -69,6 +69,22 @@ object PushPayload {
      */
     const val DAY_COUNT = "dayCount"
 
+    /**
+     * A request's deadline, as an instant: epoch millis in decimal text (phase 3a).
+     *
+     * Two uses. On the first push of a request that waits for an answer ([DAY_SWAP_OFFERED],
+     * [DAY_SWAP_GROUP_OFFERED], [CHANGE_REQUEST_CREATED], [CUSTODY_PROPOSAL_PROPOSED]) it is the
+     * deadline the proposer chose, and the receiving phone adds "Answer by <time>." to the sentence
+     * it writes. On a [REQUEST_LAST_CHANCE] it is where the last chance ends, and the push cannot
+     * be worded without it.
+     *
+     * An instant rather than a sentence or a day, because the receiving phone is the one that
+     * knows its reader's zone, language and 12/24-hour clock. Epoch millis is 13 digits today;
+     * `firestore.rules` bounds the key to 20 characters, as it does every key a client writes. An
+     * older build ignores it.
+     */
+    const val ANSWER_BY = "answerBy"
+
     /** Deep-link targets. Ids, not text — nothing renders them. */
     const val EVENT_ID = "eventId"
     const val CHILD_INFO_ID = "childInfoId"
@@ -177,6 +193,17 @@ object PushPayload {
      */
     const val RECORDS_SHARED = "records_shared"
 
+    /**
+     * The proposer's phone telling the parent who did not answer in time that the request is
+     * theirs to answer once more (phase 3a): "<name> is waiting for your answer until <time>."
+     *
+     * Queued by the proposer's phone, because it must reach a phone that may not be syncing.
+     * Carries [ANSWER_BY], where the last chance ends, and no word about the request itself — the
+     * receiving phone names the person and the time, and the tap opens the Requests inbox, where
+     * the card names the request. A build with no wording for it drops it, as for any unknown type.
+     */
+    const val REQUEST_LAST_CHANCE = "request_last_chance"
+
     // ---- types only a Cloud Function may produce -------------------------------
 
     /** Queued by `acceptPairingInvitation`. */
@@ -242,7 +269,8 @@ object PushPayload {
         SPLIT_RATIO_ACCEPTED,
         SPLIT_RATIO_DECLINED,
         SPLIT_RATIO_AGREED,
-        RECORDS_SHARED
+        RECORDS_SHARED,
+        REQUEST_LAST_CHANCE
     )
 
     /**

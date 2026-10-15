@@ -78,4 +78,14 @@
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Второй родитель удалил аккаунт</string>
     <string name="push_coparent_account_deleted_body">%1$s: аккаунт удалён. Ваша переписка будет удалена %2$s — экспортируйте её до этого срока.</string>
+
+    <!-- Phase 3a: a request waits for an answer. The first push of a day swap, a change request or a
+         custody proposal ends with this sentence when the proposer chose a deadline. It travels as
+         epoch millis and this phone says it in its own zone, language and clock
+         (%1$s = a weekday, a day and a time, as in "Tue, Oct 13, 10:00"). -->
+    <string name="push_answer_by">Ответьте до %1$s.</string>
+    <!-- The proposer gave the parent who did not answer in time a last chance
+         (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
+    <string name="push_request_last_chance_title">Последний шанс ответить</string>
+    <string name="push_request_last_chance_body">%1$s ждёт вашего ответа до %2$s.</string>
 </resources>
