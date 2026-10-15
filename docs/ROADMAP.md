@@ -3015,6 +3015,14 @@ after the owner's answers:
   has a banner of its own), with swaps from the family's own custody document, and a History
   derived from the records rather than stored. CLAUDE.md item 40; checklist §5.8.
 
+**A custody schedule per family** (schema 45, found in phase 2's final review). The phone kept one
+active custody row for every family. With a second family on screen, the mirror, every sync and the
+pattern editor could write the first family's schedule, seasonal layers and children's overrides
+into the second family's document. Each row now names its family, and every read answers for the
+family on screen. CLAUDE.md item 41; checklist §5.2. Left: the device look, and one manual repair.
+On the live project, a family whose document an older build already overwrote sets its schedule
+again, because nothing says which pattern was which family's.
+
 Left: the device runs (§5.6, §5.8), the functions deploy (`parentNames` on new grants; existing
 grants name nobody until re-invited — no backfill, spec §4.4, the feature has only closed-test
 users), and phase 3 (day swaps, which

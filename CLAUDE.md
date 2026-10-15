@@ -339,9 +339,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     started (`TodayWidgetRefresher.followParents` → `TodayWidgetNames`, in `EncryptedPreferences`,
     cleared with them and refused for another uid). Never attach `ParentsSource` from a widget
     update, which would cost four Firestore listeners for a label. **Every redraw has a trigger**:
-    a Room write to `events` or `custody_models` (the invalidation tracker, debounced), a change
-    of names, a unique periodic work a minute past midnight, and hourly `updatePeriodMillis` as the
-    backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
+    a Room write to `events`, `custody_models` or `users` (the invalidation tracker, debounced; the
+    signed-in parent's row says which family's schedule is drawn), a change of names, a unique
+    periodic work a minute past midnight, and hourly `updatePeriodMillis` as the backstop. A table the widget starts to read joins `WATCHED_TABLES`. **Nothing the schema does
     not hold**: a handover is a day and a person, never an hour, as on Home. It is home-screen
     only. It adds no XML layout: `initialLayout` is Glance's own, and the picker preview is a
     vector drawable. Its text takes the today card's type roles through `role()` (the role's size,
@@ -1143,7 +1143,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v44 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v45 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -1311,7 +1311,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v44), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v45), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -2197,11 +2197,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     because a waiting custody proposal draws a banner of its own. Five things not to undo.
     - **Swaps and the proposal come from the family's own custody document**, asked for by its id
       (`CustodyModelRepository.observeSharedOf`), and so do the mini months' custody days — never
-      from Room's one active custody model (`observeDayOverrides`, `getActiveModel`), which keeps
-      the previous family's schedule and swaps while the family on screen has no document, and
-      never from `observeShared` alone, which replays the previous family's document until the next
-      one's listener answers. Reading Room is how another family's swap reached this inbox, Home's
-      count and its pop-up (phase 2 review).
+      from `observeShared` alone, which replays the previous family's document until the next
+      one's listener answers. Room's one active custody model, which kept the previous family's
+      schedule and swaps while the family on screen had no document, is how another family's swap
+      reached this inbox, Home's count and its pop-up (phase 2 review). Room keeps a schedule per
+      family since schema 45 (item 41); the requests still read the document, where a pending
+      proposal lives.
     - **History is derived, never stored.** `RequestHistory` builds it from the records
       themselves — a decided or withdrawn change request, an answered swap, an accepted or declined
       event, a decided proposal — with who decided and when, and marks an answer this phone has not
@@ -2215,6 +2216,44 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       its description beside the creator's initial, its time on the reader's clock and a
       `MiniMonth`; the event form says so while the event would wait (`descriptionReachesCoParent`,
       which states `EventAcceptanceTransition.required`'s rule).
+
+41. **The phone keeps a custody schedule per family** (October 2026, schema 45). Each
+    `custody_models` row names its family in `familyId`, which is the id of the family's
+    `custody_models` document. `CustodyModelRepository` answers every question from Room for the
+    family on screen, through `ActiveCustodyRow.pick`. `SignedInFamilies` supplies the family on
+    screen (`partnerId`) and the set of co-parents (`partnerIds`).
+    The phone used to keep **one** active row for every family. A parent in two families then had
+    the first family's pattern, seasonal layers and children's overrides written into the second
+    family's document, by three writers:
+    - the mirror's republish, when the other family's row was newer;
+    - every sync's `publishLocalIfMissing`, while the second family had no document;
+    - the pattern editor's `withActiveLayers`.
+
+    Four things not to undo.
+    - **A row is stamped once and never re-derived.** `saveAndActivate` stamps the family on
+      screen. The mirror stamps the family whose document arrived, not the family on screen, which
+      a switch may already have changed. `saveReslotted` and `archiveRejected` keep the row's own
+      family. Null is a row saved while unpaired, or written before schema 45.
+    - **A row naming no family belongs to the family only while the parent has exactly one
+      co-parent**, the same rule as a child's record (item 38). With two co-parents it answers for
+      neither, and nothing stamps it by guess: the migration leaves every existing row null. A
+      one-family phone converges by itself, because the next echo of the family's document stamps
+      the row.
+    - **A row reaches only its own family's document** (`SignedInFamilies.pairFor`): a stamped row
+      while that family is still live, an unstamped one only while there is one family. A
+      republish goes to the row's own family even when the switcher has moved on.
+    - **A family's write takes only that family's rows and the unstamped ones out of force**
+      (`CustodyModelDao.deactivateFamily`). Another family's schedule stays active. Two families'
+      documents may carry one model id, because the old republish copied it with the pattern. The
+      mirror therefore borrows nothing from a row of another family under the same id. A REPLACE
+      may swap the two rows back and forth on each switch, which is harmless: each family's mirror
+      restores its own row.
+
+    Unpaired, the calendar reads a row saved without a family, else the newest row it had. That is
+    what unpairing always left on screen. `MultiFamilyCustodyTest` (e2e), `CustodyModelDaoTest` and
+    the unit tests hold all of this.
+    A document the old build already overwrote cannot be repaired automatically, since nothing says
+    which pattern was which family's. Such a family sets its schedule again.
 
 ## Legal and GDPR (September 2026) — keep consistent
 

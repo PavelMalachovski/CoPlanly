@@ -103,6 +103,7 @@ so.
 | `TwoParentPairingTest` | Pairing on both phones, both slots, one conversation, `pairing_accepted` queued; a code naming its inviter before anything is linked, and refusing what the accept would (§5.7) | The QR scan, the pairing screens, the link opening the app |
 | `TwoParentEventsTest`, `MultiFamilyTest` | Events through the sync's own query, a private event never on the server, tombstones; a second family's audience, the family learnt by the inviter's own pairing listener without taking over the screen (§5.2) | The grid as drawn |
 | `MultiFamilyRecordsTest` | One parent in two families: with the second family on screen, an edit and a sync leave a child and a pet of the first family with that family's audience, marked synced on the writer's phone, and refused to the second family's parent (§5.2) | The forms; an older build on the writer's phone, which only the rules deploy refuses |
+| `MultiFamilyCustodyTest` | One parent in two families keeps a custody schedule per family (schema 45): with the second family on screen it reads no schedule and a sync publishes none; its own schedule goes to its own document; switching back, the first family's document is untouched by the mirror and each family's schedule is in force on the phone (§5.2) | The calendar band and Home as drawn after a switch; the Today widget |
 | `TwoParentChatTest`, `OneParentOnScreenTest` | Chat across the date line to unread, DELIVERED, READ; one parent's real screens (§5.1) | Two screens at once, displayed times, the push |
 | `TwoParentAttachmentsTest` | Chat attachments and the vault, bytes and digests, a stranger refused (§5.5) | A viewer app opening the file |
 | `TwoParentExpensesTest`, `TwoParentAgreementsTest` | A shared expense on the other parent's balance; the split ratio agreed, proposed, accepted, declined, withdrawn; the parenting plan's agreement lapsing on a reword, the other half unwritable | The Expenses and plan screens, the banners |
@@ -1332,7 +1333,7 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
 
-> **[CI e2e]** `MultiFamilyTest` proves the data side: A's own pairing listener brings C's family in without taking over the screen, with a second co-parent selected a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `MultiFamilyRecordsTest` pins the October 2026 leak: with C's family on screen, A's edit and sync leave a child and a pet of B's family with B's audience, and C is refused both. `OnScreenFamiliesTest` drives the switcher on A's real screens: C's family reaches the open app by itself, with B's family on screen C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
+> **[CI e2e]** `MultiFamilyTest` proves the data side: A's own pairing listener brings C's family in without taking over the screen, with a second co-parent selected a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `MultiFamilyRecordsTest` pins the October 2026 leak: with C's family on screen, A's edit and sync leave a child and a pet of B's family with B's audience, and C is refused both. `MultiFamilyCustodyTest` pins its custody twin: each family keeps its own schedule, and neither reaches the other's document. `OnScreenFamiliesTest` drives the switcher on A's real screens: C's family reaches the open app by itself, with B's family on screen C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -1373,6 +1374,19 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   - **If it fails:** tags `SyncService`, `PairingRepositoryImpl`, `SelectedFamily`;
     `domain/family/FamilyAudience.kt` (`recordPartnerFor`), `PairingRepositoryImpl.
     onPairingStateObserved`, `presentation/common/CoParentOnScreen.kt`.
+- [ ] **Each family keeps its own schedule** (October 2026, schema 45). **[CI e2e]** On A, with B's
+      family on screen, B's family has a custody schedule. Switch to **C's family**:
+  - the calendar shows **no custody band** (or C's family's own, if it has one), never B's
+    pattern; Home's hero and the Today widget on the home screen follow within a few seconds;
+  - pull to refresh: **C's** phone still shows no schedule from A (before the fix every sync gave
+    C's family B's schedule);
+  - set a schedule in C's family: it reaches **C's** phone and **not B's**; switch back to B's
+    family and B's band, seasonal layers and swaps are as they were, on A and on B.
+  - A phone upgraded from an older build may show C's family **B's old schedule** if the old
+    build had already written it into C's document: the fix stops new writes, it cannot tell
+    which family a stored pattern was. Set the schedule again in that family.
+  - **If it fails:** tag `CustodyModelRepo`; `data/repository/CustodyModelRepository.kt`,
+    `ActiveCustodyRow.kt`, `SignedInFamilies.kt`.
 
 - [ ] Home and Expenses show a **switcher chip** beside the gear.
   - It names the family on screen by its co-parent.
