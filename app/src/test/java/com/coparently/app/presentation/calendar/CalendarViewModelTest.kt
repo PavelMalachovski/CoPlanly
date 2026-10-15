@@ -3,16 +3,28 @@ package com.coparently.app.presentation.calendar
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.AnswerByPreset
+import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.model.User
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.testParentsSource
 import io.mockk.Runs
 import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -23,6 +35,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -39,6 +52,15 @@ class CalendarViewModelTest {
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var encryptedPreferences: EncryptedPreferences
     private lateinit var viewModel: CalendarViewModel
+
+    /** Alice, signed in on this phone. */
+    private val alice = User(
+        id = "alice-uid",
+        email = "alice@example.com",
+        name = "Alice",
+        role = "mom",
+        colorCode = "#FF4081"
+    )
 
     @Before
     fun setup() {
@@ -58,20 +80,63 @@ class CalendarViewModelTest {
             every { putString(any(), any()) } just Runs
             every { putBoolean(any(), any()) } just Runs
         }
-        viewModel = CalendarViewModel(
-            custodyScheduleDao = custodyScheduleDao,
-            custodyModelRepository = custodyModelRepository,
-            encryptedPreferences = encryptedPreferences,
-            friendRepository = noCalendarFriends(),
-            parentsSource = testParentsSource(),
-            userRepository = noSignedInUser()
-        )
+        viewModel = calendarViewModel(testParentsSource())
     }
+
+    private fun calendarViewModel(parentsSource: ParentsSource) = CalendarViewModel(
+        custodyScheduleDao = custodyScheduleDao,
+        custodyModelRepository = custodyModelRepository,
+        encryptedPreferences = encryptedPreferences,
+        friendRepository = noCalendarFriends(),
+        parentsSource = parentsSource,
+        userRepository = noSignedInUser()
+    )
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
         clearAllMocks()
+    }
+
+    @Test
+    fun `a single-day offer is its own group and passes the deadline on`() = runTest {
+        val pick = AnswerByPick.Preset(AnswerByPreset.WEEK)
+        val date = LocalDate.of(2026, 11, 20)
+        val transform = slot<(Map<String, DayOverride>) -> Result<Map<String, DayOverride>>>()
+        coEvery { custodyModelRepository.applyDayOverrides(any(), capture(transform), any()) } returns
+            Result.success(emptyMap())
+        val signedIn = calendarViewModel(testParentsSource(me = alice))
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+
+        signedIn.offerDaySwap(date, toParent = "dad", answerBy = pick)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { custodyModelRepository.applyDayOverrides("2026-11-20", any(), pick) }
+        // A group of one: the id its clock is named by is on the entry the transform writes.
+        val offered = transform.captured(emptyMap()).getOrThrow().getValue("2026-11-20")
+        assertNotNull(offered.groupId)
+        assertEquals(DayOverrideStatus.PENDING, offered.status)
+        assertEquals("alice-uid", offered.requestedBy)
+        assertNull(signedIn.swapError.value)
+    }
+
+    @Test
+    fun `a run of days passes the deadline on, once for the whole group`() = runTest {
+        val pick = AnswerByPick.Preset(AnswerByPreset.TOMORROW)
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) } returns
+            Result.success(emptyMap())
+        val signedIn = calendarViewModel(testParentsSource(me = alice))
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+        val first = LocalDate.of(2026, 11, 20)
+
+        signedIn.offerDaySwapForDates(listOf(first, first.plusDays(1)), toParentFor = { "dad" }, answerBy = pick)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            custodyModelRepository.applyDayOverridesForDates(listOf("2026-11-20", "2026-11-21"), any(), pick)
+        }
     }
 
     @Test

@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
 import com.coparently.app.domain.family.FamilyMemberRef
@@ -27,12 +29,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
@@ -80,6 +85,32 @@ class CustodySetupViewModel @Inject constructor(
 
     private val _currentModel = MutableStateFlow<CustodyModel?>(null)
     val currentModel: StateFlow<CustodyModel?> = _currentModel.asStateFlow()
+
+    /**
+     * Whether a save will be a proposal the co-parent answers (phase 3a, spec §4.2): there is a
+     * co-parent, and an agreed schedule a change must not overwrite. The form shows its deadline
+     * block only then; a save that applies at once has nobody to wait on.
+     */
+    val proposes: StateFlow<Boolean> = combine(parents, _currentModel) { parents, active ->
+        parents.isPaired && active != null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), false)
+
+    /**
+     * The cap of the proposal a save would make (phase 3a, spec §4.2): 00:00 of the first day, from
+     * today, on which the schedule the form describes differs from the agreed one in anything the
+     * calendar shows — whole days, contact windows, a child's own days — or null when nothing ahead
+     * would change. The deadline block offers its choices against it. Worked out again when the
+     * edited schedule changes, never per frame; the repository works it out again when it sends.
+     */
+    val answerByCap: StateFlow<Long?> = combine(_uiState, _currentModel) { state, active ->
+        state.candidateModel(active) to active
+    }
+        .distinctUntilChanged()
+        .map { (candidate, active) ->
+            val zone = ZoneId.systemDefault()
+            candidate?.let { RequestCap.forProposal(active, it, LocalDate.now(zone), zone) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), null)
 
     /**
      * The family's children, for "Different schedule for a child" (FAM-4). A stream for what the
@@ -296,8 +327,11 @@ class CustodySetupViewModel @Inject constructor(
      *
      * Scoped to a child (FAM-4), it saves that child's own schedule instead — or, with
      * [followFamily], sends the child back to the family schedule, which needs no valid form.
+     *
+     * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
+     *   when the form showed no deadline block; it applies only when the save is a proposal.
      */
-    fun save(followFamily: Boolean = false, onSuccess: () -> Unit = {}) {
+    fun save(followFamily: Boolean = false, answerBy: AnswerByPick? = null, onSuccess: () -> Unit = {}) {
         val state = _uiState.value
         if (!state.isValid && !followFamily) return
 
@@ -307,7 +341,7 @@ class CustodySetupViewModel @Inject constructor(
         val citation = state.planReference?.citationWire?.takeIf { state.childScope == null }
         viewModelScope.launch {
             try {
-                val submission = custodyModelRepository.submitFor(state, citation, followFamily)
+                val submission = custodyModelRepository.submitFor(state, citation, followFamily, answerBy)
                 // A refusal wrote nothing: the form stays open, as it was, with the reason.
                 val refusal = when (submission) {
                     PatternSubmission.COPARENT_PROPOSAL_WAITING ->

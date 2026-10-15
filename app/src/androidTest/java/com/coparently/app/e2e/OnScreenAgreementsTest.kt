@@ -284,9 +284,14 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     private suspend fun bobOffers(agreed: CustodyModel, date: LocalDate) {
         val iso = date.toString()
         val toSlot = if (agreed.getCustodyFor(date) == SLOT_ONE) SLOT_TWO else SLOT_ONE
-        bob.custodyRepository.applyDayOverrides(iso) { current ->
-            DayOverrideTransition.offer(current, iso, toSlot, bob.uid, LocalDateTime.now().toString())
-        }.getOrThrow()
+        val atIso = LocalDateTime.now().toString()
+        val groupId = UUID.randomUUID().toString()
+        bob.custodyRepository.applyDayOverrides(
+            date = iso,
+            transform = { current ->
+                DayOverrideTransition.offer(current, iso, toSlot, bob.uid, atIso, groupId = groupId)
+            }
+        ).getOrThrow()
     }
 
     /** The pair's document as [parent]'s listener delivers it, once [condition] holds. */

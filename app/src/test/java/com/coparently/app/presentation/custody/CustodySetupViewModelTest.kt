@@ -4,15 +4,20 @@ import androidx.lifecycle.SavedStateHandle
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
+import com.coparently.app.domain.model.PartnerSummary
+import com.coparently.app.domain.model.User
 import com.coparently.app.domain.parentingplan.PlanCitation
 import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.domain.parentingplan.PlanScheduleTarget
 import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
@@ -23,6 +28,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -35,6 +41,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -60,17 +67,33 @@ class CustodySetupViewModelTest {
         citation = PlanCitation("care_weekday", "0123456789abcdef")
     )
 
-    private fun viewModel(active: CustodyModel? = null, planQuestion: String? = null): CustodySetupViewModel {
+    private fun viewModel(
+        active: CustodyModel? = null,
+        planQuestion: String? = null,
+        parents: ParentsSource = testParentsSource()
+    ): CustodySetupViewModel {
         every { repository.getActiveModel() } returns flowOf(active)
         val args = planQuestion?.let { mapOf("planQuestion" to it) }.orEmpty()
         return CustodySetupViewModel(
             repository,
-            testParentsSource(),
+            parents,
             SavedStateHandle(args),
             planReferences,
             testFamilyMembersSource(childNames = listOf("Ema", "Tomas"))
         )
     }
+
+    /** Alice, linked to Bob: a co-parent to put a change to. */
+    private val paired = testParentsSource(
+        me = User(id = "u1", email = "alice@example.com", name = "Alice", role = "mom", colorCode = "#FF4081"),
+        partner = PartnerSummary(
+            id = "u2",
+            name = "Bob",
+            email = "bob@example.com",
+            pairedSinceMillis = 1L,
+            role = "dad"
+        )
+    )
 
     @Before
     fun setUp() {
@@ -385,4 +408,83 @@ class CustodySetupViewModelTest {
             assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
             assertFalse(vm.uiState.value.isSaved)
         }
+
+    // ---- the deadline of the proposal a save makes (phase 3a) -----------------
+
+    @Test
+    fun `save passes the deadline on`() = runTest(dispatcher) {
+        val pick = AnswerByPick.Preset(AnswerByPreset.WEEK)
+        coEvery { repository.createWeekOnWeekOff(any(), any(), any(), any(), any()) } returns PatternSubmission.PROPOSED
+        coEvery { repository.submitChildOverride(any(), any(), any()) } returns PatternSubmission.PROPOSED
+        val vm = viewModel(active = family)
+        advanceUntilIdle()
+
+        vm.save(answerBy = pick)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.createWeekOnWeekOff(start, true, emptyList(), null, pick) }
+
+        // A child's own schedule is a proposal too, with the same deadline.
+        vm.editSchedule(ema)
+        vm.save(answerBy = pick)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.submitChildOverride("c-Ema", any(), pick) }
+    }
+
+    @Test
+    fun `the cap preview is the first day the edited pattern changes`() = runTest(dispatcher) {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
+        // Anchored today, so day 10 of the cycle is ten days from now.
+        val vm = viewModel(active = CustodyModel.custom("m1", today, patternDays = 14, momDayIndices = (0..6).toSet()))
+        backgroundScope.launch { vm.answerByCap.collect {} }
+        advanceUntilIdle()
+        // Unedited, the form describes the agreed schedule: nothing ahead changes.
+        assertNull(vm.answerByCap.value)
+
+        vm.toggleCustomMomDay(10)
+        advanceUntilIdle()
+
+        assertEquals(today.plusDays(10).atStartOfDay(zone).toInstant().toEpochMilli(), vm.answerByCap.value)
+    }
+
+    @Test
+    fun `a child's schedule's cap is the first day that child's days change`() = runTest(dispatcher) {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
+        val vm = viewModel(active = CustodyModel.custom("m1", today, patternDays = 14, momDayIndices = (0..6).toSet()))
+        backgroundScope.launch { vm.answerByCap.collect {} }
+        advanceUntilIdle()
+        // Ema has no schedule of her own, so the editor opens on the family's: nothing changes yet.
+        vm.editSchedule(ema)
+        advanceUntilIdle()
+        assertNull(vm.answerByCap.value)
+
+        // Day 12 becomes slot 1's for Ema alone; the family's own days do not move.
+        vm.toggleCustomMomDay(12)
+        advanceUntilIdle()
+
+        assertEquals(today.plusDays(12).atStartOfDay(zone).toInstant().toEpochMilli(), vm.answerByCap.value)
+    }
+
+    @Test
+    fun `with no co-parent or no agreed schedule a save does not propose`() = runTest(dispatcher) {
+        // No co-parent: a schedule, but nobody to ask.
+        val alone = viewModel(active = family)
+        backgroundScope.launch { alone.proposes.collect {} }
+        alone.parents.first { it.loaded }
+        advanceUntilIdle()
+        assertFalse(alone.proposes.value)
+
+        // A co-parent, but no agreed schedule yet: the first one applies at once.
+        val first = viewModel(active = null, parents = paired)
+        backgroundScope.launch { first.proposes.collect {} }
+        first.parents.first { it.loaded }
+        advanceUntilIdle()
+        assertFalse(first.proposes.value)
+
+        // Both: a save is a proposal, and the form asks when it should be answered by.
+        val both = viewModel(active = family, parents = paired)
+        backgroundScope.launch { both.proposes.collect {} }
+        assertTrue(both.proposes.first { it })
+    }
 }

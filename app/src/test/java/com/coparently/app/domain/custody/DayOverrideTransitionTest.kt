@@ -3,6 +3,7 @@ package com.coparently.app.domain.custody
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -83,6 +84,18 @@ class DayOverrideTransitionTest {
 
         val answered = DayOverrideTransition.accept(offered, date, dad, now).getOrThrow()
         assertFalse(DayOverrideTransition.awaitsAnswerFrom(answered, date, dad), "already decided")
+    }
+
+    @Test
+    fun `a single-day offer carries its group id`() {
+        // A one-day offer is a group of one (phase 3a): its clock is named by the group id, as a
+        // run's is, so the id has to reach the stored entry.
+        val next = DayOverrideTransition
+            .offer(emptyMap(), date, "dad", mom, now, groupId = "group-1").getOrThrow()
+
+        assertEquals("group-1", next.getValue(date).groupId)
+        // A caller that names no group still writes the entry an older build wrote.
+        assertNull(DayOverrideTransition.offer(emptyMap(), date, "dad", mom, now).getOrThrow().getValue(date).groupId)
     }
 
     @Test

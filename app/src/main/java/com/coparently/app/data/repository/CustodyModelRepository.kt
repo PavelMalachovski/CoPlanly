@@ -10,6 +10,11 @@ import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.changerequests.AnswerBy
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestCap
+import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
@@ -24,6 +29,7 @@ import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.MidweekContact
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -46,6 +52,7 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transform
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
@@ -108,12 +115,15 @@ class PartialSwapRun(
 
 @Singleton
 @Suppress("TooManyFunctions")
-class CustodyModelRepository(
+class CustodyModelRepository
+@Suppress("LongParameterList") // the request clock joins the collaborators (phase 3a)
+constructor(
     private val custodyModelDao: CustodyModelDao,
     private val userRepository: UserRepository,
     private val firestoreCustodyDataSource: FirestoreCustodyDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
     private val fcmService: FcmService,
+    private val requestDeadlines: RequestDeadlineRepository,
     private val scope: CoroutineScope
 ) {
     /**
@@ -121,7 +131,7 @@ class CustodyModelRepository(
      * detail of this singleton, the same way `ParentsSource` owns its own — so it is supplied
      * here rather than bound in a module.
      *
-     * The four-argument constructor above exists so tests can hand in a scope backed by the test
+     * The constructor above exists so tests can hand in a scope backed by the test
      * scheduler and drive [observeShared] itself, backoff delays and all, on virtual time.
      * Without it the only testable seam was the unshared upstream, exposed as `internal` — a
      * production-visible way to attach a second, unshared snapshot listener, which is precisely
@@ -133,13 +143,15 @@ class CustodyModelRepository(
         userRepository: UserRepository,
         firestoreCustodyDataSource: FirestoreCustodyDataSource,
         activityAnnouncer: ActivityAnnouncer,
-        fcmService: FcmService
+        fcmService: FcmService,
+        requestDeadlines: RequestDeadlineRepository
     ) : this(
         custodyModelDao,
         userRepository,
         firestoreCustodyDataSource,
         activityAnnouncer,
         fcmService,
+        requestDeadlines,
         defaultScope()
     )
 
@@ -387,11 +399,17 @@ class CustodyModelRepository(
      *   `PlanCitationCodec` string, or null. It rides on a proposal only — a pattern that is
      *   simply activated has nobody to show its source to — and it is a citation, never an input:
      *   [model] is what the parent built, whatever the plan says.
+     * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
+     *   for none. Like the citation it rides on a proposal only: a proposal given one starts its
+     *   clock, capped at the first day the schedule would change, and its push says when.
      * @return whether the pattern was activated, merely proposed, or refused, so the UI can say
      *   which.
      */
-    suspend fun submitPattern(model: CustodyModel, planCitation: String? = null): PatternSubmission =
-        submit(model, planCitation, currentFamilies())
+    suspend fun submitPattern(
+        model: CustodyModel,
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
+    ): PatternSubmission = submit(model, planCitation, currentFamilies(), answerBy)
 
     /**
      * [submitPattern] for the [families] read once when the change began, so every step of it —
@@ -402,7 +420,8 @@ class CustodyModelRepository(
     private suspend fun submit(
         model: CustodyModel,
         planCitation: String?,
-        families: SignedInFamilies
+        families: SignedInFamilies,
+        answerBy: AnswerByPick?
     ): PatternSubmission {
         val pair = families.pair
         if (pair == null) {
@@ -441,8 +460,11 @@ class CustodyModelRepository(
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, proposed)
         }
         if (written == null) return PatternSubmission.NOT_SENT
+        // The clock starts once the proposal is written and before it is announced, so the push can
+        // say when the answer is due — and only when the clock was written (ruling 8).
+        val answerByMillis = startClock(proposalClock(pair, existing.model, proposed, answerBy))
         announceProposal(pair, ActivityKind.CUSTODY_PROPOSED, planCitation)
-        notifyPartnerOfProposal(pair, "proposed")
+        notifyPartnerOfProposal(pair, "proposed", answerByMillis)
         return PatternSubmission.PROPOSED
     }
 
@@ -464,6 +486,30 @@ class CustodyModelRepository(
     /** Withdraws this device's own pending proposal. Nothing is decided; the co-parent is told. */
     suspend fun withdrawProposal(): Result<Unit> = decideProposal { current, uid, _, _ ->
         CustodyProposalTransition.withdraw(current, uid)
+    }
+
+    /**
+     * Withdraws this parent's proposal in [familyId] when it is still the one made at [proposedAt].
+     *
+     * The end of a proposal nobody answered (phase 3a, spec §4.4). A step of a clock acts on the
+     * clock's family, never the one on screen (spec §5.6), so [familyId] is read against this
+     * parent's families, once, and never through [currentPair]: it must still be a family they are
+     * in. The read and the write are one transaction, so a proposal answered, withdrawn or replaced
+     * a moment before is left as it is — an answer racing the end wins. Nothing is announced here;
+     * the end posts its own card.
+     *
+     * @return Whether the proposal was withdrawn: false when the family has ended, when the proposal
+     *   is no longer this one, and when the document could not be written, for the caller to retry.
+     */
+    suspend fun withdrawUnanswered(familyId: String, proposedAt: String): Boolean {
+        val pair = currentFamilies().pairIn(familyId) ?: return false
+        val written = guarded("unanswered withdrawal") {
+            firestoreCustodyDataSource.transact(pair.documentId, pair.participants) { current ->
+                withdrawnIfUnanswered(current, proposedAt, pair.myUid)
+            }
+        } ?: return false
+        mirrorIntoRoom(pair.documentId, written)
+        return true
     }
 
     /**
@@ -519,8 +565,10 @@ class CustodyModelRepository(
     /**
      * Best-effort push to the parent who did not perform this proposal write — same mechanism
      * as [notifyPartnerOfSwap], and like it, carries no text of its own.
+     *
+     * @param answerByMillis The deadline of the proposal's clock, when one was written (phase 3a).
      */
-    private suspend fun notifyPartnerOfProposal(pair: CustodyPair, action: String) {
+    private suspend fun notifyPartnerOfProposal(pair: CustodyPair, action: String, answerByMillis: Long? = null) {
         val partnerUid = pair.participants.firstOrNull { it != pair.myUid } ?: return
         fcmService.queueNotificationForUser(
             targetUserId = partnerUid,
@@ -529,7 +577,7 @@ class CustodyModelRepository(
                 // typed, so the receiving device has everything it needs to write the sentence
                 // in the reader's language (SEC-3).
                 PushPayload.TYPE to "custody_proposal_$action"
-            )
+            ).withAnswerBy(answerByMillis)
         )
     }
 
@@ -593,19 +641,21 @@ class CustodyModelRepository(
      * @param startDate The anchor date for the pattern
      * @param momFirst If true, mom has the first week; if false, dad has the first week
      * @param planCitation The parenting-plan answer this was built from (MON-21); see [submitPattern]
+     * @param answerBy The deadline for the co-parent's answer, when it is a proposal; see [submitPattern]
      */
     suspend fun createWeekOnWeekOff(
         startDate: LocalDate,
         momFirst: Boolean = true,
         contactWindows: List<ContactWindow> = emptyList(),
-        planCitation: String? = null
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.weekOnWeekOff(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momFirst = momFirst
         )
-        return submitNew(model.withWindows(contactWindows), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation, answerBy)
     }
 
     /**
@@ -616,13 +666,16 @@ class CustodyModelRepository(
      * @param midweek The midweek contact day, or null for alternate weekends only
      * @param contactWindows Contact afternoons on top of the days (MON-6b)
      * @param planCitation The parenting-plan answer this was built from (MON-21); see [submitPattern]
+     * @param answerBy The deadline for the co-parent's answer, when it is a proposal; see [submitPattern]
      */
+    @Suppress("LongParameterList") // the pattern's fields, then how it is sent
     suspend fun createEveryOtherWeekend(
         startDate: LocalDate,
         momIsResident: Boolean = true,
         midweek: MidweekContact? = null,
         contactWindows: List<ContactWindow> = emptyList(),
-        planCitation: String? = null
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.everyOtherWeekend(
             id = UUID.randomUUID().toString(),
@@ -630,7 +683,7 @@ class CustodyModelRepository(
             momIsResident = momIsResident,
             midweek = midweek
         )
-        return submitNew(model.withWindows(contactWindows), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation, answerBy)
     }
 
     /**
@@ -640,14 +693,15 @@ class CustodyModelRepository(
         startDate: LocalDate,
         momStartsFirst: Boolean = true,
         contactWindows: List<ContactWindow> = emptyList(),
-        planCitation: String? = null
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.twoTwoThree(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitNew(model.withWindows(contactWindows), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation, answerBy)
     }
 
     /**
@@ -657,25 +711,28 @@ class CustodyModelRepository(
         startDate: LocalDate,
         momStartsFirst: Boolean = true,
         contactWindows: List<ContactWindow> = emptyList(),
-        planCitation: String? = null
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.threeFourFourThree(
             id = UUID.randomUUID().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
-        return submitNew(model.withWindows(contactWindows), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation, answerBy)
     }
 
     /**
      * Creates and saves a custom custody model.
      */
+    @Suppress("LongParameterList") // the pattern's fields, then how it is sent
     suspend fun createCustom(
         startDate: LocalDate,
         patternDays: Int,
         momDayIndices: Set<Int>,
         contactWindows: List<ContactWindow> = emptyList(),
-        planCitation: String? = null
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.custom(
             id = UUID.randomUUID().toString(),
@@ -683,7 +740,7 @@ class CustodyModelRepository(
             patternDays = patternDays,
             momDayIndices = momDayIndices
         )
-        return submitNew(model.withWindows(contactWindows), planCitation)
+        return submitNew(model.withWindows(contactWindows), planCitation, answerBy)
     }
 
     /**
@@ -695,9 +752,13 @@ class CustodyModelRepository(
         copy(contactWindows = ContactWindowCodec.canonical(windows.filter { it.dayIndex < patternDays }))
 
     /** A fresh pattern from the editor, with the family's layers, for the family on screen now. */
-    private suspend fun submitNew(model: CustodyModel, planCitation: String?): PatternSubmission {
+    private suspend fun submitNew(
+        model: CustodyModel,
+        planCitation: String?,
+        answerBy: AnswerByPick?
+    ): PatternSubmission {
         val families = currentFamilies()
-        return submit(withActiveLayers(model, families), planCitation, families)
+        return submit(withActiveLayers(model, families), planCitation, families, answerBy)
     }
 
     /**
@@ -729,13 +790,18 @@ class CustodyModelRepository(
      * layers, the other children's overrides and any entry this build cannot read are carried
      * unchanged.
      *
+     * @param answerBy The deadline for the co-parent's answer, when it is a proposal; see [submitPattern]
      * @return How the change landed, or null when there is no family schedule to override.
      */
-    suspend fun submitChildOverride(childId: String, override: ChildScheduleOverride?): PatternSubmission? {
+    suspend fun submitChildOverride(
+        childId: String,
+        override: ChildScheduleOverride?,
+        answerBy: AnswerByPick? = null
+    ): PatternSubmission? {
         val families = currentFamilies()
         val active = activeRowNow(families)?.toDomainModel() ?: return null
         val others = active.childOverrides.filterNot { it.childId == childId }
-        return submit(active.copy(childOverrides = others + listOfNotNull(override)), null, families)
+        return submit(active.copy(childOverrides = others + listOfNotNull(override)), null, families, answerBy)
     }
 
     /**
@@ -748,12 +814,17 @@ class CustodyModelRepository(
      *
      * @param planCitation The parenting-plan answer the layer was built from (MON-21), or null;
      *   see [submitPattern].
+     * @param answerBy The deadline for the co-parent's answer, when it is a proposal; see [submitPattern]
      * @return How the change landed, or null when there is no base pattern to layer on.
      */
-    suspend fun submitSeasonalLayers(layers: List<SeasonalLayer>, planCitation: String? = null): PatternSubmission? {
+    suspend fun submitSeasonalLayers(
+        layers: List<SeasonalLayer>,
+        planCitation: String? = null,
+        answerBy: AnswerByPick? = null
+    ): PatternSubmission? {
         val families = currentFamilies()
         val active = activeRowNow(families)?.toDomainModel() ?: return null
-        return submit(active.copy(seasonalLayers = layers), planCitation, families)
+        return submit(active.copy(seasonalLayers = layers), planCitation, families, answerBy)
     }
 
     /**
@@ -988,11 +1059,14 @@ class CustodyModelRepository(
      *   `firestore.rules` requires the document to carry it: Rules cannot iterate a map, so the
      *   write names its one date and the rule checks the diff affects only that key.
      * @param transform The transition to apply, from [DayOverrideTransition].
+     * @param answerBy The deadline the offering parent chose (phase 3a), or null for none. An offer
+     *   given one starts its clock once it is written, and its push says when; an answer starts none.
      * @return The applied map, or the transition's own failure.
      */
     suspend fun applyDayOverrides(
         date: String,
-        transform: (Map<String, DayOverride>) -> Result<Map<String, DayOverride>>
+        transform: (Map<String, DayOverride>) -> Result<Map<String, DayOverride>>,
+        answerBy: AnswerByPick? = null
     ): Result<Map<String, DayOverride>> {
         val pair = currentPair()
             ?: return Result.failure(IllegalStateException("No co-parent to agree a swap with"))
@@ -1003,7 +1077,8 @@ class CustodyModelRepository(
         // thread, and this is it. The status the transition produced *is* the announcement —
         // offered, agreed or turned down — so nothing here has to be told which it was.
         next[date]?.let { entry ->
-            announceSwap(pair, date, entry.status, dayCount = 1)
+            val answerByMillis = startClock(swapClock(pair, entry, listOf(date), answerBy))
+            announceSwap(pair, date, entry.status, dayCount = 1, answerByMillis = answerByMillis)
         }
         return Result.success(next)
     }
@@ -1024,13 +1099,22 @@ class CustodyModelRepository(
      * — needs the rule to validate a multi-date diff, which Rules can only do by unrolling a
      * fixed number of per-date checks, and an off-by-one there silently admits an unvalidated key.
      *
+     * Refuses, with nothing written, a run with no date or no co-parent; stops at the first write
+     * that fails, reporting [PartialSwapRun] when part of the run had landed; and refuses a run that
+     * wrote nothing. An offer given a deadline starts one clock, for the days that landed, before
+     * the one announcement.
+     *
      * @param dates The ISO dates to apply, in the order they should be written.
      * @param transform The transition for one date, from [DayOverrideTransition].
+     * @param answerBy The deadline the offering parent chose (phase 3a), or null for none; see
+     *   [applyDayOverrides].
      * @return The map after the last successful write.
      */
+    @Suppress("ReturnCount") // one early refusal per reason; see the KDoc
     suspend fun applyDayOverridesForDates(
         dates: List<String>,
-        transform: (Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>
+        transform: (Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>,
+        answerBy: AnswerByPick? = null
     ): Result<Map<String, DayOverride>> {
         if (dates.isEmpty()) {
             return Result.failure(IllegalArgumentException("A swap needs at least one day"))
@@ -1046,7 +1130,7 @@ class CustodyModelRepository(
                 // Announce whatever *did* land before reporting the failure. Returning straight
                 // out left the days already written with no chat card and no push at all: the
                 // co-parent's schedule had moved and nothing had told them.
-                announceRun(pair, latest, changed)
+                announceRun(pair, latest, changed, answerBy)
                 return if (changed.isEmpty()) {
                     Result.failure(cause)
                 } else {
@@ -1058,7 +1142,7 @@ class CustodyModelRepository(
         }
 
         val map = latest ?: return Result.failure(IllegalStateException("Nothing was written"))
-        announceRun(pair, map, changed)
+        announceRun(pair, map, changed, answerBy)
         return Result.success(map)
     }
 
@@ -1068,16 +1152,19 @@ class CustodyModelRepository(
      * Counts [changed] rather than the dates asked for: a group being finished skips the days
      * already answered, and telling the co-parent "5 days" when two moved is the same kind of
      * wrong as telling them nothing. The status of the first changed day speaks for the run —
-     * `decideGroup` and `offerAll` both give every day of a group the same status.
+     * `decideGroup` and `offerAll` both give every day of a group the same status. So does its
+     * clock (phase 3a): one, for the days that landed.
      */
     private suspend fun announceRun(
         pair: CustodyPair,
         map: Map<String, DayOverride>?,
-        changed: List<String>
+        changed: List<String>,
+        answerBy: AnswerByPick?
     ) {
         val first = changed.firstOrNull() ?: return
         map?.get(first)?.let { entry ->
-            announceSwap(pair, first, entry.status, dayCount = changed.size)
+            val answerByMillis = startClock(swapClock(pair, entry, changed, answerBy))
+            announceSwap(pair, first, entry.status, dayCount = changed.size, answerByMillis = answerByMillis)
         }
     }
 
@@ -1143,12 +1230,14 @@ class CustodyModelRepository(
      *
      * @param dayCount Days in the offer. One picks the single-day wording on the other phone;
      *   more picks the grouped one, which is the whole point of the group.
+     * @param answerByMillis The deadline of the offer's clock, when one was written (phase 3a).
      */
     private suspend fun announceSwap(
         pair: CustodyPair,
         date: String,
         status: DayOverrideStatus,
-        dayCount: Int
+        dayCount: Int,
+        answerByMillis: Long?
     ) {
         activityAnnouncer.announce(
             announcement = ActivityAnnouncement(
@@ -1163,7 +1252,7 @@ class CustodyModelRepository(
                 whenIso = date
             )
         )
-        notifyPartnerOfSwap(pair, date, status, dayCount)
+        notifyPartnerOfSwap(pair, date, status, dayCount, answerByMillis)
     }
 
     /**
@@ -1172,40 +1261,33 @@ class CustodyModelRepository(
      * pop-up on the other phone (items 4/13), and the Cloud Function behind `notification_queue`
      * already fans these out. Delivery is a nicety — the document write above is the record.
      *
-     * The payload carries the type and the date and no text at all: the receiving device writes
-     * the sentence from its own resources, in the reader's language (SEC-3). It used to be
-     * composed here, in English, which is what made a push able to claim to be anything.
+     * The payload carries no text at all ([swapPush]): the receiving device writes the sentence
+     * from its own resources, in the reader's language (SEC-3). It used to be composed here, in
+     * English, which is what made a push able to claim to be anything.
+     *
+     * An offer whose clock was written also carries its deadline ([PushPayload.ANSWER_BY]), so the
+     * first notification can say when the answer is due (phase 3a); an older build ignores the key.
      */
     private suspend fun notifyPartnerOfSwap(
         pair: CustodyPair,
         date: String,
         status: DayOverrideStatus,
-        dayCount: Int
+        dayCount: Int,
+        answerByMillis: Long?
     ) {
         val partnerUid = pair.participants.firstOrNull { it != pair.myUid } ?: return
-        val action = when (status) {
-            DayOverrideStatus.PENDING -> "offered"
-            DayOverrideStatus.ACCEPTED -> "accepted"
-            DayOverrideStatus.DECLINED -> "declined"
-        }
-        // A run of days gets its own type carrying the count, rather than a date the reader
-        // would have to expand into a range. The count is a string like every other payload
-        // value: `notification_queue` documents hold strings, and the receiving device parses
-        // it — a type it cannot parse composes nothing at all, which is the SEC-3 rule.
-        val data = if (dayCount > 1) {
-            mapOf(
-                PushPayload.TYPE to "day_swap_group_$action",
-                PushPayload.DATE to date,
-                PushPayload.DAY_COUNT to dayCount.toString()
-            )
-        } else {
-            mapOf(
-                PushPayload.TYPE to "day_swap_$action",
-                PushPayload.DATE to date
-            )
-        }
-        fcmService.queueNotificationForUser(targetUserId = partnerUid, notificationData = data)
+        fcmService.queueNotificationForUser(partnerUid, swapPush(date, status, dayCount).withAnswerBy(answerByMillis))
     }
+
+    /**
+     * Writes the clock [start] describes (phase 3a, spec §5.1): after the request's own write and
+     * before its announcement, so the first push can say when the answer is due.
+     *
+     * @return The deadline the clock was written with, or null when there is none — none was asked
+     *   for, or the write was refused — and the push then says nothing of one (ruling 8).
+     */
+    private suspend fun startClock(start: RequestStart?): Long? =
+        start?.let { requestDeadlines.start(it)?.answerByMillis }
 
     /**
      * The pair this device currently belongs to — the family on screen — or null when nobody is
@@ -1318,3 +1400,112 @@ class CustodyModelRepository(
         const val MAX_BACKOFF_SHIFT = 5L
     }
 }
+
+/** The co-parent of [this] pair, the parent a request made here waits on; null for a malformed pair. */
+private fun CustodyPair.partnerUid(): String? = participants.firstOrNull { it != myUid }
+
+/**
+ * The clock a day-swap offer starts (phase 3a, spec §4.2, §5.1), or null when it starts none: no
+ * [answerBy] was chosen, [entry] answers an offer rather than making one, it has no group id to name
+ * its clock by, or the offer's first day is too near for a deadline.
+ *
+ * The cap is 00:00 of the first of [dates], and the deadline and the cap are worked out in the zone
+ * of the phone that offers, the zone its form showed them in. The clock carries the days that were
+ * written ([dates]), so a "No answer" can still say which after the offer is replaced (ruling 12).
+ */
+private fun swapClock(
+    pair: CustodyPair,
+    entry: DayOverride,
+    dates: List<String>,
+    answerBy: AnswerByPick?
+): RequestStart? {
+    val groupId = entry.groupId?.takeIf { entry.isPending }
+    val responder = pair.partnerUid()
+    if (answerBy == null || groupId == null || responder == null) return null
+    val days = dates.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val zone = ZoneId.systemDefault()
+    val cap = RequestCap.forSwap(days, zone)
+    val deadline = cap?.let { AnswerBy.resolve(answerBy, System.currentTimeMillis(), it, zone) } ?: return null
+    return RequestStart(
+        kind = RequestKind.SWAP,
+        ref = groupId,
+        familyId = pair.documentId,
+        responderUid = responder,
+        answerByMillis = deadline,
+        capMillis = cap,
+        firstDate = days.minOrNull(),
+        dayCount = dates.size
+    )
+}
+
+/**
+ * The clock a custody proposal starts (phase 3a, spec §4.2, §5.1), or null when it starts none: no
+ * [answerBy] was chosen, or the first change is too near for a deadline.
+ *
+ * Its reference is the proposal's `proposedAt`. The cap is 00:00 of the first day, from today, on
+ * which [proposed]'s proposal differs from [agreed] in anything the calendar shows (ruling 10), in
+ * the zone of the phone that proposes; a proposal that changes nothing ahead has none.
+ */
+private fun proposalClock(
+    pair: CustodyPair,
+    agreed: CustodyModel,
+    proposed: SharedCustody,
+    answerBy: AnswerByPick?
+): RequestStart? {
+    val proposal = proposed.proposal
+    val responder = pair.partnerUid()
+    if (answerBy == null || proposal == null || responder == null) return null
+    val zone = ZoneId.systemDefault()
+    val cap = RequestCap.forProposal(agreed, proposal.model, LocalDate.now(zone), zone)
+    val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), cap, zone) ?: return null
+    return RequestStart(
+        kind = RequestKind.PROPOSAL,
+        ref = proposal.proposedAt,
+        familyId = pair.documentId,
+        responderUid = responder,
+        answerByMillis = deadline,
+        capMillis = cap
+    )
+}
+
+/**
+ * [current] with [myUid]'s proposal withdrawn when it is still the one made at [proposedAt], or null —
+ * nothing to write — when it is not: answered, withdrawn or replaced meanwhile, or the co-parent's.
+ */
+private fun withdrawnIfUnanswered(current: SharedCustody?, proposedAt: String, myUid: String): SharedCustody? {
+    val proposal = current?.proposal ?: return null
+    if (proposal.proposedAt != proposedAt || proposal.proposedBy != myUid) return null
+    return CustodyProposalTransition.withdraw(current, myUid).getOrNull()
+}
+
+/**
+ * The push about a swap of [date]: its type and its date, and for a run of [dayCount] days the
+ * count — what the receiving device writes its sentence from, in the reader's language (SEC-3).
+ */
+private fun swapPush(date: String, status: DayOverrideStatus, dayCount: Int): Map<String, String> {
+    val action = when (status) {
+        DayOverrideStatus.PENDING -> "offered"
+        DayOverrideStatus.ACCEPTED -> "accepted"
+        DayOverrideStatus.DECLINED -> "declined"
+    }
+    // A run of days gets its own type carrying the count, rather than a date the reader
+    // would have to expand into a range. The count is a string like every other payload
+    // value: `notification_queue` documents hold strings, and the receiving device parses
+    // it — a type it cannot parse composes nothing at all, which is the SEC-3 rule.
+    return if (dayCount > 1) {
+        mapOf(
+            PushPayload.TYPE to "day_swap_group_$action",
+            PushPayload.DATE to date,
+            PushPayload.DAY_COUNT to dayCount.toString()
+        )
+    } else {
+        mapOf(
+            PushPayload.TYPE to "day_swap_$action",
+            PushPayload.DATE to date
+        )
+    }
+}
+
+/** [this] push with the request's deadline (phase 3a) when its clock was written; as it is otherwise. */
+private fun Map<String, String>.withAnswerBy(answerByMillis: Long?): Map<String, String> =
+    answerByMillis?.let { this + (PushPayload.ANSWER_BY to it.toString()) } ?: this

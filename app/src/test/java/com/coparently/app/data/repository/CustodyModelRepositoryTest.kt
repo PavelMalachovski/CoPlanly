@@ -2,20 +2,30 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.changerequests.AnswerBy
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
@@ -43,12 +53,14 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -79,6 +91,8 @@ class CustodyModelRepositoryTest {
     private lateinit var userRepository: UserRepository
     private lateinit var firestoreCustodyDataSource: FirestoreCustodyDataSource
     private lateinit var activityAnnouncer: ActivityAnnouncer
+    private lateinit var fcmService: FcmService
+    private lateinit var requestDeadlines: RequestDeadlineRepository
     private lateinit var repository: CustodyModelRepository
 
     @Before
@@ -91,12 +105,17 @@ class CustodyModelRepositoryTest {
         userRepository = mockk()
         firestoreCustodyDataSource = mockk()
         activityAnnouncer = mockk(relaxed = true)
+        fcmService = mockk(relaxed = true)
+        // Strict but for `start`, stubbed below: each test verifies the clocks it expects, and any
+        // other clock call is refused.
+        requestDeadlines = mockk()
         repository = CustodyModelRepository(
             custodyModelDao,
             userRepository,
             firestoreCustodyDataSource,
             activityAnnouncer,
-            mockk(relaxed = true),
+            fcmService,
+            requestDeadlines,
             CoroutineScope(dispatcher)
         )
 
@@ -106,6 +125,7 @@ class CustodyModelRepositoryTest {
         coEvery { firestoreCustodyDataSource.getCustody(any()) } returns null
         coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } returns Unit
         every { firestoreCustodyDataSource.observeCustody(any()) } returns flowOf(null)
+        coEvery { requestDeadlines.start(any()) } answers { clockFor(firstArg()) }
     }
 
     @After
@@ -1133,6 +1153,290 @@ class CustodyModelRepositoryTest {
         }
     }
 
+    // ---- request clocks (phase 3a) ------------------------------------------
+    //
+    // A swap offer and a custody proposal start their clock in the same action as the request,
+    // after its own write, and the request's first push says when the answer is due — but only
+    // when the clock was written: a refused clock leaves the request working as one without a
+    // clock (ruling 8).
+
+    @Test
+    fun `an offer with a deadline starts its clock after the swap is written and before the push, which says when`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val zone = ZoneId.systemDefault()
+            val date = LocalDate.now(zone).plusDays(10)
+            val started = slot<RequestStart>()
+            coEvery { requestDeadlines.start(capture(started)) } answers { clockFor(firstArg()) }
+
+            val result = repository.applyDayOverrides(date.toString(), offerOf(date.toString()), AnswerByPick.DEFAULT)
+
+            assertTrue(result.isSuccess)
+            coVerifyOrder {
+                firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
+                requestDeadlines.start(
+                    match {
+                        it.kind == RequestKind.SWAP && it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == date
+                    }
+                )
+                fcmService.queueNotificationForUser(
+                    PARTNER_UID,
+                    match { it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString() }
+                )
+            }
+            // The clock names the family the offer was made in and the parent who must answer, and
+            // it ends before the offer's first day with a day to spare for a last chance.
+            val cap = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            assertEquals(DOCUMENT_ID, started.captured.familyId)
+            assertEquals(PARTNER_UID, started.captured.responderUid)
+            assertEquals(cap, started.captured.capMillis)
+            assertTrue(started.captured.answerByMillis <= cap - AnswerBy.LAST_CHANCE_RESERVE_MILLIS)
+            assertTrue(started.captured.answerByMillis > System.currentTimeMillis())
+        }
+
+    @Test
+    fun `a run starts one clock for the days that landed`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        // The first day lands; the second is refused, which ends the run there.
+        coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } returns Unit andThenThrows
+            permissionDenied()
+        val first = LocalDate.now().plusDays(10)
+        val dates = (0L..2L).map { first.plusDays(it).toString() }
+
+        val result = repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT)
+
+        assertEquals(1, (result.exceptionOrNull() as PartialSwapRun).written)
+        coVerify(exactly = 1) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first })
+        }
+        // One day landed, so the co-parent is asked about one day, with its deadline.
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `an offer for today goes out without a clock`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        val today = LocalDate.now().toString()
+
+        val result = repository.applyDayOverrides(today, offerOf(today), AnswerByPick.DEFAULT)
+
+        // Today's cap is already behind: too soon for a deadline, so the offer goes out as a plain one.
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `answering a swap starts no clock`() = runTest(dispatcher) {
+        val date = LocalDate.now().plusDays(10).toString()
+        val theirs = DayOverride(
+            toParent = "mom",
+            requestedBy = PARTNER_UID,
+            requestedAt = "2026-10-15T09:00:00",
+            groupId = GROUP_ID
+        )
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+            remoteCustody().copy(dayOverrides = mapOf(date to theirs))
+
+        // Even handed a deadline, an answer is not a request: nobody waits on it.
+        repository.applyDayOverridesForDates(
+            listOf(date),
+            { current, day -> DayOverrideTransition.decideGroup(current, listOf(day), MY_UID, NOW_ISO, accept = true) },
+            AnswerByPick.DEFAULT
+        )
+
+        coVerify(exactly = 1) {
+            firestoreCustodyDataSource.setCustody(
+                DOCUMENT_ID,
+                PARTICIPANTS,
+                match { it.dayOverrides[date]?.status == DayOverrideStatus.ACCEPTED }
+            )
+        }
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.DAY_SWAP_ACCEPTED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `a refused clock still sends the offer, without answerBy`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        coEvery { requestDeadlines.start(any()) } returns null
+        val date = LocalDate.now().plusDays(10).toString()
+
+        val result = repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT)
+
+        // Review Focus 3: the rules refused the clock (an offline queue landing late, a fast phone),
+        // and the offer is still made, announced and pushed — as a request with no deadline.
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any()) }
+        coVerify(exactly = 1) {
+            activityAnnouncer.announce(match { it.kind == ActivityKind.DAY_SWAP_OFFERED }, any(), any())
+        }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `a proposal starts its clock under its proposedAt, capped at the first changed day`() = runTest(dispatcher) {
+        val zone = ZoneId.systemDefault()
+        // Every day with slot 2, and a proposed trip that gives slot 1 ten days from now onwards:
+        // nothing changes before that day, whatever today is.
+        val agreed = localModel().copy(id = REMOTE_MODEL_ID, patternDays = 7, momDayIndices = emptySet())
+        val changes = LocalDate.now(zone).plusDays(10)
+        val trip = SeasonalLayer.allWith("trip", "Trip", changes..changes.plusDays(3), "mom")
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody().copy(model = agreed)
+        val written = slot<SharedCustody>()
+        coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(written)) } returns Unit
+        val started = slot<RequestStart>()
+        coEvery { requestDeadlines.start(capture(started)) } answers { clockFor(firstArg()) }
+
+        val proposed = agreed.copy(seasonalLayers = listOf(trip))
+
+        val result = repository.submitPattern(proposed, answerBy = AnswerByPick.DEFAULT)
+
+        assertEquals(PatternSubmission.PROPOSED, result)
+        val cap = changes.atStartOfDay(zone).toInstant().toEpochMilli()
+        assertEquals(RequestKind.PROPOSAL, started.captured.kind)
+        assertEquals(requireNotNull(written.captured.proposal).proposedAt, started.captured.ref)
+        assertEquals(DOCUMENT_ID, started.captured.familyId)
+        assertEquals(PARTNER_UID, started.captured.responderUid)
+        assertEquals(cap, started.captured.capMillis)
+        assertTrue(started.captured.answerByMillis <= cap - AnswerBy.LAST_CHANCE_RESERVE_MILLIS)
+        assertNull(started.captured.firstDate)
+        assertNull(started.captured.dayCount)
+        coVerifyOrder {
+            firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
+            requestDeadlines.start(any())
+            activityAnnouncer.announce(match { it.kind == ActivityKind.CUSTODY_PROPOSED }, any(), any())
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.CUSTODY_PROPOSAL_PROPOSED &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `a pattern activated on an empty family starts no clock`() = runTest(dispatcher) {
+        // The pair has no document yet: nobody is asked, so nobody is waited on.
+        val result = repository.createWeekOnWeekOff(START_DATE, answerBy = AnswerByPick.DEFAULT)
+
+        assertEquals(PatternSubmission.ACTIVATED, result)
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+    }
+
+    @Test
+    fun `withdrawUnanswered withdraws only the same pending proposal of this parent`() = runTest(dispatcher) {
+        val mine = remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT))
+        val transform = slot<(SharedCustody?) -> SharedCustody?>()
+        coEvery { firestoreCustodyDataSource.transact(DOCUMENT_ID, PARTICIPANTS, capture(transform)) } answers {
+            transform.captured(mine)
+        }
+
+        assertTrue(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+
+        // Review Focus 5. Only the first of these four is written: the proposal this clock timed,
+        // still pending and still this parent's. Withdrawn, it leaves no decision behind.
+        val withdrawn = transform.captured(mine)
+        assertNotNull(withdrawn)
+        assertNull(withdrawn?.proposal)
+        assertNull(withdrawn?.lastDecision)
+        assertEquals(mine.model, withdrawn?.model)
+        // Replaced by a newer proposal of this parent's.
+        assertNull(transform.captured(remoteCustody().copy(proposal = proposalBy(MY_UID, "2026-10-16T09:00:00"))))
+        // Decided meanwhile: no proposal is pending any more.
+        assertNull(transform.captured(remoteCustody()))
+        // The co-parent's own proposal, made at the same moment.
+        assertNull(transform.captured(remoteCustody().copy(proposal = proposalBy(PARTNER_UID, PROPOSED_AT))))
+        // What was written is mirrored into the family's own row.
+        coVerify(exactly = 1) { custodyModelDao.insertModel(match { it.familyId == DOCUMENT_ID }) }
+
+        // A transaction that wrote nothing withdrew nothing.
+        coEvery { firestoreCustodyDataSource.transact(any(), any(), capture(transform)) } answers {
+            transform.captured(remoteCustody())
+        }
+        assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+    }
+
+    @Test
+    fun `withdrawUnanswered acts on the clock's family while another is on screen, and not on an ended one`() =
+        runTest(dispatcher) {
+            inTwoFamilies(onScreen = OTHER_PARTNER_UID)
+            val mine = remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT))
+            val transform = slot<(SharedCustody?) -> SharedCustody?>()
+            coEvery { firestoreCustodyDataSource.transact(any(), any(), capture(transform)) } answers {
+                transform.captured(mine)
+            }
+
+            // uidC's family is on screen; the clock is uidB's family's.
+            assertTrue(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+            coVerify(exactly = 1) { firestoreCustodyDataSource.transact(DOCUMENT_ID, PARTICIPANTS, any()) }
+            coVerify(exactly = 0) { firestoreCustodyDataSource.transact(OTHER_DOCUMENT_ID, any(), any()) }
+
+            // uidB's family has ended; uidC's is the only one left. Nothing is withdrawn there.
+            pairedWith(OTHER_PARTNER_UID)
+            assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+            coVerify(exactly = 1) { firestoreCustodyDataSource.transact(any(), any(), any()) }
+        }
+
+    /** A one-day offer of [date] to slot 1, as `CalendarViewModel.offerDaySwap` makes it. */
+    private fun offerOf(date: String): (Map<String, DayOverride>) -> Result<Map<String, DayOverride>> = { current ->
+        DayOverrideTransition.offer(current, date, "mom", MY_UID, NOW_ISO, groupId = GROUP_ID)
+    }
+
+    /** One day of a run offered to slot 1, as `CalendarViewModel.offerDaySwapForDates` makes it. */
+    private fun offerOfRun(current: Map<String, DayOverride>, date: String): Result<Map<String, DayOverride>> =
+        DayOverrideTransition.offerAll(current, mapOf(date to "mom"), MY_UID, NOW_ISO, GROUP_ID)
+
+    private fun proposalBy(uid: String, at: String) = CustodyProposal(
+        model = localModel().copy(id = "proposed"),
+        repeatYearly = true,
+        proposedBy = uid,
+        proposedAt = at
+    )
+
+    /**
+     * The clock [start] would write, with a deadline of its own ([CLOCK_ANSWER_BY]), so a push that
+     * says when is shown to say the clock's time rather than one worked out beside it.
+     */
+    private fun clockFor(start: RequestStart) = RequestDeadline(
+        id = "clock-1",
+        kind = start.kind,
+        ref = start.ref,
+        familyId = start.familyId,
+        proposerUid = MY_UID,
+        responderUid = start.responderUid,
+        answerByMillis = CLOCK_ANSWER_BY,
+        capMillis = start.capMillis,
+        firstDate = start.firstDate,
+        dayCount = start.dayCount
+    )
+
     // ---- fixtures ---------------------------------------------------------
 
     /** Points both the one-shot and the streaming uid lookups at [partnerUid]. */
@@ -1213,6 +1517,18 @@ class CustodyModelRepositoryTest {
     )
 
     private companion object {
+        /** The group id of an offer this device makes. */
+        const val GROUP_ID = "group-1"
+
+        /** When an offer or a proposal in these tests was made. */
+        const val NOW_ISO = "2026-10-15T09:00:00"
+
+        /** The `proposedAt` of the proposal a clock times. */
+        const val PROPOSED_AT = "2026-10-15T09:30:00"
+
+        /** The deadline a started clock answers with: 2030-01-01, unlike anything the code works out. */
+        const val CLOCK_ANSWER_BY = 1_893_456_000_000L
+
         /** A parenting-plan citation as `PlanCitationCodec` writes it (MON-21). */
         const val PLAN_CITATION = "p1|care_weekday|0123456789abcdef"
 

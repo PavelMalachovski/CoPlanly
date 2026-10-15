@@ -219,29 +219,35 @@ class TwoParentCustodyTest : TwoParentTest() {
     /**
      * Offers each day in [toSlotByDate] from [parent], exactly as the calendar does: one day through
      * `applyDayOverrides` (`CalendarViewModel.offerDaySwap`), a run through
-     * `applyDayOverridesForDates` under one group id (`offerDaySwapForDates`).
+     * `applyDayOverridesForDates` (`offerDaySwapForDates`), each under a group id of its own.
      */
     private suspend fun offerDays(
         parent: EmulatorParent,
         toSlotByDate: Map<String, String>
     ): Result<Map<String, DayOverride>> {
         val atIso = LocalDateTime.now().toString()
+        val groupId = UUID.randomUUID().toString()
         if (toSlotByDate.size == 1) {
             val (date, toSlot) = toSlotByDate.entries.single()
-            return parent.custodyRepository.applyDayOverrides(date) { current ->
-                DayOverrideTransition.offer(current, date, toSlot, parent.uid, atIso)
-            }
-        }
-        val groupId = UUID.randomUUID().toString()
-        return parent.custodyRepository.applyDayOverridesForDates(toSlotByDate.keys.sorted()) { current, date ->
-            DayOverrideTransition.offerAll(
-                current = current,
-                toParentByDate = mapOf(date to toSlotByDate.getValue(date)),
-                byUid = parent.uid,
-                atIso = atIso,
-                groupId = groupId
+            return parent.custodyRepository.applyDayOverrides(
+                date = date,
+                transform = { current ->
+                    DayOverrideTransition.offer(current, date, toSlot, parent.uid, atIso, groupId = groupId)
+                }
             )
         }
+        return parent.custodyRepository.applyDayOverridesForDates(
+            dates = toSlotByDate.keys.sorted(),
+            transform = { current, date ->
+                DayOverrideTransition.offerAll(
+                    current = current,
+                    toParentByDate = mapOf(date to toSlotByDate.getValue(date)),
+                    byUid = parent.uid,
+                    atIso = atIso,
+                    groupId = groupId
+                )
+            }
+        )
     }
 
     /**
@@ -254,13 +260,16 @@ class TwoParentCustodyTest : TwoParentTest() {
         accept: Boolean
     ): Result<Map<String, DayOverride>> {
         val now = LocalDateTime.now().toString()
-        return parent.custodyRepository.applyDayOverridesForDates(dates) { current, date ->
-            if (DayOverrideTransition.awaitsAnswerFrom(current, date, parent.uid)) {
-                DayOverrideTransition.decideGroup(current, listOf(date), parent.uid, now, accept)
-            } else {
-                Result.success(current)
+        return parent.custodyRepository.applyDayOverridesForDates(
+            dates = dates,
+            transform = { current, date ->
+                if (DayOverrideTransition.awaitsAnswerFrom(current, date, parent.uid)) {
+                    DayOverrideTransition.decideGroup(current, listOf(date), parent.uid, now, accept)
+                } else {
+                    Result.success(current)
+                }
             }
-        }
+        )
     }
 
     /**

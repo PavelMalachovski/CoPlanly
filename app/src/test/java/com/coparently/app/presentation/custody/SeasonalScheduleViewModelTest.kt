@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
@@ -37,6 +39,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.Year
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -81,7 +84,7 @@ class SeasonalScheduleViewModelTest {
         every { repository.observeDayOverrides() } returns flowOf(emptyMap())
         coEvery { repository.getActiveModelSync() } returns model
         coEvery { repository.readShared() } returns read
-        coEvery { repository.submitSeasonalLayers(any()) } returns PatternSubmission.PROPOSED
+        coEvery { repository.submitSeasonalLayers(any(), any(), any()) } returns PatternSubmission.PROPOSED
         every { users.observeCurrentUserId() } returns flowOf("alice")
         every { users.observeUserById(any()) } returns flowOf(null)
         coEvery { users.getCurrentUserId() } returns "alice"
@@ -205,7 +208,46 @@ class SeasonalScheduleViewModelTest {
         vm.deleteLayer("summer")
         advanceUntilIdle()
 
-        coVerify { repository.submitSeasonalLayers(emptyList()) }
+        coVerify { repository.submitSeasonalLayers(emptyList(), null, any()) }
+    }
+
+    @Test
+    fun `saving a layer passes the deadline, deleting one sends the default`() = runTest(dispatcher) {
+        val pick = AnswerByPick.Preset(AnswerByPreset.WEEK)
+        val vm = viewModel(model = base.copy(seasonalLayers = listOf(summer)))
+
+        vm.saveLayer(draft("Christmas", "2026-12-24", "2026-12-26"), editingId = null, answerBy = pick)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.submitSeasonalLayers(match { it.size == 2 }, null, pick) }
+
+        // Ruling 9: the delete's confirmation has no deadline block, so it goes with the default.
+        vm.deleteLayer("summer")
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.submitSeasonalLayers(emptyList(), null, AnswerByPick.DEFAULT) }
+    }
+
+    @Test
+    fun `a layer's cap is its first day when that day changes`() = runTest(dispatcher) {
+        val zone = ZoneId.systemDefault()
+        val vm = viewModel()
+        advanceUntilIdle()
+        val first = LocalDate.now(zone).plusDays(10)
+        val whose = base.getCustodyFor(first)
+        val other = if (whose == "mom") "dad" else "mom"
+
+        // The layer gives its first day to the parent who does not have it: that day changes.
+        val moves = SeasonalLayerDraft(
+            name = "Trip",
+            from = first,
+            to = first.plusDays(2),
+            shape = LayerShape.ALL_WITH,
+            firstSlot = other
+        )
+        assertEquals(first.atStartOfDay(zone).toInstant().toEpochMilli(), vm.answerByCap(moves, editingId = null))
+
+        // One that gives the day to whoever has it already changes nothing.
+        val keeps = SeasonalLayerDraft("Same", from = first, to = first, shape = LayerShape.ALL_WITH, firstSlot = whose)
+        assertNull(vm.answerByCap(keeps, editingId = null))
     }
 
     @Test

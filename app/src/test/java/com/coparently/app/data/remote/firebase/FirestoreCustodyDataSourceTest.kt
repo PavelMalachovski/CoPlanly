@@ -12,9 +12,11 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Transaction
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -39,6 +41,7 @@ import java.time.LocalDate
 class FirestoreCustodyDataSourceTest {
 
     private lateinit var documentRef: DocumentReference
+    private lateinit var firestore: FirebaseFirestore
     private lateinit var dataSource: FirestoreCustodyDataSource
 
     @Before
@@ -47,7 +50,7 @@ class FirestoreCustodyDataSourceTest {
         val collection = mockk<CollectionReference>()
         every { collection.document(DOCUMENT_ID) } returns documentRef
 
-        val firestore = mockk<FirebaseFirestore>()
+        firestore = mockk()
         every { firestore.collection("custody_models") } returns collection
 
         dataSource = FirestoreCustodyDataSource(firestore)
@@ -383,6 +386,39 @@ class FirestoreCustodyDataSourceTest {
         assertEquals(emptyList<String>(), proposal?.contactWindowsWire)
         assertTrue(proposal?.model?.contactWindows.orEmpty().isEmpty())
     }
+
+    // ---- the transaction (phase 3a) ---------------------------------------------
+
+    @Test
+    fun `a transaction writes what its transform answers, sorted, and nothing when it answers null`() =
+        runTest {
+            // Firestore runs the function inside its own transaction; here it runs it once.
+            val transaction = mockk<Transaction>()
+            every { transaction.get(documentRef) } returns snapshotOf(document("proposal" to proposalMap()))
+            val payload = slot<Any>()
+            every { transaction.set(documentRef, capture(payload)) } returns transaction
+            every { firestore.runTransaction(any<Transaction.Function<SharedCustody?>>()) } answers {
+                Tasks.forResult(firstArg<Transaction.Function<SharedCustody?>>().apply(transaction))
+            }
+            var seen: SharedCustody? = null
+
+            val written = dataSource.transact(DOCUMENT_ID, listOf(LATER_UID, EARLIER_UID)) { current ->
+                seen = current
+                current?.copy(proposal = null)
+            }
+
+            // The transform saw the document as it stood, parsed as every read parses it.
+            assertEquals(proposal(), seen?.proposal)
+            // What it answered is what was written and what comes back.
+            assertNull(written?.proposal)
+            val document = payload.captured as Map<*, *>
+            assertEquals(listOf(EARLIER_UID, LATER_UID), document["participants"])
+            assertFalse(document.containsKey("proposal"))
+
+            // Answering null writes nothing.
+            assertNull(dataSource.transact(DOCUMENT_ID, listOf(EARLIER_UID, LATER_UID)) { null })
+            verify(exactly = 1) { transaction.set(any<DocumentReference>(), any()) }
+        }
 
     // ---- fixtures -----------------------------------------------------------
 

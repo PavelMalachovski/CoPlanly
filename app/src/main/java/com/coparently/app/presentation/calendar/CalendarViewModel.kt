@@ -8,6 +8,7 @@ import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PartialSwapRun
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.CustodyChangeAnnouncement
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyResolver
@@ -312,11 +313,15 @@ class CalendarViewModel @Inject constructor(
      * outcome the parent has to see, and this is the one screen where a silent no-op would look
      * exactly like success.
      *
+     * The day is a group of one (phase 3a): its group id names the offer's clock, as a run's does.
+     *
      * @param date The day being offered.
      * @param toParent The slot that would take it — `"mom"` or `"dad"`.
      * @param note Optional free text; blank normalises to none.
+     * @param answerBy The deadline the parent chose in the sheet, or null for none: the offer then
+     *   goes without a clock, as it did before.
      */
-    fun offerDaySwap(date: LocalDate, toParent: String, note: String? = null) {
+    fun offerDaySwap(date: LocalDate, toParent: String, note: String? = null, answerBy: AnswerByPick? = null) {
         viewModelScope.launch {
             val myUid = parents.value.me?.uid
             if (myUid == null) {
@@ -324,16 +329,22 @@ class CalendarViewModel @Inject constructor(
                 return@launch
             }
             val iso = date.toString()
-            custodyModelRepository.applyDayOverrides(iso) { current ->
-                DayOverrideTransition.offer(
-                    current = current,
-                    date = iso,
-                    toParent = toParent,
-                    byUid = myUid,
-                    atIso = LocalDateTime.now().toString(),
-                    note = note
-                )
-            }.onFailure { _swapError.value = SwapError.Refused }
+            val groupId = UUID.randomUUID().toString()
+            custodyModelRepository.applyDayOverrides(
+                date = iso,
+                transform = { current ->
+                    DayOverrideTransition.offer(
+                        current = current,
+                        date = iso,
+                        toParent = toParent,
+                        byUid = myUid,
+                        atIso = LocalDateTime.now().toString(),
+                        note = note,
+                        groupId = groupId
+                    )
+                },
+                answerBy = answerBy
+            ).onFailure { _swapError.value = SwapError.Refused }
         }
     }
 
@@ -352,11 +363,14 @@ class CalendarViewModel @Inject constructor(
      * @param dates The selected days, in any order; duplicates collapse.
      * @param toParentFor Resolves the slot a given day would move to, or null when unknown.
      * @param note Optional free text, applied to every day of the group.
+     * @param answerBy The deadline the parent chose in the sheet, or null for none; one clock times
+     *   the whole group.
      */
     fun offerDaySwapForDates(
         dates: Collection<LocalDate>,
         toParentFor: (LocalDate) -> String?,
-        note: String? = null
+        note: String? = null,
+        answerBy: AnswerByPick? = null
     ) {
         viewModelScope.launch {
             val myUid = parents.value.me?.uid
@@ -373,16 +387,20 @@ class CalendarViewModel @Inject constructor(
             }
             val groupId = UUID.randomUUID().toString()
             val atIso = LocalDateTime.now().toString()
-            custodyModelRepository.applyDayOverridesForDates(targets.keys.toList()) { current, date ->
-                DayOverrideTransition.offerAll(
-                    current = current,
-                    toParentByDate = mapOf(date to targets.getValue(date)),
-                    byUid = myUid,
-                    atIso = atIso,
-                    groupId = groupId,
-                    note = note
-                )
-            }.onFailure { cause ->
+            custodyModelRepository.applyDayOverridesForDates(
+                dates = targets.keys.toList(),
+                transform = { current, date ->
+                    DayOverrideTransition.offerAll(
+                        current = current,
+                        toParentByDate = mapOf(date to targets.getValue(date)),
+                        byUid = myUid,
+                        atIso = atIso,
+                        groupId = groupId,
+                        note = note
+                    )
+                },
+                answerBy = answerBy
+            ).onFailure { cause ->
                 _swapError.value = if (cause is PartialSwapRun) {
                     SwapError.Partial(cause.written, cause.total)
                 } else {
