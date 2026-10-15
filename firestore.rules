@@ -1521,9 +1521,12 @@ service cloud.firestore {
     // and `closedAt` are `FieldValue.serverTimestamp()`, pinned to `request.time` as
     // `event_versions.recordedAt` is: a millis value a client chose, bounded to minutes of
     // `request.time`, would be refused whenever an offline phone's queue lands hours later. What
-    // a phone reports about itself — delivered, opened, the times of its reminders — is epoch
-    // millis from its own clock, checked against the document, and allowed to run five minutes
-    // ahead of the server's because device clocks drift.
+    // a phone reads off its own clock — when it received the clock, when it opened the request,
+    // where a last chance ends — is epoch millis checked against the server's, with five minutes
+    // either way because device clocks drift. Either way matters: a clock that is a little wrong
+    // is wrong by the same amount on every retry, so a bound with room on one side only refuses
+    // such a phone for good. The reminders get none: they are planned from the document's own
+    // `createdAt` and deadline, so they are checked against those, exactly.
 
     // The farthest deadline a clock may carry: 31 days past the write. The app clamps itself to
     // 30 (`AnswerBy.MAX_AHEAD_MILLIS`); the day between is for a phone whose clock runs fast.
@@ -1531,7 +1534,7 @@ service cloud.firestore {
       return 31 * 24 * 60 * 60 * 1000;
     }
 
-    // How far a phone's own report of "now" may run ahead of the server's: five minutes.
+    // How far a phone's own clock may be from the server's, behind or ahead: five minutes.
     function requestClockSkewMillis() {
       return 5 * 60 * 1000;
     }
@@ -1622,7 +1625,9 @@ service cloud.firestore {
              !('remindersPlanned' in before) &&
              !('reminderTimesMillis' in before) &&
              after.deliveredAtMillis is int &&
-             after.deliveredAtMillis >= before.createdAt.toMillis() &&
+             // Stamped by the phone's own clock about a second after the server created the clock,
+             // so a phone that runs behind stamps a moment before `createdAt`: room for that.
+             after.deliveredAtMillis >= before.createdAt.toMillis() - requestClockSkewMillis() &&
              after.deliveredAtMillis <= request.time.toMillis() + requestClockSkewMillis() &&
              after.remindersPlanned is int &&
              after.remindersPlanned >= 0 &&
@@ -1637,15 +1642,16 @@ service cloud.firestore {
                                        before.createdAt.toMillis(), before.answerByMillis);
     }
 
-    // The answering parent opening the request for the first time: once, after the clock existed
-    // and no further ahead than the phone's clock may run.
+    // The answering parent opening the request for the first time: once, and as the phone's own
+    // clock reads it — no more than the skew before the clock was created and no more than the
+    // skew past the server's time, the same room delivery has and for the same reason.
     function requestClockOpeningWrite(before, after) {
       return request.auth.uid == before.responderUid &&
              after.diff(before).affectedKeys().hasOnly(['seenAtMillis']) &&
              after.diff(before).affectedKeys().hasAll(['seenAtMillis']) &&
              !('seenAtMillis' in before) &&
              after.seenAtMillis is int &&
-             after.seenAtMillis >= before.createdAt.toMillis() &&
+             after.seenAtMillis >= before.createdAt.toMillis() - requestClockSkewMillis() &&
              after.seenAtMillis <= request.time.toMillis() + requestClockSkewMillis();
     }
 
@@ -1664,6 +1670,12 @@ service cloud.firestore {
     // The proposer's last chance, given once, after the deadline and before the clock was closed.
     // The server stamps when it was given; it ends within 24 hours of that and, when the request
     // has a cap, no later than the cap — a last chance must not outlive the thing it decides.
+    //
+    // **The 24 hours get the skew on top.** The proposer's phone ends a last chance a day from its
+    // own now (`RequestClock.lastChanceWindowMillis`), and this measures the day from the server's:
+    // a phone whose clock leads the server's by more than the write's latency would otherwise send
+    // an end past the bound on every retry. The cap gets none — it is a stored time, not a clock
+    // reading, and the phone ends a last chance an hour before it.
     function requestClockLastChanceWrite(before, after) {
       return request.auth.uid == before.proposerUid &&
              after.diff(before).affectedKeys().hasOnly(['lastChanceAt', 'lastChanceUntilMillis']) &&
@@ -1676,7 +1688,8 @@ service cloud.firestore {
              after.lastChanceUntilMillis is int &&
              after.lastChanceUntilMillis > request.time.toMillis() &&
              after.lastChanceUntilMillis <=
-               request.time.toMillis() + requestClockLastChanceMillis() &&
+               request.time.toMillis() + requestClockLastChanceMillis() +
+               requestClockSkewMillis() &&
              (!('capMillis' in before) || after.lastChanceUntilMillis <= before.capMillis);
     }
 

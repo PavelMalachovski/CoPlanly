@@ -16,7 +16,10 @@
  *   the creation time never move after the create, and neither parent writes the other's fields.
  * - **The server vouches for the times that matter.** `createdAt`, `lastChanceAt` and `closedAt`
  *   are the server's clock (pinned to `request.time`, as `event_versions.recordedAt` is). What a
- *   phone reports about itself may run five minutes ahead of the server and no more.
+ *   phone reads off its own clock - when it received or opened a request, where a last chance
+ *   ends - may be five minutes either side of the server's and no more: a clock that is a little
+ *   wrong is wrong by the same amount on every retry, so a bound with no room for it refuses that
+ *   phone for good.
  * - **Nothing in the clock refuses an answer.** That is the point of these rules not touching
  *   `change_requests`, `custody_models` or `events`: a co-parent on an older build answers a
  *   request whatever its clock says.
@@ -438,9 +441,10 @@ describe('request_deadlines', () => {
     }
     await assertFails(clock(BOB).update(plan(1, {reminderTimesMillis: [now + HOUR + 0.5]})));
     await assertFails(clock(BOB).update(plan(1, {reminderTimesMillis: [String(now + HOUR)]})));
-    // Delivery cannot precede the clock, and a phone that is ten minutes fast is not believed
-    // (four minutes is: device clocks drift).
-    await assertFails(clock(BOB).update(plan(1, {deliveredAtMillis: createdAt - 1})));
+    // A phone's clock may be a few minutes off the server's, and ten minutes is not believed:
+    // not ten before the clock was created, nor ten ahead of the server (four minutes is either
+    // way: device clocks drift, see the skew cases below).
+    await assertFails(clock(BOB).update(plan(1, {deliveredAtMillis: createdAt - 10 * MINUTE})));
     await assertFails(clock(BOB).update(plan(1, {deliveredAtMillis: now + 10 * MINUTE})));
     await assertFails(clock(BOB).update(plan(1, {deliveredAtMillis: String(now)})));
     await assertFails(clock(BOB).update(plan(1, {deliveredAtMillis: now + 0.5})));
@@ -463,24 +467,56 @@ describe('request_deadlines', () => {
     })));
   });
 
+  it('lets a phone stamp delivery five minutes either side of the server, and no further', async () => {
+    // The answering phone stamps delivery with its own clock about a second after the server
+    // creates the clock. One that runs even slightly behind stamps a moment *before* `createdAt`,
+    // and a retry stamps the same lag again: with no room for it, that phone is refused for good.
+    const doc = storedClock({});
+    const createdAt = doc.createdAt.toMillis();
+    const now = Date.now();
+    const deliveredAt = (millis) => plan(1, {deliveredAtMillis: millis});
+    await put(doc);
+    await assertFails(clock(BOB).update(deliveredAt(createdAt - 10 * MINUTE)));
+    await assertSucceeds(clock(BOB).update(deliveredAt(createdAt - 4 * MINUTE)));
+    // And the same room on the fast side, on a fresh clock (a plan is written once).
+    await put(doc);
+    await assertFails(clock(BOB).update(deliveredAt(now + 10 * MINUTE)));
+    await assertSucceeds(clock(BOB).update(deliveredAt(now + 4 * MINUTE)));
+  });
+
   it('lets the answering parent record opening once', async () => {
     const doc = storedClock(plan(2));
     const createdAt = doc.createdAt.toMillis();
     const now = Date.now();
     await put(doc);
-    // Only the answering parent opens a request; it is an int, after the clock existed and not
-    // far ahead of the server.
+    // Only the answering parent opens a request; it is an int, and within a few minutes of the
+    // server's clock - not ten before the clock was created, nor ten ahead of the server.
     await assertFails(clock(ALICE).update({seenAtMillis: now}));
     await assertFails(clock(CAROL).update({seenAtMillis: now}));
     await assertFails(clock(BOB).update({seenAtMillis: String(now)}));
     await assertFails(clock(BOB).update({seenAtMillis: now + 0.5}));
-    await assertFails(clock(BOB).update({seenAtMillis: createdAt - 1}));
+    await assertFails(clock(BOB).update({seenAtMillis: createdAt - 10 * MINUTE}));
     await assertFails(clock(BOB).update({seenAtMillis: now + 10 * MINUTE}));
     await assertFails(clock(BOB).update({seenAtMillis: now, remindersShown: 1}));
     await assertSucceeds(clock(BOB).update({seenAtMillis: now + 4 * MINUTE}));
     // Once.
     await assertFails(clock(BOB).update({seenAtMillis: now}));
     await assertFails(clock(BOB).update({seenAtMillis: now + MINUTE}));
+  });
+
+  it('lets a phone stamp opening five minutes either side of the server, and no further', async () => {
+    // The same room as delivery, for the same reason: a phone a little behind the server stamps
+    // the opening of a request it was just handed before the clock existed, every time.
+    const doc = storedClock({});
+    const createdAt = doc.createdAt.toMillis();
+    const now = Date.now();
+    await put(doc);
+    await assertFails(clock(BOB).update({seenAtMillis: createdAt - 10 * MINUTE}));
+    await assertSucceeds(clock(BOB).update({seenAtMillis: createdAt - 4 * MINUTE}));
+    // And on the fast side, on a fresh clock (opening is written once).
+    await put(doc);
+    await assertFails(clock(BOB).update({seenAtMillis: now + 10 * MINUTE}));
+    await assertSucceeds(clock(BOB).update({seenAtMillis: now + 4 * MINUTE}));
   });
 
   it('lets the answering parent count shown reminders one at a time, up to the plan', async () => {
@@ -551,6 +587,23 @@ describe('request_deadlines', () => {
     // A clock that was closed stays closed.
     await put(pastDueClock({outcome: 'no_answer', closedAt: Timestamp.fromMillis(now - MINUTE)}));
     await assertFails(clock(ALICE).update(lastChance(now + HOUR)));
+  });
+
+  it('lets a last chance end five minutes past a day, and no later', async () => {
+    // The proposer's phone ends a last chance a day from *its* now, and the rule measures the day
+    // from the server's. A phone whose clock leads by more than the write's latency sends an end
+    // past a day, and the lead is the same on every retry, so there is room for a few minutes of it.
+    // A day exactly is accepted too, which pins the length: nothing else reaches the 24 hours.
+    // (The cap takes no such room: the cases above refuse an end a minute past it.)
+    const now = Date.now();
+    const giveLastChance = async (untilMillis) => {
+      await put(pastDueClock({}));
+      return clock(ALICE).update(lastChance(untilMillis));
+    };
+    await assertSucceeds(giveLastChance(now + 24 * HOUR));
+    await assertSucceeds(giveLastChance(now + 24 * HOUR + 4 * MINUTE));
+    await assertFails(giveLastChance(now + 24 * HOUR + 10 * MINUTE));
+    await assertFails(giveLastChance(now + 25 * HOUR));
   });
 
   it('lets the proposer close it as no_answer once, only after the deadline', async () => {
