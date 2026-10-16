@@ -2345,8 +2345,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       and end jobs wait for a network** (`RequestClockWork.needsNetwork`): they read the server, and
       unconstrained they spent their three runs in about ninety seconds offline, so a proposer
       offline at the deadline was never told. A deadline already passed is not armed again, so its
-      notice is lost only when every run fails online. A reminder is unconstrained and more than half
-      an hour late posts nothing (no reminders at night, none during a last chance — the last-chance push is the reminder).
+      notice is lost only when every run fails online. A reminder is unconstrained; one more than half
+      an hour late posts nothing, nor does one whose job fires in the quiet hours of the phone's zone
+      (`ReminderPlan.isQuietAt`, checked again at fire time because Doze delays jobs). No reminders
+      at night, none during a last chance — the last-chance push is the reminder.
     - **An older build's late answer counts.** No rule refuses an answer because a clock says "No
       answer" — that would put a read into three hot rules for an edge only an older build reaches
       — and History shows the answer it is. Only a custody proposal is withdrawn at the end, in a

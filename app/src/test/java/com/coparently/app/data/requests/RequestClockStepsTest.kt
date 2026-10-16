@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 /**
@@ -58,7 +59,7 @@ class RequestClockStepsTest {
         val clock = clock(RequestKind.CHANGE)
         signedInAs(BOB)
         reads(clock, RecordStatus.PENDING)
-        now = SENT + 10 * HOUR
+        now = DAYTIME
 
         assertEquals(StepResult.DONE, steps.reminder(clock.id, plannedAtMillis = now - 5 * MINUTE))
 
@@ -74,7 +75,7 @@ class RequestClockStepsTest {
     fun `a reminder posts nothing for an answered, past-deadline or ended-family request or another account's clock`() =
         runTest {
             val clock = clock(RequestKind.CHANGE)
-            now = SENT + 10 * HOUR
+            now = DAYTIME
 
             signedInAs(BOB)
             reads(clock, RecordStatus.ANSWERED)
@@ -91,7 +92,7 @@ class RequestClockStepsTest {
             now = clock.answerByMillis + MINUTE
             assertEquals("past the deadline", StepResult.DONE, steps.reminder(clock.id, now))
 
-            now = SENT + 10 * HOUR
+            now = DAYTIME
             signedInAs(ALICE)
             assertEquals("the proposer's own phone", StepResult.DONE, steps.reminder(clock.id, now))
             signedInAs("uidZ")
@@ -106,7 +107,7 @@ class RequestClockStepsTest {
         val clock = clock(RequestKind.CHANGE)
         signedInAs(BOB)
         reads(clock, RecordStatus.PENDING)
-        now = SENT + 10 * HOUR
+        now = DAYTIME
 
         assertEquals(StepResult.DONE, steps.reminder(clock.id, plannedAtMillis = now - 31 * MINUTE))
         coVerify(exactly = 0) { notices.remind(any()) }
@@ -117,10 +118,29 @@ class RequestClockStepsTest {
     }
 
     @Test
+    fun `a reminder that fires in the answering parent's quiet hours posts nothing and counts nothing`() = runTest {
+        // Planned for 20:50, outside the night, and held back by Doze past 21:00: the plan's quiet
+        // hours are checked again at fire time, on this phone's clock (final review M-1).
+        val clock = clock(RequestKind.CHANGE)
+        signedInAs(BOB)
+        reads(clock, RecordStatus.PENDING)
+        now = utc(2026, 5, 6, 21, 30)
+
+        assertEquals(StepResult.DONE, steps.reminder(clock.id, plannedAtMillis = now - 25 * MINUTE))
+        coVerify(exactly = 0) { notices.remind(any()) }
+        coVerify(exactly = 0) { repository.reportReminderShown(any()) }
+
+        now = utc(2026, 5, 6, 20, 30)
+        assertEquals("the evening before is not night", StepResult.DONE, steps.reminder(clock.id, now - 5 * MINUTE))
+        coVerify(exactly = 1) { notices.remind(clock) }
+        coVerify(exactly = 1) { repository.reportReminderShown(clock) }
+    }
+
+    @Test
     fun `a reminder whose clock or record cannot be read is tried again`() = runTest {
         val clock = clock(RequestKind.SWAP)
         signedInAs(BOB)
-        now = SENT + 10 * HOUR
+        now = DAYTIME
         coEvery { repository.get(clock.id) } returns null
         assertEquals(StepResult.RETRY, steps.reminder(clock.id, now))
 
@@ -371,6 +391,9 @@ class RequestClockStepsTest {
         coEvery { records.lookOnServer(clock) } returns RecordLook(status, card)
     }
 
+    private fun utc(year: Int, month: Int, day: Int, hour: Int, minute: Int): Long =
+        LocalDateTime.of(year, month, day, hour, minute).toInstant(ZoneOffset.UTC).toEpochMilli()
+
     private fun clock(kind: RequestKind): RequestDeadline {
         val ref = if (kind == RequestKind.PROPOSAL) "2026-05-05T09:00:00" else "ref-1"
         return RequestDeadline(
@@ -393,6 +416,9 @@ class RequestClockStepsTest {
         const val HOUR = 60 * MINUTE
         const val SENT = 1_778_000_000_000L
         const val ANSWER_BY = SENT + 72 * HOUR
+
+        /** 12:53 UTC the day after [SENT]: inside the window and outside the quiet hours. */
+        const val DAYTIME = SENT + 20 * HOUR
         val CARD = CardSubject(ActivityEntityType.CHANGE_REQUEST, "ev-9", "Dentist")
     }
 }

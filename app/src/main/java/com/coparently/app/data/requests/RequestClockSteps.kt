@@ -1,6 +1,7 @@
 package com.coparently.app.data.requests
 
 import com.coparently.app.domain.changerequests.ClockState
+import com.coparently.app.domain.changerequests.ReminderPlan
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
@@ -26,7 +27,9 @@ enum class StepResult {
  *
  * - **A reminder**, on the answering parent's phone: posted and counted only while the request is
  *   open and its record still waits, and not when the job runs more than half an hour after the
- *   time it was planned for — a phone that was off must not remind at night (ruling 6).
+ *   time it was planned for — a phone that was off must not remind at night (ruling 6) — nor when
+ *   it runs in the quiet hours of the phone's zone now ([ReminderPlan.isQuietAt]): Doze can hold a
+ *   reminder planned for 20:50 past 21:00, and the parent may have travelled since the plan.
  * - **The deadline**, on the proposer's phone: while a last chance can still be given and the
  *   record still waits, the proposer is told and the end is scheduled; when none can be given, the
  *   end runs at once.
@@ -67,6 +70,7 @@ class RequestClockSteps @Inject constructor(
         val now = time.nowMillis()
         val due = clock.responderUid == repository.signedInUid() &&
             now - plannedAtMillis <= LATE_REMINDER_MILLIS &&
+            !ReminderPlan.isQuietAt(now, time.zone()) &&
             RequestClock.stateOf(clock, now) == ClockState.OPEN
         if (!due) return StepResult.DONE
         return when (records.look(clock).status) {
