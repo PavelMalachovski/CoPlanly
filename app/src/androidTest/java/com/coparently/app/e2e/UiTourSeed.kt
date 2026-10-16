@@ -116,9 +116,12 @@ class UiTourSeed @Inject constructor(
             } else {
                 family.aliceSlot
             }
-            bob.custodyRepository.applyDayOverrides(date) { current ->
-                DayOverrideTransition.offer(current, date, toSlot, bob.uid, LocalDateTime.now().toString())
-            }.getOrThrow()
+            bob.custodyRepository.applyDayOverrides(
+                date = date,
+                transform = { current ->
+                    DayOverrideTransition.offer(current, date, toSlot, bob.uid, LocalDateTime.now().toString())
+                }
+            ).getOrThrow()
         }
         attempt("change request") {
             val dentist = events.getAllEvents().first().first { it.title == content.events.dentist }

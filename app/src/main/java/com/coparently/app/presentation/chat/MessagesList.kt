@@ -50,7 +50,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
-import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
 import com.coparently.app.domain.model.Message
@@ -485,12 +484,14 @@ fun MessageItem(
     // could not be parsed.
     val bubbleText = activity
         ?.let { card ->
-            // A day swap's title is the day itself, as ISO text on the wire (older builds print
-            // it as it is). This build says the day the way the reader's language does (D-18).
-            val subject = if (card.entityType == ActivityEntityType.DAY_SWAP) {
-                isoDateText(card.title, DAY_WITH_WEEKDAY)
-            } else {
-                card.title
+            // What the sentence is about is `ActivityCardText.subjectOf`'s decision. A day swap's
+            // is the day itself, as ISO text on the wire (older builds print it as it is); this
+            // build says it the way the reader's language does (D-18). A custody proposal has no
+            // title of its own, so it is worded; anything else is the sender's own title.
+            val subject = when (val about = ActivityCardText.subjectOf(card)) {
+                is CardSubjectText.IsoDate -> isoDateText(about.iso, DAY_WITH_WEEKDAY)
+                is CardSubjectText.Res -> stringResource(about.id)
+                is CardSubjectText.Raw -> about.text
             }
             stringResource(ActivityCardText.resourceFor(card.kind), subject)
         }

@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.HolidayFairness
@@ -17,6 +19,7 @@ import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.holidays.SchoolVacationSuggestions
 import com.coparently.app.domain.holidays.VacationSuggestion
+import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.domain.parentingplan.PlanScheduleTarget
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -43,6 +46,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
@@ -123,6 +127,23 @@ class SeasonalScheduleViewModel @Inject constructor(
         .onStart { emit(HolidayLocation.Default) }
 
     private val shared: Flow<SharedCustody?> = custodyModelRepository.observeShared().onStart { emit(null) }
+
+    /**
+     * The agreed schedule as Room holds it, for [answerByCap]'s preview, which is read outside any
+     * collection: collected for the ViewModel's life, so its value is never the starting null of a
+     * stream nobody is collecting (CLAUDE.md item 17's reason).
+     */
+    private val activeModel: StateFlow<CustodyModel?> = custodyModelRepository.getActiveModel()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Whether a layer change will be a proposal the co-parent answers (phase 3a, spec §4.2): there is
+     * a co-parent, and an agreed schedule to change. The layer editor shows its deadline block only
+     * then.
+     */
+    val proposes: StateFlow<Boolean> = combine(parents, activeModel) { parents, model ->
+        parents.isPaired && model != null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
     /** The section's state. */
     val layersState: StateFlow<SeasonalLayersUiState> = combine(
@@ -210,21 +231,53 @@ class SeasonalScheduleViewModel @Inject constructor(
      *
      * @param citePlan True when the editor was opened from an agreed parenting-plan answer
      *   (MON-21): the proposal then cites it. The layer is still exactly the parent's draft.
+     * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
+     *   when the editor showed no deadline block; it applies only when the change is a proposal.
      */
-    fun saveLayer(draft: SeasonalLayerDraft, editingId: String?, citePlan: Boolean = false) {
+    fun saveLayer(
+        draft: SeasonalLayerDraft,
+        editingId: String?,
+        citePlan: Boolean = false,
+        answerBy: AnswerByPick? = null
+    ) {
         // The ViewModel's own state, not a WhileSubscribed stream (CLAUDE.md item 17).
         val citation = transient.value.planReference?.citationWire?.takeIf { citePlan }
-        change(citation) { current ->
-            val existing = current.firstOrNull { it.id == editingId }
-            draft.toLayer(editingId ?: newId(), existing)?.let { layer ->
-                current.filterNot { it.id == layer.id } + layer
-            }
-        }
+        change(citation, answerBy) { current -> layersWith(current, draft, editingId, editingId ?: newId()) }
     }
 
-    /** Removes the layer with [id] and submits the result. */
-    fun deleteLayer(id: String) = change(planCitation = null) { current ->
+    /**
+     * The cap of the proposal saving [draft] would make (phase 3a, spec §4.2): 00:00 of the first
+     * day, from today, that the layer changes — or null when it changes nothing ahead, when there is
+     * no base pattern, and while the draft is not a layer yet. For the editor's deadline block; the
+     * repository works it out again when it sends.
+     */
+    fun answerByCap(draft: SeasonalLayerDraft, editingId: String?): Long? {
+        val active = activeModel.value ?: return null
+        val layers = layersWith(active.seasonalLayers, draft, editingId, editingId ?: PREVIEW_LAYER_ID) ?: return null
+        val zone = ZoneId.systemDefault()
+        return RequestCap.forProposal(active, active.copy(seasonalLayers = layers), LocalDate.now(zone), zone)
+    }
+
+    /**
+     * Removes the layer with [id] and submits the result. Its confirmation has no deadline block,
+     * so a proposal it makes asks for an answer by the default deadline (ruling 9).
+     */
+    fun deleteLayer(id: String) = change(planCitation = null, answerBy = AnswerByPick.DEFAULT) { current ->
         current.filterNot { it.id == id }.takeIf { it.size != current.size }
+    }
+
+    /**
+     * [current] with [draft] added as a layer under [id], or replacing the one with [editingId];
+     * null when the draft is not a layer.
+     */
+    private fun layersWith(
+        current: List<SeasonalLayer>,
+        draft: SeasonalLayerDraft,
+        editingId: String?,
+        id: String
+    ): List<SeasonalLayer>? {
+        val existing = current.firstOrNull { it.id == editingId }
+        return draft.toLayer(id, existing)?.let { layer -> current.filterNot { it.id == layer.id } + layer }
     }
 
     /** Clears the last outcome once the screen has shown it. */
@@ -238,11 +291,15 @@ class SeasonalScheduleViewModel @Inject constructor(
      * Read fresh rather than from [layersState]: a save path never trusts a `WhileSubscribed`
      * flow's `.value` (CLAUDE.md item 17). [edit] returning null means nothing changed.
      */
-    private fun change(planCitation: String?, edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?) {
+    private fun change(
+        planCitation: String?,
+        answerBy: AnswerByPick?,
+        edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?
+    ) {
         transient.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val message = try {
-                submit(planCitation, edit)
+                submit(planCitation, answerBy, edit)
             } catch (e: CancellationException) {
                 throw e
             } catch (
@@ -257,6 +314,7 @@ class SeasonalScheduleViewModel @Inject constructor(
 
     private suspend fun submit(
         planCitation: String?,
+        answerBy: AnswerByPick?,
         edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?
     ): UiText? {
         val active = custodyModelRepository.getActiveModelSync()
@@ -265,7 +323,7 @@ class SeasonalScheduleViewModel @Inject constructor(
         return when {
             next == null -> null
             coParentProposalWaiting() -> UiText.Res(R.string.seasonal_answer_pending_first)
-            else -> when (custodyModelRepository.submitSeasonalLayers(next, planCitation)) {
+            else -> when (custodyModelRepository.submitSeasonalLayers(next, planCitation, answerBy)) {
                 PatternSubmission.PROPOSED -> UiText.Res(R.string.seasonal_sent_for_approval)
                 PatternSubmission.ACTIVATED -> UiText.Res(R.string.seasonal_saved)
                 // The repository's own refusals: the check above can race a proposal that lands
@@ -291,6 +349,9 @@ class SeasonalScheduleViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "SeasonalScheduleVM"
+
+        /** The id a draft layer carries while it is only compared, before a save mints its own. */
+        const val PREVIEW_LAYER_ID = "preview"
 
         /** The navigation argument naming the plan question the screen was opened from (MON-21). */
         const val ARG_PLAN_QUESTION = "planQuestion"

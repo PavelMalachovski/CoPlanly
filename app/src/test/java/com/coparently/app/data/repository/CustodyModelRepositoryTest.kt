@@ -2,20 +2,33 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.changerequests.AnswerBy
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.CustodyDecision
+import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
@@ -26,9 +39,11 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -43,12 +58,14 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -79,6 +96,8 @@ class CustodyModelRepositoryTest {
     private lateinit var userRepository: UserRepository
     private lateinit var firestoreCustodyDataSource: FirestoreCustodyDataSource
     private lateinit var activityAnnouncer: ActivityAnnouncer
+    private lateinit var fcmService: FcmService
+    private lateinit var requestDeadlines: RequestDeadlineRepository
     private lateinit var repository: CustodyModelRepository
 
     @Before
@@ -91,12 +110,17 @@ class CustodyModelRepositoryTest {
         userRepository = mockk()
         firestoreCustodyDataSource = mockk()
         activityAnnouncer = mockk(relaxed = true)
+        fcmService = mockk(relaxed = true)
+        // Strict but for `start`, stubbed below: each test verifies the clocks it expects, and any
+        // other clock call is refused.
+        requestDeadlines = mockk()
         repository = CustodyModelRepository(
             custodyModelDao,
             userRepository,
             firestoreCustodyDataSource,
             activityAnnouncer,
-            mockk(relaxed = true),
+            fcmService,
+            requestDeadlines,
             CoroutineScope(dispatcher)
         )
 
@@ -106,6 +130,7 @@ class CustodyModelRepositoryTest {
         coEvery { firestoreCustodyDataSource.getCustody(any()) } returns null
         coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } returns Unit
         every { firestoreCustodyDataSource.observeCustody(any()) } returns flowOf(null)
+        coEvery { requestDeadlines.start(any()) } answers { clockFor(firstArg()) }
     }
 
     @After
@@ -1113,7 +1138,8 @@ class CustodyModelRepositoryTest {
                 activityAnnouncer.announce(
                     match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == PLAN_CITATION },
                     any(),
-                    any()
+                    any(),
+                    PARTNER_UID
                 )
             }
         }
@@ -1128,10 +1154,715 @@ class CustodyModelRepositoryTest {
             activityAnnouncer.announce(
                 match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.planCitation == null },
                 any(),
-                any()
+                any(),
+                PARTNER_UID
             )
         }
     }
+
+    // ---- request clocks (phase 3a) ------------------------------------------
+    //
+    // A swap offer and a custody proposal start their clock in the same action as the request,
+    // after its own write, and the request's first push says when the answer is due — but only
+    // when the clock was written: a refused clock leaves the request working as one without a
+    // clock (ruling 8).
+
+    @Test
+    fun `an offer with a deadline starts its clock after the swap is written and before the push, which says when`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val zone = ZoneId.systemDefault()
+            val date = LocalDate.now(zone).plusDays(10)
+            val started = slot<RequestStart>()
+            coEvery { requestDeadlines.start(capture(started)) } answers { clockFor(firstArg()) }
+
+            val result = repository.applyDayOverrides(date.toString(), offerOf(date.toString()), AnswerByPick.DEFAULT)
+
+            assertTrue(result.isSuccess)
+            coVerifyOrder {
+                firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
+                requestDeadlines.start(
+                    match {
+                        it.kind == RequestKind.SWAP && it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == date
+                    }
+                )
+                fcmService.queueNotificationForUser(
+                    PARTNER_UID,
+                    match { it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString() }
+                )
+            }
+            // The clock names the family the offer was made in and the parent who must answer, and
+            // it ends before the offer's first day with a day to spare for a last chance.
+            val cap = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            assertEquals(DOCUMENT_ID, started.captured.familyId)
+            assertEquals(PARTNER_UID, started.captured.responderUid)
+            assertEquals(cap, started.captured.capMillis)
+            assertTrue(started.captured.answerByMillis <= cap - AnswerBy.LAST_CHANCE_RESERVE_MILLIS)
+            assertTrue(started.captured.answerByMillis > System.currentTimeMillis())
+        }
+
+    @Test
+    fun `a run starts one clock for the days that landed`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        // The first day lands; the second is refused, which ends the run there.
+        coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } returns Unit andThenThrows
+            permissionDenied()
+        val first = LocalDate.now().plusDays(10)
+        val dates = (0L..2L).map { first.plusDays(it).toString() }
+
+        val result = repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT)
+
+        assertEquals(1, (result.exceptionOrNull() as PartialSwapRun).written)
+        coVerify(exactly = 1) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first })
+        }
+        // One day landed, so the co-parent is asked about one day, with its deadline.
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `a run that lands whole is one card, one group push and one clock, for all its days`() = runTest(dispatcher) {
+        // The document keeps each write, as Firestore does, so the run's last map holds all its days.
+        var stored = remoteCustody()
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
+        coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) } answers { stored = thirdArg() }
+        val first = LocalDate.now().plusDays(10)
+        val dates = (0L..2L).map { first.plusDays(it).toString() }
+
+        assertTrue(repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT).isSuccess)
+
+        // Named by its first day and counted whole: the card, the clock and the push agree on three days.
+        coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
+        coVerify(exactly = 1) {
+            activityAnnouncer.announce(
+                match { it.kind == ActivityKind.DAY_SWAP_OFFERED && it.entityId == dates.first() },
+                any(),
+                any(),
+                PARTNER_UID
+            )
+        }
+        coVerify(exactly = 1) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 3 && it.firstDate == first })
+        }
+        coVerify(exactly = 1) { fcmService.queueNotificationForUser(any(), any()) }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.DAY_SWAP_GROUP_OFFERED &&
+                        it[PushPayload.DATE] == dates.first() &&
+                        it[PushPayload.DAY_COUNT] == "3" &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `an offer for today goes out without a clock`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        val today = LocalDate.now().toString()
+
+        val result = repository.applyDayOverrides(today, offerOf(today), AnswerByPick.DEFAULT)
+
+        // Today's cap is already behind: too soon for a deadline, so the offer goes out as a plain one.
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `answering a swap starts no clock`() = runTest(dispatcher) {
+        val date = LocalDate.now().plusDays(10).toString()
+        val theirs = DayOverride(
+            toParent = "mom",
+            requestedBy = PARTNER_UID,
+            requestedAt = "2026-10-15T09:00:00",
+            groupId = GROUP_ID
+        )
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+            remoteCustody().copy(dayOverrides = mapOf(date to theirs))
+
+        // Even handed a deadline, an answer is not a request: nobody waits on it.
+        repository.applyDayOverridesForDates(
+            listOf(date),
+            { current, day -> DayOverrideTransition.decideGroup(current, listOf(day), MY_UID, NOW_ISO, accept = true) },
+            AnswerByPick.DEFAULT
+        )
+
+        coVerify(exactly = 1) {
+            firestoreCustodyDataSource.setCustody(
+                DOCUMENT_ID,
+                PARTICIPANTS,
+                match { it.dayOverrides[date]?.status == DayOverrideStatus.ACCEPTED }
+            )
+        }
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.DAY_SWAP_ACCEPTED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `a refused clock still sends the offer, without answerBy`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        coEvery { requestDeadlines.start(any()) } returns null
+        val date = LocalDate.now().plusDays(10).toString()
+
+        val result = repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT)
+
+        // Review Focus 3: the rules refused the clock (an offline queue landing late, a fast phone),
+        // and the offer is still made, announced and pushed — as a request with no deadline.
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any()) }
+        coVerify(exactly = 1) {
+            activityAnnouncer.announce(match { it.kind == ActivityKind.DAY_SWAP_OFFERED }, any(), any(), PARTNER_UID)
+        }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `a proposal starts its clock under its proposedAt, capped at the first changed day`() = runTest(dispatcher) {
+        val zone = ZoneId.systemDefault()
+        // Every day with slot 2, and a proposed trip that gives slot 1 ten days from now onwards:
+        // nothing changes before that day, whatever today is.
+        val agreed = localModel().copy(id = REMOTE_MODEL_ID, patternDays = 7, momDayIndices = emptySet())
+        val changes = LocalDate.now(zone).plusDays(10)
+        val trip = SeasonalLayer.allWith("trip", "Trip", changes..changes.plusDays(3), "mom")
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody().copy(model = agreed)
+        val written = slot<SharedCustody>()
+        coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(written)) } returns Unit
+        val started = slot<RequestStart>()
+        coEvery { requestDeadlines.start(capture(started)) } answers { clockFor(firstArg()) }
+
+        val proposed = agreed.copy(seasonalLayers = listOf(trip))
+
+        val result = repository.submitPattern(proposed, answerBy = AnswerByPick.DEFAULT)
+
+        assertEquals(PatternSubmission.PROPOSED, result)
+        val cap = changes.atStartOfDay(zone).toInstant().toEpochMilli()
+        assertEquals(RequestKind.PROPOSAL, started.captured.kind)
+        assertEquals(requireNotNull(written.captured.proposal).proposedAt, started.captured.ref)
+        assertEquals(DOCUMENT_ID, started.captured.familyId)
+        assertEquals(PARTNER_UID, started.captured.responderUid)
+        assertEquals(cap, started.captured.capMillis)
+        assertTrue(started.captured.answerByMillis <= cap - AnswerBy.LAST_CHANCE_RESERVE_MILLIS)
+        assertNull(started.captured.firstDate)
+        assertNull(started.captured.dayCount)
+        coVerifyOrder {
+            firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
+            requestDeadlines.start(any())
+            activityAnnouncer.announce(match { it.kind == ActivityKind.CUSTODY_PROPOSED }, any(), any(), PARTNER_UID)
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.CUSTODY_PROPOSAL_PROPOSED &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `a pattern activated on an empty family starts no clock`() = runTest(dispatcher) {
+        // The pair has no document yet: nobody is asked, so nobody is waited on.
+        val result = repository.createWeekOnWeekOff(START_DATE, answerBy = AnswerByPick.DEFAULT)
+
+        assertEquals(PatternSubmission.ACTIVATED, result)
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+    }
+
+    @Test
+    fun `withdrawUnanswered withdraws only the same pending proposal of this parent`() = runTest(dispatcher) {
+        val mine = remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT))
+        val transform = slot<(SharedCustody?) -> SharedCustody?>()
+        coEvery { firestoreCustodyDataSource.transact(DOCUMENT_ID, PARTICIPANTS, capture(transform)) } answers {
+            transform.captured(mine)
+        }
+
+        assertTrue(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+
+        // Review Focus 5. Only the first of these four is written: the proposal this clock timed,
+        // still pending and still this parent's. Withdrawn, it leaves no decision behind.
+        val withdrawn = transform.captured(mine)
+        assertNotNull(withdrawn)
+        assertNull(withdrawn?.proposal)
+        assertNull(withdrawn?.lastDecision)
+        assertEquals(mine.model, withdrawn?.model)
+        // Replaced by a newer proposal of this parent's.
+        assertNull(transform.captured(remoteCustody().copy(proposal = proposalBy(MY_UID, "2026-10-16T09:00:00"))))
+        // Decided meanwhile: no proposal is pending any more.
+        assertNull(transform.captured(remoteCustody()))
+        // The co-parent's own proposal, made at the same moment.
+        assertNull(transform.captured(remoteCustody().copy(proposal = proposalBy(PARTNER_UID, PROPOSED_AT))))
+        // What was written is mirrored into the family's own row.
+        coVerify(exactly = 1) { custodyModelDao.insertModel(match { it.familyId == DOCUMENT_ID }) }
+
+        // A transaction that wrote nothing withdrew nothing.
+        coEvery { firestoreCustodyDataSource.transact(any(), any(), capture(transform)) } answers {
+            transform.captured(remoteCustody())
+        }
+        assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+    }
+
+    @Test
+    fun `withdrawUnanswered acts on the clock's family while another is on screen, and not on an ended one`() =
+        runTest(dispatcher) {
+            inTwoFamilies(onScreen = OTHER_PARTNER_UID)
+            val mine = remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT))
+            val transform = slot<(SharedCustody?) -> SharedCustody?>()
+            coEvery { firestoreCustodyDataSource.transact(any(), any(), capture(transform)) } answers {
+                transform.captured(mine)
+            }
+
+            // uidC's family is on screen; the clock is uidB's family's.
+            assertTrue(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+            coVerify(exactly = 1) { firestoreCustodyDataSource.transact(DOCUMENT_ID, PARTICIPANTS, any()) }
+            coVerify(exactly = 0) { firestoreCustodyDataSource.transact(OTHER_DOCUMENT_ID, any(), any()) }
+
+            // uidB's family has ended; uidC's is the only one left. Nothing is withdrawn there.
+            pairedWith(OTHER_PARTNER_UID)
+            assertFalse(repository.withdrawUnanswered(DOCUMENT_ID, PROPOSED_AT))
+            coVerify(exactly = 1) { firestoreCustodyDataSource.transact(any(), any(), any()) }
+        }
+
+    // A clock waits for the server for up to ten seconds (ruling 14). A push tap can switch the
+    // family on screen in that time, so the card is posted to the thread of the pair the request was
+    // written for, never to whichever family is on screen when it is announced: it names that
+    // family's days or schedule. A decision on a proposal waits for the server's read and write the
+    // same way, and its card and push go to the family it was written in.
+
+    @Test
+    fun `an offer's card goes to its own family's thread though the screen switches while its clock is written`() =
+        runTest(dispatcher) {
+            val onScreen = switchesFamilyWhileAClockIsWritten()
+            // The document keeps each write, as Firestore does, so a run's last map holds its days.
+            var stored = remoteCustody()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
+            coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) } answers { stored = thirdArg() }
+            val first = LocalDate.now().plusDays(10)
+
+            repository.applyDayOverrides(first.toString(), offerOf(first.toString()), AnswerByPick.DEFAULT)
+            onScreen.value = PARTNER_UID
+            val run = listOf(first.plusDays(1).toString(), first.plusDays(2).toString())
+            repository.applyDayOverridesForDates(run, ::offerOfRun, AnswerByPick.DEFAULT)
+
+            // Both times uidC's family was on screen by the time the card was posted.
+            assertEquals(OTHER_PARTNER_UID, onScreen.value)
+            coVerify(exactly = 2) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 2) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.DAY_SWAP_OFFERED },
+                    any(),
+                    any(),
+                    PARTNER_UID
+                )
+            }
+            // As the clock and the push already did.
+            coVerify(exactly = 2) {
+                requestDeadlines.start(match { it.familyId == DOCUMENT_ID && it.responderUid == PARTNER_UID })
+            }
+            coVerify(exactly = 2) { fcmService.queueNotificationForUser(PARTNER_UID, any()) }
+        }
+
+    @Test
+    fun `a proposal's card goes to its own family's thread though the screen switches while its clock is written`() =
+        runTest(dispatcher) {
+            val onScreen = switchesFamilyWhileAClockIsWritten()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            // A trip ten days from now: far enough ahead for the proposal to get a clock.
+            val from = LocalDate.now().plusDays(10)
+            val trip = SeasonalLayer.allWith("trip", "Trip", from..from.plusDays(3), "dad")
+
+            val result = repository.submitPattern(
+                remoteCustody().model.copy(seasonalLayers = listOf(trip)),
+                answerBy = AnswerByPick.DEFAULT
+            )
+
+            assertEquals(PatternSubmission.PROPOSED, result)
+            assertEquals(OTHER_PARTNER_UID, onScreen.value)
+            coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 1) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.CUSTODY_PROPOSED && it.entityId == DOCUMENT_ID },
+                    any(),
+                    any(),
+                    PARTNER_UID
+                )
+            }
+            coVerify(exactly = 1) {
+                requestDeadlines.start(match { it.familyId == DOCUMENT_ID && it.responderUid == PARTNER_UID })
+            }
+            coVerify(exactly = 1) { fcmService.queueNotificationForUser(PARTNER_UID, any()) }
+        }
+
+    @Test
+    fun `a decision is told to its own family though the screen switches while it is written`() =
+        runTest(dispatcher) {
+            val onScreen = switchableBetweenTwoFamilies()
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+                remoteCustody().copy(proposal = proposalBy(PARTNER_UID, PROPOSED_AT))
+            // A push tap switches the screen to uidC's family while uidB's proposal is being accepted.
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } answers {
+                onScreen.value = OTHER_PARTNER_UID
+            }
+
+            assertTrue(repository.acceptProposal().isSuccess)
+
+            // uidB proposed and uidB is told, in uidB's family's thread; uidC hears nothing of it.
+            assertEquals(OTHER_PARTNER_UID, onScreen.value)
+            coVerify(exactly = 1) { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any()) }
+            coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 1) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.CUSTODY_ACCEPTED && it.entityId == DOCUMENT_ID },
+                    any(),
+                    any(),
+                    PARTNER_UID
+                )
+            }
+            coVerify(exactly = 1) { fcmService.queueNotificationForUser(any(), any()) }
+            coVerify(exactly = 1) {
+                fcmService.queueNotificationForUser(
+                    PARTNER_UID,
+                    match { it[PushPayload.TYPE] == PushPayload.CUSTODY_PROPOSAL_ACCEPTED }
+                )
+            }
+        }
+
+    @Test
+    fun `a withdrawal posts no card and no push, though the document still holds the last decision`() =
+        runTest(dispatcher) {
+            val earlier = CustodyDecision(
+                outcome = CustodyDecisionOutcome.ACCEPTED,
+                by = PARTNER_UID,
+                at = "2026-10-01T10:00:00",
+                proposalAt = "2026-09-30T09:00:00",
+                note = null
+            )
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+                remoteCustody().copy(proposal = proposalBy(MY_UID, PROPOSED_AT), lastDecision = earlier)
+
+            assertTrue(repository.withdrawProposal().isSuccess)
+
+            // A withdrawal decides nothing, and the decision the document keeps is uidB's old one: telling
+            // anybody of it again would say that a proposal had just been accepted.
+            coVerify(exactly = 1) {
+                firestoreCustodyDataSource.setCustody(
+                    DOCUMENT_ID,
+                    PARTICIPANTS,
+                    match { it.proposal == null && it.lastDecision == earlier }
+                )
+            }
+            coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+        }
+
+    /**
+     * uidA in uidB's and uidC's families, with uidB's on screen until a test moves the value — as a
+     * push tap may, at any moment.
+     *
+     * @return The co-parent of the family on screen, for a test to move or to read.
+     */
+    private fun switchableBetweenTwoFamilies(): MutableStateFlow<String> {
+        val onScreen = MutableStateFlow(PARTNER_UID)
+        val me = signedInWith(PARTNER_UID).copy(partnerIds = listOf(PARTNER_UID, OTHER_PARTNER_UID))
+        coEvery { userRepository.getUserById(MY_UID) } answers { me.copy(partnerId = onScreen.value) }
+        return onScreen
+    }
+
+    /**
+     * [switchableBetweenTwoFamilies], switched to uidC's family by a push tap once a clock is started,
+     * before the clock's write returns.
+     *
+     * @return The co-parent of the family on screen, for a test to move back or to read.
+     */
+    private fun switchesFamilyWhileAClockIsWritten(): MutableStateFlow<String> {
+        val onScreen = switchableBetweenTwoFamilies()
+        coEvery { requestDeadlines.start(any()) } answers {
+            onScreen.value = OTHER_PARTNER_UID
+            clockFor(firstArg())
+        }
+        return onScreen
+    }
+
+    // ---- leaving the screen while a request is sent ---------------------------------------
+    //
+    // Once the server has a swap, a proposal or a decision, what follows it runs to its end even if
+    // the screen that sent it is left: the clock, which waits for the server for up to ten seconds
+    // (ruling 14), then the card and the push. The request is on the server either way, and a
+    // cancelled caller must not cost the co-parent being told of it. Until the server has it, leaving
+    // cancels it as ever.
+
+    @Test
+    fun `an offer whose screen is left while its clock is written still reaches the co-parent`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val clockWrite = HeldCall()
+            coEvery { requestDeadlines.start(any()) } coAnswers {
+                clockWrite.hold()
+                clockFor(firstArg())
+            }
+            val posted = postsLikeTheRealAnnouncer()
+            val date = LocalDate.now().plusDays(10).toString()
+
+            val offering = launch { repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT) }
+            clockWrite.reached.await()
+            offering.cancel() // the calendar is left while the clock waits for the server
+            clockWrite.release()
+            offering.join()
+
+            // The offer is on the server, so its co-parent is told, with the clock's deadline, although
+            // the caller has gone.
+            assertTrue(offering.isCancelled)
+            assertEquals(listOf(ActivityKind.DAY_SWAP_OFFERED), posted)
+            coVerify(exactly = 1) {
+                fcmService.queueNotificationForUser(
+                    PARTNER_UID,
+                    match {
+                        it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED &&
+                            it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                    }
+                )
+            }
+        }
+
+    @Test
+    fun `a run left part-way still offers the days already written, and writes no more`() = runTest(dispatcher) {
+        // The document keeps each write, as Firestore does, so the first day's entry is there to announce.
+        var stored = remoteCustody()
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
+        val secondWrite = HeldCall()
+        val writes = AtomicInteger()
+        coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) } coAnswers {
+            if (writes.incrementAndGet() == 2) secondWrite.hold()
+            stored = thirdArg()
+        }
+        val posted = postsLikeTheRealAnnouncer()
+        val first = LocalDate.now().plusDays(10)
+        val dates = (0L..2L).map { first.plusDays(it).toString() }
+
+        val offering = launch { repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT) }
+        secondWrite.reached.await()
+        offering.cancel() // the screen is left while the second day is being written
+        secondWrite.release() // lets a run that was wrongly kept going write its third day
+        offering.join()
+
+        // The first day is on the server, so it is offered, one day with its clock and its push,
+        // although the caller has gone. The second day's write ended with its caller, and the third
+        // was never begun.
+        assertEquals(2, writes.get())
+        assertEquals(listOf(ActivityKind.DAY_SWAP_OFFERED), posted)
+        coVerify(exactly = 1) {
+            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first })
+        }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.DAY_SWAP_OFFERED &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `a proposal whose screen is left while its clock is written still reaches the co-parent`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val clockWrite = HeldCall()
+            coEvery { requestDeadlines.start(any()) } coAnswers {
+                clockWrite.hold()
+                clockFor(firstArg())
+            }
+            val posted = postsLikeTheRealAnnouncer()
+
+            val proposing = launch { repository.submitPattern(withTripTenDaysOut(), answerBy = AnswerByPick.DEFAULT) }
+            clockWrite.reached.await()
+            proposing.cancel() // the schedule editor is left while the clock waits for the server
+            clockWrite.release()
+            proposing.join()
+
+            assertTrue(proposing.isCancelled)
+            assertEquals(listOf(ActivityKind.CUSTODY_PROPOSED), posted)
+            coVerify(exactly = 1) {
+                fcmService.queueNotificationForUser(
+                    PARTNER_UID,
+                    match {
+                        it[PushPayload.TYPE] == PushPayload.CUSTODY_PROPOSAL_PROPOSED &&
+                            it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                    }
+                )
+            }
+        }
+
+    @Test
+    fun `a decision whose screen is left while its card is posted still tells the proposer`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+            remoteCustody().copy(proposal = proposalBy(PARTNER_UID, PROPOSED_AT))
+        val card = HeldCall()
+        val posted = mutableListOf<ActivityKind>()
+        coEvery { activityAnnouncer.announce(any(), any(), any(), any()) } coAnswers {
+            card.hold()
+            posted += firstArg<ActivityAnnouncement>().kind
+        }
+
+        val declining = launch { repository.declineProposal() }
+        card.reached.await()
+        declining.cancel() // the requests inbox is left while the card is posted
+        card.release()
+        declining.join()
+
+        // The decision is on the server: the proposer gets its card and its push all the same.
+        assertEquals(listOf(ActivityKind.CUSTODY_DECLINED), posted)
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                PARTNER_UID,
+                match { it[PushPayload.TYPE] == PushPayload.CUSTODY_PROPOSAL_DECLINED }
+            )
+        }
+    }
+
+    @Test
+    fun `leaving before the server has the offer cancels it as ever, with no clock, card or push`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val swapWrite = HeldCall()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } coAnswers { swapWrite.hold() }
+            val date = LocalDate.now().plusDays(10).toString()
+
+            val offering = launch { repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT) }
+            swapWrite.reached.await()
+            offering.cancel()
+            runCurrent()
+
+            // Nothing is shielded until the server has the offer: the caller ends at once, and nothing
+            // follows a write that was never acknowledged.
+            val ended = offering.isCompleted
+            swapWrite.release() // lets a caller that was wrongly shielded finish too
+            assertTrue("the caller was kept running past a cancellation before the write", ended)
+            coVerify(exactly = 0) { requestDeadlines.start(any()) }
+            coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+        }
+
+    @Test
+    fun `leaving before the server has the proposal cancels it as ever, with no clock, card or push`() =
+        runTest(dispatcher) {
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+            val proposalWrite = HeldCall()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } coAnswers { proposalWrite.hold() }
+
+            val proposing = launch { repository.submitPattern(withTripTenDaysOut(), answerBy = AnswerByPick.DEFAULT) }
+            proposalWrite.reached.await()
+            proposing.cancel()
+            runCurrent()
+
+            val ended = proposing.isCompleted
+            proposalWrite.release() // lets a caller that was wrongly shielded finish too
+            assertTrue("the caller was kept running past a cancellation before the write", ended)
+            coVerify(exactly = 0) { requestDeadlines.start(any()) }
+            coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+        }
+
+    /** A call held where a slow server would hold it, until the test [release]s it. */
+    private class HeldCall {
+        /** Completed once the call has begun to wait. */
+        val reached = CompletableDeferred<Unit>()
+        private val released = CompletableDeferred<Unit>()
+
+        /** Waits, cancellably, as the acknowledgement of a write is awaited. */
+        suspend fun hold() {
+            reached.complete(Unit)
+            released.await()
+        }
+
+        fun release() {
+            released.complete(Unit)
+        }
+    }
+
+    /**
+     * The announcer as the real one behaves: it suspends, on Room and then the network, before the
+     * card is posted, so a cancelled caller that has not shielded it stops there and posts nothing.
+     *
+     * @return The kinds of the cards posted, in order.
+     */
+    private fun postsLikeTheRealAnnouncer(): List<ActivityKind> {
+        val posted = mutableListOf<ActivityKind>()
+        coEvery { activityAnnouncer.announce(any(), any(), any(), any()) } coAnswers {
+            delay(1)
+            posted += firstArg<ActivityAnnouncement>().kind
+        }
+        return posted
+    }
+
+    /** [remoteCustody]'s pattern with a trip ten days ahead: far enough for its clock to get a deadline. */
+    private fun withTripTenDaysOut(): CustodyModel {
+        val from = LocalDate.now().plusDays(10)
+        return remoteCustody().model.copy(
+            seasonalLayers = listOf(SeasonalLayer.allWith("trip", "Trip", from..from.plusDays(3), "dad"))
+        )
+    }
+
+    /** A one-day offer of [date] to slot 1, as `CalendarViewModel.offerDaySwap` makes it. */
+    private fun offerOf(date: String): (Map<String, DayOverride>) -> Result<Map<String, DayOverride>> = { current ->
+        DayOverrideTransition.offer(current, date, "mom", MY_UID, NOW_ISO, groupId = GROUP_ID)
+    }
+
+    /** One day of a run offered to slot 1, as `CalendarViewModel.offerDaySwapForDates` makes it. */
+    private fun offerOfRun(current: Map<String, DayOverride>, date: String): Result<Map<String, DayOverride>> =
+        DayOverrideTransition.offerAll(current, mapOf(date to "mom"), MY_UID, NOW_ISO, GROUP_ID)
+
+    private fun proposalBy(uid: String, at: String) = CustodyProposal(
+        model = localModel().copy(id = "proposed"),
+        repeatYearly = true,
+        proposedBy = uid,
+        proposedAt = at
+    )
+
+    /**
+     * The clock [start] would write, with a deadline of its own ([CLOCK_ANSWER_BY]), so a push that
+     * says when is shown to say the clock's time rather than one worked out beside it.
+     */
+    private fun clockFor(start: RequestStart) = RequestDeadline(
+        id = "clock-1",
+        kind = start.kind,
+        ref = start.ref,
+        familyId = start.familyId,
+        proposerUid = MY_UID,
+        responderUid = start.responderUid,
+        answerByMillis = CLOCK_ANSWER_BY,
+        capMillis = start.capMillis,
+        firstDate = start.firstDate,
+        dayCount = start.dayCount
+    )
 
     // ---- fixtures ---------------------------------------------------------
 
@@ -1213,6 +1944,18 @@ class CustodyModelRepositoryTest {
     )
 
     private companion object {
+        /** The group id of an offer this device makes. */
+        const val GROUP_ID = "group-1"
+
+        /** When an offer or a proposal in these tests was made. */
+        const val NOW_ISO = "2026-10-15T09:00:00"
+
+        /** The `proposedAt` of the proposal a clock times. */
+        const val PROPOSED_AT = "2026-10-15T09:30:00"
+
+        /** The deadline a started clock answers with: 2030-01-01, unlike anything the code works out. */
+        const val CLOCK_ANSWER_BY = 1_893_456_000_000L
+
         /** A parenting-plan citation as `PlanCitationCodec` writes it (MON-21). */
         const val PLAN_CITATION = "p1|care_weekday|0123456789abcdef"
 

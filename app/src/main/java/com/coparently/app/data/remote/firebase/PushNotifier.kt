@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.text.format.DateFormat
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
@@ -14,6 +15,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.utils.DAY_IN_SENTENCE
+import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
 import com.coparently.app.utils.localizedDate
 import java.time.Instant
@@ -96,6 +98,11 @@ class PushNotifier(private val context: Context) {
      * A missing or blank actor name falls back to a translated "your co-parent" rather than to
      * an empty gap in the sentence. `displayName` is genuinely absent for an email/password
      * account that never set one, so this is the normal case for some pairs, not a defect.
+     *
+     * **A request's first push says when to answer by** (phase 3a). A type in [ANSWER_BY_TYPES]
+     * whose payload carries a readable [PushPayload.ANSWER_BY] gets "Answer by <time>." after its
+     * sentence; without one — an older build's push, a request with no clock — the text is exactly
+     * what it was.
      */
     internal fun compose(type: String?, data: Map<String, String>): PushText? {
         // The chat preview is the one notification whose text is not a frame: the title is who
@@ -112,8 +119,34 @@ class PushNotifier(private val context: Context) {
         // `type?.let` rather than `PUSH_TEXT[type]`: the map is keyed on a non-null String, so
         // indexing it with the nullable value straight off the payload does not compile.
         val spec = type?.let { PUSH_TEXT[it] } ?: return null
-        return bodyOf(spec, data)?.let { body -> PushText(context.getString(spec.title), body) }
+        return bodyOf(spec, data)?.let { body ->
+            PushText(context.getString(spec.title), withDeadline(type, body, data))
+        }
     }
+
+    /**
+     * [body] with the deadline said after it — "Answer by Tue, Oct 13, 10:00." — when [type] is a
+     * request's first push and [data] names one; [body] as it is otherwise.
+     */
+    private fun withDeadline(type: String, body: String, data: Map<String, String>): String {
+        if (type !in ANSWER_BY_TYPES) return body
+        val deadline = answerByOf(data) ?: return body
+        return sentenceAfter(body, context.getString(R.string.push_answer_by, deadline))
+    }
+
+    /**
+     * The deadline in [data] as this phone's reader says it — their zone, language and 12/24-hour
+     * clock ([DateFormat.is24HourFormat], as `EventReminderScheduler` reads it) — or null when the
+     * push names none or an unreadable one.
+     */
+    private fun answerByOf(data: Map<String, String>): String? =
+        data[PushPayload.ANSWER_BY]?.toLongOrNull()?.let { millis ->
+            answerByText(
+                millis,
+                locale = context.resources.configuration.locales[0],
+                is24Hour = DateFormat.is24HourFormat(context)
+            )
+        }
 
     /** The text of a push worded by [spec], filled from [data]; null when [data] cannot fill it. */
     private fun bodyOf(spec: PushTextSpec, data: Map<String, String>): String? {
@@ -132,6 +165,9 @@ class PushNotifier(private val context: Context) {
                     ?: isoDateText(data[PushPayload.DATE], DAY_IN_SENTENCE, locale)
                 context.getString(spec.body, actor, day)
             }
+            // A last chance names where it ends, and a sentence about waiting "until" nothing says
+            // nothing: an unreadable instant composes nothing, like an unparseable count below.
+            BodyArgs.ACTOR_AND_ANSWER_BY -> answerByOf(data)?.let { context.getString(spec.body, actor, it) }
             // The date travels as ISO text; the reader's language says it (D-18). An unreadable
             // one is shown as it came rather than dropped.
             BodyArgs.DATE -> context.getString(
@@ -187,6 +223,12 @@ class PushNotifier(private val context: Context) {
      * thread itself holds the full history — and, being a distinct constant, never collides with
      * (or is replaced by) a pairing notification. Every other notification type keeps a
      * timestamp id so unrelated notifications keep accumulating.
+     *
+     * **The body is set twice, on purpose** (phase 3a). `setContentText` is the collapsed line and
+     * what `EXTRA_TEXT` holds; a [NotificationCompat.BigTextStyle] carries the whole body for when
+     * the notification is expanded. A plain notification cuts a long body to one line, which for a
+     * request's first push is exactly where its deadline sits ("Answer by <time>.") and for a last
+     * chance where its time sits ("until <time>"). Every push gets the style, not only those.
      */
     private fun show(target: NotificationTarget): Int {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -200,6 +242,7 @@ class PushNotifier(private val context: Context) {
         val notification = NotificationCompat.Builder(context, PushRouting.channelOf(target.type).id)
             .setContentTitle(target.text.title)
             .setContentText(target.text.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(target.text.body))
             // android.R.drawable.ic_dialog_info is a framework placeholder and
             // renders as a grey blob in the status bar.
             .setSmallIcon(R.drawable.ic_notification)
@@ -263,7 +306,15 @@ class PushNotifier(private val context: Context) {
     )
 
     /** Which of the payload's names a body string takes, in order. */
-    internal enum class BodyArgs { ACTOR_AND_SUBJECT, ACTOR, ACTOR_AND_DEADLINE, DATE, DAY_COUNT, NONE }
+    internal enum class BodyArgs {
+        ACTOR_AND_SUBJECT,
+        ACTOR,
+        ACTOR_AND_DEADLINE,
+        ACTOR_AND_ANSWER_BY,
+        DATE,
+        DAY_COUNT,
+        NONE
+    }
 
     /**
      * A type's wording: the frame, and what fills it.
@@ -458,6 +509,11 @@ class PushNotifier(private val context: Context) {
                 R.string.push_records_shared_body,
                 BodyArgs.ACTOR
             ),
+            PushPayload.REQUEST_LAST_CHANCE to PushTextSpec(
+                R.string.push_request_last_chance_title,
+                R.string.push_request_last_chance_body,
+                BodyArgs.ACTOR_AND_ANSWER_BY
+            ),
             PushPayload.PAIRING_ACCEPTED to PushTextSpec(
                 R.string.push_pairing_accepted_title,
                 R.string.push_pairing_accepted_body,
@@ -479,5 +535,31 @@ class PushNotifier(private val context: Context) {
                 BodyArgs.ACTOR_AND_DEADLINE
             )
         )
+
+        /**
+         * The pushes that open a request, and so may carry its deadline ([PushPayload.ANSWER_BY])
+         * for [compose] to say after their sentence: a day swap offered (one day or a run), a
+         * change request, a custody proposal. An event waiting to be accepted has no push of its
+         * own, and a last chance says its time in its own body ([BodyArgs.ACTOR_AND_ANSWER_BY]).
+         */
+        val ANSWER_BY_TYPES: Set<String> = setOf(
+            PushPayload.DAY_SWAP_OFFERED,
+            PushPayload.DAY_SWAP_GROUP_OFFERED,
+            PushPayload.CHANGE_REQUEST_CREATED,
+            PushPayload.CUSTODY_PROPOSAL_PROPOSED
+        )
+
+        /** What ends a sentence in the five languages the app is worded in. */
+        private val SENTENCE_END = setOf('.', '!', '?', '…')
+
+        /**
+         * [sentence] after [body], as a sentence of its own.
+         *
+         * Most bodies end on a name or a date and no full stop ("Your co-parent proposes swapping
+         * May 14"), so a bare space would run the two together; one is added first unless the body
+         * already ends a sentence.
+         */
+        internal fun sentenceAfter(body: String, sentence: String): String =
+            body + (if (body.lastOrNull() in SENTENCE_END) " " else ". ") + sentence
     }
 }

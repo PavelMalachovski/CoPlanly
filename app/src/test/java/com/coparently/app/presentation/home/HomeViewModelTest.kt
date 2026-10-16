@@ -2,6 +2,7 @@ package com.coparently.app.presentation.home
 
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SharedCustody
@@ -30,6 +31,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -128,7 +130,9 @@ class HomeViewModelTest {
                 eventRepository,
                 custodyModelRepository,
                 userRepository,
-                pairingRepository
+                pairingRepository,
+                // No request has a clock here: every request is placed as it always was.
+                mockk<RequestClocks> { every { observeFamily(any(), any()) } returns emptyFlow() }
             ),
             custodyModelRepository = custodyModelRepository,
             monthSpendDependencies = monthSpendDependencies,

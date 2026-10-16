@@ -237,17 +237,20 @@ class ChangeRequestViewModel @Inject constructor(
                 _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
                 return@launch
             }
-            custodyModelRepository.applyDayOverridesForDates(group.dates) { current, date ->
-                if (DayOverrideTransition.awaitsAnswerFrom(current, date, uid)) {
-                    DayOverrideTransition.decideGroup(current, listOf(date), uid, now, accept)
-                } else {
-                    // Already decided, or this parent's own offer: leave it exactly as it is.
-                    // `decideGroup` would refuse a one-element list it cannot answer and abort
-                    // the run at that day, which is what stopped a part-answered group from ever
-                    // being finished.
-                    Result.success(current)
+            custodyModelRepository.applyDayOverridesForDates(
+                dates = group.dates,
+                transform = { current, date ->
+                    if (DayOverrideTransition.awaitsAnswerFrom(current, date, uid)) {
+                        DayOverrideTransition.decideGroup(current, listOf(date), uid, now, accept)
+                    } else {
+                        // Already decided, or this parent's own offer: leave it exactly as it is.
+                        // `decideGroup` would refuse a one-element list it cannot answer and abort
+                        // the run at that day, which is what stopped a part-answered group from ever
+                        // being finished.
+                        Result.success(current)
+                    }
                 }
-            }.onFailure { e ->
+            ).onFailure { e ->
                 Log.w(TAG, "Answering a day swap failed", e)
                 _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
             }

@@ -114,6 +114,34 @@ describe('SEC-3: notification payloads', () => {
         actorName: 'x'.repeat(101),
       })));
     });
+
+    it('bounds the deadline a request push carries', async () => {
+      // `answerBy` is the deadline as epoch millis in decimal text - 13 characters today. It is
+      // a key a client writes, so it has a bound like every other: an unbounded key is a place
+      // to put a wall of text.
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered',
+        answerBy: 'x'.repeat(21),
+      })));
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'request_last_chance',
+        answerBy: 'x'.repeat(21),
+      })));
+      // Text, not a number: the other keys here are all strings and so is this.
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered',
+        answerBy: 1787000000000,
+      })));
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered',
+        answerBy: 'x'.repeat(20),
+      })));
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered',
+        answerBy: '1787000000000',
+      })));
+    });
   });
 
   describe('what a client may claim to be', () => {
@@ -174,6 +202,8 @@ describe('SEC-3: notification payloads', () => {
         // UX-18. The pair's first agreement, carried over from before they paired — its own
         // type because it is not a proposal and there is nothing to confirm or decline.
         'split_ratio_agreed',
+        // Phase 3a. The proposer's phone queues it for the parent who did not answer in time.
+        'request_last_chance',
       ];
       for (const type of types) {
         await assertSucceeds(
@@ -235,6 +265,23 @@ describe('SEC-3: notification payloads', () => {
       await assertFails(db.collection('notification_queue').add(queued({
         type: 'event_created',
         familyId: 42,
+      })));
+    });
+
+    it('accepts a last chance that names the family and when it ends', async () => {
+      // What the proposer's phone queues (phase 3a): a type, the family the request belongs to
+      // and the end of the last chance. Nothing else rides along; the words are the receiving
+      // device's own.
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'request_last_chance',
+        familyId: 'alice-uid__bob-uid',
+        answerBy: '1787000000000',
+      })));
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'request_last_chance',
+        familyId: 'alice-uid__carol-uid',
+        answerBy: '1787000000000',
       })));
     });
   });

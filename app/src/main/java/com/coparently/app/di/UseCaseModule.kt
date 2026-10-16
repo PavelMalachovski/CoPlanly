@@ -3,6 +3,7 @@ package com.coparently.app.di
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.usecase.*
 import dagger.Module
 import dagger.Provides
@@ -23,18 +24,21 @@ object UseCaseModule {
 
     @Provides
     @ViewModelScoped
+    @Suppress("LongParameterList") // one binding per collaborator of the use case
     fun provideCreateEventUseCase(
         eventRepository: EventRepository,
         eventValidator: EventValidator,
         analyticsManager: AnalyticsManager,
         crashlyticsManager: CrashlyticsManager,
-        reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
+        reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler,
+        requestDeadlines: RequestDeadlineRepository
     ): CreateEventUseCase = CreateEventUseCase(
         eventRepository,
         eventValidator,
         analyticsManager,
         crashlyticsManager,
-        reminderScheduler
+        reminderScheduler,
+        requestDeadlines
     )
 
     @Provides

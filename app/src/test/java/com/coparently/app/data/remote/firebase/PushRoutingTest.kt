@@ -51,6 +51,12 @@ class PushRoutingTest {
     }
 
     @Test
+    fun `a last chance opens the inbox, on the schedule channel`() {
+        assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(PushPayload.REQUEST_LAST_CHANCE))
+        assertEquals(PushChannel.SCHEDULE, PushRouting.channelOf(PushPayload.REQUEST_LAST_CHANCE))
+    }
+
+    @Test
     fun `money, schedule and chat each have their own channel, so one can be muted alone`() {
         assertEquals(PushChannel.CHAT, PushRouting.channelOf(PushPayload.CHAT_MESSAGE))
         for (type in PushPayload.CLIENT_TYPES) {

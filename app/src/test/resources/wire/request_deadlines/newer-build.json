@@ -1,0 +1,67 @@
+{
+  "about": "A swap's clock after its whole life, written by a later build that adds a field this build does not know (escalation): the fields it reads are unchanged and the unknown one is ignored.",
+  "document": {
+    "answerByMillis": 1778259200000,
+    "capMillis": 1778691200000,
+    "closedAt": {
+      "$timestamp": 1778352801000
+    },
+    "createdAt": {
+      "$timestamp": 1778000000000
+    },
+    "dayCount": 3,
+    "deliveredAtMillis": 1778000060000,
+    "escalation": {
+      "channel": "sms",
+      "level": 2
+    },
+    "familyId": "uidA__uidB",
+    "firstDate": "2026-05-13",
+    "kind": "swap",
+    "lastChanceAt": {
+      "$timestamp": 1778266400000
+    },
+    "lastChanceUntilMillis": 1778352800000,
+    "outcome": "no_answer",
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "proposerUid": "uidA",
+    "ref": "grp-old-1",
+    "reminderTimesMillis": [
+      1778086400000,
+      1778172800000,
+      1778252000000
+    ],
+    "remindersPlanned": 3,
+    "remindersShown": 2,
+    "responderUid": "uidB",
+    "seenAtMillis": 1778000600000
+  },
+  "reads": {
+    "answerByMillis": 1778259200000,
+    "capMillis": 1778691200000,
+    "closedAtMillis": 1778352801000,
+    "createdAtMillis": 1778000000000,
+    "dayCount": 3,
+    "deliveredAtMillis": 1778000060000,
+    "familyId": "uidA__uidB",
+    "firstDate": "2026-05-13",
+    "kind": "swap",
+    "lastChanceAtMillis": 1778266400000,
+    "lastChanceUntilMillis": 1778352800000,
+    "outcome": "no_answer",
+    "proposerUid": "uidA",
+    "ref": "grp-old-1",
+    "reminderTimesMillis": [
+      1778086400000,
+      1778172800000,
+      1778252000000
+    ],
+    "remindersPlanned": 3,
+    "remindersShown": 2,
+    "responderUid": "uidB",
+    "seenAtMillis": 1778000600000
+  }
+}

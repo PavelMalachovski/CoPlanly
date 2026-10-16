@@ -45,8 +45,10 @@ enum class DayOverrideStatus {
  * @property decidedAt ISO date-time of that answer, or null while pending.
  * @property note Optional free text from either side. Blank is stored as null rather than as an
  *   empty string, so the UI has one thing to test for.
- * @property groupId Ties the days of one multi-day offer together, or null for a single day and
- *   for every entry written before groups existed.
+ * @property groupId Ties the days of one offer together, or null for a single day an older build
+ *   offered and for every entry written before groups existed. Since phase 3a a single day offered
+ *   by this build is a group of one, because the offer's clock (`request_deadlines`) is named by
+ *   its group id.
  *
  *   Grouping is a **client-side** fact and deliberately so. `firestore.rules` can validate a diff
  *   that names exactly one date (Rules cannot iterate a map), so a run of days is still written

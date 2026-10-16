@@ -67,7 +67,11 @@ class ChatCardTargetTest {
         ActivityKind.DAY_SWAP_DECLINED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
         ActivityKind.CUSTODY_PROPOSED to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null),
         ActivityKind.CUSTODY_ACCEPTED to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null),
-        ActivityKind.CUSTODY_DECLINED to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null)
+        ActivityKind.CUSTODY_DECLINED to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null),
+        // Announced about all four kinds of request, so one entity type speaks for each here and
+        // `a request's last-chance or no-answer card goes where its own cards go` covers the rest.
+        ActivityKind.REQUEST_LAST_CHANCE to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
+        ActivityKind.REQUEST_UNANSWERED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox)
     )
 
     // ---- the defect -----------------------------------------------------------
@@ -100,6 +104,25 @@ class ChatCardTargetTest {
         val swap = card(ActivityKind.DAY_SWAP_OFFERED, ActivityEntityType.DAY_SWAP, entityId = "2026-10-14")
 
         assertEquals(ChatCardTarget.Inbox, ChatCardTarget.of(swap))
+    }
+
+    @Test
+    fun `a request's last-chance or no-answer card goes where its own cards go`() {
+        // The card carries its request's own entity type, so the tap needs no rule of its own: a
+        // swap opens the inbox, a change request the inbox on its event, an event its preview, and
+        // a proposal nothing.
+        val own = mapOf(
+            ActivityEntityType.DAY_SWAP to ChatCardTarget.Inbox,
+            ActivityEntityType.CHANGE_REQUEST to ChatCardTarget.ChangeRequest(ID),
+            ActivityEntityType.EVENT to ChatCardTarget.Event(ID),
+            ActivityEntityType.CUSTODY_PROPOSAL to null
+        )
+
+        listOf(ActivityKind.REQUEST_LAST_CHANCE, ActivityKind.REQUEST_UNANSWERED).forEach { kind ->
+            own.forEach { (type, target) ->
+                assertEquals(target, ChatCardTarget.of(card(kind, type)), "$kind about $type")
+            }
+        }
     }
 
     @Test

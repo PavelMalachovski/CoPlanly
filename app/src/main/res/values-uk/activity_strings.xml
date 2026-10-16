@@ -18,4 +18,7 @@
     <string name="activity_custody_proposed">Запропоновано новий графік опіки</string>
     <string name="activity_custody_accepted">Новий графік опіки погоджено</string>
     <string name="activity_custody_declined">Пропозицію щодо опіки відхилено</string>
+    <string name="activity_request_last_chance">Останній шанс відповісти: %1$s</string>
+    <string name="activity_request_unanswered">Немає відповіді: %1$s</string>
+    <string name="activity_subject_custody_schedule">графік опіки</string>
 </resources>

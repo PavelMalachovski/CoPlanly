@@ -42,8 +42,9 @@ object RequestsRowText {
 
     /**
      * The co-parent's newest ACCEPTED/DECLINED answer to one of this parent's requests, decided
-     * within seven days of [now]. A withdrawal is not an answer, and a custody decision has its
-     * own banner and pop-up.
+     * within seven days of [now]. A withdrawal is not an answer, nor is "No answer" (phase 3a) —
+     * the row would otherwise say they declined it — and a custody decision has its own banner and
+     * pop-up.
      */
     fun latestAnswer(history: List<HistoryEntry>, scope: RequestScope, now: LocalDateTime): HistoryEntry? {
         val since = now.minus(ANSWER_WINDOW)
@@ -51,7 +52,7 @@ object RequestsRowText {
             .filter { entry ->
                 entry.askedBy == scope.myUid &&
                     entry.decidedBy == scope.coParentUid &&
-                    entry.outcome != RequestOutcome.WITHDRAWN &&
+                    entry.outcome.isAnswer &&
                     entry.subject != RequestSubject.CustodySchedule &&
                     !entry.decidedAt.isBefore(since)
             }

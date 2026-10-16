@@ -169,4 +169,17 @@ class HomeFeedTest {
             HomeFeed.items(emptyList(), emptyList(), listOf(myAnswer, theirWithdrawal, custody), partner, maxItems = 5)
         )
     }
+
+    @Test
+    fun `a request the co-parent never answered is not an answer of theirs`() {
+        // Silence is not something they did, and it must never read as "declined" (phase 3a).
+        val unanswered = answer(
+            "cr_silent",
+            RequestSubject.NewTime("e1", "Swimming", t0.plusDays(2)),
+            RequestOutcome.NO_ANSWER,
+            decidedAt = t0.plusHours(1)
+        )
+
+        assertEquals(emptyList(), HomeFeed.items(emptyList(), emptyList(), listOf(unanswered), partner, maxItems = 5))
+    }
 }

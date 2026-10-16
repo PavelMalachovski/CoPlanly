@@ -31,12 +31,13 @@ import com.coparently.app.utils.dateWithTime
 
 /**
  * The inbox's History (phase 2, spec §6.2): every request of the family on screen that was
- * answered or withdrawn, newest first, as one group of rows.
+ * answered, withdrawn or — since phase 3a — left with no answer, newest first, as one group of rows.
  *
  * A row says what the request was, what it asked for when that is a time, how it ended — on the
- * inbox's own neutral status chip, with the outcome's shape in it — and who answered when. The
- * time sits in its own part after " · " rather than inside the sentence: in Czech, Russian and
- * Ukrainian "answered <date>" would need a preposition and a case. Rows are not interactive.
+ * inbox's own neutral status chip, with the outcome's shape in it — and who answered when; a "No
+ * answer" row names nobody as answering. The time sits in its own part after " · " rather than
+ * inside the sentence: in Czech, Russian and Ukrainian "answered <date>" would need a preposition
+ * and a case. Rows are not interactive.
  *
  * @param entries The history, newest first.
  * @param parentNames Names each parent — never "Mom" or "Dad".
@@ -97,21 +98,26 @@ private fun HistoryRow(entry: HistoryEntry, parentNames: ParentNames, myUid: Str
         proposedTime(entry.subject)?.let { time ->
             Text(text = time.format(dateWithTime("MMMEd")), style = MaterialTheme.typography.bodyMedium)
         }
-        Text(
-            text = stringResource(
-                R.string.request_history_when,
-                whoAnswered(entry, parentNames, myUid),
-                entry.decidedAt.format(dateWithTime("MMMd"))
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // Nobody answered a "No answer", so its row claims no answer and names nobody as answering.
+        if (entry.outcome != RequestOutcome.NO_ANSWER) {
+            Text(
+                text = stringResource(
+                    R.string.request_history_when,
+                    whoAnswered(entry, parentNames, myUid),
+                    entry.decidedAt.format(dateWithTime("MMMd"))
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 /**
- * How the request ended, on one neutral chip for every outcome — the shape of the icon carries
- * it. This phone's own answer that has not left yet says Queued instead (CQ-20).
+ * How the request ended, on one neutral chip for every answer and withdrawal — the shape of the
+ * icon carries it. "No answer" (phase 3a) is the one outlined chip, with no icon: `onSurfaceVariant`
+ * on an `outline` border, never the error colour, which would read as "Declined". This phone's own
+ * answer that has not left yet says Queued instead (CQ-20).
  */
 @Composable
 private fun OutcomeChip(entry: HistoryEntry) {
@@ -123,20 +129,24 @@ private fun OutcomeChip(entry: HistoryEntry) {
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     } else {
+        // A null container is PillChip's outlined variant, drawn on the theme's `outline` border.
+        val outlined = entry.outcome == RequestOutcome.NO_ANSWER
         PillChip(
             label = stringResource(
                 when (entry.outcome) {
                     RequestOutcome.ACCEPTED -> R.string.change_request_status_accepted
                     RequestOutcome.DECLINED -> R.string.change_request_status_declined
                     RequestOutcome.WITHDRAWN -> R.string.change_request_status_cancelled
+                    RequestOutcome.NO_ANSWER -> R.string.request_clock_no_answer
                 }
             ),
             icon = when (entry.outcome) {
                 RequestOutcome.ACCEPTED -> Icons.Default.Check
                 RequestOutcome.DECLINED -> Icons.Default.Close
                 RequestOutcome.WITHDRAWN -> Icons.AutoMirrored.Filled.Undo
+                RequestOutcome.NO_ANSWER -> null
             },
-            container = MaterialTheme.colorScheme.surfaceVariant,
+            container = if (outlined) null else MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

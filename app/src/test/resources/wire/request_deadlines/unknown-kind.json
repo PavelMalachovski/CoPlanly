@@ -1,0 +1,20 @@
+{
+  "about": "A clock for a kind of request a later build times and this build cannot show: it is left out rather than guessed, so the request it belongs to is shown as it always was.",
+  "document": {
+    "answerByMillis": 1778259200000,
+    "createdAt": {
+      "$timestamp": 1778000000000
+    },
+    "familyId": "uidA__uidB",
+    "kind": "handover",
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "proposerUid": "uidA",
+    "ref": "handover-1",
+    "responderUid": "uidB"
+  },
+  "reads": null,
+  "skipped": "a kind this build does not know"
+}

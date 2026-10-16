@@ -6,6 +6,7 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.school.ExistingImport
 import com.coparently.app.domain.school.SchoolImportPlan
 import com.coparently.app.domain.usecase.CreateEventUseCase
@@ -51,15 +52,19 @@ class SchoolEventWriter @Inject constructor(
     private val eventRepository: EventRepository,
     analyticsManager: AnalyticsManager,
     crashlyticsManager: CrashlyticsManager,
-    reminderScheduler: ReminderScheduler
+    reminderScheduler: ReminderScheduler,
+    requestDeadlines: RequestDeadlineRepository
 ) {
 
+    // An import asks nobody for an answer: it never passes a deadline, so `requestDeadlines` is here
+    // only because the use case needs it to be built (phase 3a).
     private val createEvent = CreateEventUseCase(
         eventRepository,
         EventValidator(),
         analyticsManager,
         crashlyticsManager,
-        reminderScheduler
+        reminderScheduler,
+        requestDeadlines
     )
     private val updateEvent = UpdateEventUseCase(
         eventRepository,

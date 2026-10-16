@@ -1492,6 +1492,249 @@ service cloud.firestore {
                       familyIsMineOrBlank(request.resource.data.get('familyId', ''));
     }
 
+    // ---- Request clocks (phase 3a) -------------------------------------
+    // `request_deadlines/{clockId}` — the clock of one request that waits on the other parent: a
+    // day swap, a change request, an event awaiting acceptance, a custody proposal. It holds the
+    // deadline the proposer chose, the first moment the request would change something (the
+    // cap), and the marks the two phones add as the request is received, opened, reminded about,
+    // given a last chance and closed. The design is
+    // docs/superpowers/specs/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang-design.md §5;
+    // the client's one definition of the stored shape is `RequestDeadlineDocument`.
+    //
+    // **A document of its own, because the request's record cannot take a new key.** A change
+    // request's update rule admits three fields, the custody document's swap and proposal writes
+    // are closed lists, and an older build rewrites a whole change request when it answers. So
+    // an older build never reads or writes this collection, and **nothing here refuses an
+    // answer**: `change_requests`, `custody_models` and `events` are untouched, and a co-parent
+    // on an older build answers a request whatever its clock says (spec §5.5). A request whose
+    // clock never arrives behaves as one without a clock.
+    //
+    // **Two writers, and each field has one.** The proposer creates the clock, gives a last
+    // chance, and closes it. The answering parent's phone records when it received the clock
+    // (with the reminders it planned, in one write), when the parent first opened the request,
+    // and each reminder it showed. Every update is exactly one of those five shapes, each bounded
+    // by `diff().affectedKeys()`: the deadline, the cap, the two parents and the creation time
+    // never move once written, a field written once is not written again, and neither parent
+    // writes the other's.
+    //
+    // **The server's clock stamps what the server has to vouch for.** `createdAt`, `lastChanceAt`
+    // and `closedAt` are `FieldValue.serverTimestamp()`, pinned to `request.time` as
+    // `event_versions.recordedAt` is: a millis value a client chose, bounded to minutes of
+    // `request.time`, would be refused whenever an offline phone's queue lands hours later. What
+    // a phone reads off its own clock — when it received the clock, when it opened the request,
+    // where a last chance ends — is epoch millis checked against the server's, with five minutes
+    // either way because device clocks drift. Either way matters: a clock that is a little wrong
+    // is wrong by the same amount on every retry, so a bound with room on one side only refuses
+    // such a phone for good. The reminders get none: they are planned from the document's own
+    // `createdAt` and deadline, so they are checked against those, exactly.
+
+    // The farthest deadline a clock may carry: 31 days past the write. The app clamps itself to
+    // 30 (`AnswerBy.MAX_AHEAD_MILLIS`); the day between is for a phone whose clock runs fast.
+    function requestClockMaxAheadMillis() {
+      return 31 * 24 * 60 * 60 * 1000;
+    }
+
+    // How far a phone's own clock may be from the server's, behind or ahead: five minutes.
+    function requestClockSkewMillis() {
+      return 5 * 60 * 1000;
+    }
+
+    // The longest a last chance may run, counted from the moment it is given: 24 hours.
+    function requestClockLastChanceMillis() {
+      return 24 * 60 * 60 * 1000;
+    }
+
+    // The id a clock must carry, built from the caller and the clock's own fields: its kind, the
+    // proposer's uid and the reference it times — and for a proposal the family too, because a
+    // proposal's reference is a timestamp, unique only within one family's custody document.
+    // `RequestDeadlineId` builds the same string on the client.
+    //
+    // The proposer's uid is in the id because the other parent can see the rest of it. Rebuilt
+    // here from the *caller*, it stops the other parent creating a request's clock first and
+    // stripping its deadline, or faking an early "No answer". The parts are joined with `_`,
+    // which a Firebase uid never contains, so two proposers cannot spell the same id. The create
+    // rule checks the kind is one of the four before it asks for the id.
+    function requestClockId(data) {
+      return data.kind == 'proposal'
+          ? 'proposal_' + request.auth.uid + '_' + data.familyId + '_' + data.ref
+          : data.kind + '_' + request.auth.uid + '_' + data.ref;
+    }
+
+    // A new clock: the proposer's, for a request to their live co-parent, with the required keys,
+    // the optional ones and nothing that is written later.
+    //
+    // **`createdAt` is the server's.** The client writes `FieldValue.serverTimestamp()`, which is
+    // exactly `request.time`; a time it chose is refused.
+    //
+    // **The family is one the caller is in, that still exists and that names two adults**, and
+    // the responder is the other one: `isLiveFamilyMember` reads the id and the existence of
+    // `families/{id}` (unpair deletes it), the `split` is the same read of the id, and a pair's id
+    // always has exactly two parts (`FamilyKey.of`). So a clock can neither address a stranger
+    // nor outlive the relationship it was made in.
+    //
+    // **An optional field is absent, not null**: the writer leaves it out (`capMillis` when
+    // nothing ahead would change, `firstDate` and `dayCount` for everything but a swap).
+    function requestClockCreateValid(clockId, data) {
+      return data.keys().hasAll(['kind', 'ref', 'familyId', 'proposerUid', 'responderUid',
+                                 'participants', 'createdAt', 'answerByMillis']) &&
+             data.keys().hasOnly(['kind', 'ref', 'familyId', 'proposerUid', 'responderUid',
+                                  'participants', 'createdAt', 'answerByMillis',
+                                  'capMillis', 'firstDate', 'dayCount']) &&
+             data.kind in ['swap', 'change', 'event', 'proposal'] &&
+             isValidLength(data.ref, 1, 100) &&
+             data.familyId is string &&
+             clockId == requestClockId(data) &&
+             data.proposerUid == request.auth.uid &&
+             isLiveFamilyMember(data.familyId) &&
+             data.familyId.split('__').size() == 2 &&
+             data.responderUid in data.familyId.split('__') &&
+             data.responderUid != request.auth.uid &&
+             data.participants is list &&
+             data.participants.size() == 2 &&
+             request.auth.uid in data.participants &&
+             data.responderUid in data.participants &&
+             data.createdAt == request.time &&
+             data.answerByMillis is int &&
+             data.answerByMillis > request.time.toMillis() &&
+             data.answerByMillis <= request.time.toMillis() + requestClockMaxAheadMillis() &&
+             (!('capMillis' in data) ||
+              (data.capMillis is int && data.capMillis > data.answerByMillis)) &&
+             (!('firstDate' in data) || isValidLength(data.firstDate, 10, 10)) &&
+             (!('dayCount' in data) ||
+              (data.dayCount is int && data.dayCount >= 1 && data.dayCount <= 366));
+    }
+
+    // One reminder of the plan: absent past the plan's length, otherwise a whole number of millis
+    // between the clock's creation and its deadline. Rules cannot loop over a list and a plan
+    // holds three at most, so the plan's write asks this of places 0, 1 and 2.
+    function requestClockReminderValid(times, place, fromMillis, toMillis) {
+      return times.size() <= place ||
+             (times[place] is int && times[place] >= fromMillis && times[place] <= toMillis);
+    }
+
+    // The answering parent's phone recording that it received the clock and the reminders it
+    // planned, in one write and once: all three keys arrive together, none was there before (a
+    // `hasAll` on the diff alone would pass for a key that merely changed).
+    function requestClockPlanWrite(before, after) {
+      return request.auth.uid == before.responderUid &&
+             after.diff(before).affectedKeys().hasOnly(
+               ['deliveredAtMillis', 'remindersPlanned', 'reminderTimesMillis']) &&
+             after.diff(before).affectedKeys().hasAll(
+               ['deliveredAtMillis', 'remindersPlanned', 'reminderTimesMillis']) &&
+             !('deliveredAtMillis' in before) &&
+             !('remindersPlanned' in before) &&
+             !('reminderTimesMillis' in before) &&
+             after.deliveredAtMillis is int &&
+             // Stamped by the phone's own clock about a second after the server created the clock,
+             // so a phone that runs behind stamps a moment before `createdAt`: room for that.
+             after.deliveredAtMillis >= before.createdAt.toMillis() - requestClockSkewMillis() &&
+             after.deliveredAtMillis <= request.time.toMillis() + requestClockSkewMillis() &&
+             after.remindersPlanned is int &&
+             after.remindersPlanned >= 0 &&
+             after.remindersPlanned <= 3 &&
+             after.reminderTimesMillis is list &&
+             after.reminderTimesMillis.size() == after.remindersPlanned &&
+             requestClockReminderValid(after.reminderTimesMillis, 0,
+                                       before.createdAt.toMillis(), before.answerByMillis) &&
+             requestClockReminderValid(after.reminderTimesMillis, 1,
+                                       before.createdAt.toMillis(), before.answerByMillis) &&
+             requestClockReminderValid(after.reminderTimesMillis, 2,
+                                       before.createdAt.toMillis(), before.answerByMillis);
+    }
+
+    // The answering parent opening the request for the first time: once, and as the phone's own
+    // clock reads it — no more than the skew before the clock was created and no more than the
+    // skew past the server's time, the same room delivery has and for the same reason.
+    function requestClockOpeningWrite(before, after) {
+      return request.auth.uid == before.responderUid &&
+             after.diff(before).affectedKeys().hasOnly(['seenAtMillis']) &&
+             after.diff(before).affectedKeys().hasAll(['seenAtMillis']) &&
+             !('seenAtMillis' in before) &&
+             after.seenAtMillis is int &&
+             after.seenAtMillis >= before.createdAt.toMillis() - requestClockSkewMillis() &&
+             after.seenAtMillis <= request.time.toMillis() + requestClockSkewMillis();
+    }
+
+    // The answering parent's phone counting a reminder it showed: one more than the last, never
+    // above what it planned. A clock with no plan has nothing to count. `increment(1)` arrives
+    // here as the value it produces, so the app's write and a plain value are judged alike.
+    function requestClockReminderShownWrite(before, after) {
+      return request.auth.uid == before.responderUid &&
+             after.diff(before).affectedKeys().hasOnly(['remindersShown']) &&
+             after.diff(before).affectedKeys().hasAll(['remindersShown']) &&
+             after.remindersShown is int &&
+             after.remindersShown == before.get('remindersShown', 0) + 1 &&
+             after.remindersShown <= before.get('remindersPlanned', 0);
+    }
+
+    // The proposer's last chance, given once, after the deadline and before the clock was closed.
+    // The server stamps when it was given; it ends within 24 hours of that and, when the request
+    // has a cap, no later than the cap — a last chance must not outlive the thing it decides.
+    //
+    // **The 24 hours get the skew on top.** The proposer's phone ends a last chance a day from its
+    // own now (`RequestClock.lastChanceWindowMillis`), and this measures the day from the server's:
+    // a phone whose clock leads the server's by more than the write's latency would otherwise send
+    // an end past the bound on every retry. The cap gets none — it is a stored time, not a clock
+    // reading, and the phone ends a last chance an hour before it.
+    function requestClockLastChanceWrite(before, after) {
+      return request.auth.uid == before.proposerUid &&
+             after.diff(before).affectedKeys().hasOnly(['lastChanceAt', 'lastChanceUntilMillis']) &&
+             after.diff(before).affectedKeys().hasAll(['lastChanceAt', 'lastChanceUntilMillis']) &&
+             !('lastChanceAt' in before) &&
+             !('lastChanceUntilMillis' in before) &&
+             !('outcome' in before) &&
+             request.time.toMillis() > before.answerByMillis &&
+             after.lastChanceAt == request.time &&
+             after.lastChanceUntilMillis is int &&
+             after.lastChanceUntilMillis > request.time.toMillis() &&
+             after.lastChanceUntilMillis <=
+               request.time.toMillis() + requestClockLastChanceMillis() +
+               requestClockSkewMillis() &&
+             (!('capMillis' in before) || after.lastChanceUntilMillis <= before.capMillis);
+    }
+
+    // The proposer closing the clock because nobody answered: once, after the deadline, with the
+    // one outcome there is and the server's stamp of when. The outcome is the only state a clock
+    // stores; the rest is derived on each phone from the times.
+    //
+    // With a single legal outcome a second closure could never *change* `outcome`, so `hasAll` on
+    // the diff would already refuse it. The explicit absent-before checks say "once" without
+    // leaning on that, and keep it true on the day a second outcome is allowed.
+    function requestClockClosureWrite(before, after) {
+      return request.auth.uid == before.proposerUid &&
+             after.diff(before).affectedKeys().hasOnly(['outcome', 'closedAt']) &&
+             after.diff(before).affectedKeys().hasAll(['outcome', 'closedAt']) &&
+             !('outcome' in before) &&
+             !('closedAt' in before) &&
+             request.time.toMillis() > before.answerByMillis &&
+             after.outcome == 'no_answer' &&
+             after.closedAt == request.time;
+    }
+
+    match /request_deadlines/{clockId} {
+      // The two parents, and only them. Firestore judges a list by its structure, so a query has
+      // to be keyed on `participants` with the caller's uid (`array-contains`) — the app adds the
+      // family, or a deadline, as a second filter. A `get` of a clock that does not exist is a
+      // permission error, not "not found", as it is for `change_requests`: a reader treats it as
+      // no clock.
+      allow get, list: if isAuthenticated() && request.auth.uid in resource.data.participants;
+
+      allow create: if isAuthenticated() &&
+                      requestClockCreateValid(clockId, request.resource.data);
+
+      allow update: if isAuthenticated() && (
+        requestClockPlanWrite(resource.data, request.resource.data) ||
+        requestClockOpeningWrite(resource.data, request.resource.data) ||
+        requestClockReminderShownWrite(resource.data, request.resource.data) ||
+        requestClockLastChanceWrite(resource.data, request.resource.data) ||
+        requestClockClosureWrite(resource.data, request.resource.data)
+      );
+
+      // Nobody. Account deletion removes a departing parent's clocks as the server, which
+      // bypasses these rules.
+      allow delete: if false;
+    }
+
     // ---- Invitations ---------------------------------------------------
     // A single document backs the short code, the QR image and the share
     // link. Redemption goes through the acceptPairingInvitation callable —
@@ -1696,7 +1939,8 @@ service cloud.firestore {
         'day_swap_group_offered', 'day_swap_group_accepted', 'day_swap_group_declined',
         'split_ratio_proposed', 'split_ratio_accepted', 'split_ratio_declined',
         'split_ratio_agreed',
-        'records_shared'
+        'records_shared',
+        'request_last_chance'
       ];
     }
 
@@ -1734,6 +1978,11 @@ service cloud.firestore {
                       // other free-text key: a field the rule does not know about is a field
                       // with no bound.
                       isValidLength(request.resource.data.get('data', {}).get('dayCount', ''), 0, 4) &&
+                      // A request's deadline, as epoch millis in decimal text (13 characters
+                      // today) - the day-swap, change-request and custody-proposal pushes carry
+                      // it so their first notification can say when to answer by, and a last
+                      // chance carries where it ends. Bounded like every key a client writes.
+                      isValidLength(request.resource.data.get('data', {}).get('answerBy', ''), 0, 20) &&
                       isPushFamily(request.resource.data.get('data', {}).get('familyId', ''),
                                    request.resource.data.targetUserId);
       allow update, delete: if false;

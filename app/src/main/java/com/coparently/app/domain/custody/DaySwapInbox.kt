@@ -60,7 +60,7 @@ object DaySwapInbox {
      * that names one date.
      *
      * An entry with no group id is its own group, which is what every swap written before groups
-     * existed is, and what a single-day swap still is.
+     * existed is, and what a single-day swap from an older build still is.
      *
      * @param overrides The pair's swaps, keyed by ISO date.
      * @param today The day to measure "already passed" against.

@@ -1,0 +1,39 @@
+{
+  "about": "A swap offer's clock as RequestDeadlineRepositoryImpl.start creates it, before the data source adds createdAt.",
+  "document": {
+    "answerByMillis": 1778616000000,
+    "capMillis": 1778889600000,
+    "dayCount": 2,
+    "familyId": "uidA__uidB",
+    "firstDate": "2026-05-16",
+    "kind": "swap",
+    "participants": [
+      "uidA",
+      "uidB"
+    ],
+    "proposerUid": "uidA",
+    "ref": "grp-current-1",
+    "responderUid": "uidB"
+  },
+  "reads": {
+    "answerByMillis": 1778616000000,
+    "capMillis": 1778889600000,
+    "closedAtMillis": null,
+    "createdAtMillis": null,
+    "dayCount": 2,
+    "deliveredAtMillis": null,
+    "familyId": "uidA__uidB",
+    "firstDate": "2026-05-16",
+    "kind": "swap",
+    "lastChanceAtMillis": null,
+    "lastChanceUntilMillis": null,
+    "outcome": null,
+    "proposerUid": "uidA",
+    "ref": "grp-current-1",
+    "reminderTimesMillis": [],
+    "remindersPlanned": null,
+    "remindersShown": 0,
+    "responderUid": "uidB",
+    "seenAtMillis": null
+  }
+}

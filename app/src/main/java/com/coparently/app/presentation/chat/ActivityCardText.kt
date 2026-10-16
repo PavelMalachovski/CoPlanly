@@ -2,7 +2,27 @@ package com.coparently.app.presentation.chat
 
 import androidx.annotation.StringRes
 import com.coparently.app.R
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+
+/**
+ * What an announcement's sentence is about — the `%1$s` of its string — before the reading device
+ * words it. A tagged value rather than a `String`, because not everything a card is about is the
+ * sender's text: a day is written the way the reader's language writes it, and a schedule is a
+ * noun this app words itself.
+ */
+sealed interface CardSubjectText {
+
+    /** A day, as ISO text on the wire. The reader's language says it, with its weekday. */
+    data class IsoDate(val iso: String) : CardSubjectText
+
+    /** A noun the app words itself, in the reader's language. */
+    data class Res(@StringRes val id: Int) : CardSubjectText
+
+    /** What the sender wrote, shown as it is: an event's title, an expense's description. */
+    data class Raw(val text: String) : CardSubjectText
+}
 
 /**
  * Turns an announcement's [ActivityKind] into the sentence *this* device speaks.
@@ -41,5 +61,28 @@ object ActivityCardText {
         ActivityKind.CUSTODY_PROPOSED -> R.string.activity_custody_proposed
         ActivityKind.CUSTODY_ACCEPTED -> R.string.activity_custody_accepted
         ActivityKind.CUSTODY_DECLINED -> R.string.activity_custody_declined
+        ActivityKind.REQUEST_LAST_CHANCE -> R.string.activity_request_last_chance
+        ActivityKind.REQUEST_UNANSWERED -> R.string.activity_request_unanswered
+    }
+
+    /**
+     * What [card]'s sentence is about, decided by the entity the card names:
+     *
+     * - a day swap is its date, which the reader's language writes (`title` is the ISO date; an
+     *   older build prints it as it is);
+     * - a custody proposal is worded — it has no name of its own, and a request's card carries a
+     *   blank title. The cards that existed before carry the family id there, and their sentences
+     *   take no argument, so the worded subject changes nothing they show;
+     * - anything else is its `title`, as the sender wrote it.
+     *
+     * `when` with no `else`, like [resourceFor]: a new [ActivityEntityType] has to be given a
+     * subject before this builds.
+     */
+    fun subjectOf(card: ActivityAnnouncement): CardSubjectText = when (card.entityType) {
+        ActivityEntityType.DAY_SWAP -> CardSubjectText.IsoDate(card.title)
+        ActivityEntityType.CUSTODY_PROPOSAL -> CardSubjectText.Res(R.string.activity_subject_custody_schedule)
+        ActivityEntityType.EVENT,
+        ActivityEntityType.CHANGE_REQUEST,
+        ActivityEntityType.EXPENSE -> CardSubjectText.Raw(card.title)
     }
 }

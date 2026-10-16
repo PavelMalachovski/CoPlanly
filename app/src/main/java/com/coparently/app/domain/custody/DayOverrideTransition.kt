@@ -44,6 +44,8 @@ object DayOverrideTransition {
      * @param byUid The parent offering — this device's own uid.
      * @param atIso ISO date-time of the offer.
      * @param note Optional free text; blank normalises to null.
+     * @param groupId Makes the day a group of one (phase 3a): the offer's clock is named by its
+     *   group id, as a run's is. Null writes the entry an older build wrote, which is still an offer.
      */
     @Suppress("LongParameterList") // one entry, one parameter per stored field
     fun offer(
@@ -52,7 +54,8 @@ object DayOverrideTransition {
         toParent: String,
         byUid: String,
         atIso: String,
-        note: String? = null
+        note: String? = null,
+        groupId: String? = null
     ): Result<Map<String, DayOverride>> = Result.success(
         current + (
             date to DayOverride(
@@ -60,7 +63,8 @@ object DayOverrideTransition {
                 requestedBy = byUid,
                 requestedAt = atIso,
                 status = DayOverrideStatus.PENDING,
-                note = note?.takeIf { it.isNotBlank() }
+                note = note?.takeIf { it.isNotBlank() },
+                groupId = groupId
             )
             )
     )

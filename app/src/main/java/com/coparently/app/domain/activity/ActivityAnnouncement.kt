@@ -129,5 +129,31 @@ enum class ActivityKind {
     DAY_SWAP_DECLINED,
     CUSTODY_PROPOSED,
     CUSTODY_ACCEPTED,
-    CUSTODY_DECLINED
+    CUSTODY_DECLINED,
+
+    /**
+     * The proposer gave a request a last chance (phase 3a): it stays open, with a new end.
+     *
+     * Announced about any of the four kinds of request that wait for an answer, and carries the
+     * request's **own** [ActivityEntityType], so a tap goes where the request's other cards go
+     * (`ChatCardTarget`) and no rule of its own is needed:
+     *
+     * - a day swap: `DAY_SWAP`, the first ISO date as both `entityId` and `title`;
+     * - a change request: `CHANGE_REQUEST`, the event's id and its title;
+     * - an event waiting for acceptance: `EVENT`, the event's id and its title;
+     * - a custody proposal: `CUSTODY_PROPOSAL`, the family's id and a blank `title` — a proposal
+     *   has no name of its own, so the reader words it.
+     *
+     * A record in the thread, never a push of its own: the last chance has its own push type, and
+     * `notifyOfChatMessage` skips this kind.
+     */
+    REQUEST_LAST_CHANCE,
+
+    /**
+     * A request ended with no answer (phase 3a). The payload is [REQUEST_LAST_CHANCE]'s.
+     *
+     * A record in the thread that pushes nobody — `notifyOfChatMessage` skips this kind: nothing
+     * more is sent to the parent who did not answer once their last chance has run.
+     */
+    REQUEST_UNANSWERED
 }

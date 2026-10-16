@@ -54,6 +54,17 @@ internal data class SignedInFamilies(
      */
     fun pairFor(row: CustodyModelEntity): CustodyPair? {
         val familyId = row.familyId ?: return pair?.takeIf { soleFamily }
+        return pairIn(familyId)
+    }
+
+    /**
+     * [familyId]'s document while the signed-in parent is still in that family — its other parent
+     * is one of their co-parents — whichever family is on screen. Null once that family has ended,
+     * and for a family they were never in.
+     *
+     * What a request's clock acts on (phase 3a): the family it was made in, never the one on screen.
+     */
+    fun pairIn(familyId: String): CustodyPair? {
         val uid = myUid ?: return null
         return coParents.asSequence()
             .mapNotNull { coParent -> pairOf(uid, coParent) }

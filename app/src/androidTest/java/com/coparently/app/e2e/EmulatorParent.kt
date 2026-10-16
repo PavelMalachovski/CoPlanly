@@ -30,6 +30,7 @@ import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
+import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
@@ -49,6 +50,7 @@ import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
+import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountSwitchGuard
@@ -63,6 +65,7 @@ import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.testing.NoFcm
 import com.coparently.app.testing.NoReminders
@@ -270,11 +273,25 @@ class EmulatorParent private constructor(
         firestorePetDataSource = FirestorePetDataSource(firestore)
     )
 
+    /**
+     * Every step a request clock asks this phone to schedule (phase 3a), recorded instead of handed
+     * to WorkManager: a test runs a step when it wants one rather than waiting for its time.
+     */
+    val requestScheduler = RecordingClockScheduler()
+
+    /** The production request clocks (phase 3a), over this phone's Firestore and [requestScheduler]. */
+    val requestDeadlineRepository: RequestDeadlineRepository = RequestDeadlineRepositoryImpl(
+        dataSource = FirestoreRequestDeadlineDataSource(firestore),
+        authService = authService,
+        scheduler = requestScheduler
+    )
+
     val changeRequestRepository = ChangeRequestRepositoryImpl(
         changeRequestDao = database.changeRequestDao(),
         firestoreDataSource = FirestoreChangeRequestDataSource(firestore),
         firebaseAuthService = authService,
-        fcmService = fcmService
+        fcmService = fcmService,
+        requestDeadlines = requestDeadlineRepository
     )
 
     val custodyRepository = CustodyModelRepository(
@@ -283,6 +300,7 @@ class EmulatorParent private constructor(
         firestoreCustodyDataSource = custodyDataSource,
         activityAnnouncer = announcer,
         fcmService = fcmService,
+        requestDeadlines = requestDeadlineRepository,
         scope = scope
     )
 

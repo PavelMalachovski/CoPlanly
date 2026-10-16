@@ -9,14 +9,17 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * The inbox's history (phase 2, spec §6.2): every request answered or withdrawn, derived from the
- * records both phones already hold — never a stored history list that could disagree with them.
+ * records both phones already hold — never a stored history list that could disagree with them —
+ * and, since phase 3a (spec §4.4, §6.6), every request nobody answered by the end of its clock.
  */
 class RequestHistoryTest {
 
@@ -85,8 +88,37 @@ class RequestHistoryTest {
         changeRequests: List<ChangeRequest> = emptyList(),
         events: List<Event> = emptyList(),
         overrides: Map<String, DayOverride> = emptyMap(),
-        decision: CustodyDecision? = null
-    ) = RequestHistory.build(scope, changeRequests, events, overrides, decision)
+        decision: CustodyDecision? = null,
+        clocks: ClocksAt = ClocksAt()
+    ) = RequestHistory.build(scope, changeRequests, events, overrides, decision, clocks)
+
+    /** [time] on this device's clock as epoch millis — the zone the history reads a clock's times in. */
+    private fun millisOf(time: LocalDateTime): Long = time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    /** The device's local time at [millis]. */
+    private fun localOf(millis: Long): LocalDateTime =
+        Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+    /**
+     * The clock of the request [ref] names, written by its author [from] for the other parent, due at
+     * [DEADLINE] with no cap, so it ends a day later unless a last chance was given.
+     */
+    private fun clock(kind: RequestKind, ref: String, from: String = "u1") = RequestDeadline(
+        id = RequestDeadlineId.of(kind, from, ref, "u1__u2"),
+        kind = kind,
+        ref = ref,
+        familyId = "u1__u2",
+        proposerUid = from,
+        responderUid = scope.otherOf(from),
+        answerByMillis = millisOf(DEADLINE)
+    )
+
+    /** [clock] as the proposer's phone closed it at [CLOSED_AT]. */
+    private fun closed(kind: RequestKind, ref: String, from: String = "u1") =
+        clock(kind, ref, from).copy(outcome = RequestClockOutcome.NO_ANSWER, closedAtMillis = millisOf(CLOSED_AT))
+
+    /** [clocks] seen at [LATER], well past every clock's end. */
+    private fun seenLater(vararg clocks: RequestDeadline) = ClocksAt.of(clocks.toList(), millisOf(LATER))
 
     @Test
     fun `my request the co-parent accepted is answered by them at respondedAt`() {
@@ -265,5 +297,170 @@ class RequestHistoryTest {
         )
 
         assertEquals(mapOf("cr_mine" to true, "cr_theirs" to false), entries.associate { it.key to it.queued })
+    }
+
+    @Test
+    fun `"No answer" is its own outcome, dated by its closure`() {
+        val pending = request("r1", status = ChangeRequestStatus.PENDING)
+        val closedClock = closed(RequestKind.CHANGE, "r1")
+
+        assertEquals(
+            listOf(
+                HistoryEntry(
+                    key = "cr_r1",
+                    subject = RequestSubject.NewTime("e-r1", "Swimming", LocalDateTime.of(2026, 10, 16, 18, 30)),
+                    outcome = RequestOutcome.NO_ANSWER,
+                    askedBy = "u1",
+                    decidedBy = "u2",
+                    decidedAt = CLOSED_AT,
+                    clock = closedClock
+                )
+            ),
+            history(listOf(pending), clocks = seenLater(closedClock))
+        )
+
+        // Until the proposer's phone closes it, the row is dated by the clock's own end: a day after
+        // the deadline, the last chance never given.
+        val unclosed = clock(RequestKind.CHANGE, "r1")
+        val entry = history(listOf(pending), clocks = seenLater(unclosed)).single()
+        assertEquals(RequestOutcome.NO_ANSWER, entry.outcome)
+        assertEquals(localOf(RequestClock.endMillis(unclosed)), entry.decidedAt)
+        assertTrue(entry.decidedAt.isAfter(DEADLINE))
+    }
+
+    @Test
+    fun `a late answer shows as the answer, not as "No answer"`() {
+        // Each was closed as "No answer" first, then answered from a co-parent's older build.
+        val answeredAt = CLOSED_AT.plusHours(10)
+        val entries = history(
+            changeRequests = listOf(request("r1", status = ChangeRequestStatus.DECLINED, respondedAt = answeredAt)),
+            events = listOf(event("e1", EventAcceptance.ACCEPTED, acceptedAt = answeredAt)),
+            overrides = mapOf("2026-10-20" to swap(DayOverrideStatus.ACCEPTED)),
+            decision = CustodyDecision(
+                outcome = CustodyDecisionOutcome.DECLINED,
+                by = "u2",
+                at = "2026-10-06T07:00:00",
+                proposalAt = PROPOSED_AT,
+                note = null
+            ),
+            clocks = seenLater(
+                closed(RequestKind.CHANGE, "r1"),
+                closed(RequestKind.EVENT, "e1"),
+                // A swap's clock names its offer's days, as every one this build writes does.
+                closed(RequestKind.SWAP, "g1").copy(firstDate = LocalDate.of(2026, 10, 20), dayCount = 1),
+                closed(RequestKind.PROPOSAL, PROPOSED_AT)
+            )
+        )
+
+        assertEquals(
+            mapOf(
+                "cr_r1" to RequestOutcome.DECLINED,
+                "ev_e1" to RequestOutcome.ACCEPTED,
+                "swap_g1" to RequestOutcome.ACCEPTED,
+                "custody_$PROPOSED_AT" to RequestOutcome.DECLINED
+            ),
+            entries.associate { it.key to it.outcome }
+        )
+        assertEquals(4, entries.size)
+    }
+
+    @Test
+    fun `a proposal withdrawn at its end stays in History from its clock`() {
+        // The proposer's phone closed the clock and took the proposal back; the custody document's
+        // last decision is an earlier proposal's.
+        val withdrawn = closed(RequestKind.PROPOSAL, PROPOSED_AT, from = "u2")
+        val earlier = CustodyDecision(
+            outcome = CustodyDecisionOutcome.ACCEPTED,
+            by = "u1",
+            at = "2026-09-20T12:00:00",
+            proposalAt = "2026-09-19T08:00:00",
+            note = null
+        )
+
+        val entries = history(decision = earlier, clocks = seenLater(withdrawn))
+
+        assertEquals(
+            HistoryEntry(
+                key = "custody_$PROPOSED_AT",
+                subject = RequestSubject.CustodySchedule,
+                outcome = RequestOutcome.NO_ANSWER,
+                askedBy = "u2",
+                decidedBy = "u1",
+                decidedAt = CLOSED_AT,
+                clock = withdrawn
+            ),
+            entries.first()
+        )
+        assertEquals(listOf("custody_$PROPOSED_AT", "custody_2026-09-19T08:00:00"), entries.map { it.key })
+    }
+
+    @Test
+    fun `a swap offered again keeps its "No answer" row from the clock's first day and count`() {
+        // Alice offered two days, Bob never answered, and she offered them again: the new offer
+        // replaced the old one's entries and left its closed clock with nothing to point at.
+        val again = swap(DayOverrideStatus.PENDING, groupId = "g-again")
+        val oldOffer = closed(RequestKind.SWAP, "g-old").copy(firstDate = LocalDate.of(2026, 10, 20), dayCount = 2)
+
+        val entries = history(
+            overrides = mapOf("2026-10-20" to again, "2026-10-21" to again),
+            clocks = seenLater(oldOffer)
+        )
+
+        assertEquals(
+            listOf(
+                HistoryEntry(
+                    key = "swap_g-old",
+                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 10, 20), 2),
+                    outcome = RequestOutcome.NO_ANSWER,
+                    askedBy = "u1",
+                    decidedBy = "u2",
+                    decidedAt = CLOSED_AT,
+                    clock = oldOffer
+                )
+            ),
+            entries
+        )
+    }
+
+    @Test
+    fun `an orphaned clock without an outcome shows nothing`() {
+        // Long past their ends but never closed, so superseded: an offer made again, and a proposal
+        // its author corrected — or one answered before a later decision took the answer's place.
+        val again = swap(DayOverrideStatus.PENDING, groupId = "g-again")
+        val replacedOffer = clock(RequestKind.SWAP, "g-old").copy(firstDate = LocalDate.of(2026, 10, 20), dayCount = 1)
+        val supersededProposal = clock(RequestKind.PROPOSAL, PROPOSED_AT, from = "u2")
+        val later = millisOf(LATER)
+        assertEquals(ClockState.NO_ANSWER, RequestClock.stateOf(replacedOffer, later))
+        assertEquals(ClockState.NO_ANSWER, RequestClock.stateOf(supersededProposal, later))
+
+        val entries = history(
+            overrides = mapOf("2026-10-20" to again),
+            clocks = seenLater(replacedOffer, supersededProposal)
+        )
+
+        assertEquals(emptyList(), entries)
+    }
+
+    @Test
+    fun `a "No answer" whose change request is gone is left out`() {
+        val entries = history(
+            clocks = seenLater(closed(RequestKind.CHANGE, "gone"), closed(RequestKind.EVENT, "gone-too"))
+        )
+
+        assertEquals(emptyList(), entries)
+    }
+
+    private companion object {
+        /** When the proposal of the custody cases was made: its clock's reference. */
+        const val PROPOSED_AT = "2026-10-03T09:00:00"
+
+        /** The deadline of every clock here. */
+        val DEADLINE: LocalDateTime = LocalDateTime.of(2026, 10, 4, 20, 0)
+
+        /** When the proposer's phone closed a clock: an hour after its end, the last chance unused. */
+        val CLOSED_AT: LocalDateTime = LocalDateTime.of(2026, 10, 5, 21, 0)
+
+        /** Well past every clock's end. */
+        val LATER: LocalDateTime = LocalDateTime.of(2026, 10, 10, 9, 0)
     }
 }

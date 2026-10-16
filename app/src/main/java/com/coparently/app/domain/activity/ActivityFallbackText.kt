@@ -41,6 +41,8 @@ object ActivityFallbackText {
             ActivityKind.CUSTODY_PROPOSED -> "Custody schedule proposed"
             ActivityKind.CUSTODY_ACCEPTED -> "Custody schedule agreed"
             ActivityKind.CUSTODY_DECLINED -> "Custody proposal turned down"
+            ActivityKind.REQUEST_LAST_CHANCE -> "Last chance to answer"
+            ActivityKind.REQUEST_UNANSWERED -> "No answer"
         }
         return if (announcement.title.isBlank()) prefix else "$prefix: ${announcement.title}"
     }

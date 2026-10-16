@@ -2,6 +2,7 @@ package com.coparently.app.presentation.changerequests
 
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
@@ -31,6 +32,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -135,7 +137,9 @@ class ChangeRequestViewModelTest {
             eventRepository = eventRepository,
             custodyModelRepository = custodyModelRepository,
             userRepository = userRepository,
-            pairingRepository = pairingRepository
+            pairingRepository = pairingRepository,
+            // No request has a clock here: every request is placed as it always was.
+            requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns emptyFlow() }
         )
     )
 

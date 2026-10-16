@@ -78,7 +78,8 @@ internal object WireContracts {
         ChildInfoWireContract,
         PetWireContract,
         ExpenseWireContract,
-        EventVersionWireContract
+        EventVersionWireContract,
+        RequestDeadlineWireContract
     )
 
     /** The contract for [collection], or null when this build has none (a newer build's fixture). */

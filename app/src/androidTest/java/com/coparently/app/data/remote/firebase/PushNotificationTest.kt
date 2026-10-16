@@ -11,11 +11,13 @@ import android.os.Build
 import android.os.LocaleList
 import android.os.SystemClock
 import android.service.notification.StatusBarNotification
+import android.text.format.DateFormat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.utils.DAY_IN_SENTENCE
+import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -27,6 +29,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
+import java.time.ZoneId
+import java.util.Locale
 
 /**
  * A push as a person sees it: real data payloads through [PushNotifier] — the class
@@ -84,11 +89,15 @@ class PushNotificationTest {
         for ((type, spec) in PushNotifier.PUSH_TEXT) {
             val inEnglish = postAndRead(english, payload(type))
             val inGerman = postAndRead(german, payload(type))
+            val bodyInEnglish = expectedBody(english, type, spec)
+            val bodyInGerman = expectedBody(german, type, spec)
 
             assertEquals("$type title (en)", english.getString(spec.title), inEnglish.title)
-            assertEquals("$type text (en)", expectedBody(english, spec), inEnglish.text)
+            assertEquals("$type text (en)", bodyInEnglish, inEnglish.text)
+            assertEquals("$type expanded text (en)", bodyInEnglish, inEnglish.bigText)
             assertEquals("$type title (de)", german.getString(spec.title), inGerman.title)
-            assertEquals("$type text (de)", expectedBody(german, spec), inGerman.text)
+            assertEquals("$type text (de)", bodyInGerman, inGerman.text)
+            assertEquals("$type expanded text (de)", bodyInGerman, inGerman.bigText)
             assertNotEquals("$type is worded in German, not in English", inEnglish.title, inGerman.title)
             assertNotEquals("$type text is worded in German, not in English", inEnglish.text, inGerman.text)
             assertCarriesItsNames(type, spec, inEnglish.text)
@@ -128,6 +137,7 @@ class PushNotificationTest {
         val shown = read(awaitPosted(id!!))
         assertEquals(ACTOR_NAME, shown.title)
         assertEquals(PREVIEW, shown.text)
+        assertEquals(PREVIEW, shown.bigText)
     }
 
     @Test
@@ -152,6 +162,41 @@ class PushNotificationTest {
         val data = payload(PushPayload.DAY_SWAP_GROUP_OFFERED) + (PushPayload.DAY_COUNT to "several")
 
         assertNull(PushNotifier(appContext).receive(data, SIGNED_IN))
+        assertNothingPosted()
+    }
+
+    @Test
+    fun anOfferWithADeadlineSaysWhenToAnswerBy() {
+        val english = localized("en")
+        val today = english.getString(
+            R.string.push_day_swap_offered_body,
+            isoDateText(DATE, DAY_IN_SENTENCE, Locale.ENGLISH)
+        )
+        val sentence = english.getString(R.string.push_answer_by, answerByIn(english))
+
+        val withoutOne = postAndRead(english, payload(PushPayload.DAY_SWAP_OFFERED) - PushPayload.ANSWER_BY)
+        val withOne = postAndRead(english, payload(PushPayload.DAY_SWAP_OFFERED))
+
+        // No deadline: the text is what it was before deadlines existed.
+        assertEquals(today, withoutOne.text)
+        // A deadline: the same sentence, then the one that says when to answer by. The English
+        // body ends on a date with no full stop, so the join supplies one.
+        assertTrue("\"${withOne.text}\" ends with \"$sentence\"", withOne.text.endsWith(sentence))
+        assertEquals("$today. $sentence", withOne.text)
+        assertEquals(withoutOne.title, withOne.title)
+        // Expanded, the whole of it: the deadline sentence is what a collapsed line would cut.
+        assertEquals(withoutOne.text, withoutOne.bigText)
+        assertEquals(withOne.text, withOne.bigText)
+    }
+
+    @Test
+    fun aLastChanceWithoutAReadableTimePostsNothing() {
+        val notifier = PushNotifier(appContext)
+        val lastChance = payload(PushPayload.REQUEST_LAST_CHANCE)
+
+        assertNull(notifier.receive(lastChance + (PushPayload.ANSWER_BY to "tomorrow"), SIGNED_IN))
+        assertNull(notifier.receive(lastChance + (PushPayload.ANSWER_BY to ""), SIGNED_IN))
+        assertNull(notifier.receive(lastChance - PushPayload.ANSWER_BY, SIGNED_IN))
         assertNothingPosted()
     }
 
@@ -278,8 +323,11 @@ class PushNotificationTest {
 
     // ---- helpers ---------------------------------------------------------------------------
 
-    /** Title and text as the posted notification holds them. */
-    private data class Shown(val title: String, val text: String)
+    /**
+     * Title, collapsed text and expanded text as the posted notification holds them: the text is
+     * `setContentText`'s, the big text the `BigTextStyle`'s, and the two carry the same body.
+     */
+    private data class Shown(val title: String, val text: String, val bigText: String)
 
     /** A full payload for [type]: every name a type may need, addressed to [SIGNED_IN]. */
     private fun payload(type: String): Map<String, String> = mapOf(
@@ -288,6 +336,7 @@ class PushNotificationTest {
         PushPayload.SUBJECT to SUBJECT,
         PushPayload.DATE to DATE,
         PushPayload.DAY_COUNT to DAY_COUNT.toString(),
+        PushPayload.ANSWER_BY to ANSWER_BY.toString(),
         PushPayload.TARGET_USER_ID to SIGNED_IN,
         PushPayload.FAMILY_ID to FAMILY
     )
@@ -297,23 +346,40 @@ class PushNotificationTest {
         PushPayload.CONVERSATION_ID to CONVERSATION
     )
 
-    /** What the text of a push worded by [spec] reads as in [context]'s language. */
-    private fun expectedBody(context: Context, spec: PushNotifier.PushTextSpec): String = when (spec.args) {
-        PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, ACTOR_NAME, SUBJECT)
-        PushNotifier.BodyArgs.ACTOR -> context.getString(spec.body, ACTOR_NAME)
-        // The payload below carries no deadline millis, so the notifier falls back to the ISO day.
-        PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> context.getString(
-            spec.body,
-            ACTOR_NAME,
-            isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
-        )
-        PushNotifier.BodyArgs.DATE -> context.getString(
-            spec.body,
-            isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
-        )
-        PushNotifier.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(spec.body, DAY_COUNT, DAY_COUNT)
-        PushNotifier.BodyArgs.NONE -> context.getString(spec.body)
+    /**
+     * What the text of a push of [type], worded by [spec], reads as in [context]'s language: the
+     * body, and for a request's first push the sentence that says when to answer by.
+     */
+    private fun expectedBody(context: Context, type: String, spec: PushNotifier.PushTextSpec): String {
+        val body = when (spec.args) {
+            PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> context.getString(spec.body, ACTOR_NAME, SUBJECT)
+            PushNotifier.BodyArgs.ACTOR -> context.getString(spec.body, ACTOR_NAME)
+            // The payload below carries no deadline millis, so the notifier falls back to the ISO day.
+            PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> context.getString(
+                spec.body,
+                ACTOR_NAME,
+                isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+            )
+            PushNotifier.BodyArgs.ACTOR_AND_ANSWER_BY -> context.getString(spec.body, ACTOR_NAME, answerByIn(context))
+            PushNotifier.BodyArgs.DATE -> context.getString(
+                spec.body,
+                isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
+            )
+            PushNotifier.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(spec.body, DAY_COUNT, DAY_COUNT)
+            PushNotifier.BodyArgs.NONE -> context.getString(spec.body)
+        }
+        if (type !in PushNotifier.ANSWER_BY_TYPES) return body
+        // A sentence of its own: after a full stop when the body ends one, after one this adds otherwise.
+        val join = if (body.last() in ".!?…") " " else ". "
+        return body + join + context.getString(R.string.push_answer_by, answerByIn(context))
     }
+
+    /** [ANSWER_BY] said the way [context]'s reader hears it: their language, clock and zone. */
+    private fun answerByIn(context: Context): String = answerByText(
+        ANSWER_BY,
+        locale = context.resources.configuration.locales[0],
+        is24Hour = DateFormat.is24HourFormat(context)
+    )
 
     /** The names the payload carried appear in [body] — a translation that drops one fails here. */
     private fun assertCarriesItsNames(label: String, spec: PushNotifier.PushTextSpec, body: String) {
@@ -322,6 +388,7 @@ class PushNotificationTest {
             PushNotifier.BodyArgs.ACTOR_AND_SUBJECT -> listOf(ACTOR_NAME, SUBJECT)
             PushNotifier.BodyArgs.ACTOR -> listOf(ACTOR_NAME)
             PushNotifier.BodyArgs.ACTOR_AND_DEADLINE -> listOf(ACTOR_NAME, DATE_DAY)
+            PushNotifier.BodyArgs.ACTOR_AND_ANSWER_BY -> listOf(ACTOR_NAME, ANSWER_BY_DAY)
             // The date is said in the reader's language (D-18), so its day is what every one shows.
             PushNotifier.BodyArgs.DATE -> listOf(DATE_DAY)
             PushNotifier.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())
@@ -344,7 +411,8 @@ class PushNotificationTest {
         val extras = posted.notification.extras
         return Shown(
             title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
-            text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+            text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+            bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
         )
     }
 
@@ -419,6 +487,13 @@ class PushNotificationTest {
         const val DATE = "2026-05-14"
         const val DATE_DAY = "14"
         const val DAY_COUNT = 3
+
+        /** 12:00 UTC on 27 October 2026, the deadline every payload below carries. */
+        const val ANSWER_BY = 1_793_102_400_000L
+
+        /** The day of [ANSWER_BY] in the zone the phone is set to, which is the one the push says. */
+        val ANSWER_BY_DAY: String =
+            Instant.ofEpochMilli(ANSWER_BY).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
         const val PREVIEW = "See you at five"
         const val CONVERSATION = "conversation-1"
         val SHIPPED_LANGUAGES = listOf("en", "cs", "de", "ru", "uk")

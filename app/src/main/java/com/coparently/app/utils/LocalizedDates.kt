@@ -3,8 +3,10 @@ package com.coparently.app.utils
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.runtime.mutableStateOf
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.chrono.IsoChronology
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
@@ -122,6 +124,31 @@ fun dateWithTime(
         .toFormatter(locale)
 
 /**
+ * A request's deadline as its reader says it: the weekday, day and month in [locale]'s own order,
+ * then the time on the reader's clock — "Tue, Oct 13, 10:00", "Tue, Oct 13, 10:00 AM" (phase 3a).
+ *
+ * [millis] is an instant, so [zone] decides which day and hour it falls on: the device's, because
+ * a deadline is a moment in the reader's own day and the other parent may live in another zone.
+ * The date and the time are formatted apart and joined with a comma, as [dateWithTime] joins them
+ * with a dot, for the reason [localizedDate] gives. One function for every place a deadline is
+ * said — the pushes, the notices and the cards — so it reads the same in each.
+ *
+ * @param millis The deadline, epoch milliseconds
+ * @param zone The zone the reader's day is counted in; the device's by default
+ * @param locale The language, for the order of the date and the names in it
+ * @param is24Hour Whether the reader's clock is 24-hour; [ClockFormat] by default
+ */
+fun answerByText(
+    millis: Long,
+    zone: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
+    is24Hour: Boolean = ClockFormat.is24Hour
+): String {
+    val moment = Instant.ofEpochMilli(millis).atZone(zone)
+    return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ", " + moment.format(shortTime(locale, is24Hour))
+}
+
+/**
  * [text] — a formatted date — with its spaces made no-break, so a line never ends between a day
  * and its month ("4 | октября"). A space after a comma stays breakable: the weekday of a full
  * date ("суббота, 4 октября 2026 г.") may still take a line of its own when the rest does not fit.
@@ -140,6 +167,9 @@ private const val NO_BREAK_SPACE = ' '
 private const val PATTERN_24_HOUR = "HH:mm"
 private const val PATTERN_12_HOUR = "h:mm a"
 private const val PATTERN_12_HOUR_GUTTER = "h a"
+
+/** The skeleton for the day of a deadline: weekday, month and day, no year ("Tue, Oct 13"). */
+private const val ANSWER_BY_DAY = "EEEMMMd"
 
 /**
  * Whether the reader's clock is 24-hour: the device's "Use 24-hour format" setting, which

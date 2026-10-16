@@ -114,6 +114,37 @@ class FirestoreCustodyDataSource @Inject constructor(
     }
 
     /**
+     * Reads the pair's custody document, applies [transform] to it, and writes what [transform]
+     * answers, in one Firestore transaction (phase 3a).
+     *
+     * For a write that must not land on a document somebody changed after it was read: a proposal
+     * withdrawn because nobody answered it must not take away one that was answered, or replaced,
+     * a moment before. Firestore runs [transform] again on the newer document when the one it read
+     * changes before the write, so [transform] must be pure. It needs the server, so it fails
+     * offline; the caller tries again later.
+     *
+     * @param documentId The pair's custody id, from `CustodyKey.of`.
+     * @param participants The two parents' Firebase UIDs, in any order; sorted here, as
+     *   [setCustody] sorts them.
+     * @param transform The document as it stands, or null when there is none, to the document to
+     *   write, or null to write nothing.
+     * @return The document as written, or null when [transform] answered null and nothing was
+     *   written.
+     */
+    suspend fun transact(
+        documentId: String,
+        participants: List<String>,
+        transform: (SharedCustody?) -> SharedCustody?
+    ): SharedCustody? {
+        val document = custodyCollection.document(documentId)
+        val sortedParticipants = participants.sorted()
+        return firestore.runTransaction<SharedCustody?> { transaction ->
+            val current = transaction.get(document).data?.toSharedCustody(documentId)
+            transform(current)?.also { next -> transaction.set(document, next.toDocument(sortedParticipants)) }
+        }.await()
+    }
+
+    /**
      * The document as this app writes it. Dates are ISO strings, as everywhere else in this
      * schema; `momDayIndices` is a real array (see the class KDoc).
      */

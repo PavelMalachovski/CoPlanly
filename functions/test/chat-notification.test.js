@@ -37,17 +37,21 @@ const PAIRED_USERS = {
  * @param {?Object} conversation The `conversations/{conversationId}` document data, or
  *     `null`/`undefined` to model a missing document.
  * @param {!Object<string, !Object>=} users Profiles keyed by uid; defaults to [PAIRED_USERS].
- * @return {!Object} The fake, carrying `_added` for assertions.
+ * @return {!Object} The fake, carrying `_added` and `_reads` (every document looked up, as
+ *     `collection/id`) for assertions.
  */
 function fakeDb(conversation, users) {
   const added = [];
+  const reads = [];
   const profiles = users || PAIRED_USERS;
   return {
     _added: added,
+    _reads: reads,
     collection(name) {
       return {
         doc: (id) => ({
           async get() {
+            reads.push(`${name}/${id}`);
             if (name === 'users') {
               const profile = profiles[id];
               return {exists: profile != null, data: () => profile};
@@ -379,5 +383,44 @@ describe('notifyOfChatMessage', () => {
     await notifyOfChatMessage(db, message);
 
     assert.strictEqual(db._added.length, 1);
+  });
+
+  // Phase 3a. Two chat cards are a record, not news. The last chance is pushed by its own type
+  // (`request_last_chance`), so a chat push too would tell the parent twice; "No answer" is the
+  // proposer's news, and nothing more is sent to the parent who did not answer once their last
+  // chance has run. Skipped before any read: there is nothing to look up for a card that never
+  // pushes.
+  it('pushes nothing for a last-chance or a no-answer card', async () => {
+    for (const kind of ['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED']) {
+      const db = fakeDb({participants: ['alice', 'bob']});
+      const message = {
+        conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+        content: 'Last chance to answer: Swimming', timestamp: '2026-08-02T10:00:00',
+        activity: {kind, entityType: 'EVENT', entityId: 'e1', title: 'Swimming'},
+      };
+
+      await notifyOfChatMessage(db, message);
+
+      assert.deepStrictEqual(db._added, [], `${kind} was pushed`);
+      assert.deepStrictEqual(db._reads, [], `${kind} was looked up before it was skipped`);
+    }
+  });
+
+  it('still pushes every other card', async () => {
+    const db = fakeDb({participants: ['alice', 'bob']});
+    const message = {
+      conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',
+      content: 'Day swap offered: 2026-10-16', timestamp: '2026-08-02T10:00:00',
+      activity: {
+        kind: 'DAY_SWAP_OFFERED', entityType: 'DAY_SWAP', entityId: '2026-10-16',
+        title: '2026-10-16',
+      },
+    };
+
+    await notifyOfChatMessage(db, message);
+
+    assert.strictEqual(db._added.length, 1);
+    assert.strictEqual(db._added[0].data.targetUserId, 'bob');
+    assert.strictEqual(db._added[0].data.data.type, 'chat_message');
   });
 });

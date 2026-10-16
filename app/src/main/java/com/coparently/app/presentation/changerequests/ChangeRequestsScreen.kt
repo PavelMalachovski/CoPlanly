@@ -105,7 +105,7 @@ fun ChangeRequestsScreen(
     ShowErrorOnce(errorMessage, onShown = viewModel::clearError)
 
     val ready = state as? RequestsState.Ready
-    val inboxItems = remember(ready?.inbox) { ready?.let { InboxItems.of(it.inbox) }.orEmpty() }
+    val inboxItems = remember(ready?.inbox, ready?.scope) { ready?.let { InboxItems.of(it.inbox, it.scope) }.orEmpty() }
     val highlighted = remember(ready?.changeRequests, linkedEventId) {
         linkedEventId?.let { eventId -> ready?.let { ChangeRequestHighlight.forEvent(it.changeRequests, eventId) } }
     }
