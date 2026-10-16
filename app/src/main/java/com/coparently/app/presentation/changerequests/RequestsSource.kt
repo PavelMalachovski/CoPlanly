@@ -3,6 +3,8 @@ package com.coparently.app.presentation.changerequests
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.RequestInbox
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.custody.SharedCustody
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -45,13 +48,16 @@ sealed interface RequestsState {
      * @property events The family's events, every acceptance — what the mini months draw from.
      * @property custody The family's own custody document — its schedule and swaps, what the mini
      *   months colour the days with — or null while it has none or has not arrived.
+     * @property clocks The family's request clocks at the moment [inbox] was placed by them (phase
+     *   3a); none until the clocks listener first answers.
      */
     data class Ready(
         val scope: RequestScope,
         val inbox: RequestInbox,
         val changeRequests: List<ChangeRequest>,
         val events: List<Event>,
-        val custody: SharedCustody? = null
+        val custody: SharedCustody? = null,
+        val clocks: ClocksAt = ClocksAt()
     ) : RequestsState
 }
 
@@ -69,6 +75,13 @@ sealed interface RequestsState {
  * its id ([CustodyModelRepository.observeSharedOf]) — never from Room's one active custody model,
  * which keeps the previous family's swaps while the family on screen has no document (phase 2
  * review). Change requests and events are narrowed here through [RequestScope].
+ *
+ * **The clocks** (phase 3a, spec §4.1): every request is placed by its clock as well as its record,
+ * so that family's request clocks ([RequestClocks.observeFamily], that family's alone) are a fourth
+ * source, and their minute tick re-places the requests when nothing was written or received — a
+ * request passes its deadline on every screen at the minute it does. Until the clocks listener
+ * first answers, the requests are placed as if none had a clock: the inbox is never held back by
+ * it, and a listener that keeps failing reads as no clocks.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RequestsSource @Inject constructor(
@@ -76,7 +89,8 @@ class RequestsSource @Inject constructor(
     private val eventRepository: EventRepository,
     private val custodyModelRepository: CustodyModelRepository,
     private val userRepository: UserRepository,
-    private val pairingRepository: PairingRepository
+    private val pairingRepository: PairingRepository,
+    private val requestClocks: RequestClocks
 ) {
 
     /** The family on screen's requests, re-derived on every change to any of them. */
@@ -97,18 +111,20 @@ class RequestsSource @Inject constructor(
     private fun readyFor(scope: RequestScope): Flow<RequestsState> = combine(
         changeRequestRepository.getAllChangeRequests(),
         eventRepository.getAllEvents(),
-        custodyModelRepository.observeSharedOf(scope.familyId)
-    ) { requests, events, custody ->
+        custodyModelRepository.observeSharedOf(scope.familyId),
+        requestClocks.observeFamily(scope.myUid, scope.familyId).onStart { emit(ClocksAt()) }
+    ) { requests, events, custody, clocks ->
         val familyRequests = requests.filter(scope::covers)
         val familyEvents = events.filter(scope::covers)
         val swaps = custody?.dayOverrides.orEmpty()
         RequestsState.Ready(
             scope = scope,
             // Read per emission rather than once: this flow outlives midnight.
-            inbox = RequestInbox.build(scope, familyRequests, familyEvents, swaps, custody, LocalDate.now()),
+            inbox = RequestInbox.build(scope, familyRequests, familyEvents, swaps, custody, LocalDate.now(), clocks),
             changeRequests = familyRequests,
             events = familyEvents,
-            custody = custody
+            custody = custody,
+            clocks = clocks
         )
     }
 

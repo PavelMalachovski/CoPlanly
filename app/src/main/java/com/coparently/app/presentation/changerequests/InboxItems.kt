@@ -1,7 +1,10 @@
 package com.coparently.app.presentation.changerequests
 
 import com.coparently.app.domain.changerequests.HistoryEntry
+import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestInbox
+import com.coparently.app.domain.changerequests.RequestScope
+import com.coparently.app.domain.changerequests.TimedRequest
 import com.coparently.app.domain.changerequests.Waiting
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
@@ -46,8 +49,13 @@ sealed interface InboxItem {
      * The custody-pattern proposal.
      *
      * @property mine Whether this parent made it — then nothing on the card answers it.
+     * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
      */
-    data class Proposal(val proposal: CustodyProposal, val mine: Boolean) : InboxItem {
+    data class Proposal(
+        val proposal: CustodyProposal,
+        val mine: Boolean,
+        val timed: TimedRequest? = null
+    ) : InboxItem {
         override val key: String get() = if (mine) "p_mine" else "p_theirs"
     }
 
@@ -56,18 +64,27 @@ sealed interface InboxItem {
      *
      * @property mine Whether this parent created it — then the card shows what was sent, with no
      *   buttons.
+     * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
      */
-    data class AwaitingEvent(val event: Event, val mine: Boolean) : InboxItem {
+    data class AwaitingEvent(val event: Event, val mine: Boolean, val timed: TimedRequest? = null) : InboxItem {
         override val key: String get() = "ev_${event.id}"
     }
 
-    /** A day-swap offer, one per offer however many days it covers. */
-    data class Swap(val group: DaySwapGroup) : InboxItem {
+    /**
+     * A day-swap offer, one per offer however many days it covers.
+     *
+     * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
+     */
+    data class Swap(val group: DaySwapGroup, val timed: TimedRequest? = null) : InboxItem {
         override val key: String get() = "sw_${group.key}"
     }
 
-    /** A pending change request, either way. */
-    data class Request(val request: ChangeRequest) : InboxItem {
+    /**
+     * A pending change request, either way.
+     *
+     * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
+     */
+    data class Request(val request: ChangeRequest, val timed: TimedRequest? = null) : InboxItem {
         override val key: String get() = "cr_${request.id}"
     }
 
@@ -110,10 +127,18 @@ object InboxItems {
     /**
      * [inbox] in drawing order: what waits on this parent, what waits on the co-parent, then the
      * history. A section with nothing in it has no header either.
+     *
+     * Each request's item carries its clock ([RequestInbox.timedFor]), and says whether this parent
+     * made it from the request itself rather than from its section: since requests are placed by
+     * their clocks (phase 3a, spec §4.1), the co-parent's request waits in their section while its
+     * last chance is theirs to give, and its card must not read as this parent's own.
+     *
+     * @param scope The family [inbox] is of: who this parent is, and the family a proposal's clock
+     *   is named in.
      */
-    fun of(inbox: RequestInbox): List<InboxItem> = buildList {
-        addWaiting(InboxSection.WAITING_ON_ME, inbox.waitingOnMe, mine = false)
-        addWaiting(InboxSection.WAITING_ON_THEM, inbox.waitingOnThem, mine = true)
+    fun of(inbox: RequestInbox, scope: RequestScope): List<InboxItem> = buildList {
+        addWaiting(InboxSection.WAITING_ON_ME, inbox.waitingOnMe, inbox, scope)
+        addWaiting(InboxSection.WAITING_ON_THEM, inbox.waitingOnThem, inbox, scope)
         if (inbox.history.isNotEmpty()) {
             add(InboxItem.Header(InboxSection.HISTORY))
             add(InboxItem.History(inbox.history))
@@ -165,12 +190,23 @@ object InboxItems {
         }
     }
 
-    private fun MutableList<InboxItem>.addWaiting(section: InboxSection, waiting: Waiting, mine: Boolean) {
+    private fun MutableList<InboxItem>.addWaiting(
+        section: InboxSection,
+        waiting: Waiting,
+        inbox: RequestInbox,
+        scope: RequestScope
+    ) {
         if (waiting.isEmpty) return
         add(InboxItem.Header(section))
-        waiting.proposal?.let { add(InboxItem.Proposal(it, mine)) }
-        waiting.events.forEach { add(InboxItem.AwaitingEvent(it, mine)) }
-        waiting.swaps.forEach { add(InboxItem.Swap(it)) }
-        waiting.changeRequests.forEach { add(InboxItem.Request(it)) }
+        waiting.proposal?.let {
+            val timed = inbox.timedFor(RequestDeadlineId.forProposal(it, scope.familyId))
+            add(InboxItem.Proposal(it, mine = it.proposedBy == scope.myUid, timed = timed))
+        }
+        waiting.events.forEach {
+            val timed = inbox.timedFor(RequestDeadlineId.forEvent(it))
+            add(InboxItem.AwaitingEvent(it, mine = it.createdByFirebaseUid == scope.myUid, timed = timed))
+        }
+        waiting.swaps.forEach { add(InboxItem.Swap(it, inbox.timedFor(RequestDeadlineId.forSwap(it)))) }
+        waiting.changeRequests.forEach { add(InboxItem.Request(it, inbox.timedFor(RequestDeadlineId.forChange(it)))) }
     }
 }

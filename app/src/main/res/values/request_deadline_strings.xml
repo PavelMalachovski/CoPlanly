@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A request's clock (phase 3a): its deadline, the last chance and the outcome nobody chose.
+     Never the words "Mom" or "Dad": every parent label goes through ParentNames. -->
+<resources>
+    <!-- The outcome of a request nobody answered by the end of its clock. Its own outcome, never
+         "Declined": the other parent said nothing, which is not saying no. -->
+    <string name="request_clock_no_answer">No answer</string>
+</resources>

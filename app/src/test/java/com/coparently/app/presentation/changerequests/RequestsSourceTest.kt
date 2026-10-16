@@ -1,6 +1,15 @@
 package com.coparently.app.presentation.changerequests
 
+import app.cash.turbine.ReceiveTurbine
+import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.data.requests.RequestTime
+import com.coparently.app.domain.changerequests.ClockState
+import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
@@ -15,26 +24,41 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.PairingRepository
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 /**
  * One source for the requests of the family on screen (phase 2, spec §6.3): the inbox, Home's
  * Requests row and the calendar's banner all read it, so a parent in two families sees one
- * family's requests at a time, and the three surfaces count the same ones.
+ * family's requests at a time, and the three surfaces count the same ones. Since phase 3a it also
+ * reads that family's request clocks, and their minute tick re-places each request.
  */
 class RequestsSourceTest {
 
     private val at = LocalDateTime.of(2026, 10, 10, 9, 0)
+
+    /** The time the clocks are read at, which a test moves before it ticks. */
+    private var now = NOW
+
+    /** The minute ticks: one at once, then whenever a test emits. */
+    private val ticks = MutableSharedFlow<Unit>(replay = 1).apply { tryEmit(Unit) }
+
+    /** The clocks listener, each family's clocks by family id; a family not named has none. */
+    private val clockRepository = mockk<RequestDeadlineRepository>()
     private val bob = PartnerSummary(id = "u2", name = "Bob", email = "bob@example.com", pairedSinceMillis = 1L)
 
     private fun request(id: String, status: ChangeRequestStatus = ChangeRequestStatus.PENDING) = ChangeRequest(
@@ -92,6 +116,7 @@ class RequestsSourceTest {
      * @param coParents Every co-parent the row lists.
      * @param roomSwaps What Room's one active custody model holds, whichever family it came from.
      * @param documents Each family's custody document, by family id; a family not named has none.
+     * @param clocks Each family's request clocks, by family id; a family not named has none.
      */
     @Suppress("LongParameterList") // one fixture for every source the requests are derived from
     private fun source(
@@ -101,8 +126,10 @@ class RequestsSourceTest {
         requests: List<ChangeRequest> = emptyList(),
         events: List<Event> = emptyList(),
         roomSwaps: Map<String, DayOverride> = emptyMap(),
-        documents: Map<String, SharedCustody> = emptyMap()
+        documents: Map<String, SharedCustody> = emptyMap(),
+        clocks: Map<String, List<RequestDeadline>> = emptyMap()
     ): RequestsSource {
+        every { clockRepository.observeFamily("u1", any()) } answers { flowOf(clocks[secondArg()].orEmpty()) }
         val row = User(
             id = "u1",
             email = "alice@example.com",
@@ -126,8 +153,33 @@ class RequestsSourceTest {
                 every { observeCurrentUserId() } returns flowOf("u1")
                 every { getAllUsers() } returns flowOf(listOf(row))
             },
-            pairingRepository = mockk<PairingRepository> { every { observePairingState() } returns flowOf(pairing) }
+            pairingRepository = mockk<PairingRepository> { every { observePairingState() } returns flowOf(pairing) },
+            requestClocks = RequestClocks(
+                clockRepository,
+                RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks)
+            )
         )
+    }
+
+    /** The clock of [request], written by its author for the parent it asks, due an hour after [NOW]. */
+    private fun clockOf(request: ChangeRequest, familyId: String = "u1__u2") = RequestDeadline(
+        id = RequestDeadlineId.forChange(request),
+        kind = RequestKind.CHANGE,
+        ref = request.id,
+        familyId = familyId,
+        proposerUid = request.requestedBy,
+        responderUid = request.requestedTo,
+        answerByMillis = NOW + HOUR
+    )
+
+    /** The next state that is [RequestsState.Ready] and satisfies [until], skipping the rest. */
+    private suspend fun ReceiveTurbine<RequestsState>.awaitReady(
+        until: (RequestsState.Ready) -> Boolean
+    ): RequestsState.Ready {
+        while (true) {
+            val state = awaitItem()
+            if (state is RequestsState.Ready && until(state)) return state
+        }
     }
 
     @Test
@@ -210,5 +262,89 @@ class RequestsSourceTest {
         assertEquals(listOf("waiting"), ready.inbox.waitingOnMe.changeRequests.map { it.id })
         assertEquals(listOf("cr_answered"), ready.inbox.history.map { it.key })
         assertEquals(setOf("waiting", "answered"), ready.changeRequests.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `the family's clocks and the minute tick reach the inbox`() = runTest {
+        val waiting = request("r1")
+        val bobsClock = clockOf(waiting)
+        // Alice's other family has a clock of its own, which the inbox of Bob's family never asks for.
+        val carolsClock = clockOf(waiting.copy(id = "r9", requestedBy = "u3"), familyId = "u1__u3")
+        val requests = source(
+            PairingState.Paired(bob),
+            shown = "u2",
+            coParents = listOf("u2", "u3"),
+            requests = listOf(waiting),
+            clocks = mapOf("u1__u2" to listOf(bobsClock), "u1__u3" to listOf(carolsClock))
+        )
+
+        requests.observe().test {
+            val first = awaitReady { it.clocks.nowMillis == NOW }
+            assertEquals(ClocksAt.of(listOf(bobsClock), NOW), first.clocks)
+            assertEquals(ClockState.OPEN, first.inbox.timedFor(bobsClock.id)?.state)
+
+            now = NOW + MINUTE
+            ticks.emit(Unit)
+
+            val ticked = awaitReady { it.clocks.nowMillis == NOW + MINUTE }
+            assertEquals(ClocksAt.of(listOf(bobsClock), NOW + MINUTE), ticked.clocks)
+            assertEquals(NOW + MINUTE, ticked.inbox.timedFor(bobsClock.id)?.nowMillis)
+            cancelAndIgnoreRemainingEvents()
+        }
+        verify { clockRepository.observeFamily("u1", "u1__u2") }
+        verify(exactly = 0) { clockRepository.observeFamily("u1", "u1__u3") }
+    }
+
+    @Test
+    fun `a tick moves a request past its deadline without any document changing`() = runTest {
+        val waiting = request("r1")
+        val requests = source(
+            PairingState.Paired(bob),
+            shown = "u2",
+            coParents = listOf("u2"),
+            requests = listOf(waiting),
+            clocks = mapOf("u1__u2" to listOf(clockOf(waiting)))
+        )
+
+        requests.observe().test {
+            val open = awaitReady { it.clocks.nowMillis == NOW }
+            assertEquals(listOf("r1"), open.inbox.waitingOnMe.changeRequests.map { it.id })
+            assertEquals(1, open.inbox.waitingOnMe.count)
+
+            // The deadline passes: nothing is written and nothing arrives; only the minute turns over.
+            now = NOW + 2 * HOUR
+            ticks.emit(Unit)
+
+            val past = awaitReady { it.clocks.nowMillis == NOW + 2 * HOUR }
+            assertEquals(0, past.inbox.waitingOnMe.count)
+            assertEquals(listOf("r1"), past.inbox.waitingOnThem.changeRequests.map { it.id })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the requests are not held back until the clocks listener answers`() = runTest {
+        val waiting = request("r1")
+        val requests = source(
+            PairingState.Paired(bob),
+            shown = "u2",
+            coParents = listOf("u2"),
+            requests = listOf(waiting)
+        )
+        // A listener that has not answered yet — offline with a cold cache, or retrying a denial.
+        every { clockRepository.observeFamily(any(), any()) } returns MutableSharedFlow()
+
+        val ready = requests.observe().filterIsInstance<RequestsState.Ready>().first()
+
+        assertEquals(ClocksAt(), ready.clocks)
+        assertEquals(listOf("r1"), ready.inbox.waitingOnMe.changeRequests.map { it.id })
+    }
+
+    private companion object {
+        const val MINUTE = 60_000L
+        const val HOUR = 60 * MINUTE
+
+        /** 2026-10-14T09:00:00Z. */
+        const val NOW = 1_791_968_400_000L
     }
 }

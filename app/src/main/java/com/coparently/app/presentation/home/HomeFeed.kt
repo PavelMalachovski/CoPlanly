@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.home
 
 import com.coparently.app.domain.changerequests.HistoryEntry
-import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
@@ -71,9 +70,10 @@ object HomeFeed {
     ): List<ActivityItem> {
         val answers = history
             .filter { entry ->
+                // Their answers only: a withdrawal is not an answer, and "No answer" is nothing they did.
                 entry.decidedBy == partnerId &&
                     entry.askedBy != partnerId &&
-                    entry.outcome != RequestOutcome.WITHDRAWN &&
+                    entry.outcome.isAnswer &&
                     entry.subject != RequestSubject.CustodySchedule
             }
             .map { it.toActivityItem() }

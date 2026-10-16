@@ -1,7 +1,13 @@
 package com.coparently.app.presentation.changerequests
 
+import com.coparently.app.domain.changerequests.ClockState
+import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestInbox
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestScope
+import com.coparently.app.domain.changerequests.TimedRequest
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwap
@@ -16,12 +22,16 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The inbox's one flat list (phase 2, spec §6.2): what its `LazyColumn` draws, in order, and the
  * only thing a scroll target is looked up in — so a chat card's highlight and a "History" link
- * land on the card they name, a pending proposal above them or not.
+ * land on the card they name, a pending proposal above them or not. Since phase 3a each request's
+ * item carries its clock, for its card to read.
  */
 class InboxItemsTest {
 
@@ -84,8 +94,11 @@ class InboxItemsTest {
         )
     }
 
-    /** Something in every section: the co-parent's proposal, one of each kind either way, a past answer. */
-    private val full = RequestInbox.build(
+    /**
+     * Something in every section: the co-parent's proposal, one of each kind either way, a past
+     * answer — with [clocks], none by default.
+     */
+    private fun fullInbox(clocks: ClocksAt = ClocksAt()) = RequestInbox.build(
         scope,
         changeRequests = listOf(
             request("theirs", from = "u2", to = "u1"),
@@ -98,7 +111,21 @@ class InboxItemsTest {
             "2026-10-22" to swap(requestedBy = "u1", groupId = "g-mine")
         ),
         shared = proposalBy("u2"),
-        today = today
+        today = today,
+        clocks = clocks
+    )
+
+    private val full = fullInbox()
+
+    /** The clock of the request [ref] names, written by [from] for the other parent, due at [DEADLINE]. */
+    private fun clock(kind: RequestKind, ref: String, from: String) = RequestDeadline(
+        id = RequestDeadlineId.of(kind, from, ref, "u1__u2"),
+        kind = kind,
+        ref = ref,
+        familyId = "u1__u2",
+        proposerUid = from,
+        responderUid = scope.otherOf(from),
+        answerByMillis = DEADLINE
     )
 
     @Test
@@ -109,7 +136,7 @@ class InboxItemsTest {
                 "h_sent", "ev_for-them", "sw_g-mine", "cr_mine",
                 "h_history", "history"
             ),
-            InboxItems.of(full).map { it.key }
+            InboxItems.of(full, scope).map { it.key }
         )
 
         val onlyTheirs = RequestInbox.build(
@@ -120,7 +147,7 @@ class InboxItemsTest {
             shared = null,
             today = today
         )
-        assertEquals(listOf("h_waiting", "cr_theirs"), InboxItems.of(onlyTheirs).map { it.key })
+        assertEquals(listOf("h_waiting", "cr_theirs"), InboxItems.of(onlyTheirs, scope).map { it.key })
     }
 
     @Test
@@ -136,12 +163,12 @@ class InboxItemsTest {
             today = today
         )
 
-        assertEquals(2, InboxItems.indexOfRequest(InboxItems.of(inbox), "r1"))
+        assertEquals(2, InboxItems.indexOfRequest(InboxItems.of(inbox, scope), "r1"))
     }
 
     @Test
     fun `an answered request is found at the History item`() {
-        val items = InboxItems.of(full)
+        val items = InboxItems.of(full, scope)
 
         assertEquals(items.indexOfFirst { it is InboxItem.History }, InboxItems.indexOfRequest(items, "answered"))
         assertEquals(items.indexOfFirst { it.key == "cr_mine" }, InboxItems.indexOfRequest(items, "mine"))
@@ -150,7 +177,7 @@ class InboxItemsTest {
 
     @Test
     fun `the history header can be scrolled to`() {
-        val items = InboxItems.of(full)
+        val items = InboxItems.of(full, scope)
 
         assertEquals(items.indexOfFirst { it.key == "h_history" }, InboxItems.indexOf(items, InboxSection.HISTORY))
         assertEquals(0, InboxItems.indexOf(items, InboxSection.WAITING_ON_ME))
@@ -163,14 +190,15 @@ class InboxItemsTest {
                 overrides = emptyMap(),
                 shared = null,
                 today = today
-            )
+            ),
+            scope
         )
         assertEquals(-1, InboxItems.indexOf(noHistory, InboxSection.HISTORY))
     }
 
     @Test
     fun `arriving for a section scrolls to its heading, and stays put when it is not drawn`() {
-        val items = InboxItems.of(full)
+        val items = InboxItems.of(full, scope)
 
         assertEquals(
             InboxArrival.ScrollTo(items.indexOfFirst { it.key == "h_history" }),
@@ -188,7 +216,7 @@ class InboxItemsTest {
 
     @Test
     fun `arriving from a chat card scrolls to its request, and says so when the event has none`() {
-        val items = InboxItems.of(full)
+        val items = InboxItems.of(full, scope)
 
         assertEquals(
             InboxArrival.ScrollTo(items.indexOfFirst { it is InboxItem.History }),
@@ -233,5 +261,91 @@ class InboxItemsTest {
         assertNull(InboxSection.fromRoute("null"))
         assertNull(InboxSection.fromRoute(""))
         assertNull(InboxSection.fromRoute("HISTORY"))
+    }
+
+    @Test
+    fun `each item carries its clock`() {
+        val clocks = listOf(
+            clock(RequestKind.PROPOSAL, "2026-10-12T08:00:00", from = "u2"),
+            clock(RequestKind.EVENT, "for-me", from = "u2"),
+            clock(RequestKind.SWAP, "g-theirs", from = "u2"),
+            clock(RequestKind.CHANGE, "theirs", from = "u2"),
+            clock(RequestKind.EVENT, "for-them", from = "u1"),
+            clock(RequestKind.SWAP, "g-mine", from = "u1"),
+            clock(RequestKind.CHANGE, "mine", from = "u1")
+        )
+
+        val items = InboxItems.of(fullInbox(ClocksAt.of(clocks, NOW)), scope)
+
+        assertEquals(
+            listOf(
+                "h_waiting" to null,
+                "p_theirs" to clocks[0].id,
+                "ev_for-me" to clocks[1].id,
+                "sw_g-theirs" to clocks[2].id,
+                "cr_theirs" to clocks[3].id,
+                "h_sent" to null,
+                "ev_for-them" to clocks[4].id,
+                "sw_g-mine" to clocks[5].id,
+                "cr_mine" to clocks[6].id,
+                "h_history" to null,
+                "history" to null
+            ),
+            items.map { it.key to it.timedOrNull()?.clock?.id }
+        )
+        assertTrue(items.mapNotNull { it.timedOrNull() }.all { it.nowMillis == NOW && it.state == ClockState.OPEN })
+        // The same inbox without clocks carries none.
+        assertTrue(InboxItems.of(full, scope).all { it.timedOrNull() == null })
+    }
+
+    @Test
+    fun `a request past its deadline is still the co-parent's on its card, under their name`() {
+        // Bob's proposal and event, past their deadlines with his last chance still to give: they
+        // wait in his section on Alice's phone, but she did not make them, and her cards must not
+        // say she did.
+        val clocks = ClocksAt.of(
+            listOf(
+                clock(RequestKind.PROPOSAL, "2026-10-12T08:00:00", from = "u2"),
+                clock(RequestKind.EVENT, "for-me", from = "u2")
+            ),
+            PAST_DEADLINE
+        )
+        val inbox = RequestInbox.build(
+            scope,
+            changeRequests = emptyList(),
+            events = listOf(event("for-me", creator = "u2")),
+            overrides = emptyMap(),
+            shared = proposalBy("u2"),
+            today = today,
+            clocks = clocks
+        )
+
+        val items = InboxItems.of(inbox, scope)
+
+        assertEquals(listOf("h_sent", "p_theirs", "ev_for-me"), items.map { it.key })
+        assertFalse(assertIs<InboxItem.Proposal>(items[1]).mine)
+        assertFalse(assertIs<InboxItem.AwaitingEvent>(items[2]).mine)
+    }
+
+    /** The clock an item of a request kind carries; null for a header, the history, or no clock. */
+    private fun InboxItem.timedOrNull(): TimedRequest? = when (this) {
+        is InboxItem.Proposal -> timed
+        is InboxItem.AwaitingEvent -> timed
+        is InboxItem.Swap -> timed
+        is InboxItem.Request -> timed
+        is InboxItem.Header, is InboxItem.History -> null
+    }
+
+    private companion object {
+        const val HOUR = 3_600_000L
+
+        /** 2026-10-14T09:00:00Z: every clock here is open. */
+        const val NOW = 1_791_968_400_000L
+
+        /** The deadline of every clock here. */
+        const val DEADLINE = NOW + HOUR
+
+        /** Past the deadline, with the proposer's last-chance button still offered. */
+        const val PAST_DEADLINE = NOW + 2 * HOUR
     }
 }

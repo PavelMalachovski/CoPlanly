@@ -32,7 +32,8 @@ import java.time.LocalDateTime
  *
  * Measured rather than screenshotted, because the defect was a position: at 150 % and 200 % in
  * German the chip kept its width beside the title and squeezed "Neuer Betreuungsplan" into a
- * column that broke the word in two places.
+ * column that broke the word in two places. And what a "No answer" row claims (phase 3a): its own
+ * chip, and nobody named as having answered.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w393dp-h851dp")
@@ -62,12 +63,25 @@ class RequestHistoryGroupTest {
         assertTrue("chip $chip should sit under title $title", chip.top >= title.bottom)
     }
 
-    private fun render(fontScale: Float) {
+    @Test
+    fun `a request nobody answered says so on its own chip and claims no answer`() {
+        render(fontScale = 1f, entry = unanswered)
+
+        rule.onNodeWithText(context.getString(R.string.request_clock_no_answer), useUnmergedTree = true)
+            .assertExists()
+        rule.onNodeWithText(
+            context.getString(R.string.request_history_yours_answered, "Pavel"),
+            substring = true,
+            useUnmergedTree = true
+        ).assertDoesNotExist()
+    }
+
+    private fun render(fontScale: Float, entry: HistoryEntry = accepted) {
         rule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 CoPlanlyTheme {
-                    RequestHistoryGroup(entries = listOf(accepted), parentNames = names, myUid = MY_UID)
+                    RequestHistoryGroup(entries = listOf(entry), parentNames = names, myUid = MY_UID)
                 }
             }
         }
@@ -100,6 +114,16 @@ class RequestHistoryGroupTest {
             askedBy = CO_PARENT_UID,
             decidedBy = MY_UID,
             decidedAt = LocalDateTime.of(2026, 5, 11, 9, 0)
+        )
+
+        /** This parent's new time for an event, which the co-parent never answered (phase 3a). */
+        val unanswered = HistoryEntry(
+            key = "cr_r1",
+            subject = RequestSubject.NewTime("e1", "Swimming", LocalDateTime.of(2026, 5, 14, 17, 0)),
+            outcome = RequestOutcome.NO_ANSWER,
+            askedBy = MY_UID,
+            decidedBy = CO_PARENT_UID,
+            decidedAt = LocalDateTime.of(2026, 5, 11, 21, 0)
         )
     }
 }

@@ -120,6 +120,16 @@ class RequestsRowTextTest {
     }
 
     @Test
+    fun `a request the co-parent never answered is not their answer`() {
+        // The row would otherwise say they declined it (phase 3a: "No answer" is never "Declined").
+        val unanswered = answer(RequestOutcome.NO_ANSWER, now.minusHours(1))
+        val theirAnswer = answer(RequestOutcome.DECLINED, now.minusDays(2))
+
+        assertEquals(theirAnswer, RequestsRowText.latestAnswer(listOf(unanswered, theirAnswer), scope, now))
+        assertNull(RequestsRowText.latestAnswer(listOf(unanswered), scope, now))
+    }
+
+    @Test
     fun `relative days`() {
         assertEquals(UiText.Res(R.string.home_requests_day_today), RequestsRowText.relativeDay(today, today))
         assertEquals(
