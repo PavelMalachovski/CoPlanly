@@ -539,15 +539,17 @@ private fun ProposalToAnswer(
         )
     }
     CardClockDetails()
-    // Past the deadline the next move is the proposer's: no answer is asked for until a last chance.
-    if (LocalCardClock.current?.hidesAnswers != true) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+    // Past the deadline Accept waits for a last chance, but Decline stays: until the proposer's
+    // phone withdraws it, the proposal blocks every schedule change this parent could make.
+    val declineOnly = LocalCardClock.current?.declineOnly == true
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        if (!declineOnly) {
             Button(onClick = onAccept) {
                 Text(stringResource(R.string.custody_proposal_accept))
             }
-            TextButton(onClick = onDecline) {
-                Text(stringResource(R.string.custody_proposal_decline))
-            }
+        }
+        TextButton(onClick = onDecline) {
+            Text(stringResource(R.string.custody_proposal_decline))
         }
     }
 }

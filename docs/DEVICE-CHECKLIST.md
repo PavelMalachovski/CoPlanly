@@ -1715,6 +1715,7 @@ to another time zone.
       `request_last_chance` push, which names the person and the time, and the card on B's phone shows
       the attention banner "Last chance · <time left>". **[CI]** for the clock, the single push and `answerBy`;
       the push as drawn and the banner are the check.
+- [ ] **A proposal past its deadline can still be declined.** With A's custody proposal past its deadline and no last chance given, B's card offers **Decline** alone (no Accept, unlike a swap or a change request, which show no answer); B declines, A's History says Declined, and B can save a schedule change at once.
 - [ ] **An answer under the last chance wins.** B accepts before the new time: A's History says
       Accepted, never "No answer", and nothing closes it afterwards. **[CI]**
 - [ ] **Both proposer notices.** Both go to A, the proposer, and B gets no notice at all. When the

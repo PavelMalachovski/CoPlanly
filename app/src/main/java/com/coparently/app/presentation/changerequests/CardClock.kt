@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.ClockState
 import com.coparently.app.domain.changerequests.RequestClock
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.TimedRequest
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
@@ -74,10 +75,23 @@ data class CardClock(
 ) {
 
     /**
-     * Whether the card hides its answer buttons: the answering parent's request is past its
-     * deadline and the next move is the proposer's (spec §4.1).
+     * Whether the card hides both answer buttons: the answering parent's swap, change request or
+     * event is past its deadline and the next move is the proposer's (spec §4.1). Never true for a
+     * custody proposal, which keeps its Decline ([declineOnly]).
      */
     val hidesAnswers: Boolean
+        get() = pastDeadlineForResponder && timed.clock.kind != RequestKind.PROPOSAL
+
+    /**
+     * Whether the card offers Decline and nothing else: the answering parent's custody proposal is
+     * past its deadline (final review I-2). Until the proposer's phone withdraws it, the proposal
+     * refuses every schedule change the answering parent makes, so they may still turn it down —
+     * an explicit answer the transition and the rules accept. Accept waits for a last chance.
+     */
+    val declineOnly: Boolean
+        get() = pastDeadlineForResponder && timed.clock.kind == RequestKind.PROPOSAL
+
+    private val pastDeadlineForResponder: Boolean
         get() = role == ClockRole.RESPONDER && timed.state == ClockState.NO_ANSWER_LAST_CHANCE_POSSIBLE
 
     /** Whether the card's title carries "No answer": the proposer's request past its deadline. */

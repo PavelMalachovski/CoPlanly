@@ -2351,7 +2351,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       answer" — that would put a read into three hot rules for an edge only an older build reaches
       — and History shows the answer it is. Only a custody proposal is withdrawn at the end, in a
       transaction checking it is the same `proposedAt`: a change request is never set `CANCELLED`
-      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer).
+      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer). Past a proposal's
+      deadline, before any last chance, the answering parent's card keeps **Decline** and never
+      Accept (`CardClock.declineOnly`), because the waiting proposal refuses their every schedule
+      change until the proposer's phone withdraws it; swaps, change requests and events show no
+      answer then (`hidesAnswers`).
     - **The two chat cards push nobody.** `REQUEST_LAST_CHANCE` and `REQUEST_UNANSWERED` are in
       `functions/index.js`' `SILENT_CARD_KINDS`, which `notifyOfChatMessage` skips: the last chance
       has its own push (`request_last_chance`, item 15's four places), and "No answer" must not
