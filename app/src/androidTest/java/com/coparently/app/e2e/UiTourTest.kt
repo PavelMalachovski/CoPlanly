@@ -134,6 +134,15 @@ class UiTourTest : AliceOnScreenTest() {
             driver.appeared(hasText(content.events.dentist, substring = true))
             driver.linger()
         }
+        // Alice's own request, waiting on Bob, with its deadline and the "opened" mark (phase 3a).
+        camera.shot("requests_waiting_on_them") {
+            val card = hasText(content.events.parentTeacherMeeting, substring = true)
+            repeat(MAX_INBOX_SCROLLS) {
+                if (!driver.appeared(card, CARD_WAIT_MS)) driver.scrollDown()
+            }
+            driver.await("Alice's request waiting on Bob", card)
+            driver.linger()
+        }
         // Answered on screen rather than seeded, so the tour walks the answer path too. The swap's
         // card comes before the request's (InboxItems), so the first Decline is the swap's; once
         // its card has gone to History the only Accept left is the request's — in English the two
@@ -471,6 +480,8 @@ class UiTourTest : AliceOnScreenTest() {
         private const val REASON_CHARS = 400
         private const val FIRST_NUMBER = 1
         private const val MAX_DIALOGS = 4
+        private const val MAX_INBOX_SCROLLS = 4
+        private const val CARD_WAIT_MS = 1_000L
         private const val SETTINGS_SCREENFULS = 4
         private const val CUSTODY_SCREENFULS = 3
         private const val KEYBOARD_MS = 1_500L

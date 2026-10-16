@@ -177,7 +177,8 @@
       "e2e": [
         "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered",
         "TwoParentRequestDeadlinesTest#aProposalNobodyAnswersClosesAsNoAnswerAndIsWithdrawn"
-      ]
+      ],
+      "checklist": ["5.9"]
     }
   },
   "storage": {
@@ -384,7 +385,8 @@
     "request_last_chance": {
       "e2e": [
         "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered"
-      ]
+      ],
+      "checklist": ["5.9"]
     }
   },
   "functions": {

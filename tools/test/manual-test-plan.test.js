@@ -52,6 +52,19 @@ test('database and encryption changes need the SEC-2 upgrade run', () => {
   assert.ok(sectionsFor([K + 'data/security/DatabaseKey.kt']).includes('2.1'));
 });
 
+test('maps the request clocks to 5.9', () => {
+  assert.ok(sectionsFor([K + 'data/requests/RequestClockSteps.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'domain/changerequests/RequestClock.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'domain/changerequests/RequestDeadline.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'domain/changerequests/AnswerBy.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'domain/changerequests/ReminderPlan.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'domain/changerequests/RequestCap.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'presentation/common/AnswerByField.kt']).includes('5.9'));
+  assert.ok(sectionsFor([K + 'presentation/changerequests/CardClock.kt']).includes('5.9'));
+  assert.ok(sectionsFor(['app/src/main/res/values-cs/request_deadline_strings.xml']).includes('5.9'));
+  assert.ok(!sectionsFor([K + 'presentation/home/HomeScreen.kt']).includes('5.9'));
+});
+
 test('requests on Home, the answers feed and the inbox need the requests check', () => {
   assert.ok(sectionsFor([K + 'domain/changerequests/RequestHistory.kt']).includes('5.8'));
   assert.ok(sectionsFor([K + 'presentation/changerequests/InboxItems.kt']).includes('5.8'));

@@ -287,6 +287,17 @@ const RULES = [
       'app/src/main/res/values*/change_requests_strings.xml'],
   },
   {
+    sections: ['5.9'],
+    why: 'request deadlines: the clock, reminders, the last chance and "No answer"',
+    paths: ['K/data/requests/**',
+      'K/domain/changerequests/RequestClock*', 'K/domain/changerequests/RequestDeadline*',
+      'K/domain/changerequests/AnswerBy*', 'K/domain/changerequests/ReminderPlan*',
+      'K/domain/changerequests/RequestCap*',
+      'K/presentation/common/AnswerByField*',
+      'K/presentation/changerequests/CardClock*',
+      'app/src/main/res/values*/request_deadline_strings.xml'],
+  },
+  {
     sections: ['5.6'],
     why: 'a calendar friend, whose grants are one per family',
     paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',
