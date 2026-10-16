@@ -67,6 +67,15 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
      MiniMonthModel`) is the one small calendar (October 2026, tester feedback phase 2): a month
      with the custody wash, event dots and a ringed day, on the card of an event that waits for an
      answer. Don't draw a second one; phase 3's day swaps reuse it.
+   - `AnswerByField` (`common/AnswerByField.kt`, with `rememberAnswerByOffer` and
+     `AnswerByPickSaver`) is the "Answer by" block of every form that asks the co-parent something
+     (phase 3a, item 42): the day swap sheet, the change request, the event form while the event
+     would wait, and each custody proposal. Its chips are `FilterChip`s in a `FlowRow`, the offer
+     comes from `AnswerBy.offer` and is recomputed each minute; don't give a form its own chips.
+   - `LocalCardClock` (`changerequests/CardClock.kt`) hands each inbox card its request's clock —
+     the deadline line, the proposer's status rows, "No answer", the last-chance banner and
+     button. A CompositionLocal, not a parameter, for `LocalChatEventCard`'s reason: the detekt
+     baseline keys entries on the cards' signatures.
 
    **Icon sizes come from `theme/IconSizes.kt`** (October 2026 audit, D-25): `Inline` 16 dp (a
    mark in a line of text), `Small` 18 (buttons, chips, banners, status lines — Material's own),
@@ -246,7 +255,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     screen has something waiting**: chat newer than my read mark (the conversation *document*),
     a pending change request from that co-parent (a query keyed on `requestedTo`, the
     field the rule reads), or a schedule proposal or day swap awaiting me (`custody_models/{id}`
-    by **id** — `allow get` only, never a query). Only the selected family is mirrored, so no
+    by **id** — `allow get` only, never a query). Since phase 3a it also reads each other family's
+    request clocks (item 42), so a request past its deadline — no answer, or waiting on the
+    proposer's last chance — lights nothing; until they answer, or when they cannot be read, the
+    dot is what it was before clocks. Only the selected family is mirrored, so no
     figure for another family could be backed. `data/family/OtherFamiliesSignals` holds those
     listeners per other family and reports which `FamilySignal` kinds are waiting; the chip's
     content description and the dialog row's line name them. Shared process-wide (`shareIn`,
@@ -1397,6 +1409,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     handover. A new type gets both, and `PushRoutingTest` fails until it does. It words
     through a configuration context because the service does: on API 32 and below AppCompat's
     per-app language reaches activities only, so a push follows the *device* language there.
+    **A push may also carry `answerBy`** (phase 3a, item 42) — a field like `familyId`, epoch
+    millis as text on a request's first push, which `PushNotifier` turns into a closing "Answer by
+    <time>." on the reader's clock. Every push is posted with a `BigTextStyle` beside its content
+    text, and so is every request notice (`RequestNotices`); don't drop it: a two-sentence body is
+    cut on the collapsed line exactly where the deadline sits.
 16. **`sharedWith` is computed at upload time and never recomputed for a row already marked
     synced.** An event created while the account was unpaired is uploaded with an audience of
     one uid, and nothing revisits it — so it stays unreadable by a co-parent who arrives later.
@@ -2282,6 +2299,60 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the unit tests hold all of this.
     A document the old build already overwrote cannot be repaired automatically, since nothing says
     which pattern was which family's. Such a family sets its schedule again.
+
+42. **A request's deadline is a clock beside the request, and only its end is stored** (October
+    2026, tester feedback phase 3a; spec
+    `docs/superpowers/specs/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang-design.md`).
+    A change request, a day swap, an event awaiting an answer and a custody proposal may carry a
+    deadline the proposer picks (`AnswerByField`, `domain/changerequests/AnswerBy`, capped by
+    `RequestCap`). It lives in **one document per request**, `request_deadlines/{id}`
+    (`RequestDeadlineDocument` is the wire form, `data/requests/` the steps), never in the record:
+    a change request's update admits three keys, the custody writes are `hasOnly` lists, and an older
+    build rewrites a whole change request when it answers. Nothing is added to `change_requests`,
+    `custody_models` or `events` (a one-day swap only fills its existing `DayOverride.groupId`), and
+    no Room table holds a clock. Eight things not to undo.
+    - **States are derived, the end alone is stored.** Open, no answer with a last chance possible,
+      last chance, no answer and answered come from `RequestClock` over the clock, the record and the
+      phone's time, the one decision the inbox, Home, the banner, the switcher's dot (design item
+      13) and every job read. The proposer writes `outcome: "no_answer"` once; an orphaned clock
+      without one (its request withdrawn or replaced) shows nothing. Each field has one writer and
+      is written once (`firestore.rules`' five update shapes): delivery with the reminder plan, the
+      first opening, each reminder shown, the last chance, the closure. The server stamps
+      `createdAt`, `lastChanceAt` and `closedAt` (read with `ESTIMATE`, so the proposer's phone holds
+      its own estimate until the server answers); a phone's own times get five minutes of skew both
+      ways, and the client clamps delivered and seen to `createdAt` so "opened" never precedes
+      "sent".
+    - **The proposer's uid is in the id** (`RequestDeadlineId`: `swap_`, `change_` or
+      `event_<uid>_<ref>`, `proposal_<uid>_<familyId>_<proposedAt>`), the create rule rebuilds it
+      from the caller, and a phone ignores a clock whose id does not spell its own fields — otherwise the other parent
+      could create the clock first and strip the deadline, or fake an early "No answer".
+    - **The read is keyed on `participants` alone, on purpose**: a clock outlives an unpair, as
+      `event_versions` and the chat do. Creating one needs a live family; account deletion removes
+      every clock naming the departing uid, for both parents (`deleteAccountDataImpl`).
+    - **Every background step acts in the clock's `familyId`, never the family on screen** — the
+      reminder, the deadline notice, the end's card and the proposal's withdrawal
+      (`RequestRecords`, `CustodyModelRepository.withdrawUnanswered`, `ActivityAnnouncer.announce`
+      with the clock's responder). Nothing here may go through `currentPair()`.
+    - **The deadline notice and the end decide on a `Source.SERVER` read of the record**, because
+      what they write cannot be taken back and this phone may not hold the co-parent's answer yet;
+      a server out of reach is `StepResult.RETRY`, never "No answer". So is a clock or record that
+      cannot be read. A reminder reads the local copy: a wrong one costs a notice. A last chance
+      reads the server too, and a refused one is reported to the proposer, never retried.
+    - **Jobs are `KEEP` by unique name (tag `request_clock`), so a step never re-enqueues its own
+      name**: one that fires early retries only when its moment is a minute away and otherwise
+      finishes, and `RequestClockKeeper.sweep`, run on every full sync, re-arms whatever a job lost.
+      A reminder more than half an hour late posts nothing (no reminders at night, none during a
+      last chance — the last-chance push is the reminder).
+    - **An older build's late answer counts.** No rule refuses an answer because a clock says "No
+      answer" — that would put a read into three hot rules for an edge only an older build reaches
+      — and History shows the answer it is. Only a custody proposal is withdrawn at the end, in a
+      transaction checking it is the same `proposedAt`: a change request is never set `CANCELLED`
+      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer).
+    - **The two chat cards push nobody.** `REQUEST_LAST_CHANCE` and `REQUEST_UNANSWERED` are in
+      `functions/index.js`' `SILENT_CARD_KINDS`, which `notifyOfChatMessage` skips: the last chance
+      has its own push (`request_last_chance`, item 15's four places), and "No answer" must not
+      wake the parent who was just told nothing more comes. Until the functions are deployed they
+      are pushed like any message. Opening a request pushes nobody either; DPIA R22.
 
 ## Legal and GDPR (September 2026) — keep consistent
 

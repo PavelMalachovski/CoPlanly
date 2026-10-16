@@ -83,6 +83,17 @@ decide what each of you may read. **Legal basis:** performance of our contract w
 - **The custody schedule** — the pattern you agree and any one-off day swaps.
 - **Change requests** — a proposed change to an event or a day, with the reason you give, and
   your co-parent's answer.
+- **When a request is to be answered by.** A change request, a day swap, a custody proposal and an
+  event that waits for your co-parent's answer can carry a deadline you choose. With it we keep,
+  next to the request: the deadline and the first moment the request would change something; when
+  your co-parent's phone received the request; when they first opened it; the times that phone
+  chose to remind them (at most three, none at night) and how many reminders it has shown; whether
+  you gave one last chance, and until when; and whether the request ended with no answer, and
+  when. **The parent who
+  sent the request sees when the other opened it** — as they see a message's read mark. Opening a
+  request notifies nobody, and the reminders are notifications on the answering parent's own phone,
+  not messages from our servers. A request sent without a deadline, or from an older version of
+  the app, carries none of this.
 - **The parenting plan** — each parent's written answers to the plan's questions and which of
   the other parent's answers they marked as agreed. Each of you can change only your own half.
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
@@ -395,6 +406,7 @@ daily on our servers, not by hand.
 | What | How long |
 | --- | --- |
 | Your account and everything you entered | Until you delete it, or delete the record |
+| A request's deadline and what was recorded about it (received, opened, reminders, last chance, no answer) | Until either parent deletes their account — it stays after the request is answered, and after the two of you unlink, as part of what you recorded |
 | A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
 | A photograph you remove or replace | Deleted from our servers when you save the change |
 | A guest's, family friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A family friend's or professional's access to a family also ends when its two parents unlink |
@@ -423,6 +435,9 @@ within which a claim arising from the family's affairs can generally still be br
   and budgets, the records you entered about your child and pet, your custody schedule and agreed
   expense split, your parenting plan and your invitations — and takes your answers out of the
   parenting plan of any family you had already left, leaving that co-parent's own answers;
+- deletes the deadlines of every request you sent or were asked to answer, with what was recorded
+  about them (when a request was received and opened, its reminders, a last chance, "no answer") —
+  for your co-parent too, since each of these names you both;
 - deletes the photographs attached to those records — event photos, receipts, and medical and
   pet photographs — any photograph you added before you linked a co-parent, and the family
   documents you added. A photograph you added to a record your co-parent created stays with that

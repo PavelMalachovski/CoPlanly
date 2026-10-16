@@ -132,8 +132,8 @@ exactly as today: open until answered.
   and two thirds of the window and 2 hours before the deadline; 6 to 24 hours → 2, at the midpoint
   and 1 hour before; under 6 hours → 1, at the midpoint.
 - **Quiet hours.** A reminder falling between 21:00 and 08:00 on the answering parent's own clock
-  moves to 08:00; if that would be after the deadline, it moves back to 20:30 the evening before; if
-  that is before the request was sent, it is dropped. Two reminders that land on the same time
+  moves to 08:00; if that would be at or after the deadline, it moves back to 20:30 the evening
+  before; if that is at or before the moment the request was sent, it is dropped. Two reminders that land on the same time
   become one.
 - **The answering phone plans them**, in its own time zone, when it first receives the clock. Only
   that phone knows the zone: no profile stores one. It writes the count that survived
@@ -264,7 +264,9 @@ So each request gets one small document beside it, which an older build never re
 - **Update**:
   - the responder may add `deliveredAtMillis`, `remindersPlanned` (0–3) and `reminderTimesMillis`
     (that many numbers, between creation and the deadline) once, together; and `seenAtMillis` once.
-    Neither time may be in the future;
+    Both times are the phone's own clock, so each may be up to 5 minutes before the clock's creation
+    and up to 5 minutes after the server's time — a bound both ways, because a phone whose clock is
+    a little wrong is wrong by the same amount on every retry (the plan's ruling 7);
   - the responder may raise `remindersShown` by one, never above `remindersPlanned`;
   - the proposer may add `lastChanceAtMillis` and `lastChanceUntilMillis` once, only after
     `answerByMillis`. The start must be within a few minutes of the request time; the end must be at
@@ -313,8 +315,10 @@ So each request gets one small document beside it, which an older build never re
 
 **`answerBy` on the request pushes the proposer's phone queues** — the day-swap offers,
 `change_request_created` and `custody_proposal_proposed`: the deadline as epoch-millis text.
-- The push is queued before the clock is written, so this field is how the first notification can
-  say "Answer by <time>." (§6.2). `PushNotifier` adds that sentence when the field is present.
+- The clock is written first, waiting at most 10 seconds for the server (the plan's ruling 14), and the push
+  is queued after it. The push still carries the deadline itself, so the first notification can say
+  "Answer by <time>." (§6.2) without reading the clock, which may not have reached the server or the
+  other phone yet. `PushNotifier` adds that sentence when the field is present.
 - `notification_queue`'s create rule bounds it like the other keys (`isValidLength(…, 0, 20)`), and
   an older build ignores it.
 - **An event awaiting acceptance has no push of its own.** `EventRepositoryImpl` queues none; it
