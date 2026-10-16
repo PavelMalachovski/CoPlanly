@@ -29,6 +29,11 @@ interface ChangeRequestRepository {
      *   is on the server its clock is started, and the push that tells the co-parent says when the
      *   answer is due. A clock that cannot be written leaves the request as one without a clock, and
      *   a request that waits in the outbox and is sent later (see [flushOutbox]) goes without one.
+     *
+     * Once the server has the request, the rest of the call runs to its end even if the caller is
+     * cancelled meanwhile — a form left while the clock waits for the server must not leave a request
+     * on the server, filed as sent, that its co-parent was never told of. A caller cancelled before
+     * the server has it is cancelled as ever, and the outbox sends the request later.
      */
     suspend fun createChangeRequest(request: ChangeRequest, answerBy: AnswerByPick? = null)
 

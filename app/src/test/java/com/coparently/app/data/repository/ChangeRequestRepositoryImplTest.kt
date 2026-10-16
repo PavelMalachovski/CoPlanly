@@ -21,6 +21,7 @@ import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flowOf
@@ -161,6 +162,11 @@ class ChangeRequestRepositoryImplTest {
     // server, and the push that tells the co-parent says when the answer is due — but only when the
     // clock was written (ruling 8). An answer is not a request, and a request sent from the outbox
     // later goes without one.
+    //
+    // From the moment the server has the request, filing it as sent, starting its clock and telling
+    // the co-parent are not interrupted by the caller leaving: the clock waits for the server for up
+    // to ten seconds, and the form's up arrow stays enabled while it does. Until then the caller is
+    // cancelled as ever.
 
     @Test
     fun `a request with a deadline starts its clock after it is published and before the push, which says when`() =
@@ -284,6 +290,108 @@ class ChangeRequestRepositoryImplTest {
         repository.createChangeRequest(myRequest(), AnswerByPick.DEFAULT)
 
         // The request is already on the server: the co-parent is told, with no deadline to name.
+        assertTrue(stored.getValue("r2").syncedToFirestore)
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                CO_PARENT_UID,
+                match { it[PushPayload.TYPE] == PushPayload.CHANGE_REQUEST_CREATED && PushPayload.ANSWER_BY !in it }
+            )
+        }
+    }
+
+    @Test
+    fun `a request whose caller leaves while its clock is written is still announced`() = runTest {
+        coEvery { dataSource.setChangeRequest(any(), any()) } returns Unit
+        val inClock = CompletableDeferred<Unit>()
+        val clockWritten = CompletableDeferred<Unit>()
+        coEvery { requestDeadlines.start(any()) } coAnswers {
+            inClock.complete(Unit)
+            clockWritten.await()
+            clockFor(firstArg())
+        }
+
+        val creating = launch { repository.createChangeRequest(myRequest(), AnswerByPick.DEFAULT) }
+        inClock.await()
+        creating.cancel() // the form is left while the clock waits for the server
+        clockWritten.complete(Unit)
+        creating.join()
+
+        // The server has the request, so it is filed as sent and its co-parent is told — with the
+        // deadline of the clock that was written. Left to the cancelled caller, neither would happen
+        // and the outbox, which sends only what is not filed as sent, would never send it.
+        assertTrue(creating.isCancelled)
+        assertTrue(stored.getValue("r2").syncedToFirestore)
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                CO_PARENT_UID,
+                match {
+                    it[PushPayload.TYPE] == PushPayload.CHANGE_REQUEST_CREATED &&
+                        it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString()
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `a request whose caller leaves as it is filed as sent is still announced, with its clock`() = runTest {
+        coEvery { dataSource.setChangeRequest(any(), any()) } returns Unit
+        coEvery { requestDeadlines.start(any()) } answers { clockFor(firstArg()) }
+        // The second write of the request is the mark that the server has it. Hold it, as a busy disk would.
+        val marking = CompletableDeferred<Unit>()
+        val marked = CompletableDeferred<Unit>()
+        coEvery { dao.insertChangeRequest(any()) } coAnswers {
+            val entity = firstArg<ChangeRequestEntity>()
+            if (entity.syncedToFirestore) {
+                marking.complete(Unit)
+                marked.await()
+            }
+            stored[entity.id] = entity
+        }
+
+        val creating = launch { repository.createChangeRequest(myRequest(), AnswerByPick.DEFAULT) }
+        marking.await()
+        creating.cancel()
+        marked.complete(Unit)
+        creating.join()
+
+        // Not left unmarked for the outbox to send again: that would announce it twice, the second
+        // time without its deadline.
+        assertTrue(stored.getValue("r2").syncedToFirestore)
+        coVerify(exactly = 1) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) {
+            fcmService.queueNotificationForUser(
+                CO_PARENT_UID,
+                match { it[PushPayload.ANSWER_BY] == CLOCK_ANSWER_BY.toString() }
+            )
+        }
+    }
+
+    @Test
+    fun `leaving before the server has the request cancels it as ever, and the outbox sends it later`() = runTest {
+        val writing = CompletableDeferred<Unit>()
+        val acknowledged = CompletableDeferred<Unit>()
+        coEvery { dataSource.setChangeRequest(any(), any()) } coAnswers {
+            writing.complete(Unit)
+            acknowledged.await()
+        }
+
+        val creating = launch { repository.createChangeRequest(myRequest(), AnswerByPick.DEFAULT) }
+        writing.await()
+        creating.cancel()
+        runCurrent()
+
+        // Nothing is shielded until the server has the request. The caller ends at once, and the
+        // request waits in the outbox, announced to nobody and with no clock.
+        val ended = creating.isCompleted
+        acknowledged.complete(Unit) // lets a caller that was wrongly shielded finish too
+        assertTrue("the caller was kept running past a cancellation before the write", ended)
+        assertFalse(stored.getValue("r2").syncedToFirestore)
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+
+        coEvery { dataSource.setChangeRequest(any(), any()) } returns Unit
+        repository.flushOutbox()
+
         assertTrue(stored.getValue("r2").syncedToFirestore)
         coVerify(exactly = 1) {
             fcmService.queueNotificationForUser(

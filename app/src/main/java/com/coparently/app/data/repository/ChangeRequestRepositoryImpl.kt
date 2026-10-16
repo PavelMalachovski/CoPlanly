@@ -18,9 +18,11 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -100,6 +102,14 @@ class ChangeRequestRepositoryImpl @Inject constructor(
      * push can say when the answer is due (phase 3a, spec §5.1, §5.4). The clock never fails the
      * request: one that is not written leaves it as a request without a clock, and the push then
      * says nothing of a deadline (ruling 8).
+     *
+     * **From the server's acknowledgement on, nothing here can be cancelled**: filing the request as
+     * sent, starting its clock and queueing the push. The clock waits for the server for up to ten
+     * seconds (ruling 14) and the form's up arrow stays enabled while it does, so a caller cancelled in
+     * that wait would leave the request on the server and filed as sent — which is what keeps
+     * [flushOutbox] from ever sending it again — with its push never queued. Before the
+     * acknowledgement the caller is cancelled as ever: the request is still unsent in Room and the
+     * outbox sends it later.
      */
     private suspend fun publish(
         request: ChangeRequest,
@@ -115,9 +125,11 @@ class ChangeRequestRepositoryImpl @Inject constructor(
             Log.w(TAG, "Change request ${request.id} stays queued", e)
             return
         }
-        changeRequestDao.insertChangeRequest(request.copy(syncedToFirestore = true).toEntity())
-        val answerByMillis = startClock(request, answerBy)
-        notifyCounterparty(request, targetUserId = targetUserId, action = action, answerByMillis = answerByMillis)
+        withContext(NonCancellable) {
+            changeRequestDao.insertChangeRequest(request.copy(syncedToFirestore = true).toEntity())
+            val answerByMillis = startClock(request, answerBy)
+            notifyCounterparty(request, targetUserId = targetUserId, action = action, answerByMillis = answerByMillis)
+        }
     }
 
     /**
