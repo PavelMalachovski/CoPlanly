@@ -37,7 +37,7 @@
    - **Developer contact information**: ваш email
 4. Нажмите **SAVE AND CONTINUE**
 5. На шаге **Scopes** добавьте:
-   - `https://www.googleapis.com/auth/calendar` (Google Calendar API)
+   - `https://www.googleapis.com/auth/calendar.events.owned.readonly` (Google Calendar API)
 6. Нажмите **SAVE AND CONTINUE**
 7. На шаге **Test users** добавьте тестовые email адреса:
    - **Важно**: Добавьте свой email и email всех, кто будет тестировать приложение
@@ -233,7 +233,7 @@
 ### Проблема: "Failed to get access token"
 
 **Проверьте:**
-1. ✅ Scope `https://www.googleapis.com/auth/calendar` добавлен в OAuth consent screen
+1. ✅ Scope `https://www.googleapis.com/auth/calendar.events.owned.readonly` добавлен в OAuth consent screen
 2. ✅ Пользователь предоставил разрешение на доступ к календарю
 3. ✅ Проверьте логи в Logcat с тегом `GoogleSignIn`
 

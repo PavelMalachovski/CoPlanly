@@ -229,6 +229,11 @@ const RULES = [
       'K/presentation/components/**', 'K/presentation/expenses/**', 'K/presentation/settings/**', 'K/presentation/sync/**'],
   },
   {
+    sections: ['3.9'],
+    why: 'the Google Calendar connection, its consent and its import',
+    paths: ['K/data/remote/google/**', 'K/data/sync/CalendarSyncRepository.kt'],
+  },
+  {
     sections: ['3.10'],
     why: 'record photos (L-4), photo upload or Storage rules',
     paths: ['storage.rules', 'K/presentation/pets/**', 'K/presentation/childinfo/**',

@@ -5,18 +5,20 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.Calendar
-import com.google.api.services.calendar.model.EventDateTime
 import com.google.api.services.calendar.model.Events
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
 
 /**
- * Google Calendar API wrapper for Android.
- * Provides methods to interact with Google Calendar API.
+ * Google Calendar API wrapper for Android: it reads, and only reads.
+ *
+ * [listEvents] is the one call the app makes to Google Calendar, under the read-only scope
+ * [GoogleCalendarAccess.SCOPE]. There is no create, update or delete here on purpose: the app
+ * writes nothing to Google, and `GoogleCalendarAccessTest` fails if a public method is added, so
+ * the scope, the privacy policy and the consent screen are looked at again first.
  */
 @Singleton
 class GoogleCalendarApi @Inject constructor() {
@@ -105,95 +107,6 @@ class GoogleCalendarApi @Inject constructor() {
 
     private fun LocalDateTime.toGoogleDateTime(): DateTime =
         DateTime(atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
-
-    /**
-     * Creates an event in Google Calendar.
-     */
-    @Throws(IOException::class)
-    fun createEvent(
-        credential: Credential,
-        calendarId: String = "primary",
-        title: String,
-        description: String?,
-        startDateTime: LocalDateTime,
-        endDateTime: LocalDateTime?
-    ): GoogleCalendarEvent {
-        val calendar = getCalendarService(credential)
-
-        val event = GoogleCalendarEvent()
-            .setSummary(title)
-            .apply { description?.let { setDescription(it) } }
-
-        val start = EventDateTime()
-            .setDateTime(DateTime(startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()))
-            .setTimeZone(ZoneId.systemDefault().id)
-        event.start = start
-
-        val end = EventDateTime()
-            .setDateTime(
-                DateTime(
-                    (endDateTime ?: startDateTime.plusHours(1))
-                        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                )
-            )
-            .setTimeZone(ZoneId.systemDefault().id)
-        event.end = end
-
-        return calendar.events().insert(calendarId, event).execute()
-    }
-
-    /**
-     * Updates an event in Google Calendar.
-     */
-    @Throws(IOException::class)
-    fun updateEvent(
-        credential: Credential,
-        calendarId: String = "primary",
-        eventId: String,
-        title: String,
-        description: String?,
-        startDateTime: LocalDateTime,
-        endDateTime: LocalDateTime?
-    ): GoogleCalendarEvent {
-        val calendar = getCalendarService(credential)
-
-        // Get existing event
-        val event = calendar.events().get(calendarId, eventId).execute()
-
-        // Update event fields
-        event.summary = title
-        description?.let { event.description = it }
-
-        val start = EventDateTime()
-            .setDateTime(DateTime(startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()))
-            .setTimeZone(ZoneId.systemDefault().id)
-        event.start = start
-
-        val end = EventDateTime()
-            .setDateTime(
-                DateTime(
-                    (endDateTime ?: startDateTime.plusHours(1))
-                        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                )
-            )
-            .setTimeZone(ZoneId.systemDefault().id)
-        event.end = end
-
-        return calendar.events().update(calendarId, eventId, event).execute()
-    }
-
-    /**
-     * Deletes an event from Google Calendar.
-     */
-    @Throws(IOException::class)
-    fun deleteEvent(
-        credential: Credential,
-        calendarId: String = "primary",
-        eventId: String
-    ) {
-        val calendar = getCalendarService(credential)
-        calendar.events().delete(calendarId, eventId).execute()
-    }
 }
 
 /**

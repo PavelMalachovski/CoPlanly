@@ -5,9 +5,55 @@ delete an account that works **without the app installed**. This directory holds
 terms of service: `delete-account/`, `privacy/` and `terms/`, one self-contained `index.html`
 each. A fourth page, `verify/`, is not a Play requirement but belongs with them: it is where a
 lawyer or a court checks an exported record (MON-16). A fifth, `pair/`, is where a co-parent's
-invitation link lands. The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
+invitation link lands, and `index.html` is the site's home page, which Google's verification of
+the OAuth consent screen asks for. The legal texts are still drafts (REL-4) — every page carries a banner saying so until the
 last `{{PLACEHOLDER}}` is gone — but the pages exist so that hosting them is one command once a
 lawyer has been through the markdown.
+
+## `index.html` — the home page
+
+The page at `/`. Google's verification of the OAuth consent screen (`docs/AUDIT-2026-09-play-final.md`
+A-7, E-2) asks for a public home page, on the same domain as the privacy policy, that says what
+the app is, what it does, and what it does with Google user data. This one does, and links the
+policy, the terms, the deletion page and the verification page beside it. It is also simply what
+somebody finds who types the site's address. Self-contained like the others, and indexable,
+unlike `pair/`.
+
+- **English is written in the markup**, so the page reads without JavaScript and to a reviewer;
+  the script reads it back as its English table before translating anything. Czech, German,
+  Russian and Ukrainian are the `TEXT` table, following the browser, behind the same five buttons
+  as `pair/`. The feature list is the Play listing's approved captions
+  (`docs/play-listing/README.md`), under the same rule: only what the app does today.
+- **It names the one permission the app asks of Google Calendar**, the one
+  `GoogleCalendarAccess.SCOPE` requests, and carries Google's Limited Use disclosure verbatim in
+  English, linked to the policy it names. `tools/check-invariants.js` (check 6) fails when the app's
+  scope and the scope this page, the privacy policy or its hosted copy name part, so a wider scope
+  cannot ship with texts that promise a narrower one.
+- **The status line says the app is in testing.** Change it in all five languages when CoPlanly
+  reaches Google Play — and link the listing then, not before: a Play link that 404s is design
+  rule #8's affordance-promising-nothing.
+- **Tested** by `web-tests/home-page.spec.js` in the `web` job: no request leaves the page, it is
+  not kept out of search, the Calendar section and the disclosure, every link resolving to a page
+  that exists, the same English with and without JavaScript, five complete languages, and 375 px
+  with no sideways scroll.
+
+### Before submitting the consent screen for verification
+
+1. **Verify the host in Search Console** with an account that is an owner or editor of the Google
+   Cloud project: a *URL-prefix* property for `https://coparently-a39c9.web.app/`, verified with
+   the **HTML tag** method — add the `<meta name="google-site-verification" content="…">` line it
+   gives to the `<head>` of this file and deploy hosting. The HTML-file method is the less sure
+   one here: `cleanUrls` answers `/google….html` with a redirect.
+2. **On the consent screen**, set the home page to `https://coparently-a39c9.web.app/`, the
+   privacy policy to `…/privacy/` and the terms to `…/terms/`, and add `coparently-a39c9.web.app`
+   to the authorised domains.
+3. **The open question is the domain itself.** Google wants the home page "on a verified domain
+   you own". Whether it accepts a `*.web.app` host for that is not settled — a developer reported
+   verification blocked on "Homepage website is not registered" with one, and nothing confirms
+   either answer ⚠. A domain of your own is the sure way: connect it to Firebase Hosting (the same
+   `web/` directory is served unchanged — every link on the page is relative), verify it in Search
+   Console as a *Domain* property through DNS, and put it on the consent screen and in the legal
+   documents instead. That decision, and its cost, is the owner's.
 
 ## `privacy/index.html` and `terms/index.html`
 
@@ -175,8 +221,9 @@ exists in the Firebase project:
 firebase deploy --only hosting
 ```
 
-puts the five pages at `https://<site>/delete-account/`, `https://<site>/privacy/`,
-`https://<site>/terms/`, `https://<site>/verify/` and `https://<site>/pair/`. **Deployed in October
+puts the home page at `https://<site>/` and the five others at `https://<site>/delete-account/`,
+`https://<site>/privacy/`, `https://<site>/terms/`, `https://<site>/verify/` and
+`https://<site>/pair/`. **Deployed in October
 2026** to `https://coparently-a39c9.web.app/`, on the owner's decision, with the privacy policy and
 terms still drafts under their banner — a closed test needs them linked, and a page regenerated in
 place keeps its URL. The deletion and policy URLs are filled into the legal documents and the

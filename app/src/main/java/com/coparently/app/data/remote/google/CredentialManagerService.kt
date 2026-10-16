@@ -13,7 +13,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import com.google.api.services.calendar.CalendarScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -56,7 +55,7 @@ class CredentialManagerService @Inject constructor(
                 // consent screen on every connect, which is a deliberate act in Settings.
                 .requestServerAuthCode(webClientId, true)
                 .requestEmail()
-                .requestScopes(Scope(CalendarScopes.CALENDAR))
+                .requestScopes(Scope(GoogleCalendarAccess.SCOPE))
                 .build()
             GoogleSignIn.getClient(context, gso)
         } catch (e: Exception) {
