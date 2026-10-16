@@ -2340,9 +2340,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       reads the server too, and a refused one is reported to the proposer, never retried.
     - **Jobs are `KEEP` by unique name (tag `request_clock`), so a step never re-enqueues its own
       name**: one that fires early retries only when its moment is a minute away and otherwise
-      finishes, and `RequestClockKeeper.sweep`, run on every full sync, re-arms whatever a job lost.
-      A reminder more than half an hour late posts nothing (no reminders at night, none during a
-      last chance — the last-chance push is the reminder).
+      finishes, and `RequestClockKeeper.sweep`, run on every full sync, arms again the reminders
+      still ahead, a deadline still ahead and the end (running an end already due). **The deadline
+      and end jobs wait for a network** (`RequestClockWork.needsNetwork`): they read the server, and
+      unconstrained they spent their three runs in about ninety seconds offline, so a proposer
+      offline at the deadline was never told. A deadline already passed is not armed again, so its
+      notice is lost only when every run fails online. A reminder is unconstrained and more than half
+      an hour late posts nothing (no reminders at night, none during a last chance — the last-chance push is the reminder).
     - **An older build's late answer counts.** No rule refuses an answer because a clock says "No
       answer" — that would put a read into three hot rules for an edge only an older build reaches
       — and History shows the answer it is. Only a custody proposal is withdrawn at the end, in a

@@ -38,11 +38,14 @@ enum class StepResult {
  * (spec §5.6); `RequestRecords` reads a family this parent has left as gone. **The deadline and the
  * end decide on the server's copy of the record** (`RequestRecords.lookOnServer`): what they write
  * cannot be taken back, and this phone's copy may not yet hold the co-parent's answer. A server out
- * of reach is [StepResult.RETRY], and the sweep of the next sync online takes over. A reminder reads
- * this phone's copy: a wrong one costs a notice. **A clock or a record
- * that cannot be read is [StepResult.RETRY]**, never "nothing to do": the repository reads any
- * failure as no clock, so a step that gave up on it would be lost, and the keeper's sweep on the
- * next sync re-arms whatever a step's last retry missed.
+ * of reach is [StepResult.RETRY]; their jobs wait for a network before they start
+ * (`RequestClockWork.needsNetwork`), so a phone offline at the deadline is told once it is back
+ * online rather than spending its retries. A reminder reads this phone's copy: a wrong one costs a
+ * notice. **A clock or a record that cannot be read is [StepResult.RETRY]**, never "nothing to do":
+ * the repository reads any failure as no clock, so a step that gave up on it would be lost. A step
+ * whose retries all fail online is given up: the keeper's sweep on the next sync arms the end again
+ * (or runs it, once due) and the reminders still ahead, but not a deadline already passed — that
+ * notice is then not shown, and the end still comes.
  *
  * **A step cannot schedule its own job again.** Jobs are kept by name, and a name that is running
  * is not enqueued twice, so a step that fired early answers [StepResult.RETRY] when its time is

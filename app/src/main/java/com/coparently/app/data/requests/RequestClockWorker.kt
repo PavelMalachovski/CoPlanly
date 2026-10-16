@@ -15,8 +15,10 @@ import dagger.assisted.AssistedInject
  * names; [RequestClockSteps] reads the clock and the request again and decides.
  *
  * A step that answers [StepResult.RETRY] is tried again with WorkManager's backoff, up to
- * [MAX_ATTEMPTS] runs in all, and then given up: the keeper's sweep on the next full sync arms
- * whatever is still owed. A job this build cannot read — no clock id, or a step it does not know,
+ * [MAX_ATTEMPTS] runs in all, and then given up. The deadline and the end wait for a network before
+ * each run (`WorkRequestClockScheduler`), so being offline does not spend those runs. After a
+ * give-up, the keeper's sweep on the next full sync arms the end and the reminders still ahead
+ * again; a deadline that has passed is not armed again. A job this build cannot read — no clock id, or a step it does not know,
  * as a newer build might have enqueued before a downgrade — fails at once.
  */
 @HiltWorker
