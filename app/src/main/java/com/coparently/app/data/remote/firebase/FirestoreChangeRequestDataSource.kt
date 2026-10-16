@@ -64,8 +64,9 @@ class FirestoreChangeRequestDataSource @Inject constructor(
     }
 
     /**
-     * Whether [fromUid] has a request waiting on [myUid]'s answer — one family's part of the
-     * family switcher's dot (M-8), for a family that is not on screen.
+     * The ids of the requests [fromUid] has made to [myUid] that are still pending — one family's
+     * part of the family switcher's dot (M-8), for a family that is not on screen. The caller
+     * decides which of them still wait on an answer, by their clocks (phase 3a).
      *
      * **Shaped by the rule** (CLAUDE.md item 12). `change_requests` allows a read only to
      * `requestedBy` or `requestedTo`, and a list query is accepted only when its filters
@@ -74,26 +75,26 @@ class FirestoreChangeRequestDataSource @Inject constructor(
      * only ever addressed to a live co-parent, and a request written before the stamp existed
      * carries none.
      *
-     * `limit(1)`, because the question is yes or no. Three equality filters and no `orderBy` are
-     * served by merging single-field indexes, so no composite index is needed.
+     * No `limit`: the dot needs the ids to look their clocks up, and a family has a handful of
+     * pending requests at most. Three equality filters and no `orderBy` are served by merging
+     * single-field indexes, so no composite index is needed.
      *
      * Fails the flow on a listener error rather than swallowing it; the caller bounds the retry.
      *
      * @param myUid The signed-in parent, who would have to answer.
      * @param fromUid The co-parent of the family being watched.
      */
-    fun observeHasPendingFrom(myUid: String, fromUid: String): Flow<Boolean> = callbackFlow {
+    fun observePendingIdsFrom(myUid: String, fromUid: String): Flow<Set<String>> = callbackFlow {
         val registration = collection
             .whereEqualTo("requestedTo", myUid)
             .whereEqualTo("requestedBy", fromUid)
             .whereEqualTo("status", PENDING)
-            .limit(1)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
-                if (snapshot != null) trySend(!snapshot.isEmpty)
+                if (snapshot != null) trySend(snapshot.documents.map { it.id }.toSet())
             }
 
         awaitClose { registration.remove() }

@@ -6,9 +6,16 @@ import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.repository.longOrNull
 import com.coparently.app.data.repository.markMap
+import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestScope
+import com.coparently.app.domain.changerequests.governing
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -56,8 +63,9 @@ enum class FamilySignal {
  *
  * - **Chat** — the conversation *document*, whose `lastMessageAt` and `lastReadAt` marks answer
  *   "anything after my mark?" without reading a message ([hasUnread]).
- * - **Change requests** — a `limit(1)` query for a request from that co-parent to me that is
- *   still pending ([FirestoreChangeRequestDataSource.observeHasPendingFrom]).
+ * - **Change requests** — a query for the requests from that co-parent to me that are still
+ *   pending ([FirestoreChangeRequestDataSource.observePendingIdsFrom]), of which those past their
+ *   deadline no longer count ([waitingRequests]).
  * - **Schedule** — the pair's `custody_models` document, one per family and read by id (the rule
  *   grants `allow get` only, so this must never become a query): a pending proposal or a pending
  *   day swap from the co-parent ([hasPendingSchedule]).
@@ -85,7 +93,8 @@ class OtherFamiliesSignals @Inject constructor(
     private val selectedFamilySource: SelectedFamilySource,
     private val messageDataSource: FirestoreMessageDataSource,
     private val changeRequestDataSource: FirestoreChangeRequestDataSource,
-    private val custodyDataSource: FirestoreCustodyDataSource
+    private val custodyDataSource: FirestoreCustodyDataSource,
+    private val requestClocks: RequestClocks
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -132,11 +141,16 @@ class OtherFamiliesSignals @Inject constructor(
         val requests = if (family.partnerUid.isBlank()) {
             flowOf(false)
         } else {
-            changeRequestDataSource.observeHasPendingFrom(myUid, family.partnerUid)
+            combine(
+                changeRequestDataSource.observePendingIdsFrom(myUid, family.partnerUid),
+                clocksOf(myUid, family)
+            ) { ids, clocks -> waitingRequests(ids, family.partnerUid, family.familyId, clocks) }
                 .bounded(FamilySignal.CHANGE_REQUEST)
         }
-        val schedule = custodyDataSource.observeCustody(family.familyId)
-            .map { hasPendingSchedule(it, myUid, LocalDate.now()) }
+        val schedule = combine(
+            custodyDataSource.observeCustody(family.familyId),
+            clocksOf(myUid, family)
+        ) { custody, clocks -> hasPendingSchedule(custody, myUid, LocalDate.now(), clocks) }
             .bounded(FamilySignal.SCHEDULE)
         return combine(chat, requests, schedule) { c, r, s ->
             buildSet {
@@ -146,6 +160,18 @@ class OtherFamiliesSignals @Inject constructor(
             }
         }.distinctUntilChanged()
     }
+
+    /**
+     * The family's request clocks. Until they answer, and if they cannot, the default holds none,
+     * which is how every request looked before clocks existed: the dot is then what it always was.
+     */
+    private fun clocksOf(myUid: String, family: FamilyOption): Flow<ClocksAt> =
+        requestClocks.observeFamily(myUid, family.familyId)
+            .catch { e ->
+                Log.w(TAG, "Another family's request clocks could not be read; the dot ignores them", e)
+                emit(ClocksAt())
+            }
+            .onStart { emit(ClocksAt()) }
 
     /**
      * Bounded retry, then "nothing waiting" for this kind alone — one family's failing custody
@@ -204,17 +230,74 @@ class OtherFamiliesSignals @Inject constructor(
                 )
 
         /**
+         * Whether one of the change requests [fromUid] made to this parent still waits on their
+         * answer: it has no clock, or its clock says it is open or under a last chance
+         * ([com.coparently.app.domain.changerequests.TimedRequest.waitsOnResponder]). One past its
+         * deadline waits on [fromUid]'s last chance, or on nobody, and lights nothing.
+         *
+         * @param pendingIds The ids of the pending requests from [fromUid] to this parent.
+         * @param fromUid The co-parent of the family.
+         * @param familyId The family; a clock of another one governs nothing here.
+         * @param clocks The family's clocks at one moment.
+         */
+        fun waitingRequests(pendingIds: Set<String>, fromUid: String, familyId: String, clocks: ClocksAt): Boolean {
+            return pendingIds.any { id ->
+                stillWaits(clocks, myOf(familyId, fromUid) ?: return@any true, fromUid) {
+                    RequestDeadlineId.of(RequestKind.CHANGE, fromUid, id, familyId)
+                }
+            }
+        }
+
+        /** The parent in [familyId] who is not [coParentUid]; null when the id does not name them. */
+        private fun myOf(familyId: String, coParentUid: String): String? {
+            val (a, b) = FamilyKey.membersOf(familyId) ?: return null
+            return when (coParentUid) {
+                a -> b
+                b -> a
+                else -> null
+            }
+        }
+
+        /**
          * Whether the pair's custody document holds something [myUid] is being asked to answer:
          * a proposal the *other* parent made (a parent's own proposal waits on nobody here), or
          * a day swap awaiting them on [today] or later — [DaySwapInbox]'s rules, so the dot
          * agrees with the inbox the parent lands on. A missing document asks nothing.
+         *
+         * A proposal or a swap whose clock says its deadline has passed asks nothing either; one
+         * without a clock, or whose clock does not govern it, is counted as before.
+         *
+         * @param clocks The family's clocks at one moment.
          */
-        fun hasPendingSchedule(custody: SharedCustody?, myUid: String, today: LocalDate): Boolean {
+        fun hasPendingSchedule(
+            custody: SharedCustody?,
+            myUid: String,
+            today: LocalDate,
+            clocks: ClocksAt = ClocksAt()
+        ): Boolean {
             if (custody == null) return false
             val proposal = custody.proposal
-            if (proposal != null && proposal.proposedBy != myUid) return true
-            return DaySwapInbox.visible(custody.dayOverrides, today)
-                .any { DaySwapInbox.awaitsAnswerFrom(it, myUid) }
+            if (proposal != null && proposal.proposedBy != myUid &&
+                stillWaits(clocks, myUid, proposal.proposedBy) { RequestDeadlineId.forProposal(proposal, it) }
+            ) {
+                return true
+            }
+            return DaySwapInbox.groups(custody.dayOverrides, today).any { group ->
+                val author = group.swaps.first().override.requestedBy
+                group.swaps.any { DaySwapInbox.awaitsAnswerFrom(it, myUid) } &&
+                    stillWaits(clocks, myUid, author) { RequestDeadlineId.forSwap(group) }
+            }
+        }
+
+        /**
+         * Whether a request [author] made to [myUid] still waits on them: no clock governs it, or
+         * the one that does says it is open or in its last chance. [clockId] names the clock from
+         * the family the two parents make.
+         */
+        private fun stillWaits(clocks: ClocksAt, myUid: String, author: String, clockId: (String) -> String?): Boolean {
+            val familyId = FamilyKey.orNull(myUid, author) ?: return true
+            val scope = RequestScope(myUid, author, familyId, soleFamily = false)
+            return clocks.governing(scope, clockId(familyId), author)?.waitsOnResponder != false
         }
     }
 }
