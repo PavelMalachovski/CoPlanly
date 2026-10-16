@@ -18,6 +18,7 @@ import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
+import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.custody.CustodyTimestamp
@@ -36,6 +37,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +52,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -462,26 +465,36 @@ constructor(
         if (written == null) return PatternSubmission.NOT_SENT
         // The clock starts once the proposal is written and before it is announced, so the push can
         // say when the answer is due — and only when the clock was written (ruling 8).
-        val answerByMillis = startClock(proposalClock(pair, existing.model, proposed, answerBy))
-        announceProposal(pair, ActivityKind.CUSTODY_PROPOSED, planCitation)
-        notifyPartnerOfProposal(pair, "proposed", answerByMillis)
+        //
+        // **Not cancellable from here on.** The server has the proposal, and the clock waits for the
+        // server for up to ten seconds (ruling 14), during which the schedule editor can be left: a
+        // caller cancelled that way must not leave the proposal on the server with no clock, no card
+        // and no push. Before the write is acknowledged nothing is shielded, and leaving cancels.
+        withContext(NonCancellable) {
+            val answerByMillis = startClock(proposalClock(pair, existing.model, proposed, answerBy))
+            announceProposal(pair, ActivityKind.CUSTODY_PROPOSED, planCitation)
+            notifyPartnerOfProposal(pair, "proposed", answerByMillis)
+        }
         return PatternSubmission.PROPOSED
     }
 
     /**
      * Takes up the co-parent's pending proposal: it becomes the agreed pattern and is mirrored
      * into Room so this device's calendar follows immediately, without waiting for the snapshot
-     * to round-trip.
+     * to round-trip. The proposer is told in their own family's thread; see [decideProposal].
      */
     suspend fun acceptProposal(): Result<Unit> = decideProposal { current, uid, now, nowMillis ->
         CustodyProposalTransition.accept(current, uid, now, nowMillis)
-    }.onSuccess { announceDecision(ActivityKind.CUSTODY_ACCEPTED) }
+    }
 
-    /** Turns the co-parent's pending proposal down; the agreed pattern is untouched. */
+    /**
+     * Turns the co-parent's pending proposal down; the agreed pattern is untouched. The proposer is
+     * told as for [acceptProposal].
+     */
     suspend fun declineProposal(note: String? = null): Result<Unit> =
         decideProposal { current, uid, now, _ ->
             CustodyProposalTransition.decline(current, uid, now, note)
-        }.onSuccess { announceDecision(ActivityKind.CUSTODY_DECLINED) }
+        }
 
     /** Withdraws this device's own pending proposal. Nothing is decided; the co-parent is told. */
     suspend fun withdrawProposal(): Result<Unit> = decideProposal { current, uid, _, _ ->
@@ -513,11 +526,20 @@ constructor(
     }
 
     /**
-     * Reads the shared document, applies [transform], writes it back, and — when the write moved
-     * the agreed pattern — mirrors the result into Room.
+     * Reads the shared document, applies [transform], writes it back, mirrors the result into Room,
+     * and — when the write recorded a decision — tells the proposer ([decisionCard]).
      *
      * The transform runs against whatever the document holds *now*, never a held snapshot: both
      * parents write one document, and a stale snapshot would drop whatever the other just did.
+     *
+     * **One family throughout.** The pair is read once, here, and the decision's card and push go to
+     * the pair it was written for. The server's read and write take long enough for a push tap to
+     * switch the family on screen, and a second read afterwards told the other family's co-parent of
+     * this family's decision. Which decision it was is read off the written document, as a swap's
+     * status is: the signature stays as it is (its `ReturnCount` finding is in the detekt baseline).
+     *
+     * **Not cancellable once the server has the decision**: the mirror, the card and the push run to
+     * their end even if the screen that decided is left meanwhile, like a request's own tail.
      */
     private suspend fun decideProposal(
         transform: (SharedCustody, String, String, Long) -> Result<SharedCustody>
@@ -534,7 +556,10 @@ constructor(
         guarded("decide-proposal") {
             firestoreCustodyDataSource.setCustody(pair.documentId, pair.participants, next)
         } ?: return Result.failure(IllegalStateException("The decision could not be written"))
-        mirrorIntoRoom(pair.documentId, next)
+        withContext(NonCancellable) {
+            mirrorIntoRoom(pair.documentId, next)
+            decisionCard(existing, next)?.let { announceDecision(pair, it) }
+        }
         return Result.success(Unit)
     }
 
@@ -544,8 +569,8 @@ constructor(
      * the immutable place the export can still read it from.
      *
      * Posted to [pair]'s own thread, never the family on screen at the time: a proposal's clock
-     * waits for the server first (phase 3a), and a family switched meanwhile must not be shown
-     * another family's schedule.
+     * (phase 3a) and a decision's read and write each wait for the server first, and a family
+     * switched meanwhile must not be shown another family's schedule.
      */
     private suspend fun announceProposal(pair: CustodyPair, kind: ActivityKind, planCitation: String? = null) {
         activityAnnouncer.announce(
@@ -561,8 +586,8 @@ constructor(
         )
     }
 
-    private suspend fun announceDecision(kind: ActivityKind) {
-        val pair = currentPair() ?: return
+    /** The card and the push for a decision on [pair]'s proposal, both to the proposer in that family. */
+    private suspend fun announceDecision(pair: CustodyPair, kind: ActivityKind) {
         announceProposal(pair, kind)
         notifyPartnerOfProposal(pair, if (kind == ActivityKind.CUSTODY_ACCEPTED) "accepted" else "declined")
     }
@@ -1081,10 +1106,7 @@ constructor(
         // change-request path once had: there must be exactly one way a change reaches the
         // thread, and this is it. The status the transition produced *is* the announcement —
         // offered, agreed or turned down — so nothing here has to be told which it was.
-        next[date]?.let { entry ->
-            val answerByMillis = startClock(swapClock(pair, entry, listOf(date), answerBy))
-            announceSwap(pair, date, entry.status, dayCount = 1, answerByMillis = answerByMillis)
-        }
+        next[date]?.let { entry -> announceSwap(pair, entry, listOf(date), answerBy) }
         return Result.success(next)
     }
 
@@ -1107,7 +1129,8 @@ constructor(
      * Refuses, with nothing written, a run with no date or no co-parent; stops at the first write
      * that fails, reporting [PartialSwapRun] when part of the run had landed; and refuses a run that
      * wrote nothing. An offer given a deadline starts one clock, for the days that landed, before
-     * the one announcement.
+     * the one announcement. A caller cancelled part-way stops the run there like a failed write,
+     * and the days that landed are announced all the same ([announceSwap] is not cancellable).
      *
      * @param dates The ISO dates to apply, in the order they should be written.
      * @param transform The transition for one date, from [DayOverrideTransition].
@@ -1130,7 +1153,14 @@ constructor(
         var latest: Map<String, DayOverride>? = null
         val changed = mutableListOf<String>()
         for (date in dates) {
-            val result = writeSwap(pair, date) { current -> transform(current, date) }
+            val result = try {
+                writeSwap(pair, date) { current -> transform(current, date) }
+            } catch (e: CancellationException) {
+                // The caller left mid-run: this day's write ends with it and no later day is
+                // written, but the days already written are on the server and are told of.
+                announceRun(pair, latest, changed, answerBy)
+                throw e
+            }
             val applied = result.getOrElse { cause ->
                 // Announce whatever *did* land before reporting the failure. Returning straight
                 // out left the days already written with no chat card and no push at all: the
@@ -1167,10 +1197,7 @@ constructor(
         answerBy: AnswerByPick?
     ) {
         val first = changed.firstOrNull() ?: return
-        map?.get(first)?.let { entry ->
-            val answerByMillis = startClock(swapClock(pair, entry, changed, answerBy))
-            announceSwap(pair, first, entry.status, dayCount = changed.size, answerByMillis = answerByMillis)
-        }
+        map?.get(first)?.let { entry -> announceSwap(pair, entry, changed, answerBy) }
     }
 
     /**
@@ -1231,37 +1258,34 @@ constructor(
     )
 
     /**
-     * One chat card and one push for a swap, however many days it covers, both to [pair]'s own
-     * thread: never the family on screen at the time, because an offer's clock waits for the
-     * server first (phase 3a), and a family switched meanwhile must not be shown another
-     * family's days.
+     * What follows a swap once the server has it: an offer's clock (phase 3a), then one chat card
+     * and one push, however many days it covers.
      *
-     * @param dayCount Days in the offer. One picks the single-day wording on the other phone;
-     *   more picks the grouped one, which is the whole point of the group.
-     * @param answerByMillis The deadline of the offer's clock, when one was written (phase 3a).
+     * **To [pair]'s own thread**: never the family on screen at the time, because the clock waits
+     * for the server first and a family switched meanwhile must not be shown another family's days.
+     * **And not cancellable**: the clock waits for up to ten seconds (ruling 14) while the screen
+     * that sent the swap may be left, and the swap is on the server either way — a cancelled caller
+     * must not cost the co-parent the card and the push, nor the clock their answer is timed by.
+     *
+     * @param entry The first day's entry, whose status the whole swap shares: offered, agreed or
+     *   turned down.
+     * @param dates The days the swap moved; the card and the push name the first. One picks the
+     *   single-day wording on the other phone; more picks the grouped one, which is the whole point of
+     *   the group.
+     * @param answerBy The deadline the offering parent chose, or null for none; see [swapClock].
      */
     private suspend fun announceSwap(
         pair: CustodyPair,
-        date: String,
-        status: DayOverrideStatus,
-        dayCount: Int,
-        answerByMillis: Long?
-    ) {
+        entry: DayOverride,
+        dates: List<String>,
+        answerBy: AnswerByPick?
+    ) = withContext(NonCancellable) {
+        val answerByMillis = startClock(swapClock(pair, entry, dates, answerBy))
         activityAnnouncer.announce(
-            announcement = ActivityAnnouncement(
-                kind = when (status) {
-                    DayOverrideStatus.PENDING -> ActivityKind.DAY_SWAP_OFFERED
-                    DayOverrideStatus.ACCEPTED -> ActivityKind.DAY_SWAP_ACCEPTED
-                    DayOverrideStatus.DECLINED -> ActivityKind.DAY_SWAP_DECLINED
-                },
-                entityType = ActivityEntityType.DAY_SWAP,
-                entityId = date,
-                title = date,
-                whenIso = date
-            ),
+            announcement = swapAnnouncement(dates.first(), entry.status),
             partnerUid = pair.partnerUid()
         )
-        notifyPartnerOfSwap(pair, date, status, dayCount, answerByMillis)
+        notifyPartnerOfSwap(pair, dates.first(), entry.status, dates.size, answerByMillis)
     }
 
     /**
@@ -1486,6 +1510,33 @@ private fun withdrawnIfUnanswered(current: SharedCustody?, proposedAt: String, m
     if (proposal.proposedAt != proposedAt || proposal.proposedBy != myUid) return null
     return CustodyProposalTransition.withdraw(current, myUid).getOrNull()
 }
+
+/**
+ * The card a proposal write owes the proposer: [ActivityKind.CUSTODY_ACCEPTED] or
+ * [ActivityKind.CUSTODY_DECLINED] when [next] records a decision [current] did not hold, and null for
+ * a write that decided nothing — a withdrawal, which keeps the last decision as it was. What the
+ * transition recorded *is* the announcement, as a swap's status is.
+ */
+private fun decisionCard(current: SharedCustody, next: SharedCustody): ActivityKind? =
+    next.lastDecision?.takeIf { it != current.lastDecision }?.let { decision ->
+        when (decision.outcome) {
+            CustodyDecisionOutcome.ACCEPTED -> ActivityKind.CUSTODY_ACCEPTED
+            CustodyDecisionOutcome.DECLINED -> ActivityKind.CUSTODY_DECLINED
+        }
+    }
+
+/** The chat card about a swap of [date]: offered, agreed or turned down, as [status] says. */
+private fun swapAnnouncement(date: String, status: DayOverrideStatus) = ActivityAnnouncement(
+    kind = when (status) {
+        DayOverrideStatus.PENDING -> ActivityKind.DAY_SWAP_OFFERED
+        DayOverrideStatus.ACCEPTED -> ActivityKind.DAY_SWAP_ACCEPTED
+        DayOverrideStatus.DECLINED -> ActivityKind.DAY_SWAP_DECLINED
+    },
+    entityType = ActivityEntityType.DAY_SWAP,
+    entityId = date,
+    title = date,
+    whenIso = date
+)
 
 /**
  * The push about a swap of [date]: its type and its date, and for a run of [dayCount] days the
