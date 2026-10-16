@@ -44,6 +44,14 @@ internal object EventDocument {
         updatedAtMillis = EventTimestamp.fromWire(data["updatedAt"] as String)
     )
 
+    /**
+     * The document's acceptance as its stored name. Absent reads as `NOT_REQUIRED`: every document
+     * written before the field existed was created without an acceptance step, and defaulting the
+     * other way would hide it.
+     */
+    fun acceptanceOf(data: Map<String, Any?>): String =
+        (data["acceptance"] as? String)?.ifBlank { null } ?: "NOT_REQUIRED"
+
     @Suppress("UNCHECKED_CAST")
     private fun toEntity(data: Map<String, Any?>, updatedAtMillis: Long): EventEntity = EventEntity(
         id = data["id"] as String,
@@ -77,7 +85,7 @@ internal object EventDocument {
         imageUrl = (data["imageUrl"] as? String)?.ifBlank { null },
         // Absent reads as NOT_REQUIRED: every document written before this field existed was
         // created without an acceptance step, and defaulting the other way would hide it.
-        acceptance = (data["acceptance"] as? String)?.ifBlank { null } ?: "NOT_REQUIRED",
+        acceptance = acceptanceOf(data),
         acceptedBy = (data["acceptedBy"] as? String)?.ifBlank { null },
         acceptedAt = (data["acceptedAt"] as? String)?.ifBlank { null }
             ?.let { LocalDateTime.parse(it, formatter) },

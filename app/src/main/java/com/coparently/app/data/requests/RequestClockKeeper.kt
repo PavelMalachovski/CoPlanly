@@ -74,7 +74,9 @@ class RequestClockKeeper internal constructor(
     /**
      * Delivers, on the keeper's scope, each of [clocks] that [myUid] must answer and has not
      * received yet. A clock whose delivery is already running is skipped; one whose delivery failed
-     * is tried again the next time it is handed over.
+     * is tried again the next time it is handed over. It does not check the co-parent set, which it
+     * is not given: [sweep] is the co-parent gate, and the listener feeding this reads the family on
+     * screen only.
      */
     fun deliverSoon(myUid: String, clocks: Collection<RequestDeadline>) {
         clocks.filter { it.responderUid == myUid && isUndelivered(it) && isGenuine(it) }

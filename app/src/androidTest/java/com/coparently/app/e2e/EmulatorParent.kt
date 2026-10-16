@@ -319,6 +319,7 @@ class EmulatorParent private constructor(
         records = RequestRecords(
             changeRequestRepository = changeRequestRepository,
             eventRepository = eventRepository,
+            eventDataSource = eventDataSource,
             custodyDataSource = custodyDataSource,
             custodyModelRepository = custodyRepository,
             userRepository = userRepository

@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
@@ -66,6 +67,15 @@ class FirestoreEventDataSource @Inject constructor(
             .await()
             .data
     }
+
+    /**
+     * The event [id]'s raw document as the server holds it, never from Firestore's cache; null when
+     * there is no such document. Throws when the server cannot be reached or refuses the read.
+     * Nothing is stored: a caller that only needs to know where the event stands must not replace
+     * this phone's row, which may hold an edit not yet uploaded.
+     */
+    suspend fun getEventFromServer(id: String): Map<String, Any?>? =
+        firestore.collection(eventsCollection).document(id).get(Source.SERVER).await().data
 
     /**
      * Inserts a new event.

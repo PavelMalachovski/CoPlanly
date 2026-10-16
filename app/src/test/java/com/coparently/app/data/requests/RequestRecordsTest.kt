@@ -1,6 +1,7 @@
 package com.coparently.app.data.requests
 
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.changerequests.RequestDeadline
@@ -22,6 +23,7 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.google.firebase.firestore.Source
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -47,11 +49,13 @@ class RequestRecordsTest {
 
     private val changeRequests = mockk<ChangeRequestRepository>()
     private val events = mockk<EventRepository>()
+    private val eventDataSource = mockk<FirestoreEventDataSource>()
     private val custodyDataSource = mockk<FirestoreCustodyDataSource>()
     private val custodyRepository = mockk<CustodyModelRepository>()
     private val users = mockk<UserRepository>()
 
-    private val records = RequestRecords(changeRequests, events, custodyDataSource, custodyRepository, users)
+    private val records =
+        RequestRecords(changeRequests, events, eventDataSource, custodyDataSource, custodyRepository, users)
 
     private fun signedInAs(uid: String, partnerIds: List<String>, partnerId: String? = partnerIds.firstOrNull()) {
         coEvery { users.getCurrentUser() } returns User(
@@ -176,6 +180,65 @@ class RequestRecordsTest {
     }
 
     @Test
+    fun `the server's copy decides when the server is asked, whatever this phone holds`() = runTest {
+        // Bob answered on his phone; Alice's phone has not heard. The end and the deadline notice ask
+        // the server, so neither tells her he did not answer.
+        signedInAs(ALICE, listOf(BOB))
+        coEvery { changeRequests.getChangeRequestById("cr-1") } returns changeRequest(ChangeRequestStatus.PENDING)
+        coEvery { changeRequests.fetchFromServer("cr-1") } returns changeRequest(ChangeRequestStatus.ACCEPTED)
+        assertEquals(RecordStatus.PENDING, statusOf(RequestKind.CHANGE, "cr-1"))
+        assertEquals(RecordStatus.ANSWERED, serverStatusOf(RequestKind.CHANGE, "cr-1"))
+        coEvery { changeRequests.fetchFromServer("cr-1") } returns null
+        assertEquals(RecordStatus.GONE, serverStatusOf(RequestKind.CHANGE, "cr-1"))
+
+        coEvery { events.getEventById("ev-1") } returns event(EventAcceptance.PENDING)
+        coEvery { eventDataSource.getEventFromServer("ev-1") } returns eventDocument("ACCEPTED")
+        assertEquals(RecordStatus.ANSWERED, serverStatusOf(RequestKind.EVENT, "ev-1"))
+        coEvery { eventDataSource.getEventFromServer("ev-1") } returns eventDocument("PENDING")
+        assertEquals(RecordStatus.PENDING, serverStatusOf(RequestKind.EVENT, "ev-1"))
+        assertEquals(
+            CardSubject(ActivityEntityType.EVENT, "ev-1", "Swimming"),
+            records.lookOnServer(clock(RequestKind.EVENT, "ev-1")).card
+        )
+        coEvery { eventDataSource.getEventFromServer("ev-1") } returns
+            eventDocument("PENDING") + ("deletedAtMillis" to 1_777_000_000_000L)
+        assertEquals("a tombstone", RecordStatus.GONE, serverStatusOf(RequestKind.EVENT, "ev-1"))
+        coEvery { eventDataSource.getEventFromServer("ev-1") } returns null
+        assertEquals(RecordStatus.GONE, serverStatusOf(RequestKind.EVENT, "ev-1"))
+
+        val pending = custody(
+            swaps = mapOf("2026-05-08" to swap("g-1", DayOverrideStatus.PENDING)),
+            proposal = proposal(PROPOSED_AT)
+        )
+        val answered = custody(
+            swaps = mapOf("2026-05-08" to swap("g-1", DayOverrideStatus.DECLINED)),
+            decision = decision(PROPOSED_AT)
+        )
+        coEvery { custodyDataSource.getCustody(FAMILY, Source.DEFAULT) } returns pending
+        coEvery { custodyDataSource.getCustody(FAMILY, Source.SERVER) } returns answered
+        assertEquals(RecordStatus.PENDING, statusOf(RequestKind.SWAP, "g-1"))
+        assertEquals(RecordStatus.ANSWERED, serverStatusOf(RequestKind.SWAP, "g-1"))
+        assertEquals(RecordStatus.ANSWERED, serverStatusOf(RequestKind.PROPOSAL, PROPOSED_AT))
+    }
+
+    @Test
+    fun `a server that cannot be reached reads as unknown`() = runTest {
+        // Offline, every cache would answer "still pending": the step must try again instead.
+        signedInAs(ALICE, listOf(BOB))
+        coEvery { changeRequests.getChangeRequestById("cr-1") } returns changeRequest(ChangeRequestStatus.PENDING)
+        coEvery { changeRequests.fetchFromServer("cr-1") } throws IOException("offline")
+        coEvery { eventDataSource.getEventFromServer("ev-1") } throws IOException("offline")
+        coEvery { custodyDataSource.getCustody(FAMILY, Source.DEFAULT) } returns
+            custody(proposal = proposal(PROPOSED_AT))
+        coEvery { custodyDataSource.getCustody(FAMILY, Source.SERVER) } throws IOException("offline")
+
+        assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.CHANGE, "cr-1"))
+        assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.EVENT, "ev-1"))
+        assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.SWAP, "g-1"))
+        assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.PROPOSAL, PROPOSED_AT))
+    }
+
+    @Test
     fun `withdrawing a proposal acts in the clock's family`() = runTest {
         signedInAs(ALICE, listOf(BOB, CAROL), partnerId = CAROL)
         coEvery { custodyRepository.withdrawUnanswered(FAMILY, PROPOSED_AT) } returns true
@@ -189,6 +252,17 @@ class RequestRecordsTest {
     }
 
     private suspend fun statusOf(kind: RequestKind, ref: String): RecordStatus = records.look(clock(kind, ref)).status
+
+    private suspend fun serverStatusOf(kind: RequestKind, ref: String): RecordStatus =
+        records.lookOnServer(clock(kind, ref)).status
+
+    /** The event's document as the server holds it: only the fields a record reads matter here. */
+    private fun eventDocument(acceptance: String): Map<String, Any?> = mapOf(
+        "id" to "ev-1",
+        "title" to "Swimming",
+        "createdByFirebaseUid" to ALICE,
+        "acceptance" to acceptance
+    )
 
     private fun clock(kind: RequestKind, ref: String) = RequestDeadline(
         id = RequestDeadlineId.of(kind, ALICE, ref, FAMILY),

@@ -1,6 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -97,6 +98,13 @@ class FirestoreChangeRequestDataSource @Inject constructor(
 
         awaitClose { registration.remove() }
     }
+
+    /**
+     * The change request [requestId] as the server holds it, never from Firestore's cache; null when
+     * there is no such document. Throws when the server cannot be reached.
+     */
+    suspend fun getFromServer(requestId: String): Map<String, Any>? =
+        collection.document(requestId).get(Source.SERVER).await().data
 
     /**
      * Adds or updates a change request document.

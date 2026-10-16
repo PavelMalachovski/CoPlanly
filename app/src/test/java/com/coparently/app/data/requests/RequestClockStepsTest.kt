@@ -299,13 +299,76 @@ class RequestClockStepsTest {
         coVerify(exactly = 0) { repository.close(any()) }
     }
 
+    @Test
+    fun `the end decides on the server's copy, never this phone's alone`() = runTest {
+        // Bob accepted on day one; Alice never opened the app, so her copy still says pending.
+        for (kind in RequestKind.entries) {
+            val clock = clock(kind)
+            signedInAs(ALICE)
+            reads(clock, RecordStatus.PENDING)
+            now = RequestClock.endMillis(clock) + MINUTE
+
+            serverSays(clock, RecordStatus.ANSWERED)
+            assertEquals("$kind answered on the server", StepResult.DONE, steps.end(clock.id))
+
+            serverSays(clock, RecordStatus.UNKNOWN)
+            assertEquals("$kind with the server out of reach", StepResult.RETRY, steps.end(clock.id))
+        }
+
+        coVerify(exactly = 0) { repository.close(any()) }
+        coVerify(exactly = 0) { notices.noAnswer(any()) }
+        coVerify(exactly = 0) { telling.unanswered(any(), any()) }
+        coVerify(exactly = 0) { records.withdrawUnansweredProposal(any()) }
+    }
+
+    @Test
+    fun `the deadline notice follows the server's copy too`() = runTest {
+        for (kind in RequestKind.entries) {
+            val clock = clock(kind)
+            signedInAs(ALICE)
+            reads(clock, RecordStatus.PENDING)
+            now = clock.answerByMillis + MINUTE
+
+            serverSays(clock, RecordStatus.ANSWERED)
+            assertEquals("$kind answered on the server", StepResult.DONE, steps.deadline(clock.id))
+
+            serverSays(clock, RecordStatus.UNKNOWN)
+            assertEquals("$kind with the server out of reach", StepResult.RETRY, steps.deadline(clock.id))
+        }
+
+        coVerify(exactly = 0) { notices.deadlinePassed(any()) }
+        verify(exactly = 0) { scheduler.scheduleEnd(any(), any()) }
+    }
+
+    @Test
+    fun `a closed proposal is withdrawn only while the server still holds it`() = runTest {
+        val closed = clock(RequestKind.PROPOSAL).copy(outcome = RequestClockOutcome.NO_ANSWER)
+        signedInAs(ALICE)
+        reads(closed, RecordStatus.PENDING)
+        now = RequestClock.endMillis(closed) + MINUTE
+
+        serverSays(closed, RecordStatus.GONE)
+        assertEquals(StepResult.DONE, steps.end(closed.id))
+        serverSays(closed, RecordStatus.UNKNOWN)
+        assertEquals(StepResult.RETRY, steps.end(closed.id))
+
+        coVerify(exactly = 0) { records.withdrawUnansweredProposal(any()) }
+    }
+
     private fun signedInAs(uid: String) {
         every { repository.signedInUid() } returns uid
     }
 
+    /** [clock] is read back, and its record says [status] on this phone and on the server alike. */
     private fun reads(clock: RequestDeadline, status: RecordStatus, card: CardSubject? = CARD) {
         coEvery { repository.get(clock.id) } returns clock
         coEvery { records.look(clock) } returns RecordLook(status, card)
+        coEvery { records.lookOnServer(clock) } returns RecordLook(status, card)
+    }
+
+    /** The server's copy of [clock]'s record says [status], whatever this phone's says. */
+    private fun serverSays(clock: RequestDeadline, status: RecordStatus, card: CardSubject? = CARD) {
+        coEvery { records.lookOnServer(clock) } returns RecordLook(status, card)
     }
 
     private fun clock(kind: RequestKind): RequestDeadline {

@@ -35,7 +35,11 @@ enum class StepResult {
  *   other parent. An answered request is never closed (Review Focus 5).
  *
  * Every step reads the clock again and acts for the family it names, never the family on screen
- * (spec §5.6); `RequestRecords` reads a family this parent has left as gone. **A clock or a record
+ * (spec §5.6); `RequestRecords` reads a family this parent has left as gone. **The deadline and the
+ * end decide on the server's copy of the record** (`RequestRecords.lookOnServer`): what they write
+ * cannot be taken back, and this phone's copy may not yet hold the co-parent's answer. A server out
+ * of reach is [StepResult.RETRY], and the sweep of the next sync online takes over. A reminder reads
+ * this phone's copy: a wrong one costs a notice. **A clock or a record
  * that cannot be read is [StepResult.RETRY]**, never "nothing to do": the repository reads any
  * failure as no clock, so a step that gave up on it would be lost, and the keeper's sweep on the
  * next sync re-arms whatever a step's last retry missed.
@@ -95,7 +99,7 @@ class RequestClockSteps @Inject constructor(
     }
 
     private suspend fun tellDeadlinePassed(clock: RequestDeadline): StepResult =
-        when (records.look(clock).status) {
+        when (records.lookOnServer(clock).status) {
             RecordStatus.UNKNOWN -> StepResult.RETRY
             RecordStatus.PENDING -> {
                 notices.deadlinePassed(clock)
@@ -120,7 +124,7 @@ class RequestClockSteps @Inject constructor(
      */
     private suspend fun withdrawLeftover(clock: RequestDeadline): StepResult {
         if (clock.kind != RequestKind.PROPOSAL) return StepResult.DONE
-        return when (records.look(clock).status) {
+        return when (records.lookOnServer(clock).status) {
             RecordStatus.UNKNOWN -> StepResult.RETRY
             RecordStatus.PENDING ->
                 if (records.withdrawUnansweredProposal(clock)) StepResult.DONE else StepResult.RETRY
@@ -144,7 +148,7 @@ class RequestClockSteps @Inject constructor(
      * is stopped, so a retry never finds the proposal gone and the card unsent.
      */
     private suspend fun closeUnanswered(clock: RequestDeadline): StepResult {
-        val look = records.look(clock)
+        val look = records.lookOnServer(clock)
         val card = look.card
         return when {
             look.status == RecordStatus.UNKNOWN -> StepResult.RETRY

@@ -17,6 +17,7 @@ import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -84,9 +85,12 @@ class FirestoreCustodyDataSource @Inject constructor(
      * `createdAt` before an update so the arrangement is not re-dated.
      *
      * @param documentId The pair's custody id, from `CustodyKey.of`.
+     * @param source Where to read from: Firestore's default (the server, or the cache offline), or
+     *   [Source.SERVER] for a decision that must not rest on a cached copy (phase 3a: the end of a
+     *   request's clock), which then throws offline.
      */
-    suspend fun getCustody(documentId: String): SharedCustody? {
-        val snapshot = custodyCollection.document(documentId).get().await()
+    suspend fun getCustody(documentId: String, source: Source = Source.DEFAULT): SharedCustody? {
+        val snapshot = custodyCollection.document(documentId).get(source).await()
         return snapshot.data?.toSharedCustody(documentId)
     }
 

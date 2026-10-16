@@ -2,7 +2,10 @@ package com.coparently.app.data.requests
 
 import android.util.Log
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.sync.EventDocument
+import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
@@ -14,6 +17,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -64,25 +68,41 @@ data class RecordLook(val status: RecordStatus, val card: CardSubject?)
  * 38 and 41). A record is the clock's only when it names the clock's proposer as its author, as
  * `RequestClock.governs` asks of every reader.
  *
- * The change request and the event are read from Room, where this phone keeps them; the custody
- * document from Firestore, which answers from its cache offline. A read that fails is
- * [RecordStatus.UNKNOWN], never "gone": a step must not close a request it could not see.
+ * **Two ways to look.** [look] reads what this phone holds — the change request and the event from
+ * Room, the custody document from Firestore, which answers from its cache offline — and is enough
+ * for a reminder, where a wrong answer costs one notice. [lookOnServer] reads each record from the
+ * server, past every cache, for the steps whose answer cannot be taken back: the deadline notice
+ * and the end, which writes "No answer" into the clock, the chat and the record a court may read.
+ * The proposer's copy of a change request is refreshed only while the inbox listens, and an event
+ * only by the periodic sync, so the co-parent's answer in time may not have reached it.
+ *
+ * A read that fails — offline, for [lookOnServer] — is [RecordStatus.UNKNOWN], never "gone": a step
+ * must not close a request it could not see.
  */
 @Singleton
 class RequestRecords @Inject constructor(
     private val changeRequestRepository: ChangeRequestRepository,
     private val eventRepository: EventRepository,
+    private val eventDataSource: FirestoreEventDataSource,
     private val custodyDataSource: FirestoreCustodyDataSource,
     private val custodyModelRepository: CustodyModelRepository,
     private val userRepository: UserRepository
 ) {
 
-    /** Where the request [clock] times stands now, and what its cards name. */
-    suspend fun look(clock: RequestDeadline): RecordLook = try {
+    /** Where the request [clock] times stands by this phone's copy, and what its cards name. */
+    suspend fun look(clock: RequestDeadline): RecordLook = lookAt(clock, fromServer = false)
+
+    /**
+     * Where the request [clock] times stands by the server's copy, and what its cards name;
+     * [RecordStatus.UNKNOWN] when the server cannot be reached. Nothing read is stored.
+     */
+    suspend fun lookOnServer(clock: RequestDeadline): RecordLook = lookAt(clock, fromServer = true)
+
+    private suspend fun lookAt(clock: RequestDeadline, fromServer: Boolean): RecordLook = try {
         when (familyIsLive(clock)) {
             null -> UNKNOWN_LOOK
             false -> GONE_LOOK
-            true -> lookInLiveFamily(clock)
+            true -> lookInLiveFamily(clock, fromServer)
         }
     } catch (e: CancellationException) {
         throw e
@@ -92,13 +112,17 @@ class RequestRecords @Inject constructor(
         UNKNOWN_LOOK
     }
 
-    private suspend fun lookInLiveFamily(clock: RequestDeadline): RecordLook = when (clock.kind) {
-        RequestKind.CHANGE -> lookChange(clock)
-        RequestKind.EVENT -> lookEvent(clock)
-        RequestKind.SWAP -> custodyDataSource.getCustody(clock.familyId)?.let { lookSwap(it, clock) } ?: GONE_LOOK
-        RequestKind.PROPOSAL ->
-            custodyDataSource.getCustody(clock.familyId)?.let { lookProposal(it, clock) } ?: GONE_LOOK
-    }
+    private suspend fun lookInLiveFamily(clock: RequestDeadline, fromServer: Boolean): RecordLook =
+        when (clock.kind) {
+            RequestKind.CHANGE -> lookChange(clock, fromServer)
+            RequestKind.EVENT -> if (fromServer) lookEventOnServer(clock) else lookEvent(clock)
+            RequestKind.SWAP -> custodyOf(clock, fromServer)?.let { lookSwap(it, clock) } ?: GONE_LOOK
+            RequestKind.PROPOSAL -> custodyOf(clock, fromServer)?.let { lookProposal(it, clock) } ?: GONE_LOOK
+        }
+
+    /** The custody document of the clock's family, from the server when [fromServer] says so. */
+    private suspend fun custodyOf(clock: RequestDeadline, fromServer: Boolean): SharedCustody? =
+        custodyDataSource.getCustody(clock.familyId, if (fromServer) Source.SERVER else Source.DEFAULT)
 
     /**
      * Withdraws the proposal [clock] times, in the clock's family, when it is still the same
@@ -128,8 +152,13 @@ class RequestRecords @Inject constructor(
         return FamilyKey.membersOf(clock.familyId)?.toList()?.toSet() == setOf(me.id, other) && other in coParents
     }
 
-    private suspend fun lookChange(clock: RequestDeadline): RecordLook {
-        val request = changeRequestRepository.getChangeRequestById(clock.ref)
+    private suspend fun lookChange(clock: RequestDeadline, fromServer: Boolean): RecordLook {
+        val stored = if (fromServer) {
+            changeRequestRepository.fetchFromServer(clock.ref)
+        } else {
+            changeRequestRepository.getChangeRequestById(clock.ref)
+        }
+        val request = stored
             ?.takeIf { it.requestedBy == clock.proposerUid && it.requestedTo == clock.responderUid }
             ?: return GONE_LOOK
         val status = if (request.status == ChangeRequestStatus.PENDING) RecordStatus.PENDING else RecordStatus.ANSWERED
@@ -142,6 +171,20 @@ class RequestRecords @Inject constructor(
             ?: return GONE_LOOK
         val status = if (event.acceptance == EventAcceptance.PENDING) RecordStatus.PENDING else RecordStatus.ANSWERED
         return RecordLook(status, CardSubject(ActivityEntityType.EVENT, event.id, event.title))
+    }
+
+    /**
+     * The event's document as the server holds it, read without touching Room: a tombstone, or an
+     * event its proposer did not create, is gone. `EventDocument` says what an absent acceptance means.
+     */
+    private suspend fun lookEventOnServer(clock: RequestDeadline): RecordLook {
+        val data = eventDataSource.getEventFromServer(clock.ref)
+            ?.takeUnless { Tombstone.isDeleted(it) }
+            ?.takeIf { it["createdByFirebaseUid"] == clock.proposerUid }
+            ?: return GONE_LOOK
+        val pending = EventDocument.acceptanceOf(data) == EventAcceptance.PENDING.name
+        val status = if (pending) RecordStatus.PENDING else RecordStatus.ANSWERED
+        return RecordLook(status, CardSubject(ActivityEntityType.EVENT, clock.ref, data["title"] as? String ?: ""))
     }
 
     /**
