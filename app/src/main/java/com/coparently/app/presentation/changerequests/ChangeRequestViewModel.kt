@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -437,15 +438,32 @@ class ChangeRequestViewModel @Inject constructor(
         }
     }
 
+    private val _lastChanceInFlight = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * The clocks whose last chance is being given right now, by id: their card's button is disabled
+     * until the read and the write behind it have answered.
+     */
+    val lastChanceInFlight: StateFlow<Set<String>> = _lastChanceInFlight.asStateFlow()
+
     /**
      * Gives the co-parent one last chance to answer the request clock [clockId] times (spec §4.4).
      * A refusal — the request was answered meanwhile, the server could not be reached, or this
      * phone's clock runs fast enough for the rules to refuse it — is said once, never retried.
+     *
+     * A second tap while the first is under way is ignored: it would be refused, because the first
+     * has given the one last chance, and the parent would be told it failed when it did not.
      */
     fun giveLastChance(clockId: String) {
+        if (clockId in _lastChanceInFlight.value) return
+        _lastChanceInFlight.update { it + clockId }
         viewModelScope.launch {
-            if (!requestClockActions.giveLastChance(clockId)) {
-                _errorMessage.value = UiText.Res(R.string.request_last_chance_failed)
+            try {
+                if (!requestClockActions.giveLastChance(clockId)) {
+                    _errorMessage.value = UiText.Res(R.string.request_last_chance_failed)
+                }
+            } finally {
+                _lastChanceInFlight.update { it - clockId }
             }
         }
     }

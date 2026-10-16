@@ -36,6 +36,7 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -45,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -412,6 +414,28 @@ class ChangeRequestViewModelTest {
 
         assertEquals(UiText.Res(R.string.request_last_chance_failed), vm.errorMessage.value)
     }
+
+    @Test
+    fun `a second tap on the last chance while the first is under way gives nothing twice and says nothing`() =
+        runTest(dispatcher) {
+            // The server read and the write take a moment; the parent taps again meanwhile.
+            coEvery { clockActions.giveLastChance("clock-1") } coAnswers {
+                delay(2_000L)
+                true
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.giveLastChance("clock-1")
+            runCurrent()
+            assertEquals(setOf("clock-1"), vm.lastChanceInFlight.value, "the card's button is disabled meanwhile")
+            vm.giveLastChance("clock-1")
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { clockActions.giveLastChance("clock-1") }
+            assertNull(vm.errorMessage.value)
+            assertEquals(emptySet<String>(), vm.lastChanceInFlight.value, "and enabled again once it is done")
+        }
 
     @Test
     fun `a request is marked seen by its clock's id, and a request with no clock is left alone`() =

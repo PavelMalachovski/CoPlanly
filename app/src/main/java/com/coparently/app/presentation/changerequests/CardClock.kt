@@ -60,6 +60,8 @@ enum class ClockRole {
  *   nothing to record (the proposer, a request seen already, or one not waiting on them).
  * @property onGiveLastChance Gives the one last chance; null unless the reader is the proposer and
  *   the button is offered now.
+ * @property lastChanceInFlight Whether that last chance is being given right now: the button stays
+ *   on the card, disabled, so a second tap cannot ask for it twice.
  */
 @Immutable
 data class CardClock(
@@ -67,7 +69,8 @@ data class CardClock(
     val role: ClockRole,
     val otherName: String,
     val onSeen: (() -> Unit)?,
-    val onGiveLastChance: (() -> Unit)?
+    val onGiveLastChance: (() -> Unit)?,
+    val lastChanceInFlight: Boolean = false
 ) {
 
     /**
@@ -207,7 +210,7 @@ private fun DeadlinePassedRows(clock: CardClock) {
     if (window != null && give != null) {
         val until = timed.nowMillis + window
         // The label promises 24 hours only when it can give them (ruling 3).
-        Button(onClick = give) {
+        Button(onClick = give, enabled = !clock.lastChanceInFlight) {
             Text(
                 if (window == RequestClock.LAST_CHANCE_MILLIS) {
                     stringResource(R.string.request_clock_give_last_chance)

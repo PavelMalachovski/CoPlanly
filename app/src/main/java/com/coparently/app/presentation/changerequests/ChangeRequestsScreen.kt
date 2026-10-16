@@ -153,7 +153,8 @@ fun ChangeRequestsScreen(
                     parentNames = parentNames,
                     proposalDiff = proposalDiff,
                     proposalCitation = proposalCitation,
-                    highlightedRequestId = highlighted?.id
+                    highlightedRequestId = highlighted?.id,
+                    lastChanceInFlight = viewModel.lastChanceInFlight.collectAsState().value
                 ),
                 answers = answers,
                 listState = listState,
@@ -219,6 +220,7 @@ private fun InboxList(
  * @property proposalDiff What the co-parent's proposal would change; null for this parent's own.
  * @property proposalCitation Where the co-parent's proposal came from (MON-21).
  * @property highlightedRequestId The request a chat card arrived for, or null.
+ * @property lastChanceInFlight The clocks whose last chance is being given right now, by id.
  */
 private data class InboxCards(
     val scope: RequestScope,
@@ -226,7 +228,8 @@ private data class InboxCards(
     val parentNames: ParentNames,
     val proposalDiff: CustodyPatternDiff?,
     val proposalCitation: CitationStatus,
-    val highlightedRequestId: String?
+    val highlightedRequestId: String?,
+    val lastChanceInFlight: Set<String> = emptySet()
 ) {
 
     /**
@@ -253,7 +256,8 @@ private data class InboxCards(
             onSeen = { answers.markSeen(clock.id) }
                 .takeIf { role == ClockRole.RESPONDER && clock.seenAtMillis == null && timed.waitsOnResponder },
             onGiveLastChance = { answers.giveLastChance(clock.id) }
-                .takeIf { role == ClockRole.PROPOSER && timed.lastChanceWindowMillis != null }
+                .takeIf { role == ClockRole.PROPOSER && timed.lastChanceWindowMillis != null },
+            lastChanceInFlight = clock.id in lastChanceInFlight
         )
     }
 }
