@@ -174,7 +174,10 @@
       ]
     },
     "request_deadlines": {
-      "exempt": "Temporary while phase 3a is in progress (PR #133 merged part-way): nothing starts a clock until the deadline forms land, and TwoParentRequestDeadlinesTest (plan Task 15) replaces this entry."
+      "e2e": [
+        "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered",
+        "TwoParentRequestDeadlinesTest#aProposalNobodyAnswersClosesAsNoAnswerAndIsWithdrawn"
+      ]
     }
   },
   "storage": {
@@ -379,7 +382,9 @@
       ]
     },
     "request_last_chance": {
-      "exempt": "Temporary while phase 3a is in progress (PR #133 merged part-way): nothing starts a clock until the deadline forms land, and TwoParentRequestDeadlinesTest (plan Task 15) replaces this entry."
+      "e2e": [
+        "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered"
+      ]
     }
   },
   "functions": {

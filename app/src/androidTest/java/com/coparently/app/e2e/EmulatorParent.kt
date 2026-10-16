@@ -52,6 +52,7 @@ import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
+import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClockSteps
 import com.coparently.app.data.requests.RequestNotices
@@ -314,18 +315,34 @@ class EmulatorParent private constructor(
      * The request clocks' background steps (phase 3a), over this phone's repositories and
      * [requestScheduler]: a test runs a step itself where the app would wait for its job.
      */
+    private val requestRecords = RequestRecords(
+        changeRequestRepository = changeRequestRepository,
+        eventRepository = eventRepository,
+        eventDataSource = eventDataSource,
+        custodyDataSource = custodyDataSource,
+        custodyModelRepository = custodyRepository,
+        userRepository = userRepository
+    )
+
+    private val requestTelling = RequestTelling(announcer, fcmService, authService)
+
     val requestClockSteps = RequestClockSteps(
         repository = requestDeadlineRepository,
-        records = RequestRecords(
-            changeRequestRepository = changeRequestRepository,
-            eventRepository = eventRepository,
-            eventDataSource = eventDataSource,
-            custodyDataSource = custodyDataSource,
-            custodyModelRepository = custodyRepository,
-            userRepository = userRepository
-        ),
+        records = requestRecords,
         notices = RequestNotices(context, pairingRepository),
-        telling = RequestTelling(announcer, fcmService, authService),
+        telling = requestTelling,
+        scheduler = requestScheduler,
+        time = RequestTime()
+    )
+
+    /**
+     * What a parent does to a clock from a request's card (phase 3a): the answering parent opening
+     * it, and the proposer giving the one last chance — over this phone's repositories.
+     */
+    val requestClockActions = RequestClockActions(
+        repository = requestDeadlineRepository,
+        records = requestRecords,
+        telling = requestTelling,
         scheduler = requestScheduler,
         time = RequestTime()
     )
