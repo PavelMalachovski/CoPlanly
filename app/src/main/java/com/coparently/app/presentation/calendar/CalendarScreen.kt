@@ -344,14 +344,23 @@ fun CalendarScreen(
         )
     }
 
+    // What waits on this parent in the family on screen: change requests, day swaps (they live on
+    // the custody document, not in `change_requests`, and count once per offer) and pending events.
+    // Read from the source Home's Requests row reads (`RequestsSource`), so the two never disagree;
+    // the custody proposal is left out because it draws a banner of its own below.
+    val inboxRequests by changeRequestViewModel.requests.collectAsState()
+
     // The dates a swap is being negotiated on. A pending swap has changed nothing about whose
     // day it is, so it is deliberately not part of `getCustody` — the grid marks it separately.
-    val pendingSwapDates: Set<LocalDate> = remember(dayOverrides) {
+    // An offer past its deadline (phase 3a) waits on nobody's answer, so its days lose the mark on
+    // both phones until a last chance brings it back.
+    val unansweredSwapDates = (inboxRequests as? RequestsState.Ready)?.inbox?.unansweredSwapDates.orEmpty()
+    val pendingSwapDates: Set<LocalDate> = remember(dayOverrides, unansweredSwapDates) {
         dayOverrides
             .filterValues { it.isPending }
             .keys
             .mapNotNull { iso -> runCatching { LocalDate.parse(iso) }.getOrNull() }
-            .toSet()
+            .toSet() - unansweredSwapDates
     }
 
     // The dates an accepted swap decides. `getCustody` already answers whose day each one is;
@@ -511,22 +520,19 @@ fun CalendarScreen(
         }
     }
 
-    // What waits on this parent in the family on screen: change requests, day swaps (they live on
-    // the custody document, not in `change_requests`, and count once per offer) and pending events.
-    // Read from the source Home's Requests row reads (`RequestsSource`), so the two never disagree;
-    // the custody proposal is left out because it draws a banner of its own below.
-    val inboxRequests by changeRequestViewModel.requests.collectAsState()
     val pendingInboxCount =
         (inboxRequests as? RequestsState.Ready)?.inbox?.waitingOnMe?.countWithoutProposal ?: 0
 
     // A custody-pattern proposal draws two different banners (item 7): the parent who must
     // answer gets a Review into the inbox; the one who proposed it gets a passive "waiting".
     // `pendingProposal` (CalendarViewModel) is either party's; `proposalAwaitingMe`
-    // (ChangeRequestViewModel) is only the co-parent's, so the difference tells them apart.
+    // (ChangeRequestViewModel) is the co-parent's while it waits on this parent's answer — past its
+    // deadline it does not (phase 3a), so the proposer is told apart by authorship, not by absence.
     val proposalAwaitingMe by changeRequestViewModel.pendingProposal.collectAsState()
     // Where that proposal came from (MON-21) — the inbox card's own live derivation, re-used.
     val proposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
-    val proposerWaiting = pendingProposal != null && proposalAwaitingMe == null
+    val myUid by changeRequestViewModel.currentUserId.collectAsState()
+    val proposerWaiting = pendingProposal?.proposedBy?.let { it.isNotEmpty() && it == myUid } == true
 
     // Back from a day opened by tapping a month cell returns to that month instead of leaving the
     // tab (docs/AUDIT-2026-10-design.md D-11): the tap reads as drilling in, so Back has to read

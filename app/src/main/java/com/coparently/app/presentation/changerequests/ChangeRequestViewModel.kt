@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClockActions
+import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyResolver
@@ -32,17 +34,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 
 private const val TAG = "ChangeRequestViewModel"
+
+/** How long marking the pending proposal seen waits for the inbox to answer before giving up. */
+private const val INBOX_WAIT_MS = 10_000L
 
 /**
  * ViewModel for the requests inbox: the family on screen's requests in three sections
@@ -56,7 +65,8 @@ private const val TAG = "ChangeRequestViewModel"
  * into the other was rejected.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("LongParameterList") // one inbox, two request kinds, and the repositories behind each
+// one inbox, two request kinds, the repositories behind each, and the clocks' actions (phase 3a)
+@Suppress("LongParameterList")
 @HiltViewModel
 class ChangeRequestViewModel @Inject constructor(
     private val changeRequestRepository: ChangeRequestRepository,
@@ -66,7 +76,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val custodyModelRepository: CustodyModelRepository,
     parentsSource: ParentsSource,
     private val planReferenceSource: PlanReferenceSource,
-    requestsSource: RequestsSource
+    private val requestClockActions: RequestClockActions,
+    private val requestsSource: RequestsSource
 ) : ViewModel() {
 
     /**
@@ -258,18 +269,19 @@ class ChangeRequestViewModel @Inject constructor(
     }
 
     /**
-     * The custody-pattern proposal this parent must answer, or null when there is none.
+     * The custody-pattern proposal this parent must answer now, or null when there is none.
      *
      * Only the co-parent's proposal surfaces here — a parent never decides their own (the
      * transition and `firestore.rules` both refuse it). The proposer sees theirs as the
      * calendar's preview overlay and a "waiting" banner instead.
+     *
+     * It is the inbox's own "Waiting for your answer" proposal (phase 3a), so Home's pop-up and the
+     * calendar's Review banner follow the proposal's clock: past its deadline the next move is the
+     * proposer's, and nothing asks this parent to answer until a last chance is given.
      */
-    val pendingProposal: StateFlow<CustodyProposal?> = combine(
-        custodyModelRepository.observeShared(),
-        _currentUserId
-    ) { shared, uid ->
-        shared?.proposal?.takeIf { uid.isNotEmpty() && it.proposedBy != uid }
-    }.stateIn(
+    val pendingProposal: StateFlow<CustodyProposal?> = requests.map { state ->
+        (state as? RequestsState.Ready)?.inbox?.waitingOnMe?.proposal
+    }.distinctUntilChanged().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
@@ -400,6 +412,45 @@ class ChangeRequestViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Records that this parent opened the request clock [clockId] times (spec §4.5). A request with
+     * no clock ([clockId] null) has nothing to record. Whether it is theirs to mark, and whether it
+     * was marked already, the clock decides when it is read again ([RequestClockActions.markSeen]).
+     */
+    fun markSeen(clockId: String?) {
+        clockId ?: return
+        viewModelScope.launch { requestClockActions.markSeen(clockId) }
+    }
+
+    /**
+     * Records that this parent opened the co-parent's pending custody proposal — Home's pop-up shows
+     * it. Its clock's id needs the family, read here from a fresh look at the inbox rather than from
+     * [requests]' value, which is not kept up to date while nothing collects it (CLAUDE.md item 17).
+     */
+    fun markProposalSeen() {
+        viewModelScope.launch {
+            val ready = withTimeoutOrNull(INBOX_WAIT_MS) {
+                requestsSource.observe().filterIsInstance<RequestsState.Ready>().first()
+            } ?: return@launch
+            val proposal = ready.inbox.waitingOnMe.proposal ?: return@launch
+            requestClockActions.markSeen(RequestDeadlineId.forProposal(proposal, ready.scope.familyId))
+        }
+    }
+
+    /**
+     * Gives the co-parent one last chance to answer the request clock [clockId] times (spec §4.4).
+     * A refusal — the request was answered meanwhile, the server could not be reached, or this
+     * phone's clock runs fast enough for the rules to refuse it — is said once, never retried.
+     */
+    fun giveLastChance(clockId: String) {
+        viewModelScope.launch {
+            if (!requestClockActions.giveLastChance(clockId)) {
+                _errorMessage.value = UiText.Res(R.string.request_last_chance_failed)
+            }
+        }
+    }
+
+    /** Forgets the last error once the screen has shown it. */
     fun clearError() {
         _errorMessage.value = null
     }

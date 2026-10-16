@@ -25,4 +25,52 @@
     <string name="answer_by_too_soon">Надто скоро для терміну — запит піде як звичайний.</string>
     <string name="answer_by_picker_ok">OK</string>
     <string name="answer_by_picker_cancel">Скасувати</string>
+    <!-- The deadline on each inbox card (phase 3a, spec §6.2–§6.5). Every time is worded by
+         answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
+         parent's, never a role. -->
+    <string name="request_clock_answer_by">Відповісти до %1$s · %2$s</string>
+    <string name="request_clock_sent">Надіслано · відповісти до %1$s</string>
+    <string name="request_clock_opened">%1$s: відкрито · %2$s</string>
+    <string name="request_clock_not_opened">%1$s: ще не відкрито</string>
+    <string name="request_clock_reminders">Нагадування: %1$d з %2$d</string>
+    <string name="request_clock_reminders_next">Нагадування: %1$d з %2$d · наступне %3$s</string>
+    <string name="request_clock_last_chance_until">Останній шанс до %1$s · %2$s</string>
+    <string name="request_clock_deadline_passed">Термін минув %1$s</string>
+    <string name="request_clock_calendar_unchanged">У календарі нічого не змінилося.</string>
+    <string name="request_clock_give_last_chance">Дати останній шанс — 24 години</string>
+    <string name="request_clock_give_last_chance_until">Дати останній шанс — до %1$s</string>
+    <string name="request_clock_last_chance_once">Лише один раз. %1$s зможе відповісти до %2$s.</string>
+    <string name="request_clock_responder_unanswered">Ви не відповіли до терміну. %1$s може дати вам останній шанс до %2$s.</string>
+    <string name="request_last_chance_banner_title">Останній шанс · залишилося %1$s</string>
+    <string name="request_last_chance_banner_text">Дайте відповідь до %1$s. Без відповіді запит закриється як «Немає відповіді».</string>
+    <string name="request_last_chance_failed">Не вдалося надіслати останній шанс. Спробуйте ще раз.</string>
+    <plurals name="request_left_days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дні</item>
+        <item quantity="many">%1$d днів</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <plurals name="request_left_hours">
+        <item quantity="one">%1$d год</item>
+        <item quantity="few">%1$d год</item>
+        <item quantity="many">%1$d год</item>
+        <item quantity="other">%1$d год</item>
+    </plurals>
+    <plurals name="request_left_minutes">
+        <item quantity="one">%1$d хв</item>
+        <item quantity="few">%1$d хв</item>
+        <item quantity="many">%1$d хв</item>
+        <item quantity="other">%1$d хв</item>
+    </plurals>
+    <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
+    <string name="request_history_meta_deadline">Термін %1$s</string>
+    <string name="request_history_meta_last_chance">останній шанс до %1$s</string>
+    <string name="request_history_meta_opened">відкрито %1$s</string>
+    <string name="request_history_meta_unchanged">календар без змін</string>
+    <plurals name="request_history_meta_reminders">
+        <item quantity="one">%1$d нагадування</item>
+        <item quantity="few">%1$d нагадування</item>
+        <item quantity="many">%1$d нагадувань</item>
+        <item quantity="other">%1$d нагадування</item>
+    </plurals>
 </resources>

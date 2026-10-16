@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.HistoryEntry
+import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.custody.HandoverInfo
@@ -291,7 +292,9 @@ fun HomeScreen(
                         },
                         onAcceptProposal = changeRequestViewModel::acceptProposal,
                         onDeclineProposal = changeRequestViewModel::declineProposal,
-                        onOpenChangeRequests = onOpenChangeRequests
+                        onOpenChangeRequests = onOpenChangeRequests,
+                        onSwapSeen = { group -> changeRequestViewModel.markSeen(RequestDeadlineId.forSwap(group)) },
+                        onProposalSeen = changeRequestViewModel::markProposalSeen
                     )
                 )
             }

@@ -25,4 +25,52 @@
     <string name="answer_by_too_soon">Na termín je příliš brzy – žádost odejde jako běžná.</string>
     <string name="answer_by_picker_ok">OK</string>
     <string name="answer_by_picker_cancel">Zrušit</string>
+    <!-- The deadline on each inbox card (phase 3a, spec §6.2–§6.5). Every time is worded by
+         answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
+         parent's, never a role. -->
+    <string name="request_clock_answer_by">Odpovědět do %1$s · %2$s</string>
+    <string name="request_clock_sent">Odesláno · odpovědět do %1$s</string>
+    <string name="request_clock_opened">%1$s: otevřeno · %2$s</string>
+    <string name="request_clock_not_opened">%1$s: zatím neotevřeno</string>
+    <string name="request_clock_reminders">Připomenutí: %1$d z %2$d</string>
+    <string name="request_clock_reminders_next">Připomenutí: %1$d z %2$d · další %3$s</string>
+    <string name="request_clock_last_chance_until">Poslední šance do %1$s · %2$s</string>
+    <string name="request_clock_deadline_passed">Termín uplynul %1$s</string>
+    <string name="request_clock_calendar_unchanged">V kalendáři se nic nezměnilo.</string>
+    <string name="request_clock_give_last_chance">Dát poslední šanci — 24 hodin</string>
+    <string name="request_clock_give_last_chance_until">Dát poslední šanci — do %1$s</string>
+    <string name="request_clock_last_chance_once">Jen jednou. %1$s bude moci odpovědět do %2$s.</string>
+    <string name="request_clock_responder_unanswered">Do termínu jste neodpověděli. %1$s vám může dát poslední šanci do %2$s.</string>
+    <string name="request_last_chance_banner_title">Poslední šance · zbývá %1$s</string>
+    <string name="request_last_chance_banner_text">Odpovězte do %1$s. Bez odpovědi se žádost uzavře jako „Bez odpovědi“.</string>
+    <string name="request_last_chance_failed">Poslední šanci se nepodařilo odeslat. Zkuste to znovu.</string>
+    <plurals name="request_left_days">
+        <item quantity="one">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="many">%1$d dne</item>
+        <item quantity="other">%1$d dní</item>
+    </plurals>
+    <plurals name="request_left_hours">
+        <item quantity="one">%1$d h</item>
+        <item quantity="few">%1$d h</item>
+        <item quantity="many">%1$d h</item>
+        <item quantity="other">%1$d h</item>
+    </plurals>
+    <plurals name="request_left_minutes">
+        <item quantity="one">%1$d min</item>
+        <item quantity="few">%1$d min</item>
+        <item quantity="many">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
+    <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
+    <string name="request_history_meta_deadline">Termín %1$s</string>
+    <string name="request_history_meta_last_chance">poslední šance do %1$s</string>
+    <string name="request_history_meta_opened">otevřeno %1$s</string>
+    <string name="request_history_meta_unchanged">kalendář beze změny</string>
+    <plurals name="request_history_meta_reminders">
+        <item quantity="one">%1$d připomenutí</item>
+        <item quantity="few">%1$d připomenutí</item>
+        <item quantity="many">%1$d připomenutí</item>
+        <item quantity="other">%1$d připomenutí</item>
+    </plurals>
 </resources>

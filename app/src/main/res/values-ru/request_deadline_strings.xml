@@ -25,4 +25,52 @@
     <string name="answer_by_too_soon">Слишком скоро для срока — запрос уйдёт как обычный.</string>
     <string name="answer_by_picker_ok">OK</string>
     <string name="answer_by_picker_cancel">Отмена</string>
+    <!-- The deadline on each inbox card (phase 3a, spec §6.2–§6.5). Every time is worded by
+         answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
+         parent's, never a role. -->
+    <string name="request_clock_answer_by">Ответить до %1$s · %2$s</string>
+    <string name="request_clock_sent">Отправлено · ответить до %1$s</string>
+    <string name="request_clock_opened">%1$s: открыто · %2$s</string>
+    <string name="request_clock_not_opened">%1$s: ещё не открыто</string>
+    <string name="request_clock_reminders">Напоминания: %1$d из %2$d</string>
+    <string name="request_clock_reminders_next">Напоминания: %1$d из %2$d · следующее %3$s</string>
+    <string name="request_clock_last_chance_until">Последний шанс до %1$s · %2$s</string>
+    <string name="request_clock_deadline_passed">Срок истёк %1$s</string>
+    <string name="request_clock_calendar_unchanged">В календаре ничего не изменилось.</string>
+    <string name="request_clock_give_last_chance">Дать последний шанс — 24 часа</string>
+    <string name="request_clock_give_last_chance_until">Дать последний шанс — до %1$s</string>
+    <string name="request_clock_last_chance_once">Только один раз. %1$s сможет ответить до %2$s.</string>
+    <string name="request_clock_responder_unanswered">Вы не ответили к сроку. %1$s может дать вам последний шанс до %2$s.</string>
+    <string name="request_last_chance_banner_title">Последний шанс · осталось %1$s</string>
+    <string name="request_last_chance_banner_text">Ответьте до %1$s. Без ответа запрос закроется как «Нет ответа».</string>
+    <string name="request_last_chance_failed">Не удалось отправить последний шанс. Попробуйте ещё раз.</string>
+    <plurals name="request_left_days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <plurals name="request_left_hours">
+        <item quantity="one">%1$d ч</item>
+        <item quantity="few">%1$d ч</item>
+        <item quantity="many">%1$d ч</item>
+        <item quantity="other">%1$d ч</item>
+    </plurals>
+    <plurals name="request_left_minutes">
+        <item quantity="one">%1$d мин</item>
+        <item quantity="few">%1$d мин</item>
+        <item quantity="many">%1$d мин</item>
+        <item quantity="other">%1$d мин</item>
+    </plurals>
+    <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
+    <string name="request_history_meta_deadline">Срок %1$s</string>
+    <string name="request_history_meta_last_chance">последний шанс до %1$s</string>
+    <string name="request_history_meta_opened">открыто %1$s</string>
+    <string name="request_history_meta_unchanged">календарь без изменений</string>
+    <plurals name="request_history_meta_reminders">
+        <item quantity="one">%1$d напоминание</item>
+        <item quantity="few">%1$d напоминания</item>
+        <item quantity="many">%1$d напоминаний</item>
+        <item quantity="other">%1$d напоминания</item>
+    </plurals>
 </resources>

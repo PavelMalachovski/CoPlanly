@@ -23,4 +23,44 @@
     <string name="answer_by_too_soon">Zu kurzfristig für eine Frist – die Anfrage geht als normale Anfrage raus.</string>
     <string name="answer_by_picker_ok">OK</string>
     <string name="answer_by_picker_cancel">Abbrechen</string>
+    <!-- The deadline on each inbox card (phase 3a, spec §6.2–§6.5). Every time is worded by
+         answerByText; %2$s after " · " is how long is left (request_left_*). A name is the other
+         parent's, never a role. -->
+    <string name="request_clock_answer_by">Antwort bis %1$s · %2$s</string>
+    <string name="request_clock_sent">Gesendet · Antwort bis %1$s</string>
+    <string name="request_clock_opened">%1$s hat es geöffnet · %2$s</string>
+    <string name="request_clock_not_opened">%1$s hat es noch nicht geöffnet</string>
+    <string name="request_clock_reminders">Erinnerungen: %1$d von %2$d</string>
+    <string name="request_clock_reminders_next">Erinnerungen: %1$d von %2$d · nächste %3$s</string>
+    <string name="request_clock_last_chance_until">Letzte Chance bis %1$s · %2$s</string>
+    <string name="request_clock_deadline_passed">Frist abgelaufen %1$s</string>
+    <string name="request_clock_calendar_unchanged">Im Kalender hat sich nichts geändert.</string>
+    <string name="request_clock_give_last_chance">Letzte Chance geben — 24 Stunden</string>
+    <string name="request_clock_give_last_chance_until">Letzte Chance geben — bis %1$s</string>
+    <string name="request_clock_last_chance_once">Nur einmal. %1$s hat dann Zeit bis %2$s.</string>
+    <string name="request_clock_responder_unanswered">Du hast bis zur Frist nicht geantwortet. %1$s kann dir bis %2$s eine letzte Chance geben.</string>
+    <string name="request_last_chance_banner_title">Letzte Chance · noch %1$s</string>
+    <string name="request_last_chance_banner_text">Antworte bis %1$s. Ohne Antwort wird die Anfrage als „Keine Antwort“ geschlossen.</string>
+    <string name="request_last_chance_failed">Die letzte Chance konnte nicht gesendet werden. Versuch es noch einmal.</string>
+    <plurals name="request_left_days">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <plurals name="request_left_hours">
+        <item quantity="one">%1$d Std.</item>
+        <item quantity="other">%1$d Std.</item>
+    </plurals>
+    <plurals name="request_left_minutes">
+        <item quantity="one">%1$d Min.</item>
+        <item quantity="other">%1$d Min.</item>
+    </plurals>
+    <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
+    <string name="request_history_meta_deadline">Frist %1$s</string>
+    <string name="request_history_meta_last_chance">letzte Chance bis %1$s</string>
+    <string name="request_history_meta_opened">geöffnet %1$s</string>
+    <string name="request_history_meta_unchanged">Kalender unverändert</string>
+    <plurals name="request_history_meta_reminders">
+        <item quantity="one">%1$d Erinnerung</item>
+        <item quantity="other">%1$d Erinnerungen</item>
+    </plurals>
 </resources>

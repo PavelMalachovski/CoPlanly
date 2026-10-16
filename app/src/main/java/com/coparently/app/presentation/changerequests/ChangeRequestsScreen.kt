@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -226,16 +227,50 @@ private data class InboxCards(
     val proposalDiff: CustodyPatternDiff?,
     val proposalCitation: CitationStatus,
     val highlightedRequestId: String?
-)
+) {
 
-/** How the inbox's cards answer, open and withdraw, bound once to the ViewModel. */
+    /**
+     * The clock [item]'s card shows (phase 3a), or null for an item with none. The reader is the
+     * proposer or the answering parent by the clock itself; the answering parent's first look is
+     * recorded while the request waits on them and they have not opened it, and the proposer's
+     * button is offered while the clock says it can be.
+     */
+    fun clockFor(item: InboxItem, answers: InboxAnswers): CardClock? {
+        val timed = when (item) {
+            is InboxItem.Proposal -> item.timed
+            is InboxItem.AwaitingEvent -> item.timed
+            is InboxItem.Swap -> item.timed
+            is InboxItem.Request -> item.timed
+            is InboxItem.Header, is InboxItem.History -> null
+        } ?: return null
+        val clock = timed.clock
+        val role = if (clock.proposerUid == scope.myUid) ClockRole.PROPOSER else ClockRole.RESPONDER
+        val otherUid = if (role == ClockRole.PROPOSER) clock.responderUid else clock.proposerUid
+        return CardClock(
+            timed = timed,
+            role = role,
+            otherName = parentNames.labelForUid(otherUid),
+            onSeen = { answers.markSeen(clock.id) }
+                .takeIf { role == ClockRole.RESPONDER && clock.seenAtMillis == null && timed.waitsOnResponder },
+            onGiveLastChance = { answers.giveLastChance(clock.id) }
+                .takeIf { role == ClockRole.PROPOSER && timed.lastChanceWindowMillis != null }
+        )
+    }
+}
+
+/**
+ * How the inbox's cards answer, open and withdraw, and act on a request's clock (phase 3a), bound
+ * once to the ViewModel.
+ */
 private data class InboxAnswers(
     val openEvent: (String) -> Unit,
     val answerRequest: (requestId: String, accept: Boolean) -> Unit,
     val withdrawRequest: (requestId: String) -> Unit,
     val answerSwap: (group: DaySwapGroup, accept: Boolean) -> Unit,
     val answerEvent: (eventId: String, accept: Boolean) -> Unit,
-    val answerProposal: (accept: Boolean) -> Unit
+    val answerProposal: (accept: Boolean) -> Unit,
+    val markSeen: (clockId: String) -> Unit,
+    val giveLastChance: (clockId: String) -> Unit
 ) {
     companion object {
         fun of(viewModel: ChangeRequestViewModel, onOpenEvent: (String) -> Unit) = InboxAnswers(
@@ -244,14 +279,26 @@ private data class InboxAnswers(
             withdrawRequest = viewModel::cancel,
             answerSwap = viewModel::decideSwapGroup,
             answerEvent = { id, accept -> if (accept) viewModel.acceptEvent(id) else viewModel.declineEvent(id) },
-            answerProposal = { accept -> if (accept) viewModel.acceptProposal() else viewModel.declineProposal() }
+            answerProposal = { accept -> if (accept) viewModel.acceptProposal() else viewModel.declineProposal() },
+            markSeen = viewModel::markSeen,
+            giveLastChance = viewModel::giveLastChance
         )
     }
 }
 
-/** One item of the inbox's list, drawn as the card its kind is. */
+/**
+ * One item of the inbox's list, drawn as the card its kind is, with its clock in [LocalCardClock]
+ * for the card's three clock slots (phase 3a).
+ */
 @Composable
 private fun InboxCard(item: InboxItem, cards: InboxCards, answers: InboxAnswers) {
+    CompositionLocalProvider(LocalCardClock provides cards.clockFor(item, answers)) {
+        InboxCardContent(item, cards, answers)
+    }
+}
+
+@Composable
+private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxAnswers) {
     when (item) {
         is InboxItem.Header -> GroupLabel(text = sectionTitle(item.section, cards))
         is InboxItem.Proposal -> CustodyProposalCard(
@@ -335,14 +382,16 @@ private fun DaySwapCard(
     val first = group.swaps.first()
     val awaitsMe = group.awaitsAnswerFrom(currentUserId)
     val offeredByMe = first.override.requestedBy == currentUserId
+    val hidesAnswers = LocalCardClock.current?.hidesAnswers == true
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
-            Text(
-                text = if (group.dayCount == 1) {
+            CardClockBanner()
+            TitleWithClockChip(
+                if (group.dayCount == 1) {
                     group.firstDate.format(dateFormatter)
                 } else {
                     stringResource(
@@ -350,8 +399,7 @@ private fun DaySwapCard(
                         group.firstDate.format(dateFormatter),
                         group.lastDate.format(dateFormatter)
                     )
-                },
-                style = MaterialTheme.typography.titleMedium
+                }
             )
             Text(
                 // The count is in the sentence, so one card answers "how many days" without the
@@ -388,7 +436,8 @@ private fun DaySwapCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (awaitsMe) {
+            CardClockDetails()
+            if (awaitsMe && !hidesAnswers) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                     Button(onClick = onAccept) {
                         Text(stringResource(R.string.day_swap_accept))
@@ -428,10 +477,8 @@ private fun CustodyProposalCard(
             modifier = Modifier.padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
-            Text(
-                text = stringResource(R.string.custody_proposal_inbox_title),
-                style = MaterialTheme.typography.titleMedium
-            )
+            CardClockBanner()
+            TitleWithClockChip(stringResource(R.string.custody_proposal_inbox_title))
             if (onAccept == null || onDecline == null) {
                 Text(
                     text = stringResource(R.string.custody_proposal_inbox_body_yours),
@@ -443,6 +490,7 @@ private fun CustodyProposalCard(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                CardClockDetails()
             } else {
                 ProposalToAnswer(proposal, diff, citation, parentNames, onAccept, onDecline)
             }
@@ -486,13 +534,33 @@ private fun ProposalToAnswer(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        Button(onClick = onAccept) {
-            Text(stringResource(R.string.custody_proposal_accept))
+    CardClockDetails()
+    // Past the deadline the next move is the proposer's: no answer is asked for until a last chance.
+    if (LocalCardClock.current?.hidesAnswers != true) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            Button(onClick = onAccept) {
+                Text(stringResource(R.string.custody_proposal_accept))
+            }
+            TextButton(onClick = onDecline) {
+                Text(stringResource(R.string.custody_proposal_decline))
+            }
         }
-        TextButton(onClick = onDecline) {
-            Text(stringResource(R.string.custody_proposal_decline))
-        }
+    }
+}
+
+/**
+ * A card's title, with the clock's "No answer" chip at the end of its line when the proposer's
+ * request is past its deadline (phase 3a, spec §6.4).
+ */
+@Composable
+private fun TitleWithClockChip(title: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        CardClockChip()
     }
 }
 
@@ -539,10 +607,12 @@ fun ChangeRequestCard(
             }
         )
     ) {
+        val clock = LocalCardClock.current
         Column(
             modifier = Modifier.padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
+            CardClockBanner()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -563,7 +633,11 @@ fun ChangeRequestCard(
                 // not left, so the two surfaces say "not delivered" the same way.
                 // Display-only pills, not disabled chips: a disabled AssistChip renders greyed
                 // out, which read as "this request is unavailable" rather than as its status.
-                if (request.syncedToFirestore) {
+                if (clock?.showsNoAnswer == true) {
+                    // Past the deadline the clock's "No answer" says where it stands; "Pending"
+                    // beside it would contradict it.
+                    CardClockChip()
+                } else if (request.syncedToFirestore) {
                     PillChip(
                         label = stringResource(statusLabel(request.status)),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -619,8 +693,11 @@ fun ChangeRequestCard(
                 )
             }
 
+            CardClockDetails()
+
             if (request.status == ChangeRequestStatus.PENDING) {
-                if (isIncoming) {
+                // Past the deadline the answering parent's next move waits on a last chance.
+                if (isIncoming && clock?.hidesAnswers != true) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
@@ -632,7 +709,7 @@ fun ChangeRequestCard(
                             Text(stringResource(R.string.change_request_decline))
                         }
                     }
-                } else {
+                } else if (!isIncoming) {
                     OutlinedButton(
                         onClick = onCancel,
                         modifier = Modifier.fillMaxWidth()
