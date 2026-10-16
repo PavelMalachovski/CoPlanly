@@ -1701,7 +1701,7 @@ to another time zone.
       The card of each reads "Sent · Answer by <time>" on A's phone and "Answer by <time> · <relative>" on B's; a date too close reads "Too soon for a deadline" and goes out as a plain request. **[CI]** for the clock and the push's `answerBy`.
 - [ ] **Reminders arrive at their planned times.** B's phone is online, then idle, with a request whose
       deadline is 3 days out: one to three reminders post at the times the card's plan shows, each on
-      the **family** channel, and each opens the card that names the request. Answer the request and
+      the **schedule** channel, and each opens the card that names the request. Answer the request and
       the later reminders do not post. **[CI]** for the plan and its scheduling; **not** the jobs firing.
 - [ ] **Quiet hours follow the phone's own zone.** Set B's phone to a zone six hours away and again plan
       a request: no reminder posts at night in that zone, whatever the time is for A. A reminder whose
@@ -1717,8 +1717,10 @@ to another time zone.
       the push as drawn and the banner are the check.
 - [ ] **An answer under the last chance wins.** B accepts before the new time: A's History says
       Accepted, never "No answer", and nothing closes it afterwards. **[CI]**
-- [ ] **Both proposer notices.** A request nobody answers ends as "No answer": A is told that it ended
-      and B is told that it can no longer be answered, each once. The card goes to History on an
+- [ ] **Both proposer notices.** Both go to A, the proposer, and B gets no notice at all. When the
+      deadline passes unanswered, A is told "<B> didn't answer by the deadline" (nothing has changed in
+      the calendar, a last chance can be given); when the request is closed with no answer, A is told
+      "No answer from <B>". Each posts once, on the schedule channel. The card goes to History on an
       outlined, neutral chip (not the red of "Declined"), and a "No answer" proposal is withdrawn, so B
       can propose again. **[CI]** for the end, the withdrawn proposal, the chat card and History; the
       two notices as drawn are the check.

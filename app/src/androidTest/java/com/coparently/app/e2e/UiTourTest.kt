@@ -142,6 +142,8 @@ class UiTourTest : AliceOnScreenTest() {
             }
             driver.await("Alice's request waiting on Bob", card)
             driver.linger()
+            // The history shot that follows looks for the swap's Decline at the top of the inbox.
+            driver.scrollToTop()
         }
         // Answered on screen rather than seeded, so the tour walks the answer path too. The swap's
         // card comes before the request's (InboxItems), so the first Decline is the swap's; once
