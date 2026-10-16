@@ -86,3 +86,4 @@ requested: 2026-10-14 — phase 2 fix pass: a history row's outcome chip goes un
 requested: 2026-10-15 — per-family custody rows: custody_models gains familyId and the database
            moves to version 45, so app/schemas/…/45.json is new; no screenshot change and no new
            detekt finding is expected
+2026-10-16T10:39:11Z phase 3a: baselines for Tasks 12–13 screenshots, detekt baseline refresh
