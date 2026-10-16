@@ -25,6 +25,11 @@
  *  5. **Gson models are probed at runtime.** Every type check 4 finds must have a case in the R8
  *     runtime probe (`app/src/r8Test/`), which the `r8-runtime` CI job runs inside a minified
  *     build on an emulator; `tools/check-r8-probe.js` then requires each case to pass.
+ *  6. **The Google scope the app asks for is the one it discloses.** Google verifies the OAuth
+ *     consent screen against the privacy policy and the home page, and a parent reads them to
+ *     decide whether to connect. `GoogleCalendarAccess.SCOPE` must be the only Calendar scope
+ *     `docs/legal/PRIVACY-POLICY.md`, its hosted copy and `web/index.html` name, so widening the
+ *     scope in code fails until the texts say so too.
  *
  * Exits non-zero listing every problem found, so it can gate a build.
  */
@@ -437,6 +442,59 @@ function checkProbeCoverage() {
   console.log(`r8 probe: ${targets.size} Gson model(s) named in ${PROBE_SOURCES}`);
 }
 
+// ---- 6. the Google scope the app asks for is the one it discloses ------------
+
+const GOOGLE_SCOPE_SOURCE = 'app/src/main/java/com/coparently/app/data/remote/google/GoogleCalendarAccess.kt';
+
+/** The documents that tell a parent, and Google's reviewer, what the app asks of Google Calendar. */
+const GOOGLE_SCOPE_DOCUMENTS = ['docs/legal/PRIVACY-POLICY.md', 'web/privacy/index.html', 'web/index.html'];
+
+/**
+ * Every Google Calendar scope a text names, by its short form (`calendar.events.owned.readonly`).
+ * A scope's dotted parts come from Google's own vocabulary, so a host such as `calendar.google.com`
+ * is not one.
+ */
+const CALENDAR_SCOPE_TOKEN =
+  /(?<![\w.-])calendar(?:\.(?:acls|app|calendarlist|calendars|created|events|freebusy|owned|public|readonly|settings))*(?![\w-]|\.\w)/g;
+
+/**
+ * What is wrong with the documents' account of the scope: each must name the scope [source]
+ * declares and no other Calendar scope. Bare "calendar" is prose, not a scope, so it is not
+ * counted — which is also why the full `calendar` scope can never pass a document that promises
+ * read-only access.
+ *
+ * @param {string} source `GoogleCalendarAccess.kt`.
+ * @param {!Object<string, string>} documents Text by repository path.
+ * @return {string[]} One line per problem; empty when the disclosure holds.
+ */
+function googleScopeProblems(source, documents) {
+  const declared = /const val SCOPE: String = "https:\/\/www\.googleapis\.com\/auth\/([a-z.]+)"/.exec(source);
+  if (!declared) {
+    return [`${GOOGLE_SCOPE_SOURCE}: no \`const val SCOPE: String = "https://www.googleapis.com/auth/…"\` ` +
+      'literal, so the disclosure check cannot tell which scope the app asks for'];
+  }
+  const scope = declared[1];
+  const out = [];
+  for (const [file, text] of Object.entries(documents)) {
+    const named = [...new Set((text.match(CALENDAR_SCOPE_TOKEN) || []).filter((t) => t.includes('.')))].sort();
+    if (named.length !== 1 || named[0] !== scope) {
+      out.push(
+        `The app asks Google for ${scope} (${GOOGLE_SCOPE_SOURCE}), but ${file} names ` +
+          `${named.length ? named.join(', ') : 'no Calendar scope'} — the privacy policy, its hosted copy ` +
+          'and the home page must name exactly the scope the app requests (regenerate web/privacy/ after ' +
+          'editing the policy, and re-check the OAuth consent screen)'
+      );
+    }
+  }
+  return out;
+}
+
+function checkGoogleScopeDisclosed() {
+  const documents = Object.fromEntries(GOOGLE_SCOPE_DOCUMENTS.map((f) => [f, read(f)]));
+  googleScopeProblems(read(GOOGLE_SCOPE_SOURCE), documents).forEach(fail);
+  console.log(`google scope: checked against ${GOOGLE_SCOPE_DOCUMENTS.length} documents`);
+}
+
 // ---- run --------------------------------------------------------------------
 
 if (require.main === module) {
@@ -444,6 +502,7 @@ if (require.main === module) {
   checkPushTypes();
   checkGsonKeepRules();
   checkProbeCoverage();
+  checkGoogleScopeDisclosed();
 
   if (problems.length) {
     console.error(`\n${problems.length} problem(s):`);
@@ -453,4 +512,4 @@ if (require.main === module) {
   console.log('\nAll invariants hold.');
 }
 
-module.exports = { gsonTargets };
+module.exports = { gsonTargets, googleScopeProblems };

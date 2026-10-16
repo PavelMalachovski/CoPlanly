@@ -29,7 +29,7 @@ keytool -list -v -keystore "путь_к_вашему_keystore.jks" -alias ваш
 - **Project ID**: `coparently-a39c9`
 - **Project Number**: `492948924829`
 - **API**: Google Calendar API
-- **Scope**: `https://www.googleapis.com/auth/calendar`
+- **Scope**: `https://www.googleapis.com/auth/calendar.events.owned.readonly`
 
 ## Чек-лист настройки
 

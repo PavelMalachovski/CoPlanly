@@ -153,12 +153,12 @@ only what is specific to it.
 
 | | |
 | --- | --- |
-| Purpose | Import and export events to the parent's own Google Calendar |
-| Data | OAuth tokens (on the device, encrypted); SHA-256 of the refresh token on the server |
+| Purpose | Copy the events of the parent's own primary Google Calendar into the app, read-only, at the parent's request. Nothing is written to Google (October 2026: the scope is `calendar.events.owned.readonly`, "See the events on Google calendars you own") |
+| Data | On the device: OAuth tokens (encrypted) and the imported events of the next twelve months — title, description, start, end — stored as **private** events, which no sync path uploads until the parent switches one to shared (then P2). On the server: SHA-256 fingerprints of the five most recent refresh tokens, to refuse a token that is not this account's |
 | Legal basis | Art. 6(1)(b), at the parent's request |
-| Recipients | Google Calendar API |
-| Retention | Until disconnected or the account is deleted |
-| Where | Device `EncryptedPreferences`; `google_oauth/{uid}` |
+| Recipients | Google Calendar API (read). The authorisation code and refresh token pass through the `exchangeGoogleAuthCode`/`refreshGoogleAccessToken` functions; no calendar content reaches our servers. Google's API Services User Data Policy (Limited Use) applies |
+| Retention | Tokens and fingerprints: until disconnected (device tokens) or the account is deleted (fingerprints). Imported events: until the parent deletes them, as any event |
+| Where | Device `EncryptedPreferences` and Room `events`; `google_oauth/{uid}` |
 
 ### P11a. School import from Bakaláři (optional)
 
