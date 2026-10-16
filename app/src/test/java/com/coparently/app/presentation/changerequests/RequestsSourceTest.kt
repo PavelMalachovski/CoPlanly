@@ -3,6 +3,7 @@ package com.coparently.app.presentation.changerequests
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.domain.changerequests.ClockState
@@ -156,7 +157,9 @@ class RequestsSourceTest {
             pairingRepository = mockk<PairingRepository> { every { observePairingState() } returns flowOf(pairing) },
             requestClocks = RequestClocks(
                 clockRepository,
-                RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks)
+                RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks),
+                // Delivery is the keeper's, and `RequestClocksTest` covers the hand-over.
+                mockk<RequestClockKeeper>(relaxed = true)
             )
         )
     }

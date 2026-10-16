@@ -17,15 +17,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestCap
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.rememberAnswerByOffer
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -53,7 +61,8 @@ import java.time.format.FormatStyle
  * @param custodyFor The slot that has a given day now — `"mom"` or `"dad"`, or null when nothing
  *   answers for it.
  * @param parentNames Resolves a slot to that parent's name.
- * @param onOffer Called with the days that can actually be offered and an optional note.
+ * @param onOffer Called with the days that can actually be offered, an optional note, and the
+ *   deadline the parent chose for the answer (phase 3a).
  * @param onDismiss Closes the sheet without offering anything.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,15 +71,14 @@ fun DaySwapSheet(
     dates: List<LocalDate>,
     custodyFor: (LocalDate) -> String?,
     parentNames: ParentNames,
-    onOffer: (dates: List<LocalDate>, note: String?) -> Unit,
+    onOffer: (dates: List<LocalDate>, note: String?, answerBy: AnswerByPick) -> Unit,
     onDismiss: () -> Unit
 ) {
     // Only days with a custody answer can be exchanged: with nothing recorded there is nothing to
     // swap *from*, so the sheet says so rather than guessing which parent would give the day up.
     val offerable = remember(dates) { dates.filter { custodyFor(it) != null } }
     var note by remember { mutableStateOf("") }
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL) }
-    val context = LocalContext.current
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -83,29 +91,7 @@ fun DaySwapSheet(
                 .padding(bottom = Spacing.XL),
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
-            Text(
-                text = stringResource(
-                    if (dates.size == 1) {
-                        R.string.day_swap_sheet_title
-                    } else {
-                        R.string.day_swap_sheet_title_range
-                    }
-                ),
-                style = MaterialTheme.typography.titleLargeEmphasized
-            )
-            Text(
-                text = if (dates.size == 1) {
-                    dates.first().format(dateFormatter)
-                } else {
-                    stringResource(
-                        R.string.day_swap_range,
-                        dates.first().format(dateFormatter),
-                        dates.last().format(dateFormatter)
-                    )
-                },
-                style = MaterialTheme.typography.bodyLarge
-            )
-
+            SwapHeading(dates)
             if (offerable.isEmpty()) {
                 Text(
                     text = stringResource(R.string.day_swap_needs_coparent),
@@ -113,48 +99,103 @@ fun DaySwapSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                // The count leads, because it is the thing the co-parent will be asked about and
-                // the thing a parent selecting a week wants confirmed before they commit.
-                Text(
-                    text = context.resources.getQuantityString(
-                        R.plurals.day_swap_day_count,
-                        offerable.size,
-                        offerable.size
-                    ),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                DirectionLines(offerable, custodyFor, parentNames)
-                if (offerable.size < dates.size) {
-                    Text(
-                        text = context.resources.getQuantityString(
-                            R.plurals.day_swap_skipped_days,
-                            dates.size - offerable.size,
-                            dates.size - offerable.size
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(stringResource(R.string.day_swap_note_label)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                SwapSummary(offerable, custodyFor, parentNames)
+                SwapNote(dates.size - offerable.size, note) { note = it }
+                SwapDeadline(offerable, parentNames, answerBy) { answerBy = it }
             }
-
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.day_swap_cancel))
                 }
                 if (offerable.isNotEmpty()) {
-                    Button(onClick = { onOffer(offerable, note.ifBlank { null }) }) {
+                    Button(onClick = { onOffer(offerable, note.ifBlank { null }, answerBy) }) {
                         Text(stringResource(R.string.day_swap_offer))
                     }
                 }
             }
         }
     }
+}
+
+/** The sheet's title and the day, or the first and last day of the run. */
+@Composable
+private fun SwapHeading(dates: List<LocalDate>) {
+    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL) }
+    Text(
+        text = stringResource(
+            if (dates.size == 1) R.string.day_swap_sheet_title else R.string.day_swap_sheet_title_range
+        ),
+        style = MaterialTheme.typography.titleLargeEmphasized
+    )
+    Text(
+        text = if (dates.size == 1) {
+            dates.first().format(dateFormatter)
+        } else {
+            stringResource(
+                R.string.day_swap_range,
+                dates.first().format(dateFormatter),
+                dates.last().format(dateFormatter)
+            )
+        },
+        style = MaterialTheme.typography.bodyLarge
+    )
+}
+
+/**
+ * The days that can be offered: how many, and who gives up what.
+ *
+ * The count leads, because it is the thing the co-parent will be asked about and the thing a parent
+ * selecting a week wants confirmed before they commit.
+ */
+@Composable
+private fun SwapSummary(offerable: List<LocalDate>, custodyFor: (LocalDate) -> String?, parentNames: ParentNames) {
+    Text(
+        text = LocalContext.current.resources.getQuantityString(
+            R.plurals.day_swap_day_count,
+            offerable.size,
+            offerable.size
+        ),
+        style = MaterialTheme.typography.bodyMedium
+    )
+    DirectionLines(offerable, custodyFor, parentNames)
+}
+
+/** How many selected days were left out for want of a custody answer, and the optional note. */
+@Composable
+private fun SwapNote(skipped: Int, note: String, onNoteChange: (String) -> Unit) {
+    if (skipped > 0) {
+        Text(
+            text = LocalContext.current.resources.getQuantityString(R.plurals.day_swap_skipped_days, skipped, skipped),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    OutlinedTextField(
+        value = note,
+        onValueChange = onNoteChange,
+        label = { Text(stringResource(R.string.day_swap_note_label)) },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/**
+ * When the offer should be answered by (phase 3a, spec §6.1). The cap is the offer's earliest day, so
+ * an offer that starts today or tomorrow gets a shorter choice, or none.
+ */
+@Composable
+private fun SwapDeadline(
+    offerable: List<LocalDate>,
+    parentNames: ParentNames,
+    selected: AnswerByPick,
+    onSelect: (AnswerByPick) -> Unit
+) {
+    val cap = remember(offerable) { RequestCap.forSwap(offerable, ZoneId.systemDefault()) }
+    AnswerByField(
+        offer = rememberAnswerByOffer(cap),
+        selected = selected,
+        onSelect = onSelect,
+        coParentName = parentNames.coParentLabel()
+    )
 }
 
 /**

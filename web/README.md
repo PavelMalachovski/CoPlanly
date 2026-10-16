@@ -115,7 +115,7 @@ Every factual claim on the page mirrors `deleteAccountDataImpl` in `functions/in
 "Deleting your account" section of `docs/legal/PRIVACY-POLICY.md`. **If any of the three changes,
 all three do.** The one most likely to drift is the list of collections: the callable deletes
 `events`, `event_versions` (the revisions the user saved — MON-4), `child_info`, `pets`,
-`expenses`, `budgets`, `change_requests`, `conversations`, `messages`, `custody_models`,
+`expenses`, `budgets`, `change_requests`, `request_deadlines` (the clocks of requests the user sent or was asked to answer — the co-parent's copy goes too, since each names both), `conversations`, `messages`, `custody_models`,
 `family_settings`, `parenting_plans`, `calendar_friends`, `calendar_feeds`, `friend_profiles`, `google_oauth`,
 `invitations`, `notification_queue` and `users`, plus the Storage files `AUTHORED_FILES` maps
 (the record photo folders under `event_images/`, `receipts/`, `medical_photos/` and `pet_photos/`

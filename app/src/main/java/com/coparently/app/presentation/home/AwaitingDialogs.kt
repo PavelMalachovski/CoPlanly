@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
@@ -51,13 +52,18 @@ data class ProposalAsk(
  * @property onAcceptProposal Accepts the pending custody proposal.
  * @property onDeclineProposal Declines the pending custody proposal.
  * @property onOpenChangeRequests Opens the inbox, where event change requests are answered.
+ * @property onSwapSeen Records that this parent opened a day-swap offer: its dialog was shown
+ *   (phase 3a, spec §4.5).
+ * @property onProposalSeen Records that this parent opened the custody proposal: its dialog was shown.
  */
-class AwaitingActions(
+data class AwaitingActions(
     val onAcceptSwap: (DaySwapGroup) -> Unit,
     val onDeclineSwap: (DaySwapGroup) -> Unit,
     val onAcceptProposal: () -> Unit,
     val onDeclineProposal: () -> Unit,
-    val onOpenChangeRequests: () -> Unit
+    val onOpenChangeRequests: () -> Unit,
+    val onSwapSeen: (DaySwapGroup) -> Unit,
+    val onProposalSeen: () -> Unit
 )
 
 /**
@@ -130,6 +136,8 @@ private fun ProposalDialog(
     onDismiss: () -> Unit,
     actions: AwaitingActions
 ) {
+    // Shown is opened (spec §4.5): once per proposal, however often the dialog recomposes.
+    LaunchedEffect(ask.proposal.proposedAt) { actions.onProposalSeen() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.custody_proposal_inbox_title)) },
@@ -182,6 +190,8 @@ private fun SwapDialog(
     val first = swapGroup.swaps.first()
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
     val context = LocalContext.current
+    // Shown is opened (spec §4.5): once per offer, however often the dialog recomposes.
+    LaunchedEffect(swapGroup.revision) { actions.onSwapSeen(swapGroup) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_dialog_swap_title)) },

@@ -94,11 +94,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.CalendarViewModel
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.FamilyMemberChips
 import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
@@ -106,6 +110,7 @@ import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.eventTypeLabel
+import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
@@ -127,6 +132,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -523,6 +529,11 @@ fun AddEditEventScreen(
         newImage = pickedImageUri?.toString()
     )
     val editsUnsaved = existingEvent?.let { EventFields.of(it) != formFields } ?: false
+    // A new event on the co-parent's days waits for their answer (phase 3a): the parent is asked when
+    // it should be answered by, under the same rule that tells them the description will be read.
+    val waitsForCoParent =
+        descriptionReachesCoParent(eventId == null, isPaired, isPrivate, parentOwner, currentUser?.slot)
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     val leave = rememberDiscardGuard(dirty = editsUnsaved && !isSaving && !isDeleting, onLeave = onCancel)
 
     // Shared save routine for the top-bar check and the sticky bottom Save button
@@ -604,7 +615,7 @@ fun AddEditEventScreen(
                 )
 
                 if (eventId == null) {
-                    viewModel.createEvent(event)
+                    viewModel.createEvent(event, answerBy.takeIf { waitsForCoParent })
                 } else {
                     viewModel.updateEvent(event)
                 }
@@ -1604,6 +1615,15 @@ fun AddEditEventScreen(
                     }
                 }
             }
+
+            if (waitsForCoParent) {
+                EventDeadline(
+                    start = LocalDateTime.of(startDate, startTime),
+                    coParentName = parentNames.labelFor(parentOwner),
+                    selected = answerBy,
+                    onSelect = { answerBy = it }
+                )
+            }
         }
     }
 
@@ -1721,6 +1741,26 @@ fun AddEditEventScreen(
             }
         )
     }
+}
+
+/**
+ * When a new event that waits for the co-parent's answer should be answered by (phase 3a, spec
+ * §6.1). The event's start is the cap: the moment the request would change the calendar.
+ */
+@Composable
+private fun EventDeadline(
+    start: LocalDateTime,
+    coParentName: String,
+    selected: AnswerByPick,
+    onSelect: (AnswerByPick) -> Unit
+) {
+    val cap = remember(start) { RequestCap.forEvent(start, System.currentTimeMillis(), ZoneId.systemDefault()) }
+    AnswerByField(
+        offer = rememberAnswerByOffer(cap),
+        selected = selected,
+        onSelect = onSelect,
+        coParentName = coParentName
+    )
 }
 
 /**

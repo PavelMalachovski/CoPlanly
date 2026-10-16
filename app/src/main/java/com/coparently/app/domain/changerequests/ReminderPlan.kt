@@ -124,6 +124,13 @@ object ReminderPlan {
         return (if (beforeDeadline) morning else theEveningBefore(morning)).toInstant().toEpochMilli()
     }
 
+    /**
+     * Whether [millis] falls in the quiet hours of [zone]'s clock. The reminder step asks it again
+     * when its job fires, because Doze can hold a job planned outside the night until it is inside.
+     */
+    fun isQuietAt(millis: Long, zone: ZoneId): Boolean =
+        isNight(Instant.ofEpochMilli(millis).atZone(zone).toLocalTime())
+
     /** Whether [time] is in the quiet hours: from [QUIET_FROM] through midnight up to [QUIET_UNTIL]. */
     private fun isNight(time: LocalTime): Boolean = time >= QUIET_FROM || time < QUIET_UNTIL
 

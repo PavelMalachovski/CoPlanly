@@ -137,6 +137,7 @@ invocation is yours.
 | **REL-3 storage** | `firebase deploy --only storage` | One command that fixes a live bug: every pet and medical photo upload is refused today because the bucket still runs the July rules. **MON-23 needs the same deploy**: the vault and chat attachments live under `family_documents/` and `chat_attachments/`, which the live bucket refuses outright until it runs. |
 | **MON-23 deploy** | `firebase deploy --only storage`, `firebase deploy --only firestore:rules,firestore:indexes` (the `family_documents` block and its index, the `messages` attachment cap), `firebase deploy --only functions` (the vault in account deletion and the tombstone sweep, chat files erased with the chat) | Rules order as for MON-4: after REL-3's record backfill. Without the storage deploy nothing can be uploaded; without the rules the vault list and every filing are refused; without the functions an erased account leaves its vault files and chat files in the bucket. |
 | **Cross-family leak repair** (October 2026) | `firebase deploy --only functions` → invoke `repairChildAndPetAudiences` with `{dryRun: true}` → `firebase deploy --only firestore:rules` (the `child_info`/`pets` family bound) → invoke it without `dryRun` | The dry run's counts are the leak's scope for the breach assessment (DPIA R20, `BREACH-PROCEDURE.md` §3) — record them. Until the rules are deployed an older build in a two-family account can still write the leak; the real run removes the other family's parent from every child's and pet's audience. `functions/README.md` has the runbook. See §11, October 2026. |
+| **Phase 3a deploy** (October 2026, request deadlines) | `firebase deploy --only firestore:rules,firestore:indexes --project coparently-a39c9` (the `request_deadlines` block and its two indexes, the `request_last_chance` push type, the `answerBy` push field), then `firebase deploy --only functions --project coparently-a39c9` (`notifyOfChatMessage` skips the "Last chance" and "No answer" cards; account deletion removes `request_deadlines`) | Until the rules are deployed every clock write is refused and each request goes out as a plain request without a deadline — nothing breaks. Until the functions are deployed, the two new chat cards are pushed like any message (spec §7), and an erased account leaves its clocks behind. Rules order as for MON-4: after REL-3's record backfill. |
 | **Google verification** (October 2026) | Consent screen → Data access: replace `.../auth/calendar` by `.../auth/calendar.events.owned.readonly`; verify the host in Search Console (the meta tag goes into `web/index.html`), set the home page `/` and the privacy and terms links, `firebase deploy --only hosting`; decide whether to verify on `coparently-a39c9.web.app` or a domain of your own | The app has asked for the narrower scope alone since this change (`GoogleCalendarAccess`, CLAUDE.md Legal item 10), and the reviewer compares it against the consent screen. While the screen is in *Testing*, Google expires refresh tokens after 7 days. Steps: `web/README.md`, `AUDIT-2026-09-play-final.md` A-7. |
 | **REL-1** | Firebase console, Google Cloud console, a fresh `google-services.json`, the debug and release SHA-1 | A local build fails until this is done — deliberately, since `applicationId` changed to `app.coplanly`. |
 | **REL-2** | Generate the release keystore and back it up in two places | The single most irreversible item in this document. |
@@ -3028,6 +3029,21 @@ Left: the device runs (§5.6, §5.8), the functions deploy (`parentNames` on new
 grants name nobody until re-invited — no backfill, spec §4.4, the feature has only closed-test
 users), and phase 3 (day swaps, which
 reuse `MiniMonth`).
+
+**Tester feedback, phase 3a: no request is left hanging** (PR #133; spec
+`docs/superpowers/specs/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang-design.md`, plan
+`docs/superpowers/plans/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang.md`). A change
+request, a day swap, an event awaiting an answer and a custody proposal used to wait for ever; a
+pending proposal even blocked the other parent's own. Now the proposer picks when to be answered by
+(`AnswerByField`, capped by the first moment the request would change anything); the answering
+phone records when it received and first opened the request and reminds up to three times, never
+at night; at the deadline the proposer is told and may give one last chance of up to 24 hours,
+pushed as `request_last_chance`; and a request nobody answers ends as "No answer" — in History, as
+a chat card that pushes nobody, with the calendar unchanged and a proposal withdrawn so it stops
+blocking. Each request's clock is one `request_deadlines` document beside it, states derived and
+only the end stored; an older build sees and answers requests as before, and its late answer
+counts. CLAUDE.md item 42; DPIA R22; checklist §5.9. Left: the deploy (§1, 💻), the screenshot
+baselines (the Regenerate workflow), and the device run of §5.9.
 
 **Still open**, found on the way and older than these fixes:
 

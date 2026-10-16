@@ -21,6 +21,7 @@ import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.LocalDateJsonAdapter
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
+import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionRecorder
@@ -77,7 +78,8 @@ class SyncService @Inject constructor(
     private val accountSwitchGuard: AccountSwitchGuard,
     private val custodyModelRepository: CustodyModelRepository,
     private val eventVersionRecorder: EventVersionRecorder,
-    private val reminderScheduler: ReminderScheduler
+    private val reminderScheduler: ReminderScheduler,
+    private val requestClockKeeper: RequestClockKeeper
 ) {
     // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
     // `UserRepositoryImpl` register: `Vaccination.date` is a `LocalDate`, and a document read
@@ -153,6 +155,17 @@ class SyncService @Inject constructor(
             _syncStatus.value = SyncStatus.Syncing(90, 100)
             messageRepository.flushOutbox()
             changeRequestRepository.flushOutbox()
+            // The request clocks (phase 3a), after the change requests went up: this is how a
+            // phone that was not running delivers a clock and arms its reminders, and how the
+            // proposer's deadline and end come back after a job was lost. Given every co-parent,
+            // not the family on screen (spec §5.6). A failure never fails the sync.
+            runCatching {
+                val me = userDao.getUserById(currentUser.uid)
+                requestClockKeeper.sweep(currentUser.uid, coParentsOf(currentUser.uid, me))
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                Log.w(TAG, "The request clocks were not swept", e)
+            }
             // Same reason again, for the parenting plan (MON-5): its screen uploads on save,
             // and a save made offline or refused has nothing else retrying it. A parenting plan
             // is filled in over weeks, so "it will go up next time you open the screen" is not

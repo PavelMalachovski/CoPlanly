@@ -6,9 +6,14 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.ParentingPlanRepository
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.documents.DocumentCategory
@@ -32,11 +37,13 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -46,6 +53,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 import javax.inject.Inject
@@ -73,7 +81,9 @@ class UiTourSeed @Inject constructor(
     private val messages: MessageRepository,
     private val custody: CustodyModelRepository,
     private val splits: FamilySettingsRepository,
-    private val plans: ParentingPlanRepository
+    private val plans: ParentingPlanRepository,
+    private val changeRequests: ChangeRequestRepository,
+    private val requestDeadlines: RequestDeadlineRepository
 ) {
 
     /** Who is who, for the whole seed: the two uids, their slots, the family id, today, and the words. */
@@ -105,7 +115,11 @@ class UiTourSeed @Inject constructor(
         attempt("document") { seedDocument(family) }
     }
 
-    /** Bob's day-swap offer and his change request on Alice's dentist appointment. */
+    /**
+     * Bob's day-swap offer and his change request on Alice's dentist appointment — the swap with a
+     * clock two days out — and Alice's own change request to Bob, with the default deadline, which
+     * Bob's phone receives and opens (phase 3a), so the inbox shows a request waiting on him.
+     */
     suspend fun seedPending(aliceUid: String, bob: EmulatorParent, content: UiTourContent) {
         val family = family(aliceUid, bob, content)
         attempt("swap") {
@@ -116,12 +130,33 @@ class UiTourSeed @Inject constructor(
             } else {
                 family.aliceSlot
             }
+            val groupId = UUID.randomUUID().toString()
             bob.custodyRepository.applyDayOverrides(
                 date = date,
                 transform = { current ->
-                    DayOverrideTransition.offer(current, date, toSlot, bob.uid, LocalDateTime.now().toString())
+                    DayOverrideTransition.offer(
+                        current, date, toSlot, bob.uid, LocalDateTime.now().toString(), groupId = groupId
+                    )
                 }
             ).getOrThrow()
+            // A preset is three days at the least, so the two-day clock is written directly, as the
+            // deadlines test does; the rules ask only that it end after the server's time.
+            val zone = ZoneId.systemDefault()
+            val now = System.currentTimeMillis()
+            checkNotNull(
+                bob.requestDeadlineRepository.start(
+                    RequestStart(
+                        kind = RequestKind.SWAP,
+                        ref = groupId,
+                        familyId = CustodyKey.of(bob.uid, aliceUid),
+                        responderUid = aliceUid,
+                        answerByMillis = now + CLOCK_DAYS * DAY_MILLIS,
+                        capMillis = LocalDate.parse(date).atStartOfDay(zone).toInstant().toEpochMilli(),
+                        firstDate = LocalDate.parse(date),
+                        dayCount = 1
+                    )
+                )
+            ) { "the rules refused the swap's clock" }
         }
         attempt("change request") {
             val dentist = events.getAllEvents().first().first { it.title == content.events.dentist }
@@ -142,6 +177,41 @@ class UiTourSeed @Inject constructor(
                 )
             )
         }
+        attempt("alice's request") { seedAlicesRequest(family) }
+    }
+
+    /**
+     * Alice's change request to Bob on his parent-teacher meeting, sent with the default deadline
+     * through her own repository. Bob's keeper then sweeps it, which records its delivery and plans
+     * its reminders, and he opens it, so the card on Alice's side reads "opened" rather than "not
+     * opened yet".
+     */
+    private suspend fun seedAlicesRequest(family: Family) {
+        val title = family.content.events.parentTeacherMeeting
+        val meeting = withTimeout(WAIT_MS) {
+            events.getAllEvents().first { all -> all.any { it.title == title } }
+        }.first { it.title == title }
+        val request = ChangeRequest(
+            id = UUID.randomUUID().toString(),
+            eventId = meeting.id,
+            eventTitle = meeting.title,
+            requestedBy = family.alice,
+            requestedTo = family.bob.uid,
+            currentStartDateTime = meeting.startDateTime,
+            currentEndDateTime = meeting.endDateTime,
+            proposedStartDateTime = meeting.startDateTime.plusHours(1),
+            proposedEndDateTime = meeting.endDateTime?.plusHours(1),
+            note = family.content.changeRequestNote,
+            createdAt = LocalDateTime.now(),
+            familyId = family.id
+        )
+        changeRequests.createChangeRequest(request, AnswerByPick.DEFAULT)
+        val clockId = RequestDeadlineId.of(RequestKind.CHANGE, family.alice, request.id, "")
+        withTimeout(WAIT_MS) {
+            while (requestDeadlines.get(clockId) == null) delay(POLL_MS)
+        }
+        family.bob.requestClockKeeper.sweep(family.bob.uid, setOf(family.alice))
+        check(family.bob.requestClockActions.markSeen(clockId)) { "Bob could not mark the request as seen" }
     }
 
     /**
@@ -485,6 +555,10 @@ class UiTourSeed @Inject constructor(
         private const val LAYER_START_OFFSET = 21L
         private const val LAYER_DAYS = 6L
         private const val SWAP_OFFSET = 9L
+
+        /** Bob's swap must be answered within this many days. */
+        private const val CLOCK_DAYS = 2L
+        private const val DAY_MILLIS = 24L * 60 * 60 * 1000
         private const val RECURRENCE_DAYS = 56L
         private const val WEDNESDAY = 2
         private const val WEEK = 7

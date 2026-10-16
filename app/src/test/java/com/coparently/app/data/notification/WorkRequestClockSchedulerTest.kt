@@ -1,7 +1,9 @@
 package com.coparently.app.data.notification
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -9,8 +11,8 @@ import org.junit.Test
  *
  * The jobs are enqueued with `ExistingWorkPolicy.KEEP`, so a name decides what counts as "the same
  * job". A name too coarse would let an old job swallow a new one; one too fine would run a step
- * twice. The scheduler itself needs WorkManager and is covered on a device; the naming is all that
- * can go wrong on the JVM.
+ * twice. The scheduler itself needs WorkManager and is covered on a device; the naming and which
+ * steps wait for a network are what can go wrong on the JVM.
  */
 class WorkRequestClockSchedulerTest {
 
@@ -76,5 +78,15 @@ class WorkRequestClockSchedulerTest {
         assertEquals("reminder", RequestClockWork.STEP_REMINDER)
         assertEquals("deadline", RequestClockWork.STEP_DEADLINE)
         assertEquals("end", RequestClockWork.STEP_END)
+    }
+
+    @Test
+    fun `the deadline and the end wait for a network, a reminder does not`() {
+        // Both read the server and answer "try again" without it. Unconstrained, WorkManager spent
+        // their three runs in about ninety seconds offline, and a proposer offline at the deadline
+        // was never told (final review I-1). A reminder reads this phone's copy.
+        assertTrue(RequestClockWork.needsNetwork(RequestClockWork.STEP_DEADLINE))
+        assertTrue(RequestClockWork.needsNetwork(RequestClockWork.STEP_END))
+        assertFalse(RequestClockWork.needsNetwork(RequestClockWork.STEP_REMINDER))
     }
 }

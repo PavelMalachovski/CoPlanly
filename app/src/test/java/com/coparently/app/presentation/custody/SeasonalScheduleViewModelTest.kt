@@ -11,11 +11,14 @@ import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.PartnerSummary
+import com.coparently.app.domain.model.User
 import com.coparently.app.domain.parentingplan.PlanCitation
 import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.domain.parentingplan.PlanScheduleTarget
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
@@ -41,6 +44,7 @@ import java.time.LocalDate
 import java.time.Year
 import java.time.ZoneId
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -77,7 +81,8 @@ class SeasonalScheduleViewModelTest {
     private fun viewModel(
         model: CustodyModel? = base,
         read: SharedCustodyRead = SharedCustodyRead.Absent,
-        planQuestion: String? = null
+        planQuestion: String? = null,
+        parents: ParentsSource = testParentsSource()
     ): SeasonalScheduleViewModel {
         every { repository.getActiveModel() } returns flowOf(model)
         every { repository.observeShared() } returns flowOf(null)
@@ -94,7 +99,7 @@ class SeasonalScheduleViewModelTest {
             repository,
             users,
             children,
-            testParentsSource(),
+            parents,
             SavedStateHandle(args),
             planReferences
         )
@@ -272,4 +277,38 @@ class SeasonalScheduleViewModelTest {
             assertEquals(state.year, vm.fairnessState.value.year)
             assertTrue(state.years.size == 2)
         }
+
+    /** Alice, linked to Bob: a co-parent to put a layer to. */
+    private val paired = testParentsSource(
+        me = User(id = "u1", email = "alice@example.com", name = "Alice", role = "mom", colorCode = "#FF4081"),
+        partner = PartnerSummary(
+            id = "u2",
+            name = "Bob",
+            email = "bob@example.com",
+            pairedSinceMillis = 1L,
+            role = "dad"
+        )
+    )
+
+    @Test
+    fun `a layer change proposes only with a co-parent and an agreed schedule`() = runTest(dispatcher) {
+        // No co-parent: a schedule, but nobody to ask.
+        val alone = viewModel(model = base)
+        backgroundScope.launch { alone.proposes.collect {} }
+        alone.parents.first { it.loaded }
+        advanceUntilIdle()
+        assertFalse(alone.proposes.value)
+
+        // A co-parent, but no agreed schedule yet: the first one applies at once.
+        val first = viewModel(model = null, parents = paired)
+        backgroundScope.launch { first.proposes.collect {} }
+        first.parents.first { it.loaded }
+        advanceUntilIdle()
+        assertFalse(first.proposes.value)
+
+        // Both: a change is a proposal, and the editor asks when it should be answered by.
+        val both = viewModel(model = base, parents = paired)
+        backgroundScope.launch { both.proposes.collect {} }
+        assertTrue(both.proposes.first { it })
+    }
 }

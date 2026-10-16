@@ -11,6 +11,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpRect
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.HistoryEntry
+import com.coparently.app.domain.changerequests.RequestClockOutcome
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.presentation.common.NamedParent
@@ -74,6 +77,27 @@ class RequestHistoryGroupTest {
             substring = true,
             useUnmergedTree = true
         ).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a request nobody answered says what its clock knows, and that the calendar did not change`() {
+        val clock = RequestDeadline(
+            id = "change_u1_r1",
+            kind = RequestKind.CHANGE,
+            ref = "r1",
+            familyId = "u1__u2",
+            proposerUid = MY_UID,
+            responderUid = CO_PARENT_UID,
+            answerByMillis = 1_778_500_000_000L,
+            outcome = RequestClockOutcome.NO_ANSWER
+        )
+        render(fontScale = 1f, entry = unanswered.copy(clock = clock))
+
+        rule.onNodeWithText(
+            context.getString(R.string.request_history_meta_unchanged),
+            substring = true,
+            useUnmergedTree = true
+        ).assertExists()
     }
 
     private fun render(fontScale: Float, entry: HistoryEntry = accepted) {

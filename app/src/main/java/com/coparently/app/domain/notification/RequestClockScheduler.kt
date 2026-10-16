@@ -9,8 +9,10 @@ package com.coparently.app.domain.notification
  * request: whoever runs it reads the clock and the request again, so a step whose request was
  * answered, withdrawn or replaced meanwhile finds nothing to do.
  *
- * Scheduling the same step for the same clock at the same time twice leaves one job. A time that
- * has already passed runs the step as soon as the system allows.
+ * Scheduling the same step for the same clock at the same time twice leaves one job while the first
+ * is still pending or running; once it has finished, the same step can be scheduled again. So a
+ * step cannot schedule its own job again from inside itself: that request is dropped while it runs.
+ * A time that has already passed runs the step as soon as the system allows.
  */
 interface RequestClockScheduler {
 

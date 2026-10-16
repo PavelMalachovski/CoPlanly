@@ -20,6 +20,16 @@ interface ChangeRequestRepository {
     suspend fun getChangeRequestById(id: String): ChangeRequest?
 
     /**
+     * The change request [id] as the server holds it now, read past every cache and written to
+     * nothing on this phone; null when the server has no such document.
+     *
+     * For a decision that must not rest on a copy this phone may not have refreshed (phase 3a: the
+     * end of a request's clock). Throws when the server cannot be reached or refuses the read, so a
+     * caller can tell "not there" from "not known".
+     */
+    suspend fun fetchFromServer(id: String): ChangeRequest?
+
+    /**
      * Creates the request locally, syncs it to Firestore and notifies the other parent.
      *
      * @param answerBy The deadline the requesting parent chose for the answer (phase 3a), or null for

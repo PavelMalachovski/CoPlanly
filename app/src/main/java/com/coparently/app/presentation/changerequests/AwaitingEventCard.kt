@@ -54,7 +54,8 @@ private const val CREATOR_WORDS_MAX_LINES = 6
  * @param event The event awaiting a decision.
  * @param miniMonth Its month, or null while it is still being computed.
  * @param parentNames Resolves a uid or a slot to that person's name — never "Mom" or "Dad".
- * @param actions Accept and Decline for the parent asked; null for the creator.
+ * @param actions Accept and Decline for the parent asked; null for the creator. The card hides them
+ *   while its clock ([LocalCardClock]) says the deadline passed and the next move is the creator's.
  */
 @Composable
 internal fun AwaitingEventCard(
@@ -69,7 +70,15 @@ internal fun AwaitingEventCard(
             modifier = Modifier.padding(Spacing.L),
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
-            Text(text = event.title, style = MaterialTheme.typography.titleMedium)
+            CardClockBanner()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = event.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                CardClockChip()
+            }
             Text(
                 text = eventWhenText(event),
                 style = MaterialTheme.typography.bodyMedium,
@@ -96,21 +105,32 @@ internal fun AwaitingEventCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (actions != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                    Button(onClick = actions.onAccept) {
-                        Text(stringResource(R.string.event_acceptance_accept))
-                    }
-                    TextButton(onClick = actions.onDecline) {
-                        Text(stringResource(R.string.event_acceptance_decline))
-                    }
-                }
-            } else {
-                Text(
-                    text = stringResource(R.string.event_acceptance_waiting),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            CardClockDetails()
+            AnswersOrWaiting(actions)
+        }
+    }
+}
+
+/**
+ * Accept and Decline for the parent asked, or "waiting" for the creator. The parent asked gets
+ * neither while the card's clock says the deadline passed and the next move is the creator's: no
+ * answer is asked for until a last chance (phase 3a).
+ */
+@Composable
+private fun AnswersOrWaiting(actions: AwaitingEventActions?) {
+    when {
+        actions == null -> Text(
+            text = stringResource(R.string.event_acceptance_waiting),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        LocalCardClock.current?.hidesAnswers == true -> Unit
+        else -> Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            Button(onClick = actions.onAccept) {
+                Text(stringResource(R.string.event_acceptance_accept))
+            }
+            TextButton(onClick = actions.onDecline) {
+                Text(stringResource(R.string.event_acceptance_decline))
             }
         }
     }

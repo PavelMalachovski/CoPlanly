@@ -1675,6 +1675,69 @@ for an answer.
 - **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`; `presentation/changerequests/`,
   `domain/changerequests/`, `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
 
+
+### 5.9 Deadlines, reminders and the last chance (phase 3a) · 2P, 1P + a second account fallback
+
+A and B paired, with a custody schedule and an event of B's on a day A can ask to move. Phase 3a, "no
+request is left hanging": every request carries a deadline the proposer picks, the answering phone
+reminds before it, the proposer can give a last chance, and a request nobody answers ends as "No
+answer" instead of waiting for ever. Needs two phones, and for the quiet-hours step one of them set
+to another time zone.
+
+> **[CI]** `TwoParentRequestDeadlinesTest` runs the clocks between two parents against the real
+> `firestore.rules` and the real callables and keepers: the clock written with an offer, its `answerBy`
+> in the `day_swap_offered` push, the delivery with the reminders the answering phone planned and
+> scheduled, the opened mark, the last chance given only after the deadline and read back as the
+> `request_last_chance` push, an answer under it (the end closes nothing, History says Accepted), and a
+> proposal ending as "No answer", withdrawn, posted to the thread as its card and listed in the
+> co-parent's History. The pure rules are unit tests (`RequestClockTest`, `ReminderPlanTest`,
+> `RequestCapTest`, `AnswerByTest`) and the cards render in the screenshot matrix. What only phones show
+> is below; a step marked **[CI]** has its mechanism covered, so run it only for what is drawn, posted
+> or timed.
+
+- [ ] **A deadline on every request.** A sends a day swap, a change request and a custody proposal, each
+      with the default (3 days), then one with "Tomorrow" and one with a date. The form shows the chosen
+      time in the phone's clock (12/24 hour); a date past the allowed range is clamped, not refused.
+      The card of each reads "Sent · Answer by <time>" on A's phone and "Answer by <time> · <relative>" on B's; a date too close reads "Too soon for a deadline" and goes out as a plain request. **[CI]** for the clock and the push's `answerBy`.
+- [ ] **Reminders arrive at their planned times.** B's phone is online, then idle, with a request whose
+      deadline is 3 days out: one to three reminders post at the times the card's plan shows, each on
+      the **schedule** channel, and each opens the card that names the request. Answer the request and
+      the later reminders do not post. **[CI]** for the plan and its scheduling; **not** the jobs firing.
+- [ ] **Quiet hours follow the phone's own zone.** Set B's phone to a zone six hours away and again plan
+      a request: no reminder posts at night in that zone, whatever the time is for A. A reminder whose
+      job ran more than 30 minutes late (phone off over the planned time, then switched on) posts
+      nothing.
+- [ ] **The opened mark.** B opens the request. A's card changes from "<B> hasn't opened it yet" to "<B> opened it · <time>"
+      within a minute, on its own. **[CI]** for the write; the card as drawn is the check.
+- [ ] **The last chance.** The deadline passes unanswered. A's card says "Deadline passed <time>" and offers
+      "Give a last chance"; the button reads "— 24 hours" only when 24 hours fit before the cap, otherwise "— until <time>". A
+      taps it once (a second tap says nothing and does not send a second push). B gets the
+      `request_last_chance` push, which names the person and the time, and the card on B's phone shows
+      the attention banner "Last chance · <time left>". **[CI]** for the clock, the single push and `answerBy`;
+      the push as drawn and the banner are the check.
+- [ ] **A proposal past its deadline can still be declined.** With A's custody proposal past its deadline and no last chance given, B's card offers **Decline** alone (no Accept, unlike a swap or a change request, which show no answer); B declines, A's History says Declined, and B can save a schedule change at once.
+- [ ] **An answer under the last chance wins.** B accepts before the new time: A's History says
+      Accepted, never "No answer", and nothing closes it afterwards. **[CI]**
+- [ ] **Both proposer notices.** Both go to A, the proposer, and B gets no notice at all. When the
+      deadline passes unanswered, A is told "<B> didn't answer by the deadline" (nothing has changed in
+      the calendar, a last chance can be given); when the request is closed with no answer, A is told
+      "No answer from <B>". Each posts once, on the schedule channel. The card goes to History on an
+      outlined, neutral chip (not the red of "Declined"), and a "No answer" proposal is withdrawn, so B
+      can propose again. **[CI]** for the end, the withdrawn proposal, the chat card and History; the
+      two notices as drawn are the check.
+- [ ] **An older build answering after "No answer".** With B on the build before this one (a day swap
+      cannot be refused by a clock): B answers A's swap after it ended as "No answer". The answer is
+      kept, the swap is agreed, and A's phone shows it as accepted, with no error on either phone.
+- [ ] **The pop-up does not return.** A request that has ended as "No answer" does not open Home's
+      requests pop-up again after a restart, a sync or a family switch, and the switcher's dot goes
+      out for it.
+- **Fallback (1P):** sign in as B on the same phone to open and answer, then back as A. The reminders
+  and the notices need the phone to stay B's, so only the cards, the last chance and the end can be
+  seen; run the time zone and older-build steps with a second device if there is one.
+- **If it fails:** tag `RequestClockSteps`, `RequestClockKeeper`, `RequestClockActions`; `data/requests/`,
+  `domain/changerequests/` (`RequestClock*`, `RequestDeadline*`, `ReminderPlan*`, `RequestCap*`),
+  `presentation/changerequests/CardClock*`, `request_deadlines` in `firestore.rules`.
+
 ---
 
 ## 6. Export (MON-3) · 1P

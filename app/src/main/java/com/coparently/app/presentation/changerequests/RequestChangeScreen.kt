@@ -40,14 +40,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.model.Event
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberAnswerByOffer
+import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * Form for proposing a new date/time for [eventId] to the co-parent.
@@ -66,6 +74,7 @@ fun RequestChangeScreen(
     viewModel: RequestChangeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val coParentName = rememberParentNames(viewModel.parents.collectAsState().value).coParentLabel()
 
     LaunchedEffect(eventId) {
         viewModel.loadEvent(eventId)
@@ -127,8 +136,9 @@ fun RequestChangeScreen(
                 RequestChangeForm(
                     event = event,
                     isSending = state is RequestChangeUiState.Sending,
-                    onSubmit = { start, end, note ->
-                        viewModel.submit(event, start, end, note)
+                    coParentName = coParentName,
+                    onSubmit = { start, end, note, answerBy ->
+                        viewModel.submit(event, start, end, note, answerBy)
                     },
                     modifier = Modifier.padding(padding)
                 )
@@ -145,7 +155,8 @@ fun RequestChangeScreen(
 private fun RequestChangeForm(
     event: Event,
     isSending: Boolean,
-    onSubmit: (LocalDateTime, LocalDateTime?, String?) -> Unit,
+    coParentName: String,
+    onSubmit: (LocalDateTime, LocalDateTime?, String?, AnswerByPick) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = localizedDate("yMMMEEEd")
@@ -158,6 +169,12 @@ private fun RequestChangeForm(
         mutableStateOf(event.endDateTime?.toLocalTime())
     }
     var note by rememberSaveable { mutableStateOf("") }
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
+    // The cap follows the proposed time, so it is worked out when that changes and not per frame.
+    val proposedStart = LocalDateTime.of(proposedDate, proposedStartTime)
+    val cap = remember(event.startDateTime, proposedStart) {
+        RequestCap.forChange(event.startDateTime, proposedStart, System.currentTimeMillis(), ZoneId.systemDefault())
+    }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
@@ -246,13 +263,19 @@ private fun RequestChangeForm(
             minLines = 3
         )
 
+        AnswerByField(
+            offer = rememberAnswerByOffer(cap),
+            selected = answerBy,
+            onSelect = { answerBy = it },
+            coParentName = coParentName
+        )
+
         Spacer(modifier = Modifier.height(Spacing.S))
 
         Button(
             onClick = {
-                val start = LocalDateTime.of(proposedDate, proposedStartTime)
                 val end = proposedEndTime?.let { LocalDateTime.of(proposedDate, it) }
-                onSubmit(start, end, note)
+                onSubmit(proposedStart, end, note, answerBy)
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isSending

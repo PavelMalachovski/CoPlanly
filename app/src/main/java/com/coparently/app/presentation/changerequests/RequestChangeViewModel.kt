@@ -14,12 +14,16 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
@@ -60,8 +64,13 @@ class RequestChangeViewModel @Inject constructor(
     private val eventRepository: EventRepository,
     private val changeRequestRepository: ChangeRequestRepository,
     private val userRepository: UserRepository,
-    private val activityAnnouncer: ActivityAnnouncer
+    private val activityAnnouncer: ActivityAnnouncer,
+    parentsSource: ParentsSource
 ) : ViewModel() {
+
+    /** Both parents, for naming the co-parent beside the deadline the form offers. */
+    val parents: StateFlow<Parents> = parentsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), Parents())
 
     private val _uiState = MutableStateFlow<RequestChangeUiState>(RequestChangeUiState.Loading)
     val uiState: StateFlow<RequestChangeUiState> = _uiState.asStateFlow()
@@ -184,5 +193,9 @@ class RequestChangeViewModel @Inject constructor(
                     RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_send_failed))
             }
         }
+    }
+
+    private companion object {
+        const val PARENTS_STOP_TIMEOUT_MS = 5_000L
     }
 }

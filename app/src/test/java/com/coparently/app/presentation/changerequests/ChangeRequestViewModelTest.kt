@@ -2,7 +2,12 @@ package com.coparently.app.presentation.changerequests
 
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
@@ -31,8 +36,9 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -40,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -74,6 +81,10 @@ class ChangeRequestViewModelTest {
         every { observeSharedOf(any()) } returns flowOf(null)
     }
     private val planReferences = mockk<PlanReferenceSource>()
+    private val clockActions = mockk<RequestClockActions>(relaxed = true)
+
+    /** The family's request clocks; none unless a test says so, so every request is placed as it always was. */
+    private val clocks = MutableStateFlow(ClocksAt())
     private val olya = User(
         id = "u1",
         email = "olya@example.com",
@@ -132,14 +143,14 @@ class ChangeRequestViewModelTest {
         custodyModelRepository = custodyModelRepository,
         parentsSource = testParentsSource(),
         planReferenceSource = planReferences,
+        requestClockActions = clockActions,
         requestsSource = RequestsSource(
             changeRequestRepository = changeRequestRepository,
             eventRepository = eventRepository,
             custodyModelRepository = custodyModelRepository,
             userRepository = userRepository,
             pairingRepository = pairingRepository,
-            // No request has a clock here: every request is placed as it always was.
-            requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns emptyFlow() }
+            requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns clocks }
         )
     )
 
@@ -356,4 +367,87 @@ class ChangeRequestViewModelTest {
 
         assertEquals(CitationStatus.None, vm.pendingProposalCitation.value)
     }
+
+    @Test
+    fun `the proposal pop-up follows the inbox, so a proposal past its deadline does not pop up`() =
+        runTest(dispatcher) {
+            val shared = sharedWithProposal("u2", null).let {
+                it.copy(proposal = it.proposal?.copy(proposedAt = "2026-09-01T10:00:00"))
+            }
+            val proposal = shared.proposal!!
+            every { custodyModelRepository.observeSharedOf("u1__u2") } returns flowOf(shared)
+            val vm = viewModel()
+            backgroundScope.launch { vm.pendingProposal.collect {} }
+            advanceUntilIdle()
+            requests.emit(emptyList())
+            advanceUntilIdle()
+
+            assertEquals(proposal, vm.pendingProposal.value, "no clock: it pops up as it always did")
+
+            val now = 1_788_000_000_000L
+            val clock = RequestDeadline(
+                id = RequestDeadlineId.forProposal(proposal, "u1__u2"),
+                kind = RequestKind.PROPOSAL,
+                ref = proposal.proposedAt,
+                familyId = "u1__u2",
+                proposerUid = "u2",
+                responderUid = "u1",
+                answerByMillis = now + 3_600_000L
+            )
+            clocks.value = ClocksAt.of(listOf(clock), now)
+            advanceUntilIdle()
+            assertEquals(proposal, vm.pendingProposal.value, "open: it still pops up")
+
+            clocks.value = ClocksAt.of(listOf(clock.copy(answerByMillis = now - 3_600_000L)), now)
+            advanceUntilIdle()
+            assertNull(vm.pendingProposal.value, "past its deadline: the next move is the proposer's")
+        }
+
+    @Test
+    fun `a failed last chance says so`() = runTest(dispatcher) {
+        coEvery { clockActions.giveLastChance("clock-1") } returns false
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.giveLastChance("clock-1")
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.request_last_chance_failed), vm.errorMessage.value)
+    }
+
+    @Test
+    fun `a second tap on the last chance while the first is under way gives nothing twice and says nothing`() =
+        runTest(dispatcher) {
+            // The server read and the write take a moment; the parent taps again meanwhile.
+            coEvery { clockActions.giveLastChance("clock-1") } coAnswers {
+                delay(2_000L)
+                true
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.giveLastChance("clock-1")
+            runCurrent()
+            assertEquals(setOf("clock-1"), vm.lastChanceInFlight.value, "the card's button is disabled meanwhile")
+            vm.giveLastChance("clock-1")
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { clockActions.giveLastChance("clock-1") }
+            assertNull(vm.errorMessage.value)
+            assertEquals(emptySet<String>(), vm.lastChanceInFlight.value, "and enabled again once it is done")
+        }
+
+    @Test
+    fun `a request is marked seen by its clock's id, and a request with no clock is left alone`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            vm.markSeen("clock-1")
+            vm.markSeen(null)
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { clockActions.markSeen("clock-1") }
+            coVerify(exactly = 1) { clockActions.markSeen(any()) }
+        }
 }

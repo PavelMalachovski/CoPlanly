@@ -1,5 +1,10 @@
 package com.coparently.app.domain.custody
 
+import com.coparently.app.domain.changerequests.ClockState
+import com.coparently.app.domain.changerequests.RequestClock
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import org.junit.Test
@@ -154,6 +159,36 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
+    fun `past its deadline the answering parent may still decline, and is no longer blocked`() {
+        // Phase 3a, final review I-2: past the deadline the inbox offers Decline alone. The
+        // transition knows nothing of the clock, and must not start to: until the proposer's phone
+        // withdraws the proposal, it refuses every schedule change the answering parent makes.
+        val pending = CustodyProposalTransition
+            .propose(current, wanted, true, DAD, NOW).getOrThrow()
+        val proposal = pending.proposal!!
+        val clock = RequestDeadline(
+            id = RequestDeadlineId.forProposal(proposal, "uid-dad__uid-mom"),
+            kind = RequestKind.PROPOSAL,
+            ref = proposal.proposedAt,
+            familyId = "uid-dad__uid-mom",
+            proposerUid = DAD,
+            responderUid = MOM,
+            answerByMillis = NOW_MILLIS + HALF_HOUR_MILLIS,
+            createdAtMillis = NOW_MILLIS
+        )
+        val afterDeadline = LATER_MILLIS
+        assertEquals(ClockState.NO_ANSWER_LAST_CHANCE_POSSIBLE, RequestClock.stateOf(clock, afterDeadline))
+        assertTrue(CustodyProposalTransition.pendingFromCoParent(pending, MOM), "blocked before the decline")
+
+        val next = CustodyProposalTransition.decline(pending, MOM, LATER, null).getOrThrow()
+
+        assertNull(next.proposal)
+        assertEquals(CustodyDecisionOutcome.DECLINED, next.lastDecision?.outcome)
+        assertEquals(NOW, next.lastDecision?.proposalAt)
+        assertFalse(CustodyProposalTransition.pendingFromCoParent(next, MOM), "free to propose again")
+    }
+
+    @Test
     fun `the proposer may not decide their own proposal`() {
         // Self-accepting is exactly the unilateral change this replaces, arriving through the
         // new door instead of the old one.
@@ -245,5 +280,6 @@ class CustodyProposalTransitionTest {
         val AGREED_AT_MILLIS = CustodyTimestamp.fromWire("2026-08-03T10:00:00")
         val LATER_MILLIS = CustodyTimestamp.fromWire(LATER)
         val NOW_MILLIS = CustodyTimestamp.fromWire(NOW)
+        const val HALF_HOUR_MILLIS = 1_800_000L
     }
 }

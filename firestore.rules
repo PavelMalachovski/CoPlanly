@@ -1717,6 +1717,12 @@ service cloud.firestore {
       // family, or a deadline, as a second filter. A `get` of a clock that does not exist is a
       // permission error, not "not found", as it is for `change_requests`: a reader treats it as
       // no clock.
+      //
+      // **Keyed on `participants` alone, on purpose**, with no live-family check: a clock stays
+      // readable to both parents after they unpair, as `event_versions` and the chat do (spec
+      // §5.2). It is part of what the two of them recorded about a request, and a "No answer" in
+      // History must not vanish from one phone because the relationship ended. Creating a clock
+      // still needs a live family.
       allow get, list: if isAuthenticated() && request.auth.uid in resource.data.participants;
 
       allow create: if isAuthenticated() &&

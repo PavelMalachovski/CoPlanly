@@ -3,6 +3,11 @@ package com.coparently.app.data.family
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.RequestDeadline
+import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
@@ -47,8 +52,16 @@ class OtherFamiliesSignalsTest {
     private val messages = mockk<FirestoreMessageDataSource>()
     private val requests = mockk<FirestoreChangeRequestDataSource>()
     private val custodySource = mockk<FirestoreCustodyDataSource>()
+    private val clocks = mockk<RequestClocks>()
 
-    private fun source() = OtherFamiliesSignals(userRepository, selectedFamilySource, messages, requests, custodySource)
+    private fun source() = OtherFamiliesSignals(
+        userRepository,
+        selectedFamilySource,
+        messages,
+        requests,
+        custodySource,
+        clocks
+    )
 
     private fun given(
         uid: Flow<String?> = flowOf(ALICE),
@@ -60,7 +73,8 @@ class OtherFamiliesSignalsTest {
         every { selectedFamilySource.observe(ALICE) } returns selected
         // Quiet by default; a test that is about one kind overrides that kind alone.
         every { messages.observeConversation(any()) } returns flowOf(null)
-        every { requests.observeHasPendingFrom(any(), any()) } returns flowOf(false)
+        every { requests.observePendingIdsFrom(any(), any()) } returns flowOf(emptySet())
+        every { clocks.observeFamily(any(), any()) } returns flowOf(ClocksAt())
         every { custodySource.observeCustody(any()) } returns flowOf(null)
     }
 
@@ -128,7 +142,7 @@ class OtherFamiliesSignalsTest {
 
         assertEquals(listOf(emptyMap<String, Set<FamilySignal>>()), emissions)
         verify(exactly = 0) { messages.observeConversation(any()) }
-        verify(exactly = 0) { requests.observeHasPendingFrom(any(), any()) }
+        verify(exactly = 0) { requests.observePendingIdsFrom(any(), any()) }
         verify(exactly = 0) { custodySource.observeCustody(any()) }
     }
 
@@ -142,14 +156,14 @@ class OtherFamiliesSignalsTest {
 
         assertEquals(mapOf(CAROL_FAMILY.familyId to setOf(FamilySignal.CHAT)), emissions.last())
         verify(exactly = 0) { messages.observeConversation(BOB_FAMILY.familyId) }
-        verify(exactly = 0) { requests.observeHasPendingFrom(ALICE, BOB) }
+        verify(exactly = 0) { requests.observePendingIdsFrom(ALICE, BOB) }
         verify(exactly = 0) { custodySource.observeCustody(BOB_FAMILY.familyId) }
     }
 
     @Test
     fun `a pending request and a pending proposal are each reported as themselves`() = runTest {
         given()
-        every { requests.observeHasPendingFrom(ALICE, CAROL) } returns flowOf(true)
+        every { requests.observePendingIdsFrom(ALICE, CAROL) } returns flowOf(setOf(REQUEST_ID))
         every { custodySource.observeCustody(CAROL_FAMILY.familyId) } returns flowOf(custody(proposedBy = CAROL))
 
         val emissions = source().observeSignals().toList()
@@ -234,6 +248,96 @@ class OtherFamiliesSignalsTest {
         assertEquals(mapOf(CAROL_FAMILY.familyId to setOf(FamilySignal.CHAT)), emissions.last())
     }
 
+    // ---- the clocks (phase 3a) ----------------------------------------------------------
+
+    @Test
+    fun `a request past its deadline does not light the dot`() {
+        val past = clocksAt(NOW + DAY, changeClock(answerBy = NOW))
+
+        assertFalse(waiting(past))
+    }
+
+    @Test
+    fun `a request under a last chance lights it again`() {
+        val chance = changeClock(answerBy = NOW, lastChanceUntil = NOW + 2 * DAY)
+
+        assertTrue(waiting(clocksAt(NOW + DAY, chance)))
+    }
+
+    @Test
+    fun `a request without a clock lights it as before`() {
+        assertTrue(waiting(ClocksAt()))
+        assertFalse(waiting(ClocksAt(), ids = emptySet()))
+    }
+
+    @Test
+    fun `a clock that does not name the author as its proposer is ignored`() {
+        val forged = changeClock(answerBy = NOW).copy(proposerUid = ALICE, responderUid = CAROL)
+
+        assertTrue(waiting(clocksAt(NOW + DAY, forged)))
+    }
+
+    @Test
+    fun `a proposal and a swap past their deadline do not light the schedule`() {
+        val proposal = custody(proposedBy = CAROL)
+        val proposalClock = proposalClock(proposal.proposal!!, answerBy = NOW)
+        val swapDoc = custody(swaps = mapOf(TODAY.toString() to swap(CAROL).copy(groupId = "g1")))
+        val swapClock = proposalClock.copy(id = "swap_${CAROL}_g1", kind = RequestKind.SWAP, ref = "g1")
+
+        val late = NOW + DAY
+        val early = NOW - 1
+        assertFalse(OtherFamiliesSignals.hasPendingSchedule(proposal, ALICE, TODAY, clocksAt(late, proposalClock)))
+        assertFalse(OtherFamiliesSignals.hasPendingSchedule(swapDoc, ALICE, TODAY, clocksAt(late, swapClock)))
+        assertTrue(OtherFamiliesSignals.hasPendingSchedule(proposal, ALICE, TODAY, clocksAt(early, proposalClock)))
+        assertTrue(OtherFamiliesSignals.hasPendingSchedule(swapDoc, ALICE, TODAY, clocksAt(early, swapClock)))
+    }
+
+    @Test
+    fun `the dot goes out at the deadline without any document changing`() = runTest {
+        given()
+        every { requests.observePendingIdsFrom(ALICE, CAROL) } returns flowOf(setOf(REQUEST_ID))
+        val ticking = MutableStateFlow(clocksAt(NOW - 1, changeClock(answerBy = NOW)))
+        every { clocks.observeFamily(ALICE, CAROL_FAMILY.familyId) } returns ticking
+        val emissions = mutableListOf<Map<String, Set<FamilySignal>>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            source().observeSignals().collect { emissions += it }
+        }
+        runCurrent()
+
+        assertEquals(setOf(FamilySignal.CHANGE_REQUEST), emissions.last()[CAROL_FAMILY.familyId])
+
+        ticking.value = clocksAt(NOW + 1, changeClock(answerBy = NOW))
+        runCurrent()
+
+        assertEquals(emptyMap(), emissions.last())
+    }
+
+    private fun waiting(clocks: ClocksAt, ids: Set<String> = setOf(REQUEST_ID)) =
+        OtherFamiliesSignals.waitingRequests(ids, CAROL, CAROL_FAMILY.familyId, clocks)
+
+    private fun clocksAt(now: Long, vararg clocks: RequestDeadline) = ClocksAt.of(clocks.toList(), now)
+
+    private fun changeClock(answerBy: Long, lastChanceUntil: Long? = null) = RequestDeadline(
+        id = RequestDeadlineId.of(RequestKind.CHANGE, CAROL, REQUEST_ID, ""),
+        kind = RequestKind.CHANGE,
+        ref = REQUEST_ID,
+        familyId = CAROL_FAMILY.familyId,
+        proposerUid = CAROL,
+        responderUid = ALICE,
+        answerByMillis = answerBy,
+        lastChanceUntilMillis = lastChanceUntil
+    )
+
+    private fun proposalClock(proposal: CustodyProposal, answerBy: Long) = RequestDeadline(
+        id = RequestDeadlineId.forProposal(proposal, CAROL_FAMILY.familyId),
+        kind = RequestKind.PROPOSAL,
+        ref = proposal.proposedAt,
+        familyId = CAROL_FAMILY.familyId,
+        proposerUid = CAROL,
+        responderUid = ALICE,
+        answerByMillis = answerBy
+    )
+
     /** A listener that reports news and stays attached until cancelled, recording the release. */
     private fun held(conversationId: String, released: MutableList<String>): Flow<Map<String, Any>?> = flow {
         emit(document(lastMessageAt = 300L, myMark = 200L))
@@ -289,6 +393,10 @@ class OtherFamiliesSignalsTest {
 
         /** The first attempt plus the eight retries `reconnecting()` also allows. */
         const val MAX_ATTEMPTS = 9
+
+        const val REQUEST_ID = "r1"
+        const val NOW = 1_800_000_000_000L
+        const val DAY = 86_400_000L
 
         val TODAY: LocalDate = LocalDate.of(2026, 9, 23)
         val BOB_FAMILY = FamilyOption("alice-uid__bob-uid", BOB)

@@ -56,6 +56,9 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         return changeRequestDao.getChangeRequestById(id)?.toDomain()
     }
 
+    override suspend fun fetchFromServer(id: String): ChangeRequest? =
+        firestoreDataSource.getFromServer(id)?.toDomain()
+
     override suspend fun createChangeRequest(request: ChangeRequest, answerBy: AnswerByPick?) {
         // Unlike an event or an expense, a change request already names both adults, so its
         // family is a fact about the record rather than something to look up: no `UserDao`

@@ -52,6 +52,13 @@ import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
+import com.coparently.app.data.requests.RequestClockActions
+import com.coparently.app.data.requests.RequestClockKeeper
+import com.coparently.app.data.requests.RequestClockSteps
+import com.coparently.app.data.requests.RequestNotices
+import com.coparently.app.data.requests.RequestRecords
+import com.coparently.app.data.requests.RequestTelling
+import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.sync.ConflictResolver
@@ -304,6 +311,50 @@ class EmulatorParent private constructor(
         scope = scope
     )
 
+    /**
+     * The request clocks' background steps (phase 3a), over this phone's repositories and
+     * [requestScheduler]: a test runs a step itself where the app would wait for its job.
+     */
+    private val requestRecords = RequestRecords(
+        changeRequestRepository = changeRequestRepository,
+        eventRepository = eventRepository,
+        eventDataSource = eventDataSource,
+        custodyDataSource = custodyDataSource,
+        custodyModelRepository = custodyRepository,
+        userRepository = userRepository
+    )
+
+    private val requestTelling = RequestTelling(announcer, fcmService, authService)
+
+    val requestClockSteps = RequestClockSteps(
+        repository = requestDeadlineRepository,
+        records = requestRecords,
+        notices = RequestNotices(context, pairingRepository),
+        telling = requestTelling,
+        scheduler = requestScheduler,
+        time = RequestTime()
+    )
+
+    /**
+     * What a parent does to a clock from a request's card (phase 3a): the answering parent opening
+     * it, and the proposer giving the one last chance — over this phone's repositories.
+     */
+    val requestClockActions = RequestClockActions(
+        repository = requestDeadlineRepository,
+        records = requestRecords,
+        telling = requestTelling,
+        scheduler = requestScheduler,
+        time = RequestTime()
+    )
+
+    /** What each full sync does with this phone's open clocks (phase 3a). */
+    val requestClockKeeper = RequestClockKeeper(
+        repository = requestDeadlineRepository,
+        steps = requestClockSteps,
+        scheduler = requestScheduler,
+        time = RequestTime()
+    )
+
     val familySettingsRepository = FamilySettingsRepository(
         dataSource = FirestoreFamilySettingsDataSource(firestore),
         userRepository = userRepository,
@@ -379,11 +430,13 @@ class EmulatorParent private constructor(
             database,
             authService,
             encryptedPreferences,
-            NoReminders
+            NoReminders,
+            requestScheduler
         ),
         custodyModelRepository = custodyRepository,
         eventVersionRecorder = eventVersionRecorder,
-        reminderScheduler = NoReminders
+        reminderScheduler = NoReminders,
+        requestClockKeeper = requestClockKeeper
     )
 
     val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)

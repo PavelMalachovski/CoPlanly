@@ -11,6 +11,7 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SnapshotMetadata
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -27,11 +28,11 @@ import org.junit.Test
 class FirestoreChangeRequestDataSourceTest {
 
     private val listeners = mutableListOf<EventListener<QuerySnapshot>>()
+    private val collection = mockk<CollectionReference>()
     private lateinit var dataSource: FirestoreChangeRequestDataSource
 
     @Before
     fun setUp() {
-        val collection = mockk<CollectionReference>()
         listOf("requestedBy", "requestedTo").forEach { field ->
             val query = mockk<Query>()
             every { collection.whereEqualTo(field, MY_UID) } returns query
@@ -64,6 +65,25 @@ class FirestoreChangeRequestDataSourceTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `the pending requests from one co-parent are listed by id`() = runTest {
+        val listener = slot<EventListener<QuerySnapshot>>()
+        val last = mockk<Query>()
+        every { last.addSnapshotListener(capture(listener)) } returns mockk<ListenerRegistration>(relaxed = true)
+        val byStatus = mockk<Query> { every { whereEqualTo("status", "PENDING") } returns last }
+        val byRequester = mockk<Query> { every { whereEqualTo("requestedBy", "u2") } returns byStatus }
+        every { collection.whereEqualTo("requestedTo", MY_UID) } returns byRequester
+
+        dataSource.observePendingIdsFrom(MY_UID, "u2").test {
+            listener.captured.onEvent(snapshotOf(idOnly("r1"), idOnly("r2")), null)
+
+            assertEquals(setOf("r1", "r2"), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    private fun idOnly(id: String): DocumentSnapshot = mockk { every { this@mockk.id } returns id }
 
     private fun document(pendingWrites: Boolean): DocumentSnapshot {
         val metadata = mockk<SnapshotMetadata> { every { hasPendingWrites() } returns pendingWrites }

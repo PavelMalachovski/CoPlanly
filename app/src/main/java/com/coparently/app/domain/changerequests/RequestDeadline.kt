@@ -83,8 +83,9 @@ enum class RequestClockOutcome(val wire: String) {
  * @property capMillis The first moment the request would change something — a swap's first day, an
  *   event's start, the first changed day of a proposal — or null when nothing ahead would change.
  *   A last chance ends before it (see [RequestClock]).
- * @property createdAtMillis The server's time when the clock was created; null until the server has
- *   stamped it.
+ * @property createdAtMillis The server's time when the clock was created. Read with the server's
+ *   estimate, so on the proposer's phone it is that phone's estimate, not null, until the server
+ *   has answered; null only for a document that carries no such field.
  * @property firstDate A swap's first day, so a "No answer" row can still say which days the offer
  *   covered after the offer itself has been replaced; null for every other kind.
  * @property dayCount How many days a swap's offer covered; null for every other kind.
@@ -97,13 +98,13 @@ enum class RequestClockOutcome(val wire: String) {
  * @property seenAtMillis When the answering parent first opened the request; written once.
  * @property remindersShown How many of the planned reminders that phone has shown.
  * @property lastChanceAtMillis The server's time when the proposer gave a last chance; null until
- *   they do, and until the server has stamped it.
+ *   they do. On the proposer's phone it is that phone's estimate until the server has answered.
  * @property lastChanceUntilMillis When the last chance ends. Its presence is what says a last chance
- *   was given: the proposer's phone sets it itself, so it is there on that phone while
- *   [lastChanceAtMillis] still waits for the server.
+ *   was given: the proposer's phone chooses it itself, so it is the one field that never depends
+ *   on the server's stamp.
  * @property outcome How the clock was closed, or null while it has not been.
  * @property closedAtMillis The server's time when the proposer's phone closed the clock; null before
- *   then, and until the server has stamped it.
+ *   then. On the proposer's phone it is that phone's estimate until the server has answered.
  */
 data class RequestDeadline(
     val id: String,

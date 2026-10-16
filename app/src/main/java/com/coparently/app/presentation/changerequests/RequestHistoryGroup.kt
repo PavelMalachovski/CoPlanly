@@ -25,6 +25,7 @@ import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
@@ -35,9 +36,10 @@ import com.coparently.app.utils.dateWithTime
  *
  * A row says what the request was, what it asked for when that is a time, how it ended — on the
  * inbox's own neutral status chip, with the outcome's shape in it — and who answered when; a "No
- * answer" row names nobody as answering. The time sits in its own part after " · " rather than
- * inside the sentence: in Czech, Russian and Ukrainian "answered <date>" would need a preposition
- * and a case. Rows are not interactive.
+ * answer" row names nobody as answering, and carries what its clock knows: the deadline, the last
+ * chance, when it was opened, the reminders, and that the calendar did not change. The time sits
+ * in its own part after " · " rather than inside the sentence: in Czech, Russian and Ukrainian
+ * "answered <date>" would need a preposition and a case. Rows are not interactive.
  *
  * @param entries The history, newest first.
  * @param parentNames Names each parent — never "Mom" or "Dad".
@@ -98,8 +100,17 @@ private fun HistoryRow(entry: HistoryEntry, parentNames: ParentNames, myUid: Str
         proposedTime(entry.subject)?.let { time ->
             Text(text = time.format(dateWithTime("MMMEd")), style = MaterialTheme.typography.bodyMedium)
         }
-        // Nobody answered a "No answer", so its row claims no answer and names nobody as answering.
-        if (entry.outcome != RequestOutcome.NO_ANSWER) {
+        // Nobody answered a "No answer", so its row claims no answer and names nobody as answering:
+        // it says what its clock knows instead (phase 3a, spec §6.6).
+        if (entry.outcome == RequestOutcome.NO_ANSWER) {
+            entry.clock?.let { clock ->
+                Text(
+                    text = RequestClockText.historyMeta(clock).map { it.asString() }.joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
             Text(
                 text = stringResource(
                     R.string.request_history_when,
