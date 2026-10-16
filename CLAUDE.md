@@ -2341,7 +2341,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **Jobs are `KEEP` by unique name (tag `request_clock`), so a step never re-enqueues its own
       name**: one that fires early retries only when its moment is a minute away and otherwise
       finishes, and `RequestClockKeeper.sweep`, run on every full sync, arms again the reminders
-      still ahead, a deadline still ahead and the end (running an end already due). **The deadline
+      still ahead, a deadline still ahead and the end (running an end already due for at most
+      `SWEEP_STEP_TIMEOUT_MILLIS`, so a server that does not answer cannot hold the sync; the bound
+      cancels only the reads, since the closure and its tail run under `NonCancellable`, and an end
+      that ran out of time goes back to its own job). **The deadline
       and end jobs wait for a network** (`RequestClockWork.needsNetwork`): they read the server, and
       unconstrained they spent their three runs in about ninety seconds offline, so a proposer
       offline at the deadline was never told. A deadline already passed is not armed again, so its

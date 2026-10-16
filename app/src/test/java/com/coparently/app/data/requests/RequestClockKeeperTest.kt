@@ -10,16 +10,21 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.ZoneId
@@ -198,6 +203,36 @@ class RequestClockKeeperTest {
     }
 
     @Test
+    fun `an end whose server read never answers leaves the sweep within its bound and closes nothing`() = runTest {
+        // The sweep runs inside performFullSync, so an end that hangs on the network held the whole
+        // sync (final review M-3). Real steps, a server read that never answers: the sweep gives the
+        // step up at its bound, closes nothing and leaves the end to its own job.
+        val records = mockk<RequestRecords>()
+        val notices = mockk<RequestNotices>(relaxed = true)
+        val telling = mockk<RequestTelling>(relaxed = true)
+        val realSteps = RequestClockSteps(repository, records, notices, telling, scheduler, time)
+        val due = clockByBob()
+        val endAt = RequestClock.endMillis(due)
+        now = endAt + MINUTE
+        coEvery { repository.openFor(BOB, now - FOUR_DAYS) } returns listOf(due)
+        every { repository.signedInUid() } returns BOB
+        coEvery { repository.get(due.id) } returns due
+        coEvery { repository.close(any()) } returns true
+        coEvery { records.lookOnServer(due) } coAnswers { awaitCancellation() }
+
+        val started = currentTime
+        withTimeout(TEN_MINUTES) {
+            RequestClockKeeper(repository, realSteps, scheduler, time, backgroundScope).sweep(BOB, setOf(ALICE))
+        }
+
+        assertTrue(currentTime - started <= RequestClockKeeper.SWEEP_STEP_TIMEOUT_MILLIS)
+        coVerify(exactly = 0) { repository.close(any()) }
+        coVerify(exactly = 0) { notices.noAnswer(any()) }
+        coVerify(exactly = 0) { telling.unanswered(any(), any()) }
+        verify(exactly = 1) { scheduler.scheduleEnd(due.id, endAt) }
+    }
+
+    @Test
     fun `a clock of a family this parent is no longer in is left alone`() = runTest {
         now = SENT + HOUR
         coEvery { repository.openFor(BOB, now - FOUR_DAYS) } returns
@@ -262,6 +297,7 @@ class RequestClockKeeperTest {
         const val HOUR = 60 * MINUTE
         const val DAY = 24 * HOUR
         const val FOUR_DAYS = 4 * DAY
+        const val TEN_MINUTES = 10 * MINUTE
 
         /** 2026-05-05T16:53:20Z. */
         const val SENT = 1_778_000_000_000L

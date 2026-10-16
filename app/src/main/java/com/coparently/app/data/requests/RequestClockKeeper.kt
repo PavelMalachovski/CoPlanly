@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -110,12 +111,25 @@ class RequestClockKeeper internal constructor(
 
     private suspend fun keepAsProposer(clock: RequestDeadline, now: Long) {
         if (clock.outcome != null) {
-            if (clock.kind == RequestKind.PROPOSAL) steps.end(clock.id)
+            if (clock.kind == RequestKind.PROPOSAL) endWithin(clock)
             return
         }
         if (now < clock.answerByMillis) scheduler.scheduleDeadline(clock.id, clock.answerByMillis)
         val endAt = RequestClock.endMillis(clock)
-        if (endAt <= now) steps.end(clock.id) else scheduler.scheduleEnd(clock.id, endAt)
+        if (endAt <= now) endWithin(clock) else scheduler.scheduleEnd(clock.id, endAt)
+    }
+
+    /**
+     * Runs [clock]'s due end inside the sweep for at most [SWEEP_STEP_TIMEOUT_MILLIS], so a server
+     * that does not answer cannot hold the full sync it runs in (final review M-3). The bound
+     * cancels only the step's reads: its closure and everything after it run under
+     * `NonCancellable` once started, so a timeout never leaves a clock closed with its card unsent,
+     * and never closes one either. A step that ran out of time, or asked to be tried again, is left
+     * to the end's own job, which waits for a network.
+     */
+    private suspend fun endWithin(clock: RequestDeadline) {
+        val result = withTimeoutOrNull(SWEEP_STEP_TIMEOUT_MILLIS) { steps.end(clock.id) }
+        if (result != StepResult.DONE) scheduler.scheduleEnd(clock.id, RequestClock.endMillis(clock))
     }
 
     /**
@@ -143,11 +157,17 @@ class RequestClockKeeper internal constructor(
         synchronized(inFlight) { inFlight.remove(id) }
     }
 
-    private companion object {
+    internal companion object {
+        /**
+         * How long the sweep gives a step it runs itself, inside a full sync, before leaving it to
+         * the step's own job (final review M-3).
+         */
+        internal const val SWEEP_STEP_TIMEOUT_MILLIS = 30_000L
+
         /**
          * How far back a sweep reads deadlines: an end comes at most two days after its deadline, so
          * four days catch every clock that can still need a step.
          */
-        const val LOOKBACK_MILLIS = 4 * 24 * 3_600_000L
+        private const val LOOKBACK_MILLIS = 4 * 24 * 3_600_000L
     }
 }

@@ -151,8 +151,10 @@ class RequestClockSteps @Inject constructor(
 
     /**
      * Closes the request in the spec's order (§4.4): the clock, the notice, the card, then a
-     * proposal's withdrawal. Once the closure is written the rest runs to its end even when the job
-     * is stopped, so a retry never finds the proposal gone and the card unsent.
+     * proposal's withdrawal. From the closure's write on, all of it runs under `NonCancellable`:
+     * a job that is stopped, or the sweep's timeout, cancels only the read before it, so the clock
+     * is never closed with the card unsent and a retry never finds the proposal gone and the card
+     * unsent. The closure's write has its own bound in the repository.
      */
     private suspend fun closeUnanswered(clock: RequestDeadline): StepResult {
         val look = records.lookOnServer(clock)
@@ -160,16 +162,19 @@ class RequestClockSteps @Inject constructor(
         return when {
             look.status == RecordStatus.UNKNOWN -> StepResult.RETRY
             look.status != RecordStatus.PENDING || card == null -> StepResult.DONE
-            // The rules judge "after the deadline" by the server's clock: a refusal moments after it
-            // is "try again shortly", not final.
-            !repository.close(clock) -> StepResult.RETRY
-            else -> withContext(NonCancellable) {
-                notices.noAnswer(clock)
-                telling.unanswered(clock, card)
-                val withdrawn = clock.kind != RequestKind.PROPOSAL || records.withdrawUnansweredProposal(clock)
-                if (withdrawn) StepResult.DONE else StepResult.RETRY
-            }
+            else -> withContext(NonCancellable) { closeAndTell(clock, card) }
         }
+    }
+
+    /** The closure and what follows it; see [closeUnanswered]. */
+    private suspend fun closeAndTell(clock: RequestDeadline, card: CardSubject): StepResult {
+        // The rules judge "after the deadline" by the server's clock: a refusal moments after it is
+        // "try again shortly", not final.
+        if (!repository.close(clock)) return StepResult.RETRY
+        notices.noAnswer(clock)
+        telling.unanswered(clock, card)
+        val withdrawn = clock.kind != RequestKind.PROPOSAL || records.withdrawUnansweredProposal(clock)
+        return if (withdrawn) StepResult.DONE else StepResult.RETRY
     }
 
     /** A step that ran [millisEarly] before its time: tried again shortly when that is soon. */
