@@ -7,4 +7,20 @@
     <string name="request_notice_deadline_body">Im Kalender hat sich nichts geändert. Du kannst eine letzte Chance geben.</string>
     <string name="request_notice_no_answer_title">Keine Antwort von %1$s</string>
     <string name="request_notice_no_answer_body">Die Anfrage ist als „Keine Antwort“ abgeschlossen. Im Kalender hat sich nichts geändert.</string>
+    <string name="answer_by_title">Antwort bis</string>
+    <string name="answer_by_tomorrow">Morgen</string>
+    <string name="answer_by_three_days">3 Tage</string>
+    <string name="answer_by_week">Eine Woche</string>
+    <string name="answer_by_pick_date">Datum wählen…</string>
+    <string name="answer_by_compressed">Bis %1$s</string>
+    <plurals name="answer_by_reminders">
+        <item quantity="one">Bis %1$s. %2$s bekommt bis zu %3$d Erinnerung, nachts keine.</item>
+        <item quantity="other">Bis %1$s. %2$s bekommt bis zu %3$d Erinnerungen, nachts keine.</item>
+    </plurals>
+    <string name="answer_by_outcome">Ohne Antwort bis dahin wirst du benachrichtigt und kannst eine letzte Chance von 24 Stunden geben. Ohne Antwort ändert sich im Kalender nichts.</string>
+    <string name="answer_by_outcome_short">Ohne Antwort bis dahin wirst du benachrichtigt und kannst eine kürzere letzte Chance geben. Ohne Antwort ändert sich im Kalender nichts.</string>
+    <string name="answer_by_fixed">Antwort bis %1$s</string>
+    <string name="answer_by_too_soon">Zu kurzfristig für eine Frist – die Anfrage geht als normale Anfrage raus.</string>
+    <string name="answer_by_picker_ok">OK</string>
+    <string name="answer_by_picker_cancel">Abbrechen</string>
 </resources>

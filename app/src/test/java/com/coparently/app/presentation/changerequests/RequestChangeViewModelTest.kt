@@ -16,9 +16,11 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CancellationException
@@ -29,6 +31,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -58,6 +61,7 @@ class RequestChangeViewModelTest {
     private val changeRequestRepository = mockk<ChangeRequestRepository>()
     private val userRepository = mockk<UserRepository>()
     private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
+    private val parentsSource = mockk<ParentsSource> { every { observe() } returns emptyFlow() }
 
     private val me = User(
         id = "u1",
@@ -80,7 +84,7 @@ class RequestChangeViewModelTest {
     private val proposedStart = LocalDateTime.of(2026, 9, 11, 9, 0)
 
     private fun viewModel() =
-        RequestChangeViewModel(eventRepository, changeRequestRepository, userRepository, announcer)
+        RequestChangeViewModel(eventRepository, changeRequestRepository, userRepository, announcer, parentsSource)
 
     @Before
     fun setUp() {
@@ -216,7 +220,8 @@ class RequestChangeViewModelTest {
                 eventRepository,
                 changeRequestRepository,
                 userRepository,
-                ActivityAnnouncer(messages, userRepository)
+                ActivityAnnouncer(messages, userRepository),
+                parentsSource
             )
 
             vm.submit(event, proposedStart, null, null)

@@ -18,17 +18,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.VacationSuggestion
 import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.holidayDisplayName
+import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
@@ -51,7 +56,11 @@ private enum class RangeEnd { FROM, TO }
  * @param parentNames Resolves a slot to that parent's name.
  * @param reference The agreed parenting-plan answer the editor was opened for (MON-21), quoted
  *   read-only above the fields; null for an editor opened any other way.
- * @param onConfirm Receives the draft to save.
+ * @param answerByCapOf The cap of the proposal saving a draft would make (phase 3a), or null when
+ *   saving is no proposal and the dialog asks for no deadline. It is worked out again when the draft
+ *   changes, not per frame.
+ * @param onConfirm Receives the draft to save, and the deadline the parent chose for the co-parent's
+ *   answer — null when [answerByCapOf] is null.
  * @param onDelete Deletes the layer; null for a new one.
  * @param onDismiss Closes the dialog.
  */
@@ -63,12 +72,14 @@ fun SeasonalLayerDialog(
     suggestions: List<VacationSuggestion>,
     parentNames: ParentNames,
     reference: PlanReference? = null,
-    onConfirm: (SeasonalLayerDraft) -> Unit,
+    answerByCapOf: ((SeasonalLayerDraft) -> Long?)? = null,
+    onConfirm: (SeasonalLayerDraft, AnswerByPick?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
     var draft by remember { mutableStateOf(initial) }
     var picking by remember { mutableStateOf<RangeEnd?>(null) }
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -84,11 +95,15 @@ fun SeasonalLayerDialog(
                 parentNames = parentNames,
                 reference = reference,
                 onChange = { draft = it },
-                onPick = { picking = it }
+                onPick = { picking = it },
+                footer = { LayerDeadline(draft, answerByCapOf, parentNames, answerBy) { answerBy = it } }
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(draft) }, enabled = draft.isValid) {
+            TextButton(
+                onClick = { onConfirm(draft, answerBy.takeIf { answerByCapOf != null }) },
+                enabled = draft.isValid
+            ) {
                 Text(stringResource(R.string.seasonal_confirm))
             }
         },
@@ -117,7 +132,29 @@ fun SeasonalLayerDialog(
     }
 }
 
-/** The dialog's content: name, range, school-holiday suggestions, shape, validation. */
+/**
+ * When the co-parent should answer the layer by (phase 3a): the block is absent while saving is no
+ * proposal ([capOf] null). The cap is worked out when the [draft] changes, not per frame.
+ */
+@Composable
+private fun LayerDeadline(
+    draft: SeasonalLayerDraft,
+    capOf: ((SeasonalLayerDraft) -> Long?)?,
+    parentNames: ParentNames,
+    selected: AnswerByPick,
+    onSelect: (AnswerByPick) -> Unit
+) {
+    if (capOf == null) return
+    val cap = remember(draft) { capOf(draft) }
+    AnswerByField(
+        offer = rememberAnswerByOffer(cap),
+        selected = selected,
+        onSelect = onSelect,
+        coParentName = parentNames.coParentLabel()
+    )
+}
+
+/** The dialog's content: name, range, school-holiday suggestions, shape, validation, then [footer]. */
 @Composable
 @Suppress("LongParameterList") // the draft, what it may offer, and its two callbacks
 private fun LayerEditorBody(
@@ -127,7 +164,8 @@ private fun LayerEditorBody(
     parentNames: ParentNames,
     reference: PlanReference?,
     onChange: (SeasonalLayerDraft) -> Unit,
-    onPick: (RangeEnd) -> Unit
+    onPick: (RangeEnd) -> Unit,
+    footer: @Composable () -> Unit
 ) {
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -162,6 +200,7 @@ private fun LayerEditorBody(
                 color = MaterialTheme.colorScheme.error
             )
         }
+        footer()
     }
 }
 

@@ -7,4 +7,22 @@
     <string name="request_notice_deadline_body">V kalendáři se nic nezměnilo. Můžete dát poslední šanci.</string>
     <string name="request_notice_no_answer_title">%1$s: bez odpovědi</string>
     <string name="request_notice_no_answer_body">Žádost je uzavřena jako „Bez odpovědi“. V kalendáři se nic nezměnilo.</string>
+    <string name="answer_by_title">Odpovědět do</string>
+    <string name="answer_by_tomorrow">Zítra</string>
+    <string name="answer_by_three_days">3 dny</string>
+    <string name="answer_by_week">Týden</string>
+    <string name="answer_by_pick_date">Vybrat datum…</string>
+    <string name="answer_by_compressed">Do %1$s</string>
+    <plurals name="answer_by_reminders">
+        <item quantity="one">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
+        <item quantity="few">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
+        <item quantity="many">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
+        <item quantity="other">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
+    </plurals>
+    <string name="answer_by_outcome">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát poslední šanci na 24 hodin. Bez odpovědi se v kalendáři nic nezmění.</string>
+    <string name="answer_by_outcome_short">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát kratší poslední šanci. Bez odpovědi se v kalendáři nic nezmění.</string>
+    <string name="answer_by_fixed">Odpovědět do %1$s</string>
+    <string name="answer_by_too_soon">Na termín je příliš brzy – žádost odejde jako běžná.</string>
+    <string name="answer_by_picker_ok">OK</string>
+    <string name="answer_by_picker_cancel">Zrušit</string>
 </resources>

@@ -18,6 +18,7 @@ import com.coparently.app.presentation.common.toUiText
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,11 +30,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import javax.inject.Inject
+import kotlin.coroutines.EmptyCoroutineContext
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
@@ -199,12 +202,18 @@ class EventViewModel @Inject constructor(
      *
      * @param answerBy The deadline the parent chose for the co-parent's answer (phase 3a), or null
      *   for none. The use case starts a clock only if the event waits for the co-parent, so the form
-     *   may pass the pick for any new event.
+     *   may pass the pick for any new event. A create with a deadline survives the screen's exit.
      */
     fun createEvent(event: Event, answerBy: AnswerByPick? = null) {
         viewModelScope.launch {
             _uiState.value = EventUiState.Loading
-            val result = eventUseCases.createEvent(event, answerBy = answerBy)
+            // The form leaves the screen at once and this scope goes with it. The use case starts a
+            // deadline's clock as its last step, after the event has waited for the server, so a create
+            // that carries a deadline is not cancelled in the middle: offline, the event would be
+            // stored and queued but never get its clock (phase 3a).
+            val result = withContext(if (answerBy != null) NonCancellable else EmptyCoroutineContext) {
+                eventUseCases.createEvent(event, answerBy = answerBy)
+            }
             result.onSuccess {
                 _uiState.value = EventUiState.OperationSuccess(EventOperation.CREATED)
                 kotlinx.coroutines.delay(2000)

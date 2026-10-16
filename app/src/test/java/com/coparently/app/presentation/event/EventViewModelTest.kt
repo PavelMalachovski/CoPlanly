@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.event
 
+import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -23,8 +24,10 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -136,6 +139,46 @@ class EventViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) { createEvent.invoke(sampleEvent, true, null) }
+    }
+
+    @Test
+    fun `a create with a deadline finishes after the screen is gone, one without does not`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        var finished = 0
+        coEvery { createEvent.invoke(any(), any(), any()) } coAnswers {
+            gate.await()
+            finished++
+            Result.success(sampleEvent)
+        }
+
+        // The form pops at once and the ViewModel's scope is cancelled with it, while the event still
+        // waits for the server: the clock is the use case's last step and must not be lost.
+        viewModel.createEvent(sampleEvent, AnswerByPick.Preset(AnswerByPreset.WEEK))
+        runCurrent()
+        viewModel.viewModelScope.cancel()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(1, finished)
+    }
+
+    @Test
+    fun `a create without a deadline is cancelled with the screen as before`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        var finished = 0
+        coEvery { createEvent.invoke(any(), any(), any()) } coAnswers {
+            gate.await()
+            finished++
+            Result.success(sampleEvent)
+        }
+
+        viewModel.createEvent(sampleEvent)
+        runCurrent()
+        viewModel.viewModelScope.cancel()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(0, finished)
     }
 
     @Test

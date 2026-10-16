@@ -946,13 +946,13 @@ fun CalendarScreen(
             dates = dates,
             custodyFor = getCustody,
             parentNames = parentNames,
-            onOffer = { offered, note ->
+            onOffer = { offered, note, answerBy ->
                 if (offered.size == 1) {
                     // One day keeps the single write, the single chat card and the single push
                     // type an older co-parent build already understands.
                     val date = offered.first()
                     val toParent = if (getCustody(date) == "mom") "dad" else "mom"
-                    calendarViewModel.offerDaySwap(date, toParent, note)
+                    calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
                 } else {
                     calendarViewModel.offerDaySwapForDates(
                         dates = offered,
@@ -963,7 +963,8 @@ fun CalendarScreen(
                                 else -> null
                             }
                         },
-                        note = note
+                        note = note,
+                        answerBy = answerBy
                     )
                 }
                 swapSheetOpen = false

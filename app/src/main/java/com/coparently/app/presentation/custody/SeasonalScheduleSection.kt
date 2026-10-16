@@ -148,14 +148,18 @@ private fun LayerEditor(
     viewModel: SeasonalScheduleViewModel,
     onClose: () -> Unit
 ) {
+    val proposes by viewModel.proposes.collectAsState()
     SeasonalLayerDialog(
         initial = target.draft,
         isEditing = target.layerId != null,
         suggestions = state.suggestions,
         parentNames = parentNames,
         reference = state.planReference.takeIf { target.fromPlan },
-        onConfirm = { draft ->
-            viewModel.saveLayer(draft, target.layerId, citePlan = target.fromPlan)
+        // Asked only while the change would be a proposal the co-parent answers (phase 3a).
+        answerByCapOf = { draft: SeasonalLayerDraft -> viewModel.answerByCap(draft, target.layerId) }
+            .takeIf { proposes },
+        onConfirm = { draft, answerBy ->
+            viewModel.saveLayer(draft, target.layerId, citePlan = target.fromPlan, answerBy = answerBy)
             onClose()
         },
         onDelete = target.layerId?.let { id ->

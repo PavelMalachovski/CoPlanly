@@ -197,8 +197,16 @@ object AnswerBy {
      *   pickable until two hours before its 20:00, and a date that has gone by is always too near),
      *   and one past the latest time reads that.
      */
-    fun resolve(pick: AnswerByPick, nowMillis: Long, capMillis: Long?, zone: ZoneId): Long? {
-        val offer = offer(nowMillis, capMillis, zone)
+    fun resolve(pick: AnswerByPick, nowMillis: Long, capMillis: Long?, zone: ZoneId): Long? =
+        resolve(pick, offer(nowMillis, capMillis, zone), zone)
+
+    /**
+     * The deadline [pick] gives under an [offer] already made, with the rules of the overload above.
+     * A form that holds the offer it displays asks this, so what it reads under the chips is exactly
+     * what the offer's moment gives, whichever preset was merged into which chip.
+     */
+    fun resolve(pick: AnswerByPick, offer: AnswerByOffer, zone: ZoneId): Long? {
+        val nowMillis = offer.nowMillis
         return when (offer.band) {
             AnswerByBand.TOO_SOON -> null
             AnswerByBand.FIXED -> offer.fixedMillis

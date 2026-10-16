@@ -52,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,13 +65,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
@@ -104,6 +109,10 @@ fun CustodySetupScreen(
     val currentModel by viewModel.currentModel.collectAsState()
     val children by viewModel.children.collectAsState()
     val childScope = uiState.childScope
+    // The deadline for the co-parent's answer (phase 3a): asked only while a save would be a proposal.
+    val proposes by viewModel.proposes.collectAsState()
+    val answerByCap by viewModel.answerByCap.collectAsState()
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     // Scoped to one child (FAM-4), Back returns to the family schedule rather than leaving.
     BackHandler(enabled = childScope != null) { viewModel.editSchedule(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -154,7 +163,7 @@ fun CustodySetupScreen(
         bottomBar = {
             StickyActionBar(
                 label = stringResource(R.string.custody_save_button),
-                onClick = { viewModel.save() },
+                onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
                 enabled = uiState.isValid,
                 busy = uiState.isLoading
             )
@@ -173,7 +182,11 @@ fun CustodySetupScreen(
                 ChildScopeHeader(
                     childName = scope.name,
                     hasOwnSchedule = currentModel?.childOverrideFor(scope.childId) != null,
-                    onFollowFamily = { viewModel.save(followFamily = true) }
+                    // The deadline block previews the form's own schedule, not this removal, so the removal
+                    // asks for the default deadline (as deleting a seasonal layer does, ruling 9).
+                    onFollowFamily = {
+                        viewModel.save(followFamily = true, answerBy = AnswerByPick.DEFAULT.takeIf { proposes })
+                    }
                 )
             }
             uiState.planReference?.takeIf { childScope == null }?.let { reference ->
@@ -538,6 +551,16 @@ fun CustodySetupScreen(
                         )
                     }
                 }
+            }
+
+            if (proposes) {
+                AnswerByField(
+                    offer = rememberAnswerByOffer(answerByCap),
+                    selected = answerBy,
+                    onSelect = { answerBy = it },
+                    coParentName = parentNames.coParentLabel(),
+                    modifier = Modifier.padding(vertical = dims.paddingMedium)
+                )
             }
 
             // Seasonal schedules (MON-14) and holiday fairness (MON-20). Sent on their own, not by

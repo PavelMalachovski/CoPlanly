@@ -246,4 +246,23 @@ class AnswerByTest {
         }
         assertEquals(AnswerByPick.DEFAULT, AnswerByPick.decode(null))
     }
+
+    @Test
+    fun `resolving under an offer already made gives what resolving at its moment gives`() {
+        val cap = at("2026-10-12T10:07")
+        val offer = AnswerBy.offer(NOW, cap, ZONE)
+        val picks = listOf(
+            Preset(AnswerByPreset.TOMORROW),
+            Preset(AnswerByPreset.THREE_DAYS),
+            Preset(AnswerByPreset.WEEK),
+            OnDate(date(10, 11)),
+            OnDate(date(12, 1))
+        )
+
+        picks.forEach { pick ->
+            assertEquals(AnswerBy.resolve(pick, NOW, cap, ZONE), AnswerBy.resolve(pick, offer, ZONE), "$pick")
+        }
+        // A preset merged into another chip still reads that chip's time.
+        assertEquals(offer.chips.last().answerByMillis, AnswerBy.resolve(Preset(AnswerByPreset.WEEK), offer, ZONE))
+    }
 }

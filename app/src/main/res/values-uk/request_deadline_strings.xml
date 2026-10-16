@@ -7,4 +7,22 @@
     <string name="request_notice_deadline_body">У календарі нічого не змінилося. Можна дати останній шанс.</string>
     <string name="request_notice_no_answer_title">%1$s: немає відповіді</string>
     <string name="request_notice_no_answer_body">Запит закрито як «Немає відповіді». У календарі нічого не змінилося.</string>
+    <string name="answer_by_title">Відповісти до</string>
+    <string name="answer_by_tomorrow">Завтра</string>
+    <string name="answer_by_three_days">3 дні</string>
+    <string name="answer_by_week">Тиждень</string>
+    <string name="answer_by_pick_date">Обрати дату…</string>
+    <string name="answer_by_compressed">До %1$s</string>
+    <plurals name="answer_by_reminders">
+        <item quantity="one">До %1$s. %2$s отримає до %3$d нагадування, вночі — без нагадувань.</item>
+        <item quantity="few">До %1$s. %2$s отримає до %3$d нагадувань, вночі — без нагадувань.</item>
+        <item quantity="many">До %1$s. %2$s отримає до %3$d нагадувань, вночі — без нагадувань.</item>
+        <item quantity="other">До %1$s. %2$s отримає до %3$d нагадування, вночі — без нагадувань.</item>
+    </plurals>
+    <string name="answer_by_outcome">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати останній шанс на 24 години. Без відповіді в календарі нічого не зміниться.</string>
+    <string name="answer_by_outcome_short">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати коротший останній шанс. Без відповіді в календарі нічого не зміниться.</string>
+    <string name="answer_by_fixed">Відповісти до %1$s</string>
+    <string name="answer_by_too_soon">Надто скоро для терміну — запит піде як звичайний.</string>
+    <string name="answer_by_picker_ok">OK</string>
+    <string name="answer_by_picker_cancel">Скасувати</string>
 </resources>

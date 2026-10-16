@@ -13,4 +13,22 @@
     <string name="request_notice_deadline_body">Nothing has changed in the calendar. You can give a last chance.</string>
     <string name="request_notice_no_answer_title">No answer from %1$s</string>
     <string name="request_notice_no_answer_body">The request is closed as “No answer”. Nothing has changed in the calendar.</string>
+    <!-- The deadline block in the four forms (phase 3a, spec §6.1). %1$s is a time as answerByText
+         words it, %2$s the other parent's name, %3$d the number of reminders. -->
+    <string name="answer_by_title">Answer by</string>
+    <string name="answer_by_tomorrow">Tomorrow</string>
+    <string name="answer_by_three_days">3 days</string>
+    <string name="answer_by_week">A week</string>
+    <string name="answer_by_pick_date">Pick a date…</string>
+    <string name="answer_by_compressed">By %1$s</string>
+    <plurals name="answer_by_reminders">
+        <item quantity="one">By %1$s. %2$s gets up to %3$d reminder, none at night.</item>
+        <item quantity="other">By %1$s. %2$s gets up to %3$d reminders, none at night.</item>
+    </plurals>
+    <string name="answer_by_outcome">No answer by then — you\'ll be told and can give a last chance of 24 hours. Nothing changes in the calendar without an answer.</string>
+    <string name="answer_by_outcome_short">No answer by then — you\'ll be told and can give a shorter last chance. Nothing changes in the calendar without an answer.</string>
+    <string name="answer_by_fixed">Answer by %1$s</string>
+    <string name="answer_by_too_soon">Too soon for a deadline — it goes out as a plain request.</string>
+    <string name="answer_by_picker_ok">OK</string>
+    <string name="answer_by_picker_cancel">Cancel</string>
 </resources>
