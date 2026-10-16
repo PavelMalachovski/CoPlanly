@@ -90,7 +90,9 @@ class FirestoreCustodyDataSource @Inject constructor(
      *   request's clock), which then throws offline.
      */
     suspend fun getCustody(documentId: String, source: Source = Source.DEFAULT): SharedCustody? {
-        val snapshot = custodyCollection.document(documentId).get(source).await()
+        val document = custodyCollection.document(documentId)
+        // The default read stays the plain get() every existing caller (and its test doubles) uses.
+        val snapshot = (if (source == Source.DEFAULT) document.get() else document.get(source)).await()
         return snapshot.data?.toSharedCustody(documentId)
     }
 
