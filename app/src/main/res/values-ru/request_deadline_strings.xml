@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="request_clock_no_answer">Нет ответа</string>
+    <string name="request_notice_reminder_title">Ожидается ваш ответ</string>
+    <string name="request_notice_reminder_body">%1$s ждёт вашего ответа до %2$s.</string>
+    <string name="request_notice_deadline_title">%1$s: нет ответа к сроку</string>
+    <string name="request_notice_deadline_body">В календаре ничего не изменилось. Можно дать последний шанс.</string>
+    <string name="request_notice_no_answer_title">%1$s: нет ответа</string>
+    <string name="request_notice_no_answer_body">Запрос закрыт как «Нет ответа». В календаре ничего не изменилось.</string>
 </resources>

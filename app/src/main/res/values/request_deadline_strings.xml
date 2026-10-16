@@ -5,4 +5,12 @@
     <!-- The outcome of a request nobody answered by the end of its clock. Its own outcome, never
          "Declined": the other parent said nothing, which is not saying no. -->
     <string name="request_clock_no_answer">No answer</string>
+    <!-- The local notices a request's clock posts (phase 3a, spec §4.3–§4.4). %1$s is the other
+         parent's name, never a role; %2$s the deadline as answerByText words it. -->
+    <string name="request_notice_reminder_title">Waiting for your answer</string>
+    <string name="request_notice_reminder_body">%1$s is waiting for your answer until %2$s.</string>
+    <string name="request_notice_deadline_title">%1$s didn\'t answer by the deadline</string>
+    <string name="request_notice_deadline_body">Nothing has changed in the calendar. You can give a last chance.</string>
+    <string name="request_notice_no_answer_title">No answer from %1$s</string>
+    <string name="request_notice_no_answer_body">The request is closed as “No answer”. Nothing has changed in the calendar.</string>
 </resources>

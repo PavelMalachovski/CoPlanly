@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="request_clock_no_answer">Bez odpovědi</string>
+    <string name="request_notice_reminder_title">Čeká se na vaši odpověď</string>
+    <string name="request_notice_reminder_body">%1$s čeká na vaši odpověď do %2$s.</string>
+    <string name="request_notice_deadline_title">%1$s: bez odpovědi do termínu</string>
+    <string name="request_notice_deadline_body">V kalendáři se nic nezměnilo. Můžete dát poslední šanci.</string>
+    <string name="request_notice_no_answer_title">%1$s: bez odpovědi</string>
+    <string name="request_notice_no_answer_body">Žádost je uzavřena jako „Bez odpovědi“. V kalendáři se nic nezměnilo.</string>
 </resources>

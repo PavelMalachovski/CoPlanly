@@ -7,6 +7,7 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -50,6 +51,7 @@ class AuthStateViewModelTest {
     private val fcmService = mockk<FcmService>(relaxed = true)
     private val schoolConnections = mockk<SchoolConnectionStore>(relaxed = true)
     private val reminderScheduler = mockk<ReminderScheduler>(relaxed = true)
+    private val requestClockScheduler = mockk<RequestClockScheduler>(relaxed = true)
 
     private val namedAccount = User(id = "u1", email = "olya@example.com", name = "Olya", role = "mom", colorCode = "")
 
@@ -60,7 +62,8 @@ class AuthStateViewModelTest {
         petRepository = petRepository,
         fcmService = fcmService,
         schoolConnections = schoolConnections,
-        reminderScheduler = reminderScheduler
+        reminderScheduler = reminderScheduler,
+        requestClockScheduler = requestClockScheduler
     )
 
     private fun child(createdBy: String?) = ChildInfo(
@@ -161,6 +164,8 @@ class AuthStateViewModelTest {
             schoolConnections.clearAll()
             // Room survives sign-out; a reminder left armed would announce the account's titles.
             reminderScheduler.cancelAll()
+            // So would a request clock's reminder or end (phase 3a).
+            requestClockScheduler.cancelAll()
             firebaseAuthService.signOutCompletely()
         }
         assertEquals(false, vm.isAuthenticated.value)

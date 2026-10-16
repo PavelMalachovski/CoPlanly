@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="request_clock_no_answer">Keine Antwort</string>
+    <string name="request_notice_reminder_title">Deine Antwort wird erwartet</string>
+    <string name="request_notice_reminder_body">%1$s wartet bis %2$s auf deine Antwort.</string>
+    <string name="request_notice_deadline_title">%1$s hat bis zur Frist nicht geantwortet</string>
+    <string name="request_notice_deadline_body">Im Kalender hat sich nichts geändert. Du kannst eine letzte Chance geben.</string>
+    <string name="request_notice_no_answer_title">Keine Antwort von %1$s</string>
+    <string name="request_notice_no_answer_body">Die Anfrage ist als „Keine Antwort“ abgeschlossen. Im Kalender hat sich nichts geändert.</string>
 </resources>

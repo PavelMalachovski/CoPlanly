@@ -509,7 +509,8 @@ constructor(
      * parent's families, once, and never through [currentPair]: it must still be a family they are
      * in. The read and the write are one transaction, so a proposal answered, withdrawn or replaced
      * a moment before is left as it is — an answer racing the end wins. Nothing is announced here;
-     * the end posts its own card.
+     * the end posts its own card. Once the server has the withdrawal, Room is mirrored even if the
+     * caller is cancelled, as [decideProposal]'s tail is.
      *
      * @return Whether the proposal was withdrawn: false when the family has ended, when the proposal
      *   is no longer this one, and when the document could not be written, for the caller to retry.
@@ -521,7 +522,8 @@ constructor(
                 withdrawnIfUnanswered(current, proposedAt, pair.myUid)
             }
         } ?: return false
-        mirrorIntoRoom(pair.documentId, written)
+        // The server has the withdrawal: the mirror runs to its end even if the job is stopped now.
+        withContext(NonCancellable) { mirrorIntoRoom(pair.documentId, written) }
         return true
     }
 

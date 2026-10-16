@@ -7,6 +7,7 @@ import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
@@ -39,6 +40,8 @@ class RequestClocksTest {
         answerByMillis = START + HOUR
     )
 
+    private val keeper = mockk<RequestClockKeeper>(relaxed = true)
+
     @Test
     fun `a tick re-reads the same clocks at the new time`() = runTest {
         var now = START
@@ -47,7 +50,7 @@ class RequestClocksTest {
         val repository = mockk<RequestDeadlineRepository>()
         every { repository.observeFamily(ME, FAMILY) } returns flowOf(listOf(clock))
 
-        RequestClocks(repository, time).observeFamily(ME, FAMILY).test {
+        RequestClocks(repository, time, keeper).observeFamily(ME, FAMILY).test {
             ticks.emit(Unit)
             assertEquals("the clocks, seen when they arrived", ClocksAt.of(listOf(clock), START), awaitItem())
 
@@ -71,7 +74,7 @@ class RequestClocksTest {
         every { repository.observeFamily(ME, FAMILY) } returns snapshots
         val time = RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks)
 
-        RequestClocks(repository, time).observeFamily(ME, FAMILY).test {
+        RequestClocks(repository, time, keeper).observeFamily(ME, FAMILY).test {
             snapshots.emit(listOf(clock))
             assertEquals(ClocksAt.of(listOf(clock), START), awaitItem())
 
@@ -83,6 +86,25 @@ class RequestClocksTest {
                 awaitItem()
             )
         }
+    }
+
+    @Test
+    fun `an undelivered clock addressed to this parent is handed to the keeper`() = runTest {
+        // While the app runs, the listener is how this phone first sees a request's clock (spec
+        // §5.3): it is delivered at once rather than at the next sync.
+        val time = RequestTime(now = { START }, zoneOf = { ZoneOffset.UTC }, ticks = flowOf(Unit))
+        val toMe = clock.copy(id = "change_uidA_cr-2", ref = "cr-2")
+        val delivered = clock.copy(deliveredAtMillis = START)
+        val mine = clock.copy(id = "change_uidB_cr-3", ref = "cr-3", proposerUid = ME, responderUid = "uidA")
+        val repository = mockk<RequestDeadlineRepository>()
+        every { repository.observeFamily(ME, FAMILY) } returns flowOf(listOf(toMe, delivered, mine))
+
+        RequestClocks(repository, time, keeper).observeFamily(ME, FAMILY).test {
+            awaitItem()
+            awaitComplete()
+        }
+
+        verify(exactly = 1) { keeper.deliverSoon(ME, listOf(toMe)) }
     }
 
     @Test

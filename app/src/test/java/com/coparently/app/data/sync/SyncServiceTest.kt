@@ -17,6 +17,7 @@ import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
+import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.notification.ReminderScheduler
@@ -93,6 +94,7 @@ class SyncServiceTest {
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var familyIdBackfill: FamilyIdBackfill
     private val reminderScheduler: ReminderScheduler = mockk(relaxed = true)
+    private val requestClockKeeper: RequestClockKeeper = mockk(relaxed = true)
     private lateinit var syncService: SyncService
 
     /**
@@ -180,7 +182,8 @@ class SyncServiceTest {
             custodyModelRepository,
             // The revision outbox (MON-4); its own suite covers it.
             mockk(relaxed = true),
-            reminderScheduler
+            reminderScheduler,
+            requestClockKeeper
         )
     }
 
@@ -899,6 +902,27 @@ class SyncServiceTest {
         syncService.performFullSync()
 
         coVerify(exactly = 1) { familyIdBackfill.run(ALICE, setOf(BOB, CAROL)) }
+    }
+
+    @Test
+    fun `a full sync sweeps the request clocks with the account's co-parents`() = runTest {
+        // Every co-parent, not the family on screen: a clock of the other family still has its
+        // reminders, its deadline and its end (spec §5.6).
+        inFamilies(partners = listOf(BOB, CAROL), selected = CAROL)
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { requestClockKeeper.sweep(ALICE, setOf(BOB, CAROL)) }
+    }
+
+    @Test
+    fun `a failed sweep does not fail the sync`() = runTest {
+        inFamilies(partners = listOf(BOB), selected = BOB)
+        coEvery { requestClockKeeper.sweep(any(), any()) } throws IllegalStateException("clocks unreadable")
+
+        val result = syncService.performFullSync()
+
+        assertTrue(result.isSuccess, "the sync went on without the clocks")
     }
 
     @Test

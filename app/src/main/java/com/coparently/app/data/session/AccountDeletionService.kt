@@ -6,6 +6,7 @@ import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.domain.notification.RequestClockScheduler
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,8 @@ class AccountDeletionService @Inject constructor(
     private val database: CoPlanlyDatabase,
     private val encryptedPreferences: EncryptedPreferences,
     private val fcmService: FcmService,
-    private val reminderScheduler: ReminderScheduler
+    private val reminderScheduler: ReminderScheduler,
+    private val requestClockScheduler: RequestClockScheduler
 ) {
 
     /**
@@ -77,6 +79,8 @@ class AccountDeletionService @Inject constructor(
         withContext(Dispatchers.IO) { database.clearAllTables() }
         // Nothing is left for a pending event reminder to announce.
         reminderScheduler.cancelAll()
+        // Nor for a request clock's step (phase 3a).
+        requestClockScheduler.cancelAll()
         encryptedPreferences.clear()
         // Kept by `clear()` on purpose (see `PreferenceKeys.SCHOOL_CONNECTION_PREFIX`); a deleted
         // account's school tokens have no business staying on the phone.

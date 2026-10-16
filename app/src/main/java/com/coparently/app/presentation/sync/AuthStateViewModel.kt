@@ -6,6 +6,7 @@ import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.school.SchoolConnectionStore
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.onboarding.OnboardingState
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
@@ -29,9 +30,9 @@ import javax.inject.Inject
  * view model so the start destination has one source that cannot disagree with itself.
  */
 @HiltViewModel
-// Seven collaborators, all injected: a Hilt graph edge list, and the last three are what sign-out
-// has to undo on this device (push token, school tokens, pending reminders) — the same reasoning
-// `PairingViewModel` uses.
+// Eight collaborators, all injected: a Hilt graph edge list, and the last four are what sign-out
+// has to undo on this device (push token, school tokens, pending reminders, pending request-clock
+// steps) — the same reasoning `PairingViewModel` uses.
 @Suppress("LongParameterList")
 class AuthStateViewModel @Inject constructor(
     private val firebaseAuthService: FirebaseAuthService,
@@ -40,7 +41,8 @@ class AuthStateViewModel @Inject constructor(
     private val petRepository: PetRepository,
     private val fcmService: FcmService,
     private val schoolConnections: SchoolConnectionStore,
-    private val reminderScheduler: ReminderScheduler
+    private val reminderScheduler: ReminderScheduler,
+    private val requestClockScheduler: RequestClockScheduler
 ) : ViewModel() {
 
     private val _isAuthenticated = MutableStateFlow<Boolean?>(null)
@@ -143,6 +145,9 @@ class AuthStateViewModel @Inject constructor(
             // armed, the account's events would go on announcing themselves on a signed-out phone.
             // Signing back in re-arms them as the sync delivers each event again.
             reminderScheduler.cancelAll()
+            // The request clocks' steps (phase 3a) too: a reminder or an end left armed would act
+            // for this account after it signed out. The next sync re-arms them when it signs in.
+            requestClockScheduler.cancelAll()
             firebaseAuthService.signOutCompletely()
             refreshAuthState()
         }
