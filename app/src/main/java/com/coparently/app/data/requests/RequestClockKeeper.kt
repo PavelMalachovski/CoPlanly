@@ -29,8 +29,8 @@ import javax.inject.Singleton
  * [sweep] runs on every full sync, which is how a phone that was not running learns of a clock, and
  * how the reminders still ahead, a deadline still ahead and the end are armed again after a job was
  * lost. A deadline that has already passed is not armed again: its job waits for a network rather
- * than failing offline, so it is lost only when every run fails online. [deliverSoon] runs while the app is open, for each snapshot
- * of the family's clocks the screens are listening to.
+ * than failing offline, so it is lost only when every run fails online. [deliverSoon] runs while
+ * the app is open, for each snapshot of the family's clocks the screens are listening to.
  *
  * Only a clock this phone can trust is acted on: its id must spell its own fields, as
  * [RequestDeadlineId] derives it, so the other parent cannot set or close this parent's request
