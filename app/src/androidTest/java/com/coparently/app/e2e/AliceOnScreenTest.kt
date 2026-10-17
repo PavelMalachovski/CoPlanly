@@ -162,6 +162,15 @@ abstract class AliceOnScreenTest {
     protected open val strings: Context
         get() = context
 
+    /**
+     * The display name of the parent on screen. The virtual tester (`com.coparently.app.qa`) names
+     * the parents after the testers' own family; every other test keeps Alice.
+     */
+    protected open val onScreenName: String = "Alice"
+
+    /** The display name of the co-parent beside her, Bob unless a subclass names them. */
+    protected open val coParentName: String = "Bob"
+
     /** Alice's uid, once `@Before` has signed her up. */
     protected lateinit var aliceUid: String
 
@@ -178,7 +187,7 @@ abstract class AliceOnScreenTest {
         step("before: sign up Alice")
         runBlocking {
             aliceUid = signUpAlice()
-            val phone = EmulatorParent.create(context, "Bob")
+            val phone = EmulatorParent.create(context, coParentName)
             coParent = phone
             step("before: pair")
             val invite = pairingRepository.createOrReuseInviteCode().getOrThrow()
@@ -309,7 +318,7 @@ abstract class AliceOnScreenTest {
         firebaseAuth.signOut()
         val email = "alice-${UUID.randomUUID()}@e2e.coplanly.test"
         val user = checkNotNull(firebaseAuth.createUserWithEmailAndPassword(email, PASSWORD).await().user)
-        user.updateProfile(UserProfileChangeRequest.Builder().setDisplayName("Alice").build()).await()
+        user.updateProfile(UserProfileChangeRequest.Builder().setDisplayName(onScreenName).build()).await()
         userRepository.ensureProfile()
         return user.uid
     }

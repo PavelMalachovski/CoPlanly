@@ -76,6 +76,15 @@ object EmulatorEnvironment {
      */
     const val UI_TOUR_VARIANT_ARGUMENT = "coplanlyUiTourVariant"
 
+    /**
+     * The instrumentation argument that asks for the virtual tester (`com.coparently.app.qa`):
+     * `-e coplanlyVirtualTester true`, on top of [HOST_ARGUMENT]. Only
+     * `.github/workflows/virtual-tester.yml` passes it (through
+     * `tools/virtual-tester/run-virtual-tester.sh`). The `e2e` job filters its own package, so the
+     * tester never runs there, and in the `instrumented` job it skips for want of a host.
+     */
+    const val VIRTUAL_TESTER_ARGUMENT = "coplanlyVirtualTester"
+
     private const val HTTP_OK = 200
     private const val HTTP_NOT_FOUND = 404
     private const val CONNECT_TIMEOUT_MS = 10_000
@@ -140,7 +149,14 @@ object EmulatorEnvironment {
      * with no result and no trace; this turns that into a failure that names the line.
      */
     fun testTimeout(): Timeout = Timeout.builder()
-        .withTimeout(if (uiTour) UI_TOUR_TIMEOUT_MINUTES else TEST_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+        .withTimeout(
+            when {
+                uiTour -> UI_TOUR_TIMEOUT_MINUTES
+                virtualTester -> VIRTUAL_TESTER_TIMEOUT_MINUTES
+                else -> TEST_TIMEOUT_MINUTES
+            },
+            TimeUnit.MINUTES
+        )
         .withLookingForStuckThread(true)
         .build()
 
@@ -148,6 +164,13 @@ object EmulatorEnvironment {
 
     /** One UI tour walks forty-odd screens after seeding a family; three minutes is one test's worth. */
     private const val UI_TOUR_TIMEOUT_MINUTES = 30L
+
+    /** One virtual tester scenario: a few minutes of steps, each with a screenshot and a sync. */
+    private const val VIRTUAL_TESTER_TIMEOUT_MINUTES = 10L
+
+    /** Whether this run was asked for the virtual tester ([VIRTUAL_TESTER_ARGUMENT]). */
+    val virtualTester: Boolean
+        get() = InstrumentationRegistry.getArguments().getString(VIRTUAL_TESTER_ARGUMENT) == "true"
 
     /** Whether this run was asked for the UI tour ([UI_TOUR_ARGUMENT]). */
     val uiTour: Boolean
@@ -198,6 +221,15 @@ object EmulatorEnvironment {
     fun assumeUiTour() {
         assumeEmulators()
         assumeTrue("No -e $UI_TOUR_ARGUMENT true: the UI tour runs only when asked for", uiTour)
+    }
+
+    /**
+     * Skips the calling test unless this run has the emulators **and** asked for the virtual
+     * tester, so no ordinary run spends its time walking the tester's scenarios.
+     */
+    fun assumeVirtualTester() {
+        assumeEmulators()
+        assumeTrue("No -e $VIRTUAL_TESTER_ARGUMENT true: the virtual tester runs only when asked for", virtualTester)
     }
 
     /** [host], for code that only runs after [assumeEmulators] has passed. */
