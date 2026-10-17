@@ -1,0 +1,12 @@
+[
+  { "area": "Smoke (four tabs)", "scenario": "Smoke" },
+  { "area": "Isolation of two families", "scenario": "Isolation" },
+  { "area": "Calendar", "scenario": "Calendar" },
+  { "area": "Day swaps and deadlines", "scenario": "Swap" },
+  { "area": "Custody proposals and seasonal layers", "scenario": "Custody" },
+  { "area": "Chat", "scenario": "Chat" },
+  { "area": "Expenses and the split", "scenario": "Expenses" },
+  { "area": "Receipts", "scenario": "Receipt" },
+  { "area": "Home and the family switcher", "scenario": "Home" },
+  { "area": "Exploratory pass", "scenario": "Exploration" }
+]
