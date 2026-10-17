@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.test.SemanticsMatcher
 import com.coparently.app.e2e.AliceOnScreenTest
 import com.coparently.app.e2e.EmulatorEnvironment
+import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.e2e.UiTourDriver
 import com.coparently.app.e2e.UiTourVariant
 import com.coparently.app.testing.exists
@@ -100,6 +101,19 @@ abstract class QaOnScreenTest : AliceOnScreenTest() {
         if (expectsListener) {
             step.findings += "needed a forced sync where a live listener should have delivered: $description"
         }
+    }
+
+    /**
+     * A third phone, [name], paired with the parent on screen through the real callable — the
+     * second family. Nothing runs on the screen's side: the open app learns of the family from its
+     * own pairing listener (item 39), and a scenario waits for that where it matters.
+     */
+    protected suspend fun pairThirdParent(name: String): EmulatorParent {
+        val parent = newParent(name)
+        val invite = pairingRepository.createOrReuseInviteCode().getOrThrow()
+        parent.pairingRepository.redeem(invite.code).getOrThrow()
+        parent.awaitPairedWith(aliceUid)
+        return parent
     }
 
     /** Runs the co-parent's sync: their side is the data layer, so how it arrived is not reported. */
