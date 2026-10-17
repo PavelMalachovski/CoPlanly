@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virtual tester</title>
+<style>
+:root { --bg:#f6f5fb; --fg:#1b1b21; --muted:#5e5d6b; --card:#fff; --line:#dcdbe6;
+  --pass:#1e7f4c; --fail:#b3261e; --skip:#7a5900; --known:#4f4cc9; }
+@media (prefers-color-scheme: dark) { :root { --bg:#131318; --fg:#e5e1e9; --muted:#a5a2b3; --card:#1f1f25;
+  --line:#3a3a44; --pass:#6fd39c; --fail:#ffb4ab; --skip:#f1c55a; --known:#c2c1ff; } }
+body { background:var(--bg); color:var(--fg); font:15px/1.45 system-ui, sans-serif; margin:0; padding:24px 16px 48px; }
+main { max-width:1100px; margin:0 auto; }
+h1 { margin:0 0 4px; } .meta { color:var(--muted); }
+.totals { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 20px; }
+.totals span { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:4px 12px; }
+.step { display:grid; grid-template-columns:1fr 180px; gap:12px; background:var(--card); border:1px solid var(--line);
+  border-left:4px solid var(--line); border-radius:12px; padding:12px; margin:8px 0; }
+.step.passed { border-left-color:var(--pass); } .step.failed { border-left-color:var(--fail); }
+.step.could_not_run { border-left-color:var(--skip); } .step.known { border-left-color:var(--known); }
+.step p { margin:4px 0; overflow-wrap:anywhere; } .label { color:var(--muted); display:inline-block; min-width:70px; }
+.badge { font-weight:600; } .step.failed .badge { color:var(--fail); } .step.passed .badge { color:var(--pass); }
+.step.could_not_run .badge { color:var(--skip); } .step.known .badge, .known { color:var(--known); }
+.step img { width:100%; border-radius:8px; border:1px solid var(--line); }
+.noshot { color:var(--muted); font-size:13px; } .findings { margin:4px 0; padding-left:18px; color:var(--skip); }
+@media (max-width:600px) { .step { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Virtual tester</h1>
+<p class="meta">claude/zuzana-testing-feedback-ntk5s5 @ 301875b</p>
+<div class="totals"><span>32 steps</span><span>11 passed</span><span>8 failed</span><span>13 could not run</span><span>0 known</span><span>4 with visual findings</span></div>
+<p class="meta">Not covered in this run: Smoke (four tabs), Day swaps and deadlines, Custody proposals and seasonal layers, Chat, Expenses and the split, Receipts, Home and the family switcher, Exploratory pass</p>
+<section><h2>Failed steps</h2>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Home's today card in the family with Igor</strong> <code>home_today</code></p>
+    <p><span class="label">Expected</span> &quot;Zubař Lena d51156&quot; is on Home; &quot;Plavání Max d51156&quot; from the family with Carol is not</p>
+    <p><span class="label">Actual</span> the other family's event &quot;Plavání Max d51156&quot; is shown on Home</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/002_Isolation_home_today.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/002_Isolation_home_today.png" alt="Screenshot after home_today"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Every push names the family it belongs to</strong> <code>pushes</code></p>
+    <p><span class="label">Expected</span> Igor's pushes to Zuzana name the family with Igor; Carol's name the family with Carol</p>
+    <p><span class="label">Actual</span> Igor's records_shared push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's pairing_accepted push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's chat_message push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's chat_message push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's chat_message push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Carol's records_shared push names family HqtaE4D3elyMYw66qHK7MY6VyZbH__SwCljHX6IArV5wTBKVOe1PGSdK3s; Car</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/007_Isolation_pushes.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/007_Isolation_pushes.png" alt="Screenshot after pushes"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Home's today card in the family with Carol</strong> <code>home_today</code></p>
+    <p><span class="label">Expected</span> &quot;Plavání Max efcd11&quot; is on Home; &quot;Zubař Lena efcd11&quot; from the family with Igor is not</p>
+    <p><span class="label">Actual</span> the other family's event &quot;Zubař Lena efcd11&quot; is shown on Home</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/010_Isolation_home_today.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/010_Isolation_home_today.png" alt="Screenshot after home_today"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Every push names the family it belongs to</strong> <code>pushes</code></p>
+    <p><span class="label">Expected</span> Igor's pushes to Zuzana name the family with Igor; Carol's name the family with Carol</p>
+    <p><span class="label">Actual</span> Igor's chat_message push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's chat_message push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's pairing_accepted push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's records_shared push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's chat_message push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Carol's chat_message push names family e3CAA75KB4pqMzoiOU6sx6JkPVg6__pPTU7lcpbMes4D0uvCxPhmzhOjWE; Carol</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/015_Isolation_pushes.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/015_Isolation_pushes.png" alt="Screenshot after pushes"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Create a one-off event through the form</strong> <code>one_off</code></p>
+    <p><span class="label">Expected</span> &quot;Rodičovská schůzka 28db24&quot; is in Day view and on Igor's phone</p>
+    <p><span class="label">Actual</span> Timed out waiting for 30000 ms</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/016_Calendar_one_off.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/016_Calendar_one_off.png" alt="Screenshot after one_off"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Zuzana renames it through the preview's Edit</strong> <code>edit_on_screen</code></p>
+    <p><span class="label">Expected</span> The new title is in Day view</p>
+    <p><span class="label">Actual</span> Failed to inject touch input.
+Can't retrieve node at index '0' of '(Text + InputText + EditableText contains 'Kroužek c7afe4' (ignoreCase: false) as substring) &amp;&amp; (OnClick is defined)'
+There are no existing nodes for that selector.
+</p>
+    <ul class="findings"><li>accessibility: node #1613 &quot;Časový blok 12:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1621 &quot;Časový blok 13:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1629 &quot;Časový blok 14:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1637 &quot;Časový blok 15:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1645 &quot;Časový blok 16:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1653 &quot;Časový blok 17:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1661 &quot;Časový blok 18:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1669 &quot;Časový blok 19:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1677 &quot;Časový blok 20:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1685 &quot;Časový blok 21:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1693 &quot;Časový blok 22:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x91px, under 48dp (126 px)</li><li>accessibility: node #1589 &quot;Časový blok 22:00 dne 17. 10.. Klepnutím přidáte událost.&quot;: 948x91px, under 48dp (126 px)</li></ul>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/022_Calendar_edit_on_screen.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/022_Calendar_edit_on_screen.png" alt="Screenshot after edit_on_screen"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Create a private event</strong> <code>private_not_on_server</code></p>
+    <p><span class="label">Expected</span> Only Zuzana has it: not on the server, not on Igor's phone</p>
+    <p><span class="label">Actual</span> Timed out waiting for 30000 ms</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/024_Calendar_private_not_on_server.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/024_Calendar_private_not_on_server.png" alt="Screenshot after private_not_on_server"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Delete it from the preview, then Undo</strong> <code>undo_restores</code></p>
+    <p><span class="label">Expected</span> The event is back</p>
+    <p><span class="label">Actual</span> Failed to inject touch input.
+Can't retrieve node at index '0' of '(Text + InputText + EditableText contains 'Narozeniny babičky c962de' (ignoreCase: false) as substring) &amp;&amp; (OnClick is defined)'
+There are no existing nodes for that selector.
+</p>
+    <ul class="findings"><li>accessibility: node #4001 &quot;Časový blok 12:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4009 &quot;Časový blok 13:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4017 &quot;Časový blok 14:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4025 &quot;Časový blok 15:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4033 &quot;Časový blok 16:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4041 &quot;Časový blok 17:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4049 &quot;Časový blok 18:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4057 &quot;Časový blok 19:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4065 &quot;Časový blok 20:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4073 &quot;Časový blok 21:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4081 &quot;Časový blok 22:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x91px, under 48dp (126 px)</li><li>accessibility: node #3977 &quot;Časový blok 22:00 dne 17. 10.. Klepnutím přidáte událost.&quot;: 948x91px, under 48dp (126 px)</li></ul>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/026_Calendar_undo_restores.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/026_Calendar_undo_restores.png" alt="Screenshot after undo_restores"></a>
+</article></section>
+<section><h2>light-cs-100</h2>
+<section><h3>Isolation</h3>
+<h4>familyOneOnScreen</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Pair Carol as a second co-parent and let each co-parent write in their own family</strong> <code>setup</code></p>
+    <p><span class="label">Expected</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    <p><span class="label">Actual</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/001_Isolation_setup.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/001_Isolation_setup.png" alt="Screenshot after setup"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Home's today card in the family with Igor</strong> <code>home_today</code></p>
+    <p><span class="label">Expected</span> &quot;Zubař Lena d51156&quot; is on Home; &quot;Plavání Max d51156&quot; from the family with Carol is not</p>
+    <p><span class="label">Actual</span> the other family's event &quot;Plavání Max d51156&quot; is shown on Home</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/002_Isolation_home_today.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/002_Isolation_home_today.png" alt="Screenshot after home_today"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The Expenses tab in the family with Igor</strong> <code>expenses_list</code></p>
+    <p><span class="label">Expected</span> &quot;Boty Lena d51156&quot; is listed; &quot;Kroužek Max d51156&quot; is not</p>
+    <p><span class="label">Actual</span> an earlier step failed: home_today</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/003_Isolation_expenses_list.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/003_Isolation_expenses_list.png" alt="Screenshot after expenses_list"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The Chat tab in the family with Igor</strong> <code>chat_thread</code></p>
+    <p><span class="label">Expected</span> Igor's message is in the thread; Carol's is not</p>
+    <p><span class="label">Actual</span> an earlier step failed: home_today</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/004_Isolation_chat_thread.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/004_Isolation_chat_thread.png" alt="Screenshot after chat_thread"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The switcher says the other family has something new</strong> <code>switcher_dot</code></p>
+    <p><span class="label">Expected</span> Home's family chip carries the dot for new messages in another family</p>
+    <p><span class="label">Actual</span> an earlier step failed: home_today</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/005_Isolation_switcher_dot.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/005_Isolation_switcher_dot.png" alt="Screenshot after switcher_dot"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>What reaches Igor's and Carol's phones after their syncs</strong> <code>coparents_phones</code></p>
+    <p><span class="label">Expected</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    <p><span class="label">Actual</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/006_Isolation_coparents_phones.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/006_Isolation_coparents_phones.png" alt="Screenshot after coparents_phones"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Every push names the family it belongs to</strong> <code>pushes</code></p>
+    <p><span class="label">Expected</span> Igor's pushes to Zuzana name the family with Igor; Carol's name the family with Carol</p>
+    <p><span class="label">Actual</span> Igor's records_shared push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's pairing_accepted push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's chat_message push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's chat_message push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Igor's chat_message push names family HOGlDdcrbjb18cXBVzW0SzCDCP5v__HqtaE4D3elyMYw66qHK7MY6VyZbH; Carol's records_shared push names family HqtaE4D3elyMYw66qHK7MY6VyZbH__SwCljHX6IArV5wTBKVOe1PGSdK3s; Car</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/007_Isolation_pushes.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/007_Isolation_pushes.png" alt="Screenshot after pushes"></a>
+</article>
+<h4>familyTwoOnScreen</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Pair Carol as a second co-parent and let each co-parent write in their own family</strong> <code>setup</code></p>
+    <p><span class="label">Expected</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    <p><span class="label">Actual</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/008_Isolation_setup.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/008_Isolation_setup.png" alt="Screenshot after setup"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Switch to the family with Carol</strong> <code>switch</code></p>
+    <p><span class="label">Expected</span> The switcher lists Carol's family and the app shows it</p>
+    <p><span class="label">Actual</span> The switcher lists Carol's family and the app shows it</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/009_Isolation_switch.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/009_Isolation_switch.png" alt="Screenshot after switch"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Home's today card in the family with Carol</strong> <code>home_today</code></p>
+    <p><span class="label">Expected</span> &quot;Plavání Max efcd11&quot; is on Home; &quot;Zubař Lena efcd11&quot; from the family with Igor is not</p>
+    <p><span class="label">Actual</span> the other family's event &quot;Zubař Lena efcd11&quot; is shown on Home</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/010_Isolation_home_today.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/010_Isolation_home_today.png" alt="Screenshot after home_today"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The Expenses tab in the family with Carol</strong> <code>expenses_list</code></p>
+    <p><span class="label">Expected</span> &quot;Kroužek Max efcd11&quot; is listed; &quot;Boty Lena efcd11&quot; is not</p>
+    <p><span class="label">Actual</span> an earlier step failed: home_today</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/011_Isolation_expenses_list.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/011_Isolation_expenses_list.png" alt="Screenshot after expenses_list"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The Chat tab in the family with Carol</strong> <code>chat_thread</code></p>
+    <p><span class="label">Expected</span> Carol's message is in the thread; Igor's is not</p>
+    <p><span class="label">Actual</span> an earlier step failed: home_today</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/012_Isolation_chat_thread.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/012_Isolation_chat_thread.png" alt="Screenshot after chat_thread"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The switcher says the other family has something new</strong> <code>switcher_dot</code></p>
+    <p><span class="label">Expected</span> Home's family chip carries the dot for new messages in another family</p>
+    <p><span class="label">Actual</span> an earlier step failed: home_today</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/013_Isolation_switcher_dot.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/013_Isolation_switcher_dot.png" alt="Screenshot after switcher_dot"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>What reaches Igor's and Carol's phones after their syncs</strong> <code>coparents_phones</code></p>
+    <p><span class="label">Expected</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    <p><span class="label">Actual</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/014_Isolation_coparents_phones.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/014_Isolation_coparents_phones.png" alt="Screenshot after coparents_phones"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Every push names the family it belongs to</strong> <code>pushes</code></p>
+    <p><span class="label">Expected</span> Igor's pushes to Zuzana name the family with Igor; Carol's name the family with Carol</p>
+    <p><span class="label">Actual</span> Igor's chat_message push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's chat_message push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's pairing_accepted push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's records_shared push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Igor's chat_message push names family 3JJjVkTzXjV8esV7aa2WgC1f5uIP__e3CAA75KB4pqMzoiOU6sx6JkPVg6; Carol's chat_message push names family e3CAA75KB4pqMzoiOU6sx6JkPVg6__pPTU7lcpbMes4D0uvCxPhmzhOjWE; Carol</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/015_Isolation_pushes.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/015_Isolation_pushes.png" alt="Screenshot after pushes"></a>
+</article></section>
+<section><h3>Calendar</h3>
+<h4>createKinds</h4>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Create a one-off event through the form</strong> <code>one_off</code></p>
+    <p><span class="label">Expected</span> &quot;Rodičovská schůzka 28db24&quot; is in Day view and on Igor's phone</p>
+    <p><span class="label">Actual</span> Timed out waiting for 30000 ms</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/016_Calendar_one_off.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/016_Calendar_one_off.png" alt="Screenshot after one_off"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>Create a weekly event</strong> <code>weekly</code></p>
+    <p><span class="label">Expected</span> &quot;Plavání Lena 28db24&quot; repeats in next week's Week view and is one row on Igor's phone</p>
+    <p><span class="label">Actual</span> an earlier step failed: one_off</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/017_Calendar_weekly.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/017_Calendar_weekly.png" alt="Screenshot after weekly"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>Create an event with a reminder an hour before</strong> <code>reminder</code></p>
+    <p><span class="label">Expected</span> The reminder is stored and scheduled</p>
+    <p><span class="label">Actual</span> an earlier step failed: one_off</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/018_Calendar_reminder.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/018_Calendar_reminder.png" alt="Screenshot after reminder"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>Create an all-day event</strong> <code>all_day</code></p>
+    <p><span class="label">Expected</span> The form offers an all-day option</p>
+    <p><span class="label">Actual</span> an earlier step failed: one_off</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/019_Calendar_all_day.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/019_Calendar_all_day.png" alt="Screenshot after all_day"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>Create an event about Lena, with two children in the family</strong> <code>about_lena</code></p>
+    <p><span class="label">Expected</span> The event names Lena and Igor sees that</p>
+    <p><span class="label">Actual</span> an earlier step failed: one_off</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/020_Calendar_about_lena.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/020_Calendar_about_lena.png" alt="Screenshot after about_lena"></a>
+</article>
+<h4>editPreserves</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Igor adds an event for today</strong> <code>seed</code></p>
+    <p><span class="label">Expected</span> It reaches Zuzana's Day view</p>
+    <p><span class="label">Actual</span> It reaches Zuzana's Day view</p>
+    <p class="meta">Delivered by a forced sync</p><ul class="findings"><li>accessibility: node #1613 &quot;Časový blok 12:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1621 &quot;Časový blok 13:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1629 &quot;Časový blok 14:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1637 &quot;Časový blok 15:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1645 &quot;Časový blok 16:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1653 &quot;Časový blok 17:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1661 &quot;Časový blok 18:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1669 &quot;Časový blok 19:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1677 &quot;Časový blok 20:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1685 &quot;Časový blok 21:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1693 &quot;Časový blok 22:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x91px, under 48dp (126 px)</li><li>accessibility: node #1589 &quot;Časový blok 22:00 dne 17. 10.. Klepnutím přidáte událost.&quot;: 948x91px, under 48dp (126 px)</li></ul>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/021_Calendar_seed.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/021_Calendar_seed.png" alt="Screenshot after seed"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Zuzana renames it through the preview's Edit</strong> <code>edit_on_screen</code></p>
+    <p><span class="label">Expected</span> The new title is in Day view</p>
+    <p><span class="label">Actual</span> Failed to inject touch input.
+Can't retrieve node at index '0' of '(Text + InputText + EditableText contains 'Kroužek c7afe4' (ignoreCase: false) as substring) &amp;&amp; (OnClick is defined)'
+There are no existing nodes for that selector.
+</p>
+    <ul class="findings"><li>accessibility: node #1613 &quot;Časový blok 12:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1621 &quot;Časový blok 13:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1629 &quot;Časový blok 14:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1637 &quot;Časový blok 15:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1645 &quot;Časový blok 16:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1653 &quot;Časový blok 17:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1661 &quot;Časový blok 18:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1669 &quot;Časový blok 19:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1677 &quot;Časový blok 20:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1685 &quot;Časový blok 21:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #1693 &quot;Časový blok 22:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x91px, under 48dp (126 px)</li><li>accessibility: node #1589 &quot;Časový blok 22:00 dne 17. 10.. Klepnutím přidáte událost.&quot;: 948x91px, under 48dp (126 px)</li></ul>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/022_Calendar_edit_on_screen.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/022_Calendar_edit_on_screen.png" alt="Screenshot after edit_on_screen"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>The edit keeps what the form does not show</strong> <code>edit_keeps_fields</code></p>
+    <p><span class="label">Expected</span> Audience, creator and family unchanged on the server; Igor sees the new title</p>
+    <p><span class="label">Actual</span> an earlier step failed: edit_on_screen</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/023_Calendar_edit_keeps_fields.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/023_Calendar_edit_keeps_fields.png" alt="Screenshot after edit_keeps_fields"></a>
+</article>
+<h4>privateEvent</h4>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Create a private event</strong> <code>private_not_on_server</code></p>
+    <p><span class="label">Expected</span> Only Zuzana has it: not on the server, not on Igor's phone</p>
+    <p><span class="label">Actual</span> Timed out waiting for 30000 ms</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/024_Calendar_private_not_on_server.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/024_Calendar_private_not_on_server.png" alt="Screenshot after private_not_on_server"></a>
+</article>
+<h4>deleteUndo</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Zuzana creates an event</strong> <code>seed</code></p>
+    <p><span class="label">Expected</span> It is in Day view</p>
+    <p><span class="label">Actual</span> It is in Day view</p>
+    <ul class="findings"><li>accessibility: node #4001 &quot;Časový blok 12:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4009 &quot;Časový blok 13:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4017 &quot;Časový blok 14:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4025 &quot;Časový blok 15:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4033 &quot;Časový blok 16:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4041 &quot;Časový blok 17:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4049 &quot;Časový blok 18:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4057 &quot;Časový blok 19:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4065 &quot;Časový blok 20:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4073 &quot;Časový blok 21:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4081 &quot;Časový blok 22:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x91px, under 48dp (126 px)</li><li>accessibility: node #3977 &quot;Časový blok 22:00 dne 17. 10.. Klepnutím přidáte událost.&quot;: 948x91px, under 48dp (126 px)</li></ul>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/025_Calendar_seed.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/025_Calendar_seed.png" alt="Screenshot after seed"></a>
+</article>
+<article class="step failed">
+  <div class="text">
+    <p><span class="badge">Failed</span> <strong>Delete it from the preview, then Undo</strong> <code>undo_restores</code></p>
+    <p><span class="label">Expected</span> The event is back</p>
+    <p><span class="label">Actual</span> Failed to inject touch input.
+Can't retrieve node at index '0' of '(Text + InputText + EditableText contains 'Narozeniny babičky c962de' (ignoreCase: false) as substring) &amp;&amp; (OnClick is defined)'
+There are no existing nodes for that selector.
+</p>
+    <ul class="findings"><li>accessibility: node #4001 &quot;Časový blok 12:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4009 &quot;Časový blok 13:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4017 &quot;Časový blok 14:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4025 &quot;Časový blok 15:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4033 &quot;Časový blok 16:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4041 &quot;Časový blok 17:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4049 &quot;Časový blok 18:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4057 &quot;Časový blok 19:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4065 &quot;Časový blok 20:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4073 &quot;Časový blok 21:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x157px, under 48dp (126 px)</li><li>accessibility: node #4081 &quot;Časový blok 22:00 dne 16. 10.. Klepnutím přidáte událost.&quot;: 42x91px, under 48dp (126 px)</li><li>accessibility: node #3977 &quot;Časový blok 22:00 dne 17. 10.. Klepnutím přidáte událost.&quot;: 948x91px, under 48dp (126 px)</li></ul>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/026_Calendar_undo_restores.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/026_Calendar_undo_restores.png" alt="Screenshot after undo_restores"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>Delete it again and let Undo lapse</strong> <code>delete_is_tombstone</code></p>
+    <p><span class="label">Expected</span> The server keeps a tombstone Igor's phone honours</p>
+    <p><span class="label">Actual</span> an earlier step failed: undo_restores</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/027_Calendar_delete_is_tombstone.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/027_Calendar_delete_is_tombstone.png" alt="Screenshot after delete_is_tombstone"></a>
+</article>
+<h4>navigation</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Switch Month, Week and Day</strong> <code>views</code></p>
+    <p><span class="label">Expected</span> Each view opens from the title's menu</p>
+    <p><span class="label">Actual</span> Each view opens from the title's menu</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/028_Calendar_views.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/028_Calendar_views.png" alt="Screenshot after views"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Page to next month</strong> <code>month_paging</code></p>
+    <p><span class="label">Expected</span> The grid pages</p>
+    <p><span class="label">Actual</span> The grid pages</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/029_Calendar_month_paging.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/029_Calendar_month_paging.png" alt="Screenshot after month_paging"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Press Today</strong> <code>today_button</code></p>
+    <p><span class="label">Expected</span> The grid returns to this month</p>
+    <p><span class="label">Actual</span> The grid returns to this month</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/030_Calendar_today_button.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/030_Calendar_today_button.png" alt="Screenshot after today_button"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Open Filters</strong> <code>filters_sheet</code></p>
+    <p><span class="label">Expected</span> The filter sheet opens</p>
+    <p><span class="label">Actual</span> The filter sheet opens</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/031_Calendar_filters_sheet.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/031_Calendar_filters_sheet.png" alt="Screenshot after filters_sheet"></a>
+</article>
+<article class="step could_not_run">
+  <div class="text">
+    <p><span class="badge">Could not run</span> <strong>Drag an event to another hour in Day view</strong> <code>drag_reschedule</code></p>
+    <p><span class="label">Expected</span> It moves</p>
+    <p><span class="label">Actual</span> dragging is not automated yet; the device checklist keeps it</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/032_Calendar_drag_reschedule.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/032_Calendar_drag_reschedule.png" alt="Screenshot after drag_reschedule"></a>
+</article></section></section>
+</main>
+</body>
+</html>

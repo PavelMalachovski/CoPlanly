@@ -1,0 +1,133 @@
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stream=
+com.coparently.app.qa.CalendarScenarioTest:
+INSTRUMENTATION_STATUS: test=createKinds
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Calendar.createKinds: failed steps one_off
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: stream=
+Error in createKinds(com.coparently.app.qa.CalendarScenarioTest):
+java.lang.AssertionError: Calendar.createKinds: failed steps one_off
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: test=createKinds
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=editPreserves
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Calendar.editPreserves: failed steps edit_on_screen
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: stream=
+Error in editPreserves(com.coparently.app.qa.CalendarScenarioTest):
+java.lang.AssertionError: Calendar.editPreserves: failed steps edit_on_screen
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: test=editPreserves
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=privateEvent
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Calendar.privateEvent: failed steps private_not_on_server
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: stream=
+Error in privateEvent(com.coparently.app.qa.CalendarScenarioTest):
+java.lang.AssertionError: Calendar.privateEvent: failed steps private_not_on_server
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: test=privateEvent
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=deleteUndo
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Calendar.deleteUndo: failed steps undo_restores
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: stream=
+Error in deleteUndo(com.coparently.app.qa.CalendarScenarioTest):
+java.lang.AssertionError: Calendar.deleteUndo: failed steps undo_restores
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+INSTRUMENTATION_STATUS: test=deleteUndo
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=5
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=navigation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.coparently.app.qa.CalendarScenarioTest
+INSTRUMENTATION_STATUS: current=5
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=5
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=navigation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 138,397
+There were 4 failures:
+1) createKinds(com.coparently.app.qa.CalendarScenarioTest)
+java.lang.AssertionError: Calendar.createKinds: failed steps one_off
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+2) editPreserves(com.coparently.app.qa.CalendarScenarioTest)
+java.lang.AssertionError: Calendar.editPreserves: failed steps edit_on_screen
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+3) privateEvent(com.coparently.app.qa.CalendarScenarioTest)
+java.lang.AssertionError: Calendar.privateEvent: failed steps private_not_on_server
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+4) deleteUndo(com.coparently.app.qa.CalendarScenarioTest)
+java.lang.AssertionError: Calendar.deleteUndo: failed steps undo_restores
+	at com.coparently.app.qa.QaReport.finish(QaReport.kt:131)
+	at com.coparently.app.qa.QaOnScreenTest.closeReport(QaOnScreenTest.kt:87)
+
+FAILURES!!!
+Tests run: 5,  Failures: 4
+
+
+INSTRUMENTATION_CODE: -1
