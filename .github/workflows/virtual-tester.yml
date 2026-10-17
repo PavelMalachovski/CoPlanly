@@ -1,0 +1,223 @@
+# The virtual tester: the real app walked the way a human tester walks it — Home, Calendar, Chat,
+# Expenses, receipts, two isolated families and a random-tap pass — with every step asserted,
+# photographed and written into a tester's report. Design:
+# docs/superpowers/specs/2026-10-17-virtual-tester-design.md.
+#
+# **What it does.** Builds the debug app and test APKs, boots an API 30 emulator with a Pixel 6
+# screen, starts the Firebase emulators, and runs the scenario classes of
+# `app/src/androidTest/java/com/coparently/app/qa/` through `tools/virtual-tester/run-virtual-tester.sh`
+# — one `am instrument` per class, so a crash costs one scenario. Each scenario signs Zuzana up on
+# the Auth emulator, pairs her with Igor through the real callable, and drives the app's own
+# screens while Igor (and, for isolation, Carol) acts through the production data layer.
+#
+# **Where the results land.** A single fresh commit on `virtual-tester/<source branch, "/" → "-">`
+# — `index.html` (the report), `results.json`, `summary.md`, `virtual-tester/<variant>/shots/` and
+# the logs — force-pushed; the same files are the `virtual-tester` artifact; the job summary lists
+# the failed steps. The job is green when the run finished, failed steps included: the verdict is
+# the report, not the colour. It is red when the run could not start or recorded no step.
+#
+#   git fetch origin virtual-tester/claude-my-branch && git checkout FETCH_HEAD -- index.html virtual-tester
+#
+# **Not part of CI.** Nothing gates on it and it never writes to the branch it ran for. Two ways to
+# ask for it, as with ui-tour.yml:
+#
+#   * `workflow_dispatch` — once this file is on the default branch.
+#   * touching `.github/virtual-tester-request` — works on any branch: commit any change to it.
+#
+# Two optional lines in `.github/virtual-tester-request` (the last of each wins):
+#
+#   * `variants: <v1> <v2> …` — default `light-cs-100`, the testers' own setting; same grammar as
+#     the UI tour's (`dark-ru-130`, `light-en-100-wide`, …);
+#   * `classes: <Name>ScenarioTest …` — run only those scenarios; default every scenario.
+#
+# It cannot loop: its own push goes to `virtual-tester/**`, which is excluded below.
+name: Virtual tester
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - 'virtual-tester/**'
+    paths:
+      - '.github/virtual-tester-request'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: virtual-tester-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tester:
+    name: Virtual tester
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the request
+        id: request
+        run: |
+          file=.github/virtual-tester-request
+          variants="$(grep -E '^variants:' "$file" 2>/dev/null | tail -1 | sed -E 's/^variants:[[:space:]]*//' || true)"
+          variants="${variants:-light-cs-100}"
+          for v in $variants; do
+            if ! [[ "$v" =~ ^(light|dark)-[a-z]{2}-[0-9]{2,3}(-wide)?$ ]]; then
+              echo "::error::Not a variant: $v"
+              exit 1
+            fi
+          done
+          classes="$(grep -E '^classes:' "$file" 2>/dev/null | tail -1 | sed -E 's/^classes:[[:space:]]*//' || true)"
+          for c in $classes; do
+            if ! [[ "$c" =~ ^[A-Z][A-Za-z]+ScenarioTest$ ]]; then
+              echo "::error::Not a scenario class: $c"
+              exit 1
+            fi
+          done
+          echo "variants=$variants" >> "$GITHUB_OUTPUT"
+          echo "classes=$classes" >> "$GITHUB_OUTPUT"
+          echo "Variants: $variants; classes: ${classes:-all}"
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            firestore-tests/package-lock.json
+
+      - name: Install the Cloud Functions and the Firebase CLI
+        run: |
+          npm ci --prefix functions
+          npm ci --prefix firestore-tests
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # Built while the emulator boots (tools/ci-background-build.sh); the tour script's first
+      # line waits for it.
+      - name: Start building the APKs in the background
+        run: bash tools/ci-background-build.sh start
+
+      - name: Cache the Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Decided by the status file, as in ui-tour.yml: the script stops the emulator itself.
+      - name: Run the virtual tester
+        id: tester
+        timeout-minutes: 130
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          VIRTUAL_TESTER_VARIANTS: ${{ steps.request.outputs.variants }}
+          VIRTUAL_TESTER_CLASSES: ${{ steps.request.outputs.classes }}
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          STATUS_FILE: ${{ runner.temp }}/virtual-tester-status
+          VIRTUAL_TESTER_OUT: build/virtual-tester-site
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/ci-background-build.sh wait && bash tools/virtual-tester/run-virtual-tester.sh; status=$?; echo "$status" > "$STATUS_FILE"; bash tools/stop-emulator.sh; exit $status
+
+      # The build ran in the background; when it failed, its log is what says why.
+      - name: Show the build log on a failed build
+        if: always()
+        run: |
+          log="${RUNNER_TEMP}/background-build/build.log"
+          status_file="${RUNNER_TEMP}/background-build/status"
+          if [ -f "$status_file" ] && [ "$(cat "$status_file")" != "0" ]; then
+            echo "::error::The APK build failed"
+            grep -E "^e: |error:|FAILED|What went wrong" -A3 "$log" | head -n 80 || tail -n 80 "$log"
+          fi
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: virtual-tester
+          path: build/virtual-tester-site/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish to the virtual-tester branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          VIRTUAL_TESTER_VARIANTS: ${{ steps.request.outputs.variants }}
+        run: |
+          set -euo pipefail
+          site=build/virtual-tester-site
+          mkdir -p "$site/virtual-tester"
+          branch="virtual-tester/${SOURCE_REF//\//-}"
+          short="${SOURCE_SHA:0:7}"
+          export VIRTUAL_TESTER_SOURCE="$SOURCE_REF @ $short"
+          # shellcheck disable=SC2086 # one argument per variant
+          node tools/virtual-tester/report.js "$site" $VIRTUAL_TESTER_VARIANTS
+          publish="$RUNNER_TEMP/virtual-tester-publish"
+          rm -rf "$publish"
+          mkdir -p "$publish"
+          cp -R "$site/virtual-tester" "$site/index.html" "$site/results.json" "$site/summary.md" "$publish/"
+          if [ -d "$site/logs" ]; then cp -R "$site/logs" "$publish/"; fi
+          cd "$publish"
+          git init -q
+          git checkout -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "chore: virtual tester run of $SOURCE_REF at $short"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$branch"
+          {
+            cat summary.md
+            echo ""
+            echo "Report: branch \`$branch\` — \`git fetch origin $branch\`, then open \`index.html\`; or the \`virtual-tester\` artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: The run finished
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/virtual-tester-status
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The run did not finish: the emulator step died or timed out first. Whatever it recorded was still published."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          if [ "$status" != "0" ]; then
+            echo "::error::The tester script exited with status $status — see the step's log and the report's logs/."
+            exit 1
+          fi
