@@ -24,9 +24,12 @@ private val anyText = SemanticsMatcher("a node with text") { it.config.contains(
  * (CLAUDE.md design item 15 and the accessibility sweep):
  *
  * - `accessibility: …` — an icon-only control with no name or under 48 dp;
- * - `money cut off: "…"` — an amount, a total or a sentence holding one that is ellipsized or
- *   overflows its box;
- * - `text clipped: "…"` — any other text that overflows its box.
+ * - `money cut off: "…"` — an amount, a total or a sentence holding one that ends in an ellipsis.
+ *
+ * Only an ellipsis is read. `TextLayoutResult.hasVisualOverflow`, which the layout the semantics
+ * action hands back reports for every text on a screen (the first run flagged "Domů" in the tab
+ * bar), says nothing a tester could act on; a title may end in an ellipsis by design, an amount
+ * may not (CLAUDE.md design item 15).
  *
  * A finding never changes a step's verdict; the report lists it beside the step.
  */
@@ -35,13 +38,8 @@ internal fun ComposeTestRule.visualFindings(): List<String> {
     onAllNodes(anyText).fetchSemanticsNodes(atLeastOneRootRequired = false).forEach { node ->
         val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text }.orEmpty()
         val layout = node.textLayout() ?: return@forEach
-        val cut = layout.hasVisualOverflow || (0 until layout.lineCount).any { layout.isLineEllipsized(it) }
-        if (!cut) return@forEach
-        findings += if (moneyText.containsMatchIn(text)) {
-            "money cut off: \"$text\""
-        } else {
-            "text clipped: \"${text.take(CLIPPED_PREFIX)}\""
-        }
+        val ellipsized = (0 until layout.lineCount).any { layout.isLineEllipsized(it) }
+        if (ellipsized && moneyText.containsMatchIn(text)) findings += "money cut off: \"$text\""
     }
     return findings.distinct()
 }
@@ -53,4 +51,3 @@ private fun SemanticsNode.textLayout(): TextLayoutResult? {
     return if (action.action?.invoke(results) == true) results.firstOrNull() else null
 }
 
-private const val CLIPPED_PREFIX = 40

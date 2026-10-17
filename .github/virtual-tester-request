@@ -4,5 +4,5 @@
 #   variants: light-cs-100 dark-ru-130     (default: light-cs-100)
 #   classes: SmokeScenarioTest             (default: every scenario)
 #
-# Run 1: the smoke scenario, to prove the harness.
-classes: SmokeScenarioTest
+# Run 2: isolation and the calendar.
+classes: IsolationScenarioTest CalendarScenarioTest
