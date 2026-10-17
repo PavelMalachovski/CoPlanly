@@ -30,7 +30,7 @@ androidTest dependency), ML Kit (already in the app), Node 22 (no dependencies),
 - A `classes:` line in the request file runs only those simple class names from `com.coparently.app.qa`.
 - The on-screen parent and the co-parent are **Zuzana** and **Igor** (their daughter **Lena**); the second family is Zuzana and **Carol** (her son **Max**). Titles the family types are Czech.
 - No `google-services.json`. Every tester class skips itself unless `-e coplanlyEmulatorHost` and `-e coplanlyVirtualTester true` are both given.
-- No production code changes except none at all; test hooks live in androidTest. (`AliceOnScreenTest` and `PausedClock.kt` are androidTest.)
+- No production code changes; every hook lives in androidTest (`AliceOnScreenTest` and `PausedClock.kt` are androidTest).
 - Receipt recognition stays on the device (CLAUDE.md item 10); receipt fixtures name fictional shops only.
 - Every wait bounded; the Compose clock paused as `AliceOnScreenTest` does; per-test timeout 10 minutes under the tester flag.
 - Code, comments, workflow and report prose in English; Conventional Commits; commit trailer as the session reminder gives.
@@ -39,7 +39,7 @@ androidTest dependency), ML Kit (already in the app), Node 22 (no dependencies),
 ## Review Focus
 
 1. **A step that passes on a stale screen** — a title already on screen from earlier satisfies the matcher. Every typed title and message carries `shortId()`; pinned in Task 1's `QaReportTest`-equivalent smoke and in each scenario's create steps.
-2. **Czech number formatting** — "1 290 Kč" uses a no-break or narrow no-break space; a money matcher or the ellipsis check that only knows an ASCII space misses it. Pinned in Task 2 (`moneyText` regex cases).
+2. **Czech number formatting** — "1 290 Kč" uses a no-break or narrow no-break space; a money matcher or the ellipsis check that only knows an ASCII space misses it. Pinned in Task 1 (the smoke scenario's `money_pattern` step).
 3. **A crash mid-run losing the report** — the process dies and nothing is written. Steps are appended and flushed one per line, the runner pulls after every class, and `report.js` reads a truncated last line without failing. Pinned in Task 2 (`readSteps tolerates a truncated last line`).
 4. **The random-tap pass doing something destructive** — signing out, deleting the account, unpairing, deleting a family. A label deny-list, pinned in Task 11's unit check of `ExplorationPolicy`.
 5. **Deadline steps landing in quiet hours** — reminders are suppressed at night on the runner's clock, so the "no answer" path must not wait for a reminder. Task 6 asserts only the deadline notice, last chance and end, never a reminder.
@@ -99,7 +99,7 @@ CLAUDE.md, docs/ROADMAP.md
   - `enum class QaVerdict { PASSED, FAILED, COULD_NOT_RUN }` (wire names lowercase snake: `passed`, `failed`, `could_not_run`).
   - `enum class QaDelivery { LISTENER, FORCED_SYNC }` (wire `listener`, `forced_sync`).
   - `class QaStep { var actual: String; var delivery: QaDelivery?; val findings: MutableList<String>; fun couldNotRun(reason: String): Nothing }`.
-  - `class QaReport(rule: ComposeTestRule, variant: UiTourVariant, scenario: String)` with `fun begin(method: String)`, `fun step(id: String, title: String, expected: String, block: QaStep.() -> Unit)`, `fun finish()` (throws `AssertionError` naming the failed step ids when any failed).
+  - `class QaReport(rule: ComposeTestRule, variant: UiTourVariant, scenario: String)` with `fun begin(method: String)`, `fun step(id: String, title: String, expected: String, independent: Boolean = false, block: QaStep.() -> Unit)`, `fun finish()` (throws `AssertionError` naming the failed step ids when any failed).
   - `fun ComposeTestRule.visualFindings(): List<String>`.
   - `abstract class QaOnScreenTest : AliceOnScreenTest` with `report: QaReport`, `driver: UiTourDriver`, `variant: UiTourVariant`, `fun awaitDelivered(step: QaStep, description: String, matcher: SemanticsMatcher, expectsListener: Boolean)`, `fun coParentSync()`.
 
@@ -115,7 +115,7 @@ CLAUDE.md, docs/ROADMAP.md
 - [ ] **Step 6: `QaReport.kt`.** Behaviour, each a requirement:
   - Writes to `<filesDir>/virtual-tester/<variant>/steps.jsonl` and `shots/NNN_<scenario>_<id>.png` (full-device `UiAutomation.takeScreenshot()`, as `UiTourCamera.save`). One JSON object per line, written and flushed before the next step starts. Keys: `variant, scenario, method, id, title, expected, actual, verdict, delivery, screenshot, findings, startedAtMillis, durationMs`.
   - `step` runs `block`; normal return → `PASSED`; `QaCouldNotRun` (thrown by `couldNotRun`) → `COULD_NOT_RUN` with the reason as `actual`; any other `Throwable` → `FAILED` with `actual` = its message (or class name). `actual` defaults to `expected` on a pass when the block set nothing.
-  - After a `FAILED` step, every later step of the same method is recorded `COULD_NOT_RUN` with `actual = "an earlier step failed: <id>"` and its block is not run. `begin(method)` resets this.
+  - After a `FAILED` step, every later step of the same method is recorded `COULD_NOT_RUN` with `actual = "an earlier step failed: <id>"` and its block is not run — unless the step is `independent` (a check that does not build on the steps before it, such as one recognised receipt field); an `independent` step's own failure does not block later steps either. `begin(method)` resets this.
   - After every step (any verdict): `composeTestRule.settle()`, screenshot, `findings += visualFindings()`; a screenshot failure is a finding, never a verdict change.
   - Logs `step("qa: <scenario>/<id> <verdict>")` through `EmulatorEnvironment.step`.
 - [ ] **Step 7: `QaOnScreenTest.kt`.**
@@ -125,7 +125,7 @@ CLAUDE.md, docs/ROADMAP.md
   - `awaitDelivered`: when `expectsListener`, pump up to `LISTENER_WAIT_MS = 30_000` for `matcher` → `delivery = LISTENER`. Otherwise, or on timeout, `syncService.performFullSync()` then pump up to `30_000` → `delivery = FORCED_SYNC`; when a listener was expected, add the finding `"needed a forced sync where a live listener should have delivered: <description>"`. Never found → `AssertionError("<description> did not appear")`.
   - `coParentSync()` runs `bob.syncService.performFullSync()` (the co-parent side is the data layer; its delivery is not reported).
   - KDoc states which surfaces expect a listener (chat, custody document incl. swaps and proposals, change requests, request clocks, the pairing/family list) and which arrive by sync or push in production (events, expenses, children, pets).
-- [ ] **Step 8: `SmokeScenarioTest`.** One method `fourTabsOpen`: steps `home`, `calendar`, `chat`, `expenses`, each opening the tab and expecting its top-bar title (the tab's own label string) on screen.
+- [ ] **Step 8: `SmokeScenarioTest`.** One method `fourTabsOpen`: steps `home`, `calendar`, `chat`, `expenses`, each opening the tab and expecting its top-bar title (the tab's own label string) on screen; then a step `money_pattern` asserting `moneyText` finds an amount in `"1\u00A0290 Kč"`, `"12,50 €"` and `"1\u202F290,00 CZK"` and nothing in `"Lena 2026"`.
 - [ ] **Step 9: Verify it compiles and nothing else moved.**
   Run: `./gradlew assembleDebugAndroidTest detekt > /tmp/t1.log 2>&1; tail -5 /tmp/t1.log`
   Expected: `BUILD SUCCESSFUL`.
@@ -237,7 +237,7 @@ Delivery: events arrive by sync — `awaitDelivered(…, expectsListener = false
 - `unreadBadgeAsIgor`: Zuzana (data) sends; `badge_counts` (tab badge 1), open Chat, `badge_clears`.
 - `search`: Igor sends "Máme čas v pátek?"; search "cas" → `diacritics_ignored`.
 - `holdUndo`: send then Undo within the pause → `undo_keeps_unsent` (Igor never receives it; the draft holds the text).
-- `attachment`: `Intents.init()`; stub the picker (`intending(not(isInternal())).respondWith(...)` returning a content URI of a PDF copied from test assets into the app's cache via a `FileProvider`-less `file://` → use the androidTest context's assets copied to the target's cacheDir and a `content://` from the app's existing FileProvider authority); `uploads` (bubble without "Not uploaded yet"); `coparent_opens` (Igor's `SharedFileCache` download matches SHA-256). `Intents.release()` in `finally`.
+- `attachment`: `Intents.init()`; stub the picker (`intending(not(isInternal())).respondWith(...)` returning `ActivityResult(RESULT_OK, Intent().setData(uri))`, `uri` = `FileProvider.getUriForFile(targetContext, "app.coplanly.fileprovider", file)` for `qa/files/plan.pdf` from the test APK's assets copied into `<target cacheDir>/shared_files/qa/` (the app's provider already serves `shared_files/`; the PDF is written by Task 9's generator — run it here first if Task 9 has not run); `uploads` (bubble without "Not uploaded yet"); `coparent_opens` (Igor's `SharedFileCache` download matches SHA-256). `Intents.release()` in `finally`.
 - `failedUploadAsIgor`: Zuzana's (data) uploads switched off (`SwitchableUploads`), she sends with an attachment; `not_delivered_until_upload` (Igor's screen does not show it), switch on, outbox retry; `arrives` (listener).
 - `cards`: an event card opens the event preview (`card_opens_event`); a change-request card opens the inbox (`card_opens_inbox`).
 
@@ -260,14 +260,14 @@ Delivery: by sync (`expectsListener = false`), except the split proposal (`famil
 ### Task 9: Receipts
 
 **Files:**
-- Create: `tools/virtual-tester/make-receipts.py`, `app/src/androidTest/assets/qa/receipts/{shoes-cz.jpg, shop-sk.jpg, supermarket-long.jpg, shoes-angled.jpg, expected.json}`, `qa/ReceiptScenarioTest.kt`
+- Create: `tools/virtual-tester/make-receipts.py` (also writes `app/src/androidTest/assets/qa/files/plan.pdf`), `app/src/androidTest/assets/qa/receipts/{shoes-cz.jpg, shop-sk.jpg, supermarket-long.jpg, shoes-angled.jpg, expected.json}`, `qa/ReceiptScenarioTest.kt`
 
 **Interfaces:** `expected.json`: `[{ "file": "shoes-cz.jpg", "total": 1290.0, "currency": "CZK", "date": "2026-10-14", "merchant": "Obuv Horák", "category": "CLOTHING" }, …]` — category is an `ExpenseCategory` name; the generator writes both images and this file.
 
 - [ ] **Step 1: `make-receipts.py`** (Pillow, DejaVu Sans Mono from `/usr/share/fonts/truetype/dejavu/`, deterministic seed). Four receipts: Czech shoe shop "Obuv Horák" (CZK, one line `Boty dětské vel. 32  1 290,00`, DPH 21 %, `CELKEM 1 290,00 Kč`, date 14.10.2026, IČO line); Slovak "Detský svet Kováč" (EUR, `SPOLU 34,90 €`, 12.10.2026); long supermarket "Potraviny U Lípy" (18 lines, a discount line, a VAT table, `K ÚHRADĚ 847,50`); the shoe receipt again rendered on a grey table, rotated ~6°, perspective-skewed and with a light gradient (`shoes-angled.jpg`). Paper texture: slight noise. JPEG quality 85, about 1000 px wide.
 - [ ] **Step 2:** Run `python3 tools/virtual-tester/make-receipts.py` — Expected: 4 JPEGs + `expected.json` written; open each with the Read tool and confirm it looks like a photographed receipt and every line is legible.
-- [ ] **Step 3: `ReceiptScenarioTest`** — one method per receipt (`shoesCz`, `shopSk`, `supermarketLong`, `shoesAngledByCamera`). The first three stub the gallery picker (`PickVisualMedia`) with a `content://` URI of the asset copied into the target's cache (as Task 7); the last stubs `MediaStore.ACTION_IMAGE_CAPTURE` with `respondWithFunction` writing the asset into the intent's `EXTRA_OUTPUT` (camera permission granted with `UiAutomation.grantRuntimePermission`). Steps per receipt:
-  - `recognised_total`, `recognised_currency`, `recognised_date`, `recognised_merchant`, `recognised_category` — each compares the form field on screen with `expected.json`; `actual` is what the form shows. A miss is `failed` (spec: a field read wrong is a finding) — never stop the method on it: these five are recorded with a local try so a miss does not block the rest. Implement as `report.step` with a flag `independent = true` that exempts the step from the "earlier step failed" rule (add the parameter to `QaReport.step`, default `false`).
+- [ ] **Step 3: `ReceiptScenarioTest`** — one method per receipt (`shoesCz`, `shopSk`, `supermarketLong`, `shoesAngledByCamera`). The first three stub the gallery picker (`PickVisualMedia`) with a `content://` URI of the asset copied into `<target cacheDir>/receipts/qa/` through the same provider (as Task 7); the last stubs `MediaStore.ACTION_IMAGE_CAPTURE` with `respondWithFunction` writing the asset into the intent's `EXTRA_OUTPUT` (camera permission granted with `UiAutomation.grantRuntimePermission`). Steps per receipt:
+  - `recognised_total`, `recognised_currency`, `recognised_date`, `recognised_merchant`, `recognised_category` — each compares the form field on screen with `expected.json`; `actual` is what the form shows. A miss is `failed` (spec: a field read wrong is a finding), recorded with `independent = true` so it does not block the rest.
   - `saved_with_photo` (after correcting any wrong field to the expected value on screen, save; the list row shows a receipt mark; opening the expense shows the photo full size).
   - `coparent_sees_receipt` (after `coParentSync()`: Igor's expense has the same amount, date and title, and his `RecordPhotoAccess`/`SharedFileCache` download of the receipt matches the reference's SHA-256).
 - [ ] **Step 4:** compile; commit `test: virtual tester scans receipts`; request `classes: ReceiptScenarioTest`; push; read the report (the screenshot of each filled form is what the owner reviews); fix harness defects; ledger recognition findings.
@@ -290,7 +290,7 @@ Delivery: by sync (`expectsListener = false`), except the split proposal (`famil
 
 **Interfaces:** `ExplorationPolicy.isAllowed(label: String, deny: List<String>): Boolean`; `deny` built from the variant's strings for: sign out, delete account, unpair, remove co-parent, delete family document, withdraw consent, disconnect Google Calendar, export share (leaves the app).
 
-- One method `randomTaps`: seed = `System.currentTimeMillis()` unless `-e coplanlyQaSeed` is given; the seed is the step's `expected` text. 150 actions (`ACTIONS = 150`), each: with probability 0.6 tap a random clickable node whose label passes `isAllowed`, 0.15 scroll the largest scroller, 0.1 type `"test <n>"` into a random editable, 0.15 Back (never Back from Home with the tab bar shown — that leaves the app). After each action pump up to 5 s; a pump that never idles is `failed` "frozen after action <n>"; leaving the app (no node of the app on screen) → bring it back with `ActivityScenario.launch` and note a finding. Screenshot every 25 actions and at the end. One step `explore` whose verdict is passed unless frozen or crashed (a crash ends the process — the runner's synthetic crash line, Task 3, reports it with the logcat path; the seed is in the step log written before the run starts: write a `could_not_run` "running" line first? No — write the seed in `EmulatorEnvironment.step("qa: exploration seed <seed>")` so logcat carries it).
+- One method `randomTaps`: seed = `System.currentTimeMillis()` unless `-e coplanlyQaSeed` is given; the seed is the step's `expected` text. 150 actions (`ACTIONS = 150`), each: with probability 0.6 tap a random clickable node whose label passes `isAllowed`, 0.15 scroll the largest scroller, 0.1 type `"test <n>"` into a random editable, 0.15 Back (never Back from Home with the tab bar shown — that leaves the app). After each action pump up to 5 s; a pump that never idles is `failed` "frozen after action <n>"; leaving the app (no node of the app on screen) → bring it back with `ActivityScenario.launch` and note a finding. Screenshot every 25 actions and at the end. One step `explore` whose verdict is passed unless frozen or crashed ; the seed is logged with `EmulatorEnvironment.step("qa: exploration seed <seed>")` before the first action, so a crash — reported by the runner's synthetic crash line (Task 3) — still leaves the seed in the published logcat.
 - A JVM-free check of the deny-list: step `deny_list` asserts `isAllowed` is false for each deny label in the variant and true for "Kalendář".
 
 - [ ] Steps as Task 5 (commit `test: virtual tester explores at random`, `classes: ExplorationScenarioTest`).
