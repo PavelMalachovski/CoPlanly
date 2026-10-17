@@ -119,7 +119,18 @@ and what the co-parent's side holds afterwards.
   added after acceptance is priced at 40/60, one added before stays at 50/50.
 - Two currencies in one month: two summaries, no cross-currency total.
 - Delete with Undo.
-- Receipt OCR on a sample receipt image fills the amount (on-device).
+- **Receipts, as a parent really uses them** (owner's request, 17 October): a parent photographs
+  the receipt for a pair of shoes, and the app must read it well, keep it conveniently and share it
+  with the co-parent. The tester ships a small set of realistic receipt photos with the test APK
+  (fictional shops, no real brand): a Czech shoe shop in CZK, a Slovak shop in EUR, a long
+  supermarket receipt with many lines, discounts and VAT, and one photographed at an angle with
+  uneven light. For each it runs the real on-device recognition (ML Kit, item 10 — nothing leaves
+  the phone) and checks, field by field, what the form is filled with against what the receipt
+  says: **total, currency, date, shop name, category**. Then it saves the expense and checks that
+  the receipt photo stays attached, opens full size, and that the co-parent sees the same amount,
+  date, shop and the photo itself (downloaded as themselves, digest checked). The report shows each
+  receipt beside the form it produced, so the owner sees at a glance what was read right and what
+  the parent had to correct. A field read wrong is a finding, not a crash.
 
 ### Settings, onboarding, pairing (smoke)
 - A new parent goes through onboarding, links the co-parent first, and opens on what the link
