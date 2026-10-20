@@ -46,7 +46,8 @@ class PushDeadlineSentenceTest {
                 PushPayload.DAY_SWAP_OFFERED,
                 PushPayload.DAY_SWAP_GROUP_OFFERED,
                 PushPayload.CHANGE_REQUEST_CREATED,
-                PushPayload.CUSTODY_PROPOSAL_PROPOSED
+                PushPayload.CUSTODY_PROPOSAL_PROPOSED,
+                PushPayload.SPLIT_RATIO_PROPOSED
             ),
             PushNotifier.ANSWER_BY_TYPES
         )

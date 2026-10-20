@@ -74,6 +74,13 @@ class ActivityAnnouncer @Inject constructor(
             // Derived from the two uids, never generated. Randomly generated ids are what once
             // put the two phones on separate threads, each talking to nobody.
             val conversationId = ConversationKey.of(myUid, partner)
+            // An expense split proposal's fallback names the proposer's own share, which only their
+            // slot says; no other card reads the profile for its text.
+            val senderSlot = if (announcement.kind == ActivityKind.SPLIT_PROPOSED) {
+                userRepository.getUserById(myUid)?.role
+            } else {
+                null
+            }
 
             messageRepository.sendMessage(
                 Message(
@@ -83,7 +90,7 @@ class ActivityAnnouncer @Inject constructor(
                     senderName = senderName,
                     // The fallback an older build shows; this build's reader composes its own
                     // sentence from `activity` instead. See `ActivityFallbackText`.
-                    content = ActivityFallbackText.of(announcement),
+                    content = ActivityFallbackText.of(announcement, senderSlot),
                     messageType = MessageType.ACTIVITY,
                     attachments = listOf(
                         announcement.entityType.name,

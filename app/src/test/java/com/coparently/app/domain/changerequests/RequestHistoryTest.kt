@@ -6,6 +6,8 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideDecisionCodec
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.SplitRatioDecision
+import com.coparently.app.domain.expenses.SplitRatioOutcome
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
@@ -489,9 +491,99 @@ class RequestHistoryTest {
         )
     }
 
+    // ---- The expense split (October 2026) ---------------------------------------------------------
+
+    /** The co-parent's answer to the split proposal made at [SPLIT_AT], given at [at]. */
+    private fun splitDecision(outcome: SplitRatioOutcome, by: String = "u2", at: LocalDateTime = DECIDED_AT) =
+        SplitRatioDecision(outcome = outcome, by = by, atMillis = millisOf(at), proposalAtMillis = SPLIT_AT)
+
+    @Test
+    fun `the split's last decision is one entry, keyed by its proposal and asked by the other parent`() {
+        val entries = RequestHistory.build(
+            scope,
+            changeRequests = emptyList(),
+            events = emptyList(),
+            overrides = emptyMap(),
+            decision = null,
+            splitDecision = splitDecision(SplitRatioOutcome.DECLINED)
+        )
+
+        assertEquals(
+            listOf(
+                HistoryEntry(
+                    key = "split_$SPLIT_AT",
+                    subject = RequestSubject.SplitRatio,
+                    outcome = RequestOutcome.DECLINED,
+                    askedBy = "u1",
+                    decidedBy = "u2",
+                    decidedAt = DECIDED_AT
+                )
+            ),
+            entries
+        )
+    }
+
+    @Test
+    fun `a split decision with no readable time, or by somebody outside the family, is no entry`() {
+        listOf(
+            splitDecision(SplitRatioOutcome.ACCEPTED).copy(atMillis = 0L),
+            splitDecision(SplitRatioOutcome.ACCEPTED, by = "u3"),
+            splitDecision(SplitRatioOutcome.ACCEPTED, by = "")
+        ).forEach { decision ->
+            val entries = RequestHistory.build(scope, emptyList(), emptyList(), emptyMap(), null, ClocksAt(), decision)
+            assertEquals(emptyList(), entries, "$decision")
+        }
+    }
+
+    @Test
+    fun `a split withdrawn at its end stays in History from its clock, and its answer wins over the clock`() {
+        val withdrawn = closed(RequestKind.SPLIT, SPLIT_AT.toString(), from = "u2")
+
+        val unanswered = RequestHistory.build(
+            scope,
+            changeRequests = emptyList(),
+            events = emptyList(),
+            overrides = emptyMap(),
+            decision = null,
+            clocks = seenLater(withdrawn)
+        )
+        assertEquals(
+            listOf(
+                HistoryEntry(
+                    key = "split_$SPLIT_AT",
+                    subject = RequestSubject.SplitRatio,
+                    outcome = RequestOutcome.NO_ANSWER,
+                    askedBy = "u2",
+                    decidedBy = "u1",
+                    decidedAt = CLOSED_AT,
+                    clock = withdrawn
+                )
+            ),
+            unanswered
+        )
+
+        // The proposal was answered after all — by u1, the clock's responder — and that answer wins.
+        val answered = RequestHistory.build(
+            scope,
+            changeRequests = emptyList(),
+            events = emptyList(),
+            overrides = emptyMap(),
+            decision = null,
+            clocks = seenLater(withdrawn),
+            splitDecision = splitDecision(SplitRatioOutcome.ACCEPTED, by = "u1")
+        )
+        assertEquals(listOf(RequestOutcome.ACCEPTED), answered.map { it.outcome })
+    }
+
     private companion object {
         /** When the proposal of the custody cases was made: its clock's reference. */
         const val PROPOSED_AT = "2026-10-03T09:00:00"
+
+        /** When the split proposal of the split cases was made, in epoch millis: its clock's reference. */
+        const val SPLIT_AT = 1_791_100_000_000L
+
+        /** When the co-parent answered the split, on this device's clock. */
+        val DECIDED_AT: LocalDateTime = LocalDateTime.of(2026, 10, 6, 18, 30)
 
         /** The deadline of every clock here. */
         val DEADLINE: LocalDateTime = LocalDateTime.of(2026, 10, 4, 20, 0)

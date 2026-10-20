@@ -73,10 +73,10 @@ object PushPayload {
      * A request's deadline, as an instant: epoch millis in decimal text (phase 3a).
      *
      * Two uses. On the first push of a request that waits for an answer ([DAY_SWAP_OFFERED],
-     * [DAY_SWAP_GROUP_OFFERED], [CHANGE_REQUEST_CREATED], [CUSTODY_PROPOSAL_PROPOSED]) it is the
-     * deadline the proposer chose, and the receiving phone adds "Answer by <time>." to the sentence
-     * it writes. On a [REQUEST_LAST_CHANCE] it is where the last chance ends, and the push cannot
-     * be worded without it.
+     * [DAY_SWAP_GROUP_OFFERED], [CHANGE_REQUEST_CREATED], [CUSTODY_PROPOSAL_PROPOSED],
+     * [SPLIT_RATIO_PROPOSED]) it is the deadline the proposer chose, and the receiving phone adds
+     * "Answer by <time>." to the sentence it writes. On a [REQUEST_LAST_CHANCE] it is where the last
+     * chance ends, and the push cannot be worded without it.
      *
      * An instant rather than a sentence or a day, because the receiving phone is the one that
      * knows its reader's zone, language and 12/24-hour clock. Epoch millis is 13 digits today;
@@ -158,7 +158,8 @@ object PushPayload {
      * No figure rides along, deliberately. A push saying "your co-parent proposes 70/30" would
      * put a number a reader may act on onto a lock screen, written by the other side and
      * unverifiable until the app is opened — and the app is where the proposal, with its
-     * Confirm and Decline, actually is.
+     * Confirm and Decline, actually is. A proposal may carry its deadline ([ANSWER_BY]), an instant
+     * and not a figure.
      */
     const val SPLIT_RATIO_PROPOSED = "split_ratio_proposed"
     const val SPLIT_RATIO_ACCEPTED = "split_ratio_accepted"

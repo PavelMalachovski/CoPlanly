@@ -34,8 +34,9 @@ enum class StepResult {
  *   record still waits, the proposer is told and the end is scheduled; when none can be given, the
  *   end runs at once.
  * - **The end**, on the proposer's phone: the clock is closed as "No answer", the proposer is told,
- *   the "No answer" card goes to the thread and a proposal is withdrawn so it stops blocking the
- *   other parent. An answered request is never closed (Review Focus 5).
+ *   the "No answer" card goes to the thread and a proposal — custody or expense split
+ *   ([RequestKind.withdrawnAtEnd]) — is withdrawn so it stops blocking the other parent. An answered
+ *   request is never closed (Review Focus 5).
  *
  * Every step reads the clock again and acts for the family it names, never the family on screen
  * (spec §5.6); `RequestRecords` reads a family this parent has left as gone. **The deadline and the
@@ -126,11 +127,12 @@ class RequestClockSteps @Inject constructor(
     }
 
     /**
-     * A clock already closed: the end ran before and only its last part, a proposal's withdrawal,
-     * may have failed. It is tried again while the proposal still waits; nothing is told twice.
+     * A clock already closed: the end ran before and only its last part, a proposal's withdrawal —
+     * custody or expense split ([RequestKind.withdrawnAtEnd]) — may have failed. It is tried again
+     * while the proposal still waits; nothing is told twice.
      */
     private suspend fun withdrawLeftover(clock: RequestDeadline): StepResult {
-        if (clock.kind != RequestKind.PROPOSAL) return StepResult.DONE
+        if (!clock.kind.withdrawnAtEnd) return StepResult.DONE
         return when (records.lookOnServer(clock).status) {
             RecordStatus.UNKNOWN -> StepResult.RETRY
             RecordStatus.PENDING ->
@@ -173,7 +175,7 @@ class RequestClockSteps @Inject constructor(
         if (!repository.close(clock)) return StepResult.RETRY
         notices.noAnswer(clock)
         telling.unanswered(clock, card)
-        val withdrawn = clock.kind != RequestKind.PROPOSAL || records.withdrawUnansweredProposal(clock)
+        val withdrawn = !clock.kind.withdrawnAtEnd || records.withdrawUnansweredProposal(clock)
         return if (withdrawn) StepResult.DONE else StepResult.RETRY
     }
 

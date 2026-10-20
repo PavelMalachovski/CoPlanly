@@ -4,7 +4,6 @@ import com.coparently.app.domain.changerequests.ReminderPlan
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
-import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CoroutineScope
@@ -111,7 +110,8 @@ class RequestClockKeeper internal constructor(
 
     private suspend fun keepAsProposer(clock: RequestDeadline, now: Long) {
         if (clock.outcome != null) {
-            if (clock.kind == RequestKind.PROPOSAL) endWithin(clock)
+            // A closed proposal may still wait for its withdrawal, the end's last part.
+            if (clock.kind.withdrawnAtEnd) endWithin(clock)
             return
         }
         if (now < clock.answerByMillis) scheduler.scheduleDeadline(clock.id, clock.answerByMillis)

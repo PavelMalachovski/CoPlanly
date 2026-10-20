@@ -318,6 +318,21 @@ class EmulatorParent private constructor(
         scope = scope
     )
 
+    private val familySettingsDataSource = FirestoreFamilySettingsDataSource(firestore)
+
+    /**
+     * The money agreement, built before [requestRecords], which withdraws an expense split nobody
+     * answered through it; it starts a proposal's clock through [requestDeadlineRepository].
+     */
+    val familySettingsRepository = FamilySettingsRepository(
+        dataSource = familySettingsDataSource,
+        userRepository = userRepository,
+        preferences = encryptedPreferences,
+        fcmService = fcmService,
+        activityAnnouncer = announcer,
+        requestDeadlines = requestDeadlineRepository
+    )
+
     /**
      * The request clocks' background steps (phase 3a), over this phone's repositories and
      * [requestScheduler]: a test runs a step itself where the app would wait for its job.
@@ -328,7 +343,9 @@ class EmulatorParent private constructor(
         eventDataSource = eventDataSource,
         custodyDataSource = custodyDataSource,
         custodyModelRepository = custodyRepository,
-        userRepository = userRepository
+        userRepository = userRepository,
+        familySettingsDataSource = familySettingsDataSource,
+        familySettingsRepository = familySettingsRepository
     )
 
     private val requestTelling = RequestTelling(announcer, fcmService, authService)
@@ -360,13 +377,6 @@ class EmulatorParent private constructor(
         steps = requestClockSteps,
         scheduler = requestScheduler,
         time = RequestTime()
-    )
-
-    val familySettingsRepository = FamilySettingsRepository(
-        dataSource = FirestoreFamilySettingsDataSource(firestore),
-        userRepository = userRepository,
-        preferences = encryptedPreferences,
-        fcmService = fcmService
     )
 
     val parentingPlanRepository = ParentingPlanRepository(

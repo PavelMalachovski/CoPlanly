@@ -180,13 +180,20 @@ class RequestClockKeeperTest {
             outcome = RequestClockOutcome.NO_ANSWER
         )
         val closedChange = clockByBob(ref = "closed").copy(outcome = RequestClockOutcome.NO_ANSWER)
+        // A closed expense split, like a closed custody proposal, may still wait for its withdrawal.
+        val closedSplit = closedProposal.copy(
+            id = RequestDeadlineId.of(RequestKind.SPLIT, BOB, "1777990000000", FAMILY),
+            kind = RequestKind.SPLIT,
+            ref = "1777990000000"
+        )
         now = SENT + HOUR
         coEvery { repository.openFor(BOB, now - FOUR_DAYS) } returns listOf(
             open,
             pastDeadline.copy(answerByMillis = now - HOUR),
             due.copy(answerByMillis = now - 3 * DAY),
             closedProposal,
-            closedChange
+            closedChange,
+            closedSplit
         )
 
         keeper().sweep(BOB, setOf(ALICE))
@@ -198,6 +205,7 @@ class RequestClockKeeperTest {
         coVerify(exactly = 1) { steps.end(due.id) }
         verify(exactly = 0) { scheduler.scheduleEnd(due.id, any()) }
         coVerify(exactly = 1) { steps.end(closedProposal.id) }
+        coVerify(exactly = 1) { steps.end(closedSplit.id) }
         coVerify(exactly = 0) { steps.end(closedChange.id) }
         verify(exactly = 0) { scheduler.scheduleEnd(closedChange.id, any()) }
     }

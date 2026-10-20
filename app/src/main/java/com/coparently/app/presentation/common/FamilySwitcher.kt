@@ -226,6 +226,7 @@ private val FamilySignal.otherFamilyText: Int
         FamilySignal.CHAT -> R.string.family_switcher_unread_other
         FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_other
         FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_other
+        FamilySignal.SPLIT -> R.string.family_switcher_split_other
     }
 
 /** A dialog row's phrase for one kind; the row already names the family. */
@@ -235,4 +236,5 @@ private val FamilySignal.rowText: Int
         FamilySignal.CHAT -> R.string.family_switcher_unread_row
         FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_row
         FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_row
+        FamilySignal.SPLIT -> R.string.family_switcher_split_row
     }

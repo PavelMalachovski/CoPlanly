@@ -25,6 +25,24 @@ class ActivityCardTextTest {
     }
 
     @Test
+    fun `an expense split's four cards are worded as a split, not as custody`() {
+        assertEquals(
+            listOf(
+                R.string.activity_split_proposed,
+                R.string.activity_split_accepted,
+                R.string.activity_split_declined,
+                R.string.activity_split_withdrawn
+            ),
+            listOf(
+                ActivityKind.SPLIT_PROPOSED,
+                ActivityKind.SPLIT_ACCEPTED,
+                ActivityKind.SPLIT_DECLINED,
+                ActivityKind.SPLIT_WITHDRAWN
+            ).map { ActivityCardText.resourceFor(it) }
+        )
+    }
+
+    @Test
     fun `every kind resolves to a real resource`() {
         ActivityKind.entries.forEach { kind ->
             assertEquals(true, ActivityCardText.resourceFor(kind) != 0, "$kind has no string")
@@ -51,6 +69,11 @@ class ActivityCardTextTest {
         assertEquals(
             CardSubjectText.Res(R.string.activity_subject_custody_schedule),
             ActivityCardText.subjectOf(card(ActivityEntityType.CUSTODY_PROPOSAL, title = "uidA__uidB"))
+        )
+        // An expense split has no name of its own either: its "No answer" card says what it was about.
+        assertEquals(
+            CardSubjectText.Res(R.string.activity_subject_expense_split),
+            ActivityCardText.subjectOf(card(ActivityEntityType.SPLIT_PROPOSAL, title = ""))
         )
         assertEquals(
             CardSubjectText.IsoDate("2026-10-16"),

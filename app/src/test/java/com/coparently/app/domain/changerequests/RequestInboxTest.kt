@@ -4,13 +4,20 @@ import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioDecision
+import com.coparently.app.domain.expenses.SplitRatioOutcome
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -449,6 +456,158 @@ class RequestInboxTest {
         assertEquals(0, at(AFTER_END, open).waitingOnThem.count)
     }
 
+    // ---- The expense split (October 2026) ---------------------------------------------------------
+
+    /** The family's money agreement: half each, [uid]'s 70/30 proposal pending unless null, and [decision]. */
+    private fun splitSettings(uid: String?, decision: SplitRatioDecision? = null) = FamilySettings(
+        ratio = SplitRatio.EVEN,
+        participants = listOf("u1", "u2"),
+        lastModifiedBy = "u1",
+        lastModifiedAtMillis = 1L,
+        proposal = uid?.let { SplitRatioProposal(SplitRatio(7_000), proposedBy = it, proposedAtMillis = SPLIT_AT) },
+        lastDecision = decision
+    )
+
+    /** The clock of the split proposal of [splitSettings], written by [from]. */
+    private fun splitClock(from: String) = clock(RequestKind.SPLIT, SPLIT_AT.toString(), from)
+
+    /** The inbox with nothing but the money agreement [settings], on [viewer]'s phone, with [clocks] seen at [at]. */
+    private fun withSplit(
+        settings: FamilySettings,
+        clocks: List<RequestDeadline> = emptyList(),
+        at: Long = NOW,
+        viewer: RequestScope = scope
+    ) = RequestInbox.build(viewer, emptyList(), emptyList(), emptyMap(), null, today, ClocksAt.of(clocks, at), settings)
+
+    @Test
+    fun `the co-parent's split waits on me and mine on them, counted on Home but not on the calendar`() {
+        val theirs = withSplit(splitSettings("u2"))
+        assertEquals("u2", theirs.waitingOnMe.split?.proposedBy)
+        assertNull(theirs.waitingOnThem.split)
+        assertEquals(1, theirs.waitingOnMe.count)
+        assertEquals(0, theirs.waitingOnMe.countWithoutProposal)
+        assertFalse(theirs.waitingOnMe.isEmpty)
+
+        val mine = withSplit(splitSettings("u1"))
+        assertEquals("u1", mine.waitingOnThem.split?.proposedBy)
+        assertNull(mine.waitingOnMe.split)
+        assertEquals(1, mine.waitingOnThem.count)
+
+        assertTrue(withSplit(splitSettings(null)).isEmpty)
+    }
+
+    @Test
+    fun `a split counts beside the custody proposal and neither counts on the calendar`() {
+        val inbox = RequestInbox.build(
+            scope,
+            changeRequests = emptyList(),
+            events = listOf(event("for-me", creator = "u2")),
+            overrides = emptyMap(),
+            shared = proposalBy("u2"),
+            today = today,
+            settings = splitSettings("u2")
+        )
+
+        assertEquals(3, inbox.waitingOnMe.count)
+        assertEquals(1, inbox.waitingOnMe.countWithoutProposal)
+    }
+
+    @Test
+    fun `a split is placed by its clock, as the custody proposal is`() {
+        val clock = splitClock(from = "u2")
+        val clockId = RequestDeadlineId.forSplit(checkNotNull(splitSettings("u2").proposal), FAMILY)
+        assertEquals(clockId, clock.id)
+
+        val open = withSplit(splitSettings("u2"), listOf(clock))
+        assertEquals("u2", open.waitingOnMe.split?.proposedBy)
+        assertEquals(ClockState.OPEN, open.timedFor(clockId)?.state)
+
+        for (viewer in listOf(scope, bobsScope)) {
+            val past = withSplit(splitSettings("u2"), listOf(clock), PAST_DEADLINE, viewer)
+            assertNull(past.waitingOnMe.split, "past its deadline nothing waits on ${viewer.myUid}'s answer")
+            assertEquals("u2", past.waitingOnThem.split?.proposedBy)
+            assertEquals(ClockState.NO_ANSWER_LAST_CHANCE_POSSIBLE, past.timedFor(clockId)?.state)
+        }
+
+        val lastChance = withSplit(
+            splitSettings("u2"),
+            listOf(clock.copy(lastChanceUntilMillis = LAST_CHANCE_UNTIL)),
+            PAST_DEADLINE
+        )
+        assertEquals("u2", lastChance.waitingOnMe.split?.proposedBy)
+        assertEquals(1, lastChance.waitingOnMe.count)
+
+        for (viewer in listOf(scope, bobsScope)) {
+            val over = withSplit(splitSettings("u2"), listOf(clock), AFTER_END, viewer)
+            assertTrue(over.waitingOnMe.isEmpty, "nothing waits on ${viewer.myUid}")
+            assertTrue(over.waitingOnThem.isEmpty, "nothing waits on ${viewer.coParentUid}")
+            val row = over.history.single()
+            assertEquals("split_$SPLIT_AT", row.key)
+            assertEquals(RequestSubject.SplitRatio, row.subject)
+            assertEquals(RequestOutcome.NO_ANSWER, row.outcome)
+            assertEquals("u2" to "u1", row.askedBy to row.decidedBy)
+            assertEquals(clock, row.clock)
+            assertEquals(ClockState.NO_ANSWER, over.timedFor(clockId)?.state)
+        }
+    }
+
+    @Test
+    fun `a split withdrawn at its end stays in History once, from its closed clock`() {
+        val closed = splitClock(from = "u2").copy(outcome = RequestClockOutcome.NO_ANSWER, closedAtMillis = AFTER_END)
+
+        // Closed, and the withdrawal has not landed yet: one row, not two.
+        val pending = withSplit(splitSettings("u2"), listOf(closed), AFTER_END)
+        assertEquals(listOf("split_$SPLIT_AT"), pending.history.map { it.key })
+        assertTrue(pending.waitingOnMe.isEmpty)
+
+        // Withdrawn: the document no longer holds it, and the closed clock still says what it was.
+        val withdrawn = withSplit(splitSettings(null), listOf(closed), AFTER_END)
+        assertEquals(listOf("split_$SPLIT_AT"), withdrawn.history.map { it.key })
+        assertEquals(RequestOutcome.NO_ANSWER, withdrawn.history.single().outcome)
+        assertEquals(localOf(AFTER_END), withdrawn.history.single().decidedAt)
+    }
+
+    @Test
+    fun `the answer to a split is in History, asked by the other parent, and wins over its clock`() {
+        val answeredAt = NOW + 3 * HOUR
+        val decided = splitSettings(
+            uid = null,
+            decision = SplitRatioDecision(
+                outcome = SplitRatioOutcome.ACCEPTED,
+                by = "u1",
+                atMillis = answeredAt,
+                proposalAtMillis = SPLIT_AT
+            )
+        )
+        val expected = HistoryEntry(
+            key = "split_$SPLIT_AT",
+            subject = RequestSubject.SplitRatio,
+            outcome = RequestOutcome.ACCEPTED,
+            askedBy = "u2",
+            decidedBy = "u1",
+            decidedAt = localOf(answeredAt)
+        )
+
+        assertEquals(listOf(expected), withSplit(decided).history)
+        // Even a clock its proposer's phone closed before the answer arrived does not turn it into "No answer".
+        val closed = splitClock(from = "u2").copy(outcome = RequestClockOutcome.NO_ANSWER, closedAtMillis = AFTER_END)
+        assertEquals(listOf(expected), withSplit(decided, listOf(closed), AFTER_END).history)
+    }
+
+    @Test
+    fun `a split's clock that does not name the proposal's author, or another family's, is ignored`() {
+        val plain = withSplit(splitSettings("u2"))
+        val forged = splitClock(from = "u2").copy(proposerUid = "u1", responderUid = "u2")
+        val elsewhere = splitClock(from = "u2").copy(familyId = "u1__u3")
+
+        assertEquals(plain, withSplit(splitSettings("u2"), listOf(forged), AFTER_END))
+        assertEquals(plain.waitingOnMe, withSplit(splitSettings("u2"), listOf(elsewhere), AFTER_END).waitingOnMe)
+    }
+
+    /** The device's local time at [millis]: how History dates a split. */
+    private fun localOf(millis: Long): LocalDateTime =
+        Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
+
     private companion object {
         const val FAMILY = "u1__u2"
 
@@ -472,5 +631,8 @@ class RequestInboxTest {
 
         /** Past the end of a clock whose last chance was never given. */
         const val AFTER_END = DEADLINE + DAY + HOUR
+
+        /** When the split proposal of [splitSettings] was made: its clock's reference. */
+        const val SPLIT_AT = NOW - DAY
     }
 }

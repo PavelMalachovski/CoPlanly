@@ -28,4 +28,13 @@
     <string name="activity_subject_custody_schedule">custody schedule</string>
     <string name="activity_settle_up_you_owe">Settle up for %1$s: you owe %2$s</string>
     <string name="activity_settle_up_owed_to_you">Settle up for %1$s: you are owed %2$s</string>
+    <!-- An expense split proposal and its answers. No shares: the card names no parent, and a share
+         without a name does not say whose it is. -->
+    <string name="activity_split_proposed">New expense split proposed</string>
+    <string name="activity_split_accepted">New expense split agreed</string>
+    <string name="activity_split_declined">Expense split proposal turned down</string>
+    <string name="activity_split_withdrawn">Expense split proposal withdrawn</string>
+    <!-- The %1$s of the two request cards above when the request is an expense split proposal.
+         Lower case: it follows a colon. -->
+    <string name="activity_subject_expense_split">expense split</string>
 </resources>

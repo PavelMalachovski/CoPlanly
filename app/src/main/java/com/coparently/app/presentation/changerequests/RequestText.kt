@@ -33,4 +33,5 @@ internal fun subjectTitle(subject: RequestSubject): String = when (subject) {
         stringResource(R.string.request_history_day_swap, swapDatesText(subject.firstDate, subject.dayCount))
     is RequestSubject.NewEvent -> subject.eventTitle
     RequestSubject.CustodySchedule -> stringResource(R.string.request_history_custody)
+    RequestSubject.SplitRatio -> stringResource(R.string.request_history_split)
 }

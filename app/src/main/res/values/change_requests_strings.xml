@@ -56,6 +56,7 @@
     <string name="request_history_new_time">New time for %1$s</string>
     <string name="request_history_day_swap">Day swap: %1$s</string>
     <string name="request_history_custody">New custody schedule</string>
+    <string name="request_history_split">Expense split</string>
     <string name="request_history_yours_answered">Your request · %1$s answered</string>
     <string name="request_history_theirs_answered">%1$s\'s request · you answered</string>
     <string name="request_history_withdrawn_by_you">You withdrew it</string>
