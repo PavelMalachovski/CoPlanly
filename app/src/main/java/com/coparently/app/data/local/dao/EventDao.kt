@@ -288,4 +288,35 @@ interface EventDao {
             "AND familyId != :familyId AND instr(familyId, :myUid) > 0"
     )
     suspend fun countRowsOfOtherFamilies(familyId: String, myUid: String): Int
+
+    /**
+     * [myUid]'s own non-private events that name no family, as they change ("Records without a
+     * family", owner decision October 2026): "only mine" until the parent assigns them.
+     *
+     * Blank as well as null: a document downloaded from an older build carries `""`. Pending
+     * tombstones are left out — a record being deleted is not a question to ask — and so are
+     * private events, which belong to nobody but their author by design (item 3).
+     */
+    @Query(
+        "SELECT * FROM events WHERE createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND isPrivate = 0 AND deletedAtMillis IS NULL ORDER BY startDateTime ASC"
+    )
+    fun observeOwnWithoutFamily(myUid: String): Flow<List<EventEntity>>
+
+    /**
+     * Gives [myUid]'s own event [id] the family the parent chose for it, and queues it for upload
+     * so the sync sends it with that family's audience (`FamilyAudience.partnerFor`).
+     *
+     * Only while it still names no family — a row that names one keeps it, never re-derived (item
+     * 18) — and never a private event, whose sync flag stays as it is: a private row with the flag
+     * cleared would be a row queued for upload. Never a pending tombstone either.
+     *
+     * @return 1 when the event took the family, 0 when it already had one or is not this parent's.
+     */
+    @Query(
+        "UPDATE events SET familyId = :familyId, syncedToFirestore = 0 " +
+            "WHERE id = :id AND createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND isPrivate = 0 AND deletedAtMillis IS NULL"
+    )
+    suspend fun assignFamily(id: String, familyId: String, myUid: String): Int
 }

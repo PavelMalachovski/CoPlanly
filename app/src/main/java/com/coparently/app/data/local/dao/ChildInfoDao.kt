@@ -177,4 +177,28 @@ interface ChildInfoDao {
             "AND familyId != :familyId AND instr(familyId, :myUid) > 0"
     )
     suspend fun countRowsOfOtherFamilies(familyId: String, myUid: String): Int
+
+    /**
+     * [myUid]'s own child records that name no family, as they change ("Records without a
+     * family"): "only mine" until the parent assigns them. See [EventDao.observeOwnWithoutFamily].
+     */
+    @Query(
+        "SELECT * FROM child_info WHERE createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL ORDER BY childName ASC"
+    )
+    fun observeOwnWithoutFamily(myUid: String): Flow<List<ChildInfoEntity>>
+
+    /**
+     * Gives [myUid]'s own child record [id] the family the parent chose for it, and queues it for
+     * upload so the sync sends it with that family's audience (`FamilyAudience.recordPartnerFor`).
+     * Only while it still names no family, and never a pending tombstone.
+     *
+     * @return 1 when the record took the family, 0 otherwise.
+     */
+    @Query(
+        "UPDATE child_info SET familyId = :familyId, syncedToFirestore = 0 " +
+            "WHERE id = :id AND createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL"
+    )
+    suspend fun assignFamily(id: String, familyId: String, myUid: String): Int
 }
