@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -55,7 +56,7 @@ class ParentingPlanViewModelTest {
 
     private val shared = MutableStateFlow<SharedCustody?>(null)
     private val custody = mockk<CustodyModelRepository> {
-        every { observeShared() } returns shared
+        every { observeSharedOf(any()) } returns shared
     }
 
     /**
@@ -63,15 +64,17 @@ class ParentingPlanViewModelTest {
      *   it onto the signed-in row; null leaves the row unprojected, as right after a pairing.
      * @param pairingStates What every collection of the pairing state emits; [pairing] alone unless
      *   a test needs the order a real phone sees.
+     * @param rows The Room rows, when a test switches the family while the screen lives.
      */
     private fun viewModel(
         pairing: PairingState = PairingState.Paired(partner),
         shownPartnerUid: String? = null,
-        pairingStates: Flow<PairingState> = flowOf(pairing)
+        pairingStates: Flow<PairingState> = flowOf(pairing),
+        rows: Flow<List<User>> = flowOf(listOf(signedInRow(shownPartnerUid)))
     ): ParentingPlanViewModel {
         val userRepository = mockk<UserRepository> {
             every { observeCurrentUserId() } returns flowOf("u1")
-            every { getAllUsers() } returns flowOf(listOf(signedInRow(shownPartnerUid)))
+            every { getAllUsers() } returns rows
         }
         val pairingRepository = mockk<PairingRepository> {
             every { observePairingState() } returns pairingStates
@@ -146,6 +149,48 @@ class ParentingPlanViewModelTest {
         advanceUntilIdle()
 
         assertEquals(mapOf("q1" to "Weekends", "q2" to "Alternate holidays"), saved.captured.answers)
+    }
+
+    @Test
+    fun `a save after a switch never writes the previous family's half into the next family's plan`() =
+        runTest(dispatcher) {
+            every { repository.observe(familyId, "u1") } returns flowOf(
+                ParentingPlanPair(yours = ParentingPlanEntry(answers = mapOf("q1" to "Bob's days")), theirs = null)
+            )
+            every { repository.observe("u1__u3", "u1") } returns flowOf(
+                ParentingPlanPair(yours = ParentingPlanEntry(answers = mapOf("q1" to "Carol's days")), theirs = null)
+            )
+            val saved = slot<ParentingPlanEntry>()
+            coEvery { repository.save("u1__u3", "u1", capture(saved)) } returns Unit
+            val rows = MutableStateFlow(listOf(signedInRow("u2")))
+            val vm = viewModel(rows = rows)
+            val screen = backgroundScope.launch { vm.uiState.collect {} }
+            advanceUntilIdle()
+            assertEquals(familyId, (vm.uiState.value as ParentingPlanUiState.Ready).familyId)
+
+            // The screen stops collecting and still holds the first family's half when a push tap
+            // switches the family; the answer the parent then saves goes to the family on screen.
+            screen.cancel()
+            advanceTimeBy(SHARING_STOPS_AFTER_MS)
+            rows.value = listOf(signedInRow("u3"))
+            vm.answer("q2", "Alternate holidays")
+            advanceUntilIdle()
+
+            assertEquals(mapOf("q1" to "Carol's days", "q2" to "Alternate holidays"), saved.captured.answers)
+        }
+
+    @Test
+    fun `another family's pending proposal never blocks this family's plan`() = runTest(dispatcher) {
+        every { repository.observe(familyId, "u1") } returns flowOf(agreedOn("care_weekday", "Week on, week off"))
+        every { custody.observeSharedOf(familyId) } returns flowOf(null)
+        every { custody.observeSharedOf("u1__u3") } returns flowOf(pendingProposalFrom("u3"))
+        val vm = viewModel()
+        backgroundScope.launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+
+        val ready = vm.uiState.value as ParentingPlanUiState.Ready
+        assertFalse(ready.coParentProposalPending)
+        assertTrue(ready.offersProposal("care_weekday"))
     }
 
     @Test
@@ -291,5 +336,8 @@ class ParentingPlanViewModelTest {
     private companion object {
         /** How long the pairing listener takes to answer in the test of a save made before it has. */
         const val PAIRING_ANSWERS_AFTER_MS = 100L
+
+        /** Past the view model's `WhileSubscribed` timeout: the plan's listener has stopped. */
+        const val SHARING_STOPS_AFTER_MS = 6_000L
     }
 }

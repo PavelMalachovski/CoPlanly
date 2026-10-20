@@ -565,6 +565,26 @@ class CustodyModelRepositoryTest {
         assertTrue("saw $seen", seen.all { it == null })
     }
 
+    @Test
+    fun `the family on screen's stream never replays the previous family's document`() = runTest(dispatcher) {
+        // The calendar's proposal preview and banner, the inbox's diff, the seasonal section and
+        // the plan read observeShared(): after a switch, uidB's proposal must not be drawn over
+        // uidC's month while uidC's listener has not answered (isolation audit F6).
+        val users = MutableStateFlow(listOf(signedInWith(PARTNER_UID)))
+        every { userRepository.getAllUsers() } returns users
+        every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns flowOf(remoteCustody())
+        every { firestoreCustodyDataSource.observeCustody(OTHER_DOCUMENT_ID) } returns flow { awaitCancellation() }
+        val seen = mutableListOf<SharedCustody?>()
+        backgroundScope.launch { repository.observeShared().toList(seen) }
+        runCurrent()
+        assertEquals(REMOTE_MODEL_ID, seen.last()?.model?.id)
+
+        users.value = listOf(signedInWith(OTHER_PARTNER_UID))
+        runCurrent()
+
+        assertNull("saw $seen", seen.last())
+    }
+
     // ---- one parent in two families: a schedule per family (schema 45) ------------------------
     //
     // The phone used to keep one active row for every family. With the uidA–uidC family on screen,
