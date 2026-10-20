@@ -25,7 +25,8 @@ sealed interface ChatCardTarget {
 
     /**
      * The change-request inbox with nothing highlighted: a day-swap card, whose entity is a date
-     * that the inbox's event-id argument would misread as a request that no longer exists.
+     * that the inbox's event-id argument would misread as a request that no longer exists, and an
+     * expense split card, whose proposal the inbox lists with its answers (October 2026).
      */
     data object Inbox : ChatCardTarget
 
@@ -57,7 +58,7 @@ sealed interface ChatCardTarget {
                 ActivityEntityType.EVENT ->
                     if (card.kind == ActivityKind.EVENT_DELETED) null else Event(card.entityId)
                 ActivityEntityType.CHANGE_REQUEST -> ChangeRequest(card.entityId)
-                ActivityEntityType.DAY_SWAP -> Inbox
+                ActivityEntityType.DAY_SWAP, ActivityEntityType.SPLIT_PROPOSAL -> Inbox
                 ActivityEntityType.EXPENSE, ActivityEntityType.CUSTODY_PROPOSAL -> null
             }
         }

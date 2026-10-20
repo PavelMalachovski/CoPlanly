@@ -45,6 +45,23 @@ class ActivityAnnouncerTest {
     }
 
     @Test
+    fun `a split proposal's fallback names the sender's own share, from their slot`() = runTest {
+        // Alice is slot 1 ("mom"); the card carries slot 1's share, 35 %.
+        val proposed = ActivityAnnouncement(
+            kind = ActivityKind.SPLIT_PROPOSED,
+            entityType = ActivityEntityType.SPLIT_PROPOSAL,
+            entityId = "alice__bob",
+            title = "",
+            amount = "3500"
+        )
+
+        announcer.announce(proposed, partnerUid = "bob")
+
+        assertEquals("Proposed a new expense split: I pay 35 %, you pay 65 %", sent.captured.content)
+        assertEquals(proposed, sent.captured.activity)
+    }
+
+    @Test
     fun `without a name it is the family on screen, as before`() = runTest {
         announcer.announce(CARD, senderName = "Alice")
 

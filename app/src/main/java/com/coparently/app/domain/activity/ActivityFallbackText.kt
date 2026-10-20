@@ -1,5 +1,9 @@
 package com.coparently.app.domain.activity
 
+import com.coparently.app.domain.expenses.FULL_SHARE_BASIS_POINTS
+import com.coparently.app.domain.expenses.SplitRatio
+import java.math.BigDecimal
+
 /**
  * The plain-text sentence an announcement carries in `Message.content`.
  *
@@ -45,9 +49,46 @@ object ActivityFallbackText {
             ActivityKind.REQUEST_LAST_CHANCE -> "Last chance to answer"
             ActivityKind.REQUEST_UNANSWERED -> "No answer"
             ActivityKind.SETTLE_UP_OWED, ActivityKind.SETTLE_UP_OWING -> "Settle up"
+            ActivityKind.SPLIT_PROPOSED -> "Proposed a new expense split"
+            ActivityKind.SPLIT_ACCEPTED -> "Accepted the expense split"
+            ActivityKind.SPLIT_DECLINED -> "Declined the expense split"
+            ActivityKind.SPLIT_WITHDRAWN -> "Withdrew the expense split proposal"
         }
         return if (announcement.title.isBlank()) prefix else "$prefix: ${announcement.title}"
     }
+
+    /**
+     * [of], knowing the sending parent's slot, which only an expense split proposal's sentence
+     * reads: its card carries slot 1's share, and "I pay" is the sender's own. Every other card
+     * reads as [of] words it, and so does a split whose slot or share is unknown.
+     *
+     * @param senderSlot The sender's slot, `"mom"` or `"dad"`, or null when unknown.
+     */
+    fun of(announcement: ActivityAnnouncement, senderSlot: String?): String =
+        splitShares(announcement, senderSlot) ?: of(announcement)
+
+    /**
+     * An expense split proposal in the proposer's first person with both shares, as the export and
+     * an older build show it: "Proposed a new expense split: I pay 65 %, you pay 35 %". Null for any
+     * other card, and when the share or the sender's slot cannot be read.
+     */
+    private fun splitShares(announcement: ActivityAnnouncement, senderSlot: String?): String? {
+        val ratio = announcement.amount?.toIntOrNull()
+            ?.let { SplitRatio.fromStored(it) }
+            ?.takeIf { announcement.kind == ActivityKind.SPLIT_PROPOSED }
+            ?: return null
+        val mine = when (senderSlot) {
+            SLOT_ONE -> ratio.momShareBasisPoints
+            SLOT_TWO -> ratio.dadShareBasisPoints
+            else -> return null
+        }
+        val yours = FULL_SHARE_BASIS_POINTS - mine
+        return "Proposed a new expense split: I pay ${percentOf(mine)}, you pay ${percentOf(yours)}"
+    }
+
+    /** [basisPoints] as a percent in the base locale: `35 %`, or `33.33 %` for a share that is not whole. */
+    private fun percentOf(basisPoints: Int): String =
+        BigDecimal.valueOf(basisPoints.toLong(), PERCENT_SCALE).stripTrailingZeros().toPlainString() + " %"
 
     /** A settle-up card in the sender's first person, as a message from them reads. */
     private fun settleUp(announcement: ActivityAnnouncement): String? {
@@ -58,4 +99,11 @@ object ActivityFallbackText {
             else -> null
         }
     }
+
+    /** The schema's two slots, which the app never shows ("Parent colours identify a person"). */
+    private const val SLOT_ONE = "mom"
+    private const val SLOT_TWO = "dad"
+
+    /** Basis points carry two decimal places of a percent. */
+    private const val PERCENT_SCALE = 2
 }

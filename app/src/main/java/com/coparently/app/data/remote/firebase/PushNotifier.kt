@@ -539,14 +539,16 @@ class PushNotifier(private val context: Context) {
         /**
          * The pushes that open a request, and so may carry its deadline ([PushPayload.ANSWER_BY])
          * for [compose] to say after their sentence: a day swap offered (one day or a run), a
-         * change request, a custody proposal. An event waiting to be accepted has no push of its
-         * own, and a last chance says its time in its own body ([BodyArgs.ACTOR_AND_ANSWER_BY]).
+         * change request, a custody proposal, an expense split proposal. An event waiting to be
+         * accepted has no push of its own, and a last chance says its time in its own body
+         * ([BodyArgs.ACTOR_AND_ANSWER_BY]).
          */
         val ANSWER_BY_TYPES: Set<String> = setOf(
             PushPayload.DAY_SWAP_OFFERED,
             PushPayload.DAY_SWAP_GROUP_OFFERED,
             PushPayload.CHANGE_REQUEST_CREATED,
-            PushPayload.CUSTODY_PROPOSAL_PROPOSED
+            PushPayload.CUSTODY_PROPOSAL_PROPOSED,
+            PushPayload.SPLIT_RATIO_PROPOSED
         )
 
         /** What ends a sentence in the five languages the app is worded in. */

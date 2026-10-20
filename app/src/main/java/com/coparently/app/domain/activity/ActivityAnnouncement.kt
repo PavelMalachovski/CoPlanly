@@ -21,6 +21,8 @@ package com.coparently.app.domain.activity
  * @property whenIso ISO date-time the change is about, where one applies. Formatted by the reader
  *   in their own locale and zone.
  * @property amount Formatted amount for an expense, or null. Already carries its currency symbol.
+ *   On a `SPLIT_PROPOSED` card it is the proposed share of slot 1 in basis points, as decimal text
+ *   (`"3500"` for 35 %), with no currency.
  * @property currency ISO currency code, or null. Kept beside [amount] so a reader can group by it
  *   without parsing the formatted string — the app never converts between currencies.
  * @property planCitation On a `CUSTODY_PROPOSED` card only: the parenting-plan answer the proposal
@@ -102,7 +104,13 @@ enum class ActivityEntityType {
     EXPENSE,
     CHANGE_REQUEST,
     DAY_SWAP,
-    CUSTODY_PROPOSAL
+    CUSTODY_PROPOSAL,
+
+    /**
+     * An expense split proposal (October 2026): `entityId` is the family's id — its
+     * `family_settings` document — and `title` is blank, since a split has no name of its own.
+     */
+    SPLIT_PROPOSAL
 }
 
 /**
@@ -142,7 +150,8 @@ enum class ActivityKind {
      * - a change request: `CHANGE_REQUEST`, the event's id and its title;
      * - an event waiting for acceptance: `EVENT`, the event's id and its title;
      * - a custody proposal: `CUSTODY_PROPOSAL`, the family's id and a blank `title` — a proposal
-     *   has no name of its own, so the reader words it.
+     *   has no name of its own, so the reader words it;
+     * - an expense split proposal: `SPLIT_PROPOSAL`, the family's id and a blank `title`, likewise.
      *
      * A record in the thread, never a push of its own: the last chance has its own push type, and
      * `notifyOfChatMessage` skips this kind.
@@ -168,7 +177,26 @@ enum class ActivityKind {
     SETTLE_UP_OWED,
 
     /** Settle up, sent by the parent who **owes** the balance. The payload is [SETTLE_UP_OWED]'s. */
-    SETTLE_UP_OWING;
+    SETTLE_UP_OWING,
+
+    /**
+     * An expense split was proposed (October 2026). `entityType` is `SPLIT_PROPOSAL`, `entityId` the
+     * family's id, `title` blank, and `amount` the proposed share of slot 1 in basis points as
+     * decimal text (`"3500"`), which the fallback text words in the proposer's first person.
+     */
+    SPLIT_PROPOSED,
+
+    /** The co-parent accepted an expense split proposal. The payload is [SPLIT_PROPOSED]'s, without `amount`. */
+    SPLIT_ACCEPTED,
+
+    /** The co-parent declined an expense split proposal. The payload is [SPLIT_ACCEPTED]'s. */
+    SPLIT_DECLINED,
+
+    /**
+     * The proposer took their expense split proposal back. The payload is [SPLIT_ACCEPTED]'s. Only
+     * a withdrawal the parent made: one the clock makes at "No answer" posts [REQUEST_UNANSWERED].
+     */
+    SPLIT_WITHDRAWN;
 
     /** Whether this is one of the two settle-up cards. */
     val isSettleUp: Boolean get() = this == SETTLE_UP_OWED || this == SETTLE_UP_OWING

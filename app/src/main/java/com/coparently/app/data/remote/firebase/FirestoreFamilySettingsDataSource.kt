@@ -6,6 +6,7 @@ import com.coparently.app.domain.expenses.SplitRatioDecision
 import com.coparently.app.domain.expenses.SplitRatioOutcome
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -60,9 +61,37 @@ class FirestoreFamilySettingsDataSource @Inject constructor(
      * One read of the pair's settings, or null when there is no document yet.
      *
      * @param documentId The pair's id.
+     * @param source Where to read from: Firestore's default (the server, or the cache offline), or
+     *   [Source.SERVER] for a decision that must not rest on a cached copy — the end of an expense
+     *   split proposal's clock — which then throws offline.
      */
-    suspend fun getSettings(documentId: String): FamilySettings? =
-        collection.document(documentId).get().await().data?.toSettings()
+    suspend fun getSettings(documentId: String, source: Source = Source.DEFAULT): FamilySettings? {
+        val document = collection.document(documentId)
+        // The default read stays the plain get() every existing caller (and its test doubles) uses.
+        val snapshot = (if (source == Source.DEFAULT) document.get() else document.get(source)).await()
+        return snapshot.data?.toSettings()
+    }
+
+    /**
+     * Reads the pair's settings and writes [transform]'s answer back, in one transaction, so a
+     * proposal answered, withdrawn or replaced a moment before is never overwritten by a write built
+     * on an older copy. Firestore runs [transform] again on the newer document when the one it read
+     * changes before the write, so [transform] must be pure. It needs the server, so it fails
+     * offline; the caller tries again later.
+     *
+     * @param documentId The pair's id.
+     * @param transform The document as it stands, or null when there is none or it cannot describe
+     *   an agreement, to the document to write — a whole document, as [setSettings] writes it — or
+     *   null to write nothing.
+     * @return The document as written, or null when [transform] answered null and nothing was written.
+     */
+    suspend fun transact(documentId: String, transform: (FamilySettings?) -> FamilySettings?): FamilySettings? {
+        val document = collection.document(documentId)
+        return firestore.runTransaction<FamilySettings?> { transaction ->
+            val current = transaction.get(document).data?.toSettings()
+            transform(current)?.also { next -> transaction.set(document, next.toDocument()) }
+        }.await()
+    }
 
     /**
      * Writes the whole document.

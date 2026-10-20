@@ -1166,8 +1166,9 @@ private fun answerLabel(answer: HistoryEntry): String {
             if (accepted) R.string.home_activity_accepted_event else R.string.home_activity_declined_event,
             subject.eventTitle
         )
-        // Never in the feed: a custody decision has its own banner and pop-up (HomeFeed).
+        // Never in the feed: a custody or split decision has its own card and banner (HomeFeed).
         RequestSubject.CustodySchedule -> stringResource(R.string.request_history_custody)
+        RequestSubject.SplitRatio -> stringResource(R.string.request_history_split)
     }
 }
 

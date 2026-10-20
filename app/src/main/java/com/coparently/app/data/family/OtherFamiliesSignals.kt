@@ -3,6 +3,7 @@ package com.coparently.app.data.family
 import android.util.Log
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.repository.longOrNull
 import com.coparently.app.data.repository.markMap
@@ -15,6 +16,7 @@ import com.coparently.app.domain.changerequests.governing
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
@@ -50,7 +52,10 @@ enum class FamilySignal {
     CHANGE_REQUEST,
 
     /** The co-parent proposed a new schedule, or offered a day swap, awaiting this parent. */
-    SCHEDULE
+    SCHEDULE,
+
+    /** The co-parent proposed a new expense split, awaiting this parent (October 2026). */
+    SPLIT
 }
 
 /**
@@ -59,7 +64,7 @@ enum class FamilySignal {
  * Everything else in the app follows the selected family, so a family the parent is not looking
  * at has nothing in Room to count, and a Room count across families would say 0 when it is not —
  * worse than no signal (design item 8). What *is* cheap to know is a yes or no from the server,
- * which is why the switcher draws a dot and never a number. Per other family, three listeners:
+ * which is why the switcher draws a dot and never a number. Per other family, four listeners:
  *
  * - **Chat** — the conversation *document*, whose `lastMessageAt` and `lastReadAt` marks answer
  *   "anything after my mark?" without reading a message ([hasUnread]).
@@ -69,6 +74,8 @@ enum class FamilySignal {
  * - **Schedule** — the pair's `custody_models` document, one per family and read by id (the rule
  *   grants `allow get` only, so this must never become a query): a pending proposal or a pending
  *   day swap from the co-parent ([hasPendingSchedule]).
+ * - **Split** — the pair's `family_settings` document, likewise one per family and read by id: a
+ *   pending expense split proposal from the co-parent ([hasPendingSplit]).
  *
  * Four properties are the point of the class:
  *
@@ -84,17 +91,21 @@ enum class FamilySignal {
  *   `participants`), and a dot is not worth a listener retried for the life of the process. A
  *   listener that gave up raises nothing until the switcher is next subscribed.
  *
- * It only reads: it never creates a conversation or a custody document.
+ * It only reads: it never creates a conversation, a custody document or a settings document.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
-class OtherFamiliesSignals @Inject constructor(
+class OtherFamiliesSignals
+@Suppress("LongParameterList") // one source per kind of signal, the signed-in parent, the switcher and the clocks
+@Inject
+constructor(
     private val userRepository: UserRepository,
     private val selectedFamilySource: SelectedFamilySource,
     private val messageDataSource: FirestoreMessageDataSource,
     private val changeRequestDataSource: FirestoreChangeRequestDataSource,
     private val custodyDataSource: FirestoreCustodyDataSource,
-    private val requestClocks: RequestClocks
+    private val requestClocks: RequestClocks,
+    private val familySettingsDataSource: FirestoreFamilySettingsDataSource
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -130,9 +141,9 @@ class OtherFamiliesSignals @Inject constructor(
         }
 
     /**
-     * One family's three listeners. The conversation id and the custody document id *are* the
-     * family id (`ConversationKey.of`, `CustodyKey.of` and `FamilyKey.of` are one function), so
-     * no lookup stands between them.
+     * One family's four listeners. The conversation id and the custody and settings document ids
+     * *are* the family id (`ConversationKey.of`, `CustodyKey.of` and `FamilyKey.of` are one
+     * function), so no lookup stands between them.
      */
     private fun watch(myUid: String, family: FamilyOption): Flow<Set<FamilySignal>> {
         val chat = messageDataSource.observeConversation(family.familyId)
@@ -152,11 +163,17 @@ class OtherFamiliesSignals @Inject constructor(
             clocksOf(myUid, family)
         ) { custody, clocks -> hasPendingSchedule(custody, myUid, LocalDate.now(), clocks) }
             .bounded(FamilySignal.SCHEDULE)
-        return combine(chat, requests, schedule) { c, r, s ->
+        val split = combine(
+            familySettingsDataSource.observeSettings(family.familyId),
+            clocksOf(myUid, family)
+        ) { settings, clocks -> hasPendingSplit(settings, myUid, clocks) }
+            .bounded(FamilySignal.SPLIT)
+        return combine(chat, requests, schedule, split) { c, r, s, m ->
             buildSet {
                 if (c) add(FamilySignal.CHAT)
                 if (r) add(FamilySignal.CHANGE_REQUEST)
                 if (s) add(FamilySignal.SCHEDULE)
+                if (m) add(FamilySignal.SPLIT)
             }
         }.distinctUntilChanged()
     }
@@ -287,6 +304,19 @@ class OtherFamiliesSignals @Inject constructor(
                 group.swaps.any { DaySwapInbox.awaitsAnswerFrom(it, myUid) } &&
                     stillWaits(clocks, myUid, author) { RequestDeadlineId.forSwap(group) }
             }
+        }
+
+        /**
+         * Whether the pair's money agreement holds an expense split proposal the *other* parent
+         * made, still waiting on [myUid]: no clock governs it, or the one that does says it is open
+         * or in its last chance — [hasPendingSchedule]'s rule for a custody proposal. A parent's own
+         * proposal waits on nobody here, and a missing document asks nothing.
+         *
+         * @param clocks The family's clocks at one moment.
+         */
+        fun hasPendingSplit(settings: FamilySettings?, myUid: String, clocks: ClocksAt = ClocksAt()): Boolean {
+            val proposal = settings?.proposal?.takeIf { it.proposedBy != myUid } ?: return false
+            return stillWaits(clocks, myUid, proposal.proposedBy) { RequestDeadlineId.forSplit(proposal, it) }
         }
 
         /**

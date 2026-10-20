@@ -90,6 +90,8 @@
     <string name="family_switcher_request_row">A change request is waiting</string>
     <string name="family_switcher_schedule_other">A schedule proposal is waiting in another family</string>
     <string name="family_switcher_schedule_row">A schedule proposal is waiting</string>
+    <string name="family_switcher_split_other">An expense split proposal is waiting in another family</string>
+    <string name="family_switcher_split_row">An expense split proposal is waiting</string>
     <!-- The school import row (MON-8). Bakaláři opens the import. EduPage's inert "Coming soon" row
          was removed before the first release (owner decision, September 2026); it returns only
          with a real import. -->

@@ -2,6 +2,7 @@ package com.coparently.app.data.family
 
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.changerequests.ClocksAt
@@ -12,6 +13,9 @@ import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.repository.UserRepository
@@ -53,6 +57,7 @@ class OtherFamiliesSignalsTest {
     private val requests = mockk<FirestoreChangeRequestDataSource>()
     private val custodySource = mockk<FirestoreCustodyDataSource>()
     private val clocks = mockk<RequestClocks>()
+    private val settingsSource = mockk<FirestoreFamilySettingsDataSource>()
 
     private fun source() = OtherFamiliesSignals(
         userRepository,
@@ -60,7 +65,8 @@ class OtherFamiliesSignalsTest {
         messages,
         requests,
         custodySource,
-        clocks
+        clocks,
+        settingsSource
     )
 
     private fun given(
@@ -76,6 +82,7 @@ class OtherFamiliesSignalsTest {
         every { requests.observePendingIdsFrom(any(), any()) } returns flowOf(emptySet())
         every { clocks.observeFamily(any(), any()) } returns flowOf(ClocksAt())
         every { custodySource.observeCustody(any()) } returns flowOf(null)
+        every { settingsSource.observeSettings(any()) } returns flowOf(null)
     }
 
     // ---- the pure rules ---------------------------------------------------------------
@@ -144,6 +151,7 @@ class OtherFamiliesSignalsTest {
         verify(exactly = 0) { messages.observeConversation(any()) }
         verify(exactly = 0) { requests.observePendingIdsFrom(any(), any()) }
         verify(exactly = 0) { custodySource.observeCustody(any()) }
+        verify(exactly = 0) { settingsSource.observeSettings(any()) }
     }
 
     @Test
@@ -158,6 +166,41 @@ class OtherFamiliesSignalsTest {
         verify(exactly = 0) { messages.observeConversation(BOB_FAMILY.familyId) }
         verify(exactly = 0) { requests.observePendingIdsFrom(ALICE, BOB) }
         verify(exactly = 0) { custodySource.observeCustody(BOB_FAMILY.familyId) }
+        verify(exactly = 0) { settingsSource.observeSettings(BOB_FAMILY.familyId) }
+    }
+
+    @Test
+    fun `a pending split proposal is reported as itself, by the family's settings read by id`() = runTest {
+        given()
+        every { settingsSource.observeSettings(CAROL_FAMILY.familyId) } returns flowOf(settings(proposedBy = CAROL))
+
+        val emissions = source().observeSignals().toList()
+
+        assertEquals(mapOf(CAROL_FAMILY.familyId to setOf(FamilySignal.SPLIT)), emissions.last())
+    }
+
+    @Test
+    fun `a split from the co-parent waits on me, my own on nobody, and none asks nothing`() {
+        assertTrue(OtherFamiliesSignals.hasPendingSplit(settings(proposedBy = CAROL), ALICE))
+        assertFalse(OtherFamiliesSignals.hasPendingSplit(settings(proposedBy = ALICE), ALICE))
+        assertFalse(OtherFamiliesSignals.hasPendingSplit(settings(proposedBy = null), ALICE))
+        assertFalse(OtherFamiliesSignals.hasPendingSplit(null, ALICE))
+    }
+
+    @Test
+    fun `a split past its deadline does not light the dot, and under a last chance it does again`() {
+        val split = settings(proposedBy = CAROL)
+        val clock = splitClock(checkNotNull(split.proposal), answerBy = NOW)
+
+        assertTrue(OtherFamiliesSignals.hasPendingSplit(split, ALICE, clocksAt(NOW - 1, clock)))
+        assertFalse(OtherFamiliesSignals.hasPendingSplit(split, ALICE, clocksAt(NOW + DAY, clock)))
+        assertTrue(
+            OtherFamiliesSignals.hasPendingSplit(
+                split,
+                ALICE,
+                clocksAt(NOW + DAY, clock.copy(lastChanceUntilMillis = NOW + 2 * DAY))
+            )
+        )
     }
 
     @Test
@@ -336,6 +379,27 @@ class OtherFamiliesSignalsTest {
         proposerUid = CAROL,
         responderUid = ALICE,
         answerByMillis = answerBy
+    )
+
+    private fun splitClock(proposal: SplitRatioProposal, answerBy: Long) = RequestDeadline(
+        id = RequestDeadlineId.forSplit(proposal, CAROL_FAMILY.familyId),
+        kind = RequestKind.SPLIT,
+        ref = proposal.proposedAtMillis.toString(),
+        familyId = CAROL_FAMILY.familyId,
+        proposerUid = CAROL,
+        responderUid = ALICE,
+        answerByMillis = answerBy
+    )
+
+    /** The family with Carol's money agreement: half each, with [proposedBy]'s 70/30 proposal, if any. */
+    private fun settings(proposedBy: String?) = FamilySettings(
+        ratio = SplitRatio.EVEN,
+        participants = listOf(ALICE, CAROL).sorted(),
+        lastModifiedBy = CAROL,
+        lastModifiedAtMillis = 1L,
+        proposal = proposedBy?.let {
+            SplitRatioProposal(ratio = SplitRatio(7_000), proposedBy = it, proposedAtMillis = NOW - DAY)
+        }
     )
 
     /** A listener that reports news and stays attached until cancelled, recording the release. */

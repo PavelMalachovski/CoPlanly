@@ -3,7 +3,9 @@ package com.coparently.app.data.requests
 import android.util.Log
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -11,6 +13,7 @@ import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.ChangeRequestStatus
@@ -63,10 +66,11 @@ data class RecordLook(val status: RecordStatus, val card: CardSubject?)
  *
  * A step never trusts the moment it was scheduled: a request answered, withdrawn or replaced since
  * finds nothing to do. **The family is the clock's** (spec §5.6): a swap or a proposal is read from
- * the custody document of the clock's `familyId`, never the family on screen, and a family this
- * parent is no longer in reads as [RecordStatus.GONE] before anything else is read (CLAUDE.md items
- * 38 and 41). A record is the clock's only when it names the clock's proposer as its author, as
- * `RequestClock.governs` asks of every reader.
+ * the custody document of the clock's `familyId`, an expense split from that family's
+ * `family_settings` document, never the family on screen's, and a family this parent is no longer
+ * in reads as [RecordStatus.GONE] before anything else is read (CLAUDE.md items 38 and 41). A record
+ * is the clock's only when it names the clock's proposer as its author, as `RequestClock.governs`
+ * asks of every reader.
  *
  * **Two ways to look.** [look] reads what this phone holds — the change request and the event from
  * Room, the custody document from Firestore, which answers from its cache offline — and is enough
@@ -80,13 +84,18 @@ data class RecordLook(val status: RecordStatus, val card: CardSubject?)
  * must not close a request it could not see.
  */
 @Singleton
-class RequestRecords @Inject constructor(
+class RequestRecords
+@Suppress("LongParameterList") // one reader and one writer per kind of record, and the signed-in parent
+@Inject
+constructor(
     private val changeRequestRepository: ChangeRequestRepository,
     private val eventRepository: EventRepository,
     private val eventDataSource: FirestoreEventDataSource,
     private val custodyDataSource: FirestoreCustodyDataSource,
     private val custodyModelRepository: CustodyModelRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val familySettingsDataSource: FirestoreFamilySettingsDataSource,
+    private val familySettingsRepository: FamilySettingsRepository
 ) {
 
     /** Where the request [clock] times stands by this phone's copy, and what its cards name. */
@@ -118,23 +127,34 @@ class RequestRecords @Inject constructor(
             RequestKind.EVENT -> if (fromServer) lookEventOnServer(clock) else lookEvent(clock)
             RequestKind.SWAP -> custodyOf(clock, fromServer)?.let { lookSwap(it, clock) } ?: GONE_LOOK
             RequestKind.PROPOSAL -> custodyOf(clock, fromServer)?.let { lookProposal(it, clock) } ?: GONE_LOOK
+            RequestKind.SPLIT -> settingsOf(clock, fromServer)?.let { lookSplit(it, clock) } ?: GONE_LOOK
         }
 
     /** The custody document of the clock's family, from the server when [fromServer] says so. */
     private suspend fun custodyOf(clock: RequestDeadline, fromServer: Boolean): SharedCustody? =
         custodyDataSource.getCustody(clock.familyId, if (fromServer) Source.SERVER else Source.DEFAULT)
 
+    /** The money agreement of the clock's family, from the server when [fromServer] says so. */
+    private suspend fun settingsOf(clock: RequestDeadline, fromServer: Boolean): FamilySettings? =
+        familySettingsDataSource.getSettings(clock.familyId, if (fromServer) Source.SERVER else Source.DEFAULT)
+
     /**
-     * Withdraws the proposal [clock] times, in the clock's family, when it is still the same
-     * pending proposal (`CustodyModelRepository.withdrawUnanswered`).
+     * Withdraws the proposal [clock] times — custody or expense split ([RequestKind.withdrawnAtEnd]) —
+     * in the clock's family, when it is still the same pending proposal
+     * (`CustodyModelRepository.withdrawUnanswered`, `FamilySettingsRepository.withdrawUnanswered`).
      *
      * @return Whether it was withdrawn: false for any other kind, for a family this parent is no
      *   longer in, for a proposal answered or replaced meanwhile, and for a write that failed.
      */
     suspend fun withdrawUnansweredProposal(clock: RequestDeadline): Boolean =
-        clock.kind == RequestKind.PROPOSAL &&
+        clock.kind.withdrawnAtEnd &&
             familyIsLive(clock) == true &&
-            custodyModelRepository.withdrawUnanswered(clock.familyId, clock.ref)
+            when (clock.kind) {
+                RequestKind.PROPOSAL -> custodyModelRepository.withdrawUnanswered(clock.familyId, clock.ref)
+                RequestKind.SPLIT -> clock.ref.toLongOrNull()
+                    ?.let { familySettingsRepository.withdrawUnanswered(clock.familyId, it) } == true
+                RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT -> false
+            }
 
     /**
      * Whether [clock]'s family is one the signed-in parent is still in: they are one of its two
@@ -212,6 +232,23 @@ class RequestRecords @Inject constructor(
             else -> RecordStatus.GONE
         }
         return RecordLook(status, CardSubject(ActivityEntityType.CUSTODY_PROPOSAL, clock.familyId, ""))
+    }
+
+    /**
+     * [lookProposal] for an expense split: pending while the money agreement's proposal is this one,
+     * by its time and its proposer; answered when the last decision is about it; gone otherwise —
+     * withdrawn, or replaced by a newer proposal.
+     */
+    private fun lookSplit(settings: FamilySettings, clock: RequestDeadline): RecordLook {
+        val proposal = settings.proposal
+        val status = when {
+            proposal != null &&
+                proposal.proposedAtMillis.toString() == clock.ref &&
+                proposal.proposedBy == clock.proposerUid -> RecordStatus.PENDING
+            settings.lastDecision?.proposalAtMillis?.toString() == clock.ref -> RecordStatus.ANSWERED
+            else -> RecordStatus.GONE
+        }
+        return RecordLook(status, CardSubject(ActivityEntityType.SPLIT_PROPOSAL, clock.familyId, ""))
     }
 
     private companion object {

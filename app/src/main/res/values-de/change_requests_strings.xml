@@ -48,6 +48,7 @@
     <string name="request_history_new_time">Neue Zeit für %1$s</string>
     <string name="request_history_day_swap">Tagestausch: %1$s</string>
     <string name="request_history_custody">Neuer Betreuungsplan</string>
+    <string name="request_history_split">Kostenaufteilung</string>
     <string name="request_history_yours_answered">Deine Anfrage · %1$s hat geantwortet</string>
     <string name="request_history_theirs_answered">Anfrage von %1$s · du hast geantwortet</string>
     <string name="request_history_withdrawn_by_you">Du hast sie zurückgezogen</string>

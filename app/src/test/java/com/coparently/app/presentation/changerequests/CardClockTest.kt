@@ -31,6 +31,20 @@ class CardClockTest {
     }
 
     @Test
+    fun `past the deadline an expense split keeps its Decline as a custody proposal does`() {
+        // A pending split blocks the answering parent's own proposals until the proposer's phone
+        // withdraws it, so they may still turn it down.
+        val card = card(RequestKind.SPLIT, ClockRole.RESPONDER, pastDeadline())
+
+        assertTrue("Decline stays", card.declineOnly)
+        assertFalse("not both hidden", card.hidesAnswers)
+
+        val proposer = card(RequestKind.SPLIT, ClockRole.PROPOSER, pastDeadline())
+        assertFalse(proposer.declineOnly)
+        assertFalse(proposer.hidesAnswers)
+    }
+
+    @Test
     fun `past the deadline a swap, a change request and an event still hide both answers`() {
         listOf(RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT).forEach { kind ->
             val card = card(kind, ClockRole.RESPONDER, pastDeadline())

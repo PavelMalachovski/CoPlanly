@@ -71,10 +71,12 @@ object HomeFeed {
         val answers = history
             .filter { entry ->
                 // Their answers only: a withdrawal is not an answer, and "No answer" is nothing they did.
+                // A custody or split decision is told by its own card, banner and pop-up.
                 entry.decidedBy == partnerId &&
                     entry.askedBy != partnerId &&
                     entry.outcome.isAnswer &&
-                    entry.subject != RequestSubject.CustodySchedule
+                    entry.subject != RequestSubject.CustodySchedule &&
+                    entry.subject != RequestSubject.SplitRatio
             }
             .map { it.toActivityItem() }
 
@@ -109,7 +111,7 @@ object HomeFeed {
         val event = when (val about = subject) {
             is RequestSubject.NewTime -> about.eventId to about.eventTitle
             is RequestSubject.NewEvent -> about.eventId to about.eventTitle
-            is RequestSubject.DaySwap, RequestSubject.CustodySchedule -> "" to ""
+            is RequestSubject.DaySwap, RequestSubject.CustodySchedule, RequestSubject.SplitRatio -> "" to ""
         }
         return ActivityItem(
             id = "ans_$key",

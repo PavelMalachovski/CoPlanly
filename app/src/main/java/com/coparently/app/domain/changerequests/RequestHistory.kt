@@ -8,6 +8,9 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.SplitRatioDecision
+import com.coparently.app.domain.expenses.SplitRatioOutcome
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
@@ -68,13 +71,20 @@ sealed interface RequestSubject {
 
     /** A new custody schedule. */
     data object CustodySchedule : RequestSubject
+
+    /**
+     * A new expense split (October 2026). Like [CustodySchedule] it names nothing of its own: the
+     * family has one agreement, and its proposal is the only one that can wait.
+     */
+    data object SplitRatio : RequestSubject
 }
 
 /**
  * One answered, withdrawn or unanswered request in the inbox's history.
  *
- * @property key Unique across every kind of request: `cr_`, `swap_`, `ev_` or `custody_` and the
- *   record's own id. A [RequestOutcome.NO_ANSWER] row takes the key its record's own row would.
+ * @property key Unique across every kind of request: `cr_`, `swap_`, `ev_`, `custody_` or `split_`
+ *   and the record's own id. A [RequestOutcome.NO_ANSWER] row takes the key its record's own row
+ *   would.
  * @property askedBy The parent who asked.
  * @property decidedBy The parent who answered — or, for a withdrawal, the one who withdrew; for
  *   [RequestOutcome.NO_ANSWER], the one whose answer was due.
@@ -106,10 +116,10 @@ data class HistoryEntry(
  * left unanswered, newest first (phase 2, spec §6.2; phase 3a, spec §4.4).
  *
  * Derived from the records both phones already hold — change requests, day swaps, events created
- * for the other parent, and the custody document's last decision — and from the family's request
- * clocks, never from a stored history list, which would be a second account of what happened and
- * could disagree with the first. Only the latest custody decision is kept by the document; older
- * ones stay in the chat's cards.
+ * for the other parent, the custody document's last decision and the money agreement's — and from
+ * the family's request clocks, never from a stored history list, which would be a second account of
+ * what happened and could disagree with the first. Only the latest custody decision and the latest
+ * split decision are kept by their documents; older ones stay in the chat's cards.
  */
 object RequestHistory {
 
@@ -124,19 +134,22 @@ object RequestHistory {
      * it is over is a [RequestOutcome.NO_ANSWER] row, and so is a closed clock whose request is
      * gone ([UnansweredRows.ofClosedClocks]). An answer wins over its clock, late or not: it is an
      * explicit yes or no. A clock that does not govern its record is ignored ([governing]). The
-     * custody document's pending proposal is not among these sources, so the inbox adds its row
-     * while its clock is over but not yet closed ([UnansweredRows.withPendingProposal]).
+     * pending custody and split proposals are not among these sources, so the inbox adds their rows
+     * while their clocks are over but not yet closed ([UnansweredRows.withPendingProposal],
+     * [UnansweredRows.withPendingSplit]).
      *
      * @param clocks The family's request clocks, seen at one moment; none by default.
+     * @param splitDecision The money agreement's last decision (`family_settings`), or none.
      */
-    @Suppress("LongParameterList") // the four sources, the scope, and the clocks that close them
+    @Suppress("LongParameterList") // the five sources, the scope, and the clocks that close them
     fun build(
         scope: RequestScope,
         changeRequests: List<ChangeRequest>,
         events: List<Event>,
         overrides: Map<String, DayOverride>,
         decision: CustodyDecision?,
-        clocks: ClocksAt = ClocksAt()
+        clocks: ClocksAt = ClocksAt(),
+        splitDecision: SplitRatioDecision? = null
     ): List<HistoryEntry> {
         val offers = DaySwapInbox.allGroups(overrides)
         return (
@@ -144,8 +157,9 @@ object RequestHistory {
                 offers.mapNotNull { fromSwap(scope, it, clocks) } +
                 events.mapNotNull { fromEvent(scope, it, clocks) } +
                 listOfNotNull(decision?.let { fromDecision(scope, it) }) +
+                listOfNotNull(splitDecision?.let { splitDecisionRow(scope, it) }) +
                 earlierSwapAnswers(scope, overrides) +
-                UnansweredRows.ofClosedClocks(scope, offers, decision, clocks)
+                UnansweredRows.ofClosedClocks(scope, offers, decision, clocks, splitDecision)
             ).sortedWith(NEWEST_FIRST)
     }
 
@@ -321,22 +335,24 @@ internal object UnansweredRows {
         timed?.takeIf { it.state == ClockState.NO_ANSWER }?.let { row(key, subject, it.clock) }
 
     /**
-     * The rows of closed clocks whose request is gone (spec §5.1): a custody proposal withdrawn at
-     * its end, and a day-swap offer replaced by a newer offer for its days, which only the clock
-     * still describes, by its first day and day count. Only a closed clock speaks for a request that
-     * is no longer there: one never closed was superseded — answered, corrected or offered again —
-     * and shows nothing. The proposal's own answer, while the custody document still holds it, wins
-     * over its clock, and a change request or event that is gone shows nothing at all (ruling 13):
-     * its chat card still records it.
+     * The rows of closed clocks whose request is gone (spec §5.1): a custody or expense split
+     * proposal withdrawn at its end, and a day-swap offer replaced by a newer offer for its days,
+     * which only the clock still describes, by its first day and day count. Only a closed clock
+     * speaks for a request that is no longer there: one never closed was superseded — answered,
+     * corrected or offered again — and shows nothing. A proposal's own answer, while its document
+     * still holds it, wins over its clock, and a change request or event that is gone shows nothing
+     * at all (ruling 13): its chat card still records it.
      *
      * @param offers Every day-swap offer the family's custody document holds.
      * @param decision The custody document's last decision.
+     * @param splitDecision The money agreement's last decision.
      */
     fun ofClosedClocks(
         scope: RequestScope,
         offers: List<DaySwapGroup>,
         decision: CustodyDecision?,
-        clocks: ClocksAt
+        clocks: ClocksAt,
+        splitDecision: SplitRatioDecision? = null
     ): List<HistoryEntry> {
         val offerIds = offers.mapNotNullTo(HashSet()) { it.swaps.first().override.groupId }
         return clocks.byId.values
@@ -345,6 +361,8 @@ internal object UnansweredRows {
                 when (clock.kind) {
                     RequestKind.PROPOSAL -> row("custody_${clock.ref}", RequestSubject.CustodySchedule, clock)
                         .takeIf { decision?.proposalAt != clock.ref }
+                    RequestKind.SPLIT -> row("split_${clock.ref}", RequestSubject.SplitRatio, clock)
+                        .takeIf { splitDecision?.proposalAtMillis?.toString() != clock.ref }
                     RequestKind.SWAP -> replacedOffer(clock).takeIf { clock.ref !in offerIds }
                     RequestKind.CHANGE, RequestKind.EVENT -> null
                 }
@@ -362,14 +380,28 @@ internal object UnansweredRows {
         history: List<HistoryEntry>,
         proposal: CustodyProposal,
         timed: TimedRequest?
-    ): List<HistoryEntry> {
-        val row = ifOver("custody_${proposal.proposedAt}", RequestSubject.CustodySchedule, timed)
-        return if (row == null || history.any { it.key == row.key }) {
+    ): List<HistoryEntry> =
+        withPendingRow(history, ifOver("custody_${proposal.proposedAt}", RequestSubject.CustodySchedule, timed))
+
+    /**
+     * [history] with the "No answer" row of the family's pending expense split [proposal] when its
+     * clock [timed] says it is over but nobody has closed it yet — [withPendingProposal]'s rule for
+     * the money agreement's proposal.
+     */
+    fun withPendingSplit(
+        history: List<HistoryEntry>,
+        proposal: SplitRatioProposal,
+        timed: TimedRequest?
+    ): List<HistoryEntry> =
+        withPendingRow(history, ifOver("split_${proposal.proposedAtMillis}", RequestSubject.SplitRatio, timed))
+
+    /** [history] with [row] in its place, unless there is no row or the history already has its key. */
+    private fun withPendingRow(history: List<HistoryEntry>, row: HistoryEntry?): List<HistoryEntry> =
+        if (row == null || history.any { it.key == row.key }) {
             history
         } else {
             (history + row).sortedWith(NEWEST_FIRST)
         }
-    }
 
     /** The row of a replaced offer, from what its clock says it covered; null for a clock that does not say. */
     private fun replacedOffer(clock: RequestDeadline): HistoryEntry? {
@@ -404,6 +436,31 @@ internal fun ClocksAt.governing(scope: RequestScope, clockId: String?, authorUid
         RequestClock.governs(timed.clock, author, scope.otherOf(author))
     return timed.takeIf { governs }
 }
+
+/**
+ * The money agreement's last decision as a History row (October 2026), keyed by the proposal it
+ * answered and dated on this device's clock. A decision with no readable time, or by somebody
+ * outside [scope]'s family, is no row: an older or damaged document must not put a 1970 answer at
+ * the bottom of History.
+ */
+private fun splitDecisionRow(scope: RequestScope, decision: SplitRatioDecision): HistoryEntry? =
+    if (decision.atMillis <= 0L || !scope.isPair(decision.by)) {
+        null
+    } else {
+        HistoryEntry(
+            key = "split_${decision.proposalAtMillis}",
+            subject = RequestSubject.SplitRatio,
+            outcome = when (decision.outcome) {
+                SplitRatioOutcome.ACCEPTED -> RequestOutcome.ACCEPTED
+                SplitRatioOutcome.DECLINED -> RequestOutcome.DECLINED
+            },
+            // As for custody: the proposer never decides their own (SplitRatioTransition), so in a
+            // pair the one who asked is the other parent.
+            askedBy = scope.otherOf(decision.by),
+            decidedBy = decision.by,
+            decidedAt = Instant.ofEpochMilli(decision.atMillis).atZone(ZoneId.systemDefault()).toLocalDateTime()
+        )
+    }
 
 /** The history's order: newest first, and equal times by key, so the order never flickers. */
 private val NEWEST_FIRST: Comparator<HistoryEntry> =

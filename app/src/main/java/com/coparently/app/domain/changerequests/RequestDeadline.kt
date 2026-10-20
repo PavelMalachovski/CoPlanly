@@ -2,6 +2,7 @@ package com.coparently.app.domain.changerequests
 
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
 import java.time.LocalDate
@@ -25,7 +26,20 @@ enum class RequestKind(val wire: String) {
     EVENT("event"),
 
     /** A custody proposal: a new schedule. */
-    PROPOSAL("proposal");
+    PROPOSAL("proposal"),
+
+    /** An expense split proposal: a new share of the shared costs (October 2026). */
+    SPLIT("split");
+
+    /**
+     * Whether a request of this kind is a pending proposal that blocks the other parent's own: a
+     * custody proposal and an expense split, each held one at a time on a document both parents
+     * write. At "No answer" such a request is withdrawn, so it stops blocking them; and past its
+     * deadline, before any last chance, the answering parent's card keeps Decline and never Accept
+     * (`CardClock.declineOnly`), because until it is withdrawn it refuses every proposal of their
+     * own. The other kinds block nothing, and their end only closes the clock.
+     */
+    val withdrawnAtEnd: Boolean get() = this == PROPOSAL || this == SPLIT
 
     companion object {
         /**
@@ -73,8 +87,8 @@ enum class RequestClockOutcome(val wire: String) {
  *
  * @property id The document id, [RequestDeadlineId.of], so both phones find it without asking.
  * @property kind What kind of request the clock times.
- * @property ref The request it times: a swap's group id, a change request's id, an event's id, or a
- *   proposal's `proposedAt`.
+ * @property ref The request it times: a swap's group id, a change request's id, an event's id, a
+ *   proposal's `proposedAt`, or an expense split proposal's `proposedAtMillis` as decimal text.
  * @property familyId The family the request was made in. Whatever works from the clock — a reminder,
  *   the end — acts in this family, never in the one on screen.
  * @property proposerUid The parent who made the request and set the deadline.
@@ -165,6 +179,7 @@ data class RequestStart(
  * - `change_<proposerUid>_<changeRequestId>`
  * - `event_<proposerUid>_<eventId>`
  * - `proposal_<proposerUid>_<familyId>_<proposedAt>`
+ * - `split_<proposerUid>_<familyId>_<proposedAtMillis>`
  *
  * The proposer's uid is in the id because the other parent can see the rest of it. With it the
  * security rules can bind the id to the caller, so the other parent can neither create a request's
@@ -173,23 +188,25 @@ data class RequestStart(
  * no two proposers can spell the same id; the rules rebuild the id the same way.
  *
  * A proposal's id also carries its family, because its reference is a timestamp, unique only
- * within one family's custody document. The other kinds' references are random ids.
+ * within one family's custody document; so does a split's, whose reference is a timestamp in one
+ * family's `family_settings` document. The other kinds' references are random ids.
  */
 object RequestDeadlineId {
 
     private const val SEPARATOR = "_"
 
-    /** The family stands in the id of a proposal only; the other kinds pass this. */
+    /** The family stands in the id of a proposal and a split only; the other kinds pass this. */
     private const val NO_FAMILY = ""
 
     /**
      * The id for [kind] made by [proposerUid] about [ref], as [RequestDeadline.ref] defines it.
      *
-     * @param familyId Used by a [RequestKind.PROPOSAL] only; the other kinds ignore it.
+     * @param familyId Used by a [RequestKind.PROPOSAL] and a [RequestKind.SPLIT] only; the other
+     *   kinds ignore it.
      */
     fun of(kind: RequestKind, proposerUid: String, ref: String, familyId: String): String {
         val parts = when (kind) {
-            RequestKind.PROPOSAL -> listOf(kind.wire, proposerUid, familyId, ref)
+            RequestKind.PROPOSAL, RequestKind.SPLIT -> listOf(kind.wire, proposerUid, familyId, ref)
             RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT -> listOf(kind.wire, proposerUid, ref)
         }
         return parts.joinToString(SEPARATOR)
@@ -228,4 +245,11 @@ object RequestDeadlineId {
      */
     fun forProposal(proposal: CustodyProposal, familyId: String): String =
         of(RequestKind.PROPOSAL, proposal.proposedBy, proposal.proposedAt, familyId)
+
+    /**
+     * The id of an expense split proposal's clock in [familyId]; the proposer is
+     * [SplitRatioProposal.proposedBy] and the reference its `proposedAtMillis`, as decimal text.
+     */
+    fun forSplit(proposal: SplitRatioProposal, familyId: String): String =
+        of(RequestKind.SPLIT, proposal.proposedBy, proposal.proposedAtMillis.toString(), familyId)
 }

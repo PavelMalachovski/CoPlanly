@@ -4,6 +4,8 @@ import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
@@ -75,6 +77,40 @@ class RequestDeadlineIdTest {
             "proposal_uA_uA__uB_2026-10-15T10:00:00",
             RequestDeadlineId.of(RequestKind.PROPOSAL, "uA", "2026-10-15T10:00:00", family)
         )
+        assertEquals(
+            "split_uA_uA__uB_1792488600000",
+            RequestDeadlineId.of(RequestKind.SPLIT, "uA", "1792488600000", family)
+        )
+    }
+
+    @Test
+    fun `an expense split's clock is named by its proposer, its family and its time in millis`() {
+        // A split's time is unique only within one family's `family_settings` document, so its id
+        // carries the family, as a custody proposal's does.
+        val split = SplitRatioProposal(
+            ratio = SplitRatio(3_500),
+            proposedBy = "uB",
+            proposedAtMillis = 1_792_488_600_000L
+        )
+
+        assertEquals("split_uB_uA__uB_1792488600000", RequestDeadlineId.forSplit(split, family))
+        assertEquals(
+            RequestDeadlineId.of(RequestKind.SPLIT, "uB", "1792488600000", family),
+            RequestDeadlineId.forSplit(split, family)
+        )
+        assertEquals(
+            "split_uB_uB__uC_1792488600000",
+            RequestDeadlineId.forSplit(split, "uB__uC"),
+            "the same moment in another family is another clock"
+        )
+    }
+
+    @Test
+    fun `only the two proposals are withdrawn at their end`() {
+        assertEquals(
+            setOf(RequestKind.PROPOSAL, RequestKind.SPLIT),
+            RequestKind.entries.filter { it.withdrawnAtEnd }.toSet()
+        )
     }
 
     @Test
@@ -100,7 +136,7 @@ class RequestDeadlineIdTest {
     fun `a wire name reads back as its kind, and a name this build does not know as nothing`() {
         // These strings are stored in the clock and rebuilt by the rules: they are a wire format.
         assertEquals(
-            listOf("swap", "change", "event", "proposal"),
+            listOf("swap", "change", "event", "proposal", "split"),
             RequestKind.entries.map { it.wire }
         )
         RequestKind.entries.forEach { assertEquals(it, RequestKind.fromWire(it.wire)) }

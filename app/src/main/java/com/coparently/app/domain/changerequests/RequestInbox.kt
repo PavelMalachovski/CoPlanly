@@ -5,25 +5,34 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import java.time.LocalDate
 
 /**
- * What waits on one parent: a custody proposal, events created for their days, day-swap offers and
- * change requests — each still unanswered, in the order the inbox lists them.
+ * What waits on one parent: a custody proposal, an expense split proposal, events created for their
+ * days, day-swap offers and change requests — each still unanswered, in the order the inbox lists
+ * them.
+ *
+ * @property split The family's pending expense split proposal (October 2026), when it waits here.
  */
 data class Waiting(
     val proposal: CustodyProposal? = null,
+    val split: SplitRatioProposal? = null,
     val events: List<Event> = emptyList(),
     val swaps: List<DaySwapGroup> = emptyList(),
     val changeRequests: List<ChangeRequest> = emptyList()
 ) {
-    /** Everything waiting, the proposal included: the number Home's Requests row shows. */
-    val count: Int get() = countWithoutProposal + if (proposal != null) 1 else 0
+    /** Everything waiting, both proposals included: the number Home's Requests row shows. */
+    val count: Int get() = countWithoutProposal + listOfNotNull(proposal, split).size
 
-    /** Everything but the proposal, which draws a banner of its own over the calendar. */
+    /**
+     * Everything but the two proposals: the custody one draws its own calendar banner, and a split
+     * is about money, not the calendar. The number the calendar's banner shows.
+     */
     val countWithoutProposal: Int get() = events.size + swaps.size + changeRequests.size
 
     /** Whether nothing waits at all. */
@@ -82,8 +91,11 @@ data class RequestInbox(
          * @param today The day the waiting sections start from.
          * @param clocks The family's request clocks, seen at one moment; none by default, which
          *   places every request as one without a clock.
+         * @param settings The family's money agreement (`family_settings`), for its expense split
+         *   proposal and its last decision; none by default. The split is placed exactly as the
+         *   custody proposal is: by its clock when one governs it, else on whoever did not make it.
          */
-        @Suppress("LongParameterList") // the four sources, the scope and day they are read for, and their clocks
+        @Suppress("LongParameterList") // the five sources, the scope and day they are read for, and their clocks
         fun build(
             scope: RequestScope,
             changeRequests: List<ChangeRequest>,
@@ -91,65 +103,64 @@ data class RequestInbox(
             overrides: Map<String, DayOverride>,
             shared: SharedCustody?,
             today: LocalDate,
-            clocks: ClocksAt = ClocksAt()
+            clocks: ClocksAt = ClocksAt(),
+            settings: FamilySettings? = null
         ): RequestInbox {
             val me = scope.myUid
-            val requests = changeRequests
-                .filter { it.status == ChangeRequestStatus.PENDING && scope.covers(it) }
-                .sortedBy { it.createdAt }
-                .map { request ->
-                    val clock = clocks.governing(scope, RequestDeadlineId.forChange(request), request.requestedBy)
-                    Pending(request, request.requestedTo == me, clock)
+            val pending = Pendings(
+                requests = changeRequests
+                    .filter { it.status == ChangeRequestStatus.PENDING && scope.covers(it) }
+                    .sortedBy { it.createdAt }
+                    .map { request ->
+                        val clock = clocks.governing(scope, RequestDeadlineId.forChange(request), request.requestedBy)
+                        Pending(request, request.requestedTo == me, clock)
+                    },
+                events = events
+                    .filter { it.acceptance.isPending && scope.covers(it) }
+                    .sortedBy { it.startDateTime }
+                    .map { event ->
+                        val clockId = RequestDeadlineId.forEvent(event)
+                        val clock = clocks.governing(scope, clockId, event.createdByFirebaseUid)
+                        Pending(event, AwaitingAnswers.eventAwaitsAnswerFrom(event, me), clock)
+                    },
+                swaps = DaySwapInbox.groups(overrides, today)
+                    .filter { group -> group.swaps.any { it.override.isPending } }
+                    .map { group ->
+                        val author = group.swaps.first().override.requestedBy
+                        val clock = clocks.governing(scope, RequestDeadlineId.forSwap(group), author)
+                        Pending(group, group.awaitsAnswerFrom(me), clock)
+                    },
+                proposal = shared?.proposal?.let {
+                    val clockId = RequestDeadlineId.forProposal(it, scope.familyId)
+                    Pending(it, it.proposedBy != me, clocks.governing(scope, clockId, it.proposedBy))
+                },
+                split = settings?.proposal?.let {
+                    val clockId = RequestDeadlineId.forSplit(it, scope.familyId)
+                    Pending(it, it.proposedBy != me, clocks.governing(scope, clockId, it.proposedBy))
                 }
-            val pendingEvents = events
-                .filter { it.acceptance.isPending && scope.covers(it) }
-                .sortedBy { it.startDateTime }
-                .map { event ->
-                    val clock = clocks.governing(scope, RequestDeadlineId.forEvent(event), event.createdByFirebaseUid)
-                    Pending(event, AwaitingAnswers.eventAwaitsAnswerFrom(event, me), clock)
-                }
-            val swaps = DaySwapInbox.groups(overrides, today)
-                .filter { group -> group.swaps.any { it.override.isPending } }
-                .map { group ->
-                    val author = group.swaps.first().override.requestedBy
-                    val clock = clocks.governing(scope, RequestDeadlineId.forSwap(group), author)
-                    Pending(group, group.awaitsAnswerFrom(me), clock)
-                }
-            val proposal = shared?.proposal?.let {
-                val clockId = RequestDeadlineId.forProposal(it, scope.familyId)
-                Pending(it, it.proposedBy != me, clocks.governing(scope, clockId, it.proposedBy))
-            }
-            val history = RequestHistory.build(scope, changeRequests, events, overrides, shared?.lastDecision, clocks)
-                .let { built ->
-                    proposal?.takeIf { it.place == RequestPlace.HISTORY }
-                        ?.let { UnansweredRows.withPendingProposal(built, it.request, it.timed) }
-                        ?: built
-                }
+            )
+            val history = pending.withUnansweredProposals(
+                RequestHistory.build(
+                    scope,
+                    changeRequests,
+                    events,
+                    overrides,
+                    shared?.lastDecision,
+                    clocks,
+                    settings?.lastDecision
+                )
+            )
             return RequestInbox(
-                waitingOnMe = waiting(RequestPlace.ON_ME, proposal, pendingEvents, swaps, requests),
-                waitingOnThem = waiting(RequestPlace.ON_THEM, proposal, pendingEvents, swaps, requests),
+                waitingOnMe = pending.at(RequestPlace.ON_ME),
+                waitingOnThem = pending.at(RequestPlace.ON_THEM),
                 history = history,
-                timed = (requests + pendingEvents + swaps + listOfNotNull(proposal))
+                timed = pending.all
                     .mapNotNull { it.timed }
                     .plus(history.mapNotNull { entry -> entry.clock?.let { TimedRequest(it, clocks.nowMillis) } })
                     .associateBy { it.clock.id },
                 unansweredSwapDates = unansweredSwapDates(scope, overrides, clocks)
             )
         }
-
-        /** What waits at [place], in the order each list was given in. */
-        private fun waiting(
-            place: RequestPlace,
-            proposal: Pending<CustodyProposal>?,
-            events: List<Pending<Event>>,
-            swaps: List<Pending<DaySwapGroup>>,
-            requests: List<Pending<ChangeRequest>>
-        ) = Waiting(
-            proposal = proposal?.takeIf { it.place == place }?.request,
-            events = events.at(place),
-            swaps = swaps.at(place),
-            changeRequests = requests.at(place)
-        )
 
         /**
          * The pending days of every offer, whatever its dates, whose clock no longer waits on the
@@ -163,9 +174,6 @@ data class RequestInbox(
                 }
                 .flatMap { group -> group.swaps.filter { it.override.isPending }.map { it.date } }
                 .toSet()
-
-        private fun <T> List<Pending<T>>.at(place: RequestPlace): List<T> =
-            filter { it.place == place }.map { it.request }
     }
 }
 
@@ -203,4 +211,47 @@ private data class Pending<out T>(val request: T, val asksMe: Boolean, val timed
             timed == null || timed.waitsOnResponder -> RequestPlace.ON_ME
             else -> RequestPlace.ON_THEM
         }
+}
+
+/**
+ * Every pending request of one inbox, each with the clock that governs it, in the order each list
+ * was given in.
+ *
+ * @property proposal The custody document's pending proposal, if any.
+ * @property split The money agreement's pending expense split proposal, if any.
+ */
+private data class Pendings(
+    val requests: List<Pending<ChangeRequest>>,
+    val events: List<Pending<Event>>,
+    val swaps: List<Pending<DaySwapGroup>>,
+    val proposal: Pending<CustodyProposal>?,
+    val split: Pending<SplitRatioProposal>?
+) {
+    /** Every one of them, whatever its kind. */
+    val all: List<Pending<*>> get() = requests + events + swaps + listOfNotNull(proposal, split)
+
+    /** What waits at [place]. */
+    fun at(place: RequestPlace) = Waiting(
+        proposal = proposal?.takeIf { it.place == place }?.request,
+        split = split?.takeIf { it.place == place }?.request,
+        events = events.placedAt(place),
+        swaps = swaps.placedAt(place),
+        changeRequests = requests.placedAt(place)
+    )
+
+    /**
+     * [history] with the "No answer" row of each pending proposal — custody or split — whose clock
+     * says it is over but nobody has closed it yet ([UnansweredRows.withPendingProposal]).
+     */
+    fun withUnansweredProposals(history: List<HistoryEntry>): List<HistoryEntry> {
+        val withCustody = proposal?.takeIf { it.place == RequestPlace.HISTORY }
+            ?.let { UnansweredRows.withPendingProposal(history, it.request, it.timed) }
+            ?: history
+        return split?.takeIf { it.place == RequestPlace.HISTORY }
+            ?.let { UnansweredRows.withPendingSplit(withCustody, it.request, it.timed) }
+            ?: withCustody
+    }
+
+    private fun <T> List<Pending<T>>.placedAt(place: RequestPlace): List<T> =
+        filter { it.place == place }.map { it.request }
 }

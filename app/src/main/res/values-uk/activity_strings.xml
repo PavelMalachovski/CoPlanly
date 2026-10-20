@@ -23,4 +23,9 @@
     <string name="activity_subject_custody_schedule">графік опіки</string>
     <string name="activity_settle_up_you_owe">Розрахунок за %1$s: ви винні %2$s</string>
     <string name="activity_settle_up_owed_to_you">Розрахунок за %1$s: вам винні %2$s</string>
+    <string name="activity_split_proposed">Запропоновано новий поділ витрат</string>
+    <string name="activity_split_accepted">Новий поділ витрат погоджено</string>
+    <string name="activity_split_declined">Пропозицію щодо поділу витрат відхилено</string>
+    <string name="activity_split_withdrawn">Пропозицію щодо поділу витрат відкликано</string>
+    <string name="activity_subject_expense_split">поділ витрат</string>
 </resources>
