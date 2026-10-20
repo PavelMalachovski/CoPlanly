@@ -24,6 +24,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -105,7 +106,17 @@ class ProfessionalRepositoryImpl @Inject constructor(
 
     override fun observeFamilyGrants(): Flow<List<ProfessionalGrant>> {
         val myUid = currentUid() ?: return flowOf(emptyList())
-        return observeGrants("familyParents", myUid, arrayContains = true)
+        // Every grant naming this parent, the one list query the rule admits a parent, kept to the
+        // family on screen as the family friends are: a parent in two families sees each family's
+        // professionals under that family, and consents to or revokes only what that family's
+        // screen shows. It listed both families' mediators and lawyers on either screen.
+        return combine(
+            observeGrants("familyParents", myUid, arrayContains = true),
+            selectedFamilySource.observe(myUid)
+        ) { grants, family ->
+            val familyId = family?.familyId
+            if (familyId == null) emptyList() else grants.filter { it.familyId == familyId }
+        }
     }
 
     override fun observeMyGrants(): Flow<List<ProfessionalGrant>> {
