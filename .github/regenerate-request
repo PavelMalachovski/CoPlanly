@@ -87,3 +87,6 @@ requested: 2026-10-15 — per-family custody rows: custody_models gains familyId
            moves to version 45, so app/schemas/…/45.json is new; no screenshot change and no new
            detekt finding is expected
 2026-10-16T10:39:11Z phase 3a: baselines for Tasks 12–13 screenshots, detekt baseline refresh
+requested: 2026-10-20 — tester fixes: the split banner names who pays which share
+           (common_inline_banner, 12 images) and the family-friend comparison offers "while linked"
+           (friends_comparison, 9 images); no schema change and no new detekt finding is expected
