@@ -1072,6 +1072,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   refuses an expired read at `request.time`. It is a range query, so a grant with no positive
   numeric expiry is never deleted; the callable never writes one and the rule admits nothing
   through it, so do not "fix" the sweep into treating a missing expiry as expired or as permanent.
+  **A friend may be invited for as long as the parents are linked** (October 2026, owner decision
+  after testers asked). `FriendAccessDuration.WHILE_LINKED` stores an end in the year 9999
+  (`WHILE_LINKED_EXPIRY_MILLIS`), so the callable, the rules and the sweep keep reading a number;
+  the grant still ends with its family (unpair deletes it) or a revoke, and the screens say "while
+  linked" for anything past 2100 (`isWhileLinked`). A child's guest keeps a real end.
   **The friend reads the calendar in the app since October 2026** (tester feedback phase 2; the
   UI calls the role a **family friend**, Settings → Family → *Family friends*). `FriendCalendarScreen`
   (`presentation/friends/`, route `friend_calendar/{familyId}`) is the professional's list agenda
@@ -1510,12 +1515,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     who already co-parents could be moved in their first family too — both parents of it on one
     colour, every record re-stamped, the custody pattern inverted. `acceptPairingInvitation`
     refuses that (`assertAccepterKeepsSlot`: `enter-their-code` when the other way round works,
-    `slot-conflict` when both already hold the same slot), and a paired account's "Add another
-    co-parent" only *shares* a code (`shareOnlySection`), never offers a field for somebody else's.
-    Don't put a code field back there, or drop the guard, before the clients read
-    `families/{id}.slots`. `OnScreenFamiliesTest` takes the second family's code from that screen,
-    because every test used to take it from the repository while the screen gave a paired account
-    no code at all.
+    `slot-conflict` when both already hold the same slot). A paired account's "Add another
+    co-parent" (`anotherCoParentSection`) opens on sharing its own code and, since October 2026
+    (tester report, owner decision: "a code field, checked by the server"), also offers the field
+    for somebody else's code; the preview and the accept refuse a slot move with those two reasons.
+    Don't drop `assertAccepterKeepsSlot` before the clients read `families/{id}.slots` — the field
+    is safe only because the server says no. `OnScreenFamiliesTest` takes the second family's code
+    from that screen, because every test used to take it from the repository while the screen gave
+    a paired account no code at all.
 20. **The database file is encrypted, and the passphrase is the one piece of state that must never
     be re-minted** (SEC-2, Aug 2026). Room opens through SQLCipher: `EncryptedDatabase` builds the
     open helper and converts an existing plaintext file on the way, `DatabaseKey` holds 256 random
@@ -2366,6 +2373,50 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       has its own push (`request_last_chance`, item 15's four places), and "No answer" must not
       wake the parent who was just told nothing more comes. Until the functions are deployed they
       are pushed like any message. Opening a request pushes nobody either; DPIA R22.
+
+43. **A family's records are read for the family on screen** (October 2026, tester report: the
+    family with Carol showed the family with Igor's expenses). `data/family/FamilyView.kt`'s
+    `inFamilyOnScreen` filters what `EventRepositoryImpl`, `ExpenseRepositoryImpl`,
+    `ChildInfoRepositoryImpl.getAllChildInfo` and `PetRepositoryImpl.getAllPets` emit, following
+    the signed-in Room row, so a switch re-filters without a reload. It hides **only the records of
+    the parent's other live families**: a record naming no family, or an ended one, stays visible
+    (the "mine alone" of item 18), and with one family nothing is hidden. A background job that
+    must see every family — health-consent withdrawal, the school import's child picker — reads
+    `getAllChildInfoInEveryFamily()`. Room still holds every family; this is a read filter, not
+    a second store.
+
+44. **An agreed day swap stands until another agreement replaces it** (October 2026, tester
+    feedback: "I agreed the day would be with him, then I fell ill — let me propose a change and
+    keep the agreement documented"). A new offer of a day carries the answer it replaces in
+    `DayOverride.earlier` (`DayOverrideDecisionCodec`, `d1|toParent|requestedBy|requestedAt|status|
+    decidedBy|decidedAt|groupId`), and `DayOverride.agreedToParent` — the entry's own slot once
+    accepted, else the latest accepted earlier answer — is what `CustodyResolver`, the grid's swap
+    fill, the month review and the calendar feed (`agreedToParent` in `calendar-feed.js`) read. So
+    while the change waits, or after it is declined, the day stays where it was agreed; History
+    keeps the earlier answer as its own row (`RequestHistory.earlierSwapAnswers`) and its accepted
+    live rows with a day ahead carry **Propose a change** (the calendar's `DaySwapSheet`, each day
+    offered back). Three things not to undo. **`firestore.rules` writes `earlier` only as the app
+    does** (`earlierWrittenAsTheAppDoes`, `dayOverrideAnswer`): an offer carries exactly the replaced
+    entry's list plus its answer, or no list; an answer keeps it — the list moves a day, so a forged
+    acceptance in it is an agreement nobody gave. **The string order is a contract with the rule**;
+    change both. And **an older build cannot carry the key**: its whole-document writes are refused
+    while any day holds one, until it is updated.
+
+45. **Settle up is a card, and the payer's phone draws the payment code** (October 2026, tester
+    reports: the settle-up draft could be edited before it was sent; "a QR code for the amount").
+    `SettleUpDialog` asks first and `SettleUpMessages` posts `SETTLE_UP_OWED`/`SETTLE_UP_OWING`
+    (amount as a plain two-decimal string, currency, month); the reader words it by who reads it
+    (`ActivityKind.readerPays`, `ActivityCardText.settleUpResource`), and a message cannot be
+    edited. Each parent may add the IBAN they are paid on, `users/{uid}.paymentIban` (`PaymentAccounts`,
+    Firestore only, mod-97 checked; the rules bound its shape), and under the card, on the payer's
+    phone only, `SettleUpPayment.kt` draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
+    by square (raw LZMA1 through `org.tukaani:xz`) for an SK one, the EPC code for another euro
+    account, and nothing for another currency — the IBAN to copy and **Share QR code** either way,
+    because a bank's app cannot scan the screen it runs on. Three things not to undo. **The codes
+    are made on the phone and nothing goes to a bank**; the privacy policy says so. **PAY by square
+    is pinned byte for byte to liblzma's encoder** (`PaymentQrTest`); change the document and the
+    expected text together, from a reference encoder, never by editing both to agree. And **a real
+    bank's app reading the code is device check §3.25**, not something CI proves.
 
 ## Legal and GDPR (September 2026) — keep consistent
 
