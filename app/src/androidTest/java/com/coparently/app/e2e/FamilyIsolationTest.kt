@@ -66,31 +66,57 @@ class FamilyIsolationTest : TwoParentTest() {
     @Test
     fun nothingOfOneFamilyReachesTheOther() = runBlocking<Unit> {
         val familyA = FamilyKey.of(alice.uid, bob.uid)
-        EmulatorEnvironment.step("family A: Alice and Bob write records with the canary")
-        val inA = fillFamilyA()
+        val inA = phase("family A: Alice and Bob write records with the canary") { fillFamilyA() }
 
-        val carol = joinCarolAndShowHerFamily()
+        val carol = phase("Carol joins and her family goes on screen") { joinCarolAndShowHerFamily() }
         val familyB = FamilyKey.of(alice.uid, carol.uid)
-        EmulatorEnvironment.step("family B: a friend, a professional and a child's guest")
-        val outsiders = admitOutsiders(carol, familyB)
+        val outsiders = phase("family B: a friend, a professional and a child's guest") {
+            admitOutsiders(carol, familyB)
+        }
 
-        EmulatorEnvironment.step("Alice edits family A's records with family B on screen, and syncs")
-        editFamilyAWhileShowingB(inA)
-        EmulatorEnvironment.step("family B: Alice and Carol write records with the second canary")
-        val inB = fillFamilyB(carol)
-        alice.syncService.performFullSync().getOrThrow()
+        phase("Alice edits family A's records with family B on screen, and syncs") {
+            editFamilyAWhileShowingB(inA)
+        }
+        val inB = phase("family B: Alice and Carol write records with the second canary") {
+            fillFamilyB(carol).also { alice.syncService.performFullSync().getOrThrow() }
+        }
 
-        EmulatorEnvironment.step("the sweep: every document, every phone, every reader")
-        assertCanaryStaysInItsFamily(canaryA, familyA, setOf(alice.uid, bob.uid))
-        assertCanaryStaysInItsFamily(canaryB, familyB, setOf(alice.uid, carol.uid))
-        assertPhoneHoldsNothingOf(carol, canaryA, bob.uid)
-        assertPhoneHoldsNothingOf(bob, canaryB, carol.uid)
+        phase("the sweep: every document") {
+            assertCanaryStaysInItsFamily(canaryA, familyA, setOf(alice.uid, bob.uid))
+            assertCanaryStaysInItsFamily(canaryB, familyB, setOf(alice.uid, carol.uid))
+        }
+        phase("the sweep: Carol's and Bob's phones") {
+            assertPhoneHoldsNothingOf(carol, canaryA, bob.uid)
+            assertPhoneHoldsNothingOf(bob, canaryB, carol.uid)
+        }
         val readersOfB = listOf(carol) + outsiders.all
-        readersOfB.forEach { reader -> inA.paths.forEach { path -> assertRefused(reader, path) } }
-        inB.paths.forEach { path -> assertRefused(bob, path) }
-        readersOfB.forEach { assertNoPushAbout(it, canaryA, familyA, bob.uid) }
-        assertNoPushAbout(bob, canaryB, familyB, carol.uid)
-        assertOutsidersStillReadFamilyB(outsiders, familyB, inB)
+        phase("the sweep: every reader refused the other family's records") {
+            readersOfB.forEach { reader -> inA.paths.forEach { path -> assertRefused(reader, path) } }
+            inB.paths.forEach { path -> assertRefused(bob, path) }
+        }
+        phase("the sweep: pushes") {
+            readersOfB.forEach { assertNoPushAbout(it, canaryA, familyA, bob.uid) }
+            assertNoPushAbout(bob, canaryB, familyB, carol.uid)
+        }
+        phase("the control: family B's outsiders still read it") {
+            assertOutsidersStillReadFamilyB(outsiders, familyB, inB)
+        }
+    }
+
+    /**
+     * Runs one stage of the scenario under [name], and names it in any failure: CI shows the
+     * failure's message and not the log, and a bare `PERMISSION_DENIED` says nothing of which of
+     * twenty writes it was.
+     */
+    private suspend fun <T> phase(name: String, block: suspend () -> T): T {
+        EmulatorEnvironment.step(name)
+        return try {
+            block()
+        } catch (failure: AssertionError) {
+            throw AssertionError("$name: ${failure.message}", failure)
+        } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) {
+            throw AssertionError("$name: $failure", failure)
+        }
     }
 
     // ---- Family A ------------------------------------------------------------------------------
@@ -214,6 +240,10 @@ class FamilyIsolationTest : TwoParentTest() {
         assertEquals("${familyB}__${professional.uid}", accepted.grantId)
         carol.professionalRepository.consent(accepted.grantId).getOrThrow()
 
+        // Carol's first sync since pairing, which the app runs on the Paired transition: its
+        // backfill re-uploads her own records from Room, and a guest granted on the server before
+        // it would be dropped by that re-upload (Room does not hold the grant until a pull).
+        carol.syncService.performFullSync().getOrThrow()
         val guestChild = newChild(carol, "Ben")
         carol.childInfoRepository.upsertChildInfo(guestChild)
         awaitOnServer("child_info/${guestChild.id}")
