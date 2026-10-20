@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Records without a family (data/family/UnassignedRecords.kt, presentation/family/): a parent's own
+     records that name no family while they co-parent, and the parent's answer for each. -->
+<resources>
+    <string name="unassigned_records_title">Záznamy bez rodiny</string>
+    <plurals name="unassigned_records_count">
+        <item quantity="one">%1$d záznam zatím nepatří k žádné rodině</item>
+        <item quantity="few">%1$d záznamy zatím nepatří k žádné rodině</item>
+        <item quantity="many">%1$d záznamu zatím nepatří k žádné rodině</item>
+        <item quantity="other">%1$d záznamů zatím nepatří k žádné rodině</item>
+    </plurals>
+    <string name="unassigned_records_intro">Tyto záznamy jste přidali dřív, než jste se propojili s dalším druhým rodičem, a tak nic neříká, ke které rodině který patří. Zatím je vidíte jen vy. U každého zvolte rodinu, nebo si ho nechte jen pro sebe.</string>
+    <string name="unassigned_records_group_children_pets">Děti a zvířata</string>
+    <string name="unassigned_records_group_events">Události</string>
+    <string name="unassigned_records_group_expenses">Výdaje</string>
+    <string name="unassigned_records_group_custody">Rozvrh péče</string>
+    <string name="unassigned_records_kind_child">Dítě</string>
+    <string name="unassigned_records_kind_pet">Zvíře</string>
+    <string name="unassigned_records_custody_starts">Začíná %1$s</string>
+    <string name="unassigned_records_choose_title">Ke které rodině patří?</string>
+    <string name="unassigned_records_family_with">Rodina, kde je druhým rodičem %1$s</string>
+    <string name="unassigned_records_family_unnamed">Rodina s druhým rodičem zatím bez jména</string>
+    <string name="unassigned_records_keep_mine">Nechat jen pro mě</string>
+    <string name="unassigned_records_keep_mine_hint">Nikdo jiný ho neuvidí a už se vás nezeptáme.</string>
+    <string name="unassigned_records_custody_note">Rozvrh může patřit jen rodině, která je právě zobrazená. Pokud už tato rodina rozvrh má, druhý rodič s tímto nejdřív musí souhlasit. Chcete-li ho dát jiné rodině, přepněte na ni a vraťte se sem.</string>
+    <string name="unassigned_records_save">Uložit</string>
+    <string name="unassigned_records_notice_assigned">Přesunuto do rodiny, kde je druhým rodičem %1$s</string>
+    <string name="unassigned_records_notice_assigned_unnamed">Přesunuto do zvolené rodiny</string>
+    <string name="unassigned_records_notice_proposed">Odesláno jako návrh rozvrhu, odpovídá %1$s</string>
+    <string name="unassigned_records_notice_proposed_unnamed">Odesláno druhému rodiči jako návrh rozvrhu</string>
+    <string name="unassigned_records_notice_proposal_waiting">Čeká na vás návrh rozvrhu od druhého rodiče. Nejdřív na něj odpovězte.</string>
+    <string name="unassigned_records_notice_not_sent">Záznam se nepodařilo přesunout. Zkuste to znovu.</string>
+    <string name="unassigned_records_notice_gone">Tento záznam už k rodině patří, nebo už neexistuje.</string>
+    <string name="unassigned_records_notice_kept">Ponecháno jen pro vás</string>
+    <string name="unassigned_records_empty_title">Všechny záznamy mají rodinu</string>
+    <string name="unassigned_records_empty_description">Co jste si nechali jen pro sebe, zůstává označené „%1$s“ a vidíte to jen vy.</string>
+    <string name="unassigned_records_prompt_title">Ke které rodině tyto záznamy patří?</string>
+    <plurals name="unassigned_records_prompt_body">
+        <item quantity="one">%1$d záznam jste přidali dřív, než jste se propojili s dalším druhým rodičem, a tak nic neříká, ke které rodině patří. Dokud nezvolíte, vidíte ho jen vy.</item>
+        <item quantity="few">%1$d záznamy jste přidali dřív, než jste se propojili s dalším druhým rodičem, a tak nic neříká, ke které rodině který patří. Dokud nezvolíte, vidíte je jen vy.</item>
+        <item quantity="many">%1$d záznamu jste přidali dřív, než jste se propojili s dalším druhým rodičem, a tak nic neříká, ke které rodině který patří. Dokud nezvolíte, vidíte je jen vy.</item>
+        <item quantity="other">%1$d záznamů jste přidali dřív, než jste se propojili s dalším druhým rodičem, a tak nic neříká, ke které rodině který patří. Dokud nezvolíte, vidíte je jen vy.</item>
+    </plurals>
+    <string name="unassigned_records_prompt_choose">Vybrat</string>
+    <string name="unassigned_records_prompt_later">Později</string>
+</resources>

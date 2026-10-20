@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Records without a family (data/family/UnassignedRecords.kt, presentation/family/): a parent's own
+     records that name no family while they co-parent, and the parent's answer for each. -->
+<resources>
+    <string name="unassigned_records_title">Записи без родини</string>
+    <plurals name="unassigned_records_count">
+        <item quantity="one">%1$d запис поки не належить до жодної родини</item>
+        <item quantity="few">%1$d записи поки не належать до жодної родини</item>
+        <item quantity="many">%1$d записів поки не належать до жодної родини</item>
+        <item quantity="other">%1$d запису поки не належать до жодної родини</item>
+    </plurals>
+    <string name="unassigned_records_intro">Ви додали ці записи до того, як повʼязалися ще з одним другим із батьків, тому ніщо не вказує, до якої родини належить кожен із них. Поки їх бачите лише ви. Виберіть родину для кожного запису або залиште його лише собі.</string>
+    <string name="unassigned_records_group_children_pets">Діти й тварини</string>
+    <string name="unassigned_records_group_events">Події</string>
+    <string name="unassigned_records_group_expenses">Витрати</string>
+    <string name="unassigned_records_group_custody">Графік опіки</string>
+    <string name="unassigned_records_kind_child">Дитина</string>
+    <string name="unassigned_records_kind_pet">Тварина</string>
+    <string name="unassigned_records_custody_starts">Початок: %1$s</string>
+    <string name="unassigned_records_choose_title">До якої родини це належить?</string>
+    <string name="unassigned_records_family_with">Родина, де другий із батьків — %1$s</string>
+    <string name="unassigned_records_family_unnamed">Родина, де імʼя другого з батьків поки невідоме</string>
+    <string name="unassigned_records_keep_mine">Залишити лише собі</string>
+    <string name="unassigned_records_keep_mine_hint">Ніхто інший його не побачить, і вас більше не запитають.</string>
+    <string name="unassigned_records_custody_note">Графік може належати лише родині, яка зараз на екрані. Якщо ця родина вже має графік, другий із батьків спершу має погодитися з цим. Щоб віддати його іншій родині, перемкніться на неї та поверніться сюди.</string>
+    <string name="unassigned_records_save">Зберегти</string>
+    <string name="unassigned_records_notice_assigned">Перенесено до родини, де другий із батьків — %1$s</string>
+    <string name="unassigned_records_notice_assigned_unnamed">Перенесено до вибраної родини</string>
+    <string name="unassigned_records_notice_proposed">Надіслано як пропозицію графіка. Відповідає: %1$s</string>
+    <string name="unassigned_records_notice_proposed_unnamed">Надіслано другому з батьків як пропозицію графіка</string>
+    <string name="unassigned_records_notice_proposal_waiting">На вас чекає пропозиція графіка від другого з батьків. Спершу дайте на неї відповідь.</string>
+    <string name="unassigned_records_notice_not_sent">Не вдалося перенести запис. Спробуйте ще раз.</string>
+    <string name="unassigned_records_notice_gone">Цей запис уже належить до родини або більше не існує.</string>
+    <string name="unassigned_records_notice_kept">Залишено лише вам</string>
+    <string name="unassigned_records_empty_title">Усі записи мають родину</string>
+    <string name="unassigned_records_empty_description">Те, що ви залишили лише собі, і далі позначено «%1$s», і це бачите лише ви.</string>
+    <string name="unassigned_records_prompt_title">До якої родини належать ці записи?</string>
+    <plurals name="unassigned_records_prompt_body">
+        <item quantity="one">Ви додали %1$d запис до того, як повʼязалися ще з одним другим із батьків, тому ніщо не вказує, до якої родини він належить. Поки ви не виберете, його бачите лише ви.</item>
+        <item quantity="few">Ви додали %1$d записи до того, як повʼязалися ще з одним другим із батьків, тому ніщо не вказує, до якої родини належить кожен. Поки ви не виберете, їх бачите лише ви.</item>
+        <item quantity="many">Ви додали %1$d записів до того, як повʼязалися ще з одним другим із батьків, тому ніщо не вказує, до якої родини належить кожен. Поки ви не виберете, їх бачите лише ви.</item>
+        <item quantity="other">Ви додали %1$d запису до того, як повʼязалися ще з одним другим із батьків, тому ніщо не вказує, до якої родини належить кожен. Поки ви не виберете, їх бачите лише ви.</item>
+    </plurals>
+    <string name="unassigned_records_prompt_choose">Вибрати</string>
+    <string name="unassigned_records_prompt_later">Пізніше</string>
+</resources>

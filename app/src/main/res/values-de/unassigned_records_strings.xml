@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Records without a family (data/family/UnassignedRecords.kt, presentation/family/): a parent's own
+     records that name no family while they co-parent, and the parent's answer for each. -->
+<resources>
+    <string name="unassigned_records_title">Einträge ohne Familie</string>
+    <plurals name="unassigned_records_count">
+        <item quantity="one">%1$d Eintrag gehört noch zu keiner Familie</item>
+        <item quantity="other">%1$d Einträge gehören noch zu keiner Familie</item>
+    </plurals>
+    <string name="unassigned_records_intro">Sie haben diese Einträge angelegt, bevor Sie sich mit einem weiteren Elternteil verbunden haben, daher ist nicht festgelegt, zu welcher Familie sie jeweils gehören. Vorerst sehen nur Sie sie. Wählen Sie für jeden eine Familie, oder behalten Sie ihn nur für sich.</string>
+    <string name="unassigned_records_group_children_pets">Kinder und Haustiere</string>
+    <string name="unassigned_records_group_events">Termine</string>
+    <string name="unassigned_records_group_expenses">Ausgaben</string>
+    <string name="unassigned_records_group_custody">Betreuungsplan</string>
+    <string name="unassigned_records_kind_child">Kind</string>
+    <string name="unassigned_records_kind_pet">Haustier</string>
+    <string name="unassigned_records_custody_starts">Beginnt am %1$s</string>
+    <string name="unassigned_records_choose_title">Zu welcher Familie gehört das?</string>
+    <string name="unassigned_records_family_with">Familie mit %1$s</string>
+    <string name="unassigned_records_family_unnamed">Familie mit einem Elternteil ohne Namen</string>
+    <string name="unassigned_records_keep_mine">Nur für mich behalten</string>
+    <string name="unassigned_records_keep_mine_hint">Niemand sonst sieht ihn, und Sie werden nicht mehr gefragt.</string>
+    <string name="unassigned_records_custody_note">Ein Betreuungsplan kann nur zur angezeigten Familie gehören. Hat diese Familie schon einen, muss der andere Elternteil diesem zuerst zustimmen. Soll er zu einer anderen Familie gehören, wechseln Sie zu ihr und kommen Sie hierher zurück.</string>
+    <string name="unassigned_records_save">Speichern</string>
+    <string name="unassigned_records_notice_assigned">In die Familie mit %1$s verschoben</string>
+    <string name="unassigned_records_notice_assigned_unnamed">In die gewählte Familie verschoben</string>
+    <string name="unassigned_records_notice_proposed">Als Vorschlag für den Betreuungsplan an %1$s gesendet</string>
+    <string name="unassigned_records_notice_proposed_unnamed">Als Vorschlag für den Betreuungsplan an den anderen Elternteil gesendet</string>
+    <string name="unassigned_records_notice_proposal_waiting">Ein Vorschlag des anderen Elternteils für den Betreuungsplan wartet. Beantworten Sie ihn zuerst.</string>
+    <string name="unassigned_records_notice_not_sent">Der Eintrag konnte nicht verschoben werden. Versuchen Sie es erneut.</string>
+    <string name="unassigned_records_notice_gone">Dieser Eintrag gehört schon zu einer Familie oder existiert nicht mehr.</string>
+    <string name="unassigned_records_notice_kept">Nur für Sie behalten</string>
+    <string name="unassigned_records_empty_title">Jeder Eintrag hat eine Familie</string>
+    <string name="unassigned_records_empty_description">Was Sie nur für sich behalten haben, bleibt mit „%1$s“ markiert, und nur Sie sehen es.</string>
+    <string name="unassigned_records_prompt_title">Zu welcher Familie gehören diese Einträge?</string>
+    <plurals name="unassigned_records_prompt_body">
+        <item quantity="one">Sie haben %1$d Eintrag angelegt, bevor Sie sich mit einem weiteren Elternteil verbunden haben, daher ist nicht festgelegt, zu welcher Familie er gehört. Bis Sie wählen, sehen nur Sie ihn.</item>
+        <item quantity="other">Sie haben %1$d Einträge angelegt, bevor Sie sich mit einem weiteren Elternteil verbunden haben, daher ist nicht festgelegt, zu welcher Familie sie jeweils gehören. Bis Sie wählen, sehen nur Sie sie.</item>
+    </plurals>
+    <string name="unassigned_records_prompt_choose">Auswählen</string>
+    <string name="unassigned_records_prompt_later">Später</string>
+</resources>

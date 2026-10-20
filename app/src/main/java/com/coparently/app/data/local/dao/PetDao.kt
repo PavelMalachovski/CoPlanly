@@ -133,4 +133,28 @@ interface PetDao {
             "AND familyId != :familyId AND instr(familyId, :myUid) > 0"
     )
     suspend fun countRowsOfOtherFamilies(familyId: String, myUid: String): Int
+
+    /**
+     * [myUid]'s own pets that name no family, as they change ("Records without a family"): "only
+     * mine" until the parent assigns them. See [ChildInfoDao.observeOwnWithoutFamily].
+     */
+    @Query(
+        "SELECT * FROM pets WHERE createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL ORDER BY name ASC"
+    )
+    fun observeOwnWithoutFamily(myUid: String): Flow<List<PetEntity>>
+
+    /**
+     * Gives [myUid]'s own pet [id] the family the parent chose for it, and queues it for upload —
+     * `PetRepositoryImpl.pullOnce`, which every full sync runs, sends it with that family's
+     * audience. Only while it still names no family, and never a pending tombstone.
+     *
+     * @return 1 when the pet took the family, 0 otherwise.
+     */
+    @Query(
+        "UPDATE pets SET familyId = :familyId, syncedToFirestore = 0 " +
+            "WHERE id = :id AND createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL"
+    )
+    suspend fun assignFamily(id: String, familyId: String, myUid: String): Int
 }

@@ -104,6 +104,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.components.SkeletonBox
+import com.coparently.app.presentation.family.UnassignedRecordsPrompt
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -156,6 +157,8 @@ private const val STACK_TILES_FONT_SCALE = 1.3f
  * @param onOpenExpenses Switches to the Expenses tab — the spend tile's deep link
  * @param onOpenChat Switches to the Chat tab — the unread tile's deep link
  * @param onAddEvent Opens the new-event form — the empty week's way forward
+ * @param onOpenUnassignedRecords Opens "Records without a family" from the one-time question about
+ *   them; null asks nothing
  * @param viewModel Screen state
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -175,6 +178,7 @@ fun HomeScreen(
     onOpenExpenses: () -> Unit,
     onOpenChat: () -> Unit,
     onAddEvent: () -> Unit,
+    onOpenUnassignedRecords: (() -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
     changeRequestViewModel: ChangeRequestViewModel = hiltViewModel()
 ) {
@@ -279,6 +283,9 @@ fun HomeScreen(
                     onOpenChat = onOpenChat,
                     onAddEvent = onAddEvent
                 )
+                // Asked once per co-parent set (owner decision, October 2026). Composed before the
+                // asks below, so a waiting swap or proposal sits on top of it.
+                onOpenUnassignedRecords?.let { UnassignedRecordsPrompt(onChoose = it) }
                 AwaitingDialogs(
                     state = state,
                     parentNames = parentNames,

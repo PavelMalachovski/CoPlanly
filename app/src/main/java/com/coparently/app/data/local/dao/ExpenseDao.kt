@@ -83,4 +83,15 @@ interface ExpenseDao {
             "AND familyId != :familyId AND instr(familyId, :myUid) > 0"
     )
     suspend fun countRowsOfOtherFamilies(familyId: String, myUid: String): Int
+
+    /**
+     * [myUid]'s own expenses that name no family, as they change ("Records without a family"):
+     * "only mine" until the parent assigns them. See [EventDao.observeOwnWithoutFamily]. Assigning
+     * one goes through `ExpenseRepository.updateExpense`, because an expense has no upload outbox.
+     */
+    @Query(
+        "SELECT * FROM expenses WHERE createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL ORDER BY date DESC"
+    )
+    fun observeOwnWithoutFamily(myUid: String): Flow<List<ExpenseEntity>>
 }

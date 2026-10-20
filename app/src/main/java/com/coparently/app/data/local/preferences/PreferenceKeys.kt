@@ -242,6 +242,30 @@ object PreferenceKeys {
     const val SELECTED_FAMILY_PREFIX = "selected_family_"
 
     /**
+     * Prefix for the per-user list of records this parent chose to keep only theirs ("Records
+     * without a family", owner decision October 2026) — the actual key is this prefix plus the
+     * Firebase UID, and the value is a [LIST_SEPARATOR]-joined list of `kind:id` keys
+     * (`UnassignedRecord.key`). A record on it is not asked about again; it stays "Only me" and
+     * keeps its mark.
+     *
+     * Per user for the reason [PARENT_SLOT_MARKER_PREFIX] gives. Not exempt from
+     * `EncryptedPreferences.clear()`: losing it costs asking about those records once more, and the
+     * next account on this device must not inherit the answer.
+     */
+    const val UNASSIGNED_KEPT_PREFIX = "unassigned_records_kept_"
+
+    /**
+     * Prefix for the per-user key naming the co-parent set Home last asked about records without a
+     * family for — the actual key is this prefix plus the Firebase UID, and the value is every
+     * co-parent's UID, sorted and comma-joined, the form [EVENT_AUDIENCE_BACKFILL_PREFIX] uses.
+     *
+     * The set, so the question is asked once, and once more only when a new co-parent arrives (a
+     * third family is a new reason to wonder where an old record belongs). Not exempt from
+     * `EncryptedPreferences.clear()`, for the reason [UNASSIGNED_KEPT_PREFIX] gives.
+     */
+    const val UNASSIGNED_ASKED_PREFIX = "unassigned_records_asked_"
+
+    /**
      * Prefix for one school-system connection (MON-8) — the actual key is this prefix plus the
      * connection's id, and the value is `SchoolConnectionCodec`'s JSON: the school's address, the
      * username, the child it imports for, and the school's rotating refresh and access tokens.
