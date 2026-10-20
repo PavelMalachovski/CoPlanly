@@ -3,6 +3,7 @@ package com.coparently.app.presentation.changerequests
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestTime
@@ -14,6 +15,9 @@ import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
@@ -41,6 +45,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 /**
  * One source for the requests of the family on screen (phase 2, spec §6.3): the inbox, Home's
@@ -60,6 +65,9 @@ class RequestsSourceTest {
 
     /** The clocks listener, each family's clocks by family id; a family not named has none. */
     private val clockRepository = mockk<RequestDeadlineRepository>()
+
+    /** The split listener, each family's `family_settings` document by family id; a family not named has none. */
+    private val settingsRepository = mockk<FamilySettingsRepository>()
     private val bob = PartnerSummary(id = "u2", name = "Bob", email = "bob@example.com", pairedSinceMillis = 1L)
 
     private fun request(id: String, status: ChangeRequestStatus = ChangeRequestStatus.PENDING) = ChangeRequest(
@@ -118,6 +126,7 @@ class RequestsSourceTest {
      * @param roomSwaps What Room's one active custody model holds, whichever family it came from.
      * @param documents Each family's custody document, by family id; a family not named has none.
      * @param clocks Each family's request clocks, by family id; a family not named has none.
+     * @param settings Each family's split document, by family id; a family not named has none.
      */
     @Suppress("LongParameterList") // one fixture for every source the requests are derived from
     private fun source(
@@ -128,9 +137,11 @@ class RequestsSourceTest {
         events: List<Event> = emptyList(),
         roomSwaps: Map<String, DayOverride> = emptyMap(),
         documents: Map<String, SharedCustody> = emptyMap(),
-        clocks: Map<String, List<RequestDeadline>> = emptyMap()
+        clocks: Map<String, List<RequestDeadline>> = emptyMap(),
+        settings: Map<String, FamilySettings> = emptyMap()
     ): RequestsSource {
         every { clockRepository.observeFamily("u1", any()) } answers { flowOf(clocks[secondArg()].orEmpty()) }
+        every { settingsRepository.observeSettingsOf(any()) } answers { flowOf(settings[firstArg()]) }
         val row = User(
             id = "u1",
             email = "alice@example.com",
@@ -160,9 +171,19 @@ class RequestsSourceTest {
                 RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks),
                 // Delivery is the keeper's, and `RequestClocksTest` covers the hand-over.
                 mockk<RequestClockKeeper>(relaxed = true)
-            )
+            ),
+            familySettingsRepository = settingsRepository
         )
     }
+
+    /** The split document of the family Alice shares with Bob, holding [by]'s proposal of 35/65. */
+    private fun splitProposedBy(by: String) = FamilySettings(
+        ratio = SplitRatio.EVEN,
+        participants = listOf("u1", "u2"),
+        lastModifiedBy = "u2",
+        lastModifiedAtMillis = 1L,
+        proposal = SplitRatioProposal(SplitRatio(THIRTY_FIVE), proposedBy = by, proposedAtMillis = NOW)
+    )
 
     /** The clock of [request], written by its author for the parent it asks, due an hour after [NOW]. */
     private fun clockOf(request: ChangeRequest, familyId: String = "u1__u2") = RequestDeadline(
@@ -343,7 +364,61 @@ class RequestsSourceTest {
         assertEquals(listOf("r1"), ready.inbox.waitingOnMe.changeRequests.map { it.id })
     }
 
+    @Test
+    fun `the family's own split proposal waits on the parent it asks`() = runTest {
+        val bobs = splitProposedBy("u2")
+
+        val ready = source(
+            PairingState.Paired(bob),
+            shown = "u2",
+            coParents = listOf("u2", "u3"),
+            settings = mapOf("u1__u2" to bobs)
+        ).observe().filterIsInstance<RequestsState.Ready>().first { it.settings != null }
+
+        assertEquals(bobs, ready.settings)
+        assertEquals(bobs.proposal, ready.inbox.waitingOnMe.split)
+        assertNull(ready.inbox.waitingOnThem.split)
+        assertEquals(1, ready.inbox.waitingOnMe.count)
+        verify { settingsRepository.observeSettingsOf("u1__u2") }
+    }
+
+    @Test
+    fun `another family's split is in neither section`() = runTest {
+        // Alice switched to Carol's family; Bob's proposal is in the family she shares with him.
+        val ready = source(
+            PairingState.Paired(bob),
+            shown = "u3",
+            coParents = listOf("u2", "u3"),
+            settings = mapOf("u1__u2" to splitProposedBy("u2"))
+        ).observe().filterIsInstance<RequestsState.Ready>().first()
+
+        assertNull(ready.settings)
+        assertNull(ready.inbox.waitingOnMe.split)
+        assertNull(ready.inbox.waitingOnThem.split)
+        verify(exactly = 0) { settingsRepository.observeSettingsOf("u1__u2") }
+    }
+
+    @Test
+    fun `the requests are not held back until the split listener answers`() = runTest {
+        val requests = source(
+            PairingState.Paired(bob),
+            shown = "u2",
+            coParents = listOf("u2"),
+            requests = listOf(request("r1"))
+        )
+        // A listener that has not answered yet — offline with a cold cache, or retrying a denial.
+        every { settingsRepository.observeSettingsOf(any()) } returns MutableSharedFlow()
+
+        val ready = requests.observe().filterIsInstance<RequestsState.Ready>().first()
+
+        assertNull(ready.settings)
+        assertEquals(listOf("r1"), ready.inbox.waitingOnMe.changeRequests.map { it.id })
+    }
+
     private companion object {
+        /** 35 % for slot 1, in basis points. */
+        const val THIRTY_FIVE = 3_500
+
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE
 

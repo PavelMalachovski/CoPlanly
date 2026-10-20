@@ -14,6 +14,9 @@ import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
@@ -93,6 +96,15 @@ class InboxItemsTest {
             )
         )
     }
+
+    /** The family's split document, agreed half each, with [uid]'s proposal of 35/65. */
+    private fun splitBy(uid: String) = FamilySettings(
+        ratio = SplitRatio.EVEN,
+        participants = listOf("u1", "u2"),
+        lastModifiedBy = uid,
+        lastModifiedAtMillis = 1L,
+        proposal = SplitRatioProposal(SplitRatio(THIRTY_FIVE), proposedBy = uid, proposedAtMillis = SPLIT_AT)
+    )
 
     /**
      * Something in every section: the co-parent's proposal, one of each kind either way, a past
@@ -239,6 +251,8 @@ class InboxItemsTest {
             InboxItem.Header(InboxSection.HISTORY),
             InboxItem.Proposal(proposal, mine = false),
             InboxItem.Proposal(proposal, mine = true),
+            InboxItem.Split(splitBy("u2").proposal!!, mine = false),
+            InboxItem.Split(splitBy("u1").proposal!!, mine = true),
             InboxItem.AwaitingEvent(event("e1", creator = "u2"), mine = false),
             InboxItem.Swap(group),
             InboxItem.Request(request("r1", from = "u2", to = "u1")),
@@ -246,7 +260,10 @@ class InboxItemsTest {
         )
 
         assertEquals(
-            listOf("h_waiting", "h_sent", "h_history", "p_theirs", "p_mine", "ev_e1", "sw_g1", "cr_r1", "history"),
+            listOf(
+                "h_waiting", "h_sent", "h_history", "p_theirs", "p_mine", "s_theirs", "s_mine",
+                "ev_e1", "sw_g1", "cr_r1", "history"
+            ),
             items.map { it.key }
         )
         assertEquals(items.size, items.map { it.key }.toSet().size)
@@ -327,9 +344,61 @@ class InboxItemsTest {
         assertFalse(assertIs<InboxItem.AwaitingEvent>(items[2]).mine)
     }
 
+    @Test
+    fun `a proposed split comes right after the custody proposal, on the side of whoever must answer it`() {
+        val theirs = RequestInbox.build(
+            scope,
+            changeRequests = listOf(request("theirs", from = "u2", to = "u1")),
+            events = emptyList(),
+            overrides = emptyMap(),
+            shared = proposalBy("u2"),
+            today = today,
+            settings = splitBy("u2")
+        )
+        val theirItems = InboxItems.of(theirs, scope)
+        assertEquals(listOf("h_waiting", "p_theirs", "s_theirs", "cr_theirs"), theirItems.map { it.key })
+        assertFalse(assertIs<InboxItem.Split>(theirItems[2]).mine)
+
+        val mine = RequestInbox.build(
+            scope,
+            changeRequests = emptyList(),
+            events = emptyList(),
+            overrides = emptyMap(),
+            shared = null,
+            today = today,
+            settings = splitBy("u1")
+        )
+        val myItems = InboxItems.of(mine, scope)
+        assertEquals(listOf("h_sent", "s_mine"), myItems.map { it.key })
+        assertTrue(assertIs<InboxItem.Split>(myItems[1]).mine)
+    }
+
+    @Test
+    fun `a proposed split carries its clock, named in its family`() {
+        val split = splitBy("u2")
+        val splitClock = clock(RequestKind.SPLIT, SPLIT_AT.toString(), from = "u2")
+        assertEquals(RequestDeadlineId.forSplit(split.proposal!!, "u1__u2"), splitClock.id)
+        val inbox = RequestInbox.build(
+            scope,
+            changeRequests = emptyList(),
+            events = emptyList(),
+            overrides = emptyMap(),
+            shared = null,
+            today = today,
+            clocks = ClocksAt.of(listOf(splitClock), NOW),
+            settings = split
+        )
+
+        val item = assertIs<InboxItem.Split>(InboxItems.of(inbox, scope)[1])
+
+        assertEquals(splitClock.id, item.timed?.clock?.id)
+        assertEquals(ClockState.OPEN, item.timed?.state)
+    }
+
     /** The clock an item of a request kind carries; null for a header, the history, or no clock. */
     private fun InboxItem.timedOrNull(): TimedRequest? = when (this) {
         is InboxItem.Proposal -> timed
+        is InboxItem.Split -> timed
         is InboxItem.AwaitingEvent -> timed
         is InboxItem.Swap -> timed
         is InboxItem.Request -> timed
@@ -338,6 +407,12 @@ class InboxItemsTest {
 
     private companion object {
         const val HOUR = 3_600_000L
+
+        /** 35 % for slot 1, in basis points. */
+        const val THIRTY_FIVE = 3_500
+
+        /** When the split was proposed: 2026-10-13T09:00:00Z. */
+        const val SPLIT_AT = 1_791_882_000_000L
 
         /** 2026-10-14T09:00:00Z: every clock here is open. */
         const val NOW = 1_791_968_400_000L

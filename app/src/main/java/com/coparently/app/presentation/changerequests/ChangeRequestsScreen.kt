@@ -53,6 +53,8 @@ import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.parentingplan.CitationStatus
@@ -166,6 +168,7 @@ fun ChangeRequestsScreen(
                     parentNames = parentNames,
                     proposalDiff = proposalDiff,
                     proposalCitation = proposalCitation,
+                    agreedSplit = ready.settings?.ratio,
                     highlightedRequestId = highlighted?.id,
                     lastChanceInFlight = viewModel.lastChanceInFlight.collectAsState().value
                 ),
@@ -265,6 +268,8 @@ private fun InboxList(
  * @property miniMonths Each waiting event's month, by event id.
  * @property proposalDiff What the co-parent's proposal would change; null for this parent's own.
  * @property proposalCitation Where the co-parent's proposal came from (MON-21).
+ * @property agreedSplit The family's agreed expense split — what a proposed split would replace —
+ *   or null while its document has not arrived.
  * @property highlightedRequestId The request a chat card arrived for, or null.
  * @property lastChanceInFlight The clocks whose last chance is being given right now, by id.
  */
@@ -274,6 +279,7 @@ private data class InboxCards(
     val parentNames: ParentNames,
     val proposalDiff: CustodyPatternDiff?,
     val proposalCitation: CitationStatus,
+    val agreedSplit: SplitRatio?,
     val highlightedRequestId: String?,
     val lastChanceInFlight: Set<String> = emptySet()
 ) {
@@ -287,6 +293,7 @@ private data class InboxCards(
     fun clockFor(item: InboxItem, answers: InboxAnswers): CardClock? {
         val timed = when (item) {
             is InboxItem.Proposal -> item.timed
+            is InboxItem.Split -> item.timed
             is InboxItem.AwaitingEvent -> item.timed
             is InboxItem.Swap -> item.timed
             is InboxItem.Request -> item.timed
@@ -319,6 +326,8 @@ private data class InboxAnswers(
     val answerSwap: (group: DaySwapGroup, accept: Boolean) -> Unit,
     val answerEvent: (eventId: String, accept: Boolean) -> Unit,
     val answerProposal: (accept: Boolean) -> Unit,
+    val answerSplit: (accept: Boolean) -> Unit,
+    val withdrawSplit: () -> Unit,
     val markSeen: (clockId: String) -> Unit,
     val giveLastChance: (clockId: String) -> Unit,
     val proposeSwapChange: (HistoryEntry) -> Unit
@@ -335,6 +344,8 @@ private data class InboxAnswers(
             answerSwap = viewModel::decideSwapGroup,
             answerEvent = { id, accept -> if (accept) viewModel.acceptEvent(id) else viewModel.declineEvent(id) },
             answerProposal = { accept -> if (accept) viewModel.acceptProposal() else viewModel.declineProposal() },
+            answerSplit = { accept -> if (accept) viewModel.acceptSplit() else viewModel.declineSplit() },
+            withdrawSplit = viewModel::withdrawSplit,
             markSeen = viewModel::markSeen,
             giveLastChance = viewModel::giveLastChance,
             proposeSwapChange = onProposeSwapChange
@@ -364,6 +375,13 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             parentNames = cards.parentNames,
             onAccept = { answers.answerProposal(true) }.takeUnless { item.mine },
             onDecline = { answers.answerProposal(false) }.takeUnless { item.mine }
+        )
+        is InboxItem.Split -> SplitProposalCard(
+            proposal = item.proposal,
+            agreed = cards.agreedSplit,
+            parentNames = cards.parentNames,
+            mine = item.mine,
+            answers = answers
         )
         is InboxItem.AwaitingEvent -> AwaitingEventCard(
             event = item.event,
@@ -605,6 +623,89 @@ private fun ProposalToAnswer(
         }
         TextButton(onClick = onDecline) {
             Text(stringResource(R.string.custody_proposal_decline))
+        }
+    }
+}
+
+/**
+ * A proposed expense split: who proposed it, the split agreed now and the one proposed, each share
+ * beside the name of the parent who pays it.
+ *
+ * The co-parent's carries Accept and Decline — past its deadline Decline alone, like a custody
+ * proposal ([CardClock.declineOnly]): until the proposer's phone withdraws it, it stops this parent
+ * proposing a split of their own. This parent's own, under "Waiting for <name>", carries Withdraw:
+ * nobody decides their own proposal, but the one who made it may take it back.
+ *
+ * @param agreed The split agreed now, or null while it is not known — then only the proposal shows.
+ * @param mine Whether this parent proposed it.
+ */
+@Composable
+private fun SplitProposalCard(
+    proposal: SplitRatioProposal,
+    agreed: SplitRatio?,
+    parentNames: ParentNames,
+    mine: Boolean,
+    answers: InboxAnswers
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(Spacing.L),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
+        ) {
+            CardClockBanner()
+            TitleWithClockChip(stringResource(R.string.split_request_title))
+            Text(
+                text = if (mine) {
+                    stringResource(R.string.split_request_body_yours)
+                } else {
+                    stringResource(R.string.split_request_body_theirs, parentNames.labelForUid(proposal.proposedBy))
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            // Money is never cut off (design item 15): both lines wrap rather than end in an ellipsis.
+            agreed?.let { now ->
+                Text(
+                    text = stringResource(R.string.split_request_now, splitSharesText(now, parentNames)),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Text(
+                text = stringResource(R.string.split_request_proposed, splitSharesText(proposal.ratio, parentNames)),
+                style = MaterialTheme.typography.bodyMediumEmphasized
+            )
+            if (mine) {
+                Text(
+                    text = stringResource(R.string.event_acceptance_waiting),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            CardClockDetails()
+            SplitProposalButtons(mine, answers)
+        }
+    }
+}
+
+/** The split card's buttons: the proposer's Withdraw, or the answering parent's Accept and Decline. */
+@Composable
+private fun SplitProposalButtons(mine: Boolean, answers: InboxAnswers) {
+    if (mine) {
+        TextButton(onClick = answers.withdrawSplit) {
+            Text(stringResource(R.string.expenses_split_proposal_withdraw))
+        }
+        return
+    }
+    // Past the deadline Accept waits for a last chance, but Decline stays (CardClock.declineOnly).
+    val declineOnly = LocalCardClock.current?.declineOnly == true
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        if (!declineOnly) {
+            Button(onClick = { answers.answerSplit(true) }) {
+                Text(stringResource(R.string.change_request_accept))
+            }
+        }
+        TextButton(onClick = { answers.answerSplit(false) }) {
+            Text(stringResource(R.string.change_request_decline))
         }
     }
 }

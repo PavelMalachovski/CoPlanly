@@ -2,6 +2,7 @@ package com.coparently.app.presentation.changerequests
 
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.changerequests.ClocksAt
@@ -13,6 +14,9 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
@@ -47,6 +51,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -85,6 +90,15 @@ class ChangeRequestViewModelTest {
     }
     private val planReferences = mockk<PlanReferenceSource>()
     private val clockActions = mockk<RequestClockActions>(relaxed = true)
+
+    /** The family's split document; none unless a test says so. */
+    private val splitSettings = MutableStateFlow<FamilySettings?>(null)
+    private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
+        every { observeSettingsOf(any()) } returns splitSettings
+        coEvery { acceptProposal(any()) } returns Result.success(Unit)
+        coEvery { declineProposal(any()) } returns Result.success(Unit)
+        coEvery { withdrawProposal(any()) } returns Result.success(Unit)
+    }
 
     /** The family's request clocks; none unless a test says so, so every request is placed as it always was. */
     private val clocks = MutableStateFlow(ClocksAt())
@@ -153,9 +167,33 @@ class ChangeRequestViewModelTest {
             custodyModelRepository = custodyModelRepository,
             userRepository = userRepository,
             pairingRepository = pairingRepository,
-            requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns clocks }
-        )
+            requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns clocks },
+            familySettingsRepository = familySettingsRepository
+        ),
+        familySettingsRepository = familySettingsRepository
     )
+
+    /** The split document of the family Olya shares with Pavel, agreed half each, with [by]'s 35/65 proposal. */
+    private fun splitProposedBy(by: String) = FamilySettings(
+        ratio = SplitRatio.EVEN,
+        participants = listOf("u1", "u2"),
+        lastModifiedBy = "u2",
+        lastModifiedAtMillis = 1L,
+        proposal = SplitRatioProposal(SplitRatio(THIRTY_FIVE), proposedBy = by, proposedAtMillis = SPLIT_PROPOSED_AT)
+    )
+
+    /** A view model whose inbox has drawn the family Olya shares with Pavel. */
+    private suspend fun TestScope.inboxDrawn(
+        parents: ParentsSource = testParentsSource()
+    ): ChangeRequestViewModel {
+        val vm = viewModel(parents)
+        backgroundScope.launch { vm.requests.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+        advanceUntilIdle()
+        assertEquals("u1__u2", (vm.requests.value as RequestsState.Ready).scope.familyId)
+        return vm
+    }
 
     @Before
     fun setUp() {
@@ -478,6 +516,122 @@ class ChangeRequestViewModelTest {
         }
 
     @Test
+    fun `a split answer goes to the family the inbox drew`() = runTest(dispatcher) {
+        val vm = inboxDrawn()
+
+        vm.acceptSplit()
+        advanceUntilIdle()
+        vm.declineSplit()
+        advanceUntilIdle()
+        vm.withdrawSplit()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { familySettingsRepository.acceptProposal("u1__u2") }
+        coVerify(exactly = 1) { familySettingsRepository.declineProposal("u1__u2") }
+        coVerify(exactly = 1) { familySettingsRepository.withdrawProposal("u1__u2") }
+        assertNull(vm.errorMessage.value)
+    }
+
+    @Test
+    fun `a split answer drawn for one family is refused once another family is on screen`() = runTest(dispatcher) {
+        // The inbox drew the family with u2; a push tap has since switched the phone to the family
+        // with u3. Answering would decide a split of the family the parent is no longer looking at.
+        val vm = inboxDrawn(parents = testParentsSource(me = olya.copy(partnerId = "u3")))
+
+        vm.acceptSplit()
+        advanceUntilIdle()
+        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        vm.clearError()
+        vm.withdrawSplit()
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        coVerify(exactly = 0) { familySettingsRepository.acceptProposal(any()) }
+        coVerify(exactly = 0) { familySettingsRepository.withdrawProposal(any()) }
+    }
+
+    @Test
+    fun `a refused split answer is said, not swallowed`() = runTest(dispatcher) {
+        coEvery { familySettingsRepository.declineProposal(any()) } returns
+            Result.failure(IllegalStateException("already answered"))
+        val vm = inboxDrawn()
+
+        vm.declineSplit()
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.expenses_split_answer_failed), vm.errorMessage.value)
+    }
+
+    @Test
+    fun `the split pop-up follows the inbox: the co-parent's split, never this parent's own`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            backgroundScope.launch { vm.pendingSplit.collect {} }
+            backgroundScope.launch { vm.agreedSplit.collect {} }
+            advanceUntilIdle()
+            requests.emit(emptyList())
+            advanceUntilIdle()
+            assertNull(vm.pendingSplit.value, "no split document: nothing pops up")
+
+            val pavels = splitProposedBy("u2")
+            splitSettings.value = pavels
+            advanceUntilIdle()
+            assertEquals(pavels.proposal, vm.pendingSplit.value)
+            assertEquals(SplitRatio.EVEN, vm.agreedSplit.value, "what the proposal would replace")
+
+            splitSettings.value = splitProposedBy("u1")
+            advanceUntilIdle()
+            assertNull(vm.pendingSplit.value, "this parent's own split waits on the co-parent")
+        }
+
+    @Test
+    fun `a split past its deadline does not pop up`() = runTest(dispatcher) {
+        val pavels = splitProposedBy("u2")
+        val proposal = pavels.proposal!!
+        splitSettings.value = pavels
+        val vm = viewModel()
+        backgroundScope.launch { vm.pendingSplit.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+        advanceUntilIdle()
+
+        val now = SPLIT_PROPOSED_AT + 60_000L
+        val clock = RequestDeadline(
+            id = RequestDeadlineId.forSplit(proposal, "u1__u2"),
+            kind = RequestKind.SPLIT,
+            ref = proposal.proposedAtMillis.toString(),
+            familyId = "u1__u2",
+            proposerUid = "u2",
+            responderUid = "u1",
+            answerByMillis = now + 3_600_000L
+        )
+        clocks.value = ClocksAt.of(listOf(clock), now)
+        advanceUntilIdle()
+        assertEquals(proposal, vm.pendingSplit.value, "open: it pops up")
+
+        clocks.value = ClocksAt.of(listOf(clock.copy(answerByMillis = now - 3_600_000L)), now)
+        advanceUntilIdle()
+        assertNull(vm.pendingSplit.value, "past its deadline: the next move is the proposer's")
+    }
+
+    @Test
+    fun `opening the split marks its clock seen, under the family's id`() = runTest(dispatcher) {
+        val pavels = splitProposedBy("u2")
+        splitSettings.value = pavels
+        val vm = viewModel()
+        runCurrent()
+
+        // Waited for in virtual time without advancing it: the look at the inbox is bounded by a
+        // timeout that advancing the clock would fire.
+        vm.markSplitSeen()
+        runCurrent()
+        requests.emit(emptyList())
+        runCurrent()
+
+        coVerify(exactly = 1) { clockActions.markSeen(RequestDeadlineId.forSplit(pavels.proposal!!, "u1__u2")) }
+    }
+
+    @Test
     fun `asking to change an agreed swap offers each day back from the agreement it reads`() = runTest(dispatcher) {
         coEvery { userRepository.getCurrentUserId() } returns "u1"
         val transform = slot<(Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>>()
@@ -508,5 +662,13 @@ class ChangeRequestViewModelTest {
         assertEquals("dad", change.agreedToParent, "the agreement stands until the change is accepted")
         // A day whose agreement is gone by the time of the write is left as it is.
         assertEquals(current, transform.captured(current, "2026-10-24").getOrThrow())
+    }
+
+    private companion object {
+        /** 35 % for slot 1, in basis points. */
+        const val THIRTY_FIVE = 3_500
+
+        /** When Pavel proposed the split: 2026-08-29T10:40:00Z. */
+        const val SPLIT_PROPOSED_AT = 1_788_000_000_000L
     }
 }
