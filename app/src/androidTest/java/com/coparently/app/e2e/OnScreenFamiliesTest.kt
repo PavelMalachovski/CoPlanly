@@ -146,9 +146,9 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
      *
      * Through the screen rather than the repository on purpose. The repository could always mint
      * a paired account a code, and every test took it from there, while the screen gave a paired
-     * account none: nobody could invite a second co-parent, and every test passed. The row also
-     * offers no field to enter somebody else's code, because entering one would move Alice's slot
-     * in Bob's family too.
+     * account none: nobody could invite a second co-parent, and every test passed. Entering
+     * somebody else's code is the row's second mode (October 2026), checked by the server before
+     * it can move Alice's slot in Bob's family.
      */
     private fun aliceCodeFromHerPairingScreen(): String {
         step("families: Alice opens Add another co-parent")
@@ -161,8 +161,9 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
         waitFor("Add another co-parent", addAnother)
         tap(addAnother)
         waitFor("Alice's code for another co-parent", inviteCode)
+        // The row opens on sharing; entering the other person's code is the toggle's second half.
         assertTrue(
-            "a paired account must not be offered a field for somebody else's code",
+            "Add another co-parent must open on sharing this parent's code, not on a code field",
             composeTestRule.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isEmpty()
         )
         val code = composeTestRule.onAllNodes(inviteCode).onFirst().fetchSemanticsNode()
