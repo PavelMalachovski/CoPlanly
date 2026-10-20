@@ -4,6 +4,10 @@ import com.coparently.app.domain.guests.GuestGrantPolicy
 import java.time.Duration
 import java.time.Instant
 
+// File-level, not in the companion: an enum's entries are built before its companion object is.
+private const val WEEK_DAYS = 7L
+private const val QUARTER_DAYS = 90L
+
 /**
  * How long a family friend may read the family's calendar, as a parent picks it when inviting.
  *
@@ -35,9 +39,6 @@ enum class FriendAccessDuration(private val duration: Duration?) {
     fun expiryFrom(from: Instant): Long = duration?.let { from.plus(it).toEpochMilli() } ?: WHILE_LINKED_EXPIRY_MILLIS
 
     companion object {
-        private const val WEEK_DAYS = 7L
-        private const val QUARTER_DAYS = 90L
-
         /** What the invite sheet starts on. */
         val DEFAULT = MONTH
 
