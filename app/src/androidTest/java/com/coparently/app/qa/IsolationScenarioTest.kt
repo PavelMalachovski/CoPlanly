@@ -173,14 +173,22 @@ class IsolationScenarioTest : QaOnScreenTest() {
         report.step(
             id = "pushes",
             title = "Every push names the family it belongs to",
-            expected = "Igor's pushes to Zuzana name the family with Igor; Carol's name the family with Carol",
+            expected = "Every push to Zuzana names one of her two families, and each family has its own",
             independent = true
         ) {
-            val wrong = buildList {
-                addAll(wronglyAddressed(bob, FamilyKey.of(aliceUid, bob.uid)))
-                addAll(wronglyAddressed(carol, FamilyKey.of(aliceUid, carol.uid)))
+            val igorFamily = FamilyKey.of(aliceUid, bob.uid)
+            val carolFamily = FamilyKey.of(aliceUid, carol.uid)
+            // `queuedFor` reads every push addressed to Zuzana, whoever queued it; a push carries
+            // no sender, so what is checked is the family each one names.
+            val named = bob.queuedFor(aliceUid).map { push ->
+                val data = push["data"] as? Map<*, *>
+                (data?.get(PushPayload.TYPE) as? String) to (data?.get(PushPayload.FAMILY_ID) as? String)
             }
-            check(wrong.isEmpty()) { wrong.joinToString("; ") }
+            val stray = named.filter { (_, family) -> family != null && family != igorFamily && family != carolFamily }
+            check(stray.isEmpty()) { "pushes naming a family Zuzana is not in: $stray" }
+            check(named.any { it.second == igorFamily }) { "no push names the family with Igor: $named" }
+            check(named.any { it.second == carolFamily }) { "no push names the family with Carol: $named" }
+            actual = "${named.size} pushes, each naming one of Zuzana's families"
         }
     }
 
@@ -202,17 +210,6 @@ class IsolationScenarioTest : QaOnScreenTest() {
             if (forbidden.child in children) add("$label holds the other family's child ${forbidden.child}")
         }
     }
-
-    private fun wronglyAddressed(sender: EmulatorParent, familyId: String): List<String> =
-        sender.queuedFor(aliceUid).mapNotNull { push ->
-            val data = push["data"] as? Map<*, *> ?: return@mapNotNull null
-            val named = data[PushPayload.FAMILY_ID] as? String
-            if (named == null || named == familyId) {
-                null
-            } else {
-                "${sender.name}'s ${data[PushPayload.TYPE]} push names family $named"
-            }
-        }
 
     private companion object {
         const val CAROL = "Carol"

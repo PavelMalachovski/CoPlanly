@@ -24,6 +24,7 @@ import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.PairingRepository
@@ -125,6 +126,9 @@ abstract class AliceOnScreenTest {
 
     @Inject
     lateinit var database: CoPlanlyDatabase
+
+    @Inject
+    lateinit var accountSwitchGuard: AccountSwitchGuard
 
     protected val context = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -319,6 +323,10 @@ abstract class AliceOnScreenTest {
         val email = "alice-${UUID.randomUUID()}@e2e.coplanly.test"
         val user = checkNotNull(firebaseAuth.createUserWithEmailAndPassword(email, PASSWORD).await().user)
         user.updateProfile(UserProfileChangeRequest.Builder().setDisplayName(onScreenName).build()).await()
+        // What signing in does first (`SessionProfileSynchronizer`): this emulator remembers the
+        // previous test's Alice, and the guard would otherwise wipe Room at her first sync,
+        // mid-test — taking her profile row, and with it the family switcher, off the screen.
+        accountSwitchGuard.ensureAccountConsistency()
         userRepository.ensureProfile()
         return user.uid
     }
