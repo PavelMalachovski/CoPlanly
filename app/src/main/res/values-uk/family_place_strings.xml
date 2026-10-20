@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where a record stands for the family on screen (data/family/FamilyView.kt, RecordPlace). -->
+<resources>
+    <!-- A parent's own record of no family while they have two families: shown everywhere, shared with nobody. -->
+    <string name="record_place_only_me">Лише я</string>
+    <string name="record_place_only_me_description">Це бачите лише ви. Поки це не належить до жодної родини.</string>
+    <!-- A record of a family the parent is no longer linked with: history, never shared, not counted. -->
+    <string name="record_place_earlier_family">З попередньої родини</string>
+    <string name="record_place_earlier_family_description">З родини, з якою ви більше не повʼязані. Це бачите лише ви, і тут це не враховується.</string>
+</resources>

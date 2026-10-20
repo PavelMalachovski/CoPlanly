@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where a record stands for the family on screen (data/family/FamilyView.kt, RecordPlace). -->
+<resources>
+    <!-- A parent's own record of no family while they have two families: shown everywhere, shared with nobody. -->
+    <string name="record_place_only_me">Only me</string>
+    <string name="record_place_only_me_description">Only you see this. It belongs to no family yet.</string>
+    <!-- A record of a family the parent is no longer linked with: history, never shared, not counted. -->
+    <string name="record_place_earlier_family">From an earlier family</string>
+    <string name="record_place_earlier_family_description">From a family you are no longer linked with. Only you see it, and it is not counted here.</string>
+</resources>
