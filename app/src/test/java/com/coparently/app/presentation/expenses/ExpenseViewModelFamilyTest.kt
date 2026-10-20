@@ -195,6 +195,25 @@ class ExpenseViewModelFamilyTest {
     }
 
     @Test
+    fun `an undo puts an expense of no family back with no family`() = runTest(dispatcher) {
+        // `addExpense` stamps a family-less expense with the family on screen; an Undo of one that
+        // was "only mine" must not land it in Carol's ledger.
+        val today = java.time.LocalDate.now()
+        val onlyMine = expense("only-mine", 500.0, familyId = null, createdBy = ZUZANA, date = today)
+        val carols = expense("swimming", 1_200.0, familyId = CAROL_FAMILY, createdBy = ZUZANA, date = today)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.restoreExpense(onlyMine)
+        viewModel.restoreExpense(carols)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { expenseRepository.updateExpense(onlyMine) }
+        coVerify(exactly = 0) { expenseRepository.addExpense(onlyMine) }
+        coVerify(exactly = 1) { expenseRepository.addExpense(carols) }
+    }
+
+    @Test
     fun `the download follows a switch and ends the previous family's listener`() = runTest(dispatcher) {
         var started = 0
         var ended = 0

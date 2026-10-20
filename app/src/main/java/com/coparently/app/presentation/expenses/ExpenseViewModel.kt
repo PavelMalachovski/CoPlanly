@@ -765,11 +765,22 @@ class ExpenseViewModel @Inject constructor(
      * Puts back an expense removed by [deleteExpense], keeping its original id so the receipt
      * it points at is still the right one.
      *
+     * **An expense that named no family comes back naming none.** `addExpense` stamps a
+     * family-less expense with the family on screen, which is right for a new one and wrong here:
+     * an Undo of an expense that was "only mine" would put it into that co-parent's ledger
+     * (October 2026 isolation audit). It is written back as it was instead, through the update
+     * path, which keeps every field; its card follows `FamilyAudience`'s rule for a record of no
+     * family.
+     *
      * @param expense The captured expense to restore
      */
     fun restoreExpense(expense: Expense) {
         viewModelScope.launch {
-            expenseRepository.addExpense(expense)
+            if (expense.familyId.isNullOrBlank()) {
+                expenseRepository.updateExpense(expense)
+            } else {
+                expenseRepository.addExpense(expense)
+            }
         }
     }
 

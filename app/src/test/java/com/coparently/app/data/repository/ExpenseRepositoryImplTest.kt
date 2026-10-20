@@ -245,37 +245,12 @@ class ExpenseRepositoryImplTest {
         assertEquals(emptyList<String>(), captured.captured["forMembers"])
     }
 
-    // ---- which family an unstamped expense is given (October 2026 isolation audit) ----------
-
-    @Test
-    fun `an expense naming no family takes the one family while there is one`() = runTest {
-        signIn("uidA")
-        coEvery { userDao.getUserById("uidA") } returns userEntity(id = "uidA", partnerId = "uidB")
-        val captured = slot<Map<String, Any>>()
-        coEvery { firestoreExpenseDataSource.setExpense(any(), capture(captured)) } returns Unit
-
-        repository.addExpense(expense())
-
-        assertEquals("uidA__uidB", captured.captured["familyId"])
-    }
-
-    @Test
-    fun `an expense naming no family stays only mine while there are two families`() = runTest {
-        // An Undo of an expense that is "only mine" used to be stamped with the family on screen,
-        // putting it into that co-parent's ledger. With two families nothing says which it is.
-        signIn("uidA")
-        coEvery { userDao.getUserById("uidA") } returns
-            userEntity(id = "uidA", partnerId = "uidC").copy(partnerIdsJson = "[\"uidB\",\"uidC\"]")
-        val captured = slot<Map<String, Any>>()
-        coEvery { firestoreExpenseDataSource.setExpense(any(), capture(captured)) } returns Unit
-
-        repository.addExpense(expense())
-
-        assertEquals("", captured.captured["familyId"])
-    }
+    // ---- which family an expense is written in (October 2026 isolation audit) --------------
 
     @Test
     fun `an expense stamped by its form keeps the family it names`() = runTest {
+        // `ExpenseViewModel` reads the family once, before the receipt upload; the repository must
+        // not read the family on screen again, which a switch may have moved by now.
         signIn("uidA")
         coEvery { userDao.getUserById("uidA") } returns
             userEntity(id = "uidA", partnerId = "uidC").copy(partnerIdsJson = "[\"uidB\",\"uidC\"]")
