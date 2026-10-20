@@ -2456,7 +2456,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       when there is none. The chat's event picker offers events of every family.
     - **A stamp is never changed once written.** The rules refuse it (`firestore.rules`), so
       a conflict won locally writes back the server's stamp when this phone still holds the record
-      unstamped, and adopts it (`SyncService.stampedFamily`, `PetRepositoryImpl.adoptServerStamp`).
+      unstamped, and adopts it (`data/sync/StampedFamily`, used by `SyncService` and `PetRepositoryImpl.adoptServerStamp`).
       Without that, a phone that missed its backfill would send `""` over the stamp for ever.
     - **The server holds the same lines**, so an older build that still leaks is refused once the
       rules are deployed:

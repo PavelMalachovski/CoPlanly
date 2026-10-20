@@ -7,6 +7,7 @@ import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.data.sync.PetAudience
+import com.coparently.app.data.sync.StampedFamily
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.events.EventTimestamp
@@ -239,8 +240,9 @@ class PetRepositoryImpl @Inject constructor(
      * otherwise stay queued for ever. It stays queued here, to go up with its family next pass.
      */
     private suspend fun adoptServerStamp(local: PetEntity?, stamped: String?) {
-        if (local == null || !local.familyId.isNullOrBlank() || stamped.isNullOrBlank()) return
-        petDao.insertPet(local.copy(familyId = stamped))
+        val family = StampedFamily.of(local?.familyId, stamped)
+        if (local == null || family == local.familyId) return
+        petDao.insertPet(local.copy(familyId = family))
     }
 
     /**
