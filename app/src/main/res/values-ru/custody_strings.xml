@@ -54,6 +54,7 @@
     <string name="custody_conflict_save_failed">График не удалось сохранить. Попробуйте ещё раз.</string>
     <string name="custody_proposal_inbox_title">Предложен новый график опеки</string>
     <string name="custody_proposal_inbox_body">%1$s предлагает новый график опеки. Ваш календарь не изменится, пока вы его не примете.</string>
+    <string name="custody_proposal_preview">Предложено: %1$s, с %2$s</string>
     <string name="custody_proposal_accept">Принять</string>
     <string name="custody_proposal_decline">Отклонить</string>
     <string name="custody_proposal_waiting">Ждём, когда второй родитель одобрит новый график</string>

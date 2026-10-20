@@ -54,6 +54,7 @@
     <string name="custody_conflict_save_failed">Der Plan konnte nicht gespeichert werden. Versuch es erneut.</string>
     <string name="custody_proposal_inbox_title">Neuer Betreuungsplan vorgeschlagen</string>
     <string name="custody_proposal_inbox_body">%1$s schlägt einen neuen Betreuungsplan vor. Dein Kalender ändert sich erst, wenn du ihn annimmst.</string>
+    <string name="custody_proposal_preview">Vorgeschlagen: %1$s, ab %2$s</string>
     <string name="custody_proposal_accept">Annehmen</string>
     <string name="custody_proposal_decline">Ablehnen</string>
     <string name="custody_proposal_waiting">Warten auf die Zustimmung des anderen Elternteils zum neuen Plan</string>

@@ -529,6 +529,8 @@ private fun ProposalToAnswer(
             style = MaterialTheme.typography.bodyMedium
         )
     }
+    // What it looks like, always: the line above is missing when the pattern itself changes.
+    ProposedSchedulePreview(proposal, parentNames)
     // Where it came from (MON-21): the agreed plan answer it cites, or that the answer has
     // changed since. A proposal citing nothing — an older build's — shows nothing here.
     planCitationLine(citation)?.let { line ->
