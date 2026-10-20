@@ -57,7 +57,7 @@
     <string name="custody_proposal_preview">Navrhovaný rozvrh: %1$s, od %2$s</string>
     <string name="custody_proposal_accept">Přijmout</string>
     <string name="custody_proposal_decline">Odmítnout</string>
-    <string name="custody_proposal_waiting">Čeká se, až druhý rodič schválí nový rozvrh</string>
+    <string name="custody_proposal_waiting_named">Navrhli jste „%1$s“. Dokud ho %2$s nepřijme, je zobrazen světleji a platí dosavadní rozvrh.</string>
     <string name="custody_proposal_review">%1$s navrhuje nový rozvrh péče</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Každý druhý víkend</string>

@@ -75,9 +75,11 @@ import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.toggling
+import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
@@ -709,10 +711,19 @@ fun CalendarScreen(
                         }
                     }
 
-                    // The proposer's own view: a passive note that the change is not live yet.
+                    // The proposer's own view: a passive note that the change is not live yet, naming
+                    // what was proposed and who has to accept it. The lighter wash under it is that
+                    // proposal; without saying so, the proposer read it as the schedule both of
+                    // them had (tester report, October 2026: "one sees 2-2-3, the other week on,
+                    // week off").
                     if (proposerWaiting) {
+                        val proposedType = pendingProposal?.model?.modelType
                         Text(
-                            text = stringResource(R.string.custody_proposal_waiting),
+                            text = stringResource(
+                                R.string.custody_proposal_waiting_named,
+                                proposedType?.let { stringResource(it.labelRes()) }.orEmpty(),
+                                parentNames.coParentLabel()
+                            ),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(

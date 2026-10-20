@@ -57,7 +57,7 @@
     <string name="custody_proposal_preview">Предложено: %1$s, с %2$s</string>
     <string name="custody_proposal_accept">Принять</string>
     <string name="custody_proposal_decline">Отклонить</string>
-    <string name="custody_proposal_waiting">Ждём, когда второй родитель одобрит новый график</string>
+    <string name="custody_proposal_waiting_named">Вы предложили «%1$s». Пока %2$s не примет его, он показан бледнее и действует прежний график.</string>
     <string name="custody_proposal_review">%1$s предлагает новый график опеки</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Каждые вторые выходные</string>

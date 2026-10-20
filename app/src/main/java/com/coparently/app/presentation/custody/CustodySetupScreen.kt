@@ -69,6 +69,7 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.StickyActionBar
@@ -127,9 +128,14 @@ fun CustodySetupScreen(
         }
     }
 
-    // Navigate back on successful save
+    // Navigate back on successful save — saying first when the save became a proposal. It used to
+    // leave silently, so a parent whose choice was sent for approval believed it was the schedule,
+    // and the two phones seemed to disagree (tester report, October 2026).
+    val appMessages = LocalAppMessages.current
+    val sentForApproval = stringResource(R.string.seasonal_sent_for_approval)
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
+            if (uiState.proposedForApproval) appMessages?.show(sentForApproval)
             onNavigateBack()
         }
     }

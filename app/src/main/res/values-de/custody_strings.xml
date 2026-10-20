@@ -57,7 +57,7 @@
     <string name="custody_proposal_preview">Vorgeschlagen: %1$s, ab %2$s</string>
     <string name="custody_proposal_accept">Annehmen</string>
     <string name="custody_proposal_decline">Ablehnen</string>
-    <string name="custody_proposal_waiting">Warten auf die Zustimmung des anderen Elternteils zum neuen Plan</string>
+    <string name="custody_proposal_waiting_named">Du hast „%1$s“ vorgeschlagen. Bis %2$s zustimmt, ist er heller dargestellt und es gilt der bisherige Plan.</string>
     <string name="custody_proposal_review">%1$s hat einen neuen Betreuungsplan vorgeschlagen</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Jedes zweite Wochenende</string>

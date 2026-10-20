@@ -64,7 +64,7 @@
     <string name="custody_proposal_preview">Proposed: %1$s, from %2$s</string>
     <string name="custody_proposal_accept">Accept</string>
     <string name="custody_proposal_decline">Decline</string>
-    <string name="custody_proposal_waiting">Waiting for your co-parent to approve the new schedule</string>
+    <string name="custody_proposal_waiting_named">You proposed “%1$s”. Until %2$s accepts it, it is shown lighter and the current schedule applies.</string>
     <string name="custody_proposal_review">%1$s proposed a new custody schedule</string>
     <!-- MON-6: sole custody with contact every second weekend, the arrangement a large
          share of Czech families have. The switch above the preview asks a different question
