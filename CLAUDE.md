@@ -254,8 +254,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     co-parent. **The chip and each dialog row carry a dot — never a count — when a family *not* on
     screen has something waiting**: chat newer than my read mark (the conversation *document*),
     a pending change request from that co-parent (a query keyed on `requestedTo`, the
-    field the rule reads), or a schedule proposal or day swap awaiting me (`custody_models/{id}`
-    by **id** — `allow get` only, never a query). Since phase 3a it also reads each other family's
+    field the rule reads), a schedule proposal or day swap awaiting me (`custody_models/{id}`
+    by **id** — `allow get` only, never a query), or a proposed expense split awaiting me
+    (`family_settings/{id}`, by id too; `FamilySignal.SPLIT`, October 2026). Since phase 3a it also reads each other family's
     request clocks (item 42), so a request past its deadline — no answer, or waiting on the
     proposer's last chance — lights nothing; until they answer, or when they cannot be read, the
     dot is what it was before clocks. Only the selected family is mirrored, so no
@@ -2231,13 +2232,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
 40. **Requests are derived for the family on screen, through one source** (October 2026, tester
     feedback phase 2). `presentation/changerequests/RequestsSource` scopes the change requests, day
-    swaps, events awaiting an answer and the custody proposal to the family the switcher shows
+    swaps, events awaiting an answer, the custody proposal and the expense split proposal to the
+    family the switcher shows
     (`domain/changerequests/RequestScope`), and everything that speaks of requests reads it: the
     inbox (`ChangeRequestsScreen`, titled **Requests**, in three sections — *Waiting for your
     answer*, *Waiting for {co-parent}*, *History*), Home's **Requests** row, its swap pop-up and the
     co-parent's feed (`RequestsRow`, `HomeFeed`), and the calendar banner — so the row and the
     banner count from one `RequestInbox`: the row its `count`, the banner `countWithoutProposal`,
-    because a waiting custody proposal draws a banner of its own. Five things not to undo.
+    because a waiting custody proposal draws a banner of its own (and a split is about money, not
+    the calendar, so it counts on the row only). Six things not to undo.
     - **Swaps and the proposal come from the family's own custody document**, asked for by its id
       (`CustodyModelRepository.observeSharedOf`), and so do the mini months' custody days — never
       from `observeShared` alone, which replays the previous family's document until the next
@@ -2253,8 +2256,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **One flat list.** `InboxItems.of` is what the inbox draws *and* what a chat card's highlight
       and the `section` route argument scroll by (`InboxItems.arrival`); an index computed from
       anything else lands a card off, as the pending proposal once made it.
-    - **No new Withdraw.** Only a change request can be withdrawn in the UI, as before (spec §6.2):
+    - **No new Withdraw for a custody proposal.** A change request can be withdrawn in the UI, as
+      before (spec §6.2), and so can an expense split proposal (its card and the Expenses banner);
       `CustodyModelRepository.withdrawProposal` has no caller and tells the co-parent nothing.
+    - **The expense split proposal is a request like the custody proposal** (October 2026, owner
+      request: "I don't know whether she got it"). It is read from the family's own
+      `family_settings/{familyId}` by id (`FamilySettingsRepository.observeSettingsOf`), waits in
+      `Waiting.split`, counts on Home's Requests row but not the calendar banner, pops up once on the
+      answering parent's Home (`HomeAsks`/`SplitAsk`, key `split_<proposedAtMillis>`), and is
+      answered or withdrawn from its inbox card (`SplitProposalCard`). Its history row is the
+      document's `lastDecision` — only the latest answer is stored, so older ones live in the chat.
+      The proposal, each answer and a manual withdrawal post a chat card (`SPLIT_PROPOSED`,
+      `SPLIT_ACCEPTED`, `SPLIT_DECLINED`, `SPLIT_WITHDRAWN`, entity `SPLIT_PROPOSAL`, every one
+      opening the inbox); the proposal's base-English text names the proposer's own share, which is
+      what an older build and the export print. The Expenses banners stay as they were.
     - **The creator's words reach the answering parent.** The card of an event that waits shows
       its description beside the creator's initial, its time on the reader's clock and a
       `MiniMonth`; the event form says so while the event would wait (`descriptionReachesCoParent`,
@@ -2316,8 +2331,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 42. **A request's deadline is a clock beside the request, and only its end is stored** (October
     2026, tester feedback phase 3a; spec
     `docs/superpowers/specs/2026-10-15-zuzana-feedback-phase-3a-requests-never-hang-design.md`).
-    A change request, a day swap, an event awaiting an answer and a custody proposal may carry a
-    deadline the proposer picks (`AnswerByField`, `domain/changerequests/AnswerBy`, capped by
+    A change request, a day swap, an event awaiting an answer, a custody proposal and an expense
+    split proposal (`RequestKind.SPLIT`, October 2026) may carry a deadline the proposer picks (`AnswerByField`, `domain/changerequests/AnswerBy`, capped by
     `RequestCap`). It lives in **one document per request**, `request_deadlines/{id}`
     (`RequestDeadlineDocument` is the wire form, `data/requests/` the steps), never in the record:
     a change request's update admits three keys, the custody writes are `hasOnly` lists, and an older
@@ -2336,7 +2351,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       ways, and the client clamps delivered and seen to `createdAt` so "opened" never precedes
       "sent".
     - **The proposer's uid is in the id** (`RequestDeadlineId`: `swap_`, `change_` or
-      `event_<uid>_<ref>`, `proposal_<uid>_<familyId>_<proposedAt>`), the create rule rebuilds it
+      `event_<uid>_<ref>`, `proposal_<uid>_<familyId>_<proposedAt>`,
+      `split_<uid>_<familyId>_<proposedAtMillis>`), the create rule rebuilds it
       from the caller, and a phone ignores a clock whose id does not spell its own fields — otherwise the other parent
       could create the clock first and strip the deadline, or fake an early "No answer".
     - **The read is keyed on `participants` alone, on purpose**: a clock outlives an unpair, as
@@ -2367,10 +2383,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       at night, none during a last chance — the last-chance push is the reminder.
     - **An older build's late answer counts.** No rule refuses an answer because a clock says "No
       answer" — that would put a read into three hot rules for an edge only an older build reaches
-      — and History shows the answer it is. Only a custody proposal is withdrawn at the end, in a
-      transaction checking it is the same `proposedAt`: a change request is never set `CANCELLED`
-      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer). Past a proposal's
-      deadline, before any last chance, the answering parent's card keeps **Decline** and never
+      — and History shows the answer it is. Only a custody or an expense split proposal is
+      withdrawn at the end (`RequestKind.withdrawnAtEnd`; the split through
+      `FamilySettingsRepository.withdrawUnanswered`), in a transaction checking it is the same
+      `proposedAt`: a change request is never set `CANCELLED`
+      (`updateStatus`'s `set()` from Room would overwrite a last-minute answer). Past a proposal's (custody or
+      split) deadline, before any last chance, the answering parent's card keeps **Decline** and never
       Accept (`CardClock.declineOnly`), because the waiting proposal refuses their every schedule
       change until the proposer's phone withdraws it; swaps, change requests and events show no
       answer then (`hidesAnswers`).
