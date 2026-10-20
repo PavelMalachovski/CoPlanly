@@ -218,7 +218,8 @@ fun PairingScreen(
     }
 
     UnpairFlow(
-        partnerName = (partnerOnScreen ?: (state as? PairingState.Paired)?.partner)?.name.orEmpty(),
+        partner = partnerOnScreen,
+        state = state,
         visible = showUnpairConfirm,
         onUnpair = viewModel::unpair
     )
@@ -266,11 +267,18 @@ private fun PairingSideEffects(
  * is lost and takes a red Yes. Two steps are an owner decision (Aug 2026 walkthrough): unpairing
  * severs the shared calendar, and one habitual tap should never be enough.
  *
- * [partnerName] is the co-parent of the family on screen, the one the unpair ends.
+ * [partner] is the co-parent of the family on screen, the one the unpair ends; the server's partner
+ * stands in only until it is known.
  */
 @Composable
-private fun UnpairFlow(partnerName: String, visible: MutableState<Boolean>, onUnpair: () -> Unit) {
+private fun UnpairFlow(
+    partner: PartnerSummary?,
+    state: PairingState,
+    visible: MutableState<Boolean>,
+    onUnpair: () -> Unit
+) {
     if (!visible.value) return
+    val partnerName = (partner ?: (state as? PairingState.Paired)?.partner)?.name.orEmpty()
     // Keyed on visible.value so reopening the flow always starts back at step one; saveable so a
     // config change mid-flow keeps whichever dialog was up.
     val finalStep = rememberSaveable(visible.value) { mutableStateOf(false) }

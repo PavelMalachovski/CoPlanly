@@ -1,7 +1,6 @@
 package com.coparently.app.domain.repository
 
 import com.coparently.app.domain.model.Expense
-import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -19,11 +18,6 @@ interface ExpenseRepository {
      * Gets expenses for a specific date range as a Flow.
      */
     fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>>
-
-    /**
-     * Gets expenses by category as a Flow.
-     */
-    fun getExpensesByCategory(category: ExpenseCategory): Flow<List<Expense>>
 
     /**
      * Gets an expense by ID.

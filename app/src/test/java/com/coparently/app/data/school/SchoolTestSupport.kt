@@ -30,6 +30,7 @@ internal object SchoolTestSupport {
     }
 
     /** A stored connection for [uid], with the tokens given, for [familyId] (null: none). */
+    @Suppress("LongParameterList") // a fixture: every argument has a default and is passed by name
     fun stored(
         uid: String = "alice",
         id: String = "conn1",

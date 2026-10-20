@@ -5,7 +5,6 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.entity.ChildInfoEntity
-import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.ExpenseEntity
 import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.domain.files.RecordPhotoKind

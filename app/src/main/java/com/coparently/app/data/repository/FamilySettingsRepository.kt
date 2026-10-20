@@ -101,6 +101,8 @@ class FamilySettingsRepository @Inject constructor(
     /** The signed-in parent's families, read from their own Room row (M-8). */
     private val families = SignedInFamiliesReader(userRepository)
 
+    private val documents = SettingsDocuments(dataSource)
+
     /**
      * The split of the family on screen, re-read on every switch.
      *
@@ -232,10 +234,10 @@ class FamilySettingsRepository @Inject constructor(
     /** [submitRatio] for a family the signed-in parent is in: agree outright, or propose. */
     private suspend fun agreeOrPropose(pair: CustodyPair, ratio: SplitRatio): Result<RatioSubmission> {
         val now = System.currentTimeMillis()
-        val existing = read(pair.documentId) ?: return agreeFirst(pair, ratio, now)
+        val existing = documents.read(pair.documentId) ?: return agreeFirst(pair, ratio, now)
         return SplitRatioTransition.propose(existing, ratio, pair.myUid, now).fold(
             onSuccess = { proposed ->
-                write(pair, proposed).map {
+                documents.write(pair, proposed).map {
                     notifyPartner(pair, PushPayload.SPLIT_RATIO_PROPOSED)
                     RatioSubmission.PROPOSED
                 }
@@ -252,7 +254,7 @@ class FamilySettingsRepository @Inject constructor(
             lastModifiedBy = pair.myUid,
             lastModifiedAtMillis = now
         )
-        return write(pair, settings).map {
+        return documents.write(pair, settings).map {
             cacheAgreedRatio(pair.documentId, ratio)
             // The pair's first agreement, made from a screen rather than carried over from
             // the wizard — the same announcement `publishCachedRatioIfMissing` makes, for
@@ -285,11 +287,11 @@ class FamilySettingsRepository @Inject constructor(
     suspend fun publishCachedRatioIfMissing() {
         val cached = SplitRatio.fromStored(preferences.getSplitRatioBasisPoints()) ?: return
         val pair = families.current().pair ?: return
-        if (read(pair.documentId) != null) return
+        if (documents.read(pair.documentId) != null) return
 
         val anchored = reanchored(cached) ?: return
         Log.i(TAG, "Publishing the ratio agreed before pairing to ${pair.documentId}")
-        write(
+        documents.write(
             pair,
             FamilySettings(
                 ratio = anchored,
@@ -383,17 +385,17 @@ class FamilySettingsRepository @Inject constructor(
      */
     suspend fun withdrawProposal(familyId: String): Result<Unit> {
         val pair = families.current().pairIn(familyId) ?: return noCoParent()
-        val existing = read(pair.documentId)
+        val existing = documents.read(pair.documentId)
             ?: return Result.failure(IllegalStateException("There is no proposal to withdraw"))
         return SplitRatioTransition.withdraw(existing, pair.myUid).fold(
-            onSuccess = { next -> write(pair, next) },
+            onSuccess = { next -> documents.write(pair, next) },
             onFailure = { Result.failure(it) }
         )
     }
 
     private suspend fun decide(familyId: String, accept: Boolean): Result<Unit> {
         val pair = families.current().pairIn(familyId) ?: return noCoParent()
-        val existing = read(pair.documentId)
+        val existing = documents.read(pair.documentId)
             ?: return Result.failure(IllegalStateException("There is no proposal to answer"))
         val now = System.currentTimeMillis()
         val decided = if (accept) {
@@ -403,7 +405,7 @@ class FamilySettingsRepository @Inject constructor(
         }
         return decided.fold(
             onSuccess = { next ->
-                write(pair, next).map {
+                documents.write(pair, next).map {
                     if (accept) cacheAgreedRatio(pair.documentId, next.ratio)
                     notifyPartner(
                         pair,
@@ -413,29 +415,6 @@ class FamilySettingsRepository @Inject constructor(
             },
             onFailure = { Result.failure(it) }
         )
-    }
-
-    /** The refusal for a family the signed-in parent is not in, or no longer in. */
-    private fun <T> noCoParent(): Result<T> =
-        Result.failure(IllegalStateException("No co-parent to agree a split with"))
-
-    private suspend fun read(documentId: String): FamilySettings? = try {
-        dataSource.getSettings(documentId)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "Could not read the family settings document", e)
-        null
-    }
-
-    private suspend fun write(pair: CustodyPair, settings: FamilySettings): Result<Unit> = try {
-        dataSource.setSettings(pair.documentId, settings)
-        Result.success(Unit)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "The family settings write was refused", e)
-        Result.failure(e)
     }
 
     /**
@@ -448,6 +427,40 @@ class FamilySettingsRepository @Inject constructor(
             targetUserId = partnerUid,
             notificationData = mapOf(PushPayload.TYPE to type)
         )
+    }
+
+    private companion object {
+        const val TAG = "FamilySettingsRepo"
+
+        /** The refusal for a family the signed-in parent is not in, or no longer in. */
+        fun <T> noCoParent(): Result<T> =
+            Result.failure(IllegalStateException("No co-parent to agree a split with"))
+    }
+}
+
+/**
+ * The family settings documents, read and written without ever throwing: a refused or failed
+ * read is no document, a refused write is a failure the caller reports.
+ */
+private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsDataSource) {
+
+    suspend fun read(documentId: String): FamilySettings? = try {
+        dataSource.getSettings(documentId)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        Log.w(TAG, "Could not read the family settings document", e)
+        null
+    }
+
+    suspend fun write(pair: CustodyPair, settings: FamilySettings): Result<Unit> = try {
+        dataSource.setSettings(pair.documentId, settings)
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        Log.w(TAG, "The family settings write was refused", e)
+        Result.failure(e)
     }
 
     private companion object {

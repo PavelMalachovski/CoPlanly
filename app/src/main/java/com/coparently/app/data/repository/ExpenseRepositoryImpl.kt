@@ -67,12 +67,6 @@ class ExpenseRepositoryImpl @Inject constructor(
         ) { it.familyId }
     }
 
-    override fun getExpensesByCategory(category: ExpenseCategory): Flow<List<Expense>> {
-        return expenseDao.getExpensesByCategory(category.name).map { entities ->
-            entities.map { it.toDomain() }
-        }
-    }
-
     override suspend fun getExpenseById(id: String): Expense? {
         // The DAO returns pending tombstones so the sync and delete paths can tell "deleted
         // here" from "never existed". To a caller asking on a user's behalf it is simply gone.

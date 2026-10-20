@@ -22,12 +22,6 @@ interface ExpenseDao {
     )
     fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<ExpenseEntity>>
 
-    @Query(
-        "SELECT * FROM expenses WHERE deletedAtMillis IS NULL " +
-            "AND category = :category ORDER BY date DESC"
-    )
-    fun getExpensesByCategory(category: String): Flow<List<ExpenseEntity>>
-
     /**
      * Gets an expense by id, **including a pending tombstone** — see
      * [EventDao.getEventById] for why the sync and delete paths need the unfiltered answer.
