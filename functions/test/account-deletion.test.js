@@ -352,6 +352,8 @@ describe('deleteAccountDataImpl', () => {
           date: new Date(NOW + 30 * DAY).toISOString().slice(0, 10),
           retainedUntilMillis: String(NOW + 30 * DAY),
           conversationId: `${ALICE}__${BOB}`,
+          // The family the thread belonged to (M-8): a phone in two families opens it on tap.
+          familyId: `${ALICE}__${BOB}`,
         });
       });
 
@@ -561,6 +563,70 @@ describe('deleteAccountDataImpl', () => {
     await myFunctions.deleteAccountDataImpl(db, ALICE);
 
     assert.deepStrictEqual(db._store.ai_usage.map((d) => d.id), [BOB]);
+  });
+
+  it('leaves every record of a family the departing parent was never in', async () => {
+    // Zuzana co-parents with Igor (family A) and with Carol (family B); Carol is also a guest of
+    // Igor's child. Carol deletes her account. Family A loses nothing — not a schedule, a plan, a
+    // grant, a feed, a clock or a thread — and Zuzana stays in her own child's record: the unpair
+    // sweep used to remove her from it, because Carol was a guest there.
+    const A = 'igor__zuzana';
+    const B = 'carol__zuzana';
+    const db = fakeDb({
+      users: [
+        {id: 'zuzana', name: 'Zuzana', partnerId: 'igor', partnerIds: ['igor', 'carol']},
+        {id: 'igor', name: 'Igor', partnerId: 'zuzana', partnerIds: ['zuzana']},
+        {id: 'carol', name: 'Carol', partnerId: 'zuzana', partnerIds: ['zuzana']},
+      ],
+      families: [{id: A, members: ['igor', 'zuzana']}, {id: B, members: ['carol', 'zuzana']}],
+      events: [
+        {id: 'ev-a', createdByFirebaseUid: 'zuzana', familyId: A, sharedWith: ['zuzana', 'igor']},
+        {id: 'ev-b', createdByFirebaseUid: 'zuzana', familyId: B, sharedWith: ['zuzana', 'carol']},
+      ],
+      child_info: [{id: 'kid-a', createdByFirebaseUid: 'igor', familyId: A,
+        sharedWith: ['igor', 'zuzana', 'carol'],
+        guests: {carol: {name: 'Carol', grantedBy: 'igor', expiresAtMillis: 4102444800000}}}],
+      pets: [],
+      custody_models: [{id: A, participants: ['igor', 'zuzana']}],
+      family_settings: [{id: A, participants: ['igor', 'zuzana']}],
+      parenting_plans: [{id: A, answers: {zuzana: {}, igor: {}}}],
+      calendar_friends: [{id: `${A}__granny`, familyId: A, familyParents: ['igor', 'zuzana'],
+        friendUid: 'granny', expiresAtMillis: 4102444800000}],
+      professional_grants: [{id: `${A}__mediator`, familyId: A, proUid: 'mediator',
+        familyParents: ['igor', 'zuzana'], expiresAtMillis: 4102444800000}],
+      calendar_feeds: [{id: 'hash-a', ownerUid: 'zuzana', familyMembers: ['igor', 'zuzana']}],
+      request_deadlines: [{id: 'clock-a', familyId: A, participants: ['zuzana', 'igor']}],
+      conversations: [
+        {id: A, participants: ['igor', 'zuzana']},
+        {id: B, participants: ['carol', 'zuzana']},
+      ],
+      messages: [{id: 'm-a', conversationId: A, senderId: 'igor', content: 'Dentist'}],
+      invitations: [],
+      notification_queue: [],
+    });
+
+    await myFunctions.deleteAccountDataImpl(db, 'carol', null, NOW);
+
+    const ids = (name) => db._store[name].map((d) => d.id);
+    assert.deepStrictEqual(db._store.events.find((e) => e.id === 'ev-a').sharedWith,
+        ['zuzana', 'igor']);
+    const kid = db._store.child_info.find((c) => c.id === 'kid-a');
+    assert.deepStrictEqual(kid.sharedWith, ['igor', 'zuzana'], 'Zuzana stays in her child\'s record');
+    assert.ok(!('carol' in kid.guests));
+    assert.deepStrictEqual(ids('custody_models'), [A]);
+    assert.deepStrictEqual(ids('family_settings'), [A]);
+    assert.deepStrictEqual(ids('parenting_plans'), [A]);
+    assert.deepStrictEqual(ids('calendar_friends'), [`${A}__granny`]);
+    assert.deepStrictEqual(ids('professional_grants'), [`${A}__mediator`]);
+    assert.deepStrictEqual(ids('calendar_feeds'), ['hash-a']);
+    assert.deepStrictEqual(ids('request_deadlines'), ['clock-a']);
+    assert.deepStrictEqual(ids('messages'), ['m-a']);
+    assert.ok(ids('conversations').includes(A));
+    assert.deepStrictEqual(db._store.users.find((u) => u.id === 'zuzana').partnerIds, ['igor']);
+    assert.deepStrictEqual(db._store.users.find((u) => u.id === 'igor').partnerIds, ['zuzana']);
+    const toZuzana = db._store.notification_queue.filter((n) => n.targetUserId === 'zuzana');
+    assert.deepStrictEqual(toZuzana.map((n) => [n.data.type, n.data.familyId]),
+        [['coparent_account_deleted', B]]);
   });
 
   it('tears down every co-parent link of a parent with two families', async () => {

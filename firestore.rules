@@ -71,10 +71,16 @@ service cloud.firestore {
     // The empty string is "no family", which is what an unpaired parent's records carry and
     // what every document written before the field existed reads as. It matches nobody: an
     // empty id splits to a single empty part, and no uid is blank.
+    //
+    // **Exactly two parts.** `FamilyKey.of` always joins two uids, and an id with a third part
+    // would otherwise make its writer a "member" of a family that also names two other people —
+    // a parenting plan or a friend invitation filed under `carol__igor__zuzana` is one both
+    // strangers could later be pointed at.
     function isFamilyMember(familyId) {
       return isAuthenticated() &&
              familyId is string &&
              familyId.size() > 0 &&
+             familyId.split('__').size() == 2 &&
              request.auth.uid in familyId.split('__');
     }
 
@@ -942,6 +948,20 @@ service cloud.firestore {
               before.get('createdByFirebaseUid', '') in after.familyId.split('__'));
     }
 
+    // True when a write leaves a stamped `familyId` exactly as it was. Only a blank one may move,
+    // and the caller's own branch says to what (`familyIsMineOrBlank`, `partnerKeepsFamily`).
+    //
+    // A record keeps its family (CLAUDE.md item 18), and that applies to its creator too: the
+    // family decides who else reads it — the co-parent of an expense, a calendar friend or a
+    // professional of an event — so moving an A record to B hands it to B's people. Blanking is
+    // refused as well, because blank → B is a fill: two writes would walk around a bound on one.
+    // A device whose row lacks a family the server already stamped writes `''` here and is
+    // refused until its sync brings the stamp down; a refused upload stays queued.
+    function familyKept(before, after) {
+      return before.get('familyId', '') == '' ||
+             after.get('familyId', '') == before.get('familyId', '');
+    }
+
     match /events/{eventId} {
       // Creator, a shared partner, or a live calendar friend of the creator (item 16). The
       // friend disjunct is last so a parent's own read short-circuits before any `get()`.
@@ -965,7 +985,11 @@ service cloud.firestore {
                       isValidLength(request.resource.data.title, 1, 200) &&
                       // Who may see it is bound to who the writer is — see `isMyAudience`.
                       isMyAudience(request.resource.data.get('sharedWith', [])) &&
-                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
+                      familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                      // …and, once it names a family, to that family's two parents: a parent in
+                      // two families may not show one family's event to the other's co-parent
+                      // (item 38's bound, which children and pets already had).
+                      audienceWithinItsFamily(request.resource.data, noGuests());
 
       // Creator, or a partner with read_write permission, may update. The creator
       // field is immutable. lastModifiedBy is intentionally NOT required to equal
@@ -989,7 +1013,10 @@ service cloud.firestore {
          // audience is a grant, and this is the bound `create` places on it, applied to
          // what the write admits rather than to what an older write already had.
          onlyFamilyAdded(resource.data, request.resource.data) &&
-         familyIsMineOrBlank(request.resource.data.get('familyId', ''))) ||
+         familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+         // A stamped event stays in its family, and what the write adds is that family's.
+         familyKept(resource.data, request.resource.data) &&
+         onlyFamilyAddedToItsFamily(resource.data, request.resource.data, noGuests())) ||
         (request.auth.uid in resource.data.get('sharedWith', []) &&
          resource.data.get('permissions', '') == 'read_write' &&
          request.resource.data.get('sharedWith', []) == resource.data.get('sharedWith', []) &&
@@ -1028,15 +1055,31 @@ service cloud.firestore {
 
     // True when the caller may record a revision of [eventId].
     //
-    // A missing event does not refuse it, deliberately. The revision comes from a device outbox,
-    // and the event may not have landed yet (created offline) or may already be gone (created and
-    // deleted offline, or swept 90 days after its tombstone); refusing either would strand the
-    // outbox for ever. It grants nothing: the author is the caller and the audience is bound to
-    // the caller's own family below, so a revision of a missing event is the caller's own words
-    // under their own name — which is what creating an event already is.
+    // A missing event does not refuse its creator, deliberately. The revision comes from a device
+    // outbox, and the event may not have landed yet (created offline) or may already be gone
+    // (created and deleted offline, or swept 90 days after its tombstone); refusing either would
+    // strand the outbox for ever. It grants nothing: the author is the caller and the audience is
+    // bound to the caller's own family below, so a revision of a missing event is the caller's own
+    // words under their own name — which is what creating an event already is. **Only the event's
+    // creator, though**, as the revision's own copy of the event says: anybody else could file
+    // "revisions" under the id of an event that was swept or turned private, and a non-creator's
+    // edit of an event that no longer exists is not a save the record has to keep.
+    //
+    // An event that exists also bounds the revision's audience by **its** family, whatever family
+    // the revision itself names: an unstamped revision of a family-A event must not carry A's
+    // event to the other family's co-parent.
     function mayRecordRevisionOf(eventId) {
-      return !exists(/databases/$(database)/documents/events/$(eventId)) ||
-             mayEditEvent(get(/databases/$(database)/documents/events/$(eventId)).data);
+      return exists(/databases/$(database)/documents/events/$(eventId))
+          ? (mayEditEvent(get(/databases/$(database)/documents/events/$(eventId)).data) &&
+             revisionWithinEventFamily(
+               get(/databases/$(database)/documents/events/$(eventId)).data))
+          : request.resource.data.event.get('createdByFirebaseUid', '') == request.auth.uid;
+    }
+
+    // The revision's audience against the stored event's family, when it names one.
+    function revisionWithinEventFamily(ev) {
+      return !(ev.get('familyId', '') is string) ||
+             withinFamily(request.resource.data.sharedWith.toSet(), ev.get('familyId', ''));
     }
 
     match /event_versions/{versionId} {
@@ -1073,6 +1116,10 @@ service cloud.firestore {
                       request.auth.uid in request.resource.data.sharedWith &&
                       isMyAudience(request.resource.data.sharedWith) &&
                       familyIsMineOrBlank(request.resource.data.familyId) &&
+                      // A revision is kept for ever and unpair never narrows it, so an audience
+                      // outside its family would be a disclosure nothing can take back.
+                      withinFamily(request.resource.data.sharedWith.toSet(),
+                                   request.resource.data.familyId) &&
                       mayRecordRevisionOf(request.resource.data.eventId);
 
       allow update, delete: if false;
@@ -1166,14 +1213,24 @@ service cloud.firestore {
       // second family's parent in `sharedWith`, medical details and all, and the write passed.
       // `onlyFamilyAddedToItsFamily` bounds what a write adds to the parents the record's family id
       // names, before and after the write.
+      //
+      // **"The creator's partner" is a parent of the record's own family** (`isRecordPartner`).
+      // `isPartnerOf(creator)` asked a question about the creator, and a parent in two families
+      // has two partners: the other family's co-parent, once in the audience — as a guest Zuzana
+      // let in, or as what the item-38 leak left behind — became a full editor who could extend
+      // or drop their own guest grant, mint guests, drop the family's other parent and re-stamp
+      // the record into their own family. A guest never takes the partner branch, and the record
+      // keeps its family on both branches (`familyKept`, `partnerKeepsFamily`), so the bound below
+      // cannot be walked around in two writes.
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
                       resource.data.createdByFirebaseUid in request.resource.data.sharedWith &&
                       (
                         (resource.data.createdByFirebaseUid == request.auth.uid &&
                          onlyFamilyOrGuestsAdded(resource.data, request.resource.data) &&
-                         familyIsMineOrBlank(request.resource.data.get('familyId', ''))) ||
-                        (isPartnerOf(resource.data.createdByFirebaseUid) &&
+                         familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                         familyKept(resource.data, request.resource.data)) ||
+                        (isRecordPartner(resource.data, request.resource.data) &&
                          request.auth.uid in request.resource.data.sharedWith &&
                          onlyGuestsAdded(resource.data, request.resource.data))
                       ) &&
@@ -1183,6 +1240,23 @@ service cloud.firestore {
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
+    }
+
+    // True when the caller may edit a child's or a pet's record as the creator's co-parent: one
+    // of the two parents the record's family names (and still the creator's co-parent), or — for
+    // a record that names no family yet — any co-parent of the creator, the older bound. Never a
+    // guest, before or after the write: a guest reads, and a parent who names themselves a guest
+    // would be swept out of their own child's record when the grant ran out. The family stays as
+    // it was, or a blank one is filled with the creator's and the caller's (`partnerKeepsFamily`).
+    function isRecordPartner(before, after) {
+      return (before.get('familyId', '') == ''
+                ? isPartnerOf(before.createdByFirebaseUid)
+                : (isFamilyMember(before.familyId) &&
+                   before.createdByFirebaseUid in before.familyId.split('__') &&
+                   isPartnerOf(before.createdByFirebaseUid))) &&
+             !(request.auth.uid in before.get('guests', {})) &&
+             !(request.auth.uid in after.get('guests', {})) &&
+             partnerKeepsFamily(before, after);
     }
 
     // The uids a child record's write lets in as guests: the keys of the `guests` map it carries.
@@ -1235,7 +1309,7 @@ service cloud.firestore {
         .difference(guestUids);
     }
 
-    // True when the audience of a child or pet record, with its guests taken out, is the
+    // True when the audience of a child's record, with its guests taken out, is the
     // writer's own family. A guest is admitted by being a key of the `guests` map the same write
     // carries, so a uid in `sharedWith` that is neither a guest nor family is a stranger.
     function isMyGuestlessAudience(data) {
@@ -1279,27 +1353,31 @@ service cloud.firestore {
                     request.auth.uid in resource.data.get('sharedWith', []);
 
       // The family bound is `child_info`'s with no guest exception: a pet has no guests, so a
-      // `guests` map on a pet document admits nobody once the pet names a family.
+      // `guests` map on a pet document admits nobody — with a family or without one. The child
+      // helpers take the `guests` keys out of the audience before bounding it, and on a pet with
+      // no family that let any uid in, for ever: the pets read rule checks no grant expiry.
       allow create: if isAuthenticated() &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.auth.uid in request.resource.data.sharedWith &&
                       request.resource.data.keys().hasAll(['name', 'createdByFirebaseUid', 'sharedWith']) &&
                       isValidLength(request.resource.data.name, 1, 100) &&
-                      isMyGuestlessAudience(request.resource.data) &&
+                      isMyAudience(request.resource.data.sharedWith) &&
                       familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
                       audienceWithinItsFamily(request.resource.data, noGuests());
 
-      // Same three bounds as `child_info`, and read its comment for why.
+      // Same three bounds as `child_info`, and read its comment for why — without guests: the
+      // creator may add only family, the co-parent nobody.
       allow update: if isAuthenticated() &&
                       request.auth.uid in resource.data.sharedWith &&
                       resource.data.createdByFirebaseUid in request.resource.data.sharedWith &&
                       (
                         (resource.data.createdByFirebaseUid == request.auth.uid &&
-                         onlyFamilyOrGuestsAdded(resource.data, request.resource.data) &&
-                         familyIsMineOrBlank(request.resource.data.get('familyId', ''))) ||
-                        (isPartnerOf(resource.data.createdByFirebaseUid) &&
+                         onlyFamilyAdded(resource.data, request.resource.data) &&
+                         familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                         familyKept(resource.data, request.resource.data)) ||
+                        (isRecordPartner(resource.data, request.resource.data) &&
                          request.auth.uid in request.resource.data.sharedWith &&
-                         onlyGuestsAdded(resource.data, request.resource.data))
+                         addedToAudience(resource.data, request.resource.data, noGuests()).size() == 0)
                       ) &&
                       onlyFamilyAddedToItsFamily(resource.data, request.resource.data, noGuests()) &&
                       request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
@@ -1437,7 +1515,10 @@ service cloud.firestore {
       allow update: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid &&
                       request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
-                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
+                      familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                      // The family is the audience here: re-stamping an A expense to B would show
+                      // it to B's co-parent at once (`isLiveFamilyMember`).
+                      familyKept(resource.data, request.resource.data);
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
@@ -1491,6 +1572,16 @@ service cloud.firestore {
               request.auth.uid == before.requestedBy);
     }
 
+    // True when a change request's `familyId` is blank or names exactly its two parties. A request
+    // is between two adults, so its family is a fact about the record (`ChangeRequestRepositoryImpl`
+    // derives it from the pair): a request stamped A but addressed to the author's co-parent in B
+    // would carry an A event's title and times to B.
+    function changeRequestFamilyValid(data) {
+      return data.requestedBy != data.requestedTo &&
+             withinFamily([data.requestedBy, data.requestedTo].toSet(),
+                          data.get('familyId', ''));
+    }
+
     // ---- Change requests ----------------------------------------------
     // Event change requests: only the requester or the addressee may access.
     match /change_requests/{requestId} {
@@ -1517,6 +1608,9 @@ service cloud.firestore {
       ) && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'respondedAt', 'familyId']) &&
         familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+        // The stamp may fill a blank, with the two parties' own family, and never move.
+        familyKept(resource.data, request.resource.data) &&
+        changeRequestFamilyValid(request.resource.data) &&
         changeRequestStatusMove(resource.data, request.resource.data);
 
       // A request must be authored by the caller and addressed to their live co-parent.
@@ -1531,7 +1625,8 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                       request.auth.uid == request.resource.data.requestedBy &&
                       isPartnerOf(request.resource.data.requestedTo) &&
-                      familyIsMineOrBlank(request.resource.data.get('familyId', ''));
+                      familyIsMineOrBlank(request.resource.data.get('familyId', '')) &&
+                      changeRequestFamilyValid(request.resource.data);
     }
 
     // ---- Request clocks (phase 3a) -------------------------------------
@@ -1801,9 +1896,10 @@ service cloud.firestore {
     // with Admin credentials, and it also checks the thing rules cannot cheaply check — that
     // the inviter holds the named record as a parent rather than as a guest. This only stops
     // a malformed invitation existing in the first place.
-    // A **friend** invitation (item 16) names no child record — it opens the whole calendar —
-    // so it carries only the grant's end instant, which must still be in the future. Like the
-    // guest kind, this only stops a malformed document existing;
+    // A **friend** invitation (item 16) names no child record — it opens the whole calendar of
+    // one family — so it carries the grant's end instant, which must still be in the future, and
+    // the family, one the inviter is in. Like the guest kind, this only stops a malformed document
+    // existing;
     // `acceptCalendarFriendInvitation` re-checks everything with Admin credentials, including
     // the thing rules cannot cheaply check: that the inviter is a *paired parent*.
     // A **professional** invitation (MON-18) names the family it opens — one the inviter is in —
@@ -1818,10 +1914,15 @@ service cloud.firestore {
         data.guestExpiresAt is number &&
         data.guestExpiresAt > request.time.toMillis()
       ) || (
+        // A friend invitation names the family it opens, one the inviter is in. Without it the
+        // callable had to guess, and its guess — the inviter's singular `partnerId`, which the
+        // server keeps on the *first* co-parent — admitted a friend meant for family B to family
+        // A's calendar, which A's other parent never chose.
         data.kind == 'friend' &&
-        data.keys().hasAll(['friendExpiresAt']) &&
+        data.keys().hasAll(['friendExpiresAt', 'familyId']) &&
         data.friendExpiresAt is number &&
-        data.friendExpiresAt > request.time.toMillis()
+        data.friendExpiresAt > request.time.toMillis() &&
+        isFamilyMember(data.familyId)
       ) || (
         data.kind == 'professional' &&
         data.keys().hasAll(['professionalRole', 'professionalExpiresAt', 'familyId']) &&
