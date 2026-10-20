@@ -3,6 +3,8 @@ package com.coparently.app.presentation.school
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
+import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.school.SchoolAccounts
 import com.coparently.app.data.school.SchoolImporter
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -25,10 +27,13 @@ import javax.inject.Inject
  * @property connection The connection.
  * @property childName The CoPlanly child it imports for, as the family named them; the school's
  *   name for the child when the record is gone.
+ * @property needsFamily The connection names no family, the parent has two, and the child's record
+ *   names none either: it imports nothing until it is connected again with a family chosen.
  */
 data class SchoolConnectionRow(
     val connection: SchoolConnection,
-    val childName: String
+    val childName: String,
+    val needsFamily: Boolean = false
 )
 
 /**
@@ -50,12 +55,19 @@ data class SchoolImportUiState(
  * Lists the school connections and runs "Update now" and "Disconnect" (MON-8).
  *
  * Signing in again is the connect screen's job, in its reconnect mode.
+ *
+ * **The family on screen's connections**, and those that name no family, following the switcher:
+ * each connection imports for one family, and another live family's connection — its child's name
+ * as the school spells it, the school, "Update now" and "Disconnect" — belongs on that family's
+ * screen (isolation audit, October 2026). A connection of a family that has ended stays listed, as
+ * that family's other records do, so it can still be disconnected.
  */
 @HiltViewModel
 class SchoolImportViewModel @Inject constructor(
     private val accounts: SchoolAccounts,
     private val importer: SchoolImporter,
-    childInfoRepository: ChildInfoRepository
+    childInfoRepository: ChildInfoRepository,
+    familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SchoolImportUiState())
@@ -65,13 +77,23 @@ class SchoolImportViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(accounts.observe(), childInfoRepository.getAllChildInfo()) { connections, children ->
-                val names = children.associate { it.id to it.childName }
-                connections.map { connection ->
+            combine(
+                accounts.observe(),
+                // Every family's children: a connection listed here is this family's or nobody's,
+                // and its child may be one whose record names no family yet.
+                childInfoRepository.getAllChildInfoInEveryFamily(),
+                familyViewSource.observe()
+            ) { connections, children, view ->
+                val byId = children.associateBy { it.id }
+                // Two families or more: a connection of no family imports only once its child's
+                // record names one (SchoolImporter.familyOf).
+                val choosing = view.placeOf(null) == RecordPlace.ONLY_ME
+                connections.filter { view.shows(it.familyId) }.map { connection ->
+                    val child = byId[connection.childId]
                     SchoolConnectionRow(
                         connection = connection,
-                        childName = names[connection.childId]?.takeIf { it.isNotBlank() }
-                            ?: connection.studentName
+                        childName = child?.childName?.takeIf { it.isNotBlank() } ?: connection.studentName,
+                        needsFamily = choosing && connection.familyId.isNullOrBlank() && child?.familyId.isNullOrBlank()
                     )
                 }
             }.collect { rows -> _state.update { it.copy(rows = rows, isLoading = false) } }
@@ -111,5 +133,6 @@ class SchoolImportViewModel @Inject constructor(
             SchoolSyncFailure.SERVER -> UiText.Res(R.string.school_import_sync_server)
         }
         SchoolSyncResult.NotFound -> UiText.Res(R.string.school_import_sync_server)
+        SchoolSyncResult.NeedsFamily -> UiText.Res(R.string.school_import_sync_needs_family)
     }
 }

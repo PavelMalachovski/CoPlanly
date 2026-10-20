@@ -29,13 +29,14 @@ internal object SchoolTestSupport {
         return EncryptedPreferences(context, ReversingCipher)
     }
 
-    /** A stored connection for [uid], with the tokens given. */
+    /** A stored connection for [uid], with the tokens given, for [familyId] (null: none). */
     fun stored(
         uid: String = "alice",
         id: String = "conn1",
         baseUrl: String = "https://skola.bakalari.cz",
         tokens: BakalariTokens = BakalariTokens("access-1", "refresh-1", Long.MAX_VALUE),
-        status: SchoolConnectionStatus = SchoolConnectionStatus.OK
+        status: SchoolConnectionStatus = SchoolConnectionStatus.OK,
+        familyId: String? = "alice__bob"
     ) = StoredSchoolConnection(
         connection = SchoolConnection(
             id = id,
@@ -44,7 +45,7 @@ internal object SchoolTestSupport {
             schoolName = "ZŠ Beroun",
             studentName = "Nováková Anna, 5.A",
             childId = "child-1",
-            familyId = "alice__bob",
+            familyId = familyId,
             status = status,
             lastSuccessAtMillis = null
         ),
