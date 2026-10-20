@@ -241,17 +241,17 @@ class SchoolImporter internal constructor(
         }
     }
 
+    /** The family a connection's events belong to, as [familyOf] resolves it before an update. */
+    private sealed interface ConnectionFamily {
+
+        /** The events go to [familyId], or to no family while the parent has no co-parent. */
+        data class Known(val familyId: String?) : ConnectionFamily
+
+        /** The parent has two families or more and nothing names one: nothing is imported. */
+        data object Unknown : ConnectionFamily
+    }
+
     private companion object {
         const val TAG = "SchoolImporter"
     }
-}
-
-/** The family a connection's events belong to, as [SchoolImporter] resolves it before an update. */
-private sealed interface ConnectionFamily {
-
-    /** The events go to [familyId], or to no family while the parent has no co-parent. */
-    data class Known(val familyId: String?) : ConnectionFamily
-
-    /** The parent has two families or more and nothing names one: nothing is imported. */
-    data object Unknown : ConnectionFamily
 }
