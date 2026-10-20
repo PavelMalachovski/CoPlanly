@@ -160,9 +160,49 @@ class RecordPhotoTest {
         )
     }
 
+    // ---- which folder a new upload goes to (October 2026 isolation audit) --------------------
+
+    @Test
+    fun `a photograph of a record goes to the family it names`() {
+        assertEquals(
+            FAMILY,
+            RecordPhotoPaths.uploadFamily(FAMILY, storedRecord = true, ALICE, listOf(BOB, CAROL), CAROL)
+        )
+    }
+
+    @Test
+    fun `a stored record of no family goes to the uploader's own folder while there are two families`() {
+        // With Carol on screen, Alice edits a record that is "only mine": a family path would let
+        // Carol read the photograph of a record nobody shares with her.
+        assertNull(RecordPhotoPaths.uploadFamily(null, storedRecord = true, ALICE, listOf(BOB, CAROL), CAROL))
+        assertNull(RecordPhotoPaths.uploadFamily("", storedRecord = true, ALICE, listOf(BOB, CAROL), CAROL))
+    }
+
+    @Test
+    fun `with one co-parent a stored record of no family keeps the family on screen`() {
+        assertEquals(FAMILY, RecordPhotoPaths.uploadFamily(null, storedRecord = true, ALICE, listOf(BOB), BOB))
+        // A row written before the co-parent list existed carries only the family on screen.
+        assertEquals(FAMILY, RecordPhotoPaths.uploadFamily(null, storedRecord = true, ALICE, emptyList(), BOB))
+    }
+
+    @Test
+    fun `a record being created goes to the family on screen, the family it is created in`() {
+        assertEquals(
+            "alice__carol",
+            RecordPhotoPaths.uploadFamily(null, storedRecord = false, ALICE, listOf(BOB, CAROL), CAROL)
+        )
+    }
+
+    @Test
+    fun `an unpaired uploader keeps the photograph in their own folder`() {
+        assertNull(RecordPhotoPaths.uploadFamily(null, storedRecord = false, ALICE, emptyList(), null))
+        assertNull(RecordPhotoPaths.uploadFamily(null, storedRecord = true, ALICE, emptyList(), null))
+    }
+
     private companion object {
         const val ALICE = "alice"
         const val BOB = "bob"
+        const val CAROL = "carol"
         const val GUEST = "grandma"
         const val FAMILY = "alice__bob"
         val SHA = "0123456789abcdef".repeat(4)
