@@ -1374,7 +1374,7 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 ### 5.2 Family switcher and chat following the selected family (M-8) · 3A, 2P or 1P fallback
 
-> **[CI e2e]** `MultiFamilyTest` proves the data side: A's own pairing listener brings C's family in without taking over the screen, with a second co-parent selected a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `MultiFamilyRecordsTest` pins the October 2026 leak: with C's family on screen, A's edit and sync leave a child and a pet of B's family with B's audience, and C is refused both. `MultiFamilyCustodyTest` pins its custody twin: each family keeps its own schedule, and neither reaches the other's document. `OnScreenFamiliesTest` drives the switcher on A's real screens: C's family reaches the open app by itself, with B's family on screen C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C. Still manual: the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
+> **[CI e2e]** `MultiFamilyTest` proves the data side: A's own pairing listener brings C's family in without taking over the screen, with a second co-parent selected a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `MultiFamilyRecordsTest` pins the October 2026 leak: with C's family on screen, A's edit and sync leave a child and a pet of B's family with B's audience, and C is refused both. `MultiFamilyCustodyTest` pins its custody twin: each family keeps its own schedule, and neither reaches the other's document. `OnScreenFamiliesTest` drives the switcher on A's real screens: C's family reaches the open app by itself, with B's family on screen C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C. `FamilyIsolationTest` sweeps every document in the emulator, both other phones' databases and every push for a canary word written in each family, with C's family also admitting a friend, a professional and a child's guest; `OnScreenIsolationTest` walks Home, the Day view, Expenses, Child information and Pets with C's family on screen and finds none of B's records. Still manual: the marks, totals and colours below, the ask-once dialog, the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
 
 Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
 
@@ -1415,6 +1415,22 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
   - **If it fails:** tags `SyncService`, `PairingRepositoryImpl`, `SelectedFamily`;
     `domain/family/FamilyAudience.kt` (`recordPartnerFor`), `PairingRepositoryImpl.
     onPairingStateObserved`, `presentation/common/CoParentOnScreen.kt`.
+- [ ] **Nothing of one family appears in the other** (isolation audit, October 2026). **[CI e2e]**
+      for the data and the five main screens. On A, with **C's family** on screen:
+  - B's events, expenses, children, pets, requests, chat cards and documents appear on **no**
+    screen: Home (today, the week, the co-parent's changes, the month's figures), the calendar in
+    all three views, Expenses and its totals, Child information, Pets, the Requests inbox, the
+    journal and the export.
+  - A record A wrote **before pairing with anyone** shows in both families marked **"Only me"**;
+    an event of a family A **left** shows marked **"From an earlier family"**, in grey, without a
+    person line. Neither changes a total or the balance on Expenses or Home.
+  - Open the chat's event picker and ask to change one of **B's** events from **C's** thread: the
+    form says the event is not in a family you are linked with; nothing reaches C.
+  - On **C's** phone, after a pull to refresh, none of B's records is listed anywhere, and no
+    notification about B's family arrived.
+  - **If it fails:** tags `FamilyView`, `SyncService`, `EventRepository`;
+    `data/family/FamilyView.kt`, `domain/family/FamilyAudience.kt`,
+    `presentation/common/RecordPlaceMark.kt`.
 - [ ] **Each family keeps its own schedule** (October 2026, schema 45). **[CI e2e]** On A, with B's
       family on screen, B's family has a custody schedule. Switch to **C's family**:
   - the calendar shows **no custody band** (or C's family's own, if it has one), never B's
