@@ -91,7 +91,8 @@ data class FamilyView(val me: String? = null, val onScreen: String?, val others:
     fun counts(familyId: String?, createdBy: String? = null): Boolean =
         placeOf(familyId, createdBy) == RecordPlace.ON_SCREEN
 
-    private fun liveFamilies(): Int = others.size + (if (onScreen != null) 1 else 0)
+    /** How many live families the parent is in: the one on screen and the others. */
+    fun liveFamilies(): Int = others.size + (if (onScreen != null) 1 else 0)
 
     companion object {
         /** Shows everything: signed out, or no row yet. */

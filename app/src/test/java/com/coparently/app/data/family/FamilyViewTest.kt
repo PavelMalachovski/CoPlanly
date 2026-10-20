@@ -68,6 +68,14 @@ class FamilyViewTest {
     }
 
     @Test
+    fun `live families count the one on screen and the others`() {
+        val two = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("igor", "carol")))
+        assertEquals(2, two.liveFamilies())
+        assertEquals(1, FamilyView.of(zuzana, row(onScreen = "igor", partners = listOf("igor"))).liveFamilies())
+        assertEquals(0, FamilyView.of(zuzana, row(onScreen = null, partners = emptyList())).liveFamilies())
+    }
+
+    @Test
     fun `a co-parent's record of no family belongs to the family with them`() {
         // Igor's records came down with a blank family and were drawn in the family with Carol,
         // in Carol's name and colour (isolation audit, October 2026).

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyViewSource
-import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.school.SchoolAccounts
 import com.coparently.app.data.school.SchoolImporter
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -87,7 +86,7 @@ class SchoolImportViewModel @Inject constructor(
                 val byId = children.associateBy { it.id }
                 // Two families or more: a connection of no family imports only once its child's
                 // record names one (SchoolImporter.familyOf).
-                val choosing = view.placeOf(null) == RecordPlace.ONLY_ME
+                val choosing = view.liveFamilies() > 1
                 connections.filter { view.shows(it.familyId) }.map { connection ->
                     val child = byId[connection.childId]
                     SchoolConnectionRow(
