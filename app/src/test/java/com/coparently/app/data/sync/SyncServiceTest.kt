@@ -1196,6 +1196,54 @@ class SyncServiceTest {
     }
 
     @Test
+    fun `an event conflict won locally keeps the family the server stamped and adopts it`() = runTest {
+        // The rules refuse a write that blanks a stamped `familyId`, the creator's included, and
+        // `stampOwnBlankFamilyIds` stamps on the same evidence `FamilyIdBackfill` would. A phone
+        // that missed its own backfill would otherwise send `""` over the stamp for ever.
+        pairWith(partnerId = BOB)
+        val remote = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+            .copy(familyId = BOB_FAMILY)
+        val local = remote.copy(
+            familyId = null,
+            syncedToFirestore = false,
+            updatedAtMillis = remote.updatedAtMillis + HOUR_MS
+        )
+        coEvery { eventDao.getEventById(EVENT_ID) } returns local
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(eventDocument(remote, listOf(ALICE, BOB))), null))
+        val written = slot<Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.updateEvent(EVENT_ID, capture(written)) } returns Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(BOB_FAMILY, written.captured["familyId"])
+        coVerify {
+            eventDao.insertEvent(match { it.id == EVENT_ID && it.familyId == BOB_FAMILY && it.syncedToFirestore })
+        }
+    }
+
+    @Test
+    fun `a child conflict won locally keeps the family the server stamped and adopts it`() = runTest {
+        pairWith(partnerId = BOB)
+        coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns
+            childInfoEntity(updatedAt = now.plusHours(1), synced = false)
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
+            flowOf(listOf(remoteChildInfoMap(updatedAt = now) + ("familyId" to BOB_FAMILY)))
+        val written = slot<Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.updateChildInfo(CHILD_ID, capture(written)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(BOB_FAMILY, written.captured["familyId"])
+        coVerify {
+            childInfoDao.insertChildInfo(
+                match { it.id == CHILD_ID && it.familyId == BOB_FAMILY && it.syncedToFirestore }
+            )
+        }
+    }
+
+    @Test
     fun `a child conflict won locally is marked synced only once the update lands`() = runTest {
         pairWith(partnerId = BOB)
         coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns
@@ -1398,7 +1446,8 @@ class SyncServiceTest {
             "sharedWith" to sharedWith,
             "lastModifiedBy" to entity.lastModifiedBy,
             "permissions" to entity.permissions,
-            "imageUrl" to entity.imageUrl
+            "imageUrl" to entity.imageUrl,
+            "familyId" to entity.familyId
         )
 
     /**

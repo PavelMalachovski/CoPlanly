@@ -357,6 +357,7 @@ class SyncService @Inject constructor(
                             // Keep local, upload to remote. This is a partial `update()`,
                             // so `sharedWith` on the remote document is left as it is
                             // rather than being narrowed to this device's stale copy.
+                            val family = stampedFamily(localEntity.familyId, remoteEntity.familyId)
                             val localData = mapOf(
                                 "id" to localEntity.id,
                                 "title" to localEntity.title,
@@ -383,12 +384,14 @@ class SyncService @Inject constructor(
                                 "reminderMinutes" to localEntity.reminderMinutes,
                                 "forMembers" to
                                     EventDocument.storedMembers(localEntity.forMembersJson),
-                                "familyId" to (localEntity.familyId ?: "")
+                                "familyId" to (family ?: "")
                             )
                             // Synced only once the write has landed: a refused or offline
                             // update leaves the row queued, and the next pass tries again.
                             val updated = firestoreEventDataSource.updateEvent(localEntity.id, localData)
-                            if (updated.isSuccess) {
+                            if (updated.isSuccess && family != localEntity.familyId) {
+                                eventDao.insertEvent(localEntity.copy(familyId = family, syncedToFirestore = true))
+                            } else if (updated.isSuccess) {
                                 eventDao.markAsSynced(localEntity.id)
                             } else {
                                 Log.w(
@@ -765,6 +768,7 @@ class SyncService @Inject constructor(
                             // un-updatable, because `request.auth.uid in resource.data.sharedWith`
                             // is a missing-field error from then on. The only way back was
                             // deleting the document. Same reasoning as the events branch above.
+                            val family = stampedFamily(localEntity.familyId, remoteEntity.familyId)
                             val localData = mapOf(
                                 "id" to localEntity.id,
                                 "childName" to localEntity.childName,
@@ -784,11 +788,15 @@ class SyncService @Inject constructor(
                                 "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
-                                "familyId" to (localEntity.familyId ?: "")
+                                "familyId" to (family ?: "")
                             )
                             val updated =
                                 firestoreChildInfoDataSource.updateChildInfo(localEntity.id, localData)
-                            if (updated.isSuccess) {
+                            if (updated.isSuccess && family != localEntity.familyId) {
+                                childInfoDao.insertChildInfo(
+                                    localEntity.copy(familyId = family, syncedToFirestore = true)
+                                )
+                            } else if (updated.isSuccess) {
                                 childInfoDao.markAsSynced(localEntity.id)
                             } else {
                                 Log.w(
@@ -1015,6 +1023,15 @@ class SyncService @Inject constructor(
      * Delegates to [EventDocument], which is the single reader of the document shape now that
      * the change-request inbox fetches events too.
      */
+    /**
+     * The family a conflict won locally writes back: this phone's, or the server's stamp while
+     * this phone still holds the record unstamped. `stampOwnBlankFamilyIds` stamps on the evidence
+     * [FamilyIdBackfill] reads, and the rules refuse a write that blanks a stamp — the creator's
+     * too — so a phone that missed its own backfill would otherwise send `""` over it for ever.
+     */
+    private fun stampedFamily(local: String?, remote: String?): String? =
+        local?.takeIf { it.isNotBlank() } ?: remote?.takeIf { it.isNotBlank() }
+
     private fun Map<String, Any?>.toEventEntity() = EventDocument.toEntity(this)
 
     /**
