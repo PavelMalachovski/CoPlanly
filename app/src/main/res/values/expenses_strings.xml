@@ -80,7 +80,8 @@
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · receipt</string>
     <string name="expenses_split_proposal_title">New expense split proposed</string>
-    <string name="expenses_split_proposal_body">Your co-parent proposes %1$d / %2$d for shared expenses from now on. Already recorded expenses keep their split.</string>
+    <string name="expenses_split_proposal_body_named">%1$s proposes a new split for shared expenses from now on: %2$s. Already recorded expenses keep their split.</string>
+    <string name="expenses_split_shares_named">%1$s pays %2$d %%, %3$s pays %4$d %%</string>
     <string name="expenses_split_proposal_confirm">Confirm</string>
     <string name="expenses_split_proposal_decline">Decline</string>
     <string name="expenses_split_proposal_later">Later</string>
@@ -93,7 +94,7 @@
     <string name="expenses_filter_members">Show for</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Waiting for an answer</string>
-    <string name="expenses_split_proposal_waiting_body">You proposed %1$d/%2$d. Your co-parent has not answered yet.</string>
+    <string name="expenses_split_proposal_waiting_body_named">You proposed: %1$s. %2$s has not answered yet.</string>
     <string name="expenses_split_proposal_withdraw">Withdraw</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

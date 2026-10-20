@@ -54,6 +54,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.BannerTone
@@ -63,6 +65,7 @@ import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.Loadable
+import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.ScrollAwareFab
 import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.clearance
@@ -262,6 +265,7 @@ fun ExpenseScreen(
             pendingRatioProposal?.takeIf { !ratioProposalDismissed }?.let { proposal ->
                 SplitRatioProposalBanner(
                     proposal = proposal,
+                    parentNames = parentNames,
                     onAccept = { viewModel.decideRatioProposal(accept = true) },
                     onDecline = { viewModel.decideRatioProposal(accept = false) },
                     // "Later" leaves it pending, so it is still the co-parent's open question
@@ -277,6 +281,7 @@ fun ExpenseScreen(
             myPendingRatioProposal?.let { proposal ->
                 SplitRatioWaitingBanner(
                     proposal = proposal,
+                    parentNames = parentNames,
                     onWithdraw = viewModel::withdrawRatioProposal
                 )
             }
@@ -598,19 +603,21 @@ private fun rememberMonthLabel(month: YearMonth): String = remember(month) {
  * undoes it.
  *
  * @param proposal What this parent put forward.
+ * @param parentNames Who pays which share, by name (a bare "35/65" did not say who was who).
  * @param onWithdraw Takes it back; the agreed ratio never moved, so nothing else changes.
  */
 @Composable
 private fun SplitRatioWaitingBanner(
     proposal: SplitRatioProposal,
+    parentNames: ParentNames,
     onWithdraw: () -> Unit
 ) {
     InlineBanner(
         title = stringResource(R.string.expenses_split_proposal_waiting_title),
         text = stringResource(
-            R.string.expenses_split_proposal_waiting_body,
-            proposal.ratio.momPercent,
-            proposal.ratio.dadPercent
+            R.string.expenses_split_proposal_waiting_body_named,
+            namedShares(proposal.ratio, parentNames),
+            coParentName(parentNames)
         ),
         modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
         actions = {
@@ -632,6 +639,7 @@ private fun SplitRatioWaitingBanner(
  * nothing without knowing what it is replacing.
  *
  * @param proposal What the co-parent put forward.
+ * @param parentNames Who pays which share, by name, and who proposed it.
  * @param onAccept Agrees; the new split prices expenses recorded from then on.
  * @param onDecline Turns it down; nothing changes.
  * @param onLater Hides the banner without answering.
@@ -639,6 +647,7 @@ private fun SplitRatioWaitingBanner(
 @Composable
 private fun SplitRatioProposalBanner(
     proposal: SplitRatioProposal,
+    parentNames: ParentNames,
     onAccept: () -> Unit,
     onDecline: () -> Unit,
     onLater: () -> Unit
@@ -646,9 +655,9 @@ private fun SplitRatioProposalBanner(
     InlineBanner(
         title = stringResource(R.string.expenses_split_proposal_title),
         text = stringResource(
-            R.string.expenses_split_proposal_body,
-            proposal.ratio.momPercent,
-            proposal.ratio.dadPercent
+            R.string.expenses_split_proposal_body_named,
+            coParentName(parentNames),
+            namedShares(proposal.ratio, parentNames)
         ),
         modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
         tone = BannerTone.ATTENTION,
@@ -665,3 +674,20 @@ private fun SplitRatioProposalBanner(
         }
     )
 }
+
+/**
+ * "Zuzana pays 35 %, Pavel pays 65 %": a split with the name beside each share. A bare "35 / 65"
+ * left both parents guessing which number was theirs (tester report, October 2026).
+ */
+@Composable
+private fun namedShares(ratio: SplitRatio, parentNames: ParentNames): String = stringResource(
+    R.string.expenses_split_shares_named,
+    parentNames.labelFor(ContactWindow.SLOT_ONE),
+    ratio.momPercent,
+    parentNames.labelFor(ContactWindow.SLOT_TWO),
+    ratio.dadPercent
+)
+
+/** The co-parent's name, or the "your co-parent" fallback while it is not known. */
+private fun coParentName(parentNames: ParentNames): String =
+    parentNames.parents.coParent?.uid?.let(parentNames::labelForUid) ?: parentNames.coParentFallback

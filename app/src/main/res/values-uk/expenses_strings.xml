@@ -72,7 +72,8 @@
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
     <string name="expenses_split_proposal_title">Запропоновано новий поділ витрат</string>
-    <string name="expenses_split_proposal_body">Другий із батьків пропонує відтепер ділити спільні витрати %1$d / %2$d. Уже внесені витрати збережуть свій поділ.</string>
+    <string name="expenses_split_proposal_body_named">%1$s пропонує відтепер новий поділ спільних витрат: %2$s. Уже внесені витрати збережуть свій поділ.</string>
+    <string name="expenses_split_shares_named">%1$s платить %2$d %%, %3$s платить %4$d %%</string>
     <string name="expenses_split_proposal_confirm">Підтвердити</string>
     <string name="expenses_split_proposal_decline">Відхилити</string>
     <string name="expenses_split_proposal_later">Пізніше</string>
@@ -85,7 +86,7 @@
     <string name="expenses_filter_members">Показати для</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Чекаємо на відповідь</string>
-    <string name="expenses_split_proposal_waiting_body">Ви запропонували %1$d/%2$d. Другий із батьків ще не відповів.</string>
+    <string name="expenses_split_proposal_waiting_body_named">Ви запропонували: %1$s. %2$s ще не відповів(ла).</string>
     <string name="expenses_split_proposal_withdraw">Відкликати</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

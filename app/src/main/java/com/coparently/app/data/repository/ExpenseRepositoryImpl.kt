@@ -1,5 +1,6 @@
 package com.coparently.app.data.repository
 
+import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ExpenseEntity
@@ -39,16 +40,21 @@ class ExpenseRepositoryImpl @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
+    /**
+     * The family on screen's expenses. A parent in two families sees one family's money at a
+     * time: the other live family's expenses stay out ([inFamilyOnScreen]) — balances settle per
+     * pair, and two families' shoes in one list was the tester report this fixes.
+     */
     override fun getAllExpenses(): Flow<List<Expense>> {
         return expenseDao.getAllExpenses().map { entities ->
             entities.map { it.toDomain() }
-        }
+        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
     }
 
     override fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>> {
         return expenseDao.getExpensesForPeriod(start, end).map { entities ->
             entities.map { it.toDomain() }
-        }
+        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
     }
 
     override fun getExpensesByCategory(category: ExpenseCategory): Flow<List<Expense>> {

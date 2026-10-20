@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.Flow
 interface PetRepository {
 
     /**
-     * Gets all pets as a Flow.
+     * The pets of the family on screen as a Flow — with two families, the other family's pets
+     * are left out (`FamilyView`); a pet naming no family is always included.
      */
     fun getAllPets(): Flow<List<Pet>>
 

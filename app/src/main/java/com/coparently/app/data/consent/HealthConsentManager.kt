@@ -107,7 +107,7 @@ class HealthConsentManager @Inject constructor(
      */
     suspend fun withdraw(): HealthConsentWithdrawal {
         val uid = userRepository.getCurrentUserId() ?: return HealthConsentWithdrawal.SIGNED_OUT
-        val mine = childInfoRepository.getAllChildInfo().first()
+        val mine = childInfoRepository.getAllChildInfoInEveryFamily().first()
             .filter { it.createdByFirebaseUid == uid }
 
         var photosKept = false

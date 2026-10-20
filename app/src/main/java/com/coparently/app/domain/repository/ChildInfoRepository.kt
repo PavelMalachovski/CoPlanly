@@ -10,11 +10,19 @@ import kotlinx.coroutines.flow.Flow
 interface ChildInfoRepository {
 
     /**
-     * Gets all child information as a Flow.
+     * The children of the family on screen as a Flow — with two families, the other family's
+     * children are left out (`FamilyView`); a child naming no family is always included.
      *
-     * @return Flow of list of all child information
+     * @return Flow of the children this screen may show
      */
     fun getAllChildInfo(): Flow<List<ChildInfo>>
+
+    /**
+     * Every child this phone holds, in every family. Only for work that must reach all of them
+     * whichever family is on screen: withdrawing health consent, and connecting a school for a
+     * family the parent chose. Defaults to [getAllChildInfo] for a fake.
+     */
+    fun getAllChildInfoInEveryFamily(): Flow<List<ChildInfo>> = getAllChildInfo()
 
     /**
      * Gets child information by ID.
