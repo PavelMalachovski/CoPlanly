@@ -20,6 +20,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -66,9 +70,11 @@ data class DocumentsUiState(
 /**
  * The family document vault (MON-23): Settings → Family → Documents.
  *
- * The family is the one on screen when the vault opens (`SelectedFamilySource`, M-8), read fresh
- * rather than from a `WhileSubscribed` value (CLAUDE.md item 17), and every document added goes
- * to it. Nothing is private here. The list is a Firestore listener; while it cannot reach the
+ * The family is the one on screen (`SelectedFamilySource`, M-8), **followed** rather than read
+ * once: a push tap can switch the family while this screen stays on the back stack, and the vault
+ * opened for one family kept listing — and filing into — that family under the other's name
+ * (isolation audit, October 2026). A document added goes to the family the screen showed when Add
+ * was tapped. Nothing is private here. The list is a Firestore listener; while it cannot reach the
  * server the repository answers from its Room copy of the index, and the state says so.
  */
 @HiltViewModel
@@ -93,20 +99,26 @@ class FamilyDocumentsViewModel @Inject constructor(
     /** Files ready to open, one event per tap. */
     val opened: Flow<OpenedFile> = _opened.receiveAsFlow()
 
+    /** The family the screen is showing now, which an upload goes to. */
     private var familyId: String? = null
 
     init {
+        val myUid = authService.getCurrentUser()?.uid.orEmpty()
+        _state.update { it.copy(myUid = myUid) }
+        val families = if (myUid.isBlank()) flowOf(null) else selectedFamilySource.observe(myUid)
         viewModelScope.launch {
-            val family = selectedFamilySource.selected()
-            _state.update { it.copy(myUid = authService.getCurrentUser()?.uid.orEmpty()) }
-            if (family == null) {
-                _state.update { it.copy(list = DocumentsList.NoFamily) }
-                return@launch
-            }
-            familyId = family.familyId
-            repository.observe(family.familyId).collect { listing ->
-                val list = listing?.let { DocumentsList.Loaded(it.documents, it.possiblyOutdated) }
-                _state.update { it.copy(list = list ?: DocumentsList.Unavailable) }
+            families.map { it?.familyId }.distinctUntilChanged().collectLatest { family ->
+                familyId = family
+                if (family == null) {
+                    _state.update { it.copy(list = DocumentsList.NoFamily) }
+                    return@collectLatest
+                }
+                // Never the previous family's list under this one's name, not even for a frame.
+                _state.update { it.copy(list = DocumentsList.Loading) }
+                repository.observe(family).collect { listing ->
+                    val list = listing?.let { DocumentsList.Loaded(it.documents, it.possiblyOutdated) }
+                    _state.update { it.copy(list = list ?: DocumentsList.Unavailable) }
+                }
             }
         }
     }

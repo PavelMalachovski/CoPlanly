@@ -2,7 +2,8 @@ package com.coparently.app.presentation.settings
 
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
-import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.family.FamilyView
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.domain.feed.CalendarFeedLimitException
 import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
@@ -10,9 +11,11 @@ import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.presentation.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -34,9 +37,8 @@ class CalendarFeedViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<CalendarFeedRepository>()
-    private val selectedFamilySource = mockk<SelectedFamilySource> {
-        coEvery { selected() } returns FAMILY
-    }
+    private val view = MutableStateFlow(onScreen(FAMILY.familyId))
+    private val familyViewSource = mockk<FamilyViewSource> { every { observe() } returns view }
 
     @Before
     fun setUp() {
@@ -51,7 +53,7 @@ class CalendarFeedViewModelTest {
 
     @Test
     fun `lists only the links into the family on screen`() = runTest(dispatcher) {
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         assertEquals(FAMILY.familyId, vm.state.value.familyId)
@@ -61,8 +63,8 @@ class CalendarFeedViewModelTest {
 
     @Test
     fun `without a family there is nothing to link, and nothing is listed`() = runTest(dispatcher) {
-        coEvery { selectedFamilySource.selected() } returns null
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        view.value = FamilyView(me = "alice-uid", onScreen = null, others = emptySet())
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         assertNull(vm.state.value.familyId)
@@ -77,7 +79,7 @@ class CalendarFeedViewModelTest {
     @Test
     fun `a new link is held for sharing, for the family on screen, in the app language`() = runTest(dispatcher) {
         coEvery { repository.create(FAMILY.familyId, "cs") } returns Result.success(CREATED)
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         vm.create("cs")
@@ -92,7 +94,7 @@ class CalendarFeedViewModelTest {
     @Test
     fun `hitting the server's cap says so, rather than blaming the connection`() = runTest(dispatcher) {
         coEvery { repository.create(any(), any()) } returns Result.failure(CalendarFeedLimitException())
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         vm.create("en")
@@ -105,7 +107,7 @@ class CalendarFeedViewModelTest {
     @Test
     fun `any other failed create is a connection failure`() = runTest(dispatcher) {
         coEvery { repository.create(any(), any()) } returns Result.failure(IllegalStateException("offline"))
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         vm.create("en")
@@ -120,7 +122,7 @@ class CalendarFeedViewModelTest {
     fun `a revoked link leaves the list, and a just-made one stops being offered`() = runTest(dispatcher) {
         coEvery { repository.create(any(), any()) } returns Result.success(CREATED)
         coEvery { repository.revoke(CREATED.feedId) } returns Result.success(Unit)
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
         vm.create("en")
         advanceUntilIdle()
@@ -139,7 +141,7 @@ class CalendarFeedViewModelTest {
     @Test
     fun `a refused revoke keeps the link listed`() = runTest(dispatcher) {
         coEvery { repository.revoke(MINE.feedId) } returns Result.failure(IllegalStateException("denied"))
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         vm.revoke(MINE.feedId)
@@ -153,13 +155,37 @@ class CalendarFeedViewModelTest {
     @Test
     fun `a failed list keeps the screen usable and says so`() = runTest(dispatcher) {
         coEvery { repository.list() } returns Result.failure(IllegalStateException("offline"))
-        val vm = CalendarFeedViewModel(repository, selectedFamilySource)
+        val vm = CalendarFeedViewModel(repository, familyViewSource)
         advanceUntilIdle()
 
         assertEquals(FAMILY.familyId, vm.state.value.familyId)
         assertFalse(vm.state.value.isLoading)
         assertEquals(UiText.Res(R.string.calendar_feed_load_failed), vm.state.value.message)
     }
+
+    @Test
+    fun `a switch while the screen is open lists the family now on screen and forgets the just-made link`() =
+        runTest(dispatcher) {
+            coEvery { repository.create(FAMILY.familyId, "en") } returns Result.success(CREATED)
+            val vm = CalendarFeedViewModel(repository, familyViewSource)
+            advanceUntilIdle()
+            vm.create("en")
+            advanceUntilIdle()
+            assertEquals(CREATED, vm.state.value.created)
+
+            view.value = onScreen(OTHER_FAMILY_LINK.familyId)
+            advanceUntilIdle()
+
+            assertEquals(OTHER_FAMILY_LINK.familyId, vm.state.value.familyId)
+            assertEquals(listOf(OTHER_FAMILY_LINK), vm.state.value.links)
+            assertNull(vm.state.value.created)
+        }
+
+    private fun onScreen(familyId: String) = FamilyView(
+        me = "alice-uid",
+        onScreen = familyId,
+        others = setOf(FAMILY.familyId, OTHER_FAMILY_LINK.familyId) - familyId
+    )
 
     private companion object {
         val FAMILY = FamilyOption("alice-uid__bob-uid", "bob-uid")

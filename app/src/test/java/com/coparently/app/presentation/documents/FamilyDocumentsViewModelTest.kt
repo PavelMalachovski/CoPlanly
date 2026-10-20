@@ -44,8 +44,9 @@ class FamilyDocumentsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<FamilyDocumentRepository>()
     private val documents = MutableStateFlow<VaultListing?>(VaultListing(emptyList()))
+    private val onScreen = MutableStateFlow<FamilyOption?>(FamilyOption(FAMILY, "bob"))
     private val selectedFamilySource = mockk<SelectedFamilySource> {
-        coEvery { selected() } returns FamilyOption(FAMILY, "bob")
+        every { observe("alice") } returns onScreen
     }
     private val authService = mockk<FirebaseAuthService> {
         every { getCurrentUser() } returns mockk<FirebaseUser> { every { uid } returns "alice" }
@@ -99,7 +100,7 @@ class FamilyDocumentsViewModelTest {
 
     @Test
     fun `without a co-parent there is no vault to file into`() = runTest(dispatcher) {
-        coEvery { selectedFamilySource.selected() } returns null
+        onScreen.value = null
         val vm = viewModel()
         advanceUntilIdle()
 
@@ -135,8 +136,32 @@ class FamilyDocumentsViewModelTest {
         assertEquals(UiText.Res(R.string.shared_file_error_integrity), vm.state.value.error)
     }
 
+    @Test
+    fun `a switch while the vault is open lists and files into the family now on screen`() = runTest(dispatcher) {
+        // A push tap switches the family while this screen stays on the back stack; the vault
+        // used to keep listing, and filing into, the family it was opened for.
+        val carols = MutableStateFlow<VaultListing?>(VaultListing(listOf(DOCUMENT.copy(id = "doc-c"))))
+        every { repository.observe(OTHER_FAMILY) } returns carols
+        coEvery { repository.add(OTHER_FAMILY, "Order", DocumentCategory.COURT_ORDER, "content://x") } returns
+            Result.success(DOCUMENT)
+        documents.value = VaultListing(listOf(DOCUMENT))
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertEquals(DocumentsList.Loaded(listOf(DOCUMENT)), vm.state.value.list)
+
+        onScreen.value = FamilyOption(OTHER_FAMILY, "carol")
+        advanceUntilIdle()
+        assertEquals(DocumentsList.Loaded(listOf(DOCUMENT.copy(id = "doc-c"))), vm.state.value.list)
+
+        vm.add("Order", DocumentCategory.COURT_ORDER, "content://x")
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.add(OTHER_FAMILY, any(), any(), any()) }
+        coVerify(exactly = 0) { repository.add(FAMILY, any(), any(), any()) }
+    }
+
     private companion object {
         const val FAMILY = "alice__bob"
+        const val OTHER_FAMILY = "alice__carol"
         val DOCUMENT = FamilyDocument(
             id = "doc-1",
             familyId = FAMILY,

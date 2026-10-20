@@ -2,6 +2,8 @@ package com.coparently.app.presentation.custody
 
 import androidx.lifecycle.SavedStateHandle
 import com.coparently.app.R
+import com.coparently.app.data.family.FamilyView
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -28,6 +30,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -67,6 +70,10 @@ class CustodySetupViewModelTest {
         citation = PlanCitation("care_weekday", "0123456789abcdef")
     )
 
+    /** The family on screen; one family unless a test switches it. */
+    private val familyView = MutableStateFlow(FamilyView(me = "u1", onScreen = "u1__u2", others = emptySet()))
+    private val familyViewSource = mockk<FamilyViewSource> { every { observe() } returns familyView }
+
     private fun viewModel(
         active: CustodyModel? = null,
         planQuestion: String? = null,
@@ -79,9 +86,33 @@ class CustodySetupViewModelTest {
             parents,
             SavedStateHandle(args),
             planReferences,
-            testFamilyMembersSource(childNames = listOf("Ema", "Tomas"))
+            testFamilyMembersSource(childNames = listOf("Ema", "Tomas")),
+            familyViewSource
         )
     }
+
+    @Test
+    fun `a switch to a family with no schedule empties the form rather than keeping the last family's`() =
+        runTest(dispatcher) {
+            // The family with u2 has every other weekend; the family with u3 has no schedule yet.
+            val saved = CustodyModel.everyOtherWeekend(
+                id = "m1",
+                startDate = start,
+                momIsResident = true,
+                midweek = MidweekContact(DayOfWeek.MONDAY, everyWeek = true)
+            )
+            val vm = viewModel(active = saved)
+            every { repository.getActiveModel() } returnsMany listOf(flowOf(saved), flowOf(null))
+            advanceUntilIdle()
+            assertEquals(CustodyModelType.EVERY_OTHER_WEEKEND, vm.uiState.value.selectedModelType)
+
+            familyView.value = FamilyView(me = "u1", onScreen = "u1__u3", others = setOf("u1__u2"))
+            advanceUntilIdle()
+
+            assertEquals(CustodySetupUiState().selectedModelType, vm.uiState.value.selectedModelType)
+            assertFalse(vm.uiState.value.midweekEnabled)
+            assertNull(vm.currentModel.value)
+        }
 
     /** Alice, linked to Bob: a co-parent to put a change to. */
     private val paired = testParentsSource(
