@@ -16,6 +16,13 @@ interface PetRepository {
     fun getAllPets(): Flow<List<Pet>>
 
     /**
+     * Every pet this phone holds, in every family. Only for work that must see all of them
+     * whichever family is on screen — whether this account has been through onboarding.
+     * Defaults to [getAllPets] for a fake.
+     */
+    fun getAllPetsInEveryFamily(): Flow<List<Pet>> = getAllPets()
+
+    /**
      * Gets a pet by ID.
      *
      * @param id The pet ID

@@ -60,6 +60,9 @@ class PetRepositoryImpl @Inject constructor(
         ) { it.familyId }
     }
 
+    override fun getAllPetsInEveryFamily(): Flow<List<Pet>> =
+        petDao.getAllPets().map { entities -> entities.map { it.toDomain() } }
+
     override suspend fun getPetById(id: String): Pet? {
         // Filtered here rather than in the DAO: `getPetById` deliberately returns a pending
         // tombstone so the sync path can recognise one.
