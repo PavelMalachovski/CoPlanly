@@ -563,7 +563,7 @@ class ChangeRequestViewModelTest {
     }
 
     @Test
-    fun `the split pop-up follows the inbox: the co-parent's split, never this parent's own`() =
+    fun `the split pop-up follows the inbox, the co-parent's split and never this parent's own`() =
         runTest(dispatcher) {
             val vm = viewModel()
             backgroundScope.launch { vm.pendingSplit.collect {} }
