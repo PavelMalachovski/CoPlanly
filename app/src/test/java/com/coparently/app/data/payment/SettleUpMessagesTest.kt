@@ -1,13 +1,21 @@
 package com.coparently.app.data.payment
 
 import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityFallbackText
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.repository.UserRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -52,6 +60,35 @@ class SettleUpMessagesTest {
     }
 
     @Test
+    fun `the card goes to the family whose balance it is, whichever family is on screen`() = runTest {
+        // Settle up was tapped on the family with Igor; a push tap then switched to Carol's. The
+        // card used to go to the thread on screen when Send was tapped, with Igor's amount on it.
+        val announcer = mockk<ActivityAnnouncer>(relaxed = true)
+        val users = mockk<UserRepository> {
+            coEvery { getCurrentUserId() } returns ZUZANA
+            coEvery { getCurrentUser() } returns null
+        }
+
+        SettleUpMessages(announcer, users).post(1290.5, "CZK", october, FamilyKey.of(ZUZANA, IGOR))
+        SettleUpMessages(announcer, users).post(1290.5, "CZK", october, FamilyKey.of("uid-dan", "uid-erin"))
+
+        coVerify(exactly = 1) {
+            announcer.announce(any(), any(), suppress = false, partnerUid = IGOR)
+        }
+        coVerify(exactly = 1) {
+            announcer.announce(any(), any(), suppress = true, partnerUid = null)
+        }
+    }
+
+    @Test
+    fun `a family id names the other parent only for one of its two members`() {
+        assertEquals(IGOR, SettleUpMessages.otherParentIn(FamilyKey.of(ZUZANA, IGOR), ZUZANA))
+        assertEquals(ZUZANA, SettleUpMessages.otherParentIn(FamilyKey.of(ZUZANA, IGOR), IGOR))
+        assertNull(SettleUpMessages.otherParentIn(FamilyKey.of(ZUZANA, IGOR), "uid-carol"))
+        assertNull(SettleUpMessages.otherParentIn("not-a-family", ZUZANA))
+    }
+
+    @Test
     fun `an older build shows the card as the sender would say it`() {
         assertEquals(
             "Settle up for 2026-10: you owe me 1290.50 CZK",
@@ -61,5 +98,10 @@ class SettleUpMessagesTest {
             "Settle up for 2026-10: I owe you 45.00 EUR",
             ActivityFallbackText.of(SettleUpMessages.cardFor(-45.0, "EUR", october))
         )
+    }
+
+    private companion object {
+        const val ZUZANA = "uid-zuzana"
+        const val IGOR = "uid-igor"
     }
 }

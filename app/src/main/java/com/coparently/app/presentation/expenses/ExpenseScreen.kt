@@ -386,7 +386,8 @@ fun ExpenseScreen(
                                         currency = currencyBalance.currency,
                                         parentNames = parentNames,
                                         onSettleUp = { ask ->
-                                            pendingSettleUp = PendingSettleUp(ask, shownMonth.month)
+                                            pendingSettleUp =
+                                                PendingSettleUp(ask, shownMonth.month, shownMonth.familyId)
                                         },
                                         modifier = Modifier
                                             .then(
