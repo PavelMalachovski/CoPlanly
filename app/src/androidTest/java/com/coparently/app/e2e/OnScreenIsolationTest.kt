@@ -1,5 +1,6 @@
 package com.coparently.app.e2e
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -7,7 +8,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
@@ -102,13 +103,17 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
         assertTrue("$screen shows family A's records with family B on screen: $leaked", leaked.isEmpty())
     }
 
-    /** Opens a row of Settings by its title, from a tab. */
+    /**
+     * Opens a row of Settings by its title, from a tab. Through the row's click action, as the UI
+     * tour presses one: the row may sit below the fold, and `performScrollTo` waits on a scroll
+     * animation the paused clock never advances (it held this test for its whole limit).
+     */
     private fun openSettingsRow(titleRes: Int) {
         tap(hasContentDescription(string(R.string.nav_settings)) and hasClickAction())
         val row = hasText(string(titleRes)) and hasClickAction()
         waitFor("the ${string(titleRes)} row in Settings", row)
-        composeTestRule.onAllNodes(row).onFirst().performScrollTo()
-        tap(row)
+        composeTestRule.onAllNodes(row).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.settle()
     }
 
     /**
