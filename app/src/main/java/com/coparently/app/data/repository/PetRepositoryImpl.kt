@@ -224,8 +224,23 @@ class PetRepositoryImpl @Inject constructor(
         // upload half ran first and failed, so replacing the row would erase the edit before it
         // was ever sent — it stays queued for the next pull.
         val localWins = local != null && (local.deletedAtMillis != null || !local.syncedToFirestore)
-        if (!localWins) petDao.insertPet(pet.toEntity().copy(syncedToFirestore = true))
+        if (!localWins) {
+            petDao.insertPet(pet.toEntity().copy(syncedToFirestore = true))
+        } else if (local?.deletedAtMillis == null) {
+            adoptServerStamp(local, pet.familyId)
+        }
         return !localWins
+    }
+
+    /**
+     * Gives an unsent edit of a pet this device still holds unstamped the family the server
+     * stamped on it. `stampOwnBlankFamilyIds` stamps on the evidence `FamilyIdBackfill` reads, and
+     * the rules refuse an upload that blanks a stamp — the creator's too — so the edit would
+     * otherwise stay queued for ever. It stays queued here, to go up with its family next pass.
+     */
+    private suspend fun adoptServerStamp(local: PetEntity?, stamped: String?) {
+        if (local == null || !local.familyId.isNullOrBlank() || stamped.isNullOrBlank()) return
+        petDao.insertPet(local.copy(familyId = stamped))
     }
 
     /**

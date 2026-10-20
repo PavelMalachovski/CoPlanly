@@ -122,6 +122,30 @@ class PetRepositoryImplTest {
         }
 
     @Test
+    fun `an unsent edit of an unstamped pet takes the family the server stamped and stays queued`() =
+        runTest {
+            // The rules refuse an upload that blanks a stamped family, so without this the edit
+            // would be refused on every pass and never leave the phone.
+            val edited = with(repository) { pet().copy(name = "Rex (edited)").toEntity() }
+            coEvery { petDao.getUnsyncedPets() } returns listOf(edited)
+            coEvery { firestorePetDataSource.upsertPet(any(), any()) } returns
+                Result.failure(IOException("denied"))
+            coEvery { petDao.getPetById(PET_ID) } returns edited
+            val document = with(repository) {
+                pet().copy(familyId = BOB_FAMILY).toFirestoreMap(listOf(ALICE, BOB))
+            }
+            every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
+
+            repository.pullOnce()
+
+            coVerify(exactly = 1) {
+                petDao.insertPet(
+                    match { it.familyId == BOB_FAMILY && it.name == "Rex (edited)" && !it.syncedToFirestore }
+                )
+            }
+        }
+
+    @Test
     fun `a pull skips a document that does not parse and takes the rest`() = runTest {
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
