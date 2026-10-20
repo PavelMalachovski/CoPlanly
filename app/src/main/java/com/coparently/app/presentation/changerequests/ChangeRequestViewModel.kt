@@ -79,7 +79,7 @@ class ChangeRequestViewModel @Inject constructor(
     private val eventUseCases: EventUseCases,
     private val userRepository: UserRepository,
     private val custodyModelRepository: CustodyModelRepository,
-    parentsSource: ParentsSource,
+    private val parentsSource: ParentsSource,
     private val planReferenceSource: PlanReferenceSource,
     private val requestClockActions: RequestClockActions,
     private val requestsSource: RequestsSource
@@ -253,6 +253,7 @@ class ChangeRequestViewModel @Inject constructor(
                 _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
                 return@launch
             }
+            if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.applyDayOverridesForDates(
                 dates = group.dates,
                 transform = { current, date ->
@@ -297,7 +298,7 @@ class ChangeRequestViewModel @Inject constructor(
                 ?: userRepository.getCurrentUserId()
                 ?: return@launch
             val days = dates.distinct().sorted().map { it.toString() }
-            if (days.isEmpty()) return@launch
+            if (days.isEmpty() || !stillShowsItsFamily()) return@launch
             val atIso = LocalDateTime.now().toString()
             val groupId = UUID.randomUUID().toString()
             val reoffer = { current: Map<String, DayOverride>, date: String ->
@@ -324,6 +325,24 @@ class ChangeRequestViewModel @Inject constructor(
                 _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
             }
         }
+    }
+
+    /**
+     * Whether the family the inbox drew is still the family on screen, saying so when it is not.
+     *
+     * A custody answer — a swap, a proposal — is written to the family on screen at the moment it
+     * is sent (`CustodyModelRepository` reads the family once, as it writes). A push tap between
+     * the inbox drawing one family's offer and the parent's tap would otherwise answer the other
+     * family's, a decision the parent never saw (isolation audit, October 2026), so the answer is
+     * refused and nothing is written. [requests] is read for what the screen drew, which is its
+     * point; while it has drawn nothing yet, or the phone's row names no family, nothing is refused.
+     */
+    private suspend fun stillShowsItsFamily(): Boolean {
+        val shown = (requests.value as? RequestsState.Ready)?.scope?.familyId
+        val onScreen = parentsSource.familyOnScreen()
+        val same = shown == null || onScreen == null || shown == onScreen
+        if (!same) _errorMessage.value = UiText.Res(R.string.change_request_error_family_changed)
+        return same
     }
 
     private fun otherSlot(slot: String): String =
@@ -407,6 +426,7 @@ class ChangeRequestViewModel @Inject constructor(
     /** Accepts the co-parent's pending custody proposal; it becomes the agreed pattern. */
     fun acceptProposal() {
         viewModelScope.launch {
+            if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.acceptProposal().onFailure { e ->
                 Log.w(TAG, "Accepting a custody proposal failed", e)
                 _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_accept_failed)
@@ -417,6 +437,7 @@ class ChangeRequestViewModel @Inject constructor(
     /** Declines the co-parent's pending custody proposal; the agreed pattern is untouched. */
     fun declineProposal() {
         viewModelScope.launch {
+            if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.declineProposal().onFailure { e ->
                 Log.w(TAG, "Declining a custody proposal failed", e)
                 _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_decline_failed)

@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.chat.ChatPartner
+import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.data.repository.CustodyModelRepository
@@ -17,11 +19,16 @@ import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.CoParentOnScreen
+import com.coparently.app.presentation.common.coParentOnScreen
+import com.coparently.app.presentation.common.observeSignedInUser
+import com.coparently.app.presentation.common.projectedCoParentUid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -127,6 +135,26 @@ class PairingViewModel @Inject constructor(
 
     val state: StateFlow<PairingState> = pairingRepository.observePairingState()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), PairingState.Loading)
+
+    /**
+     * The co-parent of the family on screen, for the partner card and the unpair dialog, or null
+     * while there is none.
+     *
+     * Never [PairingState.Paired.partner] on its own: that is the server's `partnerId`, which stays
+     * on the *first* co-parent, so a parent showing their second family read "Paired with" the
+     * first one and was asked to confirm unpairing from them (design refresh item 12; isolation
+     * audit, October 2026). A co-parent whose profile has not been read yet is a summary with no
+     * name, which the card draws as its placeholder.
+     */
+    val partnerOnScreen: StateFlow<PartnerSummary?> = coParentOnScreen(
+        pairing = state,
+        projectedPartnerUid = userRepository.observeSignedInUser().map { it?.projectedCoParentUid() },
+        profileOf = pairingRepository::observeCoParentProfile
+    ).map { coParent ->
+        (coParent as? CoParentOnScreen.Linked)?.let { linked ->
+            linked.profile ?: PartnerSummary(id = linked.uid, name = "", email = "", pairedSinceMillis = null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     /**
      * The account this phone is signed in as, or null while signed out.
@@ -468,10 +496,28 @@ class PairingViewModel @Inject constructor(
         launchAction { pairingRepository.rejectIncoming(invitationId) }
 
     /**
-     * Ends the co-parent link. Has no field of its own, so a failure surfaces
-     * through [PairingFormState.actionErrorRes] rather than being silent.
+     * Ends the link with the co-parent of the family on screen. Has no field of its own, so a
+     * failure surfaces through [PairingFormState.actionErrorRes] rather than being silent.
+     *
+     * Names that co-parent to the callable: with two families the server refuses an unnamed one
+     * (`ambiguous-partner`), and the family to end is the one the screen showed, never simply the
+     * server's first. An account with one family whose co-parent cannot be named yet sends none,
+     * which the server reads as its only co-parent.
      */
-    fun unpair() = launchAction { pairingRepository.unpair() }
+    fun unpair() = launchAction { pairingRepository.unpair(coParentUidOnScreen()) }
+
+    /**
+     * The co-parent of the family on screen, read now rather than from [partnerOnScreen]'s
+     * `WhileSubscribed` value (CLAUDE.md item 17): the pairing state says whether there is one, the
+     * signed-in row's projection says which ([ChatPartnerSource.resolve]).
+     */
+    private suspend fun coParentUidOnScreen(): String? {
+        val pairing = withTimeoutOrNull(PAIRING_VISIBLE_TIMEOUT_MS) {
+            state.first { it !is PairingState.Loading }
+        } ?: return null
+        val projected = userRepository.getCurrentUser()?.projectedCoParentUid()
+        return (ChatPartnerSource.resolve(pairing, projected) as? ChatPartner.Linked)?.partnerUid
+    }
 
     /**
      * Renders the active invite's link as a QR bitmap.

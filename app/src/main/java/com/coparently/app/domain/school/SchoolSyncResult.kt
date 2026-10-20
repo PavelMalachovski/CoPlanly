@@ -22,6 +22,13 @@ sealed interface SchoolSyncResult {
 
     /** There is no such connection for the signed-in account, or nobody is signed in. */
     data object NotFound : SchoolSyncResult
+
+    /**
+     * The connection names no family, the parent has two or more, and the child's record names
+     * none either: nothing was imported, because a guess would share one family's child's school
+     * calendar with the other family's adult. The parent connects the school again and chooses.
+     */
+    data object NeedsFamily : SchoolSyncResult
 }
 
 /** Why a school update failed, as far as the parent can act on it. */

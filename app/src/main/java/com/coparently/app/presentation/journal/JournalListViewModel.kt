@@ -2,6 +2,7 @@ package com.coparently.app.presentation.journal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -9,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -30,17 +32,31 @@ sealed interface JournalListState {
  *
  * Follows the signed-in account rather than reading it once, so a sign-out while the screen is open
  * shows nothing rather than the previous account's notes.
+ *
+ * **Kept to the family on screen**, following the switcher: an entry stamped with the parent's other
+ * live family is that family's to show (owner decision, October 2026). An entry of no family shows in
+ * every family, and one of a family that has ended stays visible, as that family's other records do
+ * ([com.coparently.app.data.family.FamilyView]). The export keeps its own scope (`RecordJournal`).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class JournalListViewModel @Inject constructor(
     private val repository: JournalRepository,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
     /** The entries, or [JournalListState.Loading] until they have been read. */
     val state: StateFlow<JournalListState> = userRepository.observeCurrentUserId()
-        .flatMapLatest { uid -> if (uid == null) flowOf(emptyList()) else repository.observeEntries(uid) }
+        .flatMapLatest { uid ->
+            if (uid == null) {
+                flowOf(emptyList())
+            } else {
+                combine(repository.observeEntries(uid), familyViewSource.observe()) { entries, view ->
+                    entries.filter { view.shows(it.familyId, it.createdByFirebaseUid) }
+                }
+            }
+        }
         .map<List<JournalEntry>, JournalListState> { JournalListState.Loaded(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), JournalListState.Loading)
 

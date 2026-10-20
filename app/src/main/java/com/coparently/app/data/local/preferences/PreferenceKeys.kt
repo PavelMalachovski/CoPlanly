@@ -35,6 +35,10 @@ object PreferenceKeys {
      * ask that changes is asked again, and one that does not stays put off across launches. Only
      * asks still waiting are kept on each write, so the list never outgrows the inbox.
      *
+     * Each entry is `<familyId>/<revision>`, so one family's "Later" never silences another
+     * family's ask (isolation audit, October 2026); an entry without a family is from before that
+     * and is dropped on the next write.
+     *
      * Not exempt from `EncryptedPreferences.clear()`: the next account on this device is asked.
      */
     const val PUT_OFF_ASKS = "home_put_off_asks"

@@ -3,7 +3,7 @@ package com.coparently.app.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
-import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.domain.feed.CalendarFeedLimitException
 import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
@@ -13,6 +13,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,11 +48,16 @@ data class CalendarFeedUiState(
  * Everything goes through [CalendarFeedRepository], which is to say through Cloud Functions:
  * nothing about a link is stored on the device, and the URL exists here only in [CalendarFeedUiState.created]
  * — in memory, until the parent dismisses it or leaves the screen.
+ *
+ * **The family follows the switcher** (isolation audit, October 2026): a push tap can switch the
+ * family while this screen stays on the back stack, and a screen that read the family once went on
+ * listing — and making links into — the family it was opened for. A switch drops the previous
+ * family's links and a just-made URL, then lists the new family's.
  */
 @HiltViewModel
 class CalendarFeedViewModel @Inject constructor(
     private val repository: CalendarFeedRepository,
-    private val selectedFamilySource: SelectedFamilySource
+    familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CalendarFeedUiState())
@@ -58,37 +66,46 @@ class CalendarFeedViewModel @Inject constructor(
     val state: StateFlow<CalendarFeedUiState> = _state.asStateFlow()
 
     init {
-        refresh()
+        viewModelScope.launch {
+            familyViewSource.observe().map { it.onScreen }.distinctUntilChanged().collectLatest { familyId ->
+                _state.update {
+                    it.copy(familyId = familyId, links = emptyList(), created = null, isLoading = familyId != null)
+                }
+                load(familyId)
+            }
+        }
     }
 
-    /** Reloads the family on screen and its links. A failed list keeps what was shown. */
+    /** Reloads the family on screen's links. A failed list keeps what was shown. */
     fun refresh() {
-        viewModelScope.launch {
-            val familyId = selectedFamilySource.selected()?.familyId
-            if (familyId == null) {
-                _state.update { it.copy(familyId = null, links = emptyList(), isLoading = false) }
-                return@launch
-            }
-            repository.list()
-                .onSuccess { links ->
-                    _state.update { current ->
-                        current.copy(
-                            familyId = familyId,
-                            links = links.filter { it.familyId == familyId },
-                            isLoading = false
-                        )
-                    }
-                }
-                .onFailure {
-                    _state.update {
-                        it.copy(
-                            familyId = familyId,
-                            isLoading = false,
-                            message = UiText.Res(R.string.calendar_feed_load_failed)
-                        )
-                    }
-                }
+        viewModelScope.launch { load(_state.value.familyId) }
+    }
+
+    /** Lists [familyId]'s links, and drops the answer if the screen has moved to another family since. */
+    private suspend fun load(familyId: String?) {
+        if (familyId == null) {
+            _state.update { it.copy(familyId = null, links = emptyList(), isLoading = false) }
+            return
         }
+        repository.list()
+            .onSuccess { links ->
+                _state.update { current ->
+                    if (current.familyId != familyId) {
+                        current
+                    } else {
+                        current.copy(links = links.filter { it.familyId == familyId }, isLoading = false)
+                    }
+                }
+            }
+            .onFailure {
+                _state.update { current ->
+                    if (current.familyId != familyId) {
+                        current
+                    } else {
+                        current.copy(isLoading = false, message = UiText.Res(R.string.calendar_feed_load_failed))
+                    }
+                }
+            }
     }
 
     /**

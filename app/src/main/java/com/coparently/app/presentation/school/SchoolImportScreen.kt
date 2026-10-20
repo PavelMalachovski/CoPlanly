@@ -181,7 +181,7 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
             title = row.childName,
             supporting = listOf(connection.schoolName.ifBlank { connection.baseUrl }, statusLine(row))
                 .joinToString("\n"),
-            supportingColor = if (connection.status == SchoolConnectionStatus.OK) {
+            supportingColor = if (connection.status == SchoolConnectionStatus.OK && !row.needsFamily) {
                 MaterialTheme.colorScheme.onSurfaceVariant
             } else {
                 MaterialTheme.colorScheme.error
@@ -218,6 +218,9 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
 @Composable
 private fun statusLine(row: SchoolConnectionRow): String {
     val connection = row.connection
+    if (row.needsFamily && connection.status == SchoolConnectionStatus.OK) {
+        return stringResource(R.string.school_import_status_needs_family)
+    }
     return when (connection.status) {
         SchoolConnectionStatus.NEEDS_PASSWORD -> stringResource(R.string.school_import_status_needs_password)
         SchoolConnectionStatus.ERROR -> stringResource(R.string.school_import_status_error)

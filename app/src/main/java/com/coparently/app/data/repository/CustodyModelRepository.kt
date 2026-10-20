@@ -185,8 +185,16 @@ constructor(
         )
     }
 
-    /** [tagged] without the family: the document of whichever family this device follows. */
-    private val shared: Flow<SharedCustody?> by lazy { tagged.map { it.custody } }
+    /**
+     * [tagged] for the family on screen only. [tagged] replays the previous family's document until
+     * the next family's listener answers; read here, that replay is null, never another family's
+     * schedule, proposal or swaps (isolation audit, October 2026).
+     */
+    private val shared: Flow<SharedCustody?> by lazy {
+        combine(tagged, observePair()) { document, pair ->
+            document.custody.takeIf { document.documentId == pair?.documentId }
+        }
+    }
 
     /**
      * The family on screen's custody pattern, as a Flow.
@@ -200,7 +208,7 @@ constructor(
      */
     fun getActiveModel(): Flow<CustodyModel?> {
         val local = activeRow().map { entity -> entity?.toDomainModel() }
-        return merge(shared.mirrorOnly(), local)
+        return merge(tagged.mirrorOnly(), local)
     }
 
     /**
@@ -219,7 +227,7 @@ constructor(
         val local = activeRow()
             .map { entity -> DayOverrideJson.decode(entity?.dayOverridesJson) }
             .distinctUntilChanged()
-        return merge(shared.mirrorOnly(), local)
+        return merge(tagged.mirrorOnly(), local)
     }
 
     /** The family on screen's custody pattern, read once — the same row [getActiveModel] reads. */
@@ -280,15 +288,6 @@ constructor(
     }
 
     /**
-     * Gets all custody models.
-     */
-    fun getAllModels(): Flow<List<CustodyModel>> {
-        return custodyModelDao.getAllModels().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
-    }
-
-    /**
      * The pair's shared pattern, or null when there is none — no partner, or no document yet.
      *
      * Retries with backoff rather than ending on the first failure. This project already ships
@@ -301,6 +300,9 @@ constructor(
      * The window that makes this concrete: the rules gate the document on a *live* pairing, so
      * a listener attached seconds before the pairing callable finishes writing `partnerId` is
      * denied — once, transiently, exactly the case a terminal `catch` would turn permanent.
+     *
+     * Always the family on screen's document: right after a switch it is null until the next
+     * family's listener answers, never the previous family's (see [shared]).
      */
     fun observeShared(): Flow<SharedCustody?> = shared
 
@@ -309,9 +311,9 @@ constructor(
      * follows, or has no document.
      *
      * For a screen that speaks for one family (phase 2 review): the requests inbox, Home's swap
-     * pop-up and the mini months. [observeShared] follows the family on screen, but it replays the
-     * previous family's document until the next one's listener answers. Asked by family id, the
-     * replay never reaches the wrong family. ([observeDayOverrides] read Room's one active model,
+     * pop-up and the mini months. The shared listener replays the previous family's document until
+     * the next one's answers; asked by family id, the replay never reaches the wrong family, and a
+     * screen that names its family stays with it. ([observeDayOverrides] read Room's one active model,
      * which kept the previous family's swaps while the next family had no document; it reads the
      * family on screen's row since schema 45.)
      *

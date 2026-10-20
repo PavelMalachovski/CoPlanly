@@ -220,12 +220,19 @@ class PairingFunctions @Inject constructor(
     }
 
     /**
-     * Removes the co-parent link.
+     * Removes the co-parent link with [partnerUid].
      *
+     * The callable takes `partnerId`, which family to end. Omitted, it means "the only one", which
+     * the server refuses (`ambiguous-partner`) once the caller is in two families, so a parent in
+     * two families names the co-parent of the family on screen.
+     *
+     * @param partnerUid The co-parent to unpair from, or null for an account's only co-parent.
      * @return the former partner's UID, or null when there was no link.
      */
-    suspend fun unpair(): Result<String?> =
-        call("unpairCoParent", emptyMap()) { it["unpairedFrom"] as? String }
+    suspend fun unpair(partnerUid: String? = null): Result<String?> {
+        val payload = partnerUid?.takeIf { it.isNotBlank() }?.let { mapOf("partnerId" to it) }.orEmpty()
+        return call("unpairCoParent", payload) { it["unpairedFrom"] as? String }
+    }
 
     private suspend fun <T> call(
         name: String,

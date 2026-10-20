@@ -27,6 +27,8 @@
     <string name="school_import_sync_needs_password">Школа знову просить пароль.</string>
     <string name="school_import_sync_network">Сервер школи недоступний. Спробуйте пізніше.</string>
     <string name="school_import_sync_server">Сервер школи відповів помилкою. Спробуйте пізніше.</string>
+    <string name="school_import_sync_needs_family">Нічого не імпортовано: це підключення ще не належить жодній родині. Відключіть його й підключіть школу знову, щоб обрати родину.</string>
+    <string name="school_import_status_needs_family">Ще не належить жодній родині: відключіть і підключіть знову</string>
 
     <string name="school_connect_title">Підключити школу</string>
     <string name="school_connect_reconnect_title">Увійти знову</string>

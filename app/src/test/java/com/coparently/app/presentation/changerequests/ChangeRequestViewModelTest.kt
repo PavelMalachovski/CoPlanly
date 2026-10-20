@@ -27,6 +27,7 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.domain.usecase.UpdateEventUseCase
+import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
@@ -132,7 +133,7 @@ class ChangeRequestViewModelTest {
         createdAt = LocalDateTime.of(2026, 9, 2, 9, 0)
     )
 
-    private fun viewModel() = ChangeRequestViewModel(
+    private fun viewModel(parents: ParentsSource = testParentsSource()) = ChangeRequestViewModel(
         changeRequestRepository = changeRequestRepository,
         eventRepository = eventRepository,
         eventUseCases = EventUseCases(
@@ -143,7 +144,7 @@ class ChangeRequestViewModelTest {
         ),
         userRepository = userRepository,
         custodyModelRepository = custodyModelRepository,
-        parentsSource = testParentsSource(),
+        parentsSource = parents,
         planReferenceSource = planReferences,
         requestClockActions = clockActions,
         requestsSource = RequestsSource(
@@ -231,6 +232,29 @@ class ChangeRequestViewModelTest {
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.change_request_error_proposal_decline_failed), vm.errorMessage.value)
+    }
+
+    @Test
+    fun `an answer drawn for one family is refused once another family is on screen`() = runTest(dispatcher) {
+        // The inbox drew the family with u2; a push tap has since switched the phone to the family
+        // with u3. The decision is written to the family on screen, so it would answer u3's offer.
+        val vm = viewModel(parents = testParentsSource(me = olya.copy(partnerId = "u3")))
+        backgroundScope.launch { vm.requests.collect {} }
+        advanceUntilIdle()
+        requests.emit(emptyList())
+        advanceUntilIdle()
+        assertEquals("u1__u2", (vm.requests.value as RequestsState.Ready).scope.familyId)
+
+        vm.acceptProposal()
+        advanceUntilIdle()
+        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        vm.clearError()
+        vm.proposeSwapChange(listOf(LocalDate.of(2026, 10, 23)), note = null, answerBy = null)
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        coVerify(exactly = 0) { custodyModelRepository.acceptProposal() }
+        coVerify(exactly = 0) { custodyModelRepository.applyDayOverrides(any(), any(), any()) }
     }
 
     @Test

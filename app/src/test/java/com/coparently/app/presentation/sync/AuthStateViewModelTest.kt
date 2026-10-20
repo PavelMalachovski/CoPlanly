@@ -75,9 +75,13 @@ class AuthStateViewModelTest {
         createdByFirebaseUid = createdBy
     )
 
+    /**
+     * The records on this phone, in every family. The family on screen's lists are not stubbed: a
+     * parent whose own children are in the other family has been through the wizard all the same.
+     */
     private fun stubRecords(children: List<ChildInfo> = emptyList(), pets: List<Pet> = emptyList()) {
-        every { childInfoRepository.getAllChildInfo() } returns flowOf(children)
-        every { petRepository.getAllPets() } returns flowOf(pets)
+        every { childInfoRepository.getAllChildInfoInEveryFamily() } returns flowOf(children)
+        every { petRepository.getAllPetsInEveryFamily() } returns flowOf(pets)
     }
 
     @Before
@@ -131,6 +135,21 @@ class AuthStateViewModelTest {
         advanceUntilIdle()
 
         assertEquals(true, vm.needsOnboarding.value)
+    }
+
+    @Test
+    fun `own children in the family not on screen are evidence all the same`() = runTest(dispatcher) {
+        coEvery { firebaseAuthService.waitForAuthReady(any()) } returns firebaseUser
+        every { userRepository.observeUserById("u1") } returns flowOf(namedAccount)
+        stubRecords(children = listOf(child(createdBy = "u1").copy(familyId = "u1__u3")))
+        // With the family with u2 on screen, the family with u3's child is not in the scoped list.
+        every { childInfoRepository.getAllChildInfo() } returns flowOf(emptyList())
+        every { petRepository.getAllPets() } returns flowOf(emptyList())
+
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(false, vm.needsOnboarding.value)
     }
 
     @Test

@@ -160,6 +160,16 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
     }
 
     @Test
+    fun `unpair names the co-parent of the family to end`() = runTest {
+        // With two families the callable refuses an unnamed co-parent (ambiguous-partner).
+        coEvery { pairingFunctions.unpair(any()) } returns Result.success("user-c")
+
+        assertTrue(repository.unpair("user-c").isSuccess)
+
+        coVerify { pairingFunctions.unpair("user-c") }
+    }
+
+    @Test
     fun `unpair treats a null unpairedFrom as success`() = runTest {
         coEvery { pairingFunctions.unpair() } returns Result.success(null)
 

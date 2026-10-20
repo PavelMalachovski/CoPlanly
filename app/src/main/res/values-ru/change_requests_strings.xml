@@ -34,6 +34,7 @@
     <string name="change_request_error_apply_failed">Не удалось применить изменение. Попробуйте ещё раз.</string>
     <string name="change_request_error_offer_answered">На это предложение уже ответили.</string>
     <string name="change_request_error_swap_failed">Не удалось ответить на обмен. Попробуйте ещё раз.</string>
+    <string name="change_request_error_family_changed">Семья на экране сменилась. Ответ не отправлен: проверьте запрос и ответьте снова.</string>
     <string name="change_request_error_proposal_accept_failed">Не удалось принять предложение. Попробуйте ещё раз.</string>
     <string name="change_request_error_proposal_decline_failed">Не удалось отклонить предложение. Попробуйте ещё раз.</string>
     <string name="change_request_error_answer_failed">Не удалось ответить. Попробуйте ещё раз.</string>

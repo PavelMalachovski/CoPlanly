@@ -26,6 +26,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.google.api.services.calendar.model.Event as GoogleEvent
 
@@ -42,6 +43,11 @@ class CalendarSyncRepositoryTest {
     private val googleCalendarApi: GoogleCalendarApi = mockk()
     private var credentialProvider: CredentialProvider = GrantingCredentials(mockk())
     private val userRepository: UserRepository = mockk()
+
+    init {
+        // Nothing imported before, unless a test says so: a relaxed DAO would answer with a mock row.
+        coEvery { eventDao.getEventById(any()) } returns null
+    }
 
     private fun repository() = CalendarSyncRepository(
         eventDao,
@@ -233,6 +239,99 @@ class CalendarSyncRepositoryTest {
         assertEquals(SyncResult.Error(SyncFailure.NOT_SIGNED_IN_GOOGLE), notConnected)
     }
 
+    // ---- families (isolation audit, October 2026) -------------------------------------------
+
+    @Test
+    fun `a new import takes the parent's only family, and none while they have two`() = runTest {
+        every { googleCalendarApi.listEvents(any(), any(), any(), any(), any()) } returns
+            imported(googleEvent("e1", "Dentist"))
+        val inserted = slot<List<EventEntity>>()
+        coEvery { eventDao.insertEvents(capture(inserted)) } returns Unit
+
+        signedIn(partnerId = "u2", partnerIds = listOf("u2"))
+        repository().syncFromGoogle().toList()
+        assertEquals("u1__u2", inserted.captured.single().familyId)
+
+        // Two families: nothing says which one a personal calendar's event is about, and the
+        // family on screen is not an answer.
+        signedIn(partnerId = "u3", partnerIds = listOf("u2", "u3"))
+        repository().syncFromGoogle().toList()
+        assertNull(inserted.captured.single().familyId)
+    }
+
+    @Test
+    fun `a re-import keeps what the app set, and takes only what Google changed`() = runTest {
+        // The parent shared the import in the family with u2, it synced, and then the family with
+        // u3 came on screen. A re-import used to make it private, unsynced and u3's.
+        signedIn(partnerId = "u3", partnerIds = listOf("u2", "u3"))
+        val shared = EventEntity(
+            id = "e1",
+            title = "Dentist",
+            startDateTime = LocalDateTime.of(2026, 9, 14, 9, 0),
+            endDateTime = LocalDateTime.of(2026, 9, 14, 10, 0),
+            eventType = "medical",
+            parentOwner = "dad",
+            createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
+            updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0),
+            updatedAtMillis = 1L,
+            syncedToFirestore = true,
+            createdByFirebaseUid = "u1",
+            isPrivate = false,
+            familyId = "u1__u2"
+        )
+        coEvery { eventDao.getEventById("e1") } returns shared
+        every { googleCalendarApi.listEvents(any(), any(), any(), any(), any()) } returns
+            imported(googleEvent("e1", "Dentist, moved"))
+        val inserted = slot<List<EventEntity>>()
+        coEvery { eventDao.insertEvents(capture(inserted)) } returns Unit
+
+        repository().syncFromGoogle().toList()
+
+        val written = inserted.captured.single()
+        assertEquals("Dentist, moved", written.title)
+        assertEquals("u1__u2", written.familyId)
+        assertFalse(written.isPrivate)
+        assertTrue(written.syncedToFirestore)
+        assertEquals("medical", written.eventType)
+    }
+
+    @Test
+    fun `a re-import Google changed nothing in writes nothing`() = runTest {
+        signedIn()
+        every { googleCalendarApi.listEvents(any(), any(), any(), any(), any()) } returns
+            imported(googleEvent("e1", "Pickup"))
+        val first = slot<List<EventEntity>>()
+        coEvery { eventDao.insertEvents(capture(first)) } returns Unit
+        repository().syncFromGoogle().toList()
+        // The same event, as the first import wrote it, a moment later.
+        coEvery { eventDao.getEventById("e1") } returns first.captured.single().copy(familyId = "u1__u2")
+
+        val result = repository().syncFromGoogle().toList().last()
+
+        assertTrue(result is SyncResult.Success)
+        coVerify(exactly = 1) { eventDao.insertEvents(any()) }
+    }
+
+    /** A timed Google event, fixed in time so two imports of it read the same. */
+    private fun googleEvent(id: String, title: String) = GoogleEvent().apply {
+        this.id = id
+        summary = title
+        start = EventDateTime().setDateTime(DateTime(FIXED_START_MILLIS))
+    }
+
+    private fun signedIn(partnerId: String?, partnerIds: List<String>) {
+        coEvery { userRepository.getCurrentUserId() } returns "u1"
+        coEvery { userRepository.getUserById("u1") } returns User(
+            id = "u1",
+            email = "p@example.com",
+            name = "Pavel",
+            role = "dad",
+            colorCode = "#2196F3",
+            partnerId = partnerId,
+            partnerIds = partnerIds
+        )
+    }
+
     private fun signedIn() {
         coEvery { userRepository.getCurrentUserId() } returns "u1"
         coEvery { userRepository.getUserById("u1") } returns User(
@@ -253,6 +352,11 @@ class CalendarSyncRepositoryTest {
         from = LocalDateTime.of(2026, 8, 24, 0, 0),
         until = LocalDateTime.of(2027, 8, 24, 0, 0)
     )
+
+    private companion object {
+        /** A fixed instant; which day it falls on does not matter here. */
+        const val FIXED_START_MILLIS = 1_790_000_000_000L
+    }
 }
 
 /** A connected device whose Google accepts the one [credential] it holds. */

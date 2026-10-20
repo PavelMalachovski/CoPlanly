@@ -85,6 +85,12 @@ interface PairingRepository {
     /** Declines an invitation addressed to this user. */
     suspend fun rejectIncoming(invitationId: String): Result<Unit>
 
-    /** Ends the co-parent link for both parents. Shared data is kept. */
-    suspend fun unpair(): Result<Unit>
+    /**
+     * Ends the co-parent link with [partnerUid] for both parents. Shared data is kept.
+     *
+     * @param partnerUid The co-parent of the family to end — the family on screen, never simply the
+     *   server's first co-parent (M-8) — or null for an account's only co-parent. With two families
+     *   the server refuses an unnamed one rather than guess.
+     */
+    suspend fun unpair(partnerUid: String? = null): Result<Unit>
 }

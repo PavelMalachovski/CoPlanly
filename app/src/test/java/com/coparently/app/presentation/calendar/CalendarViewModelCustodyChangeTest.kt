@@ -8,6 +8,8 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.domain.model.User
+import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
@@ -93,7 +95,10 @@ class CalendarViewModelCustodyChangeTest {
      * screen's `collectAsState()` is what normally provides that collector.
      * [TestScope.backgroundScope] is cancelled automatically at the end of each test.
      */
-    private fun TestScope.viewModelSignedInAs(uid: String): CalendarViewModel {
+    private fun TestScope.viewModelSignedInAs(
+        uid: String,
+        userRepository: UserRepository = noSignedInUser()
+    ): CalendarViewModel {
         val custodyModelRepository = mockk<CustodyModelRepository> {
             every { getActiveModel() } returns flowOf(null)
             every { observeShared() } returns sharedCustody
@@ -110,7 +115,7 @@ class CalendarViewModelCustodyChangeTest {
             encryptedPreferences = encryptedPreferences,
             friendRepository = noCalendarFriends(),
             parentsSource = parentsSource,
-            userRepository = noSignedInUser()
+            userRepository = userRepository
         )
         backgroundScope.launch { viewModel.custodyChangeAnnouncement.collect {} }
         return viewModel
@@ -284,6 +289,54 @@ class CalendarViewModelCustodyChangeTest {
 
             assertNull(viewModel.custodyChangeAnnouncement.value)
         }
+
+    @Test
+    fun `a change dismissed in one family stays dismissed after the other family's is`() =
+        runTest(testDispatcher) {
+            // One device-wide instant used to hold every family's dismissal: dismissing the
+            // family with Carol's change brought the family with Bob's back on the next switch.
+            val row = MutableStateFlow<User?>(signedIn(partnerId = "bob"))
+            val users = mockk<UserRepository> {
+                every { observeCurrentUserId() } returns flowOf(MY_UID)
+                every { observeUserById(MY_UID) } returns row
+            }
+            val viewModel = viewModelSignedInAs(MY_UID, users)
+            val bobsChange = custodyOf(
+                lastModifiedBy = "bob",
+                lastModifiedAtMillis = CustodyTimestamp.fromWire("2026-08-05T09:00:00")
+            )
+            val carolsChange = custodyOf(
+                lastModifiedBy = "carol",
+                lastModifiedAtMillis = CustodyTimestamp.fromWire("2026-08-06T10:00:00")
+            )
+            sharedCustody.value = bobsChange
+            advanceUntilIdle()
+            viewModel.dismissCustodyChange(bobsChange.lastModifiedAtMillis)
+            advanceUntilIdle()
+            assertNull(viewModel.custodyChangeAnnouncement.value)
+
+            row.value = signedIn(partnerId = "carol")
+            sharedCustody.value = carolsChange
+            advanceUntilIdle()
+            assertEquals(carolsChange, viewModel.custodyChangeAnnouncement.value)
+            viewModel.dismissCustodyChange(carolsChange.lastModifiedAtMillis)
+            advanceUntilIdle()
+
+            row.value = signedIn(partnerId = "bob")
+            sharedCustody.value = bobsChange
+            advanceUntilIdle()
+
+            assertNull(viewModel.custodyChangeAnnouncement.value)
+            verify {
+                encryptedPreferences.putString(
+                    "${PreferenceKeys.DISMISSED_CUSTODY_CHANGE_AT}_bob__$MY_UID",
+                    bobsChange.lastModifiedAtMillis.toString()
+                )
+            }
+        }
+
+    private fun signedIn(partnerId: String) =
+        User(id = MY_UID, email = "me@example.com", name = "Me", role = "mom", colorCode = "", partnerId = partnerId)
 
     private fun custodyOf(
         lastModifiedBy: String,

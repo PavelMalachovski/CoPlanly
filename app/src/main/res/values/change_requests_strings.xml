@@ -39,6 +39,7 @@
     <string name="change_request_error_apply_failed">The change could not be applied. Please try again.</string>
     <string name="change_request_error_offer_answered">This offer has already been answered.</string>
     <string name="change_request_error_swap_failed">The swap could not be answered. Please try again.</string>
+    <string name="change_request_error_family_changed">The family on screen has changed. Nothing was answered: check the request and answer again.</string>
     <string name="change_request_error_proposal_accept_failed">The proposal could not be accepted. Please try again.</string>
     <string name="change_request_error_proposal_decline_failed">The proposal could not be declined. Please try again.</string>
     <string name="change_request_error_answer_failed">That could not be answered. Please try again.</string>

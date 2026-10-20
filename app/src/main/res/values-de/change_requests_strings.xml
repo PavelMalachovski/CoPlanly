@@ -34,6 +34,7 @@
     <string name="change_request_error_apply_failed">Die Änderung konnte nicht übernommen werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_offer_answered">Dieses Angebot wurde bereits beantwortet.</string>
     <string name="change_request_error_swap_failed">Der Tausch konnte nicht beantwortet werden. Bitte versuche es erneut.</string>
+    <string name="change_request_error_family_changed">Die angezeigte Familie hat sich geändert. Es wurde nichts beantwortet: Prüfe die Anfrage und antworte erneut.</string>
     <string name="change_request_error_proposal_accept_failed">Der Vorschlag konnte nicht angenommen werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_proposal_decline_failed">Der Vorschlag konnte nicht abgelehnt werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_answer_failed">Die Antwort konnte nicht gespeichert werden. Bitte versuche es erneut.</string>

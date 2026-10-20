@@ -34,6 +34,7 @@
     <string name="change_request_error_apply_failed">Změnu se nepodařilo použít. Zkuste to prosím znovu.</string>
     <string name="change_request_error_offer_answered">Na tuto nabídku už bylo odpovězeno.</string>
     <string name="change_request_error_swap_failed">Na výměnu se nepodařilo odpovědět. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_family_changed">Rodina na obrazovce se změnila. Nic se neodeslalo: zkontrolujte žádost a odpovězte znovu.</string>
     <string name="change_request_error_proposal_accept_failed">Návrh se nepodařilo přijmout. Zkuste to prosím znovu.</string>
     <string name="change_request_error_proposal_decline_failed">Návrh se nepodařilo odmítnout. Zkuste to prosím znovu.</string>
     <string name="change_request_error_answer_failed">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu.</string>

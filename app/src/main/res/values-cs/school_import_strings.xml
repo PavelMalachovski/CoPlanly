@@ -27,6 +27,8 @@
     <string name="school_import_sync_needs_password">Škola znovu žádá heslo.</string>
     <string name="school_import_sync_network">Školní server není dostupný. Zkuste to později.</string>
     <string name="school_import_sync_server">Školní server odpověděl chybou. Zkuste to později.</string>
+    <string name="school_import_sync_needs_family">Nic se neimportovalo: toto připojení zatím nepatří žádné rodině. Odpojte ho a připojte školu znovu, abyste rodinu vybrali.</string>
+    <string name="school_import_status_needs_family">Zatím nepatří žádné rodině: odpojte a připojte znovu</string>
 
     <string name="school_connect_title">Připojit školu</string>
     <string name="school_connect_reconnect_title">Znovu přihlásit</string>
