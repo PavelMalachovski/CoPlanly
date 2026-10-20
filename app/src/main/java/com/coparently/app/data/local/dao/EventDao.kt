@@ -265,17 +265,27 @@ interface EventDao {
     suspend fun markDeleted(id: String, deletedAtMillis: Long): Int
 
     /**
-     * Stamps [familyId] on every events row that names no family yet.
+     * Stamps [familyId] on every events row [authorUid] wrote that names no family yet
+     * (`FamilyIdBackfill`).
      *
-     * The backfill half of docs/DESIGN-multi-family.md M-2: rows written before the column
-     * existed, and rows written before this parent paired, both read as null. A device knows of
-     * exactly one co-parenting relationship, so an unstamped row can only belong to that one.
-     *
-     * Null rows only. A row that already names a family keeps it — re-deriving the stamp is what
-     * would let a re-pairing silently move a record into a different household.
+     * By author, never across the table: a co-parent's row of no family belongs to the family with
+     * them, and this parent's own belongs to their one family only while nothing says there was an
+     * earlier one ([countRowsOfOtherFamilies]). Stamping every null row with one family is how a
+     * parent's records written after an unpair were moved into the next family (isolation audit,
+     * October 2026). A row that already names a family keeps it.
      *
      * @return How many rows were stamped.
      */
-    @Query("UPDATE events SET familyId = :familyId WHERE familyId IS NULL")
-    suspend fun stampFamilyId(familyId: String): Int
+    @Query("UPDATE events SET familyId = :familyId WHERE familyId IS NULL AND createdByFirebaseUid = :authorUid")
+    suspend fun stampFamilyIdOfAuthor(familyId: String, authorUid: String): Int
+
+    /**
+     * How many events rows name a family of [myUid]'s other than [familyId] — evidence of an
+     * earlier family, which makes this parent's own rows of no family ambiguous.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM events WHERE familyId IS NOT NULL AND familyId != '' " +
+            "AND familyId != :familyId AND instr(familyId, :myUid) > 0"
+    )
+    suspend fun countRowsOfOtherFamilies(familyId: String, myUid: String): Int
 }

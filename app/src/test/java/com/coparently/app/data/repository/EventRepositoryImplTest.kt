@@ -177,9 +177,10 @@ class EventRepositoryImplTest {
     }
 
     @Test
-    fun `updateEvent replaces a former co-parent with the current one`() = runTest {
-        // uidA unpaired from uidB and re-paired with uidC. Intersecting the stored audience
-        // must still let the *new* co-parent in, or old events stay invisible to them.
+    fun `updateEvent of the current family drops a stale uid and names the current co-parent`() = runTest {
+        // A stored audience still naming somebody else is intersected away, and the event's own
+        // family's co-parent is let in. An event of the uidB family itself would go to nobody new:
+        // it is that family's history (see the ended-family test below).
         signIn(uid = "uidA", partnerId = "uidC")
         val captured = slot<Map<String, Any?>>()
         coEvery { firestoreEventDataSource.updateEvent(any(), capture(captured)) } returns Result.success(Unit)
@@ -188,6 +189,7 @@ class EventRepositoryImplTest {
             baseDomain().copy(
                 createdByFirebaseUid = "uidA",
                 sharedWith = listOf("uidA", "uidB"),
+                familyId = FamilyKey.of("uidA", "uidC"),
                 syncedToFirestore = true
             )
         )

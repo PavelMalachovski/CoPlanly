@@ -17,17 +17,15 @@ import kotlinx.coroutines.flow.onStart
  * Where a record stands for the family on screen ([FamilyView.placeOf]).
  */
 enum class RecordPlace {
-    /**
-     * The family on screen's own record — or, while the parent has at most one live family, their
-     * own record of no family, which is that family's or nobody's. Shown and counted.
-     */
+    /** The family on screen's own record — or anything at all while the parent is in no family. */
     ON_SCREEN,
 
     /**
-     * This parent's own record of no family while they have two or more live families: nothing
-     * says which family it is about, so it is shown in every family marked "Only me", shared with
-     * nobody and counted in no family's totals until the parent assigns it ("Records without a
-     * family", owner decision October 2026).
+     * This parent's own record of no family while they are in a family: shared with nobody
+     * (`FamilyAudience`), shown in every family marked "Only me" and counted in no family's
+     * totals until it has a family. `FamilyIdBackfill` gives it the one family where that is not a
+     * guess; otherwise the parent assigns it ("Records without a family", owner decision October
+     * 2026).
      */
     ONLY_ME,
 
@@ -55,8 +53,9 @@ enum class RecordPlace {
  * - a record of **no family written by a co-parent** belongs to the family with that co-parent —
  *   the record cannot be about any other family, and showing it everywhere put Igor's records into
  *   the family with Carol, in Carol's name and colour (isolation audit, October 2026);
- * - this parent's **own** record of no family belongs to the one family while there is one, and is
- *   "only mine" while there are two ([RecordPlace.ONLY_ME]);
+ * - this parent's **own** record of no family is "only mine" ([RecordPlace.ONLY_ME]) — its audience
+ *   names nobody until it has a family, and the screen says so rather than drawing it as the
+ *   family's;
  * - a record of a family that has **ended** stays visible as history
  *   ([RecordPlace.EARLIER_FAMILY]), so an unpair never makes a parent's past disappear;
  * - a record of another live family is hidden.
@@ -75,7 +74,7 @@ data class FamilyView(val me: String? = null, val onScreen: String?, val others:
         val owner = me ?: return RecordPlace.ON_SCREEN
         val family = familyId?.takeIf { it.isNotBlank() }
             ?: createdBy?.takeIf { it.isNotBlank() && it != owner }?.let { FamilyKey.orNull(owner, it) }
-            ?: return if (liveFamilies() > 1) RecordPlace.ONLY_ME else RecordPlace.ON_SCREEN
+            ?: return if (liveFamilies() > 0) RecordPlace.ONLY_ME else RecordPlace.ON_SCREEN
         return when {
             family == onScreen -> RecordPlace.ON_SCREEN
             family in others -> RecordPlace.OTHER_FAMILY

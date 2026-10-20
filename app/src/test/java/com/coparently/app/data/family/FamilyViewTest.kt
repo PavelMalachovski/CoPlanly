@@ -80,14 +80,19 @@ class FamilyViewTest {
     }
 
     @Test
-    fun `an own record of no family is only mine at two families and the family's at one`() {
+    fun `an own record of no family is only mine while the parent is in a family`() {
+        // Its audience names nobody until it has a family, so the screen does not draw it as the
+        // family's either.
         val two = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("igor", "carol")))
         assertEquals(RecordPlace.ONLY_ME, two.placeOf(null, createdBy = zuzana))
         assertEquals(RecordPlace.ONLY_ME, two.placeOf("", createdBy = null))
         assertFalse(two.counts(null, createdBy = zuzana))
         val one = FamilyView.of(zuzana, row(onScreen = "igor", partners = listOf("igor")))
-        assertEquals(RecordPlace.ON_SCREEN, one.placeOf(null, createdBy = zuzana))
-        assertTrue(one.counts(null, createdBy = zuzana))
+        assertEquals(RecordPlace.ONLY_ME, one.placeOf(null, createdBy = zuzana))
+        assertTrue(one.shows(null, createdBy = zuzana))
+        val none = FamilyView.of(zuzana, row(onScreen = null, partners = emptyList()))
+        assertEquals(RecordPlace.ON_SCREEN, none.placeOf(null, createdBy = zuzana))
+        assertTrue(none.counts(null, createdBy = zuzana))
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Pet
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
@@ -204,13 +205,30 @@ class PetRepositoryImplTest {
         }
 
     @Test
-    fun `with one co-parent the repair still widens an unstamped pet, as before`() = runTest {
-        // Unchanged for a parent in one family: a pet uploaded before the pairing reaches the
-        // co-parent on the owner's next pull.
+    fun `with one co-parent an unstamped pet waits for its family before it is widened`() = runTest {
+        // A pet uploaded before the pairing names no family. Whether it is the Bob family's is
+        // decided where it is not a guess — the server's `stampOwnBlankFamilyIds` when the pair
+        // forms — and the next pull then widens it. The one co-parent there is now is not an
+        // answer on its own: after an unpair it may be about the family that ended.
         coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB), selected = BOB)
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
         val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+        every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
+
+        repository.pullOnce()
+
+        coVerify(exactly = 0) { firestorePetDataSource.updatePet(any(), any()) }
+    }
+
+    @Test
+    fun `with one co-parent the repair widens a pet the server stamped with their family`() = runTest {
+        coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB), selected = BOB)
+        coEvery { petDao.getUnsyncedPets() } returns emptyList()
+        coEvery { petDao.getPetById(any()) } returns null
+        val document = with(repository) {
+            pet().copy(familyId = FamilyKey.of(ALICE, BOB)).toFirestoreMap(listOf(ALICE))
+        }
         every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
         repository.pullOnce()
