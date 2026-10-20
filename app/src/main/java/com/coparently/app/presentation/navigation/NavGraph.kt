@@ -324,6 +324,9 @@ fun NavGraph(
                         // preset, so the form starts from its own default.
                         onAddEvent = {
                             navController.navigate(Screen.AddEvent.createRoute())
+                        },
+                        onOpenUnassignedRecords = {
+                            navController.navigate(Screen.UnassignedRecords.route)
                         }
                     )
                 }
@@ -537,6 +540,9 @@ fun NavGraph(
                         onNavigateToCoParentProfile = {
                             navController.navigate(Screen.CoParentProfile.route)
                         },
+                        onNavigateToUnassignedRecords = {
+                            navController.navigate(Screen.UnassignedRecords.route)
+                        },
                         onStartGoogleSignIn = googleSignInCallback,
                         onSignOut = {
                             navController.navigate(Screen.Auth.route) {
@@ -592,6 +598,20 @@ fun NavGraph(
                     popExitTransition = { slideOutToRight() }
                 ) {
                     MonthReviewScreen(onNavigateUp = { navController.popBackStack() })
+                }
+
+                // Records without a family (owner decision, October 2026): opened from its row in
+                // Settings → Family and from Home's one-time question.
+                pane(
+                    route = Screen.UnassignedRecords.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.family.UnassignedRecordsScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
                 }
 
                 // The document vault (MON-23), beside the export: the family's papers, shared with both
@@ -1587,6 +1607,9 @@ sealed class Screen(val route: String) {
 
     /** A month in figures, with an optional AI-written summary of them. */
     data object MonthReview : Screen("month_review")
+
+    /** This parent's own records that name no family while they co-parent, and the family each takes. */
+    data object UnassignedRecords : Screen("unassigned_records")
 
     /** The private journal's list (MON-22). */
     data object Journal : Screen("journal")
