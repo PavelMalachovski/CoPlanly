@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.expenses
 
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.family.familyRow
 import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.local.entity.UserEntity
@@ -165,6 +166,35 @@ class ExpenseViewModelFamilyTest {
         }
 
     @Test
+    fun `the figures count the family's own expenses, and mark the rest`() = runTest(dispatcher) {
+        // Owner decision, October 2026: an expense that is "only mine" (no family while Zuzana has
+        // two) or from an earlier family stays in the list, marked, and is added into nothing.
+        val today = java.time.LocalDate.now()
+        every { expenseRepository.getAllExpenses() } returns flowOf(
+            listOf(
+                expense("swimming", 1_200.0, familyId = CAROL_FAMILY, createdBy = CAROL, date = today),
+                expense("only-mine", 500.0, familyId = null, createdBy = ZUZANA, date = today),
+                expense("earlier", 300.0, familyId = FamilyKey.of(ZUZANA, "uid-ex"), createdBy = ZUZANA, date = today)
+            )
+        )
+        val viewModel = viewModel()
+        backgroundScope.launch(dispatcher) { viewModel.monthOfExpenses.collect {} }
+        backgroundScope.launch(dispatcher) { viewModel.breakdowns.collect {} }
+        advanceUntilIdle()
+
+        val month = viewModel.monthOfExpenses.value
+        assertEquals(setOf("swimming", "only-mine", "earlier"), month.expenses.map { it.id }.toSet())
+        assertEquals(listOf("swimming"), month.counted.map { it.id })
+        assertEquals(1_200.0, month.balances.single().balance.total)
+        assertEquals(
+            mapOf("only-mine" to RecordPlace.ONLY_ME, "earlier" to RecordPlace.EARLIER_FAMILY),
+            month.places
+        )
+        assertEquals(CAROL_FAMILY, month.familyId)
+        assertEquals(1_200.0, viewModel.breakdowns.value.single().total)
+    }
+
+    @Test
     fun `the download follows a switch and ends the previous family's listener`() = runTest(dispatcher) {
         var started = 0
         var ended = 0
@@ -213,6 +243,26 @@ class ExpenseViewModelFamilyTest {
         colorCode = "#FF4081",
         partnerId = onScreen,
         partnerIds = listOf(IGOR, CAROL)
+    )
+
+    /** A shared expense of [amount] CZK in [familyId], written and paid by [createdBy]. */
+    private fun expense(
+        id: String,
+        amount: Double,
+        familyId: String?,
+        createdBy: String,
+        date: java.time.LocalDate
+    ) = Expense(
+        id = id,
+        title = id,
+        amount = amount,
+        currency = "CZK",
+        category = ExpenseCategory.CLOTHING,
+        paidBy = createdBy,
+        splitBetween = listOf(ZUZANA, CAROL),
+        date = date,
+        createdByFirebaseUid = createdBy,
+        familyId = familyId
     )
 
     /** [familyId]'s settings with an even split agreed and [by]'s 70/30 proposal pending. */

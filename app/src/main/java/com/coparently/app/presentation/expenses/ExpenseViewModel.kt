@@ -4,7 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
+import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -315,6 +317,14 @@ class ExpenseViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
+     * The loaded expenses beside the view that says where each stands for the family on screen
+     * ([FamilyView.placeOf]), joined before [monthOfExpenses] so the month's figures and the marks
+     * on its rows always come from one view.
+     */
+    private val expensesInView: Flow<Pair<List<Expense>, FamilyView>> =
+        combine(loadedExpenses, familyViewSource.observe()) { all, view -> all to view }
+
+    /**
      * uid -> slot, so a payer can be named and coloured. Empty until the profiles load.
      *
      * Built from the two parents rather than from `userRepository.getAllUsers()`, which is what
@@ -393,24 +403,36 @@ class ExpenseViewModel @Inject constructor(
      * Invisible while the swap is instant. Not invisible once the screen animates between
      * months — the outgoing half of a slide renders the state it is leaving, so a bundle is what
      * lets it show the month it is actually leaving rather than the one arriving.
+     *
+     * **The figures count the family's own expenses only** (owner decision, October 2026). An
+     * expense that is "only mine" (this parent's own, naming no family) or from an earlier family
+     * stays in the list, marked, and is added into no balance, total, settle-up or chart: the two
+     * parents of this family settle this family's money, and an earlier family's slot would now
+     * name the wrong person.
      */
     val monthOfExpenses: StateFlow<MonthOfExpenses> = combine(
-        loadedExpenses,
+        expensesInView,
         _selectedMonth,
         _currentUserId,
         roleByUid,
         memberFilter
-    ) { all, month, userId, roles, members ->
+    ) { (all, view), month, userId, roles, members ->
         val ofMonth = all.filter { YearMonth.from(it.date) == month }
             // An untagged expense appears only in the unfiltered month. Reading "names nobody"
             // as "names everybody" would put the family's whole grocery bill under every child's
             // chip, and every chip would then show the same list — see `FamilyMemberRef.names`.
             .filter { expense -> members.isEmpty() || expense.forMembers.any { it in members } }
             .sortedByDescending { it.date }
+        val places = ofMonth.associate { it.id to view.placeOf(it.familyId, it.createdByFirebaseUid) }
+            .filterValues { it != RecordPlace.ON_SCREEN }
+        val counted = ofMonth.filter { it.id !in places }
         MonthOfExpenses(
             month = month,
             expenses = ofMonth,
-            balances = calculateExpenseBalancesByCurrency(ofMonth, userId, roles)
+            balances = calculateExpenseBalancesByCurrency(counted, userId, roles),
+            counted = counted,
+            places = places,
+            familyId = view.onScreen
         )
     }.stateIn(
         viewModelScope,
@@ -451,14 +473,15 @@ class ExpenseViewModel @Inject constructor(
     /**
      * The selected month's spending by category, one entry per currency.
      *
-     * Derived from [monthExpenses] rather than from a second repository read, so the chart and
-     * the list below it can never be looking at different months.
+     * Derived from [monthOfExpenses] rather than from a second repository read, so the chart and
+     * the list below it can never be looking at different months — and from the expenses the
+     * month counts, so the chart adds up what the balance adds up.
      */
     val breakdowns: StateFlow<List<CurrencyBreakdown>> = combine(
-        monthExpenses,
+        monthOfExpenses,
         _analyticsPayer
-    ) { expenses, payer ->
-        breakdownByCurrency(expenses, payer)
+    ) { month, payer ->
+        breakdownByCurrency(month.counted, payer)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
@@ -798,11 +821,24 @@ private data class NewExpenseFamily(val familyId: String?, val coParent: String?
  * between months lasts.
  *
  * @property month The month these figures describe.
- * @property expenses Expenses dated within [month], newest first.
- * @property balances Who-paid-what and the settle-up figure, one entry per currency present.
+ * @property expenses Expenses dated within [month], newest first — every one the family on screen
+ *   shows, including those it does not count.
+ * @property balances Who-paid-what and the settle-up figure, one entry per currency present in
+ *   [counted].
+ * @property counted The expenses the figures add up: the family on screen's own (owner decision,
+ *   October 2026). An expense that is "only mine" or from an earlier family is in [expenses] and
+ *   not here.
+ * @property places Where each expense that is **not** counted stands ([RecordPlace.ONLY_ME] or
+ *   [RecordPlace.EARLIER_FAMILY]), by expense id, for the mark on its row. An expense absent from
+ *   it is the family's own.
+ * @property familyId The family on screen the figures belong to, or null while there is none — so a
+ *   settle-up tapped on them goes to that family's thread.
  */
 data class MonthOfExpenses(
     val month: YearMonth,
     val expenses: List<Expense>,
-    val balances: List<CurrencyBalance>
+    val balances: List<CurrencyBalance>,
+    val counted: List<Expense> = expenses,
+    val places: Map<String, RecordPlace> = emptyMap(),
+    val familyId: String? = null
 )

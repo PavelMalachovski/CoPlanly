@@ -1,6 +1,8 @@
 package com.coparently.app.presentation.home
 
 import app.cash.turbine.test
+import com.coparently.app.data.family.familyRow
+import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.custody.ContactWindow
@@ -103,7 +105,8 @@ class HomeViewModelTest {
         val preferencesRepository = mockk<PreferencesRepository> {
             every { getDefaultCurrencyFlow() } returns flowOf(SupportedCurrency.DEFAULT)
         }
-        monthSpendDependencies = MonthSpendDependencies(expenseRepository, preferencesRepository)
+        monthSpendDependencies =
+            MonthSpendDependencies(expenseRepository, preferencesRepository, testFamilyViewSource())
         messageRepository = mockk(relaxed = true)
         val userRepository = mockk<UserRepository> {
             coEvery { getCurrentUser() } returns null
@@ -365,6 +368,71 @@ class HomeViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun `the spend tile adds up the family's own expenses, not one only mine or from an earlier family`() =
+        runTest(dispatcher) {
+            // Owner decision, October 2026: an expense that is "only mine" (no family while the
+            // parent has two) or from an earlier family is listed, marked, and counted nowhere.
+            val zuzana = User(
+                id = "u1",
+                email = "zuzana@example.com",
+                name = "Zuzana",
+                role = "mom",
+                colorCode = "#FF4081",
+                partnerId = "u3",
+                partnerIds = listOf("u2", "u3")
+            )
+            val pavel = PartnerSummary(id = "u3", name = "Pavel", email = "p@example.com", pairedSinceMillis = null)
+            val users = mockk<UserRepository> {
+                coEvery { getCurrentUser() } returns zuzana
+                coEvery { getCurrentUserId() } returns "u1"
+                every { observeCurrentUserId() } returns flowOf("u1")
+                every { getAllUsers() } returns flowOf(listOf(zuzana))
+            }
+            val pairing = mockk<PairingRepository> {
+                every { observePairingState() } returns MutableStateFlow(PairingState.Paired(pavel))
+                every { observeCoParentProfile(any()) } returns flowOf(pavel)
+            }
+            val thisMonth = LocalDate.now().withDayOfMonth(1)
+            val expenses = listOf(
+                spend("own", 1_200.0, familyId = "u1__u3", createdBy = "u3", date = thisMonth),
+                spend("only-mine", 500.0, familyId = null, createdBy = "u1", date = thisMonth),
+                spend("earlier", 300.0, familyId = "u1__u9", createdBy = "u1", date = thisMonth)
+            )
+            monthSpendDependencies = MonthSpendDependencies(
+                mockk { every { getAllExpenses() } returns flowOf(expenses) },
+                mockk { every { getDefaultCurrencyFlow() } returns flowOf(SupportedCurrency.DEFAULT) },
+                testFamilyViewSource(
+                    "u1",
+                    MutableStateFlow(familyRow("u1", onScreen = "u3", partners = listOf("u2", "u3")))
+                )
+            )
+            val home = homeViewModel(users, pairing)
+
+            home.uiState.test {
+                dispatcher.scheduler.advanceUntilIdle()
+                val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
+                assertEquals(listOf(CurrencyAmount("CZK", 1_200.0)), dashboard.monthSpend.byCurrency)
+                assertEquals(1_200.0, dashboard.monthBalances.single().balance.total, 0.0)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    /** A shared expense of [amount] CZK in [familyId], written by [createdBy]. */
+    private fun spend(id: String, amount: Double, familyId: String?, createdBy: String, date: LocalDate) =
+        com.coparently.app.domain.model.Expense(
+            id = id,
+            title = id,
+            amount = amount,
+            currency = "CZK",
+            category = com.coparently.app.domain.model.ExpenseCategory.CLOTHING,
+            paidBy = createdBy,
+            splitBetween = listOf("u1", "u3"),
+            date = date,
+            createdByFirebaseUid = createdBy,
+            familyId = familyId
+        )
 
     @Test
     fun `the dashboard names, and counts unread for, the family on screen`() = runTest(dispatcher) {

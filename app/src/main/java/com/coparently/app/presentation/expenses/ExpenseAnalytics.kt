@@ -82,7 +82,8 @@ private const val PIE_WIDTH_FRACTION = 0.55f
  * @param payers The two uids the payer filter offers, or empty when the filter must be hidden.
  * @param selectedPayer The uid currently filtered to, or null for everyone.
  * @param parentNames Resolves a uid to that parent's own name.
- * @param expenses The whole selected month, unfiltered — this view narrows to the drawn currency
+ * @param expenses The selected month's expenses that count for the family on screen
+ *   (`MonthOfExpenses.counted`), otherwise unfiltered — this view narrows to the drawn currency
  *   and the payer filter itself, so the ledger can never disagree with the chart above it.
  * @param roleByUid Resolves a payer uid to its slot, for the parent-column order and colours.
  * @param onSelectCurrency Picks a currency to draw.

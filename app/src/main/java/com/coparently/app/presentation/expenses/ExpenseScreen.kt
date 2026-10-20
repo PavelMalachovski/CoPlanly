@@ -370,6 +370,16 @@ fun ExpenseScreen(
                             // month switcher; repeating it per currency would switch the same month N
                             // times.
                             val summaryCards: @Composable () -> Unit = {
+                                if (balancesByCurrency.isEmpty()) {
+                                    // Every expense this month is "only mine" or from an earlier
+                                    // family, so nothing adds up — but the month must still page.
+                                    MonthSwitcherBar(
+                                        navigation = monthNavigation,
+                                        modifier = Modifier
+                                            .monthSwipe(monthNavigation)
+                                            .padding(horizontal = Spacing.L, vertical = Spacing.S)
+                                    )
+                                }
                                 balancesByCurrency.forEachIndexed { index, currencyBalance ->
                                     ExpenseSummaryHeader(
                                         balance = currencyBalance.balance,
@@ -459,7 +469,7 @@ fun ExpenseScreen(
                                                 payers = analyticsPayers,
                                                 selectedPayer = analyticsPayer,
                                                 parentNames = parentNames,
-                                                expenses = monthExpenses,
+                                                expenses = shownMonth.counted,
                                                 roleByUid = roleByUid,
                                                 onSelectCurrency = viewModel::selectAnalyticsCurrency,
                                                 onSelectPayer = viewModel::selectAnalyticsPayer,
@@ -490,7 +500,7 @@ fun ExpenseScreen(
                                     payers = analyticsPayers,
                                     selectedPayer = analyticsPayer,
                                     parentNames = parentNames,
-                                    expenses = monthExpenses,
+                                    expenses = shownMonth.counted,
                                     roleByUid = roleByUid,
                                     onSelectCurrency = viewModel::selectAnalyticsCurrency,
                                     onSelectPayer = viewModel::selectAnalyticsPayer,
