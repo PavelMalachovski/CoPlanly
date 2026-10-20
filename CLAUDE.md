@@ -930,7 +930,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   check step reads whichever attempt ran last and leaves a notice when it was the second. Two things
   not to undo: **a test that started and then failed or hung is never retried** — that is a result,
   and "flake" is not a root cause — and the retry is a **cold** boot, because a second snapshot boot
-  can die the same way.
+  can die the same way. A cold boot can also leave a system dialog holding the window focus, and an
+  Espresso Back then waits ten seconds for a focus that never returns (PR #138 lost two on-screen
+  tests to it), so `tools/e2e/run-two-parent-tests.sh` hides error dialogs and stops the launcher
+  before the tests, as the UI tour's script does.
 - **The app ships a hand-written baseline profile** (`app/src/main/baseline-prof.txt`, week 8):
   package wildcards over the start path, installed by `profileinstaller` on a sideloaded or
   closed-test install. Recording one needs a Macrobenchmark module and a device per release, which
