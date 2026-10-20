@@ -21,4 +21,6 @@
     <string name="activity_request_last_chance">Letzte Chance zu antworten: %1$s</string>
     <string name="activity_request_unanswered">Keine Antwort: %1$s</string>
     <string name="activity_subject_custody_schedule">Betreuungsplan</string>
+    <string name="activity_settle_up_you_owe">Ausgleich für %1$s: du schuldest %2$s</string>
+    <string name="activity_settle_up_owed_to_you">Ausgleich für %1$s: du bekommst %2$s</string>
 </resources>

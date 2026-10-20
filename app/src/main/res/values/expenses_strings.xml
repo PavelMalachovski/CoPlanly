@@ -27,8 +27,6 @@
     <string name="expenses_balance_settled">You are all square</string>
     <string name="expenses_settle_up">Settle up</string>
     <!-- Drafted into the chat composer; the user reviews and sends it themselves -->
-    <string name="expenses_settle_up_message_owed">Settling up for %2$s — you owe me %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Settling up for %2$s — I owe you %1$s.</string>
 
     <!-- Expense list rows -->
     <string name="expenses_this_month">This month</string>
@@ -101,4 +99,12 @@
     <string name="expense_error_signed_out">You must be signed in to add an expense.</string>
     <string name="expense_warning_receipt_upload_failed">Receipt upload failed — expense saved without receipt</string>
     <string name="expense_warning_new_receipt_upload_failed">Receipt upload failed — expense saved without the new receipt</string>
+    <string name="settle_up_dialog_title">Settle up for %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s will see in the chat that they owe you %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s will see in the chat that you owe them %2$s. If they have added a bank account, you will get a QR code to pay with.</string>
+    <string name="settle_up_iban_label">Your IBAN, for a QR payment (optional)</string>
+    <string name="settle_up_iban_invalid">This IBAN doesn\'t look right. Check it, or leave the field empty.</string>
+    <string name="settle_up_send">Send</string>
+    <string name="settle_up_cancel">Cancel</string>
+    <string name="settle_up_iban_save_failed">Your IBAN could not be saved. The settle-up was not sent.</string>
 </resources>

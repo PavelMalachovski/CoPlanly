@@ -58,10 +58,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             ),
             currency = "CZK",
             parentNames = ScreenshotFixtures.parentNames,
-            onSettleUp = {},
-            monthLabel = ScreenshotFixtures.MONTH.format(
-                DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
-            )
+            onSettleUp = {}
         )
     }
 

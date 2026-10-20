@@ -21,4 +21,6 @@
     <string name="activity_request_last_chance">Poslední šance odpovědět: %1$s</string>
     <string name="activity_request_unanswered">Bez odpovědi: %1$s</string>
     <string name="activity_subject_custody_schedule">rozvrh péče</string>
+    <string name="activity_settle_up_you_owe">Vyrovnání za %1$s: dlužíte %2$s</string>
+    <string name="activity_settle_up_owed_to_you">Vyrovnání za %1$s: máte dostat %2$s</string>
 </resources>

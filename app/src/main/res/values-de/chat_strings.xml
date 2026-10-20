@@ -143,4 +143,12 @@
     <string name="chat_report_subject">CoPlanly: Chatnachricht melden</string>
     <string name="chat_report_body">Schreib uns, was mit dieser Nachricht nicht stimmt:\n\n\n---\nDer Text der Nachricht ist nicht enthalten. Wenn wir ihn lesen sollen, füge ihn oben ein.\nNachrichten-ID: %1$s\nUnterhaltungs-ID: %2$s\nGesendet (UTC): %3$s</string>
     <string name="chat_report_no_email_app">Keine E-Mail-App eingerichtet. Schreib an %1$s, um die Nachricht zu melden.</string>
+    <string name="settle_up_pay_title">%1$s an %2$s zahlen</string>
+    <string name="settle_up_pay_hint">Wähle in deiner Banking-App eine QR-Zahlung und lade diesen Code aus einem Bild, oder teile ihn an die App.</string>
+    <string name="settle_up_share_qr">QR-Code teilen</string>
+    <string name="settle_up_share_chooser">Zahlungscode teilen</string>
+    <string name="settle_up_copy_iban">IBAN kopieren</string>
+    <string name="settle_up_iban_copied">IBAN kopiert</string>
+    <string name="settle_up_no_account">%1$s hat noch kein Konto für Zahlungen hinterlegt.</string>
+    <string name="settle_up_qr_description">QR-Code, um %1$s an %2$s zu zahlen</string>
 </resources>

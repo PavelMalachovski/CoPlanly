@@ -23,8 +23,6 @@
     <string name="expenses_balance_you_owe">Dlužíte druhému rodiči %1$s</string>
     <string name="expenses_balance_settled">Máte vyrovnáno</string>
     <string name="expenses_settle_up">Vyrovnat</string>
-    <string name="expenses_settle_up_message_owed">Vyrovnání za %2$s – dlužíš mi %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Vyrovnání za %2$s – dlužím ti %1$s.</string>
     <string name="expenses_this_month">Tento měsíc</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d\u00A0výdaj</item>
@@ -95,4 +93,12 @@
     <string name="expense_error_signed_out">Pro přidání výdaje musíte být přihlášeni.</string>
     <string name="expense_warning_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez účtenky</string>
     <string name="expense_warning_new_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez nové účtenky</string>
+    <string name="settle_up_dialog_title">Vyrovnání za %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s uvidí v chatu, že vám dluží %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s uvidí v chatu, že dlužíte %2$s. Pokud má přidaný účet, dostanete QR kód k platbě.</string>
+    <string name="settle_up_iban_label">Váš IBAN pro QR platbu (nepovinné)</string>
+    <string name="settle_up_iban_invalid">Tento IBAN nevypadá správně. Zkontrolujte ho, nebo pole nechte prázdné.</string>
+    <string name="settle_up_send">Odeslat</string>
+    <string name="settle_up_cancel">Zrušit</string>
+    <string name="settle_up_iban_save_failed">IBAN se nepodařilo uložit. Vyrovnání nebylo odesláno.</string>
 </resources>

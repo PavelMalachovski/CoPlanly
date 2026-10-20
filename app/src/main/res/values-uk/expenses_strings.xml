@@ -23,8 +23,6 @@
     <string name="expenses_balance_you_owe">Ви винні другому з батьків %1$s</string>
     <string name="expenses_balance_settled">Боргів немає</string>
     <string name="expenses_settle_up">Розрахуватися</string>
-    <string name="expenses_settle_up_message_owed">Розрахунок за %2$s — з тебе %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Розрахунок за %2$s — з мене %1$s.</string>
     <string name="expenses_this_month">Цей місяць</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d\u00A0витрата</item>
@@ -93,4 +91,12 @@
     <string name="expense_error_signed_out">Щоб додати витрату, потрібно увійти в акаунт.</string>
     <string name="expense_warning_receipt_upload_failed">Не вдалося завантажити чек — витрату збережено без чека</string>
     <string name="expense_warning_new_receipt_upload_failed">Не вдалося завантажити чек — витрату збережено без нового чека</string>
+    <string name="settle_up_dialog_title">Розрахунок за %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s побачить у чаті, що вам винні %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s побачить у чаті, що ви винні %2$s. Якщо рахунок для платежів додано, ви отримаєте QR-код для оплати.</string>
+    <string name="settle_up_iban_label">Ваш IBAN для оплати за QR (необовʼязково)</string>
+    <string name="settle_up_iban_invalid">Цей IBAN виглядає неправильно. Перевірте його або залиште поле порожнім.</string>
+    <string name="settle_up_send">Надіслати</string>
+    <string name="settle_up_cancel">Скасувати</string>
+    <string name="settle_up_iban_save_failed">Не вдалося зберегти IBAN. Розрахунок не надіслано.</string>
 </resources>

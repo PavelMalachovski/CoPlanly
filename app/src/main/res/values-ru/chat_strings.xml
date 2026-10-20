@@ -145,4 +145,12 @@
     <string name="chat_report_subject">CoPlanly: жалоба на сообщение в чате</string>
     <string name="chat_report_body">Опишите, что не так с этим сообщением:\n\n\n---\nТекст сообщения не приложен. Если хотите, чтобы мы его прочли, вставьте его выше.\nID сообщения: %1$s\nID переписки: %2$s\nОтправлено (UTC): %3$s</string>
     <string name="chat_report_no_email_app">Не настроено ни одного почтового приложения. Чтобы пожаловаться на сообщение, напишите на %1$s.</string>
+    <string name="settle_up_pay_title">Оплатить %1$s: %2$s</string>
+    <string name="settle_up_pay_hint">В приложении банка выберите оплату по QR и загрузите этот код из изображения или поделитесь им с приложением.</string>
+    <string name="settle_up_share_qr">Поделиться QR-кодом</string>
+    <string name="settle_up_share_chooser">Поделиться платёжным кодом</string>
+    <string name="settle_up_copy_iban">Скопировать IBAN</string>
+    <string name="settle_up_iban_copied">IBAN скопирован</string>
+    <string name="settle_up_no_account">%1$s пока не добавил(а) счёт для платежей.</string>
+    <string name="settle_up_qr_description">QR-код для оплаты %1$s: %2$s</string>
 </resources>

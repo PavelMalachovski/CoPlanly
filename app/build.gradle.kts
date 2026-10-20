@@ -435,6 +435,10 @@ dependencies {
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
 
+    // Raw LZMA1 for the Slovak "PAY by square" payment code (domain/payment/PaymentQr.kt), the one
+    // QR standard that compresses its text. Pure Java, no reflection; 0BSD.
+    implementation("org.tukaani:xz:1.10")
+
     // ML Kit for QR code scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 

@@ -74,6 +74,7 @@ import com.coparently.app.presentation.common.rememberFabScrollVisibility
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
@@ -140,7 +141,7 @@ private fun Modifier.scrollsAsPage(
  * @param onAddExpense Opens the add-expense form
  * @param onEditExpense Opens an expense for editing
  * @param onOpenSettings Opens settings
- * @param onSettleUp Called with a drafted settle-up message, which the user then sends
+ * @param onSettleUp Opens the chat once a settle-up card has been sent ([SettleUpDialog])
  * @param viewModel Expense state
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,7 +154,7 @@ fun ExpenseScreen(
     onAddExpense: () -> Unit,
     onEditExpense: (String) -> Unit = {},
     onOpenSettings: (() -> Unit)? = null,
-    onSettleUp: (String) -> Unit = {},
+    onSettleUp: () -> Unit = {},
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val expensesState by viewModel.expenses.collectAsState()
@@ -182,6 +183,8 @@ fun ExpenseScreen(
     // survived the process would quietly turn "later" into "never", and the co-parent would go
     // on waiting for an answer that was never coming.
     var ratioProposalDismissed by remember { mutableStateOf(false) }
+    // The balance a parent tapped Settle up on, while its dialog asks before anything is sent.
+    var pendingSettleUp by remember { mutableStateOf<PendingSettleUp?>(null) }
     val scope = rememberCoroutineScope()
     val deletedMessage = stringResource(R.string.expenses_deleted)
     val undoLabel = stringResource(R.string.expenses_deleted_undo)
@@ -357,11 +360,6 @@ fun ExpenseScreen(
                                 )
                             }
                         } else {
-                            val monthLabel = remember(shownMonth.month) {
-                                shownMonth.month.month
-                                    .getDisplayName(java.time.format.TextStyle.FULL_STANDALONE, Locale.getDefault())
-                                    .replaceFirstChar { it.uppercase() }
-                            }
                             // The month's summary cards. One card per currency present this month — the
                             // app does no FX conversion, so a mixed-currency month is shown as separate
                             // honest totals rather than one wrong sum. Only the first card carries the
@@ -373,8 +371,9 @@ fun ExpenseScreen(
                                         balance = currencyBalance.balance,
                                         currency = currencyBalance.currency,
                                         parentNames = parentNames,
-                                        onSettleUp = onSettleUp,
-                                        monthLabel = monthLabel,
+                                        onSettleUp = { ask ->
+                                            pendingSettleUp = PendingSettleUp(ask, shownMonth.month)
+                                        },
                                         modifier = Modifier
                                             .then(
                                                 if (index == 0) {
@@ -541,6 +540,18 @@ fun ExpenseScreen(
                 }
             }
         }
+    }
+
+    pendingSettleUp?.let { pending ->
+        SettleUpDialog(
+            pending = pending,
+            coParentName = parentNames.coParentLabel(),
+            onDismiss = { pendingSettleUp = null },
+            onSent = {
+                pendingSettleUp = null
+                onSettleUp()
+            }
+        )
     }
 }
 

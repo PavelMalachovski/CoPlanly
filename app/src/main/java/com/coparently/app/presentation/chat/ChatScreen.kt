@@ -275,31 +275,34 @@ fun ChatScreen(
                 // The attachment renderer and the tap-to-open handling (MON-23), provided rather
                 // than passed so `MessageItem`'s baselined signature stays as it is.
                 ChatAttachmentsHost {
-                    // Long-press "Report message" on the co-parent's bubbles (F-10).
+                    // Long-press "Report message" on the co-parent's bubbles (F-10), and what to pay
+                    // under a settle-up card.
                     ChatReportHost {
-                        // A card about an event opens that event — its preview, or the inbox while
-                        // it waits on this parent — never the change-request inbox on a request
-                        // that does not exist.
-                        ChatEventCardHost(
-                            parentNames = parentNames,
-                            onEditEvent = onEditEvent,
-                            onOpenInbox = onOpenInbox
-                        ) {
-                            MessagesList(
-                                messages = messages,
-                                currentUserId = currentUserId,
-                                canLoadEarlier = canLoadEarlier,
-                                onLoadEarlier = viewModel::loadEarlier,
-                                onRefresh = {
-                                    viewModel.refreshThread()
-                                },
-                                onEventLinkClick = onOpenChangeRequest,
-                                onOpenInbox = onOpenInbox,
-                                onRetryFailed = { viewModel.resendFailedMessages() },
-                                modifier = Modifier.weight(1f),
-                                revealMessageId = revealTarget,
-                                onRevealed = { revealTarget = null }
-                            )
+                        SettleUpPaymentHost(parentNames) {
+                            // A card about an event opens that event — its preview, or the inbox while
+                            // it waits on this parent — never the change-request inbox on a request
+                            // that does not exist.
+                            ChatEventCardHost(
+                                parentNames = parentNames,
+                                onEditEvent = onEditEvent,
+                                onOpenInbox = onOpenInbox
+                            ) {
+                                MessagesList(
+                                    messages = messages,
+                                    currentUserId = currentUserId,
+                                    canLoadEarlier = canLoadEarlier,
+                                    onLoadEarlier = viewModel::loadEarlier,
+                                    onRefresh = {
+                                        viewModel.refreshThread()
+                                    },
+                                    onEventLinkClick = onOpenChangeRequest,
+                                    onOpenInbox = onOpenInbox,
+                                    onRetryFailed = { viewModel.resendFailedMessages() },
+                                    modifier = Modifier.weight(1f),
+                                    revealMessageId = revealTarget,
+                                    onRevealed = { revealTarget = null }
+                                )
+                            }
                         }
                     }
                 }

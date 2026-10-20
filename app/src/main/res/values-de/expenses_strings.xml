@@ -26,8 +26,6 @@
     <string name="expenses_balance_you_owe">Du schuldest dem anderen Elternteil %1$s</string>
     <string name="expenses_balance_settled">Alles ausgeglichen</string>
     <string name="expenses_settle_up">Ausgleichen</string>
-    <string name="expenses_settle_up_message_owed">Ausgleich für %2$s – du schuldest mir %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Ausgleich für %2$s – ich schulde dir %1$s.</string>
     <string name="expenses_this_month">Dieser Monat</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d Ausgabe</item>
@@ -94,4 +92,12 @@
     <string name="expense_error_signed_out">Du musst angemeldet sein, um eine Ausgabe hinzuzufügen.</string>
     <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne Beleg gespeichert</string>
     <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne den neuen Beleg gespeichert</string>
+    <string name="settle_up_dialog_title">Ausgleich für %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s sieht im Chat, dass du %2$s bekommst.</string>
+    <string name="settle_up_dialog_owing">%1$s sieht im Chat, dass du %2$s schuldest. Wenn ein Konto hinterlegt ist, bekommst du einen QR-Code zum Bezahlen.</string>
+    <string name="settle_up_iban_label">Deine IBAN für eine QR-Zahlung (optional)</string>
+    <string name="settle_up_iban_invalid">Diese IBAN scheint nicht zu stimmen. Prüfe sie oder lass das Feld leer.</string>
+    <string name="settle_up_send">Senden</string>
+    <string name="settle_up_cancel">Abbrechen</string>
+    <string name="settle_up_iban_save_failed">Deine IBAN konnte nicht gespeichert werden. Der Ausgleich wurde nicht gesendet.</string>
 </resources>

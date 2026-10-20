@@ -676,6 +676,14 @@ service cloud.firestore {
              aiConsentShapeValid(request.resource.data);
     }
 
+    // `paymentIban`: the account this parent receives a settle-up payment on, which the co-parent's
+    // phone turns into a payment code (`PaymentAccounts`). Written by its owner alone, like the
+    // rest of the profile, and only as something an IBAN can be — the client checks the digits.
+    function paymentIbanValid(data) {
+      return !('paymentIban' in data) ||
+             (data.paymentIban is string && data.paymentIban.size() >= 15 && data.paymentIban.size() <= 34);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
@@ -703,6 +711,7 @@ service cloud.firestore {
                       parentHealthKeyAbsent('allergies') &&
                       healthConsentValid(request.resource.data) &&
                       aiConsentCreateValid() &&
+                      paymentIbanValid(request.resource.data) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -737,6 +746,7 @@ service cloud.firestore {
                       parentHealthKeyNotWritten('allergies') &&
                       healthConsentValid(request.resource.data) &&
                       aiConsentUpdateValid() &&
+                      paymentIbanValid(request.resource.data) &&
                       isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||

@@ -148,4 +148,12 @@
     <string name="chat_report_subject">CoPlanly: report a chat message</string>
     <string name="chat_report_body">Tell us what is wrong with this message:\n\n\n---\nThe message text is not included. If you want us to read it, paste it above.\nMessage ID: %1$s\nConversation ID: %2$s\nSent at (UTC): %3$s</string>
     <string name="chat_report_no_email_app">No email app is set up. To report the message, write to %1$s.</string>
+    <string name="settle_up_pay_title">Pay %1$s to %2$s</string>
+    <string name="settle_up_pay_hint">In your bank\'s app, choose a QR payment and load this code from an image, or share it to the app.</string>
+    <string name="settle_up_share_qr">Share QR code</string>
+    <string name="settle_up_share_chooser">Share the payment code</string>
+    <string name="settle_up_copy_iban">Copy IBAN</string>
+    <string name="settle_up_iban_copied">IBAN copied</string>
+    <string name="settle_up_no_account">%1$s hasn\'t added a bank account for payments yet.</string>
+    <string name="settle_up_qr_description">QR code for paying %1$s to %2$s</string>
 </resources>
