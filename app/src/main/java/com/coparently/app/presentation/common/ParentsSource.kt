@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.common
 
 import android.util.Log
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.theme.ParentPalette
@@ -243,6 +244,19 @@ class ParentsSource @Inject constructor(
             return null
         }
         return partnerId.takeIf { it != uid }
+    }
+
+    /**
+     * The id of the family on screen, `FamilyKey.of(me, co-parent)`, or null while this account is
+     * unpaired or signed out.
+     *
+     * The cheap Room read [coParentUid] makes, for what this phone keeps per family rather than per
+     * device — a form's draft: typed for one family, it must never come back on the other family's
+     * form (isolation audit, October 2026).
+     */
+    suspend fun familyOnScreen(): String? {
+        val uid = userRepository.getCurrentUserId() ?: return null
+        return FamilyKey.orNull(uid, userRepository.getUserById(uid)?.partnerId)
     }
 
     private companion object {

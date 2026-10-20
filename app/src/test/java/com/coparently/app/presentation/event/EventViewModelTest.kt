@@ -8,6 +8,7 @@ import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.error.ErrorHandler
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.usecase.CreateEventUseCase
 import com.coparently.app.domain.usecase.DeleteEventUseCase
@@ -24,6 +25,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +44,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -390,5 +393,58 @@ class EventViewModelTest {
             EventUiState.Error(UiText.Res(R.string.event_error_title_invalid)),
             viewModel.uiState.value
         )
+    }
+
+    // ---- the new-event draft, one per family (isolation audit, October 2026) ----------------
+
+    /** An event form opened while [coParent]'s family is on screen. */
+    private fun formInFamilyWith(coParent: String) = EventViewModel(
+        EventUseCases(createEvent, updateEvent, deleteEvent, getEvents),
+        errorHandler,
+        encryptedPreferences,
+        Gson(),
+        photoStorage = mockk(relaxed = true),
+        parentsSource = testParentsSource(
+            me = signedInParent,
+            partner = PartnerSummary(id = coParent, name = coParent, email = "", pairedSinceMillis = null)
+        ),
+        familyMembersSource = testFamilyMembersSource()
+    )
+
+    @Test
+    fun `a draft typed for one family never comes back on the other family's form`() = runTest {
+        val carolsDraft = EventDraft("Pick up at Carol's", "", "dad", "general", "2026-07-20", "16:00", "17:00")
+        every { encryptedPreferences.getEventDraft(any()) } returns null
+        every { encryptedPreferences.getEventDraft("carol__u1") } returns Gson().toJson(carolsDraft)
+
+        assertEquals("Pick up at Carol's", formInFamilyWith("carol").loadEventDraft()?.title)
+        assertNull(formInFamilyWith("igor").loadEventDraft())
+    }
+
+    @Test
+    fun `a draft is saved and cleared under the family on screen`() = runTest {
+        val form = formInFamilyWith("carol")
+        advanceUntilIdle()
+
+        form.saveEventDraft(
+            title = "Dentist",
+            description = "",
+            parentOwner = "dad",
+            eventType = "general",
+            startDate = LocalDate.of(2026, 7, 20),
+            startTime = LocalTime.of(16, 0),
+            endTime = LocalTime.of(17, 0)
+        )
+        // The save writes from the IO dispatcher, outside the test's clock.
+        verify(timeout = IO_WRITE_TIMEOUT_MS) { encryptedPreferences.putEventDraft("carol__u1", any()) }
+
+        form.clearEventDraft()
+        advanceUntilIdle()
+        verify { encryptedPreferences.clearEventDraft("carol__u1") }
+    }
+
+    private companion object {
+        /** How long a test waits for the draft's write on the IO dispatcher. */
+        const val IO_WRITE_TIMEOUT_MS = 2_000L
     }
 }

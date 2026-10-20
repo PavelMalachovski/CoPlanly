@@ -270,32 +270,42 @@ class EncryptedPreferences internal constructor(
     }
 
     /**
-     * Stores event draft data as JSON string.
+     * Stores the new-event draft of [familyId]'s form as a JSON string.
      * Issue 1.3: Draft saving functionality.
+     *
+     * One draft per family, never one per device: a draft typed for one family came back on the
+     * other family's next new event, and saved there, it went to that family's co-parent (isolation
+     * audit, October 2026). Every draft key goes with [clear], like the rest of this store.
+     *
+     * @param familyId The family on screen when the form opened, or null for none.
      */
-    fun putEventDraft(draftJson: String) {
+    fun putEventDraft(familyId: String?, draftJson: String) {
         store.edit()
-            .putString(KEY_EVENT_DRAFT, draftJson)
+            .putString(eventDraftKey(familyId), draftJson)
             .apply()
     }
 
     /**
-     * Retrieves the stored event draft.
+     * Retrieves [familyId]'s stored event draft — never another family's.
      * Issue 1.3: Draft saving functionality.
      */
-    fun getEventDraft(): String? {
-        return store.getString(KEY_EVENT_DRAFT, null)
+    fun getEventDraft(familyId: String?): String? {
+        return store.getString(eventDraftKey(familyId), null)
     }
 
     /**
-     * Clears the stored event draft.
+     * Clears [familyId]'s stored event draft.
      * Issue 1.3: Draft saving functionality.
      */
-    fun clearEventDraft() {
+    fun clearEventDraft(familyId: String?) {
         store.edit()
-            .remove(KEY_EVENT_DRAFT)
+            .remove(eventDraftKey(familyId))
             .apply()
     }
+
+    /** The draft key of [familyId]; the device-wide key every older draft was kept under for none. */
+    private fun eventDraftKey(familyId: String?): String =
+        familyId?.takeIf { it.isNotBlank() }?.let { "${KEY_EVENT_DRAFT}_$it" } ?: KEY_EVENT_DRAFT
 
     /**
      * Stores the unsent composer text for one conversation.

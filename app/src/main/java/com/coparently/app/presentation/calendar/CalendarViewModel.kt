@@ -15,6 +15,7 @@ import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.model.CustodyModel
@@ -24,15 +25,19 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -175,18 +180,27 @@ class CalendarViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     /**
-     * The instant of the shared-custody change the user last dismissed the banner for,
-     * or null if none was ever dismissed. Seeded from [EncryptedPreferences] so an
-     * acknowledged change stays acknowledged across process death, and updated in place by
-     * [dismissCustodyChange] rather than re-read from disk each time.
+     * The family on screen, which the dismissed change is kept for: one family's acknowledged
+     * change says nothing about the other's (isolation audit, October 2026). Null while unpaired or
+     * signed out.
      */
-    private val dismissedCustodyChangeAt = MutableStateFlow(
-        // Stored as decimal text, because EncryptedPreferences deals in strings. A value written
-        // before schema 29 is an ISO date-time and will not parse — it reads as "nothing
-        // dismissed", so the current change is announced once more and its dismissal is then
-        // stored in the new form. Announcing one change twice is the right way to be wrong here.
-        encryptedPreferences.getString(KEY_DISMISSED_CUSTODY_CHANGE_AT)?.toLongOrNull()
-    )
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val familyOnScreen: Flow<String?> = userRepository.observeCurrentUserId()
+        .flatMapLatest { uid ->
+            if (uid == null) {
+                flowOf(null)
+            } else {
+                userRepository.observeUserById(uid).map { FamilyKey.orNull(uid, it?.partnerId) }
+            }
+        }
+        .distinctUntilChanged()
+
+    /**
+     * The changes dismissed while this screen lived, by family, ahead of what [EncryptedPreferences]
+     * holds ([storedDismissal]): the stored instant, one per family, is what keeps an acknowledged
+     * change acknowledged across process death and across a family switch.
+     */
+    private val dismissedHere = MutableStateFlow<Map<String?, Long>>(emptyMap())
 
     /**
      * The remote custody change to tell this user about, or null when there is nothing to say.
@@ -211,8 +225,10 @@ class CalendarViewModel @Inject constructor(
     val custodyChangeAnnouncement: StateFlow<SharedCustody?> = combine(
         custodyModelRepository.observeShared(),
         parents,
-        dismissedCustodyChangeAt
-    ) { shared, currentParents, dismissedAt ->
+        familyOnScreen,
+        dismissedHere
+    ) { shared, currentParents, family, here ->
+        val dismissedAt = here[family] ?: storedDismissal(family)
         CustodyChangeAnnouncement.toAnnounce(shared, currentParents.me?.uid, currentParents.loaded, dismissedAt)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(HANDOVER_STOP_TIMEOUT_MS), null)
 
@@ -421,15 +437,34 @@ class CalendarViewModel @Inject constructor(
      * Persisted to [EncryptedPreferences] rather than kept only in memory: a change the user has
      * already acknowledged must not reappear just because the app process died. Keying on the
      * change's own instant (instead of, say, a boolean) is what lets the *next* change — a
-     * different instant — be announced again without a separate "seen" reset.
+     * different instant — be announced again without a separate "seen" reset. Kept for the family
+     * on screen, whose change the banner shows.
      */
     fun dismissCustodyChange(lastModifiedAtMillis: Long) {
-        dismissedCustodyChangeAt.value = lastModifiedAtMillis
-        encryptedPreferences.putString(
-            KEY_DISMISSED_CUSTODY_CHANGE_AT,
-            lastModifiedAtMillis.toString()
-        )
+        viewModelScope.launch {
+            val family = familyOnScreen.first()
+            dismissedHere.update { it + (family to lastModifiedAtMillis) }
+            encryptedPreferences.putString(dismissedKey(family), lastModifiedAtMillis.toString())
+        }
     }
+
+    /**
+     * The instant of [familyId]'s change the user last dismissed the banner for, or null.
+     *
+     * Stored as decimal text, because EncryptedPreferences deals in strings. A value written before
+     * schema 29 is an ISO date-time and will not parse — it reads as "nothing dismissed", so the
+     * current change is announced once more and its dismissal is then stored in the new form.
+     * Announcing one change twice is the right way to be wrong here. A family with no dismissal of
+     * its own falls back to the device-wide value every dismissal used to be kept under; another
+     * family's change has another instant, so that can only hide the change it was written for.
+     */
+    private fun storedDismissal(familyId: String?): Long? =
+        encryptedPreferences.getString(dismissedKey(familyId))?.toLongOrNull()
+            ?: encryptedPreferences.getString(KEY_DISMISSED_CUSTODY_CHANGE_AT)?.toLongOrNull()
+
+    /** [familyId]'s dismissal key; the device-wide key for none. */
+    private fun dismissedKey(familyId: String?): String =
+        familyId?.let { "${KEY_DISMISSED_CUSTODY_CHANGE_AT}_$it" } ?: KEY_DISMISSED_CUSTODY_CHANGE_AT
 
     /**
      * Restores persisted filter state (hidden types, custom types, holiday toggle).
