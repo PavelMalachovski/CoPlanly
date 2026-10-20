@@ -746,6 +746,8 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
   const childRef = db.collection('child_info').doc(childInfoId);
   const accepterRef = db.collection('users').doc(acceptingUserId);
   const grantedAtMillis = Date.now();
+  // The record's family, read in the transaction below; `''` when it names none.
+  let recordFamily = '';
 
   await db.runTransaction(async (tx) => {
     const [childSnap, inviteSnap] = await Promise.all([tx.get(childRef), tx.get(inviteRef)]);
@@ -772,8 +774,15 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
     // ever sees who is really reading. Nothing stops a client writing an invitation that
     // names somebody else's child id either; the rules shape that document, and this is what
     // stops it meaning anything.
+    //
+    // **And of the record's own family, once it names one.** Being in `sharedWith` is not being a
+    // parent of the child: a co-parent of the creator from *another* family can be there (the
+    // item-38 leak put them there), and a guest they minted would outlive the repair that takes
+    // them out. A record that names no family keeps the older test.
+    recordFamily = isBlankFamilyId(child.familyId) ? '' : child.familyId;
     if (sharedWith.indexOf(invite.fromUserId) < 0 ||
-        Object.prototype.hasOwnProperty.call(guests, invite.fromUserId)) {
+        Object.prototype.hasOwnProperty.call(guests, invite.fromUserId) ||
+        (recordFamily !== '' && partnerFromFamilyId(recordFamily, invite.fromUserId) === '')) {
       throw new functions.https.HttpsError(
           'permission-denied', 'The inviter cannot grant access to this record',
           {reason: 'inviter-not-entitled'});
@@ -816,13 +825,16 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
     });
   });
 
+  // A type and a name, never a sentence (SEC-3, CLAUDE.md item 15): this used to send an English
+  // `title`/`body`, the shape the client must never render. No build has wording for the type yet,
+  // so the phone drops it; when one does, it writes the sentence in the reader's language. The
+  // name is the profile's own, never the address `guestName` falls back to.
   await db.collection('notification_queue').add({
     targetUserId: invite.fromUserId,
-    data: {
+    data: Object.assign({
       type: 'guest_accepted',
-      title: 'Guest access accepted',
-      body: `${await guestName(accepterRef, acceptingEmail)} can now see this child's record`,
-    },
+      actorName: await profileName(accepterRef),
+    }, recordFamily !== '' ? {familyId: recordFamily} : {}),
     status: 'pending',
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -851,6 +863,19 @@ async function guestName(accepterRef, acceptingEmail) {
 }
 
 exports.guestName = guestName;
+
+/**
+ * The name a profile stores, trimmed, or `''` — never an address. What a push names somebody by:
+ * the receiving phone substitutes its own translated fallback for a blank.
+ *
+ * @param {FirebaseFirestore.DocumentReference} userRef The user's document.
+ * @return {Promise<string>} The stored name, or `''`.
+ */
+async function profileName(userRef) {
+  const snap = await userRef.get();
+  const stored = snap.exists && snap.data() ? snap.data().name : '';
+  return typeof stored === 'string' ? stored.trim() : '';
+}
 
 /**
  * The accepter's avatar, as the one-key object to merge into a grant — `{}` when they have none.
@@ -3828,10 +3853,26 @@ const FAMILY_BOUND_AUDIENCE_COLLECTIONS = ['child_info', 'pets'];
 const AUDIENCE_REPAIR_BATCH_LIMIT = 400;
 
 /**
+ * The guests of a child's record that one of [members] granted, as their uids — the grants that
+ * may stay. A grant somebody else gave (a co-parent of another family the leak had put in the
+ * audience could mint them) is not the family's, and neither is one that names no granter.
+ *
+ * @param {!Object} data The record.
+ * @param {!Array<string>} members The family's two parents.
+ * @return {!Array<string>} The uids whose grants stay.
+ */
+function familyGrantedGuests(data, members) {
+  const guests = data.guests && typeof data.guests === 'object' && !Array.isArray(data.guests) ?
+    data.guests : {};
+  return Object.keys(guests).filter((uid) =>
+    guests[uid] && typeof guests[uid] === 'object' && members.includes(guests[uid].grantedBy));
+}
+
+/**
  * The part of a child's or a pet's audience that may stay, given the two parents its family id
- * names: every uid of `sharedWith` that is one of [members] or — on a child's record — a guest its
- * `guests` map names, in stored order and once each. A pet has no guests, so a `guests` key on a
- * pet document admits nobody.
+ * names: every uid of `sharedWith` that is one of [members] or — on a child's record — a guest one
+ * of [members] granted ([familyGrantedGuests]), in stored order and once each. A pet has no guests,
+ * so a `guests` key on a pet document admits nobody.
  *
  * @param {string} collection `child_info` or `pets`.
  * @param {!Object} data The record.
@@ -3839,8 +3880,7 @@ const AUDIENCE_REPAIR_BATCH_LIMIT = 400;
  * @return {!Array<string>} The uids of `sharedWith` that may stay.
  */
 function familyBoundAudience(collection, data, members) {
-  const guests = collection === 'child_info' && data.guests && typeof data.guests === 'object' &&
-    !Array.isArray(data.guests) ? Object.keys(data.guests) : [];
+  const guests = collection === 'child_info' ? familyGrantedGuests(data, members) : [];
   const stored = Array.isArray(data.sharedWith) ? data.sharedWith : [];
   return Array.from(new Set(stored.filter((uid) =>
     typeof uid === 'string' && (members.includes(uid) || guests.includes(uid)))));
@@ -3861,13 +3901,19 @@ function familyBoundAudience(collection, data, members) {
  * For every `child_info` and `pets` document whose `familyId` names a family:
  *
  * - every uid of `sharedWith` that is neither one of the family's two parents — the id is
- *   `FamilyKey.of`'s two uids sorted and joined — nor, on a child's record, a guest its `guests`
- *   map names is dropped. A guest's grant is not judged here; `sweepExpiredGuests` does that.
+ *   `FamilyKey.of`'s two uids sorted and joined — nor, on a child's record, a guest one of those
+ *   two parents granted (`guests[uid].grantedBy`) is dropped. A grant's expiry is not judged
+ *   here; `sweepExpiredGuests` does that.
+ * - a child's grant that somebody outside the family gave — a co-parent of another family whom
+ *   the leak had put in the audience could mint them — goes from `guests` as well, whether or not
+ *   its guest is still in `sharedWith`: every parent's save re-admits each active grant it holds,
+ *   so a grant left in the map would put its guest straight back (October 2026).
  * - the family's other parent is put back if missing — **only while the family is live**
  *   ([liveFamily]: both profiles exist and name each other). An unpair's sweep narrowed the
  *   record on purpose, and re-admitting an ex-partner is not a repair.
  *
- * What it never does: write anything but `sharedWith` — never a tombstone's deletion fields,
+ * What it never does: write anything but `sharedWith` and those dropped grants — never a
+ * tombstone's deletion fields,
  * never `updatedAt`, so no phone's conflict comparison changes its answer; touch a record whose
  * family is blank (which of a parent's families it is about is exactly what the server cannot say
  * — `stampOwnBlankFamilyIds` declines the same guess); or "repair" a record whose family does not
@@ -3880,10 +3926,11 @@ function familyBoundAudience(collection, data, members) {
  * @param {{dryRun: (boolean|undefined)}=} options `dryRun` counts what would change and writes
  *     nothing — the scope of the leak, for the breach assessment, before anything is touched.
  * @return {!Promise<{scanned: number, repaired: number, removed: number, readded: number,
- *     dryRun: boolean, perCollection: !Object<string, number>, skipped: {blankFamily: number,
- *     malformedFamily: number, creatorOutsideFamily: number}}>} `repaired` counts records whose
- *     audience changed (or would), `removed` the uids taken out, `readded` the records that got
- *     their own co-parent back.
+ *     guestsDropped: number, dryRun: boolean, perCollection: !Object<string, number>,
+ *     skipped: {blankFamily: number, malformedFamily: number, creatorOutsideFamily: number}}>}
+ *     `repaired` counts records whose audience or grants changed (or would), `removed` the uids
+ *     taken out of `sharedWith`, `guestsDropped` the grants taken out of `guests`, `readded` the
+ *     records that got their own co-parent back.
  */
 async function repairChildAndPetAudiencesImpl(db, options) {
   const dryRun = Boolean(options && options.dryRun === true);
@@ -3892,6 +3939,7 @@ async function repairChildAndPetAudiencesImpl(db, options) {
     repaired: 0,
     removed: 0,
     readded: 0,
+    guestsDropped: 0,
     dryRun,
     perCollection: {},
     skipped: {blankFamily: 0, malformedFamily: 0, creatorOutsideFamily: 0},
@@ -3935,15 +3983,27 @@ async function repairChildAndPetAudiencesImpl(db, options) {
       const otherParent = members[0] === creator ? members[1] : members[0];
       const readd = !next.includes(otherParent) && await isLive(data.familyId, creator);
       if (readd) next.push(otherParent);
-      if (next.length === stored.length && next.every((uid, i) => uid === stored[i])) continue;
+      // A child's grants nobody in the family gave go from the map too, whether or not their
+      // guest is still in the audience: every parent's save re-admits each active grant it holds.
+      const storedGuests = collection === 'child_info' && data.guests &&
+        typeof data.guests === 'object' && !Array.isArray(data.guests) ? data.guests : null;
+      const keptGuests = storedGuests ? familyGrantedGuests(data, members) : [];
+      const guestsDropped = storedGuests ? Object.keys(storedGuests).length - keptGuests.length : 0;
+      const audienceKept = next.length === stored.length && next.every((uid, i) => uid === stored[i]);
+      if (audienceKept && guestsDropped === 0) continue;
 
       summary.repaired++;
       summary.perCollection[collection]++;
       summary.removed += removed;
+      summary.guestsDropped += guestsDropped;
       if (readd) summary.readded++;
       if (dryRun) continue;
 
-      batch.update(doc.ref, {sharedWith: next});
+      const update = {sharedWith: next};
+      if (guestsDropped > 0) {
+        update.guests = Object.fromEntries(keptGuests.map((uid) => [uid, storedGuests[uid]]));
+      }
+      batch.update(doc.ref, update);
       pending++;
       if (pending === AUDIENCE_REPAIR_BATCH_LIMIT) {
         await batch.commit();

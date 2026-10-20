@@ -326,6 +326,44 @@ describe('acceptGuestInvitation', () => {
     assert.strictEqual(queued[0].data.targetUserId, 'alice');
     assert.strictEqual(queued[0].data.data.type, 'guest_accepted');
   });
+
+  it('refuses an inviter in the audience of a stamped record who is not one of its family\'s parents',
+      async () => {
+        // Carol co-parents with Alice in another family, and the item-38 leak left her in this
+        // child's audience. Her guest would outlive the operator repair that takes her out,
+        // reading another family's child's health details until the grant ran out.
+        const db = seeded({fromUserId: 'carol'});
+        db._docs.child_info.child1.familyId = 'alice__bob';
+        db._docs.child_info.child1.sharedWith.push('carol');
+
+        await assert.rejects(
+            () => myFunctions.acceptGuestInvitationImpl(db, 'nina', 'nina@example.com', ref),
+            (err) => err.details.reason === 'inviter-not-entitled');
+        assert.strictEqual(db._docs.child_info.child1.guests, undefined);
+      });
+
+  it('still lets either parent of the record\'s family invite a guest', async () => {
+    const db = seeded({fromUserId: 'bob'});
+    db._docs.child_info.child1.familyId = 'alice__bob';
+
+    await myFunctions.acceptGuestInvitationImpl(db, 'nina', 'nina@example.com', ref);
+
+    assert.strictEqual(db._docs.child_info.child1.guests.nina.grantedBy, 'bob');
+  });
+
+  it('names the record\'s family on the push, and carries no sentence of its own', async () => {
+    // SEC-3 (CLAUDE.md item 15): a push carries a type and the names it needs, never English
+    // text — and never the guest's email.
+    const db = seeded();
+    db._docs.child_info.child1.familyId = 'alice__bob';
+
+    await myFunctions.acceptGuestInvitationImpl(db, 'nina', 'nina@example.com', ref);
+
+    const queued = db._added.filter((a) => a.collection === 'notification_queue');
+    assert.strictEqual(queued[0].data.data.familyId, 'alice__bob');
+    assert.strictEqual(queued[0].data.data.actorName, 'Nina');
+    assert.ok(!('title' in queued[0].data.data) && !('body' in queued[0].data.data));
+  });
 });
 
 describe('acceptPairingInvitation refuses a guest invitation', () => {

@@ -208,8 +208,43 @@ describe('repairChildAndPetAudiences', () => {
     await index.repairChildAndPetAudiencesImpl(db);
 
     assert.deepStrictEqual(db._docs.child_info['child-1'].sharedWith, ['alice', 'bob', 'nina']);
-    assert.deepStrictEqual(db._docs.child_info['child-1'].guests, grant, 'guests are not written');
+    assert.deepStrictEqual(db._docs.child_info['child-1'].guests, grant, 'a grant the family gave is kept');
     assert.deepStrictEqual(db._docs.pets['pet-1'].sharedWith, ['alice', 'bob']);
+  });
+
+  it('drops a guest somebody outside the family granted, from both fields', async () => {
+    // Carol, left in the Bob family's child by the leak, invited Dave before the repair ran. A
+    // grant is kept only when one of the family's own parents gave it, and it goes from `guests`
+    // as well as `sharedWith`: left in the map, the next parent's save would put Dave back.
+    const nina = {name: 'Nina', grantedBy: 'bob', expiresAtMillis: 4102444800000};
+    const dave = {name: 'Dave', grantedBy: 'carol', expiresAtMillis: 4102444800000};
+    const ghost = {name: 'Ghost', grantedBy: 'carol', expiresAtMillis: 4102444800000};
+    const db = fakeDb(twoFamilies({
+      child_info: {'child-1': child({
+        sharedWith: ['alice', 'bob', 'carol', 'nina', 'dave'],
+        guests: {nina, dave, ghost},
+      })},
+    }));
+
+    const summary = await index.repairChildAndPetAudiencesImpl(db);
+
+    assert.deepStrictEqual(db._docs.child_info['child-1'].sharedWith, ['alice', 'bob', 'nina']);
+    assert.deepStrictEqual(db._docs.child_info['child-1'].guests, {nina});
+    assert.strictEqual(summary.removed, 2);
+    assert.strictEqual(summary.guestsDropped, 2);
+  });
+
+  it('drops an outsider\'s grant even when its guest is no longer in the audience', async () => {
+    const ghost = {name: 'Ghost', grantedBy: 'carol', expiresAtMillis: 4102444800000};
+    const db = fakeDb(twoFamilies({
+      child_info: {'child-1': child({guests: {ghost}})},
+    }));
+
+    const summary = await index.repairChildAndPetAudiencesImpl(db);
+
+    assert.deepStrictEqual(db._docs.child_info['child-1'].guests, {});
+    assert.deepStrictEqual(db._docs.child_info['child-1'].sharedWith, ['alice', 'bob']);
+    assert.strictEqual(summary.repaired, 1);
   });
 
   it('skips a record that names no family: there is nothing to bound it by', async () => {
