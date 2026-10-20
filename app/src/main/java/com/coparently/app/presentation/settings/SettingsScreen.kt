@@ -281,8 +281,10 @@ fun SettingsScreen(
             parentNames = splitParentNames,
             // A family that has agreed a split already is asked, not told: the change becomes a
             // proposal, and a proposal asks when it should be answered by. A first agreement, or
-            // an account with nobody to ask, applies at once and has no deadline to set.
-            proposes = familySplit.familyId != null && familySplit.settings != null,
+            // an account with nobody to ask, applies at once and has no deadline to set; and while
+            // the co-parent's own proposal waits, a new one is refused, so there is nothing to time.
+            proposes = familySplit.familyId != null && familySplit.settings != null &&
+                familySplit.settings?.proposal?.proposedBy.let { it == null || it == settingsUiState.myUid },
             onConfirm = { ratio, answerBy ->
                 settingsViewModel.submitRatio(ratio, familySplit, answerBy)
                 showSplitPicker = false

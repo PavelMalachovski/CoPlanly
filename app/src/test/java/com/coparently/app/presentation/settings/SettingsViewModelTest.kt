@@ -231,6 +231,15 @@ class SettingsViewModelTest {
             coVerify(exactly = 0) { familySettingsRepository.submitRatio(SplitRatio(SEVENTY), null, null) }
         }
 
+    @Test
+    fun `the state names the signed-in parent, so the split dialog can tell whose proposal waits`() =
+        runTest(dispatcher) {
+            val vm = viewModel(signedIn(colorCode = ParentColorChoice.PINK.storedCode))
+            advanceUntilIdle()
+
+            assertEquals("u1", vm.settingsState.value.myUid)
+        }
+
     /** A user repository with a signed-in parent whose stored colour is [colorCode]. */
     private fun signedIn(colorCode: String): UserRepository = mockk(relaxed = true) {
         coEvery { getCurrentUser() } returns User(

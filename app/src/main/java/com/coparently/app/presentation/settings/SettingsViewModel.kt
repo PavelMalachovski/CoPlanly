@@ -394,6 +394,7 @@ class SettingsViewModel @Inject constructor(
                     userEmail = currentUser?.email,
                     userName = currentUser?.name,
                     partnerId = currentUser?.partnerId,
+                    myUid = currentUser?.id,
                     isLoading = false
                 )
                 _operationState.value = UiState.Success(Unit)
@@ -558,6 +559,8 @@ data class SettingsUiState(
     val userEmail: String? = null,
     val userName: String? = null,
     val partnerId: String? = null,
+    /** The signed-in parent's uid: whose split proposal waits on whom. */
+    val myUid: String? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     /**
