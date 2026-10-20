@@ -63,9 +63,9 @@ class ActivityFallbackTextTest {
         assertEquals("Proposed a new expense split: I pay 35 %, you pay 65 %", ActivityFallbackText.of(proposed, "mom"))
         assertEquals("Proposed a new expense split: I pay 65 %, you pay 35 %", ActivityFallbackText.of(proposed, "dad"))
         assertEquals(
-            "a share that is not whole keeps its fraction",
             "Proposed a new expense split: I pay 33.33 %, you pay 66.67 %",
-            ActivityFallbackText.of(proposed.copy(amount = "3333"), "mom")
+            ActivityFallbackText.of(proposed.copy(amount = "3333"), "mom"),
+            "a share that is not whole keeps its fraction"
         )
         // Without the slot, or the share, nothing says whose share is whose: the plain sentence.
         assertEquals("Proposed a new expense split", ActivityFallbackText.of(proposed, null))
