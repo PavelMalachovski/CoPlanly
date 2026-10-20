@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virtual tester</title>
+<style>
+:root { --bg:#f6f5fb; --fg:#1b1b21; --muted:#5e5d6b; --card:#fff; --line:#dcdbe6;
+  --pass:#1e7f4c; --fail:#b3261e; --skip:#7a5900; --known:#4f4cc9; }
+@media (prefers-color-scheme: dark) { :root { --bg:#131318; --fg:#e5e1e9; --muted:#a5a2b3; --card:#1f1f25;
+  --line:#3a3a44; --pass:#6fd39c; --fail:#ffb4ab; --skip:#f1c55a; --known:#c2c1ff; } }
+body { background:var(--bg); color:var(--fg); font:15px/1.45 system-ui, sans-serif; margin:0; padding:24px 16px 48px; }
+main { max-width:1100px; margin:0 auto; }
+h1 { margin:0 0 4px; } .meta { color:var(--muted); }
+.totals { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 20px; }
+.totals span { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:4px 12px; }
+.step { display:grid; grid-template-columns:1fr 180px; gap:12px; background:var(--card); border:1px solid var(--line);
+  border-left:4px solid var(--line); border-radius:12px; padding:12px; margin:8px 0; }
+.step.passed { border-left-color:var(--pass); } .step.failed { border-left-color:var(--fail); }
+.step.could_not_run { border-left-color:var(--skip); } .step.known { border-left-color:var(--known); }
+.step p { margin:4px 0; overflow-wrap:anywhere; } .label { color:var(--muted); display:inline-block; min-width:70px; }
+.badge { font-weight:600; } .step.failed .badge { color:var(--fail); } .step.passed .badge { color:var(--pass); }
+.step.could_not_run .badge { color:var(--skip); } .step.known .badge, .known { color:var(--known); }
+.step img { width:100%; border-radius:8px; border:1px solid var(--line); }
+.noshot { color:var(--muted); font-size:13px; } .findings { margin:4px 0; padding-left:18px; color:var(--skip); }
+@media (max-width:600px) { .step { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Virtual tester</h1>
+<p class="meta">claude/zuzana-testing-feedback-ntk5s5 @ 012de9d</p>
+<div class="totals"><span>20 steps</span><span>20 passed</span><span>0 failed</span><span>0 could not run</span><span>0 known</span><span>0 with visual findings</span></div>
+<p class="meta">Not covered in this run: Calendar, Day swaps and deadlines, Custody proposals and seasonal layers, Chat, Expenses and the split, Receipts, Home and the family switcher, Exploratory pass</p>
+
+<section><h2>light-cs-100</h2>
+<section><h3>Smoke</h3>
+<h4>fourTabsOpen</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Open the Domů tab</strong> <code>home</code></p>
+    <p><span class="label">Expected</span> The Domů tab is selected and its screen is shown</p>
+    <p><span class="label">Actual</span> The Domů tab is selected and its screen is shown</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/001_Smoke_home.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/001_Smoke_home.png" alt="Screenshot after home"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Open the Kalendář tab</strong> <code>calendar</code></p>
+    <p><span class="label">Expected</span> The Kalendář tab is selected and its screen is shown</p>
+    <p><span class="label">Actual</span> The Kalendář tab is selected and its screen is shown</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/002_Smoke_calendar.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/002_Smoke_calendar.png" alt="Screenshot after calendar"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Open the Chat tab</strong> <code>chat</code></p>
+    <p><span class="label">Expected</span> The Chat tab is selected and its screen is shown</p>
+    <p><span class="label">Actual</span> The Chat tab is selected and its screen is shown</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/003_Smoke_chat.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/003_Smoke_chat.png" alt="Screenshot after chat"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Open the Výdaje tab</strong> <code>expenses</code></p>
+    <p><span class="label">Expected</span> The Výdaje tab is selected and its screen is shown</p>
+    <p><span class="label">Actual</span> The Výdaje tab is selected and its screen is shown</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/004_Smoke_expenses.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/004_Smoke_expenses.png" alt="Screenshot after expenses"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Recognise amounts the way the app prints them</strong> <code>money_pattern</code></p>
+    <p><span class="label">Expected</span> 1 290 Kč, 12,50 € and 1 290,00 CZK are amounts; &quot;Lena 2026&quot; is not</p>
+    <p><span class="label">Actual</span> 1 290 Kč, 12,50 € and 1 290,00 CZK are amounts; &quot;Lena 2026&quot; is not</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/005_Smoke_money_pattern.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/005_Smoke_money_pattern.png" alt="Screenshot after money_pattern"></a>
+</article></section>
+<section><h3>Isolation</h3>
+<h4>familyOneOnScreen</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Pair Carol as a second co-parent and let each co-parent write in their own family</strong> <code>setup</code></p>
+    <p><span class="label">Expected</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    <p><span class="label">Actual</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/006_Isolation_setup.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/006_Isolation_setup.png" alt="Screenshot after setup"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Home's today card in the family with Igor</strong> <code>home_today</code></p>
+    <p><span class="label">Expected</span> &quot;Zubař Lena 1e31c9&quot; is on Home; &quot;Plavání Max 1e31c9&quot; from the family with Carol is not</p>
+    <p><span class="label">Actual</span> &quot;Zubař Lena 1e31c9&quot; is on Home; &quot;Plavání Max 1e31c9&quot; from the family with Carol is not</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/007_Isolation_home_today.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/007_Isolation_home_today.png" alt="Screenshot after home_today"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>The Expenses tab in the family with Igor</strong> <code>expenses_list</code></p>
+    <p><span class="label">Expected</span> &quot;Boty Lena 1e31c9&quot; is listed; &quot;Kroužek Max 1e31c9&quot; is not</p>
+    <p><span class="label">Actual</span> &quot;Boty Lena 1e31c9&quot; is listed; &quot;Kroužek Max 1e31c9&quot; is not</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/008_Isolation_expenses_list.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/008_Isolation_expenses_list.png" alt="Screenshot after expenses_list"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>The Chat tab in the family with Igor</strong> <code>chat_thread</code></p>
+    <p><span class="label">Expected</span> Igor's message is in the thread; Carol's is not</p>
+    <p><span class="label">Actual</span> Igor's message is in the thread; Carol's is not</p>
+    <p class="meta">Delivered by a live listener</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/009_Isolation_chat_thread.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/009_Isolation_chat_thread.png" alt="Screenshot after chat_thread"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>The switcher says the other family has something new</strong> <code>switcher_dot</code></p>
+    <p><span class="label">Expected</span> Home's family chip carries the dot for new messages in another family</p>
+    <p><span class="label">Actual</span> Home's family chip carries the dot for new messages in another family</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/010_Isolation_switcher_dot.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/010_Isolation_switcher_dot.png" alt="Screenshot after switcher_dot"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>What reaches Igor's and Carol's phones after their syncs</strong> <code>coparents_phones</code></p>
+    <p><span class="label">Expected</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    <p><span class="label">Actual</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/011_Isolation_coparents_phones.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/011_Isolation_coparents_phones.png" alt="Screenshot after coparents_phones"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Every push names the family it belongs to</strong> <code>pushes</code></p>
+    <p><span class="label">Expected</span> Every push to Zuzana names one of her two families, and each family has its own</p>
+    <p><span class="label">Actual</span> 10 pushes, each naming one of Zuzana's families</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/012_Isolation_pushes.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/012_Isolation_pushes.png" alt="Screenshot after pushes"></a>
+</article>
+<h4>familyTwoOnScreen</h4>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Pair Carol as a second co-parent and let each co-parent write in their own family</strong> <code>setup</code></p>
+    <p><span class="label">Expected</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    <p><span class="label">Actual</span> Zuzana's phone knows two families; each family holds an event, an expense, a child and a message</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/013_Isolation_setup.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/013_Isolation_setup.png" alt="Screenshot after setup"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Switch to the family with Carol</strong> <code>switch</code></p>
+    <p><span class="label">Expected</span> The switcher lists Carol's family and the app shows it</p>
+    <p><span class="label">Actual</span> The switcher lists Carol's family and the app shows it</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/014_Isolation_switch.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/014_Isolation_switch.png" alt="Screenshot after switch"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Home's today card in the family with Carol</strong> <code>home_today</code></p>
+    <p><span class="label">Expected</span> &quot;Plavání Max 168e89&quot; is on Home; &quot;Zubař Lena 168e89&quot; from the family with Igor is not</p>
+    <p><span class="label">Actual</span> &quot;Plavání Max 168e89&quot; is on Home; &quot;Zubař Lena 168e89&quot; from the family with Igor is not</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/015_Isolation_home_today.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/015_Isolation_home_today.png" alt="Screenshot after home_today"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>The Expenses tab in the family with Carol</strong> <code>expenses_list</code></p>
+    <p><span class="label">Expected</span> &quot;Kroužek Max 168e89&quot; is listed; &quot;Boty Lena 168e89&quot; is not</p>
+    <p><span class="label">Actual</span> &quot;Kroužek Max 168e89&quot; is listed; &quot;Boty Lena 168e89&quot; is not</p>
+    <p class="meta">Delivered by a forced sync</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/016_Isolation_expenses_list.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/016_Isolation_expenses_list.png" alt="Screenshot after expenses_list"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>The Chat tab in the family with Carol</strong> <code>chat_thread</code></p>
+    <p><span class="label">Expected</span> Carol's message is in the thread; Igor's is not</p>
+    <p><span class="label">Actual</span> Carol's message is in the thread; Igor's is not</p>
+    <p class="meta">Delivered by a live listener</p>
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/017_Isolation_chat_thread.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/017_Isolation_chat_thread.png" alt="Screenshot after chat_thread"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>The switcher says the other family has something new</strong> <code>switcher_dot</code></p>
+    <p><span class="label">Expected</span> Home's family chip carries the dot for new messages in another family</p>
+    <p><span class="label">Actual</span> Home's family chip carries the dot for new messages in another family</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/018_Isolation_switcher_dot.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/018_Isolation_switcher_dot.png" alt="Screenshot after switcher_dot"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>What reaches Igor's and Carol's phones after their syncs</strong> <code>coparents_phones</code></p>
+    <p><span class="label">Expected</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    <p><span class="label">Actual</span> Igor has only his family's event, expense and child; Carol only hers</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/019_Isolation_coparents_phones.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/019_Isolation_coparents_phones.png" alt="Screenshot after coparents_phones"></a>
+</article>
+<article class="step passed">
+  <div class="text">
+    <p><span class="badge">Passed</span> <strong>Every push names the family it belongs to</strong> <code>pushes</code></p>
+    <p><span class="label">Expected</span> Every push to Zuzana names one of her two families, and each family has its own</p>
+    <p><span class="label">Actual</span> 10 pushes, each naming one of Zuzana's families</p>
+    
+  </div>
+  <a href="virtual-tester/light-cs-100/shots/020_Isolation_pushes.png"><img loading="lazy" src="virtual-tester/light-cs-100/shots/020_Isolation_pushes.png" alt="Screenshot after pushes"></a>
+</article></section></section>
+</main>
+</body>
+</html>
