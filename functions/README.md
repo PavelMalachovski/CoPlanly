@@ -585,7 +585,10 @@ included), the reference on the record rewritten, and the personal copy deleted.
 summary's `photos` counts `moved`, `rewritten` and `missing` (a reference whose object was in
 neither place, left as it is).
 
-### repairChildAndPetAudiences (October 2026, once)
+### repairChildAndPetAudiences (October 2026, once — not run)
+
+**Not run on the live project: owner decision, 20 October 2026** (`docs/legal/DPIA.md` R20). The
+runbook below stays for the day that decision changes.
 
 Operator-only on the same `BACKFILL_ADMIN_UIDS` allow-list, with 540 seconds like the other
 one-off passes. It undoes what the cross-family leak already wrote (CLAUDE.md item 38): a parent in

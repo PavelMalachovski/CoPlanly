@@ -417,6 +417,7 @@ daily on our servers, not by hand.
 | A photograph you remove or replace | Deleted from our servers when you save the change |
 | A guest's, family friend's or professional's access | Until the date set when it was granted, or until either parent ends it; professionals at most **180 days**. A family friend's or professional's access to a family also ends when its two parents unlink |
 | An invitation nobody accepted | Deleted **30 days** after it expired (**90 days** after it was made, if it had no expiry) |
+| An invitation a co-parent accepted | For as long as either of the two accounts exists; when its sender deletes their account, their name and the email addresses are removed from it |
 | A read-only calendar link | Until revoked; deleted after **90 days** without use |
 | Notifications waiting to be delivered | **30 days** |
 | The message thread, after your co-parent deletes their account | **30 days**, so you can export it — see below |
@@ -439,8 +440,11 @@ within which a claim arising from the family's affairs can generally still be br
 
 - deletes your profile, your events and the saved revisions of events you edited, your expenses
   and budgets, the records you entered about your child and pet, your custody schedule and agreed
-  expense split, your parenting plan and your invitations — and takes your answers out of the
-  parenting plan of any family you had already left, leaving that co-parent's own answers;
+  expense split, your parenting plan and the invitations you sent — and takes your answers out of
+  the parenting plan of any family you had already left, leaving that co-parent's own answers;
+- keeps an invitation you sent to a co-parent who accepted it, without your name or any email
+  address: it is your co-parent's record that the two of you were a family, and it keeps their
+  records from that family out of any family they have later;
 - deletes the deadlines of every request you sent or were asked to answer, with what was recorded
   about them (when a request was received and opened, its reminders, a last chance, "no answer") —
   for your co-parent too, since each of these names you both;

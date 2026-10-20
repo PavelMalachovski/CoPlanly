@@ -3339,11 +3339,7 @@ async function coParentsByInvitation(db, uid) {
   const others = new Set();
   sent.docs.concat(accepted.docs).forEach((doc) => {
     const invite = doc.data() || {};
-    if (invite.status !== 'accepted' ||
-        invite.kind === GUEST_INVITATION || invite.kind === FRIEND_INVITATION ||
-        invite.kind === PROFESSIONAL_INVITATION) {
-      return;
-    }
+    if (!isAcceptedCoParentInvitation(invite)) return;
     const other = invite.fromUserId === uid ? invite.acceptedBy : invite.fromUserId;
     if (typeof other === 'string' && other !== '' && other !== uid) others.add(other);
   });
@@ -3351,6 +3347,19 @@ async function coParentsByInvitation(db, uid) {
 }
 
 exports.coParentsByInvitation = coParentsByInvitation;
+
+/**
+ * Whether [invite] made two people co-parents: accepted, and not a guest's, a calendar friend's or
+ * a professional's. What [coParentsByInvitation] counts, and what account deletion keeps.
+ *
+ * @param {!Object} invite The invitation's data.
+ * @return {boolean} Whether it is an accepted co-parent invitation.
+ */
+function isAcceptedCoParentInvitation(invite) {
+  return invite.status === 'accepted' &&
+    invite.kind !== GUEST_INVITATION && invite.kind !== FRIEND_INVITATION &&
+    invite.kind !== PROFESSIONAL_INVITATION;
+}
 
 /**
  * Stamps [uid]'s own unstamped records with the one family they can be said to belong to — or,
@@ -4948,8 +4957,16 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   removed.professional_grants += await deleteQueryInBatches(
       db, db.collection('professional_grants').where('proUid', '==', uid));
 
-  removed.invitations = await deleteQueryInBatches(
-      db, db.collection('invitations').where('fromUserId', '==', uid));
+  // Invitations this account *sent*: a co-parent invitation somebody accepted stays, as the
+  // history of that family and the evidence [hadAnotherCoParent] reads for the parent who remains
+  // (audit F8, owner decision, October 2026) — without it the server's backfill stamped that
+  // parent's records from the ended family into their next one. It keeps the two uids, its status
+  // and code; this account's name and both addresses go. Everything else this account sent goes
+  // whole: a code nobody redeemed cannot be redeemed any more, and a guest's, friend's or
+  // professional's grant ends with the account.
+  const sentInvites = await keepAcceptedCoParentInvitations(db, uid);
+  removed.invitations = sentInvites.deleted;
+  removed.invitations_kept = sentInvites.kept;
 
   // Invitations this account *accepted* belong to their senders and stay: `acceptedBy` is the
   // evidence [hadAnotherCoParent] reads for the sender's other relationships. What goes is the
@@ -4982,6 +4999,41 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
 }
 
 exports.deleteAccountDataImpl = deleteAccountDataImpl;
+
+/** The fields of a kept invitation that name the account that sent it, blanked at its deletion. */
+const SENDER_PERSONAL_FIELDS = ['fromUserName', 'fromUserEmail', 'toEmail'];
+
+/**
+ * Deletes the invitations [uid] sent, except the accepted co-parent ones, which lose
+ * [SENDER_PERSONAL_FIELDS] and stay. See the call in [deleteAccountDataImpl].
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} uid The departing account.
+ * @return {Promise<{deleted: number, kept: number}>} How many went, and how many stayed.
+ */
+async function keepAcceptedCoParentInvitations(db, uid) {
+  const sent = await db.collection('invitations').where('fromUserId', '==', uid).get();
+  const result = {deleted: 0, kept: 0};
+  for (const doc of sent.docs) {
+    const invite = doc.data() || {};
+    if (!isAcceptedCoParentInvitation(invite)) {
+      await db.collection('invitations').doc(doc.id).delete();
+      result.deleted++;
+      continue;
+    }
+    const blanked = {};
+    SENDER_PERSONAL_FIELDS
+        .filter((field) => typeof invite[field] === 'string' && invite[field] !== '')
+        .forEach((field) => {
+          blanked[field] = '';
+        });
+    if (Object.keys(blanked).length > 0) {
+      await db.collection('invitations').doc(doc.id).update(blanked);
+    }
+    result.kept++;
+  }
+  return result;
+}
 
 /**
  * Erases the caller's account and everything it holds.
