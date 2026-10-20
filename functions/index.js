@@ -4680,6 +4680,10 @@ async function retainOrDeleteConversations(db, uid, departedName, bucket, nowMil
             date: isoDateUtc(retainedUntilMillis),
             retainedUntilMillis: String(retainedUntilMillis),
             conversationId: conversation.id,
+            // The family the thread belonged to (M-8), so a phone in two families opens it. Built
+            // from the pair rather than read off the thread id, which an older thread may not
+            // share with its family.
+            familyId: custodyModelKey(uid, target),
           },
           status: 'pending',
           createdAt: FieldValue.serverTimestamp(),
