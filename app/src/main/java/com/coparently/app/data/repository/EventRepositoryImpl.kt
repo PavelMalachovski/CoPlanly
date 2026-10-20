@@ -1,6 +1,7 @@
 package com.coparently.app.data.repository
 
 import android.util.Log
+import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
@@ -54,10 +55,15 @@ class EventRepositoryImpl @Inject constructor(
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val gson = Gson()
 
+    /**
+     * Every event this phone holds for the family on screen. A parent in two families sees one at
+     * a time; the records of the other live family stay out ([inFamilyOnScreen]), and so does
+     * every list read below.
+     */
     override fun getAllEvents(): Flow<List<Event>> {
         return eventDao.getAllEvents().map { entities ->
             entities.map { it.toDomain() }
-        }
+        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
     }
 
     /**
@@ -87,14 +93,14 @@ class EventRepositoryImpl @Inject constructor(
                 end
             )
             (singleEvents + occurrences).sortedBy { it.startDateTime }
-        }
+        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
     }
 
     /** One day's events, filtered by the same rule as the range query. */
     override fun getEventsByDate(date: LocalDateTime): Flow<List<Event>> {
         return eventDao.getEventsByDate(date).map { entities ->
             CalendarVisibility.visible(entities.map { it.toDomain() })
-        }
+        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
     }
 
     override suspend fun getEventById(id: String): Event? {

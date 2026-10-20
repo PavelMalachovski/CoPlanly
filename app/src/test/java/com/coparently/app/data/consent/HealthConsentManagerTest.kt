@@ -55,7 +55,8 @@ class HealthConsentManagerTest {
         val mine = child("mine", createdBy = ME, photos = listOf(PHOTO))
         val mineWithNothing = child("mine-empty", createdBy = ME).withoutHealthData()
         val theirs = child("theirs", createdBy = CO_PARENT)
-        every { childInfoRepository.getAllChildInfo() } returns flowOf(listOf(mine, mineWithNothing, theirs))
+        every { childInfoRepository.getAllChildInfoInEveryFamily() } returns
+            flowOf(listOf(mine, mineWithNothing, theirs))
 
         val outcome = manager.withdraw()
 
@@ -83,7 +84,7 @@ class HealthConsentManagerTest {
     fun `a photo that cannot be deleted stops the withdrawal and keeps the consent`() = runTest {
         coEvery { userRepository.getCurrentUserId() } returns ME
         val mine = child("mine", createdBy = ME, photos = listOf(PHOTO, OTHER_PHOTO))
-        every { childInfoRepository.getAllChildInfo() } returns flowOf(listOf(mine))
+        every { childInfoRepository.getAllChildInfoInEveryFamily() } returns flowOf(listOf(mine))
         coEvery { photoStorage.delete(OTHER_PHOTO, FAMILY) } throws IllegalStateException("offline")
 
         val outcome = manager.withdraw()

@@ -3,6 +3,8 @@ package com.coparently.app.presentation.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -11,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,6 +22,7 @@ import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.parentingplan.CitationStatus
+import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
@@ -150,8 +154,14 @@ private fun ProposalDialog(
             )
             val diff = custodyDiffDescription(ask.diff, parentNames)
             val citation = planCitationLine(ask.citation)
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
+            // Scrolls: the mini month makes the dialog taller than a small phone at large text.
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            ) {
                 Text(if (diff == null) who else "$who\n\n$diff")
+                // What it looks like, always — the diff above is missing when the pattern changes.
+                ProposedSchedulePreview(ask.proposal, parentNames)
                 citation?.let { line ->
                     Text(
                         text = line,

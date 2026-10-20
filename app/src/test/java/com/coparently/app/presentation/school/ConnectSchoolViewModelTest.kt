@@ -89,7 +89,7 @@ class ConnectSchoolViewModelTest {
         coEvery { directory.towns() } returns listOf(SchoolTown("Beroun", 3), SchoolTown("Brno", 90))
         coEvery { directory.schools("Beroun") } returns listOf(school)
         coEvery { families.namedFamilies() } returns listOf(bobFamily)
-        every { children.getAllChildInfo() } returns flowOf(listOf(child("anna", "Anna", "alice__bob")))
+        every { children.getAllChildInfoInEveryFamily() } returns flowOf(listOf(child("anna", "Anna", "alice__bob")))
         coEvery { accounts.signIn(school.baseUrl, "novak", "heslo") } returns signIn
         coEvery { accounts.connect(any(), any(), any(), any()) } returns saved
         coEvery { importer.sync(any()) } returns SchoolSyncResult.Success(1, 0, 0)
@@ -139,7 +139,7 @@ class ConnectSchoolViewModelTest {
 
     @Test
     fun `with several children none is chosen for the parent`() = runTest(dispatcher) {
-        every { children.getAllChildInfo() } returns flowOf(
+        every { children.getAllChildInfoInEveryFamily() } returns flowOf(
             listOf(child("anna", "Anna", "alice__bob"), child("leo", "Leo", null))
         )
         val vm = signedIn()
@@ -155,7 +155,7 @@ class ConnectSchoolViewModelTest {
     @Test
     fun `with two families the parent chooses one, and sees only its children`() = runTest(dispatcher) {
         coEvery { families.namedFamilies() } returns listOf(bobFamily, carolFamily)
-        every { children.getAllChildInfo() } returns flowOf(
+        every { children.getAllChildInfoInEveryFamily() } returns flowOf(
             listOf(child("anna", "Anna", "alice__bob"), child("max", "Max", "alice__carol"))
         )
         val vm = signedIn()
@@ -174,7 +174,7 @@ class ConnectSchoolViewModelTest {
 
     @Test
     fun `a family with no child records offers nothing`() = runTest(dispatcher) {
-        every { children.getAllChildInfo() } returns flowOf(emptyList())
+        every { children.getAllChildInfoInEveryFamily() } returns flowOf(emptyList())
         val vm = signedIn()
 
         assertTrue(vm.state.value.children.isEmpty())

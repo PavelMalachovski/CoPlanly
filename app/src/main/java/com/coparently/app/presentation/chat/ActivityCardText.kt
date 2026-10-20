@@ -40,7 +40,9 @@ object ActivityCardText {
 
     /**
      * The string resource for [kind]. Each takes the entity's own name as `%1$s`; it is passed as
-     * a format argument and never concatenated, because word order differs by language.
+     * a format argument and never concatenated, because word order differs by language. The two
+     * settle-up kinds are the exception: they take the month and the amount, and a reader words
+     * them through [settleUpResource].
      */
     @StringRes
     fun resourceFor(kind: ActivityKind): Int = when (kind) {
@@ -63,6 +65,24 @@ object ActivityCardText {
         ActivityKind.CUSTODY_DECLINED -> R.string.activity_custody_declined
         ActivityKind.REQUEST_LAST_CHANCE -> R.string.activity_request_last_chance
         ActivityKind.REQUEST_UNANSWERED -> R.string.activity_request_unanswered
+        // As the sender's own phone says it; [settleUpResource] picks by who reads it, and both
+        // take the month and the amount rather than one subject.
+        ActivityKind.SETTLE_UP_OWED -> R.string.activity_settle_up_owed_to_you
+        ActivityKind.SETTLE_UP_OWING -> R.string.activity_settle_up_you_owe
+    }
+
+    /**
+     * A settle-up card's sentence on this phone: who owes is a matter of who reads it, so the
+     * sentence is chosen by [ActivityKind.readerPays]. Takes the month as `%1$s` and the amount
+     * as `%2$s`.
+     *
+     * @param readerIsSender Whether this phone sent the card.
+     */
+    @StringRes
+    fun settleUpResource(kind: ActivityKind, readerIsSender: Boolean): Int = if (kind.readerPays(readerIsSender)) {
+        R.string.activity_settle_up_you_owe
+    } else {
+        R.string.activity_settle_up_owed_to_you
     }
 
     /**

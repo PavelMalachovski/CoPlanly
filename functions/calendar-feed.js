@@ -9,12 +9,14 @@
  * **The custody port is deliberately small.** The Android app answers "whose day is this" in
  * `CustodyResolver.custodyFor` and `CustodyModel.getCustodyFor`, and "which afternoons does it
  * carry" in `CustodyResolver.contactWindowsResolver` and `ContactWindowCodec`. What is ported is
- * exactly that and nothing else: an accepted one-off swap first, then the highest-priority
+ * exactly that and nothing else: an agreed one-off swap first (`DayOverride.agreedToParent`: an
+ * accepted entry, or the latest accepted answer in its `earlier` list while a change to it waits
+ * or after the change was declined), then the highest-priority
  * seasonal layer covering the date (MON-14, `SeasonalLayerCodec` strings, ordered by
  * `SeasonalLayer.PRECEDENCE`), then the whole-day pattern
  * (`floorMod(days since startDate, patternDays)` in `momDayIndices` is slot 1), and contact
  * windows decoded from their wire strings, dropped when they name the parent who already has the
- * day. A pending or declined swap moves nothing, a pending proposal is not the schedule, and the
+ * day. A pending or declined offer moves nothing by itself, a pending proposal is not the schedule, and the
  * legacy per-parent schedule never reached Firestore, so none of those is read. If this file and
  * the Kotlin ever disagree, the Kotlin is right and `test/calendar-feed.test.js` is where the
  * fixture goes.
@@ -237,11 +239,33 @@ function layerOn(model, day) {
 }
 
 /**
+ * The slot a day-override entry gives the day by what the parents last agreed, as
+ * `DayOverride.agreedToParent` decides it: the entry's own slot once accepted, otherwise the latest
+ * accepted answer in `earlier` (`DayOverrideDecisionCodec` strings,
+ * `d1|toParent|requestedBy|requestedAt|status|decidedBy|decidedAt|groupId`), otherwise null.
+ *
+ * @param {!Object} entry One `dayOverrides` value.
+ * @return {?string} The slot, or null.
+ */
+function agreedToParent(entry) {
+  if (entry.status === 'ACCEPTED') return entry.toParent;
+  const earlier = Array.isArray(entry.earlier) ? entry.earlier : [];
+  for (let i = earlier.length - 1; i >= 0; i--) {
+    const parts = typeof earlier[i] === 'string' ? earlier[i].split('|') : [];
+    if (parts.length === 8 && parts[0] === 'd1' && parts[4] === 'ACCEPTED' &&
+        parts[1].trim() !== '' && parts[2].trim() !== '') {
+      return parts[1];
+    }
+  }
+  return null;
+}
+
+/**
  * The parts of a `custody_models` document the feed needs, or null when it describes no pattern.
  *
  * Mirrors `FirestoreCustodyDataSource.toSharedCustody`: without a parseable `startDate` and a
  * `patternDays` there is no schedule, and a half-parsed one would assign the wrong days. Only
- * `ACCEPTED` overrides are kept (see the file KDoc).
+ * agreed overrides are kept ([agreedToParent], and the file KDoc).
  *
  * @param {?Object} doc The document's data.
  * @return {?{start: number, patternDays: number, momDays: !Set<number>,
@@ -260,10 +284,9 @@ function parseCustodyModel(doc) {
   const swaps = {};
   const overrides = doc.dayOverrides && typeof doc.dayOverrides === 'object' ? doc.dayOverrides : {};
   Object.keys(overrides).forEach((iso) => {
-    const entry = overrides[iso] || {};
-    if (entry.status === 'ACCEPTED' && (entry.toParent === SLOT_ONE || entry.toParent === SLOT_TWO) &&
-        !Number.isNaN(dayNumber(iso))) {
-      swaps[iso] = entry.toParent;
+    const agreed = agreedToParent(overrides[iso] || {});
+    if ((agreed === SLOT_ONE || agreed === SLOT_TWO) && !Number.isNaN(dayNumber(iso))) {
+      swaps[iso] = agreed;
     }
   });
 
@@ -750,6 +773,7 @@ module.exports = {
   decodeContactWindow,
   decodeSeasonalLayer,
   layerOn,
+  agreedToParent,
   parseCustodyModel,
   custodyOn,
   contactWindowsOn,

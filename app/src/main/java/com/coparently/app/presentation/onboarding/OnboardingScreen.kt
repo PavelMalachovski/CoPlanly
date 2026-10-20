@@ -94,6 +94,7 @@ import com.coparently.app.presentation.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.math.roundToInt
 
 /**
  * The first-run questionnaire: the co-parent link, then the parent's own details, their
@@ -887,7 +888,7 @@ private fun SplitStep(state: OnboardingUiState, viewModel: OnboardingViewModel) 
     )
     Slider(
         value = state.splitMyPercent.toFloat(),
-        onValueChange = { viewModel.setSplitMyPercent(it.toInt()) },
+        onValueChange = { viewModel.setSplitMyPercent(it.roundToInt()) },
         valueRange = 0f..SPLIT_WHOLE_PERCENT.toFloat(),
         steps = SPLIT_SLIDER_STEPS
     )

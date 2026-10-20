@@ -3,6 +3,7 @@ package com.coparently.app.domain.changerequests
 import com.coparently.app.domain.custody.CustodyDecision
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.custody.DayOverrideDecisionCodec
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.ChangeRequest
@@ -171,7 +172,8 @@ class RequestHistoryTest {
                     outcome = RequestOutcome.ACCEPTED,
                     askedBy = "u1",
                     decidedBy = "u2",
-                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0)
+                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0),
+                    swapDays = (1..3).associate { LocalDate.of(2026, 9, it) to "dad" }
                 )
             ),
             entries
@@ -448,6 +450,43 @@ class RequestHistoryTest {
         )
 
         assertEquals(emptyList(), entries)
+    }
+
+    @Test
+    fun `a day offered again keeps its earlier answer in History beside the new offer`() {
+        val accepted = swap(DayOverrideStatus.ACCEPTED, requestedBy = "u2", decidedBy = "u1")
+        val answer = DayOverrideDecisionCodec.answerOf(accepted)
+        val change = swap(
+            DayOverrideStatus.DECLINED,
+            requestedBy = "u1",
+            decidedBy = "u2",
+            decidedAt = "2026-09-05T08:00:00",
+            groupId = "g2"
+        ).copy(toParent = "mom", requestedAt = "2026-09-04T18:00:00", earlier = listOf(answer))
+
+        val entries = history(overrides = mapOf("2026-09-07" to change, "2026-09-08" to change))
+
+        assertEquals(
+            listOf(
+                HistoryEntry(
+                    key = "swap_g2",
+                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 7), 2),
+                    outcome = RequestOutcome.DECLINED,
+                    askedBy = "u1",
+                    decidedBy = "u2",
+                    decidedAt = LocalDateTime.of(2026, 9, 5, 8, 0)
+                ),
+                HistoryEntry(
+                    key = "swap_earlier_g1@2026-09-02T20:00:00",
+                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 7), 2),
+                    outcome = RequestOutcome.ACCEPTED,
+                    askedBy = "u2",
+                    decidedBy = "u1",
+                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0)
+                )
+            ),
+            entries
+        )
     }
 
     private companion object {

@@ -102,6 +102,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -985,7 +986,7 @@ private fun SplitSection(
         if (overrideMomPercent != null) {
             Slider(
                 value = overrideMomPercent.toFloat(),
-                onValueChange = { onOverrideChange(it.toInt()) },
+                onValueChange = { onOverrideChange(it.roundToInt()) },
                 valueRange = 0f..WHOLE_PERCENT.toFloat(),
                 steps = SPLIT_SLIDER_STEPS,
                 enabled = enabled

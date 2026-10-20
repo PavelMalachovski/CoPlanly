@@ -186,7 +186,11 @@ internal fun InlineBannerFixture() {
     // second line at large text instead of squeezing their labels.
     InlineBanner(
         title = stringResource(R.string.expenses_split_proposal_title),
-        text = stringResource(R.string.expenses_split_proposal_body, 70, 30),
+        text = stringResource(
+            R.string.expenses_split_proposal_body_named,
+            "Bob",
+            stringResource(R.string.expenses_split_shares_named, "Alice", 70, "Bob", 30)
+        ),
         tone = BannerTone.ATTENTION,
         actions = {
             Button(onClick = {}) { Text(stringResource(R.string.expenses_split_proposal_confirm)) }

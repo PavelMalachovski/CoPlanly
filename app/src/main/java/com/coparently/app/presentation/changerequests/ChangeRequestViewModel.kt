@@ -6,10 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.requests.RequestClockActions
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyResolver
+import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.events.EventAcceptanceTransition
@@ -47,6 +50,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 import javax.inject.Inject
 
 private const val TAG = "ChangeRequestViewModel"
@@ -268,6 +272,62 @@ class ChangeRequestViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Asks the co-parent to change days the two of them already agreed to swap (tester feedback,
+     * October 2026: "I agreed Lena would be with Igor, then I fell ill — let me suggest a change,
+     * and keep the agreement documented").
+     *
+     * Each day is offered to the parent the agreement did not give it to, as the calendar's swap
+     * sheet offers a day to its complement. The agreed answer is not lost: the new offer carries it
+     * in [com.coparently.app.domain.custody.DayOverride.earlier], History keeps showing it, and the
+     * day stays where it was agreed until the co-parent accepts — a decline leaves it there.
+     *
+     * The slot each day moves to is read from the document the write has just read, never from the
+     * row this screen drew: a day whose agreement changed in between is offered from what it is
+     * now, and a day with no agreement left is not offered at all.
+     *
+     * @param dates The agreed swap's days still ahead.
+     * @param note Optional words for the co-parent.
+     * @param answerBy The deadline the parent picked for the answer.
+     */
+    fun proposeSwapChange(dates: List<LocalDate>, note: String?, answerBy: AnswerByPick?) {
+        viewModelScope.launch {
+            val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
+                ?: userRepository.getCurrentUserId()
+                ?: return@launch
+            val days = dates.distinct().sorted().map { it.toString() }
+            if (days.isEmpty()) return@launch
+            val atIso = LocalDateTime.now().toString()
+            val groupId = UUID.randomUUID().toString()
+            val reoffer = { current: Map<String, DayOverride>, date: String ->
+                val agreed = current[date]?.agreedToParent
+                if (agreed == null) {
+                    Result.success(current)
+                } else {
+                    DayOverrideTransition.offerAll(current, mapOf(date to otherSlot(agreed)), uid, atIso, groupId, note)
+                }
+            }
+            val result = if (days.size == 1) {
+                // One day keeps the single write and single card an older co-parent build reads,
+                // as the calendar's sheet does.
+                custodyModelRepository.applyDayOverrides(
+                    date = days.first(),
+                    transform = { current -> reoffer(current, days.first()) },
+                    answerBy = answerBy
+                )
+            } else {
+                custodyModelRepository.applyDayOverridesForDates(days, reoffer, answerBy)
+            }
+            result.onFailure { e ->
+                Log.w(TAG, "Asking to change an agreed swap failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
+            }
+        }
+    }
+
+    private fun otherSlot(slot: String): String =
+        if (slot == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
 
     /**
      * The custody-pattern proposal this parent must answer now, or null when there is none.

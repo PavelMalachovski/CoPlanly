@@ -54,9 +54,10 @@
     <string name="custody_conflict_save_failed">Графік не вдалося зберегти. Спробуйте ще раз.</string>
     <string name="custody_proposal_inbox_title">Запропоновано новий графік опіки</string>
     <string name="custody_proposal_inbox_body">%1$s пропонує новий графік опіки. Ваш календар не зміниться, доки ви його не приймете.</string>
+    <string name="custody_proposal_preview">Запропоновано: %1$s, з %2$s</string>
     <string name="custody_proposal_accept">Прийняти</string>
     <string name="custody_proposal_decline">Відхилити</string>
-    <string name="custody_proposal_waiting">Чекаємо, поки другий із батьків схвалить новий графік</string>
+    <string name="custody_proposal_waiting_named">Ви запропонували «%1$s». Доки %2$s його не прийме, його показано блідіше і діє попередній графік.</string>
     <string name="custody_proposal_review">%1$s пропонує новий графік опіки</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Кожні другі вихідні</string>

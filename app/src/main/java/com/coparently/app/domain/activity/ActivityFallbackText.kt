@@ -23,6 +23,7 @@ object ActivityFallbackText {
 
     /** The base-locale sentence for [announcement]. */
     fun of(announcement: ActivityAnnouncement): String {
+        settleUp(announcement)?.let { return it }
         val prefix = when (announcement.kind) {
             ActivityKind.EVENT_CREATED -> "New event"
             ActivityKind.EVENT_UPDATED -> "Event changed"
@@ -43,7 +44,18 @@ object ActivityFallbackText {
             ActivityKind.CUSTODY_DECLINED -> "Custody proposal turned down"
             ActivityKind.REQUEST_LAST_CHANCE -> "Last chance to answer"
             ActivityKind.REQUEST_UNANSWERED -> "No answer"
+            ActivityKind.SETTLE_UP_OWED, ActivityKind.SETTLE_UP_OWING -> "Settle up"
         }
         return if (announcement.title.isBlank()) prefix else "$prefix: ${announcement.title}"
+    }
+
+    /** A settle-up card in the sender's first person, as a message from them reads. */
+    private fun settleUp(announcement: ActivityAnnouncement): String? {
+        val money = "${announcement.amount.orEmpty()} ${announcement.currency.orEmpty()}".trim()
+        return when (announcement.kind) {
+            ActivityKind.SETTLE_UP_OWED -> "Settle up for ${announcement.title}: you owe me $money"
+            ActivityKind.SETTLE_UP_OWING -> "Settle up for ${announcement.title}: I owe you $money"
+            else -> null
+        }
     }
 }

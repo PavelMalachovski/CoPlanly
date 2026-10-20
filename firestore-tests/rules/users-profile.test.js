@@ -547,3 +547,45 @@ describe('users profile: the child-health consent', () => {
             .set({healthDataConsent: {version: 1, atMillis: 1787000000000}}, {merge: true}));
   });
 });
+
+describe('users profile: the account a settle-up is paid to', () => {
+  let env;
+
+  before(async () => {
+    env = await testEnv(PROJECT, CURRENT_RULES);
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice Novak', email: 'alice@example.com', partnerId: BOB},
+      [`users/${BOB}`]: {name: 'Bob Novak', email: 'bob@example.com', partnerId: ALICE},
+    });
+  });
+
+  it('lets the owner set, change and remove their IBAN', async () => {
+    await assertSucceeds(mergeProfile(env, {paymentIban: 'SK3112000000198742637541'}));
+    await assertSucceeds(mergeProfile(env, {paymentIban: 'CZ6508000000192000145399'}));
+    await assertSucceeds(mergeProfile(env, {paymentIban: deleteField()}));
+  });
+
+  it('lets the co-parent read it, which is what their payment code is built from', async () => {
+    await mergeProfile(env, {paymentIban: 'SK3112000000198742637541'});
+    const bob = env.authenticatedContext(BOB).firestore();
+    const snapshot = await assertSucceeds(bob.doc(`users/${ALICE}`).get());
+    if (snapshot.get('paymentIban') !== 'SK3112000000198742637541') throw new Error('the IBAN did not read back');
+  });
+
+  it('refuses anything an IBAN cannot be', async () => {
+    await assertFails(mergeProfile(env, {paymentIban: 31120000}));
+    await assertFails(mergeProfile(env, {paymentIban: 'SK31'}));
+    await assertFails(mergeProfile(env, {paymentIban: 'SK31'.padEnd(35, '0')}));
+  });
+
+  it('refuses the co-parent writing it, and a stranger reading it', async () => {
+    const bob = env.authenticatedContext(BOB).firestore();
+    await assertFails(bob.doc(`users/${ALICE}`).set({paymentIban: 'CZ6508000000192000145399'}, {merge: true}));
+    const stranger = env.authenticatedContext(STRANGER).firestore();
+    await assertFails(stranger.doc(`users/${ALICE}`).get());
+  });
+});

@@ -1,5 +1,6 @@
 package com.coparently.app.data.repository
 
+import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ChildInfoEntity
@@ -45,7 +46,10 @@ class ChildInfoRepositoryImpl @Inject constructor(
         .create()
     private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-    override fun getAllChildInfo(): Flow<List<ChildInfo>> {
+    override fun getAllChildInfo(): Flow<List<ChildInfo>> =
+        getAllChildInfoInEveryFamily().inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+
+    override fun getAllChildInfoInEveryFamily(): Flow<List<ChildInfo>> {
         return childInfoDao.getAllChildInfo().map { entities ->
             entities.map { it.toDomain() }
         }

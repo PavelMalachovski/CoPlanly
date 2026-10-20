@@ -105,6 +105,14 @@ const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|buil
 const UI_TOUR_ONLY = /^(\.github\/ui-tour-request$|\.github\/workflows\/ui-tour\.yml$|tools\/ui-tour\/)/;
 
 /**
+ * The same for the virtual tester (`.github/workflows/virtual-tester.yml`), another manual
+ * workflow: its request file, its workflow and its scripts. Its scenarios live in
+ * `app/src/androidTest/java/com/coparently/app/qa/`, compile in every Android job, and run in
+ * none (the e2e job filters its own package; elsewhere they skip for want of a host).
+ */
+const VIRTUAL_TESTER_ONLY = /^(\.github\/virtual-tester-request$|\.github\/workflows\/virtual-tester\.yml$|tools\/virtual-tester\/)/;
+
+/**
  * The emulator legs. API 30 always runs when Android does; the other two by the rule above.
  *
  * `record` turns on tools/with-screen-recording.sh's video, and only API 26 has it. On the API 30
@@ -145,7 +153,7 @@ function nothing() {
 function decide(paths) {
   const all = paths.map((p) => p.trim()).filter(Boolean);
   if (all.length === 0) return everything();
-  const changed = all.filter((p) => !UI_TOUR_ONLY.test(p));
+  const changed = all.filter((p) => !UI_TOUR_ONLY.test(p) && !VIRTUAL_TESTER_ONLY.test(p));
   if (changed.length === 0) return nothing();
 
   const build = changed.some((p) => BUILD.test(p));

@@ -205,6 +205,12 @@ const RULES = [
       'K/presentation/home/HomeScreen.kt'],
   },
   {
+    sections: ['3.25'],
+    why: 'settle up: the card, the IBAN, or the payment QR code a bank reads',
+    paths: ['K/domain/payment/**', 'K/data/payment/**', 'K/presentation/chat/SettleUpPayment.kt',
+      'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/ExpenseSummaryHeader.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

@@ -21,4 +21,6 @@
     <string name="activity_request_last_chance">Останній шанс відповісти: %1$s</string>
     <string name="activity_request_unanswered">Немає відповіді: %1$s</string>
     <string name="activity_subject_custody_schedule">графік опіки</string>
+    <string name="activity_settle_up_you_owe">Розрахунок за %1$s: ви винні %2$s</string>
+    <string name="activity_settle_up_owed_to_you">Розрахунок за %1$s: вам винні %2$s</string>
 </resources>

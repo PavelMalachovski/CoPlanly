@@ -71,7 +71,10 @@ class ChatCardTargetTest {
         // Announced about all four kinds of request, so one entity type speaks for each here and
         // `a request's last-chance or no-answer card goes where its own cards go` covers the rest.
         ActivityKind.REQUEST_LAST_CHANCE to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
-        ActivityKind.REQUEST_UNANSWERED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox)
+        ActivityKind.REQUEST_UNANSWERED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
+        // A settle-up card shows its payment code in place; a tap leads nowhere.
+        ActivityKind.SETTLE_UP_OWED to Expectation(ActivityEntityType.EXPENSE, null),
+        ActivityKind.SETTLE_UP_OWING to Expectation(ActivityEntityType.EXPENSE, null)
     )
 
     // ---- the defect -----------------------------------------------------------

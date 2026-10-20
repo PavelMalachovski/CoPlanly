@@ -26,8 +26,6 @@
     <string name="expenses_balance_you_owe">Du schuldest dem anderen Elternteil %1$s</string>
     <string name="expenses_balance_settled">Alles ausgeglichen</string>
     <string name="expenses_settle_up">Ausgleichen</string>
-    <string name="expenses_settle_up_message_owed">Ausgleich für %2$s – du schuldest mir %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Ausgleich für %2$s – ich schulde dir %1$s.</string>
     <string name="expenses_this_month">Dieser Monat</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d Ausgabe</item>
@@ -73,7 +71,8 @@
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · Beleg</string>
     <string name="expenses_split_proposal_title">Neue Kostenaufteilung vorgeschlagen</string>
-    <string name="expenses_split_proposal_body">Der andere Elternteil schlägt ab jetzt %1$d / %2$d für gemeinsame Ausgaben vor. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
+    <string name="expenses_split_proposal_body_named">%1$s schlägt ab jetzt eine neue Aufteilung gemeinsamer Ausgaben vor: %2$s. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
+    <string name="expenses_split_shares_named">%1$s zahlt %2$d %%, %3$s zahlt %4$d %%</string>
     <string name="expenses_split_proposal_confirm">Bestätigen</string>
     <string name="expenses_split_proposal_decline">Ablehnen</string>
     <string name="expenses_split_proposal_later">Später</string>
@@ -86,11 +85,19 @@
     <string name="expenses_filter_members">Anzeigen für</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Warten auf eine Antwort</string>
-    <string name="expenses_split_proposal_waiting_body">Du hast %1$d/%2$d vorgeschlagen. Der andere Elternteil hat noch nicht geantwortet.</string>
+    <string name="expenses_split_proposal_waiting_body_named">Du hast vorgeschlagen: %1$s. %2$s hat noch nicht geantwortet.</string>
     <string name="expenses_split_proposal_withdraw">Zurückziehen</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="expense_error_signed_out">Du musst angemeldet sein, um eine Ausgabe hinzuzufügen.</string>
     <string name="expense_warning_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne Beleg gespeichert</string>
     <string name="expense_warning_new_receipt_upload_failed">Beleg-Upload fehlgeschlagen – Ausgabe ohne den neuen Beleg gespeichert</string>
+    <string name="settle_up_dialog_title">Ausgleich für %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s sieht im Chat, dass du %2$s bekommst.</string>
+    <string name="settle_up_dialog_owing">%1$s sieht im Chat, dass du %2$s schuldest. Wenn ein Konto hinterlegt ist, bekommst du einen QR-Code zum Bezahlen.</string>
+    <string name="settle_up_iban_label">Deine IBAN für eine QR-Zahlung (optional)</string>
+    <string name="settle_up_iban_invalid">Diese IBAN scheint nicht zu stimmen. Prüfe sie oder lass das Feld leer.</string>
+    <string name="settle_up_send">Senden</string>
+    <string name="settle_up_cancel">Abbrechen</string>
+    <string name="settle_up_iban_save_failed">Deine IBAN konnte nicht gespeichert werden. Der Ausgleich wurde nicht gesendet.</string>
 </resources>

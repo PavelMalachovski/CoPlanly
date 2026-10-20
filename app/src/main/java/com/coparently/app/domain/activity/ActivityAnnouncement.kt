@@ -155,5 +155,33 @@ enum class ActivityKind {
      * A record in the thread that pushes nobody — `notifyOfChatMessage` skips this kind: nothing
      * more is sent to the parent who did not answer once their last chance has run.
      */
-    REQUEST_UNANSWERED
+    REQUEST_UNANSWERED,
+
+    /**
+     * Settle up, sent by the parent the month's balance is owed **to** (tester feedback, October
+     * 2026). Posted by `SettleUpMessages` instead of a sentence in the composer, so the amount
+     * cannot be edited. `entityType` is `EXPENSE` (a tap leads nowhere), `title` and `whenIso`
+     * name the month (`2026-10`, `2026-10-01`), `amount` is a plain decimal with two places
+     * (`450.00`, unlike an expense card's) and `currency` its ISO code: the payer's phone builds a
+     * payment code from the two.
+     */
+    SETTLE_UP_OWED,
+
+    /** Settle up, sent by the parent who **owes** the balance. The payload is [SETTLE_UP_OWED]'s. */
+    SETTLE_UP_OWING;
+
+    /** Whether this is one of the two settle-up cards. */
+    val isSettleUp: Boolean get() = this == SETTLE_UP_OWED || this == SETTLE_UP_OWING
+
+    /**
+     * On a settle-up card, whether the parent reading it is the one who pays; false for every other
+     * card. The sender of [SETTLE_UP_OWED] is paid, the sender of [SETTLE_UP_OWING] pays.
+     *
+     * @param readerIsSender Whether the reading phone sent the card.
+     */
+    fun readerPays(readerIsSender: Boolean): Boolean = when (this) {
+        SETTLE_UP_OWED -> !readerIsSender
+        SETTLE_UP_OWING -> readerIsSender
+        else -> false
+    }
 }

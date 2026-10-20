@@ -163,9 +163,9 @@ fun PairingScreen(
     // Same one-shot shape as the error above: sending an email invitation reported
     // nothing at all before, so a delivered and an undelivered invitation looked alike.
     ActionErrorSnackbar(form.actionInfoRes, snackbarHostState, context, viewModel::consumeActionInfo)
-    // A paired account has no code field (see shareOnlySection), but a deep link or an
-    // invitation can still be redeemed from here, and its refusal needs somewhere to show.
-    if (state is PairingState.Paired) {
+    // A paired account's code field shows its own refusal; a deep link or an invitation redeemed
+    // from here with that field closed needs somewhere else to show one.
+    if (state is PairingState.Paired && !(addingAnother.value && mode.value == PairingMode.ENTER)) {
         ActionErrorSnackbar(form.codeErrorRes, snackbarHostState, context, viewModel::clearError)
     }
 
@@ -197,7 +197,8 @@ fun PairingScreen(
                         form = form,
                         viewModel = viewModel,
                         actions = actions,
-                        addingAnother = addingAnother
+                        addingAnother = addingAnother,
+                        mode = mode
                     ) { showUnpairConfirm.value = true }
                 is PairingState.NotPaired ->
                     inviteSection(
@@ -437,6 +438,7 @@ private fun LazyListScope.pairedSection(
     viewModel: PairingViewModel,
     actions: NotPairedActions,
     addingAnother: MutableState<Boolean>,
+    mode: MutableState<PairingMode>,
     onUnpairClick: () -> Unit
 ) {
     item { PairedPartnerCard(partner = current.partner) }
@@ -465,12 +467,13 @@ private fun LazyListScope.pairedSection(
     }
 
     if (addingAnother.value) {
-        shareOnlySection(
+        anotherCoParentSection(
             activeInvite = current.activeInvite,
             incoming = current.incoming,
             form = form,
             viewModel = viewModel,
-            actions = actions
+            actions = actions,
+            mode = mode
         )
     }
 
@@ -493,8 +496,8 @@ private fun LazyListScope.pairedSection(
 /**
  * Everything an unpaired account needs to bring a co-parent in: share a code, or enter theirs.
  *
- * A paired account adding a second relationship gets [shareOnlySection] instead: entering a code
- * would move its parent slot in the family it already has.
+ * A paired account adding a second relationship gets [anotherCoParentSection], where a code it
+ * enters is checked against the family it already has before anything is linked.
  *
  * @param activeInvite This user's own outstanding invite, if any.
  * @param incoming Invitations addressed to this user's email.
@@ -551,27 +554,40 @@ private fun LazyListScope.inviteSection(
 }
 
 /**
- * Bringing a second co-parent in, for an account that already has one: share a code, never enter
- * one.
+ * Bringing a second co-parent in, for an account that already has one: share this parent's code,
+ * or enter the other person's (owner decision, October 2026 — testers looked for the field and
+ * found none).
  *
  * A parent slot is still one per person, and whoever *enters* a code takes the slot opposite the
- * inviter's — so a parent who already co-parents with somebody would be moved in that first family
- * too. The server refuses that (`assertAccepterKeepsSlot`); this screen does not offer it, so the
- * direction that always works is the only one on it: this parent shares, the newcomer enters.
+ * inviter's, so entering one could move this parent in the family they already have. The code
+ * goes through the same preview as every other code (`PairingViewModel.redeemCode`), and the
+ * server refuses that move before anything is linked (`assertAccepterKeepsSlot`): the field then
+ * says to link the other way round, with this parent's own code one tap away on the toggle.
  *
  * @param activeInvite This user's own outstanding invite, or null while the row's code is minted.
  * @param incoming Invitations addressed to this user's email.
  * @param form Local form state.
  * @param viewModel Pairing actions.
  * @param actions Screen-level side effects the form cannot perform itself.
+ * @param mode Share this parent's code, or enter the other person's.
  */
-private fun LazyListScope.shareOnlySection(
+@Suppress("LongParameterList") // section state, split out of the screen body for readability
+private fun LazyListScope.anotherCoParentSection(
     activeInvite: PairingInvite?,
     incoming: List<PairingInvite>,
     form: PairingFormState,
     viewModel: PairingViewModel,
-    actions: NotPairedActions
+    actions: NotPairedActions,
+    mode: MutableState<PairingMode>
 ) {
+    item {
+        PairingModeToggle(selected = mode.value, onSelect = { mode.value = it })
+    }
+    if (mode.value == PairingMode.ENTER) {
+        enterCodeSection(form, viewModel, actions)
+        item { TrustPanel() }
+        return
+    }
     item {
         if (activeInvite != null) {
             InviteCodeCard(

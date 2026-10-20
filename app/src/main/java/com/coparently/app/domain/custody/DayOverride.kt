@@ -59,6 +59,11 @@ enum class DayOverrideStatus {
  *
  *   A null id means "its own group of one", which is what makes every pre-existing entry read
  *   correctly with no migration and no backfill.
+ * @property earlier The answers this day was given before it was offered again, as
+ *   [DayOverrideDecisionCodec] strings, oldest first; null for none. Nullable rather than an empty
+ *   default because Room's Gson reads an entry written before the field existed without running
+ *   the constructor. Carried verbatim by every answer (`copy()`), and by a new offer of the day,
+ *   which appends the answer it replaces ([DayOverrideTransition.offer]).
  */
 data class DayOverride(
     val toParent: String,
@@ -68,11 +73,35 @@ data class DayOverride(
     val decidedBy: String? = null,
     val decidedAt: String? = null,
     val note: String? = null,
-    val groupId: String? = null
+    val groupId: String? = null,
+    val earlier: List<String>? = null
 ) {
+    /**
+     * The answers this day was given before it was offered again, oldest first, decoded from
+     * [earlier]. An entry this build cannot read is left out here and kept verbatim on the wire.
+     */
+    val earlierDecisions: List<DayOverrideDecision>
+        get() = earlier.orEmpty().mapNotNull(DayOverrideDecisionCodec::decode)
+
     /** True while this offer is still waiting for an answer. */
     val isPending: Boolean get() = status == DayOverrideStatus.PENDING
 
     /** True when this offer actually moves the day. */
     val isAccepted: Boolean get() = status == DayOverrideStatus.ACCEPTED
+
+    /**
+     * The slot the day goes to by what the two parents last agreed: this offer's own [toParent]
+     * once accepted, otherwise the latest accepted answer in [earlier], otherwise null.
+     *
+     * An agreement stands until another one replaces it. Asking to change an agreed swap writes a
+     * new pending offer over the entry, and while it waits — or once it is declined or withdrawn —
+     * the day stays where the parents agreed it would be, not where the pattern would put it.
+     * This is what [CustodyResolver] answers from.
+     */
+    val agreedToParent: String?
+        get() = if (isAccepted) {
+            toParent
+        } else {
+            earlierDecisions.lastOrNull { it.status == DayOverrideStatus.ACCEPTED }?.toParent
+        }
 }

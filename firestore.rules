@@ -376,13 +376,20 @@ service cloud.firestore {
     //    authored by the caller. One override per date is the semantics and the newest offer is
     //    the live one, including a counter-offer over the co-parent's. It may replace an accepted
     //    swap: renegotiating an agreed day has to be possible, and it is not silent — the other
-    //    parent sees the request in their inbox and the arrows on that date. The day does revert
-    //    to the pattern while the new offer is pending, which is the honest reading of "this day
-    //    is being renegotiated".
+    //    parent sees the request in their inbox and the arrows on that date. The replaced
+    //    entry's answer moves into the new entry's `earlier` list (`DayOverrideDecisionCodec`
+    //    strings), and while the new offer waits — or once it is declined — the day stays where
+    //    the latest accepted answer there put it (`DayOverride.agreedToParent`). That list now
+    //    moves a day, so it is written only as the app writes it ([earlierWrittenAsTheAppDoes]):
+    //    a forged "accepted" in it would be an agreement the co-parent never gave. An offer may
+    //    also leave the list out, as an older build's does; the day then reads as it always did
+    //    while pending, by the pattern.
     // 3. **An answer.** The entry was PENDING, the caller is *not* its author, the author is left
     //    as it was, and the decision is credited to the caller. Without the `decidedBy` check the
     //    requester could grant themselves the day while crediting the co-parent — the same
-    //    forgery `lastModifiedBy` is validated against, one level down.
+    //    forgery `lastModifiedBy` is validated against, one level down. The `earlier` list is
+    //    left as it was, for the same reason: dropping it on a decline would hand the day back
+    //    to the pattern over the agreement the decline was keeping.
     function validDayOverrideWrite(before, after) {
       return validDayOverrideAt(before, after, after.get('lastSwapDate', ''));
     }
@@ -394,7 +401,8 @@ service cloud.firestore {
              (
                // 1 and 2: an offer, over nothing or over whatever was there.
                (after.dayOverrides[date].status == 'PENDING' &&
-                after.dayOverrides[date].requestedBy == request.auth.uid)
+                after.dayOverrides[date].requestedBy == request.auth.uid &&
+                earlierWrittenAsTheAppDoes(before, after, date))
                ||
                // 3: an answer to the co-parent's pending offer.
                (date in before.get('dayOverrides', {}) &&
@@ -403,8 +411,32 @@ service cloud.firestore {
                 after.dayOverrides[date].requestedBy == before.dayOverrides[date].requestedBy &&
                 after.dayOverrides[date].decidedBy == request.auth.uid &&
                 (after.dayOverrides[date].status == 'ACCEPTED' ||
-                 after.dayOverrides[date].status == 'DECLINED'))
+                 after.dayOverrides[date].status == 'DECLINED') &&
+                after.dayOverrides[date].get('earlier', []) ==
+                  before.dayOverrides[date].get('earlier', []))
              );
+    }
+
+    // An offer's `earlier` list, when it carries one, is exactly what `DayOverrideTransition`
+    // writes: the replaced entry's own list, plus the replaced entry's answer when it had one (a
+    // pending entry was never an agreement), and nothing over a day that had no entry.
+    function earlierWrittenAsTheAppDoes(before, after, date) {
+      return !('earlier' in after.dayOverrides[date]) ||
+             after.dayOverrides[date].earlier == earlierAfterReplacing(before, date);
+    }
+
+    function earlierAfterReplacing(before, date) {
+      return !(date in before.get('dayOverrides', {})) ? [] :
+             before.dayOverrides[date].status == 'PENDING' ? before.dayOverrides[date].get('earlier', []) :
+             before.dayOverrides[date].get('earlier', []).concat([dayOverrideAnswer(before.dayOverrides[date])]);
+    }
+
+    // `DayOverrideDecisionCodec.encode` of a stored entry:
+    // `d1|toParent|requestedBy|requestedAt|status|decidedBy|decidedAt|groupId`.
+    function dayOverrideAnswer(entry) {
+      return 'd1|' + entry.toParent + '|' + entry.requestedBy + '|' + entry.get('requestedAt', '') +
+             '|' + entry.status + '|' + entry.get('decidedBy', '') + '|' + entry.get('decidedAt', '') +
+             '|' + entry.get('groupId', '');
     }
 
     // True when a write that calls itself a swap changes nothing but the swap.
@@ -644,6 +676,14 @@ service cloud.firestore {
              aiConsentShapeValid(request.resource.data);
     }
 
+    // `paymentIban`: the account this parent receives a settle-up payment on, which the co-parent's
+    // phone turns into a payment code (`PaymentAccounts`). Written by its owner alone, like the
+    // rest of the profile, and only as something an IBAN can be — the client checks the digits.
+    function paymentIbanValid(data) {
+      return !('paymentIban' in data) ||
+             (data.paymentIban is string && data.paymentIban.size() >= 15 && data.paymentIban.size() <= 34);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
@@ -671,6 +711,7 @@ service cloud.firestore {
                       parentHealthKeyAbsent('allergies') &&
                       healthConsentValid(request.resource.data) &&
                       aiConsentCreateValid() &&
+                      paymentIbanValid(request.resource.data) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -705,6 +746,7 @@ service cloud.firestore {
                       parentHealthKeyNotWritten('allergies') &&
                       healthConsentValid(request.resource.data) &&
                       aiConsentUpdateValid() &&
+                      paymentIbanValid(request.resource.data) &&
                       isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||

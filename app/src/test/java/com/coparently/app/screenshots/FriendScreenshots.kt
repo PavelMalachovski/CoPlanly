@@ -2,7 +2,7 @@ package com.coparently.app.screenshots
 
 import android.app.Application
 import com.coparently.app.domain.friends.CalendarFriendGrant
-import com.coparently.app.domain.guests.GuestAccessDuration
+import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.presentation.friends.FriendAgendaDay
 import com.coparently.app.presentation.friends.FriendComparisonTable
@@ -42,7 +42,7 @@ class FriendScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) 
         FriendInviteContent(
             state = FriendInviteState(
                 isOpen = true,
-                duration = GuestAccessDuration.MONTH,
+                duration = FriendAccessDuration.MONTH,
                 invite = GuestInvite(
                     id = "invite-1",
                     code = "K7Q4-9P2M",

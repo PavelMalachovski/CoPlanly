@@ -34,8 +34,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +45,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.ChangeRequestHighlight
+import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
@@ -53,6 +57,7 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalAppMessages
@@ -61,11 +66,13 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.utils.dateWithTime
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -89,6 +96,9 @@ import java.time.format.FormatStyle
  * @param viewModel Change-request state
  */
 @Composable
+// One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
+// change an agreed swap. Splitting it for the metric would scatter state the screen owns.
+@Suppress("LongMethod")
 fun ChangeRequestsScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,
@@ -110,7 +120,10 @@ fun ChangeRequestsScreen(
     val highlighted = remember(ready?.changeRequests, linkedEventId) {
         linkedEventId?.let { eventId -> ready?.let { ChangeRequestHighlight.forEvent(it.changeRequests, eventId) } }
     }
-    val answers = remember(viewModel, onOpenEvent) { InboxAnswers.of(viewModel, onOpenEvent) }
+    val changingSwap = remember { mutableStateOf<HistoryEntry?>(null) }
+    val answers = remember(viewModel, onOpenEvent) {
+        InboxAnswers.of(viewModel, onOpenEvent) { changingSwap.value = it }
+    }
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val missingMessage = stringResource(R.string.change_request_link_missing)
@@ -162,6 +175,39 @@ fun ChangeRequestsScreen(
             )
         }
     }
+    SwapChangeSheet(changingSwap, parentNames, onOffer = viewModel::proposeSwapChange)
+}
+
+/**
+ * The calendar's swap sheet over an accepted swap's days still ahead, while [changing] names one:
+ * each day would go back to the parent the agreement took it from, with a note and a deadline, as
+ * any offer does.
+ */
+@Composable
+private fun SwapChangeSheet(
+    changing: MutableState<HistoryEntry?>,
+    parentNames: ParentNames,
+    onOffer: (dates: List<LocalDate>, note: String?, answerBy: AnswerByPick?) -> Unit
+) {
+    val entry = changing.value ?: return
+    val onDismiss = { changing.value = null }
+    val today = rememberToday().value
+    val ahead = remember(entry, today) { entry.swapDays.keys.filter { it >= today }.sorted() }
+    if (ahead.isEmpty()) {
+        // The last day passed while the sheet was open: nothing is left to change.
+        LaunchedEffect(Unit) { onDismiss() }
+        return
+    }
+    DaySwapSheet(
+        dates = ahead,
+        custodyFor = entry.swapDays::get,
+        parentNames = parentNames,
+        onOffer = { dates, note, answerBy ->
+            onOffer(dates, note, answerBy)
+            onDismiss()
+        },
+        onDismiss = onDismiss
+    )
 }
 
 /** Shows why the last answer did not go through, once, then clears it. */
@@ -274,10 +320,15 @@ private data class InboxAnswers(
     val answerEvent: (eventId: String, accept: Boolean) -> Unit,
     val answerProposal: (accept: Boolean) -> Unit,
     val markSeen: (clockId: String) -> Unit,
-    val giveLastChance: (clockId: String) -> Unit
+    val giveLastChance: (clockId: String) -> Unit,
+    val proposeSwapChange: (HistoryEntry) -> Unit
 ) {
     companion object {
-        fun of(viewModel: ChangeRequestViewModel, onOpenEvent: (String) -> Unit) = InboxAnswers(
+        fun of(
+            viewModel: ChangeRequestViewModel,
+            onOpenEvent: (String) -> Unit,
+            onProposeSwapChange: (HistoryEntry) -> Unit
+        ) = InboxAnswers(
             openEvent = onOpenEvent,
             answerRequest = { id, accept -> if (accept) viewModel.accept(id) else viewModel.decline(id) },
             withdrawRequest = viewModel::cancel,
@@ -285,7 +336,8 @@ private data class InboxAnswers(
             answerEvent = { id, accept -> if (accept) viewModel.acceptEvent(id) else viewModel.declineEvent(id) },
             answerProposal = { accept -> if (accept) viewModel.acceptProposal() else viewModel.declineProposal() },
             markSeen = viewModel::markSeen,
-            giveLastChance = viewModel::giveLastChance
+            giveLastChance = viewModel::giveLastChance,
+            proposeSwapChange = onProposeSwapChange
         )
     }
 }
@@ -342,7 +394,8 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             entries = item.entries,
             parentNames = cards.parentNames,
             myUid = cards.scope.myUid,
-            highlightedKey = cards.highlightedRequestId?.let { "cr_$it" }
+            highlightedKey = cards.highlightedRequestId?.let { "cr_$it" },
+            onProposeChange = answers.proposeSwapChange
         )
     }
 }
@@ -529,6 +582,8 @@ private fun ProposalToAnswer(
             style = MaterialTheme.typography.bodyMedium
         )
     }
+    // What it looks like, always: the line above is missing when the pattern itself changes.
+    ProposedSchedulePreview(proposal, parentNames)
     // Where it came from (MON-21): the agreed plan answer it cites, or that the answer has
     // changed since. A proposal citing nothing — an older build's — shows nothing here.
     planCitationLine(citation)?.let { line ->

@@ -1241,6 +1241,33 @@ they read at their real size.
   `presentation/home/HomeScreen.kt` (`TimelineRow`), `presentation/calendar/EventMemberMark.kt` and
   `DayWeekView.kt` (`MemberInitialDisc`).
 
+### 3.25 Settle up: a card, and a payment code a bank reads · 2P, a Czech and a Slovak banking app
+
+Settle up posts a card instead of a sentence in the composer (tester report, October 2026), and the
+payer's phone draws a QR payment code from the receiving parent's IBAN: QR Platba for a Czech
+account, PAY by square for a Slovak one, the EPC code for another euro account. The texts are pinned
+byte for byte on the JVM (`PaymentQrTest`, PAY by square against liblzma's encoder); whether a real
+bank's app reads them is only provable here.
+
+- [ ] **A card, not a draft.** On Expenses, in a month the co-parent owes you, tap **Settle up**. A
+      dialog says what the co-parent will see; type your IBAN (spaces are fine) and **Send**. The
+      Chat tab opens on a card "Settle up for <month>: you are owed <amount>" — and nothing in the
+      composer. On the co-parent's phone the same card reads "… you owe <amount>". Neither phone
+      can edit it. A mistyped IBAN (change one digit) keeps **Send** disabled and says why.
+- [ ] **The code on the payer's phone.** Under the card on the co-parent's phone: "Pay <amount> to
+      <your name>", a QR code, the IBAN in groups of four, **Copy IBAN** and **Share QR code**. Your
+      own phone shows no code under your card.
+- [ ] **A Czech bank reads it.** With a **CZ** IBAN, share the code to the gallery (or a second phone
+      photographs it) and load it in a Czech banking app's QR payment: the account, the amount, CZK
+      and the message "CoPlanly <yyyy-MM>" are filled in. Do not confirm the payment.
+- [ ] **A Slovak bank reads it.** The same with an **SK** IBAN and a Slovak banking app (PAY by
+      square): account, amount, EUR, the note and the beneficiary's name. Do not confirm it.
+- [ ] **No account yet.** Remove the IBAN (clear the field and send again): the payer's phone says
+      "<name> hasn't added a bank account for payments yet." instead of a code.
+- **If it fails:** `domain/payment/PaymentQr.kt` (the three formats), `domain/payment/Iban.kt`,
+  `presentation/chat/SettleUpPayment.kt` (the code, the share), `presentation/expenses/SettleUpDialog.kt`
+  and `data/payment/` (the IBAN on the profile, the card).
+
 ---
 
 ## 4. Release-build checks

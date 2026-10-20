@@ -51,6 +51,8 @@
     <string name="request_history_withdrawn_by_you">Du hast sie zurückgezogen</string>
     <string name="request_history_withdrawn_by">%1$s hat sie zurückgezogen</string>
     <string name="request_history_when">%1$s · %2$s</string>
+    <string name="request_history_propose_change">Änderung vorschlagen</string>
+    <string name="request_history_propose_change_description">Änderung an diesem vereinbarten Tausch vorschlagen</string>
     <plurals name="request_swap_first_and_more">
         <item quantity="one">%1$s und %2$d weiterer Tag</item>
         <item quantity="other">%1$s und %2$d weitere Tage</item>

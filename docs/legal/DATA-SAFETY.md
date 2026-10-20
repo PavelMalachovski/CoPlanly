@@ -52,7 +52,7 @@ our processor are declared.
 | Approximate/precise location | **No** | — | — | Re-checked: the manifest declares only INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, CAMERA and RECORD_AUDIO (the libraries add no location permission), and no location API is called. **Check before submitting:** Google Analytics derives a coarse region from the IP address on Google's side. Read Firebase's own "Data disclosure for Google Play's data safety section" page for the Analytics SDK version in the build and follow what it says for *Approximate location*; this row was written without access to that page |
 | Voice or sound recordings | **No** | — | — | RECORD_AUDIO serves chat voice dictation only, through the phone's **on-device** recognizer (`data/dictation/OnDeviceSpeechDictation`); the audio is not recorded, stored or sent, and only text the parent chooses to send leaves the phone, as an ordinary message. See the note below |
 | Contacts | **No** | — | — | Re-checked: `ContactsContract` appears nowhere; an emergency contact is typed by hand |
-| Payment info | **No** | — | — | No billing exists yet — **revisit when it does** |
+| Payment info | Yes | No | Yes | App functionality — the **IBAN** a parent types to be paid a month's settle-up (`users/{uid}.paymentIban`, October 2026). Read by their co-parent, whose phone draws a QR payment code from it; the app makes no payment, contacts no bank, and shares it with nobody else. Not billing: none exists yet — **revisit when it does** |
 
 ## Notes worth writing into the declaration
 

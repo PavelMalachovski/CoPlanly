@@ -1,5 +1,6 @@
 package com.coparently.app.data.repository
 
+import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.PetEntity
@@ -52,7 +53,7 @@ class PetRepositoryImpl @Inject constructor(
     override fun getAllPets(): Flow<List<Pet>> {
         return petDao.getAllPets().map { entities ->
             entities.map { it.toDomain() }
-        }
+        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
     }
 
     override suspend fun getPetById(id: String): Pet? {

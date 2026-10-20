@@ -64,7 +64,8 @@ object DayOverrideTransition {
                 requestedAt = atIso,
                 status = DayOverrideStatus.PENDING,
                 note = note?.takeIf { it.isNotBlank() },
-                groupId = groupId
+                groupId = groupId,
+                earlier = earlierAfterReplacing(current[date])
             )
             )
     )
@@ -99,17 +100,31 @@ object DayOverrideTransition {
         if (toParentByDate.isEmpty()) {
             return Result.failure(IllegalArgumentException("A swap needs at least one day"))
         }
-        val entries = toParentByDate.mapValues { (_, toParent) ->
+        val entries = toParentByDate.mapValues { (date, toParent) ->
             DayOverride(
                 toParent = toParent,
                 requestedBy = byUid,
                 requestedAt = atIso,
                 status = DayOverrideStatus.PENDING,
                 note = note?.takeIf { it.isNotBlank() },
-                groupId = groupId
+                groupId = groupId,
+                earlier = earlierAfterReplacing(current[date])
             )
         }
         return Result.success(current + entries)
+    }
+
+    /**
+     * What a new offer of a day carries as [DayOverride.earlier]: the earlier answers of the entry
+     * it replaces, plus that entry's own answer when it had one. An offer that replaces a pending
+     * offer — the same parent changing their mind, or an older build — adds nothing, because an
+     * unanswered offer was never an agreement.
+     */
+    private fun earlierAfterReplacing(replaced: DayOverride?): List<String>? {
+        if (replaced == null) return null
+        val kept = replaced.earlier.orEmpty()
+        val all = if (replaced.isPending) kept else kept + DayOverrideDecisionCodec.answerOf(replaced)
+        return all.takeIf { it.isNotEmpty() }
     }
 
     /**

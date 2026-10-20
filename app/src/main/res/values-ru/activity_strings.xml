@@ -21,4 +21,6 @@
     <string name="activity_request_last_chance">Последний шанс ответить: %1$s</string>
     <string name="activity_request_unanswered">Нет ответа: %1$s</string>
     <string name="activity_subject_custody_schedule">график опеки</string>
+    <string name="activity_settle_up_you_owe">Расчёт за %1$s: вы должны %2$s</string>
+    <string name="activity_settle_up_owed_to_you">Расчёт за %1$s: вам должны %2$s</string>
 </resources>

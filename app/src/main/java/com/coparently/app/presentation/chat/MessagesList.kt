@@ -484,6 +484,9 @@ fun MessageItem(
     // could not be parsed.
     val bubbleText = activity
         ?.let { card ->
+            // A settle-up card says "you owe" or "you are owed" by who reads it, with the month and
+            // the amount in the reader's language.
+            if (card.kind.isSettleUp) return@let settleUpCardText(card, isCurrentUser)
             // What the sentence is about is `ActivityCardText.subjectOf`'s decision. A day swap's
             // is the day itself, as ISO text on the wire (older builds print it as it is); this
             // build says it the way the reader's language does (D-18). A custody proposal has no
@@ -575,6 +578,11 @@ fun MessageItem(
                     modifier = Modifier.padding(start = Spacing.S)
                 )
             }
+        }
+
+        // What to pay, under a settle-up card on the payer's phone: the code, the IBAN, a share.
+        if (activity?.kind?.isSettleUp == true) {
+            LocalSettleUpPayment.current?.invoke(message, isCurrentUser)
         }
 
         // The one delivery state loud enough to leave the bubble: error red on the filled

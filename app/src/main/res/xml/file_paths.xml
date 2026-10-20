@@ -10,4 +10,7 @@
          SHA-256 before a viewer app is handed a one-off read grant; also the camera's target
          when a parent photographs a document for the vault. The server holds the record. -->
     <cache-path name="shared_files" path="shared_files/" />
+    <!-- A settle-up payment code the payer shares to their bank's app, which cannot scan the screen
+         it is shown on. Rewritten on every share. -->
+    <cache-path name="payment_codes" path="payment_codes/" />
 </paths>

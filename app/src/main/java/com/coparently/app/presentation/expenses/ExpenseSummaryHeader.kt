@@ -51,8 +51,6 @@ import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import java.text.NumberFormat
-import java.time.LocalDate
-import java.time.format.TextStyle
 import java.util.Currency
 import java.util.Locale
 import kotlin.math.abs
@@ -100,8 +98,7 @@ private const val STACK_FONT_SCALE = 1.3f
  * @param balance The selected month's paid/owed figures for one currency
  * @param currency ISO currency code for formatting
  * @param parentNames Resolves a slot to that parent's name
- * @param onSettleUp Invoked with a ready-to-send message when the user taps Settle up
- * @param monthLabel Name of the month being shown, used in the header and settle-up draft
+ * @param onSettleUp Invoked with the balance to settle when the user taps Settle up
  * @param modifier Modifier for the card
  * @param monthNavigation Month switcher to render at the top of the card, or null for none
  */
@@ -111,8 +108,7 @@ fun ExpenseSummaryHeader(
     balance: ExpenseBalance,
     currency: String,
     parentNames: ParentNames,
-    onSettleUp: (String) -> Unit,
-    monthLabel: String = defaultMonthLabel(),
+    onSettleUp: (SettleUpAsk) -> Unit,
     modifier: Modifier = Modifier,
     monthNavigation: MonthNavigation? = null
 ) {
@@ -156,8 +152,7 @@ fun ExpenseSummaryHeader(
                 BalanceRow(
                     balance = balance,
                     format = format,
-                    monthLabel = monthLabel,
-                    onSettleUp = onSettleUp,
+                    onSettleUp = { net -> onSettleUp(SettleUpAsk(net, currency)) },
                     modifier = Modifier.padding(top = Spacing.M)
                 )
             }
@@ -429,15 +424,15 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
  * screen exists for, and it used to sit below a divider as plain text next to an outlined
  * button — quieter than the row of numbers above it.
  *
- * Settle up only drafts a message — see [ExpenseScreen]. Sending is left to the user, because
- * a message to the other parent is theirs to send.
+ * Settle up asks before it sends anything — see [SettleUpDialog] — and then posts a card whose
+ * amount cannot be edited (tester report, October 2026: the draft it used to put in the composer
+ * could be changed before it was sent).
  */
 @Composable
 private fun BalanceRow(
     balance: ExpenseBalance,
     format: NumberFormat,
-    monthLabel: String,
-    onSettleUp: (String) -> Unit,
+    onSettleUp: (net: Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val net = balance.netForCurrentUser
@@ -456,16 +451,10 @@ private fun BalanceRow(
         net > 0 -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.primary
     }
-    val draft = if (net > 0) {
-        stringResource(R.string.expenses_settle_up_message_owed, amount, monthLabel)
-    } else {
-        stringResource(R.string.expenses_settle_up_message_owing, amount, monthLabel)
-    }
-
     BalanceStrip(
         label = label,
         accent = accent,
-        onSettleUp = if (settled) null else { { onSettleUp(draft) } },
+        onSettleUp = if (settled) null else { { onSettleUp(net) } },
         modifier = modifier
     )
 }
@@ -533,12 +522,6 @@ private fun BalanceStrip(
         }
     }
 }
-
-/** The current month's standalone name, capitalised — the header's fallback when none is passed. */
-private fun defaultMonthLabel(): String =
-    LocalDate.now().month
-        .getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault())
-        .replaceFirstChar { it.uppercase() }
 
 /** Currency formatter that tolerates an unknown code rather than crashing on it. */
 internal fun currencyFormat(currency: String): NumberFormat =

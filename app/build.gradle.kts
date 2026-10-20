@@ -435,6 +435,10 @@ dependencies {
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
 
+    // Raw LZMA1 for the Slovak "PAY by square" payment code (domain/payment/PaymentQr.kt), the one
+    // QR standard that compresses its text. Pure Java, no reflection; 0BSD.
+    implementation("org.tukaani:xz:1.10")
+
     // ML Kit for QR code scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
@@ -492,6 +496,7 @@ dependencies {
     testImplementation(kotlin("test"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.10.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")

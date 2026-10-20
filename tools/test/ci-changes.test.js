@@ -27,6 +27,16 @@ test('asking for a UI tour runs no CI job; anything beside it is decided as usua
   assert.deepEqual(decide(['.github/workflows/ci.yml']), everything());
 });
 
+test('asking for the virtual tester runs no CI job; anything beside it is decided as usual', () => {
+  assert.deepEqual(decide(['.github/virtual-tester-request']), nothing());
+  assert.deepEqual(decide(['.github/workflows/virtual-tester.yml', 'tools/virtual-tester/report.js']), nothing());
+  const withCode = decide(['.github/virtual-tester-request', 'app/src/main/java/com/coparently/app/data/sync/SyncService.kt']);
+  assert.equal(withCode.android, true);
+  assert.equal(withCode.e2e, true);
+  // Its scenarios compile with the app, so they are Android changes like any other test.
+  assert.equal(decide(['app/src/androidTest/java/com/coparently/app/qa/SmokeScenarioTest.kt']).android, true);
+});
+
 test('docs only runs no Android job and no e2e', () => {
   const d = decide(['docs/ROADMAP.md', 'CLAUDE.md']);
   assert.equal(d.android, false);

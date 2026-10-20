@@ -5,6 +5,10 @@
     <string name="friend_invite_action">Запросити друга родини</string>
     <string name="friend_invite_code_label">Передайте цей код</string>
     <string name="friend_access_until">Доступ до %1$s</string>
+    <string name="friend_access_while_linked">Доступ, поки батьки пов\'язані</string>
+    <string name="friend_calendar_row_supporting_while_linked">%1$s і %2$s · доступ, поки вони пов\'язані</string>
+    <string name="friend_access_several_while_linked">Родини: %1$d · доступ, поки батьки пов\'язані</string>
+    <string name="friend_invite_duration_while_linked">Поки ми пов\'язані</string>
     <string name="friend_access_several">Родини: %1$d · перший доступ закінчується %2$s</string>
     <string name="friend_revoke">Закрити доступ</string>
     <string name="friend_revoke_confirm_title">Закрити доступ: %1$s?</string>

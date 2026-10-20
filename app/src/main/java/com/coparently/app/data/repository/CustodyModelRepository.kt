@@ -1056,6 +1056,13 @@ constructor(
                     // every agreed swap — including from `republish`, which runs with no user
                     // action behind it at all, during ordinary mirroring.
                     dayOverrides = existing?.dayOverrides.orEmpty(),
+                    // Carried over too, for the same reason: a republish ran with no user action
+                    // behind it and erased the co-parent's pending proposal, so one phone kept
+                    // previewing a schedule the other could no longer see or answer (tester
+                    // report, October 2026). The pending proposal and the last decision belong to
+                    // the pair, not to this write; an accept clears them through its own path.
+                    proposal = existing?.proposal,
+                    lastDecision = existing?.lastDecision,
                     lastModifiedKind = CustodyWriteKind.PATTERN,
                     // Always the key, as `[]` for none: this is a pattern write, the one kind
                     // `firestore.rules` lets replace the list, and an explicit empty list is how

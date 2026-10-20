@@ -385,7 +385,7 @@ class ConnectSchoolViewModel @Inject constructor(
      * yet (made before pairing). With one child, that child is chosen; with several, none is.
      */
     private suspend fun loadChildren(familyId: String?) {
-        val children = childInfoRepository.getAllChildInfo().first()
+        val children = childInfoRepository.getAllChildInfoInEveryFamily().first()
             .filter { it.belongsTo(familyId) }
             .map { ChildChoice(it.id, it.childName) }
         _state.update { current ->

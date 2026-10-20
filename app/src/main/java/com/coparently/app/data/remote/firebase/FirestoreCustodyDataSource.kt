@@ -217,6 +217,12 @@ class FirestoreCustodyDataSource @Inject constructor(
         // Omitted when absent, like every other optional key here. A co-parent on an older build
         // simply does not see it and reads each day as its own offer, which is what it was.
         groupId?.let { put("groupId", it) }
+        // The answers the day had before it was offered again, as `DayOverrideDecisionCodec`
+        // strings; omitted when there are none. It decides where the day is while a change waits
+        // (`DayOverride.agreedToParent`), so `firestore.rules` holds it to what the app writes. An
+        // older build cannot carry it: its whole-document writes are refused while any day holds
+        // one, until it is updated.
+        earlier?.takeIf { it.isNotEmpty() }?.let { put("earlier", it) }
     }
 
     /**
@@ -344,7 +350,8 @@ class FirestoreCustodyDataSource @Inject constructor(
             decidedBy = (this["decidedBy"] as? String)?.takeIf { it.isNotBlank() },
             decidedAt = (this["decidedAt"] as? String)?.takeIf { it.isNotBlank() },
             note = (this["note"] as? String)?.takeIf { it.isNotBlank() },
-            groupId = (this["groupId"] as? String)?.takeIf { it.isNotBlank() }
+            groupId = (this["groupId"] as? String)?.takeIf { it.isNotBlank() },
+            earlier = (this["earlier"] as? List<*>)?.filterIsInstance<String>()?.takeIf { it.isNotEmpty() }
         )
     }
 

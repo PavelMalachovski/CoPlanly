@@ -13,10 +13,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.HistoryEntry
@@ -26,6 +28,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
@@ -39,21 +42,29 @@ import com.coparently.app.utils.dateWithTime
  * answer" row names nobody as answering, and carries what its clock knows: the deadline, the last
  * chance, when it was opened, the reminders, and that the calendar did not change. The time sits
  * in its own part after " · " rather than inside the sentence: in Czech, Russian and Ukrainian
- * "answered <date>" would need a preposition and a case. Rows are not interactive.
+ * "answered <date>" would need a preposition and a case.
+ *
+ * The one action a row carries is **Propose a change**, on an accepted day swap with a day still
+ * ahead (tester feedback, October 2026): the agreement stays in this list as it was given, and the
+ * change goes to the co-parent as a new offer.
  *
  * @param entries The history, newest first.
  * @param parentNames Names each parent — never "Mom" or "Dad".
  * @param myUid The signed-in parent, for "your request" and "you answered".
  * @param highlightedKey The [HistoryEntry.key] a chat card arrived for, drawn highlighted.
+ * @param onProposeChange Opens the change for an accepted swap's row; null draws no action.
  */
 @Composable
+@Suppress("LongParameterList") // the rows, who reads them, the one highlighted, its one action
 internal fun RequestHistoryGroup(
     entries: List<HistoryEntry>,
     parentNames: ParentNames,
     myUid: String,
     highlightedKey: String? = null,
+    onProposeChange: ((HistoryEntry) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val today = rememberToday().value
     SectionGroup(modifier = modifier) {
         entries.forEachIndexed { index, entry ->
             if (index > 0) Divider()
@@ -61,14 +72,23 @@ internal fun RequestHistoryGroup(
                 entry = entry,
                 parentNames = parentNames,
                 myUid = myUid,
-                highlighted = entry.key == highlightedKey
+                highlighted = entry.key == highlightedKey,
+                onProposeChange = onProposeChange
+                    ?.takeIf { !entry.queued && entry.swapDays.keys.any { it >= today } }
+                    ?.let { open -> { open(entry) } }
             )
         }
     }
 }
 
 @Composable
-private fun HistoryRow(entry: HistoryEntry, parentNames: ParentNames, myUid: String, highlighted: Boolean) {
+private fun HistoryRow(
+    entry: HistoryEntry,
+    parentNames: ParentNames,
+    myUid: String,
+    highlighted: Boolean,
+    onProposeChange: (() -> Unit)?
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -120,6 +140,12 @@ private fun HistoryRow(entry: HistoryEntry, parentNames: ParentNames, myUid: Str
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        onProposeChange?.let { open ->
+            val description = stringResource(R.string.request_history_propose_change_description)
+            TextButton(onClick = open, modifier = Modifier.semantics { contentDescription = description }) {
+                Text(stringResource(R.string.request_history_propose_change))
+            }
         }
     }
 }

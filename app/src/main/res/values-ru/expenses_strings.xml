@@ -23,8 +23,6 @@
     <string name="expenses_balance_you_owe">Вы должны второму родителю %1$s</string>
     <string name="expenses_balance_settled">Вы в расчёте</string>
     <string name="expenses_settle_up">Рассчитаться</string>
-    <string name="expenses_settle_up_message_owed">Расчёт за %2$s: за тобой %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Расчёт за %2$s: за мной %1$s.</string>
     <string name="expenses_this_month">Этот месяц</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d\u00A0расход</item>
@@ -72,7 +70,8 @@
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
     <string name="expenses_split_proposal_title">Предложено новое деление расходов</string>
-    <string name="expenses_split_proposal_body">Второй родитель предлагает с этого момента делить общие расходы в пропорции %1$d / %2$d. Уже внесённые расходы сохранят своё деление.</string>
+    <string name="expenses_split_proposal_body_named">%1$s предлагает с этого момента новое деление общих расходов: %2$s. Уже внесённые расходы сохранят своё деление.</string>
+    <string name="expenses_split_shares_named">%1$s платит %2$d %%, %3$s платит %4$d %%</string>
     <string name="expenses_split_proposal_confirm">Подтвердить</string>
     <string name="expenses_split_proposal_decline">Отклонить</string>
     <string name="expenses_split_proposal_later">Позже</string>
@@ -85,11 +84,19 @@
     <string name="expenses_filter_members">Показать для</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Ждём ответа</string>
-    <string name="expenses_split_proposal_waiting_body">Вы предложили %1$d/%2$d. Второй родитель ещё не ответил.</string>
+    <string name="expenses_split_proposal_waiting_body_named">Вы предложили: %1$s. %2$s ещё не ответил(а).</string>
     <string name="expenses_split_proposal_withdraw">Отозвать</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="expense_error_signed_out">Чтобы добавить расход, нужно войти в аккаунт.</string>
     <string name="expense_warning_receipt_upload_failed">Не удалось загрузить чек — расход сохранён без чека</string>
     <string name="expense_warning_new_receipt_upload_failed">Не удалось загрузить чек — расход сохранён без нового чека</string>
+    <string name="settle_up_dialog_title">Расчёт за %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s увидит в чате, что вам должны %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s увидит в чате, что вы должны %2$s. Если счёт для платежей добавлен, вы получите QR-код для оплаты.</string>
+    <string name="settle_up_iban_label">Ваш IBAN для оплаты по QR (необязательно)</string>
+    <string name="settle_up_iban_invalid">Этот IBAN выглядит неверно. Проверьте его или оставьте поле пустым.</string>
+    <string name="settle_up_send">Отправить</string>
+    <string name="settle_up_cancel">Отмена</string>
+    <string name="settle_up_iban_save_failed">Не удалось сохранить IBAN. Расчёт не отправлен.</string>
 </resources>

@@ -202,6 +202,25 @@ describe('calendar feed: the custody port', () => {
     assert.strictEqual(feed.custodyOn(model, day('2026-09-10')), 'mom');
   });
 
+  it('keeps an agreed swap while a change to it waits, and after the change is declined', () => {
+    const agreed = `d1|dad|${BOB}|2026-09-01T10:00:00|ACCEPTED|alice|2026-09-01T12:00:00|g1`;
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      dayOverrides: {
+        '2026-09-08': {toParent: 'mom', requestedBy: 'alice', status: 'PENDING', earlier: [agreed]},
+        '2026-09-09': {toParent: 'mom', requestedBy: 'alice', status: 'DECLINED', earlier: [agreed]},
+        '2026-09-10': {toParent: 'mom', requestedBy: 'alice', status: 'PENDING',
+          earlier: [`d1|dad|${BOB}|2026-09-01T10:00:00|DECLINED|alice|2026-09-01T12:00:00|`, 'd9|x']},
+        '2026-09-11': {toParent: 'mom', requestedBy: 'alice', status: 'ACCEPTED', earlier: [agreed]},
+      },
+    }));
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-08')), 'dad');
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-09')), 'dad');
+    // A declined earlier offer and an unreadable entry agree on nothing: the pattern decides.
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-10')), 'mom');
+    // The change itself was accepted: the newest agreement wins.
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-11')), 'mom');
+  });
+
   it('shows a contact window only when it names the parent who does not have the day', () => {
     const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
       contactWindows: ['2|15:00|19:00|dad', '3|10:00|12:00|mom', 'garbage'],

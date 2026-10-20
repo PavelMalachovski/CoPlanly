@@ -148,6 +148,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Settings screen.
@@ -1794,7 +1795,7 @@ private fun SplitRatioDialog(
                 )
                 Slider(
                     value = momPercent.toFloat(),
-                    onValueChange = { momPercent = it.toInt() },
+                    onValueChange = { momPercent = it.roundToInt() },
                     valueRange = 0f..SPLIT_WHOLE_PERCENT.toFloat(),
                     steps = SPLIT_SLIDER_STEPS
                 )

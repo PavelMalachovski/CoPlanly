@@ -23,8 +23,6 @@
     <string name="expenses_balance_you_owe">Dlužíte druhému rodiči %1$s</string>
     <string name="expenses_balance_settled">Máte vyrovnáno</string>
     <string name="expenses_settle_up">Vyrovnat</string>
-    <string name="expenses_settle_up_message_owed">Vyrovnání za %2$s – dlužíš mi %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Vyrovnání za %2$s – dlužím ti %1$s.</string>
     <string name="expenses_this_month">Tento měsíc</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d\u00A0výdaj</item>
@@ -74,7 +72,8 @@
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · účtenka</string>
     <string name="expenses_split_proposal_title">Navrženo nové rozdělení výdajů</string>
-    <string name="expenses_split_proposal_body">Druhý rodič navrhuje pro sdílené výdaje od této chvíle %1$d / %2$d. Již zadané výdaje si ponechají své rozdělení.</string>
+    <string name="expenses_split_proposal_body_named">%1$s navrhuje od této chvíle nové rozdělení sdílených výdajů: %2$s. Již zadané výdaje si ponechají své rozdělení.</string>
+    <string name="expenses_split_shares_named">%1$s platí %2$d %%, %3$s platí %4$d %%</string>
     <string name="expenses_split_proposal_confirm">Potvrdit</string>
     <string name="expenses_split_proposal_decline">Odmítnout</string>
     <string name="expenses_split_proposal_later">Později</string>
@@ -87,11 +86,19 @@
     <string name="expenses_filter_members">Zobrazit pro</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Čeká se na odpověď</string>
-    <string name="expenses_split_proposal_waiting_body">Navrhli jste %1$d/%2$d. Druhý rodič zatím neodpověděl.</string>
+    <string name="expenses_split_proposal_waiting_body_named">Navrhli jste: %1$s. %2$s zatím neodpověděl(a).</string>
     <string name="expenses_split_proposal_withdraw">Stáhnout</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="expense_error_signed_out">Pro přidání výdaje musíte být přihlášeni.</string>
     <string name="expense_warning_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez účtenky</string>
     <string name="expense_warning_new_receipt_upload_failed">Nahrání účtenky selhalo – výdaj byl uložen bez nové účtenky</string>
+    <string name="settle_up_dialog_title">Vyrovnání za %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s uvidí v chatu, že vám dluží %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s uvidí v chatu, že dlužíte %2$s. Pokud má přidaný účet, dostanete QR kód k platbě.</string>
+    <string name="settle_up_iban_label">Váš IBAN pro QR platbu (nepovinné)</string>
+    <string name="settle_up_iban_invalid">Tento IBAN nevypadá správně. Zkontrolujte ho, nebo pole nechte prázdné.</string>
+    <string name="settle_up_send">Odeslat</string>
+    <string name="settle_up_cancel">Zrušit</string>
+    <string name="settle_up_iban_save_failed">IBAN se nepodařilo uložit. Vyrovnání nebylo odesláno.</string>
 </resources>

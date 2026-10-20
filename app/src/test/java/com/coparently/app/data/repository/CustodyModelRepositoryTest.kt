@@ -340,6 +340,28 @@ class CustodyModelRepositoryTest {
         }
 
     @Test
+    fun `a republish keeps the co-parent's pending proposal and the last decision`() =
+        runTest(dispatcher) {
+            // The republish runs with no user action behind it; it used to rebuild the document
+            // without the proposal, so the co-parent's proposal vanished from one phone while the
+            // other went on previewing it (tester report, October 2026).
+            val stored = remoteCustody(lastModifiedAtMillis = LONG_AGO).copy(
+                proposal = proposalBy(PARTNER_UID, "2026-10-17T10:00:00")
+            )
+            activeRows(localEntity(lastModifiedAtMillis = RECENTLY))
+            every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns flowOf(stored)
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns stored
+            val custody = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(custody)) } returns Unit
+
+            repository.observeShared().first()
+
+            assertEquals(LOCAL_MODEL_ID, custody.captured.model.id)
+            assertEquals(stored.proposal, custody.captured.proposal)
+            assertEquals(stored.lastDecision, custody.captured.lastDecision)
+        }
+
+    @Test
     fun `a document newer than the local model still wins`() = runTest(dispatcher) {
         activeRows(localEntity(lastModifiedAtMillis = LONG_AGO))
         every { firestoreCustodyDataSource.observeCustody(DOCUMENT_ID) } returns

@@ -96,6 +96,12 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   the app, carries none of this.
 - **The parenting plan** — each parent's written answers to the plan's questions and which of
   the other parent's answers they marked as agreed. Each of you can change only your own half.
+- **Your bank account for settling up (optional)** — an IBAN you type when you ask your co-parent
+  to settle a month's expenses. It is stored on your profile, and your co-parent's phone reads it
+  to show them a QR payment code for the amount (Czech QR Platba, Slovak PAY by square, or the
+  European EPC code). The code is made on their phone and goes to no one else; we send nothing to
+  any bank. You can change or remove the IBAN whenever you settle up, and it is deleted with your
+  account.
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
   builds also let you set a monthly budget per category. This version no longer creates, shows
   or syncs budgets; any an earlier build saved stay in your account until you delete it.)

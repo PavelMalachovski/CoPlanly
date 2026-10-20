@@ -82,7 +82,20 @@ val iconOnlyControl: SemanticsMatcher = SemanticsMatcher("a clickable control wi
  * here: `performScrollTo` waits on an animation the paused clock never advances.
  */
 fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
-    val offenders = onAllNodes(iconOnlyControl).fetchSemanticsNodes().mapNotNull { node ->
+    val offenders = iconOnlyControlProblems()
+    assertTrue(
+        "$screen has icon-only controls that fail basic accessibility:\n" + offenders.joinToString("\n"),
+        offenders.isEmpty()
+    )
+}
+
+/**
+ * One line per icon-only control on the current screen that has no `contentDescription` or is
+ * under the 48 dp touch target: what [assertIconOnlyControlsAreAccessible] fails on. The virtual
+ * tester lists them beside a step instead of failing it.
+ */
+fun ComposeTestRule.iconOnlyControlProblems(): List<String> =
+    onAllNodes(iconOnlyControl).fetchSemanticsNodes().mapNotNull { node ->
         val minimum = with(node.layoutInfo.density) { MIN_TOUCH_TARGET_DP.dp.roundToPx() }
         val label = node.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }
             .orEmpty()
@@ -96,11 +109,6 @@ fun ComposeTestRule.assertIconOnlyControlsAreAccessible(screen: String) {
         }
         if (problems.isEmpty()) null else "node #${node.id} \"$label\": ${problems.joinToString("; ")}"
     }
-    assertTrue(
-        "$screen has icon-only controls that fail basic accessibility:\n" + offenders.joinToString("\n"),
-        offenders.isEmpty()
-    )
-}
 
 /** The node's touch target in px: what the window shows, or — off screen — what Compose would give it. */
 private fun touchTargetPx(node: SemanticsNode): Pair<Int, Int> {

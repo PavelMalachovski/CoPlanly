@@ -1,0 +1,8 @@
+# Commit any change to this file to run the virtual tester on this branch
+# (.github/workflows/virtual-tester.yml). Two optional lines; the last of each wins:
+#
+#   variants: light-cs-100 dark-ru-130     (default: light-cs-100)
+#   classes: SmokeScenarioTest             (default: every scenario)
+#
+# Run 4: isolation with the account guard fixed in the test; compiles the new fixes.
+classes: SmokeScenarioTest IsolationScenarioTest

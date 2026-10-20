@@ -23,8 +23,6 @@
     <string name="expenses_balance_you_owe">Ви винні другому з батьків %1$s</string>
     <string name="expenses_balance_settled">Боргів немає</string>
     <string name="expenses_settle_up">Розрахуватися</string>
-    <string name="expenses_settle_up_message_owed">Розрахунок за %2$s — з тебе %1$s.</string>
-    <string name="expenses_settle_up_message_owing">Розрахунок за %2$s — з мене %1$s.</string>
     <string name="expenses_this_month">Цей місяць</string>
     <plurals name="expenses_count">
         <item quantity="one">%1$d\u00A0витрата</item>
@@ -72,7 +70,8 @@
     <string name="expenses_row_meta">%1$s · %2$s</string>
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · чек</string>
     <string name="expenses_split_proposal_title">Запропоновано новий поділ витрат</string>
-    <string name="expenses_split_proposal_body">Другий із батьків пропонує відтепер ділити спільні витрати %1$d / %2$d. Уже внесені витрати збережуть свій поділ.</string>
+    <string name="expenses_split_proposal_body_named">%1$s пропонує відтепер новий поділ спільних витрат: %2$s. Уже внесені витрати збережуть свій поділ.</string>
+    <string name="expenses_split_shares_named">%1$s платить %2$d %%, %3$s платить %4$d %%</string>
     <string name="expenses_split_proposal_confirm">Підтвердити</string>
     <string name="expenses_split_proposal_decline">Відхилити</string>
     <string name="expenses_split_proposal_later">Пізніше</string>
@@ -85,11 +84,19 @@
     <string name="expenses_filter_members">Показати для</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Чекаємо на відповідь</string>
-    <string name="expenses_split_proposal_waiting_body">Ви запропонували %1$d/%2$d. Другий із батьків ще не відповів.</string>
+    <string name="expenses_split_proposal_waiting_body_named">Ви запропонували: %1$s. %2$s ще не відповів(ла).</string>
     <string name="expenses_split_proposal_withdraw">Відкликати</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="expense_error_signed_out">Щоб додати витрату, потрібно увійти в акаунт.</string>
     <string name="expense_warning_receipt_upload_failed">Не вдалося завантажити чек — витрату збережено без чека</string>
     <string name="expense_warning_new_receipt_upload_failed">Не вдалося завантажити чек — витрату збережено без нового чека</string>
+    <string name="settle_up_dialog_title">Розрахунок за %1$s</string>
+    <string name="settle_up_dialog_owed">%1$s побачить у чаті, що вам винні %2$s.</string>
+    <string name="settle_up_dialog_owing">%1$s побачить у чаті, що ви винні %2$s. Якщо рахунок для платежів додано, ви отримаєте QR-код для оплати.</string>
+    <string name="settle_up_iban_label">Ваш IBAN для оплати за QR (необовʼязково)</string>
+    <string name="settle_up_iban_invalid">Цей IBAN виглядає неправильно. Перевірте його або залиште поле порожнім.</string>
+    <string name="settle_up_send">Надіслати</string>
+    <string name="settle_up_cancel">Скасувати</string>
+    <string name="settle_up_iban_save_failed">Не вдалося зберегти IBAN. Розрахунок не надіслано.</string>
 </resources>
