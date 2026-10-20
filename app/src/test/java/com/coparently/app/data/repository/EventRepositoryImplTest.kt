@@ -511,10 +511,18 @@ class EventRepositoryImplTest {
         }
 
         repository.insertEvent(
-            baseDomain().copy(id = "carol-event", createdByFirebaseUid = "uidA", familyId = FamilyKey.of("uidA", "uidC"))
+            baseDomain().copy(
+                id = "carol-event",
+                createdByFirebaseUid = "uidA",
+                familyId = FamilyKey.of("uidA", "uidC")
+            )
         )
         repository.insertEvent(
-            baseDomain().copy(id = "dan-event", createdByFirebaseUid = "uidA", familyId = FamilyKey.of("uidA", "uidD"))
+            baseDomain().copy(
+                id = "dan-event",
+                createdByFirebaseUid = "uidA",
+                familyId = FamilyKey.of("uidA", "uidD")
+            )
         )
 
         assertEquals(listOf("uidA", "uidC"), uploads.getValue("carol-event")["sharedWith"])

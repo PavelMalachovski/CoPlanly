@@ -120,25 +120,7 @@ class RequestChangeViewModel @Inject constructor(
         if (_uiState.value is RequestChangeUiState.Sending) return
 
         viewModelScope.launch {
-            val user = userRepository.getCurrentUser()
-            if (user == null) {
-                _uiState.value = RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_signed_out))
-                return@launch
-            }
-            if (user.partnerId.isNullOrEmpty()) {
-                _uiState.value =
-                    RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_paired))
-                return@launch
-            }
-            // The co-parent of the event's own family, never the family on screen: an event of an
-            // ended family, of no family, or of the other family must not reach this co-parent
-            // (isolation audit, October 2026 — the chat's event picker offers all three).
-            val partnerId = coParentOf(event, user)
-            if (partnerId == null) {
-                _uiState.value =
-                    RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_in_family))
-                return@launch
-            }
+            val (user, partnerId) = recipientOf(event) ?: return@launch
 
             _uiState.value = RequestChangeUiState.Sending(event)
             try {
@@ -204,6 +186,29 @@ class RequestChangeViewModel @Inject constructor(
                     RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_send_failed))
             }
         }
+    }
+
+    /**
+     * The signed-in parent and the co-parent a request about [event] goes to, or null with the
+     * form's error set. The co-parent is the one of the event's own family, never the family on
+     * screen: an event of an ended family, of no family, or of the other family must not reach
+     * this co-parent (isolation audit, October 2026 — the chat's event picker offers all three).
+     */
+    private suspend fun recipientOf(event: Event): Pair<User, String>? {
+        val user = userRepository.getCurrentUser()
+        val error = when {
+            user == null -> R.string.change_request_error_signed_out
+            user.partnerId.isNullOrEmpty() -> R.string.change_request_error_not_paired
+            else -> null
+        }
+        val partnerId = user?.takeIf { error == null }?.let { coParentOf(event, it) }
+        if (user == null || partnerId == null) {
+            _uiState.value = RequestChangeUiState.Error(
+                UiText.Res(error ?: R.string.change_request_error_not_in_family)
+            )
+            return null
+        }
+        return user to partnerId
     }
 
     /**
