@@ -478,18 +478,22 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     // build that predates the array reads, and such a build can only cope with one
     // relationship — so it should keep showing the one it already knew rather than being
     // silently moved to a family it has never heard of. M-5 deletes the field.
-    tx.update(inviterRef, {
+    //
+    // An unfinished revocation of the person being paired again goes too, on both sides: it names
+    // a family that is live once more, and a later unpair from somebody else would resume it and
+    // narrow this family's records (`unpairCoParentImpl` drops such an entry as well).
+    tx.update(inviterRef, Object.assign({
       partnerIds: FieldValue.arrayUnion(acceptingUserId),
       partnerId: partnersOf(inviterSnap.data())[0] || acceptingUserId,
       pairedAt,
       role: slots.inviterRole,
-    });
-    tx.update(accepterRef, {
+    }, pendingRevocationCleared(inviterSnap.data(), acceptingUserId)));
+    tx.update(accepterRef, Object.assign({
       partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
       pairedAt,
       role: slots.accepterRole,
-    });
+    }, pendingRevocationCleared(accepterSnap.data(), invite.fromUserId)));
     tx.update(inviteRef, {
       status: 'accepted',
       acceptedBy: acceptingUserId,
@@ -2189,6 +2193,19 @@ const REVOCATION_BATCH_LIMIT = 400;
  * `FirestoreChildInfoDataSource.getChildInfoForParent` query on, so dropping the creator
  * would hide the document from the parent it belongs to.
  *
+ * **Only the ended family's records, and records that name no family** (October 2026). A parent
+ * may co-parent in two families, so "a document both of them are in" is not "a document of their
+ * family": the ex of family B can be a guest of a family-A child, and the pass on their behalf
+ * used to remove the *other* parent of B — a member of family A — from that A record. A document
+ * stamped with any other family is left exactly as it is: this pair ending says nothing about who
+ * reads it, and on the ended family's own records the two members are exactly the two uids being
+ * separated, so no other family's member is ever removed. For the same reason only a document
+ * one of the two *created* is narrowed: a third person's record, stamped or not, belongs to that
+ * person's family. A uid named in the document's `guests`
+ * map is left too: their grant was given for its own reasons and has its own end, which
+ * `sweepExpiredGuests` enforces on both fields at once, and removing them from `sharedWith` alone
+ * would leave a grant that the next parent's save puts straight back.
+ *
  * Runs with Admin credentials, which is why this belongs on the server: a client sweep
  * would only ever run on the device that pressed unpair, would be blocked by the `events`
  * update rule on any document shared `read_only`, and would silently do nothing at all if
@@ -2201,6 +2218,7 @@ const REVOCATION_BATCH_LIMIT = 400;
  */
 async function revokeSharedAudience(db, uidA, uidB) {
   let revoked = 0;
+  const endedFamilyId = custodyModelKey(uidA, uidB);
 
   for (const collection of SHARED_AUDIENCE_COLLECTIONS) {
     for (const [reader, removed] of [[uidA, uidB], [uidB, uidA]]) {
@@ -2217,6 +2235,24 @@ async function revokeSharedAudience(db, uidA, uidB) {
           continue;
         }
         if (!(docData.sharedWith || []).includes(removed)) {
+          continue;
+        }
+        // A third person's record — one the reader is in as a guest, or as that person's
+        // co-parent — is not this pair's either, even unstamped: the removed uid may be its
+        // creator's own co-parent. Only the reader's own records are narrowed (a creatorless
+        // record from before the field existed is still treated as the pair's).
+        const creator = docData.createdByFirebaseUid;
+        if (typeof creator === 'string' && creator !== '' && creator !== reader) {
+          continue;
+        }
+        // Another family's record: not this pair's to narrow (see above).
+        if (!isBlankFamilyId(docData.familyId) && docData.familyId !== endedFamilyId) {
+          continue;
+        }
+        // A guest: left to the guest sweep, which takes both fields out together.
+        const guests = docData.guests;
+        if (guests && typeof guests === 'object' &&
+            Object.prototype.hasOwnProperty.call(guests, removed)) {
           continue;
         }
 
@@ -2260,6 +2296,29 @@ function pendingRevocations(raw) {
 }
 
 exports.pendingRevocations = pendingRevocations;
+
+/**
+ * The update that takes [uid] out of a user document's `pendingRevocationOf`, or `{}` when it is
+ * not there — so a pairing writes nothing to a marker it has no business with.
+ *
+ * Written as the remaining list (or a delete) rather than `arrayRemove`, because the field may
+ * still hold the legacy bare string, which `arrayRemove` would overwrite with an empty array and
+ * lose whatever other ex-partner it named.
+ *
+ * @param {?Object} data The user document's data.
+ * @param {string} uid The person whose entry goes.
+ * @return {!Object} The update fields.
+ */
+function pendingRevocationCleared(data, uid) {
+  const pending = pendingRevocations((data || {}).pendingRevocationOf);
+  if (!pending.includes(uid)) {
+    return {};
+  }
+  const rest = pending.filter((other) => other !== uid);
+  return {pendingRevocationOf: rest.length > 0 ? rest : FieldValue.delete()};
+}
+
+exports.pendingRevocationCleared = pendingRevocationCleared;
 
 /**
  * The id of the one custody document a pair shares: the two UIDs sorted and joined with
@@ -2400,9 +2459,21 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
     // Set by earlier calls whose sweeps did not finish. Resuming them is the only way
     // those documents ever get narrowed: once partnerId is cleared, nothing else
     // remembers who the ex-partner was.
-    const unfinished = pendingRevocations(callerData.pendingRevocationOf);
+    //
+    // **Except for an ex who is a co-parent again.** Pairing clears the entry
+    // (`acceptPairingInvitationImpl`), but a marker written before it did, or by a sweep that
+    // failed after the re-pair, still names a live family — and resuming it here tore that
+    // family's audiences apart while ending a different one. Such an entry is dropped from the
+    // marker in this transaction, whatever else the call does.
+    const recorded = pendingRevocations(callerData.pendingRevocationOf);
+    const unfinished = recorded.filter((uid) => uid === partnerId || !partners.includes(uid));
 
     if (!partnerId) {
+      if (unfinished.length !== recorded.length) {
+        tx.update(callerRef, {
+          pendingRevocationOf: unfinished.length > 0 ? unfinished : FieldValue.delete(),
+        });
+      }
       return {unpairedFrom: null, revokeFrom: unfinished};
     }
 
@@ -2478,6 +2549,8 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
         data: {
           type: 'pairing_removed',
           actorName: result.callerName || '',
+          // The family that ended (M-8), so a phone in two families opens the right one.
+          familyId: result.endedFamilyId,
         },
         status: 'pending',
         createdAt: FieldValue.serverTimestamp(),
@@ -2838,6 +2911,8 @@ exports.storedKinds = storedKinds;
  *   invitation accepted and later unpaired, or re-paired with someone else, must not re-slot
  *   two people who are no longer, or never were, each other's live co-parent —
  *   `skippedReasons.notPaired`;
+ * - either of them co-parents with somebody else as well — a slot is one per person, so moving
+ *   it would move them in their other family too — `skippedReasons.multiFamily`;
  * - the inviter and accepter already hold the same normalized slot as each other is false —
  *   i.e. they already hold different slots — `skippedReasons.alreadySeparated`. Running this
  *   twice must look like running it once, and a pair a previous run (or a manual fix) already
@@ -2859,6 +2934,7 @@ exports.storedKinds = storedKinds;
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @return {Promise<{scanned: number, updated: number, skipped: number, failed: number,
  *   skippedReasons: {noAccepter: number, missingAccount: number, notPaired: number,
+ *   multiFamily: number,
  *   alreadySeparated: number}}>} What the migration did: how many accepted invitations were
  *   examined, how many pairs were re-slotted, and how many were skipped or failed, each
  *   broken down by reason.
@@ -2873,6 +2949,7 @@ async function backfillParentSlotsImpl(db) {
       noAccepter: 0,
       missingAccount: 0,
       notPaired: 0,
+      multiFamily: 0,
       alreadySeparated: 0,
     },
   };
@@ -2914,6 +2991,16 @@ async function backfillParentSlotsImpl(db) {
       if (!stillPaired) {
         summary.skipped++;
         summary.skippedReasons.notPaired++;
+        continue;
+      }
+
+      // A slot is still stored once per person (`assertAccepterKeepsSlot`), so re-slotting
+      // somebody who co-parents in another family moves them there too: that family's two
+      // parents would share a slot and their phones would re-stamp every record. Not ours to
+      // decide from one family's invitation.
+      if (partnersOf(inviterData).length > 1 || partnersOf(accepterData).length > 1) {
+        summary.skipped++;
+        summary.skippedReasons.multiFamily++;
         continue;
       }
 
@@ -3949,6 +4036,7 @@ exports.backfillFamilyDocuments = regional.runWith({timeoutSeconds: 540}).https.
  *
  * @return {Promise<{scanned: number, updated: number, skipped: number, failed: number,
  *   skippedReasons: {noAccepter: number, missingAccount: number, notPaired: number,
+ *   multiFamily: number,
  *   alreadySeparated: number}}>} See [backfillParentSlotsImpl].
  */
 exports.backfillParentSlots = regional.runWith({timeoutSeconds: 540}).https.onCall(

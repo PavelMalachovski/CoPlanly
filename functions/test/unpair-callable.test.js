@@ -638,7 +638,7 @@ function expectedSummary(overrides) {
     skipped: 'skipped' in o ? o.skipped : 0,
     failed: 'failed' in o ? o.failed : 0,
     skippedReasons: Object.assign(
-        {noAccepter: 0, missingAccount: 0, notPaired: 0, alreadySeparated: 0},
+        {noAccepter: 0, missingAccount: 0, notPaired: 0, multiFamily: 0, alreadySeparated: 0},
         o.skippedReasons || {}),
   };
 }
@@ -1341,5 +1341,190 @@ describe('unpairing one family out of several', () => {
 
     assert.strictEqual(result.unpairedFrom, null);
     assert.deepStrictEqual(db._docs.users.alice.partnerIds, ['bob', 'carol']);
+  });
+});
+
+/**
+ * Zuzana co-parents in family A with Igor and in family B with Carol — the isolation audit's
+ * setting (October 2026). Ending one of her families must reach that family's records and nothing
+ * of the other's, and a marker left by an earlier unpair must not tear down a family that is live
+ * again.
+ */
+describe('ending one family leaves the other alone', () => {
+  let unpairCoParentImpl;
+  let backfillParentSlotsImpl;
+
+  before(() => {
+    unpairCoParentImpl = require('../index').unpairCoParentImpl;
+    backfillParentSlotsImpl = require('../index').backfillParentSlotsImpl;
+  });
+
+  const A = 'igor__zuzana';
+  const B = 'carol__zuzana';
+
+  /**
+   * The two families' parents, and the records each test adds.
+   *
+   * @param {!Object=} records Collections of documents to add, keyed by collection.
+   * @param {!Object=} zuzanaOverrides Extra fields on Zuzana's profile.
+   * @return {!Object} The fake Firestore.
+   */
+  function twoFamilies(records, zuzanaOverrides) {
+    return fakeDb(Object.assign({
+      users: {
+        zuzana: Object.assign({id: 'zuzana', name: 'Zuzana', partnerIds: ['igor', 'carol'],
+          partnerId: 'igor', pairedAt: 1}, zuzanaOverrides || {}),
+        igor: {id: 'igor', name: 'Igor', partnerIds: ['zuzana'], partnerId: 'zuzana', pairedAt: 1},
+        carol: {id: 'carol', name: 'Carol', partnerIds: ['zuzana'], partnerId: 'zuzana',
+          pairedAt: 2},
+      },
+      families: {
+        [A]: {members: ['igor', 'zuzana']},
+        [B]: {members: ['carol', 'zuzana']},
+      },
+      events: {},
+      child_info: {},
+      pets: {},
+      family_documents: {},
+    }, records || {}));
+  }
+
+  it('never narrows a family-A record when family B ends', async () => {
+    // Carol is a guest of Igor's child (a step-parent who minds Ema), and a pet still carries her
+    // from the item-38 leak. Ending B used to run `arrayRemove('zuzana')` on both — Zuzana lost
+    // her own child's record — and left Carol in `guests` with no place in `sharedWith`.
+    const db = twoFamilies({
+      child_info: {
+        kidA: {createdByFirebaseUid: 'igor', familyId: A,
+          sharedWith: ['igor', 'zuzana', 'carol'],
+          guests: {carol: {name: 'Carol', grantedBy: 'igor', expiresAtMillis: 4102444800000}}},
+      },
+      pets: {
+        petA: {createdByFirebaseUid: 'igor', familyId: A, sharedWith: ['igor', 'zuzana', 'carol']},
+      },
+      events: {
+        evB: {createdByFirebaseUid: 'zuzana', familyId: B, sharedWith: ['zuzana', 'carol']},
+      },
+    });
+
+    await unpairCoParentImpl(db, 'zuzana', 'carol');
+
+    assert.deepStrictEqual(db._docs.child_info.kidA.sharedWith, ['igor', 'zuzana', 'carol']);
+    assert.ok(db._docs.child_info.kidA.guests.carol, 'the guest grant is the guest sweep\'s');
+    assert.deepStrictEqual(db._docs.pets.petA.sharedWith, ['igor', 'zuzana', 'carol']);
+    assert.deepStrictEqual(db._docs.events.evB.sharedWith, ['zuzana'],
+        'family B\'s own records are still narrowed');
+  });
+
+  it('still narrows the ended family\'s records and records that name no family', async () => {
+    const db = twoFamilies({
+      events: {
+        evA: {createdByFirebaseUid: 'igor', familyId: A, sharedWith: ['igor', 'zuzana']},
+        evBlank: {createdByFirebaseUid: 'zuzana', familyId: '', sharedWith: ['zuzana', 'igor']},
+        evB: {createdByFirebaseUid: 'carol', familyId: B, sharedWith: ['carol', 'zuzana']},
+      },
+    });
+
+    await unpairCoParentImpl(db, 'zuzana', 'igor');
+
+    assert.deepStrictEqual(db._docs.events.evA.sharedWith, ['igor']);
+    assert.deepStrictEqual(db._docs.events.evBlank.sharedWith, ['zuzana']);
+    assert.deepStrictEqual(db._docs.events.evB.sharedWith, ['carol', 'zuzana']);
+  });
+
+  it('leaves a guest in a record of no family to the guest sweep', async () => {
+    // Carol's unstamped child names Igor as a guest: ending A must not take him out of
+    // `sharedWith` while his grant stays in `guests` — the two would disagree.
+    const db = twoFamilies({
+      child_info: {
+        kidC: {createdByFirebaseUid: 'carol', familyId: '', sharedWith: ['carol', 'zuzana', 'igor'],
+          guests: {igor: {name: 'Igor', grantedBy: 'carol', expiresAtMillis: 4102444800000}}},
+      },
+    });
+
+    await unpairCoParentImpl(db, 'zuzana', 'igor');
+
+    assert.deepStrictEqual(db._docs.child_info.kidC.sharedWith, ['carol', 'zuzana', 'igor']);
+  });
+
+  it('leaves a guest of the reader\'s own record to the guest sweep', async () => {
+    const db = twoFamilies({
+      child_info: {
+        kidZ: {createdByFirebaseUid: 'zuzana', familyId: '', sharedWith: ['zuzana', 'igor'],
+          guests: {igor: {name: 'Igor', grantedBy: 'zuzana', expiresAtMillis: 4102444800000}}},
+      },
+    });
+
+    await unpairCoParentImpl(db, 'zuzana', 'igor');
+
+    assert.deepStrictEqual(db._docs.child_info.kidZ.sharedWith, ['zuzana', 'igor']);
+  });
+
+  it('does not resume a sweep for an ex who is a co-parent again', async () => {
+    // An earlier unpair from Carol left its marker, and the two have paired again since. Ending
+    // family A used to resume that sweep and tear family B's live audiences apart.
+    const db = twoFamilies({
+      events: {
+        evA: {createdByFirebaseUid: 'zuzana', familyId: A, sharedWith: ['zuzana', 'igor']},
+        evB1: {createdByFirebaseUid: 'zuzana', familyId: B, sharedWith: ['zuzana', 'carol']},
+        evB2: {createdByFirebaseUid: 'carol', familyId: B, sharedWith: ['carol', 'zuzana']},
+      },
+    }, {pendingRevocationOf: ['carol']});
+
+    await unpairCoParentImpl(db, 'zuzana', 'igor');
+
+    assert.deepStrictEqual(db._docs.events.evA.sharedWith, ['zuzana']);
+    assert.deepStrictEqual(db._docs.events.evB1.sharedWith, ['zuzana', 'carol']);
+    assert.deepStrictEqual(db._docs.events.evB2.sharedWith, ['carol', 'zuzana']);
+    assert.ok(!('pendingRevocationOf' in db._docs.users.zuzana),
+        'the stale entry goes with the sweep that no longer applies');
+  });
+
+  it('drops a stale marker for a live co-parent even when the call ends nothing', async () => {
+    const db = twoFamilies({
+      events: {
+        evB: {createdByFirebaseUid: 'carol', familyId: B, sharedWith: ['carol', 'zuzana']},
+      },
+    }, {pendingRevocationOf: ['carol']});
+
+    const result = await unpairCoParentImpl(db, 'zuzana', 'stranger');
+
+    assert.strictEqual(result.unpairedFrom, null);
+    assert.deepStrictEqual(db._docs.events.evB.sharedWith, ['carol', 'zuzana']);
+    assert.ok(!('pendingRevocationOf' in db._docs.users.zuzana));
+  });
+
+  it('names the ended family on the pairing_removed push', async () => {
+    const db = twoFamilies();
+
+    await unpairCoParentImpl(db, 'zuzana', 'carol');
+
+    const queued = queuedNotifications(db);
+    assert.strictEqual(queued.length, 1);
+    assert.strictEqual(queued[0].data.data.type, 'pairing_removed');
+    assert.strictEqual(queued[0].data.data.familyId, B,
+        'a tap on a two-family phone opens the family the push is about');
+  });
+
+  it('does not re-slot a pair one of whom co-parents in another family', async () => {
+    // Moving Igor's or Zuzana's person-wide slot to separate family A would put family B's two
+    // parents in one slot, and Zuzana's phone would re-stamp every record it holds.
+    const db = fakeDb({
+      invitations: {
+        inv1: {id: 'inv1', status: 'accepted', fromUserId: 'igor', acceptedBy: 'zuzana'},
+      },
+      users: {
+        igor: {id: 'igor', partnerId: 'zuzana', partnerIds: ['zuzana'], role: 'mom'},
+        zuzana: {id: 'zuzana', partnerId: 'igor', partnerIds: ['igor', 'carol'], role: 'mom'},
+        carol: {id: 'carol', partnerId: 'zuzana', partnerIds: ['zuzana'], role: 'dad'},
+      },
+    });
+
+    const summary = await backfillParentSlotsImpl(db);
+
+    assert.strictEqual(db._docs.users.zuzana.role, 'mom');
+    assert.strictEqual(db._docs.users.igor.role, 'mom');
+    assert.deepStrictEqual(summary,
+        expectedSummary({scanned: 1, skipped: 1, skippedReasons: {multiFamily: 1}}));
   });
 });
