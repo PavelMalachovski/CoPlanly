@@ -5,13 +5,24 @@ import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.changerequests.AnswerBy
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.expenses.FULL_SHARE_BASIS_POINTS
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.expenses.SplitRatioTransition
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -20,6 +31,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.withContext
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -89,19 +102,33 @@ data class FamilySplit(
  * isolation audit: one device-wide number priced the family with Carol at the split agreed with
  * Igor. The *proposal* is deliberately not cached — it is Firestore-only, exactly as the custody
  * proposal is, because a pending question is not state the app should answer from memory.
+ *
+ * **A proposal is a request** (October 2026, owner decision), like a custody proposal: it may carry
+ * a deadline, whose clock starts once the proposal is written ([submitRatio]), and each step — the
+ * proposal, the answer, a withdrawal — is a card in the family's thread as well as a push, so the
+ * proposer sees it delivered and read, and the export keeps it. At "No answer" the clock's end
+ * withdraws it ([withdrawUnanswered]).
+ *
+ * @param activityAnnouncer Posts the chat cards, each to the thread of the family it is about.
+ * @param fcmService Queues the pushes, a type and nothing else (SEC-3).
+ * @param requestDeadlines Starts a proposal's clock.
  */
 @Singleton
 class FamilySettingsRepository @Inject constructor(
     private val dataSource: FirestoreFamilySettingsDataSource,
     private val userRepository: UserRepository,
     private val preferences: EncryptedPreferences,
-    private val fcmService: FcmService
+    fcmService: FcmService,
+    activityAnnouncer: ActivityAnnouncer,
+    requestDeadlines: RequestDeadlineRepository
 ) {
 
     /** The signed-in parent's families, read from their own Room row (M-8). */
     private val families = SignedInFamiliesReader(userRepository)
 
     private val documents = SettingsDocuments(dataSource)
+
+    private val telling = SplitTelling(activityAnnouncer, fcmService, requestDeadlines)
 
     /**
      * The split of the family on screen, re-read on every switch.
@@ -130,6 +157,25 @@ class FamilySettingsRepository @Inject constructor(
     fun observeSettings(): Flow<FamilySettings?> = observeSplit()
         .filter { it.answered }
         .map { it.settings }
+
+    /**
+     * The settings of [familyId], live, by the document's id: null while they are unknown — before
+     * the listener has answered — while the family has none, and once the listener has failed. It
+     * never throws.
+     *
+     * For a screen that speaks for one family, the Requests inbox above all: asked by its id, it
+     * never answers with another family's proposal, whatever the switcher shows by then.
+     *
+     * @param familyId The family's id, which is also its document's.
+     */
+    fun observeSettingsOf(familyId: String): Flow<FamilySettings?> = dataSource.observeSettings(familyId)
+        .onStart { emit(null) }
+        .catch { cause ->
+            // A denial or an offline cold cache is "no proposal known", never a crash in a collector.
+            Log.w(TAG, "A family's settings listener ended", cause)
+            emit(null)
+        }
+        .distinctUntilChanged()
 
     /** One family's split, from its own document, cached as it arrives. */
     private fun splitOf(pair: CustodyPair?): Flow<FamilySplit> {
@@ -198,7 +244,7 @@ class FamilySettingsRepository @Inject constructor(
      */
     private suspend fun rememberUnpairedRatio(ratio: SplitRatio) {
         preferences.putSplitRatioBasisPoints(ratio.momShareBasisPoints)
-        preferences.putSplitRatioSlot(signedInSlot())
+        preferences.putSplitRatioSlot(userRepository.signedInSlot())
     }
 
     /**
@@ -213,12 +259,23 @@ class FamilySettingsRepository @Inject constructor(
     /**
      * Applies [ratio] to [familyId], or puts it to that family's co-parent when there is one to ask.
      *
+     * A proposal is a request (October 2026): it is posted to the family's thread as a card, and
+     * the co-parent is pushed. Given [answerBy], it also starts a clock once it is written, and the
+     * push says when the answer is due.
+     *
      * @param familyId The family whose split the screen showed, or null for an account with no
      *   co-parent. A family the signed-in parent is no longer in is refused: its document is not
      *   theirs to write any more.
+     * @param answerBy The deadline the parent chose for the co-parent's answer, or null for none. It
+     *   rides on a proposal only — a ratio applied outright has nobody to wait for — and a split has
+     *   no cap: it changes no day ahead, only the expenses recorded once it is agreed.
      * @return which of the two happened, or a failure carrying the transition's own refusal.
      */
-    suspend fun submitRatio(ratio: SplitRatio, familyId: String?): Result<RatioSubmission> {
+    suspend fun submitRatio(
+        ratio: SplitRatio,
+        familyId: String?,
+        answerBy: AnswerByPick? = null
+    ): Result<RatioSubmission> {
         if (familyId == null) {
             // Nobody to agree with, and no document to write it to. Cached so the expense screen
             // prices by it immediately; [publishCachedRatioIfMissing] is what carries it across
@@ -228,17 +285,31 @@ class FamilySettingsRepository @Inject constructor(
             return Result.success(RatioSubmission.APPLIED)
         }
         val pair = families.current().pairIn(familyId) ?: return noCoParent()
-        return agreeOrPropose(pair, ratio)
+        return agreeOrPropose(pair, ratio, answerBy)
     }
 
     /** [submitRatio] for a family the signed-in parent is in: agree outright, or propose. */
-    private suspend fun agreeOrPropose(pair: CustodyPair, ratio: SplitRatio): Result<RatioSubmission> {
+    private suspend fun agreeOrPropose(
+        pair: CustodyPair,
+        ratio: SplitRatio,
+        answerBy: AnswerByPick?
+    ): Result<RatioSubmission> {
         val now = System.currentTimeMillis()
         val existing = documents.read(pair.documentId) ?: return agreeFirst(pair, ratio, now)
         return SplitRatioTransition.propose(existing, ratio, pair.myUid, now).fold(
             onSuccess = { proposed ->
                 documents.write(pair, proposed).map {
-                    notifyPartner(pair, PushPayload.SPLIT_RATIO_PROPOSED)
+                    // The clock starts once the proposal is written and before it is announced, so
+                    // the push can say when the answer is due — and only when the clock was written.
+                    //
+                    // **Not cancellable from here on.** The server has the proposal, and the clock
+                    // waits for the server for up to ten seconds, during which the dialog can be
+                    // left: a caller cancelled that way must not leave the proposal on the server
+                    // with no clock, no card and no push. Before the write is acknowledged nothing is
+                    // shielded, and leaving cancels.
+                    withContext(NonCancellable) {
+                        proposed.proposal?.let { telling.proposed(pair, it, answerBy) }
+                    }
                     RatioSubmission.PROPOSED
                 }
             },
@@ -261,7 +332,7 @@ class FamilySettingsRepository @Inject constructor(
             // the same reason (UX-18): it prices every expense from this moment, and the
             // co-parent otherwise learned of it only by opening Settings. With the link now
             // made first, a second parent's wizard reaches this branch routinely.
-            notifyPartner(pair, PushPayload.SPLIT_RATIO_AGREED)
+            telling.push(pair, PushPayload.SPLIT_RATIO_AGREED)
             RatioSubmission.APPLIED
         }
     }
@@ -311,7 +382,7 @@ class FamilySettingsRepository @Inject constructor(
             // decline, and routing it through the proposal path — the tempting fix — would leave
             // an unanswered proposal splitting the pair evenly, which is the exact bug this
             // method was written to end.
-            notifyPartner(pair, PushPayload.SPLIT_RATIO_AGREED)
+            telling.push(pair, PushPayload.SPLIT_RATIO_AGREED)
         }
     }
 
@@ -336,18 +407,12 @@ class FamilySettingsRepository @Inject constructor(
             // server for that reason — "left behind, it would silently reattach if these two ever
             // re-paired".
             ?: return null
-        val currentSlot = signedInSlot() ?: return null
+        val currentSlot = userRepository.signedInSlot() ?: return null
         return if (capturedSlot == currentSlot) {
             cached
         } else {
             SplitRatio(FULL_SHARE_BASIS_POINTS - cached.momShareBasisPoints)
         }
-    }
-
-    /** This device's slot, or null when it has no local profile row yet. */
-    private suspend fun signedInSlot(): String? {
-        val uid = userRepository.getCurrentUserId() ?: return null
-        return userRepository.getUserById(uid)?.role?.takeIf { it.isNotBlank() }
     }
 
     /**
@@ -373,10 +438,12 @@ class FamilySettingsRepository @Inject constructor(
      * repository method and a Withdraw button — all along, and this is the split ratio catching
      * up with its sibling.
      *
-     * **No push.** The other three answers announce a decision the co-parent has to know about;
-     * a withdrawal decides nothing, and their banner is derived from the document, so it goes on
-     * their next read. Adding a type for it would cost the four places SEC-3 requires to agree,
-     * for a notification that says something stopped existing.
+     * **No push type of its own.** The other three answers announce a decision the co-parent has to
+     * know about; a withdrawal decides nothing, and their banner is derived from the document, so
+     * it goes on their next read. Adding a type for it would cost the four places SEC-3 requires to
+     * agree, for a notification that says something stopped existing. Since the proposal became a
+     * request (October 2026) the withdrawal is a card in the thread ([ActivityKind.SPLIT_WITHDRAWN]),
+     * so the record says the question was taken back rather than left to lapse.
      *
      * The transition refuses a withdrawal by anyone but the proposer, so a stale tap on the
      * co-parent's device fails rather than silently cancelling an answer they were owed.
@@ -388,9 +455,37 @@ class FamilySettingsRepository @Inject constructor(
         val existing = documents.read(pair.documentId)
             ?: return Result.failure(IllegalStateException("There is no proposal to withdraw"))
         return SplitRatioTransition.withdraw(existing, pair.myUid).fold(
-            onSuccess = { next -> documents.write(pair, next) },
+            onSuccess = { next ->
+                documents.write(pair, next).onSuccess {
+                    withContext(NonCancellable) { telling.withdrawn(pair) }
+                }
+            },
             onFailure = { Result.failure(it) }
         )
+    }
+
+    /**
+     * Withdraws this parent's expense split proposal in [familyId] when it is still the one made at
+     * [proposedAtMillis]: the end of a proposal nobody answered (phase 3a, spec §4.4, applied to the
+     * split in October 2026).
+     *
+     * A step of a clock acts on the clock's family, never the one on screen, so [familyId] is read
+     * against this parent's families, once: it must still be a family they are in. The read and the
+     * write are one transaction, so a proposal answered, withdrawn or replaced a moment before is
+     * left as it is — an answer racing the end wins. Nothing is announced here: the end posts its
+     * own "No answer" card, never [ActivityKind.SPLIT_WITHDRAWN].
+     *
+     * @return Whether the proposal was withdrawn: false when the family has ended, when the proposal
+     *   is no longer this one, and when the document could not be written, for the caller to retry.
+     */
+    suspend fun withdrawUnanswered(familyId: String, proposedAtMillis: Long): Boolean {
+        val pair = families.current().pairIn(familyId) ?: return false
+        val written = documents.transact(pair.documentId) { current ->
+            withdrawnIfUnanswered(current, proposedAtMillis, pair.myUid)
+        } ?: return false
+        // As every write of the agreement does; a withdrawal leaves the agreed ratio where it was.
+        cacheAgreedRatio(pair.documentId, written.ratio)
+        return true
     }
 
     private suspend fun decide(familyId: String, accept: Boolean): Result<Unit> {
@@ -407,25 +502,12 @@ class FamilySettingsRepository @Inject constructor(
             onSuccess = { next ->
                 documents.write(pair, next).map {
                     if (accept) cacheAgreedRatio(pair.documentId, next.ratio)
-                    notifyPartner(
-                        pair,
-                        if (accept) PushPayload.SPLIT_RATIO_ACCEPTED else PushPayload.SPLIT_RATIO_DECLINED
-                    )
+                    // The server has the answer: its card and its push go to the proposer even if
+                    // the screen that answered is left meanwhile, as a custody decision's do.
+                    withContext(NonCancellable) { telling.decided(pair, accept) }
                 }
             },
             onFailure = { Result.failure(it) }
-        )
-    }
-
-    /**
-     * A best-effort push carrying a **type and nothing else** (SEC-3): the receiving device
-     * writes the sentence from its own resources, in the reader's language.
-     */
-    private suspend fun notifyPartner(pair: CustodyPair, type: String) {
-        val partnerUid = pair.participants.firstOrNull { it != pair.myUid } ?: return
-        fcmService.queueNotificationForUser(
-            targetUserId = partnerUid,
-            notificationData = mapOf(PushPayload.TYPE to type)
         )
     }
 
@@ -463,7 +545,134 @@ private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsD
         Result.failure(e)
     }
 
+    /**
+     * [FirestoreFamilySettingsDataSource.transact], with a refused or failed transaction — offline
+     * among them — read as nothing written.
+     */
+    suspend fun transact(documentId: String, transform: (FamilySettings?) -> FamilySettings?): FamilySettings? = try {
+        dataSource.transact(documentId, transform)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+        Log.w(TAG, "The family settings transaction did not go through", e)
+        null
+    }
+
     private companion object {
         const val TAG = "FamilySettingsRepo"
     }
+}
+
+/**
+ * What the money agreement tells the co-parent about a proposal (October 2026): the clock a proposal
+ * given a deadline starts, the chat cards that make each step a record in the family's thread — the
+ * proposal, the answer, a withdrawal — and the pushes.
+ *
+ * **Always the pair it is handed**, the family whose document was just written, never the family on
+ * screen, which a push tap may have switched by then. Best-effort, like every announcement: a card
+ * or a push that cannot be sent never undoes the write that caused it.
+ */
+private class SplitTelling(
+    private val announcer: ActivityAnnouncer,
+    private val fcmService: FcmService,
+    private val requestDeadlines: RequestDeadlineRepository
+) {
+
+    /**
+     * A new proposal, in the order a custody proposal is told: its clock when [answerBy] gives a
+     * deadline, then its card, then its push — which says when the answer is due only when the clock
+     * was written.
+     */
+    suspend fun proposed(pair: CustodyPair, proposal: SplitRatioProposal, answerBy: AnswerByPick?) {
+        val answerByMillis = splitClock(pair, proposal, answerBy)?.let { requestDeadlines.start(it)?.answerByMillis }
+        card(pair, ActivityKind.SPLIT_PROPOSED, amount = proposal.ratio.momShareBasisPoints.toString())
+        push(pair, PushPayload.SPLIT_RATIO_PROPOSED, answerByMillis)
+    }
+
+    /** The co-parent's answer, told to the proposer: its card and its push. */
+    suspend fun decided(pair: CustodyPair, accepted: Boolean) {
+        card(pair, if (accepted) ActivityKind.SPLIT_ACCEPTED else ActivityKind.SPLIT_DECLINED)
+        push(pair, if (accepted) PushPayload.SPLIT_RATIO_ACCEPTED else PushPayload.SPLIT_RATIO_DECLINED)
+    }
+
+    /** The proposer took their proposal back: a card, and no push of its own (UX-17). */
+    suspend fun withdrawn(pair: CustodyPair) {
+        card(pair, ActivityKind.SPLIT_WITHDRAWN)
+    }
+
+    /**
+     * A best-effort push carrying a **type and nothing else** (SEC-3) — but for a proposal's
+     * deadline, an instant the receiving device words in its reader's zone and language: the
+     * receiving device writes the sentence from its own resources.
+     *
+     * @param answerByMillis The deadline of the proposal's clock, when one was written.
+     */
+    suspend fun push(pair: CustodyPair, type: String, answerByMillis: Long? = null) {
+        val partnerUid = pair.otherParent() ?: return
+        val data = mapOf(PushPayload.TYPE to type)
+        fcmService.queueNotificationForUser(
+            targetUserId = partnerUid,
+            notificationData = answerByMillis?.let { data + (PushPayload.ANSWER_BY to it.toString()) } ?: data
+        )
+    }
+
+    /**
+     * The card about [pair]'s proposal, posted to the thread with that family's other parent. A split
+     * has no name of its own, so the title is blank and the reader words it.
+     */
+    private suspend fun card(pair: CustodyPair, kind: ActivityKind, amount: String? = null) {
+        val partnerUid = pair.otherParent() ?: return
+        announcer.announce(
+            announcement = ActivityAnnouncement(
+                kind = kind,
+                entityType = ActivityEntityType.SPLIT_PROPOSAL,
+                entityId = pair.documentId,
+                title = "",
+                amount = amount
+            ),
+            partnerUid = partnerUid
+        )
+    }
+}
+
+/**
+ * The clock an expense split proposal starts (October 2026), or null when it starts none: no
+ * [answerBy] was chosen, the pair names no other parent, or the pick gives no deadline.
+ *
+ * Its reference is the proposal's `proposedAtMillis`, and it has no cap: a split changes no day
+ * ahead — only the expenses recorded once it is agreed — so a last chance may always run a full day.
+ * The deadline is worked out in the zone of the phone that proposes, the zone its form showed it in.
+ */
+private fun splitClock(pair: CustodyPair, proposal: SplitRatioProposal, answerBy: AnswerByPick?): RequestStart? {
+    val responder = pair.otherParent()
+    if (answerBy == null || responder == null) return null
+    val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), null, ZoneId.systemDefault()) ?: return null
+    return RequestStart(
+        kind = RequestKind.SPLIT,
+        ref = proposal.proposedAtMillis.toString(),
+        familyId = pair.documentId,
+        responderUid = responder,
+        answerByMillis = deadline,
+        capMillis = null
+    )
+}
+
+/**
+ * [current] with [myUid]'s proposal withdrawn when it is still the one made at [proposedAtMillis], or
+ * null — nothing to write — when it is not: answered, withdrawn or replaced meanwhile, or the
+ * co-parent's.
+ */
+private fun withdrawnIfUnanswered(current: FamilySettings?, proposedAtMillis: Long, myUid: String): FamilySettings? {
+    val proposal = current?.proposal ?: return null
+    if (proposal.proposedAtMillis != proposedAtMillis || proposal.proposedBy != myUid) return null
+    return SplitRatioTransition.withdraw(current, myUid).getOrNull()
+}
+
+/** The other parent of [this] pair, the parent a request made here waits on; null for a malformed pair. */
+private fun CustodyPair.otherParent(): String? = participants.firstOrNull { it != myUid }
+
+/** The signed-in parent's slot, or null when they have no local profile row yet. */
+private suspend fun UserRepository.signedInSlot(): String? {
+    val uid = getCurrentUserId() ?: return null
+    return getUserById(uid)?.role?.takeIf { it.isNotBlank() }
 }

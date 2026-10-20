@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="split_request_title">Поділ витрат</string>
+    <string name="split_request_body_theirs">%1$s пропонує новий поділ спільних витрат. Уже внесені витрати збережуть свій поділ.</string>
+    <string name="split_request_body_yours">Ви запропонували новий поділ спільних витрат</string>
+    <string name="split_request_now">Зараз: %1$s</string>
+    <string name="split_request_proposed">Запропоновано: %1$s</string>
+</resources>

@@ -4,11 +4,13 @@ import app.cash.turbine.test
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
+import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -39,6 +41,12 @@ class FamilySettingsRepositoryTest {
     private val dataSource = mockk<FirestoreFamilySettingsDataSource>()
     private val preferences = mockk<EncryptedPreferences>()
 
+    /** The chat cards; `FamilySettingsSplitRequestTest` reads what they say. */
+    private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
+
+    /** The request clocks; no test here gives a deadline, so nothing starts one. */
+    private val requestDeadlines = mockk<RequestDeadlineRepository>(relaxed = true)
+
     private fun repository(
         cachedBasisPoints: Int?,
         partnerId: String?,
@@ -65,7 +73,9 @@ class FamilySettingsRepositoryTest {
             dataSource,
             userRepository,
             preferences,
-            mockk<FcmService>(relaxed = true)
+            mockk<FcmService>(relaxed = true),
+            announcer,
+            requestDeadlines
         )
     }
 
@@ -274,10 +284,11 @@ class FamilySettingsRepositoryTest {
     }
 
     @Test
-    fun `withdrawing announces nothing`() = runTest {
+    fun `withdrawing pushes nothing of its own`() = runTest {
         // The other three answers announce a decision; a withdrawal decides nothing, and the
         // co-parent's banner is derived from the document. A push type for it would cost the
-        // four places SEC-3 requires to agree, to say that something stopped existing.
+        // four places SEC-3 requires to agree, to say that something stopped existing. Its chat
+        // card is `FamilySettingsSplitRequestTest`'s.
         val fcmService = mockk<FcmService>(relaxed = true)
         coEvery { dataSource.getSettings(any()) } returns settingsWithProposalBy(ME)
         coEvery { dataSource.setSettings(any(), any()) } returns Unit
@@ -413,7 +424,14 @@ class FamilySettingsRepositoryTest {
             every { observeCurrentUserId() } returns flowOf(ME)
             every { getAllUsers() } returns rows
         }
-        return FamilySettingsRepository(dataSource, userRepository, preferences, fcmService)
+        return FamilySettingsRepository(
+            dataSource,
+            userRepository,
+            preferences,
+            fcmService,
+            announcer,
+            requestDeadlines
+        )
     }
 
     /** [familyId]'s settings with [basisPoints] agreed and nothing pending. */
@@ -463,7 +481,14 @@ class FamilySettingsRepositoryTest {
                 partnerId = PARTNER
             )
         }
-        return FamilySettingsRepository(dataSource, userRepository, preferences, fcmService)
+        return FamilySettingsRepository(
+            dataSource,
+            userRepository,
+            preferences,
+            fcmService,
+            announcer,
+            requestDeadlines
+        )
     }
 
     private companion object {

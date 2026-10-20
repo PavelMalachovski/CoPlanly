@@ -30,10 +30,13 @@ object RequestDeadlineDocument {
     /** The collection. Top-level, so a request's own record is never touched to carry a clock. */
     const val COLLECTION = "request_deadlines"
 
-    /** `swap`, `change`, `event` or `proposal`: [RequestKind.wire]. Written by the proposer, at create. */
+    /** `swap`, `change`, `event`, `proposal` or `split`: [RequestKind.wire]. Written by the proposer, at create. */
     const val KIND = "kind"
 
-    /** The request the clock times: a swap's group id, a change request's or event's id, a proposal's time. */
+    /**
+     * The request the clock times: a swap's group id, a change request's or event's id, a proposal's
+     * time, or a split proposal's time in epoch millis as decimal text.
+     */
     const val REF = "ref"
 
     /** The family the request was made in. Whatever works from the clock acts in this family. */

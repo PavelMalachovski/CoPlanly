@@ -23,4 +23,9 @@
     <string name="activity_subject_custody_schedule">график опеки</string>
     <string name="activity_settle_up_you_owe">Расчёт за %1$s: вы должны %2$s</string>
     <string name="activity_settle_up_owed_to_you">Расчёт за %1$s: вам должны %2$s</string>
+    <string name="activity_split_proposed">Предложено новое деление расходов</string>
+    <string name="activity_split_accepted">Новое деление расходов согласовано</string>
+    <string name="activity_split_declined">Предложение о делении расходов отклонено</string>
+    <string name="activity_split_withdrawn">Предложение о делении расходов отозвано</string>
+    <string name="activity_subject_expense_split">деление расходов</string>
 </resources>

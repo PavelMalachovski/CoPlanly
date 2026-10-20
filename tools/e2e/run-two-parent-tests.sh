@@ -40,6 +40,23 @@ if [ -n "${FIREBASE_JAVA_HOME:-}" ]; then
   export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"
 fi
 
+# A system dialog takes the window focus from the app, and an Espresso Back waits for a focus that
+# never returns. PR #138's e2e run lost two on-screen tests that way after a cold boot (the snapshot
+# boot had died): "has-window-focus=false" on MainActivity, 10 seconds, at each test's first Back.
+# The UI tour met the same thing behind "Pixel Launcher isn't responding" and clears it the same
+# way (tools/ui-tour/run-ui-tour.sh): error dialogs are hidden for the session, which the system
+# reads as it changes, and an open one is closed — stopping the launcher dismisses its dialog with
+# it, the app under test never needs the launcher, and the close-dialogs broadcast answers the rest.
+adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+home_activity="$(adb shell cmd package resolve-activity --brief \
+  -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null | tr -d '\r' | tail -n 1)" ||
+  home_activity=""
+case "$home_activity" in
+  android/* | '') ;;
+  */*) adb shell am force-stop "${home_activity%%/*}" >/dev/null 2>&1 || true ;;
+esac
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+
 # The UI tour (tools/ui-tour/) lives in the same package but is not a test of anything: it runs
 # only with `-e coplanlyUiTour true`, and would otherwise report as skipped, which the e2e job
 # counts as a failure. So its classes are excluded by name rather than left to skip.

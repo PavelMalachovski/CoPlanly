@@ -105,6 +105,7 @@ import com.coparently.app.data.consent.HealthConsentWithdrawal
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.sync.SyncStatus
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
@@ -112,6 +113,8 @@ import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.ai.AiConsentSettingsEntry
 import com.coparently.app.presentation.chat.SendHold
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilySwitcherDialog
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
@@ -133,12 +136,14 @@ import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.regionSummaryRes
+import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.HealthConsentSettingsRow
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsRow
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.IconSizes
@@ -274,8 +279,14 @@ fun SettingsScreen(
         SplitRatioDialog(
             current = agreedRatio,
             parentNames = splitParentNames,
-            onConfirm = { ratio ->
-                settingsViewModel.submitRatio(ratio, familySplit)
+            // A family that has agreed a split already is asked, not told: the change becomes a
+            // proposal, and a proposal asks when it should be answered by. A first agreement, or
+            // an account with nobody to ask, applies at once and has no deadline to set; and while
+            // the co-parent's own proposal waits, a new one is refused, so there is nothing to time.
+            proposes = familySplit.familyId != null && familySplit.settings != null &&
+                familySplit.settings?.proposal?.proposedBy.let { it == null || it == settingsUiState.myUid },
+            onConfirm = { ratio, answerBy ->
+                settingsViewModel.submitRatio(ratio, familySplit, answerBy)
                 showSplitPicker = false
             },
             onDismiss = { showSplitPicker = false }
@@ -1772,26 +1783,32 @@ private fun FamilyKindDialog(
  *
  * This dialog **proposes**. Whether it applies straight away depends on whether there is a
  * co-parent to ask, and the screen says which happened rather than letting a parent believe a
- * split the other has not agreed.
+ * split the other has not agreed. A proposal is a request like any other: it carries the "Answer
+ * by" block, and the co-parent sees it in their Requests and on Home until they answer.
  *
  * @param current The agreed ratio, as the slider opens.
- * @param onConfirm Called with the chosen ratio.
+ * @param proposes Whether confirming puts the split to the co-parent — the family has agreed one
+ *   already — rather than applying it; only then does the dialog ask for a deadline.
+ * @param onConfirm Called with the chosen ratio and, when it [proposes], the deadline picked.
  * @param onDismiss Closes without proposing anything.
  */
 @Composable
 private fun SplitRatioDialog(
     current: SplitRatio,
     parentNames: ParentNames,
-    onConfirm: (SplitRatio) -> Unit,
+    proposes: Boolean,
+    onConfirm: (SplitRatio, AnswerByPick?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var momPercent by rememberSaveable(current) { mutableIntStateOf(current.momPercent) }
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_split_ratio_title)) },
         text = {
-            Column {
+            // Scrolls: with the deadline's chips the dialog outgrows a small phone at large text.
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     text = stringResource(
                         R.string.settings_split_ratio_value_named,
@@ -1813,10 +1830,21 @@ private fun SplitRatioDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // The split's own deadline, as every form that asks the co-parent something has
+                // one (phase 3a). No cap: nothing on a date makes a split's answer come too late.
+                if (proposes) {
+                    AnswerByField(
+                        offer = rememberAnswerByOffer(capMillis = null),
+                        selected = answerBy,
+                        onSelect = { answerBy = it },
+                        coParentName = parentNames.coParentLabel(),
+                        modifier = Modifier.padding(top = Spacing.L)
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(SplitRatio.ofMomPercent(momPercent)) }) {
+            TextButton(onClick = { onConfirm(SplitRatio.ofMomPercent(momPercent), answerBy.takeIf { proposes }) }) {
                 Text(stringResource(R.string.settings_family_kind_save))
             }
         },

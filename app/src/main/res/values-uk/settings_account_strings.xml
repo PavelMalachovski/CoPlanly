@@ -84,6 +84,8 @@
     <string name="family_switcher_request_row">Чекає запит на зміну</string>
     <string name="family_switcher_schedule_other">В іншій родині чекає пропозиція щодо графіка опіки</string>
     <string name="family_switcher_schedule_row">Чекає пропозиція щодо графіка опіки</string>
+    <string name="family_switcher_split_other">В іншій родині чекає пропозиція щодо поділу витрат</string>
+    <string name="family_switcher_split_row">Чекає пропозиція щодо поділу витрат</string>
     <string name="settings_school_import_title">Імпорт із Bakaláři</string>
     <string name="settings_school_import_description">Шкільні заходи й навчальні години дитини одразу в календарі.</string>
     <string name="settings_operation_failed">Не вдалося. Перевірте підключення та спробуйте ще раз.</string>

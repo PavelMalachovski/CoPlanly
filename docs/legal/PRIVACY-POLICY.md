@@ -83,8 +83,12 @@ decide what each of you may read. **Legal basis:** performance of our contract w
 - **The custody schedule** — the pattern you agree and any one-off day swaps.
 - **Change requests** — a proposed change to an event or a day, with the reason you give, and
   your co-parent's answer.
-- **When a request is to be answered by.** A change request, a day swap, a custody proposal and an
-  event that waits for your co-parent's answer can carry a deadline you choose. With it we keep,
+- **The expense split** — the share of shared expenses each of you pays, a proposal to change it
+  (who proposed it and when) and the latest answer. A proposal, its answer and a withdrawal also
+  appear as notes in your conversation with your co-parent.
+- **When a request is to be answered by.** A change request, a day swap, a custody proposal, a
+  proposal to change the expense split and an event that waits for your co-parent's answer can
+  carry a deadline you choose. With it we keep,
   next to the request: the deadline and the first moment the request would change something; when
   your co-parent's phone received the request; when they first opened it; the times that phone
   chose to remind them (at most three, none at night) and how many reminders it has shown; whether

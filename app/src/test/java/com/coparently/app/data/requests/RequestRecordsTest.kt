@@ -2,7 +2,9 @@ package com.coparently.app.data.requests
 
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -14,6 +16,11 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioDecision
+import com.coparently.app.domain.expenses.SplitRatioOutcome
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
@@ -53,9 +60,19 @@ class RequestRecordsTest {
     private val custodyDataSource = mockk<FirestoreCustodyDataSource>()
     private val custodyRepository = mockk<CustodyModelRepository>()
     private val users = mockk<UserRepository>()
+    private val settingsDataSource = mockk<FirestoreFamilySettingsDataSource>()
+    private val settingsRepository = mockk<FamilySettingsRepository>()
 
-    private val records =
-        RequestRecords(changeRequests, events, eventDataSource, custodyDataSource, custodyRepository, users)
+    private val records = RequestRecords(
+        changeRequests,
+        events,
+        eventDataSource,
+        custodyDataSource,
+        custodyRepository,
+        users,
+        settingsDataSource,
+        settingsRepository
+    )
 
     private fun signedInAs(uid: String, partnerIds: List<String>, partnerId: String? = partnerIds.firstOrNull()) {
         coEvery { users.getCurrentUser() } returns User(
@@ -251,6 +268,49 @@ class RequestRecordsTest {
         coVerify(exactly = 1) { custodyRepository.withdrawUnanswered(FAMILY, PROPOSED_AT) }
     }
 
+    @Test
+    fun `an expense split reads pending, answered or gone from the family's settings, on the server when asked`() =
+        runTest {
+            signedInAs(ALICE, listOf(BOB))
+            val ref = SPLIT_AT.toString()
+            coEvery { settingsDataSource.getSettings(FAMILY, Source.DEFAULT) } returns settings(splitProposal(SPLIT_AT))
+            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns
+                settings(decision = splitDecision(SPLIT_AT))
+            assertEquals(RecordStatus.PENDING, statusOf(RequestKind.SPLIT, ref))
+            assertEquals("Bob answered on his phone", RecordStatus.ANSWERED, serverStatusOf(RequestKind.SPLIT, ref))
+            assertEquals(
+                "a split: the family's id and no title of its own",
+                CardSubject(ActivityEntityType.SPLIT_PROPOSAL, FAMILY, ""),
+                records.look(clock(RequestKind.SPLIT, ref)).card
+            )
+
+            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns
+                settings(splitProposal(SPLIT_AT + 1))
+            assertEquals("replaced by a newer one", RecordStatus.GONE, serverStatusOf(RequestKind.SPLIT, ref))
+            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns
+                settings(splitProposal(SPLIT_AT, by = BOB))
+            assertEquals("the other parent's", RecordStatus.GONE, serverStatusOf(RequestKind.SPLIT, ref))
+            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns null
+            assertEquals(RecordStatus.GONE, serverStatusOf(RequestKind.SPLIT, ref))
+            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } throws IOException("offline")
+            assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.SPLIT, ref))
+        }
+
+    @Test
+    fun `withdrawing an expense split acts in the clock's family, by the proposal's time`() = runTest {
+        signedInAs(ALICE, listOf(BOB, CAROL), partnerId = CAROL)
+        coEvery { settingsRepository.withdrawUnanswered(FAMILY, SPLIT_AT) } returns true
+
+        assertTrue(records.withdrawUnansweredProposal(clock(RequestKind.SPLIT, SPLIT_AT.toString())))
+        coVerify(exactly = 1) { settingsRepository.withdrawUnanswered(FAMILY, SPLIT_AT) }
+        coVerify(exactly = 0) { custodyRepository.withdrawUnanswered(any(), any()) }
+
+        // A family the parent has left withdraws nothing.
+        signedInAs(ALICE, listOf(CAROL))
+        assertFalse(records.withdrawUnansweredProposal(clock(RequestKind.SPLIT, SPLIT_AT.toString())))
+        coVerify(exactly = 1) { settingsRepository.withdrawUnanswered(any(), any()) }
+    }
+
     private suspend fun statusOf(kind: RequestKind, ref: String): RecordStatus = records.look(clock(kind, ref)).status
 
     private suspend fun serverStatusOf(kind: RequestKind, ref: String): RecordStatus =
@@ -343,11 +403,36 @@ class RequestRecordsTest {
         dayOverrides = swaps
     )
 
+    /** An expense split proposal made at [at] by [by]. */
+    private fun splitProposal(at: Long, by: String = ALICE) =
+        SplitRatioProposal(ratio = SplitRatio(7_000), proposedBy = by, proposedAtMillis = at)
+
+    /** Bob's decline of the split proposal made at [proposalAt]. */
+    private fun splitDecision(proposalAt: Long) = SplitRatioDecision(
+        outcome = SplitRatioOutcome.DECLINED,
+        by = BOB,
+        atMillis = proposalAt + 60_000L,
+        proposalAtMillis = proposalAt
+    )
+
+    /** The family's money agreement: half each, with [proposal] and [decision]. */
+    private fun settings(proposal: SplitRatioProposal? = null, decision: SplitRatioDecision? = null) = FamilySettings(
+        ratio = SplitRatio.EVEN,
+        participants = listOf(ALICE, BOB),
+        lastModifiedBy = BOB,
+        lastModifiedAtMillis = 1L,
+        proposal = proposal,
+        lastDecision = decision
+    )
+
     private companion object {
         const val ALICE = "uidA"
         const val BOB = "uidB"
         const val CAROL = "uidC"
         const val FAMILY = "uidA__uidB"
         const val PROPOSED_AT = "2026-05-05T09:00:00"
+
+        /** When the expense split proposal was made: its clock's reference, as decimal text. */
+        const val SPLIT_AT = 1_778_000_000_000L
     }
 }

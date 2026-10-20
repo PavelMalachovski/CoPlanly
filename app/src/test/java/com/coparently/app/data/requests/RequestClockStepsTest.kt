@@ -240,6 +240,48 @@ class RequestClockStepsTest {
     }
 
     @Test
+    fun `the end withdraws an expense split nobody answered, as it does a custody proposal`() = runTest {
+        val clock = clock(RequestKind.SPLIT)
+        val card = CardSubject(ActivityEntityType.SPLIT_PROPOSAL, FAMILY, "")
+        signedInAs(ALICE)
+        reads(clock, RecordStatus.PENDING, card)
+        now = RequestClock.endMillis(clock) + MINUTE
+
+        assertEquals(StepResult.DONE, steps.end(clock.id))
+
+        coVerifyOrder {
+            repository.close(clock)
+            notices.noAnswer(clock)
+            telling.unanswered(clock, card)
+            records.withdrawUnansweredProposal(clock)
+        }
+
+        // Closed, and still pending on the server: only the withdrawal is tried again, nothing is told twice.
+        val closed = clock.copy(outcome = RequestClockOutcome.NO_ANSWER, closedAtMillis = now)
+        clearMocks(notices, telling, answers = false)
+        reads(closed, RecordStatus.PENDING, card)
+
+        assertEquals(StepResult.DONE, steps.end(closed.id))
+        coVerify(exactly = 1) { records.withdrawUnansweredProposal(closed) }
+        coVerify(exactly = 0) { notices.noAnswer(any()) }
+        coVerify(exactly = 0) { telling.unanswered(any(), any()) }
+    }
+
+    @Test
+    fun `the end of a request that is no proposal withdraws nothing`() = runTest {
+        listOf(RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT).forEach { kind ->
+            val clock = clock(kind)
+            signedInAs(ALICE)
+            reads(clock, RecordStatus.PENDING)
+            now = RequestClock.endMillis(clock) + MINUTE
+
+            assertEquals("$kind", StepResult.DONE, steps.end(clock.id))
+        }
+
+        coVerify(exactly = 0) { records.withdrawUnansweredProposal(any()) }
+    }
+
+    @Test
     fun `the end leaves an answered request open`() = runTest {
         val clock = clock(RequestKind.CHANGE)
         signedInAs(ALICE)
@@ -395,7 +437,11 @@ class RequestClockStepsTest {
         LocalDateTime.of(year, month, day, hour, minute).toInstant(ZoneOffset.UTC).toEpochMilli()
 
     private fun clock(kind: RequestKind): RequestDeadline {
-        val ref = if (kind == RequestKind.PROPOSAL) "2026-05-05T09:00:00" else "ref-1"
+        val ref = when (kind) {
+            RequestKind.PROPOSAL -> "2026-05-05T09:00:00"
+            RequestKind.SPLIT -> "1777990000000"
+            RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT -> "ref-1"
+        }
         return RequestDeadline(
             id = RequestDeadlineId.of(kind, ALICE, ref, FAMILY),
             kind = kind,

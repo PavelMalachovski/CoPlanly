@@ -69,6 +69,13 @@ object ActivityCardText {
         // take the month and the amount rather than one subject.
         ActivityKind.SETTLE_UP_OWED -> R.string.activity_settle_up_owed_to_you
         ActivityKind.SETTLE_UP_OWING -> R.string.activity_settle_up_you_owe
+        // Plain sentences, like a custody proposal's: the card cannot reach the reader's parent
+        // names, and a share without a name would not say whose it is. The fallback text, which the
+        // export prints, carries the shares in the proposer's first person.
+        ActivityKind.SPLIT_PROPOSED -> R.string.activity_split_proposed
+        ActivityKind.SPLIT_ACCEPTED -> R.string.activity_split_accepted
+        ActivityKind.SPLIT_DECLINED -> R.string.activity_split_declined
+        ActivityKind.SPLIT_WITHDRAWN -> R.string.activity_split_withdrawn
     }
 
     /**
@@ -93,6 +100,7 @@ object ActivityCardText {
      * - a custody proposal is worded — it has no name of its own, and a request's card carries a
      *   blank title. The cards that existed before carry the family id there, and their sentences
      *   take no argument, so the worded subject changes nothing they show;
+     * - an expense split proposal is worded the same way, for the same reason;
      * - anything else is its `title`, as the sender wrote it.
      *
      * `when` with no `else`, like [resourceFor]: a new [ActivityEntityType] has to be given a
@@ -101,6 +109,7 @@ object ActivityCardText {
     fun subjectOf(card: ActivityAnnouncement): CardSubjectText = when (card.entityType) {
         ActivityEntityType.DAY_SWAP -> CardSubjectText.IsoDate(card.title)
         ActivityEntityType.CUSTODY_PROPOSAL -> CardSubjectText.Res(R.string.activity_subject_custody_schedule)
+        ActivityEntityType.SPLIT_PROPOSAL -> CardSubjectText.Res(R.string.activity_subject_expense_split)
         ActivityEntityType.EVENT,
         ActivityEntityType.CHANGE_REQUEST,
         ActivityEntityType.EXPENSE -> CardSubjectText.Raw(card.title)

@@ -23,4 +23,9 @@
     <string name="activity_subject_custody_schedule">Betreuungsplan</string>
     <string name="activity_settle_up_you_owe">Ausgleich für %1$s: du schuldest %2$s</string>
     <string name="activity_settle_up_owed_to_you">Ausgleich für %1$s: du bekommst %2$s</string>
+    <string name="activity_split_proposed">Neue Kostenaufteilung vorgeschlagen</string>
+    <string name="activity_split_accepted">Neue Kostenaufteilung vereinbart</string>
+    <string name="activity_split_declined">Vorschlag zur Kostenaufteilung abgelehnt</string>
+    <string name="activity_split_withdrawn">Vorschlag zur Kostenaufteilung zurückgezogen</string>
+    <string name="activity_subject_expense_split">Kostenaufteilung</string>
 </resources>

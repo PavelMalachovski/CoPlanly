@@ -74,7 +74,12 @@ class ChatCardTargetTest {
         ActivityKind.REQUEST_UNANSWERED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
         // A settle-up card shows its payment code in place; a tap leads nowhere.
         ActivityKind.SETTLE_UP_OWED to Expectation(ActivityEntityType.EXPENSE, null),
-        ActivityKind.SETTLE_UP_OWING to Expectation(ActivityEntityType.EXPENSE, null)
+        ActivityKind.SETTLE_UP_OWING to Expectation(ActivityEntityType.EXPENSE, null),
+        // An expense split proposal is a request: its cards open the inbox, where it is answered.
+        ActivityKind.SPLIT_PROPOSED to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
+        ActivityKind.SPLIT_ACCEPTED to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
+        ActivityKind.SPLIT_DECLINED to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
+        ActivityKind.SPLIT_WITHDRAWN to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox)
     )
 
     // ---- the defect -----------------------------------------------------------
@@ -112,13 +117,14 @@ class ChatCardTargetTest {
     @Test
     fun `a request's last-chance or no-answer card goes where its own cards go`() {
         // The card carries its request's own entity type, so the tap needs no rule of its own: a
-        // swap opens the inbox, a change request the inbox on its event, an event its preview, and
-        // a proposal nothing.
+        // swap opens the inbox, a change request the inbox on its event, an event its preview, a
+        // custody proposal nothing, and an expense split the inbox.
         val own = mapOf(
             ActivityEntityType.DAY_SWAP to ChatCardTarget.Inbox,
             ActivityEntityType.CHANGE_REQUEST to ChatCardTarget.ChangeRequest(ID),
             ActivityEntityType.EVENT to ChatCardTarget.Event(ID),
-            ActivityEntityType.CUSTODY_PROPOSAL to null
+            ActivityEntityType.CUSTODY_PROPOSAL to null,
+            ActivityEntityType.SPLIT_PROPOSAL to ChatCardTarget.Inbox
         )
 
         listOf(ActivityKind.REQUEST_LAST_CHANCE, ActivityKind.REQUEST_UNANSWERED).forEach { kind ->
@@ -168,6 +174,17 @@ class ChatCardTargetTest {
     @Test
     fun `every entity type is covered by some kind`() {
         assertEquals(ActivityEntityType.entries.toSet(), expectations.values.map { it.entityType }.toSet())
+    }
+
+    @Test
+    fun `an expense split card opens the inbox, whatever its kind says`() {
+        ActivityKind.entries.forEach { kind ->
+            assertEquals(
+                ChatCardTarget.Inbox,
+                ChatCardTarget.of(card(kind, ActivityEntityType.SPLIT_PROPOSAL, entityId = "uA__uB")),
+                "$kind"
+            )
+        }
     }
 
     @Test

@@ -1,6 +1,13 @@
 package com.coparently.app.presentation.settings
 
 import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.FamilySplit
+import com.coparently.app.data.repository.RatioSubmission
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.changerequests.AnswerByPreset
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.money.SupportedCurrency
@@ -47,6 +54,16 @@ class SettingsViewModelTest {
         coEvery { setPauseBeforeSending(any()) } answers { pauseBeforeSending.value = firstArg() }
     }
 
+    /**
+     * The split's repository. Stubbed and verified with concrete ratios, never `any()`: MockK builds
+     * a matcher's signature for a value class from a random Int, and `SplitRatio` refuses one
+     * outside 0..10000.
+     */
+    private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
+        coEvery { submitRatio(SplitRatio(SEVENTY)) } returns Result.success(RatioSubmission.APPLIED)
+        coEvery { submitRatio(SplitRatio(SEVENTY), "u1__u2", WEEK) } returns Result.success(RatioSubmission.PROPOSED)
+    }
+
     private fun viewModel(
         userRepository: UserRepository = mockk<UserRepository>(relaxed = true) {
             coEvery { getCurrentUser() } returns null
@@ -61,7 +78,7 @@ class SettingsViewModelTest {
             signedInAccountSource = mockk(relaxed = true),
             familyKindSource = mockk(relaxed = true),
             parentsSource = mockk(relaxed = true),
-            familySettingsRepository = mockk(relaxed = true)
+            familySettingsRepository = familySettingsRepository
         )
     }
 
@@ -184,6 +201,45 @@ class SettingsViewModelTest {
         coVerify(exactly = 0) { preferences.suggestDefaultCurrency(any()) }
     }
 
+    @Test
+    fun `a split put to the co-parent carries the deadline picked, to the family that was shown`() =
+        runTest(dispatcher) {
+            val agreed = FamilySettings(
+                ratio = SplitRatio.EVEN,
+                participants = listOf("u1", "u2"),
+                lastModifiedBy = "u2",
+                lastModifiedAtMillis = 1L
+            )
+            val shown = FamilySplit(familyId = "u1__u2", settings = agreed, ratio = SplitRatio.EVEN)
+            val vm = viewModel()
+
+            vm.submitRatio(SplitRatio(SEVENTY), shown, WEEK)
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { familySettingsRepository.submitRatio(SplitRatio(SEVENTY), "u1__u2", WEEK) }
+        }
+
+    @Test
+    fun `a split chosen before anything loaded goes to the family on screen, with no deadline`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+
+            vm.submitRatio(SplitRatio(SEVENTY), FamilySplit.UNKNOWN, answerBy = null)
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { familySettingsRepository.submitRatio(SplitRatio(SEVENTY)) }
+            coVerify(exactly = 0) { familySettingsRepository.submitRatio(SplitRatio(SEVENTY), null, null) }
+        }
+
+    @Test
+    fun `the state names the signed-in parent, so the split dialog can tell whose proposal waits`() =
+        runTest(dispatcher) {
+            val vm = viewModel(signedIn(colorCode = ParentColorChoice.PINK.storedCode))
+            advanceUntilIdle()
+
+            assertEquals("u1", vm.settingsState.value.myUid)
+        }
+
     /** A user repository with a signed-in parent whose stored colour is [colorCode]. */
     private fun signedIn(colorCode: String): UserRepository = mockk(relaxed = true) {
         coEvery { getCurrentUser() } returns User(
@@ -193,5 +249,13 @@ class SettingsViewModelTest {
             role = "dad",
             colorCode = colorCode
         )
+    }
+
+    private companion object {
+        /** 70 % for slot 1, in basis points. */
+        const val SEVENTY = 7_000
+
+        /** "A week" from the deadline's chips. */
+        val WEEK: AnswerByPick = AnswerByPick.Preset(AnswerByPreset.WEEK)
     }
 }

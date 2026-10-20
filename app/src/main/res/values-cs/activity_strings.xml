@@ -23,4 +23,9 @@
     <string name="activity_subject_custody_schedule">rozvrh péče</string>
     <string name="activity_settle_up_you_owe">Vyrovnání za %1$s: dlužíte %2$s</string>
     <string name="activity_settle_up_owed_to_you">Vyrovnání za %1$s: máte dostat %2$s</string>
+    <string name="activity_split_proposed">Navrženo nové rozdělení výdajů</string>
+    <string name="activity_split_accepted">Nové rozdělení výdajů schváleno</string>
+    <string name="activity_split_declined">Návrh rozdělení výdajů odmítnut</string>
+    <string name="activity_split_withdrawn">Návrh rozdělení výdajů stažen</string>
+    <string name="activity_subject_expense_split">rozdělení výdajů</string>
 </resources>

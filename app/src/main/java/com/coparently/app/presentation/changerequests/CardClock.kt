@@ -77,19 +77,20 @@ data class CardClock(
     /**
      * Whether the card hides both answer buttons: the answering parent's swap, change request or
      * event is past its deadline and the next move is the proposer's (spec §4.1). Never true for a
-     * custody proposal, which keeps its Decline ([declineOnly]).
+     * custody or expense split proposal, which keeps its Decline ([declineOnly]).
      */
     val hidesAnswers: Boolean
-        get() = pastDeadlineForResponder && timed.clock.kind != RequestKind.PROPOSAL
+        get() = pastDeadlineForResponder && !timed.clock.kind.withdrawnAtEnd
 
     /**
-     * Whether the card offers Decline and nothing else: the answering parent's custody proposal is
-     * past its deadline (final review I-2). Until the proposer's phone withdraws it, the proposal
-     * refuses every schedule change the answering parent makes, so they may still turn it down —
-     * an explicit answer the transition and the rules accept. Accept waits for a last chance.
+     * Whether the card offers Decline and nothing else: the answering parent's custody or expense
+     * split proposal is past its deadline (final review I-2; [RequestKind.withdrawnAtEnd]). Until
+     * the proposer's phone withdraws it, the proposal refuses every proposal of the answering
+     * parent's own, so they may still turn it down — an explicit answer the transition and the
+     * rules accept. Accept waits for a last chance.
      */
     val declineOnly: Boolean
-        get() = pastDeadlineForResponder && timed.clock.kind == RequestKind.PROPOSAL
+        get() = pastDeadlineForResponder && timed.clock.kind.withdrawnAtEnd
 
     private val pastDeadlineForResponder: Boolean
         get() = role == ClockRole.RESPONDER && timed.state == ClockState.NO_ANSWER_LAST_CHANCE_POSSIBLE

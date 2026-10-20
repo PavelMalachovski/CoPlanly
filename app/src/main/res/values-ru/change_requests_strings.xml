@@ -48,6 +48,7 @@
     <string name="request_history_new_time">Новое время: %1$s</string>
     <string name="request_history_day_swap">Обмен днями: %1$s</string>
     <string name="request_history_custody">Новый график опеки</string>
+    <string name="request_history_split">Деление расходов</string>
     <!-- Noun phrases and "вы", not "X ответил(а)": a name cannot agree with a gendered verb. -->
     <string name="request_history_yours_answered">Ваш запрос · ответ: %1$s</string>
     <string name="request_history_theirs_answered">Запрос: %1$s · вы ответили</string>

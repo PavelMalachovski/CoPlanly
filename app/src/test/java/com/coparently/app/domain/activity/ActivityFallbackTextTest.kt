@@ -50,6 +50,45 @@ class ActivityFallbackTextTest {
     }
 
     @Test
+    fun `a split proposal states the proposer's own share in the first person when their slot is known`() {
+        // The card carries slot 1's share; "I" is the sender, so the sentence reads their slot.
+        val proposed = ActivityAnnouncement(
+            kind = ActivityKind.SPLIT_PROPOSED,
+            entityType = ActivityEntityType.SPLIT_PROPOSAL,
+            entityId = "uA__uB",
+            title = "",
+            amount = "3500"
+        )
+
+        assertEquals("Proposed a new expense split: I pay 35 %, you pay 65 %", ActivityFallbackText.of(proposed, "mom"))
+        assertEquals("Proposed a new expense split: I pay 65 %, you pay 35 %", ActivityFallbackText.of(proposed, "dad"))
+        assertEquals(
+            "Proposed a new expense split: I pay 33.33 %, you pay 66.67 %",
+            ActivityFallbackText.of(proposed.copy(amount = "3333"), "mom"),
+            "a share that is not whole keeps its fraction"
+        )
+        // Without the slot, or the share, nothing says whose share is whose: the plain sentence.
+        assertEquals("Proposed a new expense split", ActivityFallbackText.of(proposed, null))
+        assertEquals("Proposed a new expense split", ActivityFallbackText.of(proposed))
+        assertEquals("Proposed a new expense split", ActivityFallbackText.of(proposed.copy(amount = null), "mom"))
+        assertEquals("Proposed a new expense split", ActivityFallbackText.of(proposed.copy(amount = "12000"), "mom"))
+    }
+
+    @Test
+    fun `a split's answers and its withdrawal read as plain sentences, whatever the slot`() {
+        val expected = mapOf(
+            ActivityKind.SPLIT_ACCEPTED to "Accepted the expense split",
+            ActivityKind.SPLIT_DECLINED to "Declined the expense split",
+            ActivityKind.SPLIT_WITHDRAWN to "Withdrew the expense split proposal"
+        )
+        expected.forEach { (kind, text) ->
+            val card = ActivityAnnouncement(kind, ActivityEntityType.SPLIT_PROPOSAL, "uA__uB", "")
+            assertEquals(text, ActivityFallbackText.of(card))
+            assertEquals(text, ActivityFallbackText.of(card, "dad"))
+        }
+    }
+
+    @Test
     fun `every kind produces something, so no bubble is ever empty`() {
         ActivityKind.entries.forEach { kind ->
             val text = ActivityFallbackText.of(announcement(kind, "Thing"))

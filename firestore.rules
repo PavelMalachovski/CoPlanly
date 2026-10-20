@@ -1631,7 +1631,8 @@ service cloud.firestore {
 
     // ---- Request clocks (phase 3a) -------------------------------------
     // `request_deadlines/{clockId}` — the clock of one request that waits on the other parent: a
-    // day swap, a change request, an event awaiting acceptance, a custody proposal. It holds the
+    // day swap, a change request, an event awaiting acceptance, a custody proposal, an expense
+    // split proposal (`family_settings`, October 2026). It holds the
     // deadline the proposer chose, the first moment the request would change something (the
     // cap), and the marks the two phones add as the request is received, opened, reminded about,
     // given a last chance and closed. The design is
@@ -1682,18 +1683,18 @@ service cloud.firestore {
     }
 
     // The id a clock must carry, built from the caller and the clock's own fields: its kind, the
-    // proposer's uid and the reference it times — and for a proposal the family too, because a
-    // proposal's reference is a timestamp, unique only within one family's custody document.
-    // `RequestDeadlineId` builds the same string on the client.
+    // proposer's uid and the reference it times — and for a proposal or a split the family too,
+    // because their reference is a timestamp, unique only within one family's custody document or
+    // `family_settings` document. `RequestDeadlineId` builds the same string on the client.
     //
     // The proposer's uid is in the id because the other parent can see the rest of it. Rebuilt
     // here from the *caller*, it stops the other parent creating a request's clock first and
     // stripping its deadline, or faking an early "No answer". The parts are joined with `_`,
     // which a Firebase uid never contains, so two proposers cannot spell the same id. The create
-    // rule checks the kind is one of the four before it asks for the id.
+    // rule checks the kind is one of the five before it asks for the id.
     function requestClockId(data) {
-      return data.kind == 'proposal'
-          ? 'proposal_' + request.auth.uid + '_' + data.familyId + '_' + data.ref
+      return data.kind in ['proposal', 'split']
+          ? data.kind + '_' + request.auth.uid + '_' + data.familyId + '_' + data.ref
           : data.kind + '_' + request.auth.uid + '_' + data.ref;
     }
 
@@ -1717,7 +1718,7 @@ service cloud.firestore {
              data.keys().hasOnly(['kind', 'ref', 'familyId', 'proposerUid', 'responderUid',
                                   'participants', 'createdAt', 'answerByMillis',
                                   'capMillis', 'firstDate', 'dayCount']) &&
-             data.kind in ['swap', 'change', 'event', 'proposal'] &&
+             data.kind in ['swap', 'change', 'event', 'proposal', 'split'] &&
              isValidLength(data.ref, 1, 100) &&
              data.familyId is string &&
              clockId == requestClockId(data) &&
@@ -2128,9 +2129,9 @@ service cloud.firestore {
                       // with no bound.
                       isValidLength(request.resource.data.get('data', {}).get('dayCount', ''), 0, 4) &&
                       // A request's deadline, as epoch millis in decimal text (13 characters
-                      // today) - the day-swap, change-request and custody-proposal pushes carry
-                      // it so their first notification can say when to answer by, and a last
-                      // chance carries where it ends. Bounded like every key a client writes.
+                      // today) - the day-swap, change-request, custody-proposal and split-proposal
+                      // pushes carry it so their first notification can say when to answer by, and
+                      // a last chance carries where it ends. Bounded like every key a client writes.
                       isValidLength(request.resource.data.get('data', {}).get('answerBy', ''), 0, 20) &&
                       isPushFamily(request.resource.data.get('data', {}).get('familyId', ''),
                                    request.resource.data.targetUserId);

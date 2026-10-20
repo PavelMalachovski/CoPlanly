@@ -193,7 +193,7 @@ private fun OutcomeChip(entry: HistoryEntry) {
 private fun proposedTime(subject: RequestSubject) = when (subject) {
     is RequestSubject.NewTime -> subject.proposedStart
     is RequestSubject.NewEvent -> subject.start
-    is RequestSubject.DaySwap, RequestSubject.CustodySchedule -> null
+    is RequestSubject.DaySwap, RequestSubject.CustodySchedule, RequestSubject.SplitRatio -> null
 }
 
 /** Who asked and who answered, from this parent's side — or who withdrew it. */

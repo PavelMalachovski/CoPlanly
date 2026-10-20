@@ -211,6 +211,31 @@ describe('request_deadlines', () => {
     })));
   });
 
+  it('starts an expense split clock under an id with its family, and only under its proposer\'s uid', async () => {
+    // A split's reference is its `proposedAtMillis`, unique within one family's `family_settings`
+    // document only, so its id carries the family, as a proposal's does (October 2026).
+    const proposedAt = '1792488600000';
+    const split = clockDoc({kind: 'split', ref: proposedAt});
+    // The refusals first, so that none of them can fail merely because the document is there.
+    // Without its family, with another family's, or spelled as a custody proposal's...
+    await assertFails(clock(ALICE, `split_${ALICE}_${proposedAt}`).set(split));
+    await assertFails(clock(ALICE, `split_${ALICE}_${OTHER_FAMILY}_${proposedAt}`).set(split));
+    await assertFails(clock(ALICE, `proposal_${ALICE}_${FAMILY}_${proposedAt}`).set(split));
+    // ...and under the other parent's uid: Bob can neither start Alice's clock first and strip its
+    // deadline, nor put her name on one under his own id.
+    await assertFails(clock(BOB, `split_${ALICE}_${FAMILY}_${proposedAt}`).set(split));
+    await assertFails(clock(BOB, `split_${BOB}_${FAMILY}_${proposedAt}`).set(split));
+
+    await assertSucceeds(clock(ALICE, `split_${ALICE}_${FAMILY}_${proposedAt}`).set(split));
+    await assertSucceeds(clock(BOB, `split_${BOB}_${FAMILY}_${proposedAt}`).set(clockDoc({
+      kind: 'split',
+      ref: proposedAt,
+      proposerUid: BOB,
+      responderUid: ALICE,
+      participants: [BOB, ALICE],
+    })));
+  });
+
   it('lets either parent be the proposer', async () => {
     await assertSucceeds(clock(BOB, `swap_${BOB}_g-7`).set(clockDoc({
       ref: 'g-7',

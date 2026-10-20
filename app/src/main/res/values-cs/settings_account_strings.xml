@@ -84,6 +84,8 @@
     <string name="family_switcher_request_row">Čeká žádost o změnu</string>
     <string name="family_switcher_schedule_other">V jiné rodině čeká návrh rozvrhu péče</string>
     <string name="family_switcher_schedule_row">Čeká návrh rozvrhu péče</string>
+    <string name="family_switcher_split_other">V jiné rodině čeká návrh rozdělení výdajů</string>
+    <string name="family_switcher_split_row">Čeká návrh rozdělení výdajů</string>
     <string name="settings_school_import_title">Import z Bakalářů</string>
     <string name="settings_school_import_description">Školní akce a vyučování vašeho dítěte rovnou v kalendáři.</string>
     <string name="settings_operation_failed">Nepodařilo se to. Zkontrolujte připojení a zkuste to znovu.</string>
