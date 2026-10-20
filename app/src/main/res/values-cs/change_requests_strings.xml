@@ -39,6 +39,7 @@
     <string name="change_request_error_answer_failed">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu.</string>
     <string name="change_request_error_signed_out">Jste odhlášeni. Přihlaste se a zkuste to znovu.</string>
     <string name="change_request_error_not_paired">Nejdřív se propojte s druhým rodičem, abyste mohli posílat žádosti o změnu.</string>
+    <string name="change_request_error_not_in_family">Tato událost nepatří do rodiny, se kterou jste propojeni, takže není koho požádat.</string>
     <string name="change_request_error_send_failed">Žádost o změnu se nepodařilo odeslat. Zkuste to prosím znovu.</string>
     <string name="request_section_waiting_on_you">Čekají na vaši odpověď</string>
     <string name="request_section_waiting_on_them">Čekají na odpověď: %1$s</string>

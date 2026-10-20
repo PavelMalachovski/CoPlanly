@@ -44,6 +44,7 @@
     <string name="change_request_error_answer_failed">That could not be answered. Please try again.</string>
     <string name="change_request_error_signed_out">You\'re signed out. Sign in and try again.</string>
     <string name="change_request_error_not_paired">Pair with your co-parent first to send change requests.</string>
+    <string name="change_request_error_not_in_family">This event is not in a family you are linked with, so there is nobody to ask.</string>
     <string name="change_request_error_send_failed">The change request could not be sent. Please try again.</string>
     <!-- The inbox's three sections (phase 2). A heading is drawn in capitals by GroupLabel. -->
     <string name="request_section_waiting_on_you">Waiting for your answer</string>

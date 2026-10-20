@@ -8,6 +8,7 @@ import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.chat.ConversationKey
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
@@ -79,7 +80,8 @@ class RequestChangeViewModelTest {
         eventType = "medical",
         parentOwner = "mom",
         createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0)
+        updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0),
+        familyId = FamilyKey.of("u1", "u2")
     )
     private val proposedStart = LocalDateTime.of(2026, 9, 11, 9, 0)
 
@@ -120,6 +122,43 @@ class RequestChangeViewModelTest {
             vm.uiState.value
         )
         coVerify(exactly = 0) { changeRequestRepository.createChangeRequest(any()) }
+    }
+
+    @Test
+    fun `a request about another family's event goes to that family's co-parent`() = runTest(dispatcher) {
+        // Olya shows the family with u2; the event is the family with u3's. The request used to be
+        // addressed to whoever was on screen (isolation audit, October 2026).
+        coEvery { userRepository.getCurrentUser() } returns me.copy(partnerIds = listOf("u2", "u3"))
+        val request = slot<ChangeRequest>()
+        coEvery { changeRequestRepository.createChangeRequest(capture(request)) } returns Unit
+        val vm = viewModel()
+
+        vm.submit(event.copy(familyId = FamilyKey.of("u1", "u3")), proposedStart, null, null)
+        advanceUntilIdle()
+
+        assertEquals("u3", request.captured.requestedTo)
+        coVerify(exactly = 1) { announcer.announce(any(), "Olya", any(), "u3") }
+    }
+
+    @Test
+    fun `an event of an ended family or of no family asks nobody`() = runTest(dispatcher) {
+        coEvery { userRepository.getCurrentUser() } returns me.copy(partnerIds = listOf("u2"))
+        val vm = viewModel()
+
+        vm.submit(event.copy(familyId = FamilyKey.of("u1", "ex")), proposedStart, null, null)
+        advanceUntilIdle()
+        assertEquals(
+            RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_in_family)),
+            vm.uiState.value
+        )
+
+        vm.submit(event.copy(familyId = null), proposedStart, null, null)
+        advanceUntilIdle()
+        assertEquals(
+            RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_in_family)),
+            vm.uiState.value
+        )
+        coVerify(exactly = 0) { changeRequestRepository.createChangeRequest(any(), any()) }
     }
 
     @Test
