@@ -1024,9 +1024,9 @@ exports.grantParentNames = grantParentNames;
  * and the friend's profile gate (`friend_profiles/{uid}.familyParents`) gains the new family's
  * parents, so both families can read who she is.
  *
- * The inviter must be a **paired parent**: `partnerId` is what proves they hold a slot, and it
- * also supplies the second uid the grant records, so a friend admitted by one parent can read
- * both parents' events — which is what "see the calendar" means for a family of two.
+ * The inviter must be a **paired parent** of the family the invitation names, linked from both
+ * sides: that co-parent is the second uid the grant records, so a friend admitted by one parent can
+ * read both parents' events — which is what "see the calendar" means for a family of two.
  *
  * The grant also carries the two parents' first names ([grantParentNames]) as they stood at
  * redemption: the friend reads no parent's profile, and her calendar has to say whose day it is.
@@ -1111,9 +1111,13 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
     // (whichever one the inviter happens to be showing when the code is redeemed, days later)
     // is a disclosure nobody asked for. The same goes for an id that does not name the inviter.
     //
-    // The fallback is the pre-M-6 behaviour, and only an invitation that names no family at all
-    // gets it — which is what an older build generates: `users/{inviter}.partnerId`, which since
-    // M-4 is the co-parent of whichever family that parent is currently showing.
+    // An invitation that names no family at all — what an older build generates — falls back to
+    // the inviter's one co-parent, and **only while there is exactly one**. The fallback used to
+    // be `users/{inviter}.partnerId`, which the server keeps on the *first* co-parent: a friend a
+    // two-family parent meant for family B was granted family A's calendar, which A's other
+    // parent never chose. With two families nothing says which one the friend was meant for, so
+    // the code is refused (`ambiguous-family`) and the parent makes a new one; the rules now
+    // refuse a friend invitation without a family, so only an older build's code reaches this.
     const livePartners = partnersOf(inviter);
     const namesFamily = typeof invite.familyId === 'string' && invite.familyId !== '';
     let partnerId = '';
@@ -1121,8 +1125,12 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
       const requestedPartner = partnerFromFamilyId(invite.familyId, invite.fromUserId);
       partnerId = requestedPartner && livePartners.includes(requestedPartner) ?
         requestedPartner : '';
-    } else {
-      partnerId = inviter && typeof inviter.partnerId === 'string' ? inviter.partnerId : '';
+    } else if (livePartners.length === 1) {
+      partnerId = livePartners[0];
+    } else if (livePartners.length > 1) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'This invitation names no family; ask for a new code',
+          {reason: 'ambiguous-family'});
     }
     if (!partnerId) {
       throw new functions.https.HttpsError(
@@ -1148,8 +1156,15 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
       typeof legacy.data.expiresAtMillis === 'number' && legacy.data.expiresAtMillis > Date.now();
     const legacyTargetRef = legacyLive ? db.collection('calendar_friends').doc(legacy.id) : null;
     const legacyTargetTaken = legacyTargetRef ? (await tx.get(legacyTargetRef)).exists : false;
-    // The co-parent's name for the grant: the friend cannot read either parent's profile.
+    // The co-parent's name for the grant: the friend cannot read either parent's profile. The
+    // same read proves the link from the other side too — an interrupted unpair can leave the
+    // inviter naming a co-parent who no longer names them, and that family is not live.
     const partnerSnap = await tx.get(db.collection('users').doc(partnerId));
+    if (!partnerSnap.exists || !partnersOf(partnerSnap.data()).includes(invite.fromUserId)) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Only a paired parent can invite a friend',
+          {reason: 'inviter-not-paired'});
+    }
     const parentNames = grantParentNames({
       [invite.fromUserId]: inviter,
       [partnerId]: partnerSnap.exists ? partnerSnap.data() : null,
@@ -1200,13 +1215,18 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
 
   // Both parents are told: a third person reading the family's calendar is a fact the parent who
   // did not send the invitation has as much right to know as the one who did.
+  //
+  // A type, the friend's profile name and the family — never a sentence (SEC-3, CLAUDE.md item
+  // 15). This used to send an English `title`/`body` carrying the friend's verified e-mail
+  // address; no build has wording for the type yet, so phones drop it until one does.
+  const actorName = await profileName(accepterRef);
   await Promise.all(familyParents.map((parentUid) =>
     db.collection('notification_queue').add({
       targetUserId: parentUid,
       data: {
         type: 'calendar_friend_accepted',
-        title: 'Calendar access accepted',
-        body: `${acceptingEmail || 'A friend'} can now see the family calendar`,
+        actorName,
+        familyId,
       },
       status: 'pending',
       createdAt: FieldValue.serverTimestamp(),

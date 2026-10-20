@@ -353,12 +353,65 @@ describe('the grant is scoped to one family (M-6)', () => {
     assert.deepStrictEqual(Object.keys(db._docs.calendar_friends || {}), []);
   });
 
-  it('falls back for an invitation made by a build that predates M-6', async () => {
-    const db = seeded({}, twoFamilies);
+  it('refuses to guess a family for an invitation that names none when the inviter has two',
+      async () => {
+        // An older build's invitation, or one made while no family was selected. The singular
+        // `partnerId` it used to fall back to is the *first* co-parent the server recorded —
+        // whichever family the friend was meant for, she landed in Bob's, which Bob never chose.
+        const db = seeded({}, twoFamilies);
+
+        await assert.rejects(
+            () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
+            (err) => err.code === 'failed-precondition' &&
+              err.details.reason === 'ambiguous-family');
+        assert.deepStrictEqual(Object.keys(db._docs.calendar_friends || {}), []);
+        assert.strictEqual(db._docs.invitations.inv1.status, 'pending');
+      });
+
+  it('still falls back for an invitation naming no family when there is only one', async () => {
+    const db = seeded({familyId: ''});
 
     await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
 
     assert.strictEqual(db._docs.calendar_friends[GRANT_ID].familyId, 'alice__bob');
+  });
+
+  it('refuses a family whose other parent no longer names the inviter', async () => {
+    // A half-torn link (an interrupted unpair): Alice's document still names Carol, Carol's no
+    // longer names Alice. Liveness is checked from both sides, as the professional path does.
+    const halfTorn = Object.assign({}, twoFamilies, {
+      carol: {id: 'carol', name: 'Carol', role: 'dad', partnerId: '', partnerIds: []},
+    });
+    for (const familyId of ['alice__carol', undefined]) {
+      const users = familyId ? halfTorn : Object.assign({}, halfTorn, {
+        alice: {id: 'alice', name: 'Alice', role: 'mom', partnerId: 'carol', partnerIds: ['carol']},
+      });
+      const db = seeded(familyId ? {familyId} : {}, users);
+
+      await assert.rejects(
+          () => myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref),
+          (err) => err.code === 'failed-precondition' &&
+            err.details.reason === 'inviter-not-paired');
+      assert.deepStrictEqual(Object.keys(db._docs.calendar_friends || {}), []);
+    }
+  });
+
+  it('names the family on the push to both parents, and never the friend\'s address', async () => {
+    // SEC-3 (CLAUDE.md item 15): a type and a name, never an English sentence — this used to put
+    // the friend's verified e-mail address in the body.
+    const db = seeded({familyId: 'alice__carol'}, twoFamilies);
+
+    await myFunctions.acceptCalendarFriendInvitationImpl(db, 'nina', 'nina@example.com', ref);
+
+    const pushes = db._added.filter((a) => a.collection === 'notification_queue');
+    assert.deepStrictEqual(pushes.map((p) => p.data.targetUserId).sort(), ['alice', 'carol']);
+    for (const push of pushes) {
+      assert.strictEqual(push.data.data.type, 'calendar_friend_accepted');
+      assert.strictEqual(push.data.data.familyId, 'alice__carol');
+      assert.strictEqual(push.data.data.actorName, 'Nina');
+      assert.ok(!('title' in push.data.data) && !('body' in push.data.data));
+      assert.ok(!JSON.stringify(push.data.data).includes('nina@example.com'));
+    }
   });
 });
 
