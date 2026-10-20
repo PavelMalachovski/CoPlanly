@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
@@ -19,6 +20,9 @@ import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
+import com.coparently.app.domain.expenses.FamilySettings
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioOutcome
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
@@ -31,6 +35,7 @@ import com.coparently.app.utils.unbreakableDate
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -49,7 +54,8 @@ import javax.inject.Inject
 
 /**
  * What Alice **sees** when Bob asks her something, and what her answer on screen does on his
- * phone: an event change request, a new custody pattern, a one-off day swap and a seasonal layer.
+ * phone: an event change request, a new custody pattern, a one-off day swap, a seasonal layer and a
+ * new expense split.
  *
  * `TwoParentRequestsAndEventPushesTest` and `TwoParentCustodyTest` prove the mechanism between two
  * data layers; this runs Alice's real app ([AliceOnScreenTest]) so the surfaces that draw it are
@@ -141,6 +147,36 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
             awaitPattern(bob.custodyRepository) { it.modelType == CustodyModelType.TWO_TWO_THREE }
             awaitPattern(custodyRepository) { it.modelType == CustodyModelType.TWO_TWO_THREE }
         }
+    }
+
+    @Test
+    fun bobsSplitProposalPopsUpOnAlicesHomeAndHerAnswerReachesHim() {
+        step("split: Bob sets the pair's first split, then proposes another")
+        runBlocking {
+            // The first split of a pair applies outright; only a change to it asks the co-parent.
+            val splits = bob.familySettingsRepository
+            assertEquals(RatioSubmission.APPLIED, splits.submitRatio(SplitRatio.EVEN).getOrThrow())
+            assertEquals(RatioSubmission.PROPOSED, splits.submitRatio(SEVENTY_THIRTY).getOrThrow())
+        }
+        waitFor("Bob's split proposal on Alice's Home, naming him", splitDialogNaming(bob.name))
+        tap(dialogButton(R.string.change_request_accept))
+
+        step("split: Bob's document holds the split Alice accepted")
+        runBlocking {
+            awaitSettings(bob) { settings ->
+                settings.ratio == SEVENTY_THIRTY &&
+                    settings.proposal == null &&
+                    settings.lastDecision?.outcome == SplitRatioOutcome.ACCEPTED &&
+                    settings.lastDecision?.by == aliceUid
+            }
+        }
+
+        step("split: the answer is in the inbox's History")
+        tap(hasText(string(R.string.home_requests_title)) and hasClickAction())
+        waitFor(
+            "Bob's split in History, answered by Alice",
+            hasText(string(R.string.request_history_theirs_answered, bob.name), substring = true)
+        )
     }
 
     @Test
@@ -300,6 +336,12 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
             checkNotNull(parent.custodyRepository.observeShared().first { it != null && condition(it) })
         }
 
+    /** The pair's split document as [parent]'s listener delivers it, once [condition] holds. */
+    private suspend fun awaitSettings(parent: EmulatorParent, condition: (FamilySettings) -> Boolean): FamilySettings =
+        withTimeout(EmulatorParent.WAIT_MS) {
+            parent.familySettingsRepository.observeSettings().filterNotNull().first { condition(it) }
+        }
+
     /** The calendar pattern [repository] holds — Room, fed by its mirror — once [condition] holds. */
     private suspend fun awaitPattern(repository: CustodyModelRepository, condition: (CustodyModel) -> Boolean) =
         withTimeout(EmulatorParent.WAIT_MS) {
@@ -347,6 +389,15 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     private fun proposalDialogNaming(name: String): SemanticsMatcher =
         hasAnyAncestor(isDialog()) and hasText(string(R.string.custody_proposal_inbox_body, name), substring = true)
 
+    /**
+     * Home's split pop-up, whose body names the parent who proposed it. Matched on the sentence up to
+     * the shares, which name each parent by slot: which of the two Bob holds is the server's choice.
+     */
+    private fun splitDialogNaming(name: String): SemanticsMatcher {
+        val sentence = string(R.string.expenses_split_proposal_body_named, name, SHARES_MARK)
+        return hasAnyAncestor(isDialog()) and hasText(sentence.substringBefore(SHARES_MARK), substring = true)
+    }
+
     /** Home's swap pop-up for one day offered by Bob, worded and dated as `AwaitingDialogs` words it. */
     private fun swapDialogFor(date: LocalDate): SemanticsMatcher = hasAnyAncestor(isDialog()) and hasText(
         string(
@@ -368,5 +419,11 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         const val SLOT_TWO = "dad"
         const val LAYER_ID = "e2e-visit"
         const val LAYER_NAME = "Visit"
+
+        /** Seventy per cent for slot 1: a split different from the even one the pair agrees first. */
+        val SEVENTY_THIRTY = SplitRatio(7_000)
+
+        /** Stands in for the shares in the split pop-up's sentence, to cut the sentence before them. */
+        const val SHARES_MARK = "\u0000"
     }
 }
