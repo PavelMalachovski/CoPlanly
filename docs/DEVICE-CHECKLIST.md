@@ -141,11 +141,9 @@ them the evening before, from the commit you will build the app from.
   2. [ ] Invoke `backfillFamilyDocuments`.
   3. [ ] Invoke `backfillRecordFamilyIds`.
   4. [ ] `firebase deploy --only firestore:rules,firestore:indexes`.
-  5. [ ] Invoke `repairChildAndPetAudiences` with `{dryRun: true}` and write its counts down:
-         they are the scope of the October 2026 cross-family leak (`docs/legal/DPIA.md` R20).
-  6. [ ] Invoke it again without `dryRun`, after step 4 (the rules carry the `child_info`/`pets`
-         family bound, so nothing can write the leak again). A dry run afterwards reports
-         `repaired: 0`.
+  5. `repairChildAndPetAudiences` is **not** run: owner decision, 20 October 2026, recorded in
+     `docs/legal/DPIA.md` R20. Records the October 2026 cross-family leak already wrote stay as
+     they are until their own parent saves them again.
 
   If you run step 4 before step 3, each co-parent's expenses look empty on the other phone
   until step 3 has run.
