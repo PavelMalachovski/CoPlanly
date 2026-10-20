@@ -54,9 +54,9 @@ class DayOverrideDecisionCodecTest {
 
     @Test
     fun `the agreed slot is the entry's own once accepted, else the latest earlier acceptance`() {
-        val answer = DayOverrideDecisionCodec.encode(DayOverrideDecisionCodec.of(accepted))
-        val declinedChange = DayOverrideDecisionCodec.encode(
-            DayOverrideDecisionCodec.of(accepted.copy(toParent = "mom", requestedBy = "uid-mom", status = DayOverrideStatus.DECLINED))
+        val answer = DayOverrideDecisionCodec.answerOf(accepted)
+        val declinedChange = DayOverrideDecisionCodec.answerOf(
+            accepted.copy(toParent = "mom", requestedBy = "uid-mom", status = DayOverrideStatus.DECLINED)
         )
         val change = accepted.copy(toParent = "mom", requestedBy = "uid-mom", status = DayOverrideStatus.PENDING)
 

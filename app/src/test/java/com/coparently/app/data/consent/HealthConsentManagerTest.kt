@@ -55,7 +55,8 @@ class HealthConsentManagerTest {
         val mine = child("mine", createdBy = ME, photos = listOf(PHOTO))
         val mineWithNothing = child("mine-empty", createdBy = ME).withoutHealthData()
         val theirs = child("theirs", createdBy = CO_PARENT)
-        every { childInfoRepository.getAllChildInfoInEveryFamily() } returns flowOf(listOf(mine, mineWithNothing, theirs))
+        every { childInfoRepository.getAllChildInfoInEveryFamily() } returns
+            flowOf(listOf(mine, mineWithNothing, theirs))
 
         val outcome = manager.withdraw()
 

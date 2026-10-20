@@ -455,9 +455,14 @@ class RequestHistoryTest {
     @Test
     fun `a day offered again keeps its earlier answer in History beside the new offer`() {
         val accepted = swap(DayOverrideStatus.ACCEPTED, requestedBy = "u2", decidedBy = "u1")
-        val answer = DayOverrideDecisionCodec.encode(DayOverrideDecisionCodec.of(accepted))
-        val change = swap(DayOverrideStatus.DECLINED, requestedBy = "u1", decidedBy = "u2", decidedAt = "2026-09-05T08:00:00", groupId = "g2")
-            .copy(toParent = "mom", requestedAt = "2026-09-04T18:00:00", earlier = listOf(answer))
+        val answer = DayOverrideDecisionCodec.answerOf(accepted)
+        val change = swap(
+            DayOverrideStatus.DECLINED,
+            requestedBy = "u1",
+            decidedBy = "u2",
+            decidedAt = "2026-09-05T08:00:00",
+            groupId = "g2"
+        ).copy(toParent = "mom", requestedAt = "2026-09-04T18:00:00", earlier = listOf(answer))
 
         val entries = history(overrides = mapOf("2026-09-07" to change, "2026-09-08" to change))
 

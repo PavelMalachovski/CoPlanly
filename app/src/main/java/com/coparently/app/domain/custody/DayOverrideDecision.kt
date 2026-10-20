@@ -43,6 +43,15 @@ object DayOverrideDecisionCodec {
     private const val SEPARATOR = "|"
     private const val FIELDS = 8
 
+    // Where each field sits in the split string; the version is at 0.
+    private const val TO_PARENT = 1
+    private const val REQUESTED_BY = 2
+    private const val REQUESTED_AT = 3
+    private const val STATUS = 4
+    private const val DECIDED_BY = 5
+    private const val DECIDED_AT = 6
+    private const val GROUP_ID = 7
+
     /** [decision] on the wire. */
     fun encode(decision: DayOverrideDecision): String = listOf(
         VERSION,
@@ -60,18 +69,23 @@ object DayOverrideDecisionCodec {
     fun decode(wire: String): DayOverrideDecision? {
         val parts = wire.split(SEPARATOR)
         if (parts.size != FIELDS || parts[0] != VERSION) return null
-        val status = DayOverrideStatus.entries.firstOrNull { it.name == parts[4] } ?: return null
-        if (status == DayOverrideStatus.PENDING || parts[1].isBlank() || parts[2].isBlank()) return null
+        val status = DayOverrideStatus.entries.firstOrNull { it.name == parts[STATUS] } ?: return null
+        if (status == DayOverrideStatus.PENDING || parts[TO_PARENT].isBlank() || parts[REQUESTED_BY].isBlank()) {
+            return null
+        }
         return DayOverrideDecision(
-            toParent = parts[1],
-            requestedBy = parts[2],
-            requestedAt = parts[3],
+            toParent = parts[TO_PARENT],
+            requestedBy = parts[REQUESTED_BY],
+            requestedAt = parts[REQUESTED_AT],
             status = status,
-            decidedBy = parts[5].ifBlank { null },
-            decidedAt = parts[6].ifBlank { null },
-            groupId = parts[7].ifBlank { null }
+            decidedBy = parts[DECIDED_BY].ifBlank { null },
+            decidedAt = parts[DECIDED_AT].ifBlank { null },
+            groupId = parts[GROUP_ID].ifBlank { null }
         )
     }
+
+    /** [override]'s own answer on the wire, as it moves into the entry that replaces it. */
+    fun answerOf(override: DayOverride): String = encode(of(override))
 
     /** [override]'s own answer, as it moves into the entry that replaces it. */
     fun of(override: DayOverride): DayOverrideDecision = DayOverrideDecision(

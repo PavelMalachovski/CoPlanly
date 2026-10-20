@@ -20,13 +20,13 @@ import java.time.Instant
 enum class FriendAccessDuration(private val duration: Duration?) {
 
     /** A visit. */
-    WEEK(Duration.ofDays(7)),
+    WEEK(Duration.ofDays(WEEK_DAYS)),
 
     /** The default, as for a guest. */
     MONTH(GuestGrantPolicy.DEFAULT_DURATION),
 
     /** A school term, roughly. */
-    QUARTER(Duration.ofDays(90)),
+    QUARTER(Duration.ofDays(QUARTER_DAYS)),
 
     /** Until the parents unlink or revoke it. */
     WHILE_LINKED(null);
@@ -35,6 +35,9 @@ enum class FriendAccessDuration(private val duration: Duration?) {
     fun expiryFrom(from: Instant): Long = duration?.let { from.plus(it).toEpochMilli() } ?: WHILE_LINKED_EXPIRY_MILLIS
 
     companion object {
+        private const val WEEK_DAYS = 7L
+        private const val QUARTER_DAYS = 90L
+
         /** What the invite sheet starts on. */
         val DEFAULT = MONTH
 

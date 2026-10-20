@@ -72,7 +72,7 @@ class CustodyResolverTest {
 
     @Test
     fun `an agreed swap stands while a change to it waits, and after the change is declined`() {
-        val answer = DayOverrideDecisionCodec.encode(DayOverrideDecisionCodec.of(override("dad", DayOverrideStatus.ACCEPTED)))
+        val answer = DayOverrideDecisionCodec.answerOf(override("dad", DayOverrideStatus.ACCEPTED))
         val waiting = override("mom", DayOverrideStatus.PENDING).copy(earlier = listOf(answer))
         val declined = override("mom", DayOverrideStatus.DECLINED).copy(earlier = listOf(answer))
 

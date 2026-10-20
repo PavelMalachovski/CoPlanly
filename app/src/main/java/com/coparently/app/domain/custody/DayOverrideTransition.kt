@@ -123,7 +123,7 @@ object DayOverrideTransition {
     private fun earlierAfterReplacing(replaced: DayOverride?): List<String>? {
         if (replaced == null) return null
         val kept = replaced.earlier.orEmpty()
-        val all = if (replaced.isPending) kept else kept + DayOverrideDecisionCodec.encode(DayOverrideDecisionCodec.of(replaced))
+        val all = if (replaced.isPending) kept else kept + DayOverrideDecisionCodec.answerOf(replaced)
         return all.takeIf { it.isNotEmpty() }
     }
 

@@ -69,7 +69,8 @@ class FamilyViewTest {
 
     @Test
     fun `a malformed partner list hides nothing rather than failing`() {
-        val view = FamilyView.of(zuzana, row(onScreen = "igor", partners = emptyList()).copy(partnerIdsJson = "not json"))
+        val malformed = row(onScreen = "igor", partners = emptyList()).copy(partnerIdsJson = "not json")
+        val view = FamilyView.of(zuzana, malformed)
         assertTrue(view.shows(carolFamily))
     }
 

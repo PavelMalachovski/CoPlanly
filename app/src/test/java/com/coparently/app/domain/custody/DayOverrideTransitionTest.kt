@@ -111,7 +111,8 @@ class DayOverrideTransitionTest {
     @Test
     fun `offering an answered day again keeps its answer in the new offer's earlier list`() {
         val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", dad, now, groupId = "g1").getOrThrow()
-        val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, "2026-08-23T11:00:00", accept = true)
+        val accepted = DayOverrideTransition
+            .decideGroup(offered, listOf(date), mom, "2026-08-23T11:00:00", accept = true)
             .getOrThrow()
 
         val change = DayOverrideTransition.offerAll(
@@ -133,7 +134,8 @@ class DayOverrideTransitionTest {
         val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, now, accept = true).getOrThrow()
         val change = DayOverrideTransition.offer(accepted, date, "mom", mom, "2026-08-30T09:00:00").getOrThrow()
 
-        val declined = DayOverrideTransition.decideGroup(change, listOf(date), dad, "2026-08-30T10:00:00", accept = false)
+        val declined = DayOverrideTransition
+            .decideGroup(change, listOf(date), dad, "2026-08-30T10:00:00", accept = false)
             .getOrThrow().getValue(date)
 
         assertEquals(DayOverrideStatus.DECLINED, declined.status)

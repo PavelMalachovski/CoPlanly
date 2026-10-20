@@ -14,8 +14,6 @@ import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.pairing.pairingMessageRes
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Instant
-import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +25,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import javax.inject.Inject
 
 /**
  * The friend-invite sheet's state.
