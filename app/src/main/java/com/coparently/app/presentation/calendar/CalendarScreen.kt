@@ -368,7 +368,7 @@ fun CalendarScreen(
     // it) draws one solid fill instead of the handover diagonal.
     val swappedDates: Set<LocalDate> = remember(dayOverrides) {
         dayOverrides
-            .filterValues { it.isAccepted }
+            .filterValues { it.agreedToParent != null }
             .keys
             .mapNotNull { iso -> runCatching { LocalDate.parse(iso) }.getOrNull() }
             .toSet()

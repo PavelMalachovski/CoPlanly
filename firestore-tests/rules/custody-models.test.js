@@ -479,6 +479,72 @@ describe('custody_models', () => {
       })));
     });
 
+    describe('asking to change an agreed day (the earlier list)', () => {
+      // Dad offered the day to himself and Mom accepted; Mom now asks for it back. The accepted
+      // answer moves into the new offer's `earlier` list, and `DayOverride.agreedToParent` keeps
+      // the day with Dad until Dad answers - so the list moves a day and must not be forged.
+      const accepted = Object.assign(pendingSwap(DAD, 'dad'), {
+        status: 'ACCEPTED', decidedBy: MOM, decidedAt: '2026-08-23T11:00:00', groupId: 'g1',
+      });
+      const answer = `d1|dad|${DAD}|2026-08-23T10:00:00|ACCEPTED|${MOM}|2026-08-23T11:00:00|g1`;
+      const changeOffer = (earlier) => Object.assign(pendingSwap(MOM, 'mom'),
+          {requestedAt: '2026-08-30T09:00:00', groupId: 'g2'}, earlier ? {earlier} : {});
+      const swapWrite = (uid, entry) => ({
+        dayOverrides: {[DATE]: entry},
+        lastModifiedBy: uid,
+        lastModifiedKind: 'SWAP',
+        lastSwapDate: DATE,
+      });
+
+      it('lets a parent offer an accepted day back, carrying its answer as the app does', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: accepted}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        await assertSucceeds(db.doc(PATH).update(swapWrite(MOM, changeOffer([answer]))));
+      });
+
+      it('lets an older build offer it back with no list, as it always could', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: accepted}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        await assertSucceeds(db.doc(PATH).update(swapWrite(MOM, changeOffer(null))));
+      });
+
+      it('refuses an offer that forges an acceptance over a day nobody had answered', async () => {
+        await seed(env, {[PATH]: custodyDoc({})});
+        const db = env.authenticatedContext(MOM).firestore();
+        const forged = `d1|mom|${MOM}|2026-08-23T10:00:00|ACCEPTED|${DAD}|2026-08-23T11:00:00|`;
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, changeOffer([forged]))));
+      });
+
+      it('refuses an offer whose list rewrites the answer it replaces', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: accepted}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        const rewritten = answer.replace('|dad|', '|mom|');
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, changeOffer([rewritten]))));
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, changeOffer([answer, answer]))));
+      });
+
+      it('carries a pending offer\'s list unchanged when it is replaced, adding nothing', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: changeOffer([answer])}})});
+        const db = env.authenticatedContext(DAD).firestore();
+        const counter = Object.assign(pendingSwap(DAD, 'dad'), {earlier: [answer]});
+        await assertSucceeds(db.doc(PATH).update(swapWrite(DAD, counter)));
+        const appended = Object.assign(pendingSwap(DAD, 'dad'), {
+          earlier: [answer, `d1|mom|${MOM}|2026-08-30T09:00:00|PENDING|||g2`],
+        });
+        await assertFails(db.doc(PATH).update(swapWrite(DAD, appended)));
+      });
+
+      it('lets the answer keep the list, and refuses one that drops or rewrites it', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: changeOffer([answer])}})});
+        const db = env.authenticatedContext(DAD).firestore();
+        const decline = (earlier) => Object.assign(changeOffer(earlier),
+            {status: 'DECLINED', decidedBy: DAD, decidedAt: '2026-08-30T10:00:00'});
+        await assertFails(db.doc(PATH).update(swapWrite(DAD, decline(null))));
+        await assertFails(db.doc(PATH).update(swapWrite(DAD, decline([answer.replace('|dad|', '|mom|')]))));
+        await assertSucceeds(db.doc(PATH).update(swapWrite(DAD, decline([answer]))));
+      });
+    });
+
     it('refuses a non-participant either half', async () => {
       await seed(env, {
         [PATH]: custodyDoc({dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')}}),

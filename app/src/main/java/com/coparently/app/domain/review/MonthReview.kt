@@ -127,7 +127,7 @@ object MonthReviewCalculator {
             specialDaysBySlot = specialDates.mapNotNull(lookup).groupingBy { it }.eachCount(),
             specialDays = specialDates.size,
             swapDaysOffered = swapDays.size,
-            swapDaysAgreed = swapDays.count { (_, override) -> override.isAccepted },
+            swapDaysAgreed = swapDays.count { (_, override) -> override.agreedToParent != null },
             sharedEvents = sharedEvents(month, events),
             money = money(month, expenses, currentUserId, roleByUid)
         )

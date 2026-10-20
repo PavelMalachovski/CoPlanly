@@ -13,7 +13,8 @@ import java.time.LocalDate
  *
  * The ordering is the whole correctness of the feature:
  *
- * 1. an **accepted** [DayOverride] for that date;
+ * 1. an **accepted** [DayOverride] for that date — or, while a change to an agreed swap waits
+ *    or after it was declined, the agreement it would replace ([DayOverride.agreedToParent]);
  * 2. otherwise the active [CustodyModel] — which itself answers from the highest-priority
  *    [SeasonalLayer] covering the date before its base pattern (MON-14);
  * 3. otherwise the legacy per-parent schedule;
@@ -41,8 +42,8 @@ object CustodyResolver {
         date: LocalDate
     ): String? {
         overrides[date.toString()]
-            ?.takeIf { it.isAccepted }
-            ?.let { return it.toParent }
+            ?.agreedToParent
+            ?.let { return it }
 
         // `getCustodyFor` never returns null, so the legacy schedule is reached only when there
         // is no active model at all — the same precedence the calendar's own lookup has always

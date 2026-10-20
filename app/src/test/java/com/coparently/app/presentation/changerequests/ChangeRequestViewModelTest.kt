@@ -9,6 +9,8 @@ import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.custody.CustodyProposal
+import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.ChangeRequest
@@ -450,4 +452,37 @@ class ChangeRequestViewModelTest {
             coVerify(exactly = 1) { clockActions.markSeen("clock-1") }
             coVerify(exactly = 1) { clockActions.markSeen(any()) }
         }
+
+    @Test
+    fun `asking to change an agreed swap offers each day back from the agreement it reads`() = runTest(dispatcher) {
+        coEvery { userRepository.getCurrentUserId() } returns "u1"
+        val transform = slot<(Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>>()
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), capture(transform), any()) } returns
+            Result.success(emptyMap())
+        val agreed = DayOverride(
+            toParent = "dad",
+            requestedBy = "u2",
+            requestedAt = "2026-10-01T09:00:00",
+            status = DayOverrideStatus.ACCEPTED,
+            decidedBy = "u1",
+            decidedAt = "2026-10-01T10:00:00",
+            groupId = "g1"
+        )
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.proposeSwapChange(listOf(LocalDate.of(2026, 10, 24), LocalDate.of(2026, 10, 23)), "Ill", answerBy = null)
+        advanceUntilIdle()
+
+        coVerify { custodyModelRepository.applyDayOverridesForDates(listOf("2026-10-23", "2026-10-24"), any(), null) }
+        val current = mapOf("2026-10-23" to agreed)
+        val change = transform.captured(current, "2026-10-23").getOrThrow().getValue("2026-10-23")
+        assertEquals("mom", change.toParent)
+        assertEquals("u1", change.requestedBy)
+        assertEquals(DayOverrideStatus.PENDING, change.status)
+        assertEquals("Ill", change.note)
+        assertEquals("dad", change.agreedToParent, "the agreement stands until the change is accepted")
+        // A day whose agreement is gone by the time of the write is left as it is.
+        assertEquals(current, transform.captured(current, "2026-10-24").getOrThrow())
+    }
 }

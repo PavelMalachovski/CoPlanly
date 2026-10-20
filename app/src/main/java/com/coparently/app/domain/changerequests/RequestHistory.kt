@@ -85,6 +85,9 @@ sealed interface RequestSubject {
  *   the row must not claim an outcome the other parent has not received (CQ-20).
  * @property clock The clock of a [RequestOutcome.NO_ANSWER] row — its deadline, last chance, opening
  *   and reminders, for the row's own line; null for every other outcome.
+ * @property swapDays The days of an accepted swap that is still the live answer, each with the slot
+ *   it was given to — what "Propose a change" offers back; empty for every other row, an earlier
+ *   answer's row included.
  */
 data class HistoryEntry(
     val key: String,
@@ -94,7 +97,8 @@ data class HistoryEntry(
     val decidedBy: String,
     val decidedAt: LocalDateTime,
     val queued: Boolean = false,
-    val clock: RequestDeadline? = null
+    val clock: RequestDeadline? = null,
+    val swapDays: Map<LocalDate, String> = emptyMap()
 )
 
 /**
@@ -140,6 +144,7 @@ object RequestHistory {
                 offers.mapNotNull { fromSwap(scope, it, clocks) } +
                 events.mapNotNull { fromEvent(scope, it, clocks) } +
                 listOfNotNull(decision?.let { fromDecision(scope, it) }) +
+                earlierSwapAnswers(scope, overrides) +
                 UnansweredRows.ofClosedClocks(scope, offers, decision, clocks)
             ).sortedWith(NEWEST_FIRST)
     }
@@ -189,10 +194,44 @@ object RequestHistory {
                 outcome = outcome,
                 askedBy = first.requestedBy,
                 decidedBy = first.decidedBy ?: scope.otherOf(first.requestedBy),
-                decidedAt = decidedAt
+                decidedAt = decidedAt,
+                swapDays = if (outcome == RequestOutcome.ACCEPTED) {
+                    group.swaps.associate { it.date to it.override.toParent }
+                } else {
+                    emptyMap()
+                }
             )
         }
     }
+
+    /**
+     * The answers swapped days had before they were offered again ([DayOverride.earlier]): one row
+     * per earlier offer, kept beside the row of the offer that replaced it, so an agreement a
+     * parent later asked to change stays in the History it was given in (tester feedback,
+     * October 2026).
+     */
+    private fun earlierSwapAnswers(scope: RequestScope, overrides: Map<String, DayOverride>): List<HistoryEntry> =
+        overrides.entries
+            .flatMap { (iso, override) ->
+                val date = runCatching { LocalDate.parse(iso) }.getOrNull() ?: return@flatMap emptyList()
+                override.earlierDecisions.map { date to it }
+            }
+            .filter { (_, decision) -> scope.isPair(decision.requestedBy) }
+            // One row per earlier offer: its group, or its single day, at the moment it was answered.
+            .groupBy { (date, decision) -> "${decision.groupId ?: "single:$date"}@${decision.decidedAt}" }
+            .mapNotNull { (key, days) ->
+                val (firstDate, decision) = days.minBy { it.first }
+                val outcome = decision.status.outcome() ?: return@mapNotNull null
+                val decidedAt = parse(decision.decidedAt) ?: parse(decision.requestedAt) ?: return@mapNotNull null
+                HistoryEntry(
+                    key = "swap_earlier_$key",
+                    subject = RequestSubject.DaySwap(firstDate, days.size),
+                    outcome = outcome,
+                    askedBy = decision.requestedBy,
+                    decidedBy = decision.decidedBy ?: scope.otherOf(decision.requestedBy),
+                    decidedAt = decidedAt
+                )
+            }
 
     private fun fromEvent(scope: RequestScope, event: Event, clocks: ClocksAt): HistoryEntry? {
         // Covered means one of the two parents created it, so the creator is known from here on.

@@ -59,6 +59,8 @@
     <string name="request_history_withdrawn_by_you">You withdrew it</string>
     <string name="request_history_withdrawn_by">%1$s withdrew it</string>
     <string name="request_history_when">%1$s · %2$s</string>
+    <string name="request_history_propose_change">Propose a change</string>
+    <string name="request_history_propose_change_description">Propose a change to this agreed swap</string>
     <plurals name="request_swap_first_and_more">
         <item quantity="one">%1$s and %2$d more day</item>
         <item quantity="other">%1$s and %2$d more days</item>

@@ -51,6 +51,8 @@
     <string name="request_history_withdrawn_by_you">Žádost jste stáhli</string>
     <string name="request_history_withdrawn_by">%1$s: žádost stažena</string>
     <string name="request_history_when">%1$s · %2$s</string>
+    <string name="request_history_propose_change">Navrhnout změnu</string>
+    <string name="request_history_propose_change_description">Navrhnout změnu této dohodnuté výměny</string>
     <plurals name="request_swap_first_and_more">
         <item quantity="one">%1$s a %2$d další den</item>
         <item quantity="few">%1$s a %2$d další dny</item>

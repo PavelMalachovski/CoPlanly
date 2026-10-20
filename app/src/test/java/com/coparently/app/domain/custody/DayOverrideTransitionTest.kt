@@ -107,4 +107,45 @@ class DayOverrideTransitionTest {
         assertEquals(setOf(other, date), second.keys)
         assertEquals(DayOverrideStatus.PENDING, second.getValue(other).status)
     }
+
+    @Test
+    fun `offering an answered day again keeps its answer in the new offer's earlier list`() {
+        val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", dad, now, groupId = "g1").getOrThrow()
+        val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, "2026-08-23T11:00:00", accept = true)
+            .getOrThrow()
+
+        val change = DayOverrideTransition.offerAll(
+            accepted, mapOf(date to "mom"), mom, "2026-08-30T09:00:00", groupId = "g2"
+        ).getOrThrow().getValue(date)
+
+        assertEquals(DayOverrideStatus.PENDING, change.status)
+        assertEquals(
+            listOf("d1|dad|$dad|$now|ACCEPTED|$mom|2026-08-23T11:00:00|g1"),
+            change.earlier
+        )
+        // While the change waits, the agreement stands.
+        assertEquals("dad", change.agreedToParent)
+    }
+
+    @Test
+    fun `an answer keeps the earlier list, so a declined change leaves the agreement standing`() {
+        val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", dad, now).getOrThrow()
+        val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, now, accept = true).getOrThrow()
+        val change = DayOverrideTransition.offer(accepted, date, "mom", mom, "2026-08-30T09:00:00").getOrThrow()
+
+        val declined = DayOverrideTransition.decideGroup(change, listOf(date), dad, "2026-08-30T10:00:00", accept = false)
+            .getOrThrow().getValue(date)
+
+        assertEquals(DayOverrideStatus.DECLINED, declined.status)
+        assertEquals(change.getValue(date).earlier, declined.earlier)
+        assertEquals("dad", declined.agreedToParent)
+    }
+
+    @Test
+    fun `replacing an unanswered offer adds nothing to the earlier list`() {
+        val first = DayOverrideTransition.offer(emptyMap(), date, "dad", mom, now).getOrThrow()
+        val second = DayOverrideTransition.offer(first, date, "mom", dad, "2026-08-23T11:00:00").getOrThrow()
+
+        assertNull(second.getValue(date).earlier)
+    }
 }
