@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.session.AccountDeletionService
 import com.coparently.app.data.session.SignedInAccountSource
@@ -274,20 +275,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * The agreed split of a shared expense.
+     * The agreed split of a shared expense in the family on screen, and which family that is.
      *
-     * Half each until the family agrees otherwise. Cached locally as it changes, because the
-     * expense save path reads it and cannot wait on a document.
+     * Half each until the family agrees otherwise, and never another family's agreement. Follows
+     * the switcher, which this screen opens itself: the split used to be read once when the screen
+     * opened, so after a switch the row showed the previous family's ratio and a change was written
+     * to whichever family was on screen when it was saved. The repository caches each family's
+     * agreement as it changes, because the expense save path reads it and cannot wait on a
+     * document.
      */
-    val agreedRatio: StateFlow<SplitRatio> = familySettingsRepository.observeSettings()
-        .map { settings ->
-            settings?.ratio?.also(familySettingsRepository::cacheAgreedRatio)
-                ?: familySettingsRepository.agreedRatioOrDefault()
-        }
+    val split: StateFlow<FamilySplit> = familySettingsRepository.observeSplit()
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS),
-            SplitRatio.EVEN
+            FamilySplit.UNKNOWN
         )
 
     /**
@@ -306,10 +307,21 @@ class SettingsViewModel @Inject constructor(
      * Emits null on a refusal — the transition refuses proposing over the co-parent's pending
      * one, and refuses a "change" to the ratio already agreed. Either way the screen has to say
      * something: a control that looks like it worked is worse than one that says it did not.
+     *
+     * @param ratio The split chosen.
+     * @param shown The family split the screen showed while it was chosen; the change goes to that
+     *   family, whichever family is on screen by the time it is written.
      */
-    fun submitRatio(ratio: SplitRatio) {
+    fun submitRatio(ratio: SplitRatio, shown: FamilySplit) {
         viewModelScope.launch {
-            _ratioSubmission.send(familySettingsRepository.submitRatio(ratio).getOrNull())
+            val outcome = if (shown.familyId == null && !shown.answered) {
+                // Chosen before anything had loaded, so the screen showed no family at all: the
+                // family on screen now is the only one the parent can have meant.
+                familySettingsRepository.submitRatio(ratio)
+            } else {
+                familySettingsRepository.submitRatio(ratio, shown.familyId)
+            }
+            _ratioSubmission.send(outcome.getOrNull())
         }
     }
 

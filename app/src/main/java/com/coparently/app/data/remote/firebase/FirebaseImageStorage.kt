@@ -7,8 +7,9 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.dao.UserDao
-import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.files.RecordPhoto
 import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
@@ -46,7 +47,8 @@ class FirebaseImageStorage @Inject constructor(
     private val authService: FirebaseAuthService,
     private val userDao: UserDao,
     private val storage: SharedFileStorage,
-    private val cache: SharedFileCache
+    private val cache: SharedFileCache,
+    private val storedRecords: StoredRecordFamilies
 ) : RecordPhotoStorage {
 
     override suspend fun upload(
@@ -56,10 +58,7 @@ class FirebaseImageStorage @Inject constructor(
         localUri: String
     ): String {
         val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
-        // The same family the repositories stamp a new record with (`familyId ?: FamilyKey.orNull(
-        // uid, partnerId)`), so the photograph and its record name one family.
-        val familyId = recordFamilyId?.takeIf { it.isNotBlank() }
-            ?: FamilyKey.orNull(uid, userDao.getUserById(uid)?.partnerId)
+        val familyId = ownerFamily(kind, recordId, recordFamilyId, uid)
         val bytes = withContext(Dispatchers.IO) { compressImage(Uri.parse(localUri)) }
         val sha256 = MessageDigest.getInstance("SHA-256").digest(bytes).toHex()
         val objectName = "${UUID.randomUUID()}.$EXTENSION"
@@ -67,6 +66,34 @@ class FirebaseImageStorage @Inject constructor(
         storage.uploadBytes(path, bytes, CONTENT_TYPE, sha256, uid)
         cache.keep(bytes, objectName, sha256)
         return RecordPhotoCodec.encode(RecordPhoto(path, CONTENT_TYPE, bytes.size.toLong(), sha256))
+    }
+
+    /**
+     * The family whose folder the photograph of [recordId] goes to, or null for [uid]'s own `solo_`
+     * folder — [RecordPhotoPaths.uploadFamily] over what this phone knows.
+     *
+     * A record that names a family gets that family. A new one gets the family the repositories
+     * stamp it with (`familyId ?: FamilyKey.orNull(uid, partnerId)`), so the photograph and its
+     * record name one family. A stored record of no family gets the family on screen only while
+     * there is one co-parent: with two, the family on screen was a guess that let its other parent
+     * read the photograph of a record that is "only mine" (October 2026 isolation audit).
+     */
+    private suspend fun ownerFamily(
+        kind: RecordPhotoKind,
+        recordId: String,
+        recordFamilyId: String?,
+        uid: String
+    ): String? {
+        recordFamilyId?.takeIf { it.isNotBlank() }?.let { return it }
+        val stored = storedRecords.of(kind, recordId)
+        val me = userDao.getUserById(uid)
+        return RecordPhotoPaths.uploadFamily(
+            recordFamilyId = stored?.familyId,
+            storedRecord = stored != null,
+            uploaderUid = uid,
+            coParents = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
+            selectedPartner = me?.partnerId
+        )
     }
 
     override suspend fun delete(reference: String, recordFamilyId: String?) {

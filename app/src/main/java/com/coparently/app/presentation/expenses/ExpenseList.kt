@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.bothSlotsKnown
 import com.coparently.app.domain.expenses.isTwoWaySplit
@@ -55,6 +56,7 @@ import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.RecordPlaceMark
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
@@ -95,6 +97,9 @@ private const val MOM_SLOT = "mom"
  *   is a read.
  * @param state Scroll state of the list, hoisted so the screen can tell when the month's summary
  *   has scrolled away and pin its collapsed form
+ * @param places Where each expense the family does not count stands, by id
+ *   (`MonthOfExpenses.places`); those rows carry a [RecordPlaceMark]. An id absent from it is the
+ *   family's own.
  * @param modifier Modifier for the list
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,6 +114,7 @@ fun ExpenseList(
     canModify: (Expense) -> Boolean = { true },
     header: (LazyListScope.() -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
+    places: Map<String, RecordPlace> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     // Receipt being viewed full-screen; transient UI state, deliberately local.
@@ -151,7 +157,8 @@ fun ExpenseList(
                     parentNames = parentNames,
                     splitKnown = splitKnown,
                     onClick = onExpenseClick?.takeIf { modifiable }?.let { { it(expense) } },
-                    onReceiptClick = { photo -> viewedReceipt = photo }
+                    onReceiptClick = { photo -> viewedReceipt = photo },
+                    place = places[expense.id] ?: RecordPlace.ON_SCREEN
                 )
             }
             if (onDelete == null || !modifiable) {
@@ -193,6 +200,9 @@ fun ExpenseList(
  * @param onClick Opens the expense editor; null leaves the row inert
  * @param onReceiptClick Opens the full-screen receipt viewer. Only the family's two parents see a
  *   receipt (L-4); for anybody else, and for a legacy download URL, the row has no thumbnail.
+ * @param place Where the expense stands for the family on screen. One the family does not count —
+ *   "only mine" or from an earlier family — is drawn neutral, says nothing about how it divides
+ *   (it is priced in no balance here), and carries a [RecordPlaceMark].
  */
 // Each argument is a distinct input of the row; the body was already this long before L-4.
 @Suppress("LongParameterList", "LongMethod")
@@ -203,13 +213,17 @@ fun ExpenseItem(
     payerRole: String? = null,
     splitKnown: Boolean,
     onClick: (() -> Unit)? = null,
-    onReceiptClick: (ViewablePhoto) -> Unit = {}
+    onReceiptClick: (ViewablePhoto) -> Unit = {},
+    place: RecordPlace = RecordPlace.ON_SCREEN
 ) {
     val receipt = rememberRecordPhoto(expense.receiptUrl, RecordPhotoKind.RECEIPT, expense.id, expense.familyId)
     val dateFormatter = remember(Locale.getDefault()) { localizedDate("MMMd") }
     val format = remember(expense.currency) { currencyFormat(expense.currency) }
+    val counted = place == RecordPlace.ON_SCREEN
 
-    val payerColor = if (payerRole != null) {
+    // Neutral for a row the family does not count: a parent colour names a person, and an earlier
+    // family's slot colour would now name somebody else (design refresh item 12).
+    val payerColor = if (payerRole != null && counted) {
         ParentColors.fill(payerRole)
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
@@ -231,36 +245,15 @@ fun ExpenseItem(
         )
     }
 
-    // The ratio the expense was recorded under, not the family's current agreement: an expense
-    // is priced once and a later renegotiation must not re-label a settled month. Null — a row
-    // from before the agreement existed — divides evenly, which is what it was.
-    val ratio = remember(expense.splitBasisPoints, splitKnown, expense.splitBetween) {
-        SplitRatio.fromStored(expense.splitBasisPoints)
-            ?.takeIf { splitKnown && expense.isTwoWaySplit() }
-    }
-    val splitLabel = when {
-        // Named, not two bare numbers. The subtitle immediately before this already names one
-        // parent — the payer — so "split 70/30" beside it reads as *their* share, and the first
-        // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
-        // the difference between a label and a wrong claim about money.
-        ratio != null -> stringResource(
-            R.string.expenses_split_ratio,
-            parentNames.labelFor(MOM_SLOT),
-            ratio.momPercent,
-            ratio.dadPercent
-        )
-        expense.isTwoWaySplit() ->
-            stringResource(R.string.expenses_split_even)
-        expense.splitBetween.size > 2 ->
-            stringResource(R.string.expenses_split_n_ways, expense.splitBetween.size)
-        else -> stringResource(R.string.expenses_split_none)
-    }
     // The split moved from its own right-hand column into the subtitle: it is a property of
-    // the expense, not a second figure competing with the amount.
-    val meta = if (receipt != null) {
-        stringResource(R.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
-    } else {
-        stringResource(R.string.expenses_row_meta, subtitle, splitLabel)
+    // the expense, not a second figure competing with the amount. A row the family does not count
+    // leaves it out: it is priced in no balance here, and its ratio's first figure would name this
+    // family's slot 1 — somebody who may never have been in the family it belongs to.
+    val splitLabel = if (counted) splitLabelOf(expense, splitKnown, parentNames) else null
+    val meta = when {
+        splitLabel == null -> subtitle
+        receipt != null -> stringResource(R.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
+        else -> stringResource(R.string.expenses_row_meta, subtitle, splitLabel)
     }
 
     Surface(
@@ -339,10 +332,47 @@ fun ExpenseItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Under the meta line, never beside the amount, so the amount keeps its column
+                // (design refresh item 15).
+                if (!counted) RecordPlaceMark(place, modifier = Modifier.padding(top = Spacing.XS))
             }
 
             if (!amountBelowTitle) amount()
         }
+    }
+}
+
+/**
+ * How [expense] divides, as its row's meta line says it.
+ *
+ * The ratio the expense was recorded under, not the family's current agreement: an expense is
+ * priced once and a later renegotiation must not re-label a settled month. Null — a row from
+ * before the agreement existed — divides evenly, which is what it was.
+ *
+ * @param splitKnown Whether both parent slots are known; see [ExpenseItem].
+ */
+@Composable
+private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: ParentNames): String {
+    val ratio = remember(expense.splitBasisPoints, splitKnown, expense.splitBetween) {
+        SplitRatio.fromStored(expense.splitBasisPoints)
+            ?.takeIf { splitKnown && expense.isTwoWaySplit() }
+    }
+    return when {
+        // Named, not two bare numbers. The subtitle immediately before this already names one
+        // parent — the payer — so "split 70/30" beside it reads as *their* share, and the first
+        // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
+        // the difference between a label and a wrong claim about money.
+        ratio != null -> stringResource(
+            R.string.expenses_split_ratio,
+            parentNames.labelFor(MOM_SLOT),
+            ratio.momPercent,
+            ratio.dadPercent
+        )
+        expense.isTwoWaySplit() ->
+            stringResource(R.string.expenses_split_even)
+        expense.splitBetween.size > 2 ->
+            stringResource(R.string.expenses_split_n_ways, expense.splitBetween.size)
+        else -> stringResource(R.string.expenses_split_none)
     }
 }
 

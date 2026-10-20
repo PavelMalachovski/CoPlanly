@@ -1,5 +1,6 @@
 package com.coparently.app.data.repository
 
+import app.cash.turbine.test
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
@@ -15,6 +16,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -46,6 +49,7 @@ class FamilySettingsRepositoryTest {
         every { preferences.putSplitRatioBasisPoints(any()) } returns Unit
         every { preferences.putSplitRatioSlot(any()) } returns Unit
         every { preferences.getSplitRatioSlot() } returns capturedSlot
+        stubFamilyCache()
         val userRepository = mockk<UserRepository> {
             coEvery { getCurrentUserId() } returns ME
             coEvery { getUserById(ME) } returns User(
@@ -246,7 +250,7 @@ class FamilySettingsRepositoryTest {
         val written = slot<FamilySettings>()
         coEvery { dataSource.setSettings(any(), capture(written)) } returns Unit
 
-        val result = repository(cachedBasisPoints = null, partnerId = PARTNER).withdrawProposal()
+        val result = repository(cachedBasisPoints = null, partnerId = PARTNER).withdrawProposal(FAMILY)
 
         assertTrue(result.isSuccess)
         assertNull(written.captured.proposal, "the proposal is gone")
@@ -263,7 +267,7 @@ class FamilySettingsRepositoryTest {
         // cancel an answer they were owed, which is a decision disguised as a tidy-up.
         coEvery { dataSource.getSettings(any()) } returns settingsWithProposalBy(PARTNER)
 
-        val result = repository(cachedBasisPoints = null, partnerId = PARTNER).withdrawProposal()
+        val result = repository(cachedBasisPoints = null, partnerId = PARTNER).withdrawProposal(FAMILY)
 
         assertTrue(result.isFailure)
         coVerify(exactly = 0) { dataSource.setSettings(any(), any()) }
@@ -278,7 +282,7 @@ class FamilySettingsRepositoryTest {
         coEvery { dataSource.getSettings(any()) } returns settingsWithProposalBy(ME)
         coEvery { dataSource.setSettings(any(), any()) } returns Unit
 
-        repositoryWith(fcmService).withdrawProposal()
+        repositoryWith(fcmService).withdrawProposal(FAMILY)
 
         coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
     }
@@ -287,11 +291,143 @@ class FamilySettingsRepositoryTest {
     fun `there is nothing to withdraw when no proposal is pending`() = runTest {
         coEvery { dataSource.getSettings(any()) } returns null
 
-        val result = repository(cachedBasisPoints = null, partnerId = PARTNER).withdrawProposal()
+        val result = repository(cachedBasisPoints = null, partnerId = PARTNER).withdrawProposal(FAMILY)
 
         assertTrue(result.isFailure)
         coVerify(exactly = 0) { dataSource.setSettings(any(), any()) }
     }
+
+    // ---- One agreement per family (October 2026 isolation audit) ----------------------------
+
+    @Test
+    fun `the split follows a switch, and a family without its own agreement divides evenly`() = runTest {
+        // Zuzana agreed 70/30 with Igor and nothing with Carol. The listener used to be pinned to
+        // the family on screen when it started, and the cache was one number for the device: after
+        // a switch the family with Carol showed 70/30 and priced every expense at Igor's split.
+        val rows = MutableStateFlow(listOf(zuzana(onScreen = IGOR)))
+        every { dataSource.observeSettings(IGOR_FAMILY) } returns flowOf(agreed(SEVENTY, IGOR_FAMILY))
+        every { dataSource.observeSettings(CAROL_FAMILY) } returns flowOf(null)
+
+        twoFamilyRepository(rows).observeSplit().test {
+            assertEquals(FamilySplit(IGOR_FAMILY, null, SplitRatio.EVEN, answered = false), awaitItem())
+            val withIgor = awaitItem()
+            assertEquals(IGOR_FAMILY, withIgor.familyId)
+            assertEquals(SplitRatio(SEVENTY), withIgor.ratio)
+
+            rows.value = listOf(zuzana(onScreen = CAROL))
+            assertEquals(FamilySplit(CAROL_FAMILY, null, SplitRatio.EVEN, answered = false), awaitItem())
+            assertEquals(FamilySplit(CAROL_FAMILY, null, SplitRatio.EVEN), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(SEVENTY, familyCache[IGOR_FAMILY], "the family with Igor keeps its own agreement")
+        assertNull(familyCache[CAROL_FAMILY], "nothing was cached for a family that agreed nothing")
+    }
+
+    @Test
+    fun `a new expense is priced at its own family's agreement and never another's`() {
+        val repository = twoFamilyRepository(MutableStateFlow(listOf(zuzana(onScreen = CAROL))))
+        familyCache[IGOR_FAMILY] = SEVENTY
+
+        assertEquals(SplitRatio(SEVENTY), repository.agreedRatioOrDefault(IGOR_FAMILY))
+        assertEquals(SplitRatio.EVEN, repository.agreedRatioOrDefault(CAROL_FAMILY))
+    }
+
+    @Test
+    fun `an answer goes to the family whose proposal was shown, not the family on screen`() = runTest {
+        // Igor's proposal was on screen; a push tap then switched to the family with Carol. The
+        // answer used to read the family again at tap time and could accept Carol's proposal,
+        // which the parent had never seen.
+        val fcmService = mockk<FcmService>(relaxed = true)
+        coEvery { dataSource.getSettings(IGOR_FAMILY) } returns proposalIn(IGOR_FAMILY, by = IGOR)
+        coEvery { dataSource.getSettings(CAROL_FAMILY) } returns proposalIn(CAROL_FAMILY, by = CAROL)
+        val written = slot<String>()
+        coEvery { dataSource.setSettings(capture(written), any()) } returns Unit
+
+        val result = twoFamilyRepository(MutableStateFlow(listOf(zuzana(onScreen = CAROL))), fcmService)
+            .acceptProposal(IGOR_FAMILY)
+
+        assertTrue(result.isSuccess)
+        assertEquals(IGOR_FAMILY, written.captured)
+        coVerify(exactly = 0) { dataSource.setSettings(CAROL_FAMILY, any()) }
+        coVerify { fcmService.queueNotificationForUser(IGOR, any()) }
+        assertEquals(SEVENTY, familyCache[IGOR_FAMILY])
+    }
+
+    @Test
+    fun `a change goes to the family the screen showed, even after a switch`() = runTest {
+        coEvery { dataSource.getSettings(any()) } returns null
+        coEvery { dataSource.setSettings(any(), any()) } returns Unit
+
+        val outcome = twoFamilyRepository(MutableStateFlow(listOf(zuzana(onScreen = CAROL))))
+            .submitRatio(SplitRatio(SEVENTY), IGOR_FAMILY)
+
+        assertEquals(RatioSubmission.APPLIED, outcome.getOrThrow())
+        coVerify { dataSource.setSettings(IGOR_FAMILY, any()) }
+        coVerify(exactly = 0) { dataSource.setSettings(CAROL_FAMILY, any()) }
+    }
+
+    @Test
+    fun `a family the parent is no longer in takes no answer`() = runTest {
+        val ended = CustodyKey.of(ME, "uid-ex")
+
+        val repository = twoFamilyRepository(MutableStateFlow(listOf(zuzana(onScreen = CAROL))))
+
+        assertTrue(repository.acceptProposal(ended).isFailure)
+        assertTrue(repository.withdrawProposal(ended).isFailure)
+        assertTrue(repository.submitRatio(SplitRatio.EVEN, ended).isFailure)
+        coVerify(exactly = 0) { dataSource.setSettings(any(), any()) }
+    }
+
+    /** The per-family cache as a map, so a test can read what was cached for whom. */
+    private val familyCache = mutableMapOf<String, Int>()
+
+    private fun stubFamilyCache() {
+        every { preferences.getFamilySplitRatioBasisPoints(any()) } answers { familyCache[firstArg()] }
+        every { preferences.putFamilySplitRatioBasisPoints(any(), any()) } answers {
+            familyCache[firstArg()] = secondArg()
+        }
+    }
+
+    /** Zuzana, in a family with Igor and one with Carol, with [onScreen]'s on screen. */
+    private fun zuzana(onScreen: String) = User(
+        id = ME,
+        email = "zuzana@example.test",
+        name = "Zuzana",
+        role = "mom",
+        colorCode = "#FF4081",
+        partnerId = onScreen,
+        partnerIds = listOf(IGOR, CAROL)
+    )
+
+    /** A repository over [rows], the signed-in parent's Room row as a stream. */
+    private fun twoFamilyRepository(
+        rows: MutableStateFlow<List<User>>,
+        fcmService: FcmService = mockk(relaxed = true)
+    ): FamilySettingsRepository {
+        every { preferences.getSplitRatioBasisPoints() } returns null
+        every { preferences.putSplitRatioSlot(any()) } returns Unit
+        stubFamilyCache()
+        val userRepository = mockk<UserRepository> {
+            coEvery { getCurrentUserId() } returns ME
+            coEvery { getUserById(ME) } answers { rows.value.single() }
+            every { observeCurrentUserId() } returns flowOf(ME)
+            every { getAllUsers() } returns rows
+        }
+        return FamilySettingsRepository(dataSource, userRepository, preferences, fcmService)
+    }
+
+    /** [familyId]'s settings with [basisPoints] agreed and nothing pending. */
+    private fun agreed(basisPoints: Int, familyId: String) = FamilySettings(
+        ratio = SplitRatio(basisPoints),
+        participants = familyId.split("__"),
+        lastModifiedBy = ME,
+        lastModifiedAtMillis = 1L
+    )
+
+    /** [familyId]'s settings with an even split agreed and [by]'s 70/30 proposal pending. */
+    private fun proposalIn(familyId: String, by: String) = agreed(SplitRatio.EVEN.momShareBasisPoints, familyId).copy(
+        proposal = SplitRatioProposal(ratio = SplitRatio(SEVENTY), proposedBy = by, proposedAtMillis = 1L)
+    )
 
     /** The pair's settings with a proposal standing in [proposedBy]'s name. */
     private fun settingsWithProposalBy(proposedBy: String) = FamilySettings(
@@ -315,6 +451,7 @@ class FamilySettingsRepositoryTest {
         every { preferences.putSplitRatioBasisPoints(any()) } returns Unit
         every { preferences.putSplitRatioSlot(any()) } returns Unit
         every { preferences.getSplitRatioSlot() } returns "mom"
+        stubFamilyCache()
         val userRepository = mockk<UserRepository> {
             coEvery { getCurrentUserId() } returns ME
             coEvery { getUserById(ME) } returns User(
@@ -334,5 +471,14 @@ class FamilySettingsRepositoryTest {
         const val PARTNER = "uid-alex"
         const val SEVENTY_IN_BASIS_POINTS = 7_000
         const val THIRTY_IN_BASIS_POINTS = 3_000
+
+        /** The one family of the single-family cases: [ME] and [PARTNER]. */
+        val FAMILY = CustodyKey.of(ME, PARTNER)
+
+        const val IGOR = "uid-igor"
+        const val CAROL = "uid-carol"
+        val IGOR_FAMILY = CustodyKey.of(ME, IGOR)
+        val CAROL_FAMILY = CustodyKey.of(ME, CAROL)
+        const val SEVENTY = 7_000
     }
 }

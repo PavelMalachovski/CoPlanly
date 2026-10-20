@@ -318,7 +318,10 @@ class ExportViewModel @Inject constructor(
                         nameForUid(uid, parents, fallbacks)
                     }
                 },
-                nameForSlot = { slot -> nameForSlot(slot, parents, fallbacks) }
+                nameForSlot = { slot -> nameForSlot(slot, parents, fallbacks) },
+                // A record of no family belongs here only when this parent or this family's
+                // co-parent wrote it, never another family's co-parent (isolation audit).
+                exporterUid = myUid
             )
         )
     }

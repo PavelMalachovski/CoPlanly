@@ -1,6 +1,9 @@
 package com.coparently.app.presentation.review
 
 import com.coparently.app.data.ai.AiConsentManager
+import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.family.familyRow
+import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.ai.AI_CONSENT_VERSION
 import com.coparently.app.domain.ai.AiAssistAvailability
@@ -8,6 +11,7 @@ import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.domain.custody.DayOverride
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
@@ -123,7 +127,10 @@ class MonthReviewViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(enabled: Boolean = true) = MonthReviewViewModel(
+    private fun viewModel(
+        enabled: Boolean = true,
+        familyViewSource: FamilyViewSource = testFamilyViewSource()
+    ) = MonthReviewViewModel(
         MonthReviewSources(
             custodyModelRepository = custodyRepository,
             eventRepository = eventRepository,
@@ -132,7 +139,47 @@ class MonthReviewViewModelTest {
             childInfoRepository = childInfoRepository,
             parentsSource = parentsSource
         ),
-        MonthReviewAssist(AiAssistAvailability(enabled), consentManager, repository)
+        MonthReviewAssist(AiAssistAvailability(enabled), consentManager, repository),
+        familyViewSource
+    )
+
+    @Test
+    fun `the money adds up the family's own expenses, not one only mine or from an earlier family`() =
+        runTest(dispatcher) {
+            // Alice co-parents with Bob (on screen) and with Carol. Owner decision, October 2026:
+            // an expense of no family while she has two, or of a family that has ended, counts in
+            // no family's month.
+            every { expenseRepository.getAllExpenses() } returns flowOf(
+                listOf(
+                    shoes("e1", familyId = FamilyKey.of(ALICE, BOB)),
+                    shoes("only-mine", familyId = null),
+                    shoes("earlier", familyId = FamilyKey.of(ALICE, "uid-ex"))
+                )
+            )
+            val vm = viewModel(
+                familyViewSource = testFamilyViewSource(
+                    ALICE,
+                    MutableStateFlow(familyRow(ALICE, onScreen = BOB, partners = listOf(BOB, "uid-carol")))
+                )
+            )
+            backgroundScope.launch { vm.state.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(80.0, assertNotNull(vm.state.value.review).money.single().total)
+        }
+
+    /** 80 CZK of shoes Alice paid for in [familyId]. */
+    private fun shoes(id: String, familyId: String?) = Expense(
+        id = id,
+        title = "Shoes",
+        amount = 80.0,
+        currency = "CZK",
+        category = ExpenseCategory.CLOTHING,
+        paidBy = ALICE,
+        splitBetween = listOf(ALICE, BOB),
+        date = today.atDay(2),
+        createdByFirebaseUid = ALICE,
+        familyId = familyId
     )
 
     @Test

@@ -13,6 +13,9 @@ internal object RecordFixtures {
 
     const val ALICE = "alice-uid"
     const val BOB = "bob-uid"
+
+    /** Alice's co-parent in her other family, whose records are never in the family with Bob's. */
+    const val CAROL = "carol-uid"
     const val FAMILY = "alice-uid__bob-uid"
     val ZONE: ZoneId = ZoneId.of("Europe/Prague")
     val FROM: LocalDate = LocalDate.of(2026, 3, 1)

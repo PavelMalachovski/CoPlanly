@@ -245,6 +245,23 @@ class ExpenseRepositoryImplTest {
         assertEquals(emptyList<String>(), captured.captured["forMembers"])
     }
 
+    // ---- which family an expense is written in (October 2026 isolation audit) --------------
+
+    @Test
+    fun `an expense stamped by its form keeps the family it names`() = runTest {
+        // `ExpenseViewModel` reads the family once, before the receipt upload; the repository must
+        // not read the family on screen again, which a switch may have moved by now.
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidC").copy(partnerIdsJson = "[\"uidB\",\"uidC\"]")
+        val captured = slot<Map<String, Any>>()
+        coEvery { firestoreExpenseDataSource.setExpense(any(), capture(captured)) } returns Unit
+
+        repository.addExpense(expense().copy(familyId = "uidA__uidB"))
+
+        assertEquals("uidA__uidB", captured.captured["familyId"])
+    }
+
     private fun expense() = Expense(
         id = "e1",
         title = "School trip",

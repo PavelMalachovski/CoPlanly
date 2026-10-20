@@ -75,7 +75,8 @@ class CommunicationRecordSource @Inject constructor(
                     recordedAtMillis = null,
                     familyId = row.familyId.orEmpty(),
                     facts = CommunicationRecordBuilder.factsOf(snapshot),
-                    writeKey = EventVersionDocument.writeKey(snapshot)
+                    writeKey = EventVersionDocument.writeKey(snapshot),
+                    creatorUid = creatorOf(snapshot)
                 )
             }
         }
@@ -154,8 +155,16 @@ class CommunicationRecordSource @Inject constructor(
         familyId = familyId,
         facts = CommunicationRecordBuilder.factsOf(snapshot),
         recordedByServer = recordedByServer,
-        writeKey = EventVersionDocument.writeKey(snapshot)
+        writeKey = EventVersionDocument.writeKey(snapshot),
+        creatorUid = creatorOf(snapshot)
     )
+
+    /**
+     * Who created the event a revision's snapshot is of, or null when it names nobody — what
+     * decides, for a revision of no family, which family it is about (`RecordScope.admits`).
+     */
+    private fun creatorOf(snapshot: Map<String, Any?>): String? =
+        (snapshot[CREATED_BY] as? String)?.takeIf { it.isNotBlank() }
 
     private fun Event.toCurrentInput() = CurrentEventInput(
         eventId = id,
@@ -175,5 +184,8 @@ class CommunicationRecordSource @Inject constructor(
 
     private companion object {
         const val TAG = "CommunicationRecord"
+
+        /** The creator's key in an event document, as `EventDocument` writes it. */
+        const val CREATED_BY = "createdByFirebaseUid"
     }
 }

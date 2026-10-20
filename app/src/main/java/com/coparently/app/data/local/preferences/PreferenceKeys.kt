@@ -158,6 +158,19 @@ object PreferenceKeys {
     const val SPLIT_RATIO_SLOT = "expenses_split_ratio_slot"
 
     /**
+     * Prefix for one family's agreed split, as slot 1's share in basis points — the actual key is
+     * this prefix plus the family id (`family_settings/{id}`).
+     *
+     * Per family since the October 2026 isolation audit. [SPLIT_RATIO_BASIS_POINTS] was one number
+     * for the whole device, so a parent in two families who opened the family with Igor (70/30)
+     * and then switched to the family with Carol (no agreement) was shown 70/30 there, and every
+     * expense saved for Carol was priced at Igor's split — permanently, since an expense keeps the
+     * share it was recorded under. A family with no entry here divides evenly.
+     * [SPLIT_RATIO_BASIS_POINTS] is left with one meaning: the ratio chosen while unpaired.
+     */
+    const val SPLIT_RATIO_FAMILY_PREFIX = "expenses_split_ratio_family_"
+
+    /**
      * Prefix for the per-user key that records the parent slot (`"mom"`/`"dad"`) this device's
      * own records are currently stamped with — the actual key is this prefix plus the Firebase
      * UID.

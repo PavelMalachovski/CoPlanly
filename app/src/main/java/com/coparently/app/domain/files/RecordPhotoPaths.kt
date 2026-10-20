@@ -1,5 +1,6 @@
 package com.coparently.app.domain.files
 
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 
 /**
@@ -76,6 +77,40 @@ object RecordPhotoPaths {
         recordId = recordId,
         objectName = objectName
     ).value
+
+    /**
+     * The family whose folder a new photograph goes to, or null for the uploader's own `solo_`
+     * folder ([build]).
+     *
+     * - **A record that names a family**: that family.
+     * - **A record not stored yet** — one being created now: the family on screen, which is the
+     *   family it is created in and stamped with.
+     * - **A stored record that names no family**: the family on screen while the uploader has at
+     *   most one co-parent, as it always was; with two or more, the uploader's own folder. Nothing
+     *   says which family such a record is about, and a family path is readable by that family's
+     *   other parent whatever the record's audience says — the family on screen was a guess that
+     *   handed the photograph to whichever co-parent the switcher showed (October 2026 isolation
+     *   audit). Only the server moves a `solo_` photograph into a family's folder
+     *   (`movePhotosToFamily`), which [candidatesFor] then follows.
+     *
+     * @param recordFamilyId The record's family, or null/blank for none.
+     * @param storedRecord Whether the record already exists on this phone.
+     * @param uploaderUid The signed-in parent.
+     * @param coParents Every co-parent the uploader has now.
+     * @param selectedPartner The co-parent of the family on screen, or null while unpaired.
+     */
+    fun uploadFamily(
+        recordFamilyId: String?,
+        storedRecord: Boolean,
+        uploaderUid: String,
+        coParents: Collection<String>,
+        selectedPartner: String?
+    ): String? {
+        recordFamilyId?.takeIf { it.isNotBlank() }?.let { return it }
+        val ambiguous = storedRecord &&
+            FamilyAudience.coParents(uploaderUid, coParents, selectedPartner).size > 1
+        return if (ambiguous) null else FamilyKey.orNull(uploaderUid, selectedPartner)
+    }
 
     /** [path] parsed, or null when it is not a well-formed record-photo path. */
     fun parse(path: String): RecordPhotoPath? {

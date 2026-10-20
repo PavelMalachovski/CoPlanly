@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.expenses
 
+import com.coparently.app.data.family.testFamilyViewSource
+import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
@@ -86,11 +88,12 @@ class ExpenseViewModelMonthNavigationTest {
             preferencesRepository,
             receiptTextRecognizer,
             mockk(relaxed = true) {
-                every { observeSettings() } returns flowOf(null)
-                every { agreedRatioOrDefault() } returns SplitRatio.EVEN
+                every { observeSplit() } returns flowOf(FamilySplit.UNKNOWN)
+                every { agreedRatioOrDefault(any()) } returns SplitRatio.EVEN
             },
             testParentsSource(),
-            testFamilyMembersSource()
+            testFamilyMembersSource(),
+            testFamilyViewSource()
         )
     }
 

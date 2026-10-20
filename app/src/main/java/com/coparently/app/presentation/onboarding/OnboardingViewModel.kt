@@ -497,8 +497,9 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val user = userRepository.getCurrentUser()
-                // The cached ratio is slot 1's share; the slider shows this parent's.
-                val cachedMyPercent = familySettingsRepository.agreedRatioOrDefault()
+                // The cached ratio is slot 1's share; the slider shows this parent's. The family on
+                // screen's own agreement once there is a family, never another family's.
+                val cachedMyPercent = familySettingsRepository.agreedRatioOnScreen()
                     .myPercent(slotOne = user?.role != SLOT_TWO)
                 _uiState.update { state ->
                     // The stored value unless the parent has already touched the chips on this

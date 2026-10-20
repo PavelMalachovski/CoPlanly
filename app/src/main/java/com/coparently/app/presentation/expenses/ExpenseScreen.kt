@@ -182,8 +182,9 @@ fun ExpenseScreen(
     val myPendingRatioProposal by viewModel.myPendingRatioProposal.collectAsState()
     // Plain `remember`: putting the banner off is for this visit to the screen. A dismissal that
     // survived the process would quietly turn "later" into "never", and the co-parent would go
-    // on waiting for an answer that was never coming.
-    var ratioProposalDismissed by remember { mutableStateOf(false) }
+    // on waiting for an answer that was never coming. Keyed on the family, so putting off one
+    // family's proposal does not hide the other family's after a switch.
+    var ratioProposalDismissed by remember(pendingRatioProposal?.familyId) { mutableStateOf(false) }
     // The balance a parent tapped Settle up on, while its dialog asks before anything is sent.
     var pendingSettleUp by remember { mutableStateOf<PendingSettleUp?>(null) }
     val scope = rememberCoroutineScope()
@@ -266,12 +267,14 @@ fun ExpenseScreen(
             // modal: every other agreement in this app is an inline banner plus an inbox card,
             // and a dialog that steals focus on open would be a new visual language for the one
             // feature least in need of one.
-            pendingRatioProposal?.takeIf { !ratioProposalDismissed }?.let { proposal ->
+            pendingRatioProposal?.takeIf { !ratioProposalDismissed }?.let { shown ->
                 SplitRatioProposalBanner(
-                    proposal = proposal,
+                    proposal = shown.proposal,
                     parentNames = parentNames,
-                    onAccept = { viewModel.decideRatioProposal(accept = true) },
-                    onDecline = { viewModel.decideRatioProposal(accept = false) },
+                    // The family whose proposal this banner shows, never the one on screen when
+                    // the tap lands.
+                    onAccept = { viewModel.decideRatioProposal(shown, accept = true) },
+                    onDecline = { viewModel.decideRatioProposal(shown, accept = false) },
                     // "Later" leaves it pending, so it is still the co-parent's open question
                     // and still in the inbox. An answer that quietly meant "no" is the silent
                     // outcome this whole family of features exists to remove.
@@ -282,11 +285,11 @@ fun ExpenseScreen(
             // Settings so both halves live where the money does. Not dismissible: this is the
             // parent's own open question, and there is nothing to defer — the way out of it is
             // the co-parent answering or this parent taking it back.
-            myPendingRatioProposal?.let { proposal ->
+            myPendingRatioProposal?.let { shown ->
                 SplitRatioWaitingBanner(
-                    proposal = proposal,
+                    proposal = shown.proposal,
                     parentNames = parentNames,
-                    onWithdraw = viewModel::withdrawRatioProposal
+                    onWithdraw = { viewModel.withdrawRatioProposal(shown) }
                 )
             }
             if (expensesState is Loadable.Loading) {
@@ -367,13 +370,24 @@ fun ExpenseScreen(
                             // month switcher; repeating it per currency would switch the same month N
                             // times.
                             val summaryCards: @Composable () -> Unit = {
+                                if (balancesByCurrency.isEmpty()) {
+                                    // Every expense this month is "only mine" or from an earlier
+                                    // family, so nothing adds up — but the month must still page.
+                                    MonthSwitcherBar(
+                                        navigation = monthNavigation,
+                                        modifier = Modifier
+                                            .monthSwipe(monthNavigation)
+                                            .padding(horizontal = Spacing.L, vertical = Spacing.S)
+                                    )
+                                }
                                 balancesByCurrency.forEachIndexed { index, currencyBalance ->
                                     ExpenseSummaryHeader(
                                         balance = currencyBalance.balance,
                                         currency = currencyBalance.currency,
                                         parentNames = parentNames,
                                         onSettleUp = { ask ->
-                                            pendingSettleUp = PendingSettleUp(ask, shownMonth.month)
+                                            pendingSettleUp =
+                                                PendingSettleUp(ask, shownMonth.month, shownMonth.familyId)
                                         },
                                         modifier = Modifier
                                             .then(
@@ -434,6 +448,9 @@ fun ExpenseScreen(
                                     },
                                     header = header,
                                     state = listState,
+                                    // "Only me" and "From an earlier family" marks: listed here,
+                                    // counted in none of this month's figures.
+                                    places = shownMonth.places,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -456,7 +473,7 @@ fun ExpenseScreen(
                                                 payers = analyticsPayers,
                                                 selectedPayer = analyticsPayer,
                                                 parentNames = parentNames,
-                                                expenses = monthExpenses,
+                                                expenses = shownMonth.counted,
                                                 roleByUid = roleByUid,
                                                 onSelectCurrency = viewModel::selectAnalyticsCurrency,
                                                 onSelectPayer = viewModel::selectAnalyticsPayer,
@@ -487,7 +504,7 @@ fun ExpenseScreen(
                                     payers = analyticsPayers,
                                     selectedPayer = analyticsPayer,
                                     parentNames = parentNames,
-                                    expenses = monthExpenses,
+                                    expenses = shownMonth.counted,
                                     roleByUid = roleByUid,
                                     onSelectCurrency = viewModel::selectAnalyticsCurrency,
                                     onSelectPayer = viewModel::selectAnalyticsPayer,

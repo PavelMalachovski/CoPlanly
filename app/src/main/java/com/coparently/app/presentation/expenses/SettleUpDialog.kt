@@ -50,8 +50,12 @@ import kotlin.math.abs
  */
 data class SettleUpAsk(val netForMe: Double, val currency: String)
 
-/** A [SettleUpAsk] for the month it was tapped in. */
-data class PendingSettleUp(val ask: SettleUpAsk, val month: YearMonth)
+/**
+ * A [SettleUpAsk] for the month it was tapped in, and the family whose balance it is — so the card
+ * goes to that family's thread even if the switcher moves before Send (October 2026 isolation
+ * audit). Null [familyId] sends to the family on screen.
+ */
+data class PendingSettleUp(val ask: SettleUpAsk, val month: YearMonth, val familyId: String? = null)
 
 /** Where sending a settle-up stands. */
 enum class SettleUpSend { IDLE, SENDING, SENT, IBAN_NOT_SAVED }
@@ -95,7 +99,7 @@ class SettleUpViewModel @Inject constructor(
                     return@launch
                 }
             }
-            settleUpMessages.post(pending.ask.netForMe, pending.ask.currency, pending.month)
+            settleUpMessages.post(pending.ask.netForMe, pending.ask.currency, pending.month, pending.familyId)
             _sendState.value = SettleUpSend.SENT
         }
     }

@@ -105,7 +105,7 @@ class OnboardingViewModelTest {
             every { getAllPets() } returns flowOf(emptyList())
         }
         familySettingsRepository = mockk(relaxed = true) {
-            every { agreedRatioOrDefault() } returns SplitRatio.EVEN
+            coEvery { agreedRatioOnScreen() } returns SplitRatio.EVEN
             every { observeSettings() } returns flowOf(null)
         }
         pairing = MutableStateFlow(PairingState.NotPaired())
@@ -483,7 +483,7 @@ class OnboardingViewModelTest {
     @Test
     fun `the slider shows this parent's share, whichever slot they hold`() = runTest(dispatcher) {
         coEvery { userRepository.getCurrentUser() } returns storedUser.copy(role = "dad")
-        every { familySettingsRepository.agreedRatioOrDefault() } returns SplitRatio.ofMomPercent(70)
+        coEvery { familySettingsRepository.agreedRatioOnScreen() } returns SplitRatio.ofMomPercent(70)
         viewModel = newViewModel()
         advanceUntilIdle()
 

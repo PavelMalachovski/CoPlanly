@@ -87,10 +87,12 @@ class ExpenseRepositoryImpl @Inject constructor(
         val uid = expense.createdByFirebaseUid ?: firebaseAuthService.getCurrentUser()?.uid
         val owned = expense.copy(
             createdByFirebaseUid = uid,
-            // Which relationship this belongs to, and therefore who may see it. Null while the
-            // account is unpaired: the expense is this parent's alone until there is somebody to
-            // share it with, and inventing an id for a pair of one would say otherwise. Pairing
-            // backfills, the same way the audience on events is re-stamped.
+            // Which relationship this belongs to, and therefore who may see it. A new expense from
+            // the form arrives stamped by `ExpenseViewModel`, which reads the family once for the
+            // whole save. Otherwise null while the account is unpaired: the expense is this
+            // parent's alone until there is somebody to share it with, and inventing an id for a
+            // pair of one would say otherwise. Pairing backfills, the same way the audience on
+            // events is re-stamped.
             familyId = expense.familyId
                 ?: FamilyKey.orNull(uid, userDao.getUserById(uid.orEmpty())?.partnerId)
         )
