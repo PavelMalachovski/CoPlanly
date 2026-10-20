@@ -208,9 +208,10 @@ class SyncServiceTest {
         // re-uploads are silent now and the whole backfill is one `records_shared` push, which
         // is also the wake-up the other phone needs to download what it can now read.
         pairWith(partnerId = BOB)
-        // Nothing was waiting before the backfill; the one row it re-queues is old.
+        // Nothing was waiting before the backfill; the one row it re-queues is old, and
+        // `FamilyIdBackfill` has given it the family by now.
         coEvery { eventDao.getUnsyncedEvents() } returns emptyList() andThen listOf(
-            eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE))
+            eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE)).copy(familyId = BOB_FAMILY)
         )
         coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
         coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
@@ -231,7 +232,7 @@ class SyncServiceTest {
         // The backfill must not silence a genuinely new event that happened to be queued when
         // it ran: the co-parent wants to hear about that one.
         pairWith(partnerId = BOB)
-        val fresh = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE))
+        val fresh = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE)).copy(familyId = BOB_FAMILY)
         coEvery { eventDao.getUnsyncedEvents() } returns listOf(fresh)
         coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
         coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
@@ -430,7 +431,7 @@ class SyncServiceTest {
     fun `uploading an unsynced event still shares with the current co-parent`() = runTest {
         pairWith(partnerId = BOB)
         coEvery { eventDao.getUnsyncedEvents() } returns listOf(
-            eventEntity(createdByFirebaseUid = ALICE, sharedWith = emptyList())
+            eventEntity(createdByFirebaseUid = ALICE, sharedWith = emptyList()).copy(familyId = BOB_FAMILY)
         )
         val uploaded = slot<Map<String, Any?>>()
         coEvery { firestoreEventDataSource.insertEvent(any(), capture(uploaded)) } returns
@@ -460,12 +461,28 @@ class SyncServiceTest {
     }
 
     @Test
-    fun `uploading an unsynced event replaces a former co-parent with the new one`() = runTest {
-        // Alice unpaired from Bob and re-paired with Carol. The audience must lose Bob and
-        // gain Carol — intersecting must not cost the new co-parent their visibility.
+    fun `uploading an event of an ended family loses the ex-partner and gains nobody new`() = runTest {
+        // Alice unpaired from Bob and re-paired with Carol. The event is the Bob family's history:
+        // it must lose Bob, and it must not go to Carol — the first sync after the new pairing
+        // used to re-upload the whole Bob-family history to her (isolation audit, October 2026).
         pairWith(partnerId = CAROL)
         coEvery { eventDao.getUnsyncedEvents() } returns listOf(
-            eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+            eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB)).copy(familyId = BOB_FAMILY)
+        )
+        val uploaded = slot<Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.insertEvent(any(), capture(uploaded)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(listOf(ALICE), uploaded.captured["sharedWith"])
+    }
+
+    @Test
+    fun `uploading an event of the new co-parent's family reaches them`() = runTest {
+        pairWith(partnerId = CAROL)
+        coEvery { eventDao.getUnsyncedEvents() } returns listOf(
+            eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB)).copy(familyId = CAROL_FAMILY)
         )
         val uploaded = slot<Map<String, Any?>>()
         coEvery { firestoreEventDataSource.insertEvent(any(), capture(uploaded)) } returns
@@ -710,7 +727,7 @@ class SyncServiceTest {
         // the extracted policy function in isolation.
         pairWith(partnerId = BOB)
         coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(
-            childInfoEntity(updatedAt = now, synced = false)
+            childInfoEntity(updatedAt = now, synced = false).copy(familyId = BOB_FAMILY)
         )
         val uploaded = slot<Map<String, Any?>>()
         coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), capture(uploaded)) } returns
@@ -981,7 +998,7 @@ class SyncServiceTest {
         pairWith(partnerId = BOB)
         val rows = mutableMapOf(
             EVENT_ID to eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE))
-                .copy(syncedToFirestore = true)
+                .copy(syncedToFirestore = true, familyId = BOB_FAMILY)
         )
         // The pair's document as it stands before this pass: the old slot, an audience of one.
         var document = eventDocument(rows.getValue(EVENT_ID), sharedWith = listOf(ALICE))
@@ -1176,6 +1193,54 @@ class SyncServiceTest {
 
         coVerify(exactly = 1) { firestoreEventDataSource.updateEvent(EVENT_ID, any()) }
         coVerify(exactly = 0) { eventDao.markAsSynced(EVENT_ID) }
+    }
+
+    @Test
+    fun `an event conflict won locally keeps the family the server stamped and adopts it`() = runTest {
+        // The rules refuse a write that blanks a stamped `familyId`, the creator's included, and
+        // `stampOwnBlankFamilyIds` stamps on the same evidence `FamilyIdBackfill` would. A phone
+        // that missed its own backfill would otherwise send `""` over the stamp for ever.
+        pairWith(partnerId = BOB)
+        val remote = eventEntity(createdByFirebaseUid = ALICE, sharedWith = listOf(ALICE, BOB))
+            .copy(familyId = BOB_FAMILY)
+        val local = remote.copy(
+            familyId = null,
+            syncedToFirestore = false,
+            updatedAtMillis = remote.updatedAtMillis + HOUR_MS
+        )
+        coEvery { eventDao.getEventById(EVENT_ID) } returns local
+        every { firestoreEventDataSource.observeEventsSharedWith(ALICE, any()) } returns
+            flowOf(EventDownload(listOf(eventDocument(remote, listOf(ALICE, BOB))), null))
+        val written = slot<Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.updateEvent(EVENT_ID, capture(written)) } returns Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(BOB_FAMILY, written.captured["familyId"])
+        coVerify {
+            eventDao.insertEvent(match { it.id == EVENT_ID && it.familyId == BOB_FAMILY && it.syncedToFirestore })
+        }
+    }
+
+    @Test
+    fun `a child conflict won locally keeps the family the server stamped and adopts it`() = runTest {
+        pairWith(partnerId = BOB)
+        coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns
+            childInfoEntity(updatedAt = now.plusHours(1), synced = false)
+        every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
+            flowOf(listOf(remoteChildInfoMap(updatedAt = now) + ("familyId" to BOB_FAMILY)))
+        val written = slot<Map<String, Any?>>()
+        coEvery { firestoreChildInfoDataSource.updateChildInfo(CHILD_ID, capture(written)) } returns
+            Result.success(Unit)
+
+        syncService.performFullSync()
+
+        assertEquals(BOB_FAMILY, written.captured["familyId"])
+        coVerify {
+            childInfoDao.insertChildInfo(
+                match { it.id == CHILD_ID && it.familyId == BOB_FAMILY && it.syncedToFirestore }
+            )
+        }
     }
 
     @Test
@@ -1381,7 +1446,8 @@ class SyncServiceTest {
             "sharedWith" to sharedWith,
             "lastModifiedBy" to entity.lastModifiedBy,
             "permissions" to entity.permissions,
-            "imageUrl" to entity.imageUrl
+            "imageUrl" to entity.imageUrl,
+            "familyId" to entity.familyId
         )
 
     /**

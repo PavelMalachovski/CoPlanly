@@ -103,11 +103,13 @@ class AuthStateViewModel @Inject constructor(
             // Only records this account created are evidence that it has been through the
             // wizard. The wizard links the co-parent first, so a second parent's phone holds the
             // first one's children within seconds of pairing — see `OnboardingState.isOwnRecord`.
-            val hasChildInfo = childInfoRepository.getAllChildInfo().first()
+            // Read in every family: a parent whose own children are in the family not on screen
+            // has been through the wizard all the same (isolation audit, October 2026).
+            val hasChildInfo = childInfoRepository.getAllChildInfoInEveryFamily().first()
                 .any { OnboardingState.isOwnRecord(uid, it.createdByFirebaseUid) }
             // A pet counts as evidence too. Counting children alone handed the questionnaire to
             // a pets-only family on every launch.
-            val hasPets = petRepository.getAllPets().first()
+            val hasPets = petRepository.getAllPetsInEveryFamily().first()
                 .any { OnboardingState.isOwnRecord(uid, it.createdByFirebaseUid) }
             OnboardingState.isNeeded(account, hasChildInfo, hasPets)
         } ?: false

@@ -2,7 +2,9 @@ package com.coparently.app.data.school
 
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
+import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolDayType
@@ -12,6 +14,7 @@ import com.coparently.app.domain.school.SchoolImportWording
 import com.coparently.app.domain.school.SchoolSyncFailure
 import com.coparently.app.domain.school.SchoolSyncResult
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +31,7 @@ import java.io.File
 import java.nio.file.Files
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -47,6 +51,7 @@ class SchoolImporterTest {
     private val users = mockk<UserRepository>()
     private val writer = mockk<SchoolEventWriter>()
     private val wording = mockk<SchoolImportWordingSource>()
+    private val children = mockk<ChildInfoRepository>()
     private val requested = mutableListOf<String>()
 
     @Before
@@ -101,6 +106,93 @@ class SchoolImporterTest {
         assertEquals(4, stored.ledger.values.count { it.kind == SchoolImportKind.HOURS })
     }
 
+    // ---- a connection that names no family (isolation audit, October 2026) --------------------
+
+    @Test
+    fun `a connection of no family takes the parent's only family, and keeps it`() = runTest {
+        connectedWithoutFamily(coParents = listOf("bob"), childFamily = null)
+        server.dispatcher = serving(eventsStatus = 403)
+        val plan = slot<SchoolImportPlan>()
+        coEvery { writer.apply(capture(plan)) } answers { SchoolImportCounts(plan.captured.creates.size, 0, 0) }
+
+        importer().sync("conn1")
+
+        assertTrue(plan.captured.creates.isNotEmpty())
+        assertTrue(plan.captured.creates.all { it.familyId == "alice__bob" })
+        assertEquals("alice__bob", store.get("alice", "conn1")?.connection?.familyId)
+    }
+
+    @Test
+    fun `with two families a connection of no family takes its child's family, never the one on screen`() =
+        runTest {
+            // Carol's family is on screen; the child is Bob's family's.
+            connectedWithoutFamily(coParents = listOf("bob", "carol"), onScreen = "carol", childFamily = "alice__bob")
+            server.dispatcher = serving(eventsStatus = 403)
+            val plan = slot<SchoolImportPlan>()
+            coEvery { writer.apply(capture(plan)) } answers { SchoolImportCounts(plan.captured.creates.size, 0, 0) }
+
+            importer().sync("conn1")
+
+            assertTrue(plan.captured.creates.isNotEmpty())
+            assertTrue(plan.captured.creates.all { it.familyId == "alice__bob" })
+            assertEquals("alice__bob", store.get("alice", "conn1")?.connection?.familyId)
+        }
+
+    @Test
+    fun `with two families and nothing naming one, nothing is fetched or written`() = runTest {
+        connectedWithoutFamily(coParents = listOf("bob", "carol"), onScreen = "carol", childFamily = null)
+
+        val result = importer().sync("conn1")
+
+        assertEquals(SchoolSyncResult.NeedsFamily, result)
+        assertEquals(0, server.requestCount)
+        coVerify(exactly = 0) { writer.apply(any()) }
+        assertEquals(null, store.get("alice", "conn1")?.connection?.familyId)
+    }
+
+    @Test
+    fun `without a co-parent a connection of no family imports into no family`() = runTest {
+        connectedWithoutFamily(coParents = emptyList(), childFamily = null)
+        server.dispatcher = serving(eventsStatus = 403)
+        val plan = slot<SchoolImportPlan>()
+        coEvery { writer.apply(capture(plan)) } answers { SchoolImportCounts(plan.captured.creates.size, 0, 0) }
+
+        importer().sync("conn1")
+
+        assertTrue(plan.captured.creates.all { it.familyId == null })
+        assertEquals(null, store.get("alice", "conn1")?.connection?.familyId)
+    }
+
+    /**
+     * The connection made while Alice had no co-parent, now with [coParents] and [onScreen]'s family
+     * on screen, for a child whose record names [childFamily].
+     */
+    private fun connectedWithoutFamily(
+        coParents: List<String>,
+        onScreen: String? = coParents.firstOrNull(),
+        childFamily: String?
+    ) {
+        store.put(SchoolTestSupport.stored(baseUrl = server.url("/").toString().trimEnd('/'), familyId = null))
+        coEvery { users.getUserById("alice") } returns User(
+            id = "alice",
+            email = "alice@example.com",
+            name = "Alice",
+            role = "mom",
+            colorCode = "",
+            partnerId = onScreen,
+            partnerIds = coParents
+        )
+        val at = LocalDateTime.of(2020, 1, 1, 0, 0)
+        coEvery { children.getChildInfoById("child-1") } returns ChildInfo(
+            id = "child-1",
+            childName = "Anna",
+            dateOfBirth = null,
+            createdAt = at,
+            updatedAt = at,
+            familyId = childFamily
+        )
+    }
+
     @Test
     fun `a server error marks the connection and changes nothing in the calendar`() = runTest {
         server.dispatcher = serving(timetableStatus = 500)
@@ -128,7 +220,7 @@ class SchoolImporterTest {
             client = client,
             store = store,
             userRepository = users,
-            collaborators = SchoolImporter.Collaborators(writer, wording),
+            collaborators = SchoolImporter.Collaborators(writer, wording, children),
             clock = clock
         )
     }

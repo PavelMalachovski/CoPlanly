@@ -478,18 +478,22 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     // build that predates the array reads, and such a build can only cope with one
     // relationship — so it should keep showing the one it already knew rather than being
     // silently moved to a family it has never heard of. M-5 deletes the field.
-    tx.update(inviterRef, {
+    //
+    // An unfinished revocation of the person being paired again goes too, on both sides: it names
+    // a family that is live once more, and a later unpair from somebody else would resume it and
+    // narrow this family's records (`unpairCoParentImpl` drops such an entry as well).
+    tx.update(inviterRef, Object.assign({
       partnerIds: FieldValue.arrayUnion(acceptingUserId),
       partnerId: partnersOf(inviterSnap.data())[0] || acceptingUserId,
       pairedAt,
       role: slots.inviterRole,
-    });
-    tx.update(accepterRef, {
+    }, pendingRevocationCleared(inviterSnap.data(), acceptingUserId)));
+    tx.update(accepterRef, Object.assign({
       partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
       pairedAt,
       role: slots.accepterRole,
-    });
+    }, pendingRevocationCleared(accepterSnap.data(), invite.fromUserId)));
     tx.update(inviteRef, {
       status: 'accepted',
       acceptedBy: acceptingUserId,
@@ -742,6 +746,8 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
   const childRef = db.collection('child_info').doc(childInfoId);
   const accepterRef = db.collection('users').doc(acceptingUserId);
   const grantedAtMillis = Date.now();
+  // The record's family, read in the transaction below; `''` when it names none.
+  let recordFamily = '';
 
   await db.runTransaction(async (tx) => {
     const [childSnap, inviteSnap] = await Promise.all([tx.get(childRef), tx.get(inviteRef)]);
@@ -768,8 +774,15 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
     // ever sees who is really reading. Nothing stops a client writing an invitation that
     // names somebody else's child id either; the rules shape that document, and this is what
     // stops it meaning anything.
+    //
+    // **And of the record's own family, once it names one.** Being in `sharedWith` is not being a
+    // parent of the child: a co-parent of the creator from *another* family can be there (the
+    // item-38 leak put them there), and a guest they minted would outlive the repair that takes
+    // them out. A record that names no family keeps the older test.
+    recordFamily = isBlankFamilyId(child.familyId) ? '' : child.familyId;
     if (sharedWith.indexOf(invite.fromUserId) < 0 ||
-        Object.prototype.hasOwnProperty.call(guests, invite.fromUserId)) {
+        Object.prototype.hasOwnProperty.call(guests, invite.fromUserId) ||
+        (recordFamily !== '' && partnerFromFamilyId(recordFamily, invite.fromUserId) === '')) {
       throw new functions.https.HttpsError(
           'permission-denied', 'The inviter cannot grant access to this record',
           {reason: 'inviter-not-entitled'});
@@ -812,13 +825,16 @@ async function acceptGuestInvitationImpl(db, acceptingUserId, acceptingEmail, re
     });
   });
 
+  // A type and a name, never a sentence (SEC-3, CLAUDE.md item 15): this used to send an English
+  // `title`/`body`, the shape the client must never render. No build has wording for the type yet,
+  // so the phone drops it; when one does, it writes the sentence in the reader's language. The
+  // name is the profile's own, never the address `guestName` falls back to.
   await db.collection('notification_queue').add({
     targetUserId: invite.fromUserId,
-    data: {
+    data: Object.assign({
       type: 'guest_accepted',
-      title: 'Guest access accepted',
-      body: `${await guestName(accepterRef, acceptingEmail)} can now see this child's record`,
-    },
+      actorName: await profileName(accepterRef),
+    }, recordFamily !== '' ? {familyId: recordFamily} : {}),
     status: 'pending',
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -847,6 +863,19 @@ async function guestName(accepterRef, acceptingEmail) {
 }
 
 exports.guestName = guestName;
+
+/**
+ * The name a profile stores, trimmed, or `''` — never an address. What a push names somebody by:
+ * the receiving phone substitutes its own translated fallback for a blank.
+ *
+ * @param {FirebaseFirestore.DocumentReference} userRef The user's document.
+ * @return {Promise<string>} The stored name, or `''`.
+ */
+async function profileName(userRef) {
+  const snap = await userRef.get();
+  const stored = snap.exists && snap.data() ? snap.data().name : '';
+  return typeof stored === 'string' ? stored.trim() : '';
+}
 
 /**
  * The accepter's avatar, as the one-key object to merge into a grant — `{}` when they have none.
@@ -995,9 +1024,9 @@ exports.grantParentNames = grantParentNames;
  * and the friend's profile gate (`friend_profiles/{uid}.familyParents`) gains the new family's
  * parents, so both families can read who she is.
  *
- * The inviter must be a **paired parent**: `partnerId` is what proves they hold a slot, and it
- * also supplies the second uid the grant records, so a friend admitted by one parent can read
- * both parents' events — which is what "see the calendar" means for a family of two.
+ * The inviter must be a **paired parent** of the family the invitation names, linked from both
+ * sides: that co-parent is the second uid the grant records, so a friend admitted by one parent can
+ * read both parents' events — which is what "see the calendar" means for a family of two.
  *
  * The grant also carries the two parents' first names ([grantParentNames]) as they stood at
  * redemption: the friend reads no parent's profile, and her calendar has to say whose day it is.
@@ -1082,9 +1111,13 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
     // (whichever one the inviter happens to be showing when the code is redeemed, days later)
     // is a disclosure nobody asked for. The same goes for an id that does not name the inviter.
     //
-    // The fallback is the pre-M-6 behaviour, and only an invitation that names no family at all
-    // gets it — which is what an older build generates: `users/{inviter}.partnerId`, which since
-    // M-4 is the co-parent of whichever family that parent is currently showing.
+    // An invitation that names no family at all — what an older build generates — falls back to
+    // the inviter's one co-parent, and **only while there is exactly one**. The fallback used to
+    // be `users/{inviter}.partnerId`, which the server keeps on the *first* co-parent: a friend a
+    // two-family parent meant for family B was granted family A's calendar, which A's other
+    // parent never chose. With two families nothing says which one the friend was meant for, so
+    // the code is refused (`ambiguous-family`) and the parent makes a new one; the rules now
+    // refuse a friend invitation without a family, so only an older build's code reaches this.
     const livePartners = partnersOf(inviter);
     const namesFamily = typeof invite.familyId === 'string' && invite.familyId !== '';
     let partnerId = '';
@@ -1092,8 +1125,12 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
       const requestedPartner = partnerFromFamilyId(invite.familyId, invite.fromUserId);
       partnerId = requestedPartner && livePartners.includes(requestedPartner) ?
         requestedPartner : '';
-    } else {
-      partnerId = inviter && typeof inviter.partnerId === 'string' ? inviter.partnerId : '';
+    } else if (livePartners.length === 1) {
+      partnerId = livePartners[0];
+    } else if (livePartners.length > 1) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'This invitation names no family; ask for a new code',
+          {reason: 'ambiguous-family'});
     }
     if (!partnerId) {
       throw new functions.https.HttpsError(
@@ -1119,8 +1156,15 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
       typeof legacy.data.expiresAtMillis === 'number' && legacy.data.expiresAtMillis > Date.now();
     const legacyTargetRef = legacyLive ? db.collection('calendar_friends').doc(legacy.id) : null;
     const legacyTargetTaken = legacyTargetRef ? (await tx.get(legacyTargetRef)).exists : false;
-    // The co-parent's name for the grant: the friend cannot read either parent's profile.
+    // The co-parent's name for the grant: the friend cannot read either parent's profile. The
+    // same read proves the link from the other side too — an interrupted unpair can leave the
+    // inviter naming a co-parent who no longer names them, and that family is not live.
     const partnerSnap = await tx.get(db.collection('users').doc(partnerId));
+    if (!partnerSnap.exists || !partnersOf(partnerSnap.data()).includes(invite.fromUserId)) {
+      throw new functions.https.HttpsError(
+          'failed-precondition', 'Only a paired parent can invite a friend',
+          {reason: 'inviter-not-paired'});
+    }
     const parentNames = grantParentNames({
       [invite.fromUserId]: inviter,
       [partnerId]: partnerSnap.exists ? partnerSnap.data() : null,
@@ -1171,13 +1215,18 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
 
   // Both parents are told: a third person reading the family's calendar is a fact the parent who
   // did not send the invitation has as much right to know as the one who did.
+  //
+  // A type, the friend's profile name and the family — never a sentence (SEC-3, CLAUDE.md item
+  // 15). This used to send an English `title`/`body` carrying the friend's verified e-mail
+  // address; no build has wording for the type yet, so phones drop it until one does.
+  const actorName = await profileName(accepterRef);
   await Promise.all(familyParents.map((parentUid) =>
     db.collection('notification_queue').add({
       targetUserId: parentUid,
       data: {
         type: 'calendar_friend_accepted',
-        title: 'Calendar access accepted',
-        body: `${acceptingEmail || 'A friend'} can now see the family calendar`,
+        actorName,
+        familyId,
       },
       status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
@@ -2189,6 +2238,19 @@ const REVOCATION_BATCH_LIMIT = 400;
  * `FirestoreChildInfoDataSource.getChildInfoForParent` query on, so dropping the creator
  * would hide the document from the parent it belongs to.
  *
+ * **Only the ended family's records, and records that name no family** (October 2026). A parent
+ * may co-parent in two families, so "a document both of them are in" is not "a document of their
+ * family": the ex of family B can be a guest of a family-A child, and the pass on their behalf
+ * used to remove the *other* parent of B — a member of family A — from that A record. A document
+ * stamped with any other family is left exactly as it is: this pair ending says nothing about who
+ * reads it, and on the ended family's own records the two members are exactly the two uids being
+ * separated, so no other family's member is ever removed. For the same reason only a document
+ * one of the two *created* is narrowed: a third person's record, stamped or not, belongs to that
+ * person's family. A uid named in the document's `guests`
+ * map is left too: their grant was given for its own reasons and has its own end, which
+ * `sweepExpiredGuests` enforces on both fields at once, and removing them from `sharedWith` alone
+ * would leave a grant that the next parent's save puts straight back.
+ *
  * Runs with Admin credentials, which is why this belongs on the server: a client sweep
  * would only ever run on the device that pressed unpair, would be blocked by the `events`
  * update rule on any document shared `read_only`, and would silently do nothing at all if
@@ -2201,6 +2263,7 @@ const REVOCATION_BATCH_LIMIT = 400;
  */
 async function revokeSharedAudience(db, uidA, uidB) {
   let revoked = 0;
+  const endedFamilyId = custodyModelKey(uidA, uidB);
 
   for (const collection of SHARED_AUDIENCE_COLLECTIONS) {
     for (const [reader, removed] of [[uidA, uidB], [uidB, uidA]]) {
@@ -2217,6 +2280,24 @@ async function revokeSharedAudience(db, uidA, uidB) {
           continue;
         }
         if (!(docData.sharedWith || []).includes(removed)) {
+          continue;
+        }
+        // A third person's record — one the reader is in as a guest, or as that person's
+        // co-parent — is not this pair's either, even unstamped: the removed uid may be its
+        // creator's own co-parent. Only the reader's own records are narrowed (a creatorless
+        // record from before the field existed is still treated as the pair's).
+        const creator = docData.createdByFirebaseUid;
+        if (typeof creator === 'string' && creator !== '' && creator !== reader) {
+          continue;
+        }
+        // Another family's record: not this pair's to narrow (see above).
+        if (!isBlankFamilyId(docData.familyId) && docData.familyId !== endedFamilyId) {
+          continue;
+        }
+        // A guest: left to the guest sweep, which takes both fields out together.
+        const guests = docData.guests;
+        if (guests && typeof guests === 'object' &&
+            Object.prototype.hasOwnProperty.call(guests, removed)) {
           continue;
         }
 
@@ -2260,6 +2341,29 @@ function pendingRevocations(raw) {
 }
 
 exports.pendingRevocations = pendingRevocations;
+
+/**
+ * The update that takes [uid] out of a user document's `pendingRevocationOf`, or `{}` when it is
+ * not there — so a pairing writes nothing to a marker it has no business with.
+ *
+ * Written as the remaining list (or a delete) rather than `arrayRemove`, because the field may
+ * still hold the legacy bare string, which `arrayRemove` would overwrite with an empty array and
+ * lose whatever other ex-partner it named.
+ *
+ * @param {?Object} data The user document's data.
+ * @param {string} uid The person whose entry goes.
+ * @return {!Object} The update fields.
+ */
+function pendingRevocationCleared(data, uid) {
+  const pending = pendingRevocations((data || {}).pendingRevocationOf);
+  if (!pending.includes(uid)) {
+    return {};
+  }
+  const rest = pending.filter((other) => other !== uid);
+  return {pendingRevocationOf: rest.length > 0 ? rest : FieldValue.delete()};
+}
+
+exports.pendingRevocationCleared = pendingRevocationCleared;
 
 /**
  * The id of the one custody document a pair shares: the two UIDs sorted and joined with
@@ -2400,9 +2504,21 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
     // Set by earlier calls whose sweeps did not finish. Resuming them is the only way
     // those documents ever get narrowed: once partnerId is cleared, nothing else
     // remembers who the ex-partner was.
-    const unfinished = pendingRevocations(callerData.pendingRevocationOf);
+    //
+    // **Except for an ex who is a co-parent again.** Pairing clears the entry
+    // (`acceptPairingInvitationImpl`), but a marker written before it did, or by a sweep that
+    // failed after the re-pair, still names a live family — and resuming it here tore that
+    // family's audiences apart while ending a different one. Such an entry is dropped from the
+    // marker in this transaction, whatever else the call does.
+    const recorded = pendingRevocations(callerData.pendingRevocationOf);
+    const unfinished = recorded.filter((uid) => uid === partnerId || !partners.includes(uid));
 
     if (!partnerId) {
+      if (unfinished.length !== recorded.length) {
+        tx.update(callerRef, {
+          pendingRevocationOf: unfinished.length > 0 ? unfinished : FieldValue.delete(),
+        });
+      }
       return {unpairedFrom: null, revokeFrom: unfinished};
     }
 
@@ -2478,6 +2594,8 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
         data: {
           type: 'pairing_removed',
           actorName: result.callerName || '',
+          // The family that ended (M-8), so a phone in two families opens the right one.
+          familyId: result.endedFamilyId,
         },
         status: 'pending',
         createdAt: FieldValue.serverTimestamp(),
@@ -2838,6 +2956,8 @@ exports.storedKinds = storedKinds;
  *   invitation accepted and later unpaired, or re-paired with someone else, must not re-slot
  *   two people who are no longer, or never were, each other's live co-parent —
  *   `skippedReasons.notPaired`;
+ * - either of them co-parents with somebody else as well — a slot is one per person, so moving
+ *   it would move them in their other family too — `skippedReasons.multiFamily`;
  * - the inviter and accepter already hold the same normalized slot as each other is false —
  *   i.e. they already hold different slots — `skippedReasons.alreadySeparated`. Running this
  *   twice must look like running it once, and a pair a previous run (or a manual fix) already
@@ -2859,6 +2979,7 @@ exports.storedKinds = storedKinds;
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @return {Promise<{scanned: number, updated: number, skipped: number, failed: number,
  *   skippedReasons: {noAccepter: number, missingAccount: number, notPaired: number,
+ *   multiFamily: number,
  *   alreadySeparated: number}}>} What the migration did: how many accepted invitations were
  *   examined, how many pairs were re-slotted, and how many were skipped or failed, each
  *   broken down by reason.
@@ -2873,6 +2994,7 @@ async function backfillParentSlotsImpl(db) {
       noAccepter: 0,
       missingAccount: 0,
       notPaired: 0,
+      multiFamily: 0,
       alreadySeparated: 0,
     },
   };
@@ -2914,6 +3036,16 @@ async function backfillParentSlotsImpl(db) {
       if (!stillPaired) {
         summary.skipped++;
         summary.skippedReasons.notPaired++;
+        continue;
+      }
+
+      // A slot is still stored once per person (`assertAccepterKeepsSlot`), so re-slotting
+      // somebody who co-parents in another family moves them there too: that family's two
+      // parents would share a slot and their phones would re-stamp every record. Not ours to
+      // decide from one family's invitation.
+      if (partnersOf(inviterData).length > 1 || partnersOf(accepterData).length > 1) {
+        summary.skipped++;
+        summary.skippedReasons.multiFamily++;
         continue;
       }
 
@@ -3741,10 +3873,26 @@ const FAMILY_BOUND_AUDIENCE_COLLECTIONS = ['child_info', 'pets'];
 const AUDIENCE_REPAIR_BATCH_LIMIT = 400;
 
 /**
+ * The guests of a child's record that one of [members] granted, as their uids — the grants that
+ * may stay. A grant somebody else gave (a co-parent of another family the leak had put in the
+ * audience could mint them) is not the family's, and neither is one that names no granter.
+ *
+ * @param {!Object} data The record.
+ * @param {!Array<string>} members The family's two parents.
+ * @return {!Array<string>} The uids whose grants stay.
+ */
+function familyGrantedGuests(data, members) {
+  const guests = data.guests && typeof data.guests === 'object' && !Array.isArray(data.guests) ?
+    data.guests : {};
+  return Object.keys(guests).filter((uid) =>
+    guests[uid] && typeof guests[uid] === 'object' && members.includes(guests[uid].grantedBy));
+}
+
+/**
  * The part of a child's or a pet's audience that may stay, given the two parents its family id
- * names: every uid of `sharedWith` that is one of [members] or — on a child's record — a guest its
- * `guests` map names, in stored order and once each. A pet has no guests, so a `guests` key on a
- * pet document admits nobody.
+ * names: every uid of `sharedWith` that is one of [members] or — on a child's record — a guest one
+ * of [members] granted ([familyGrantedGuests]), in stored order and once each. A pet has no guests,
+ * so a `guests` key on a pet document admits nobody.
  *
  * @param {string} collection `child_info` or `pets`.
  * @param {!Object} data The record.
@@ -3752,8 +3900,7 @@ const AUDIENCE_REPAIR_BATCH_LIMIT = 400;
  * @return {!Array<string>} The uids of `sharedWith` that may stay.
  */
 function familyBoundAudience(collection, data, members) {
-  const guests = collection === 'child_info' && data.guests && typeof data.guests === 'object' &&
-    !Array.isArray(data.guests) ? Object.keys(data.guests) : [];
+  const guests = collection === 'child_info' ? familyGrantedGuests(data, members) : [];
   const stored = Array.isArray(data.sharedWith) ? data.sharedWith : [];
   return Array.from(new Set(stored.filter((uid) =>
     typeof uid === 'string' && (members.includes(uid) || guests.includes(uid)))));
@@ -3774,13 +3921,19 @@ function familyBoundAudience(collection, data, members) {
  * For every `child_info` and `pets` document whose `familyId` names a family:
  *
  * - every uid of `sharedWith` that is neither one of the family's two parents — the id is
- *   `FamilyKey.of`'s two uids sorted and joined — nor, on a child's record, a guest its `guests`
- *   map names is dropped. A guest's grant is not judged here; `sweepExpiredGuests` does that.
+ *   `FamilyKey.of`'s two uids sorted and joined — nor, on a child's record, a guest one of those
+ *   two parents granted (`guests[uid].grantedBy`) is dropped. A grant's expiry is not judged
+ *   here; `sweepExpiredGuests` does that.
+ * - a child's grant that somebody outside the family gave — a co-parent of another family whom
+ *   the leak had put in the audience could mint them — goes from `guests` as well, whether or not
+ *   its guest is still in `sharedWith`: every parent's save re-admits each active grant it holds,
+ *   so a grant left in the map would put its guest straight back (October 2026).
  * - the family's other parent is put back if missing — **only while the family is live**
  *   ([liveFamily]: both profiles exist and name each other). An unpair's sweep narrowed the
  *   record on purpose, and re-admitting an ex-partner is not a repair.
  *
- * What it never does: write anything but `sharedWith` — never a tombstone's deletion fields,
+ * What it never does: write anything but `sharedWith` and those dropped grants — never a
+ * tombstone's deletion fields,
  * never `updatedAt`, so no phone's conflict comparison changes its answer; touch a record whose
  * family is blank (which of a parent's families it is about is exactly what the server cannot say
  * — `stampOwnBlankFamilyIds` declines the same guess); or "repair" a record whose family does not
@@ -3793,10 +3946,11 @@ function familyBoundAudience(collection, data, members) {
  * @param {{dryRun: (boolean|undefined)}=} options `dryRun` counts what would change and writes
  *     nothing — the scope of the leak, for the breach assessment, before anything is touched.
  * @return {!Promise<{scanned: number, repaired: number, removed: number, readded: number,
- *     dryRun: boolean, perCollection: !Object<string, number>, skipped: {blankFamily: number,
- *     malformedFamily: number, creatorOutsideFamily: number}}>} `repaired` counts records whose
- *     audience changed (or would), `removed` the uids taken out, `readded` the records that got
- *     their own co-parent back.
+ *     guestsDropped: number, dryRun: boolean, perCollection: !Object<string, number>,
+ *     skipped: {blankFamily: number, malformedFamily: number, creatorOutsideFamily: number}}>}
+ *     `repaired` counts records whose audience or grants changed (or would), `removed` the uids
+ *     taken out of `sharedWith`, `guestsDropped` the grants taken out of `guests`, `readded` the
+ *     records that got their own co-parent back.
  */
 async function repairChildAndPetAudiencesImpl(db, options) {
   const dryRun = Boolean(options && options.dryRun === true);
@@ -3805,6 +3959,7 @@ async function repairChildAndPetAudiencesImpl(db, options) {
     repaired: 0,
     removed: 0,
     readded: 0,
+    guestsDropped: 0,
     dryRun,
     perCollection: {},
     skipped: {blankFamily: 0, malformedFamily: 0, creatorOutsideFamily: 0},
@@ -3848,15 +4003,27 @@ async function repairChildAndPetAudiencesImpl(db, options) {
       const otherParent = members[0] === creator ? members[1] : members[0];
       const readd = !next.includes(otherParent) && await isLive(data.familyId, creator);
       if (readd) next.push(otherParent);
-      if (next.length === stored.length && next.every((uid, i) => uid === stored[i])) continue;
+      // A child's grants nobody in the family gave go from the map too, whether or not their
+      // guest is still in the audience: every parent's save re-admits each active grant it holds.
+      const storedGuests = collection === 'child_info' && data.guests &&
+        typeof data.guests === 'object' && !Array.isArray(data.guests) ? data.guests : null;
+      const keptGuests = storedGuests ? familyGrantedGuests(data, members) : [];
+      const guestsDropped = storedGuests ? Object.keys(storedGuests).length - keptGuests.length : 0;
+      const audienceKept = next.length === stored.length && next.every((uid, i) => uid === stored[i]);
+      if (audienceKept && guestsDropped === 0) continue;
 
       summary.repaired++;
       summary.perCollection[collection]++;
       summary.removed += removed;
+      summary.guestsDropped += guestsDropped;
       if (readd) summary.readded++;
       if (dryRun) continue;
 
-      batch.update(doc.ref, {sharedWith: next});
+      const update = {sharedWith: next};
+      if (guestsDropped > 0) {
+        update.guests = Object.fromEntries(keptGuests.map((uid) => [uid, storedGuests[uid]]));
+      }
+      batch.update(doc.ref, update);
       pending++;
       if (pending === AUDIENCE_REPAIR_BATCH_LIMIT) {
         await batch.commit();
@@ -3949,6 +4116,7 @@ exports.backfillFamilyDocuments = regional.runWith({timeoutSeconds: 540}).https.
  *
  * @return {Promise<{scanned: number, updated: number, skipped: number, failed: number,
  *   skippedReasons: {noAccepter: number, missingAccount: number, notPaired: number,
+ *   multiFamily: number,
  *   alreadySeparated: number}}>} See [backfillParentSlotsImpl].
  */
 exports.backfillParentSlots = regional.runWith({timeoutSeconds: 540}).https.onCall(
@@ -4512,6 +4680,10 @@ async function retainOrDeleteConversations(db, uid, departedName, bucket, nowMil
             date: isoDateUtc(retainedUntilMillis),
             retainedUntilMillis: String(retainedUntilMillis),
             conversationId: conversation.id,
+            // The family the thread belonged to (M-8), so a phone in two families opens it. Built
+            // from the pair rather than read off the thread id, which an older thread may not
+            // share with its family.
+            familyId: custodyModelKey(uid, target),
           },
           status: 'pending',
           createdAt: FieldValue.serverTimestamp(),

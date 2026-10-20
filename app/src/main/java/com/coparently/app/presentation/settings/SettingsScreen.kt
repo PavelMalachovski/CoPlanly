@@ -138,6 +138,7 @@ import com.coparently.app.presentation.consent.HealthConsentSettingsRow
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.family.UnassignedRecordsRow
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.IconSizes
@@ -183,6 +184,8 @@ import kotlin.math.roundToInt
  * @param onNavigateToMyProfile Opens the signed-in user's own profile, editable
  * @param onNavigateToCoParentProfile Opens the co-parent's profile, read-only
  * @param onNavigateToDataSources Opens the data sources and licences (MON-13's ODbL notice)
+ * @param onNavigateToUnassignedRecords Opens "Records without a family"; the row shows only while
+ *   such records wait
  * @param onStartGoogleSignIn Launches the Google Sign-In activity
  * @param onSignOut Called after the user signs out of the app
  * @param syncViewModel Sync operations
@@ -214,6 +217,7 @@ fun SettingsScreen(
     onNavigateToMyProfile: (() -> Unit)? = null,
     onNavigateToCoParentProfile: (() -> Unit)? = null,
     onNavigateToDataSources: (() -> Unit)? = null,
+    onNavigateToUnassignedRecords: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
@@ -246,7 +250,9 @@ fun SettingsScreen(
     // what decides which rows below are drawn. Seeding the dialog from the union made a box the
     // co-parent ticked look like this parent's own.
     val myCaresFor by settingsViewModel.myCaresFor.collectAsState()
-    val agreedRatio by settingsViewModel.agreedRatio.collectAsState()
+    // The family on screen's split, with the family it belongs to, so a change goes to that family.
+    val familySplit by settingsViewModel.split.collectAsState()
+    val agreedRatio = familySplit.ratio
     // The split is two numbers about money; without names they do not say whose is whose.
     val parents by settingsViewModel.parents.collectAsState()
     val splitParentNames = rememberParentNames(parents)
@@ -269,7 +275,7 @@ fun SettingsScreen(
             current = agreedRatio,
             parentNames = splitParentNames,
             onConfirm = { ratio ->
-                settingsViewModel.submitRatio(ratio)
+                settingsViewModel.submitRatio(ratio, familySplit)
                 showSplitPicker = false
             },
             onDismiss = { showSplitPicker = false }
@@ -532,6 +538,9 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
+                    // Beside the families: records that name none of them (owner decision,
+                    // October 2026). Draws itself and its divider only while some wait.
+                    onNavigateToUnassignedRecords?.let { UnassignedRecordsRow(onOpen = it) }
                     // The parent's own colour. In the Family group rather than under App
                     // preferences because it is how this person is identified to the other one —
                     // the same kind of fact as their name, not a device setting like the theme.

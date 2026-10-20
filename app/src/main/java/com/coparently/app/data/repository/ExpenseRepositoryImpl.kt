@@ -7,10 +7,12 @@ import com.coparently.app.data.local.entity.ExpenseEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
@@ -48,19 +50,21 @@ class ExpenseRepositoryImpl @Inject constructor(
     override fun getAllExpenses(): Flow<List<Expense>> {
         return expenseDao.getAllExpenses().map { entities ->
             entities.map { it.toDomain() }
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
 
     override fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>> {
         return expenseDao.getExpensesForPeriod(start, end).map { entities ->
             entities.map { it.toDomain() }
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
-    }
-
-    override fun getExpensesByCategory(category: ExpenseCategory): Flow<List<Expense>> {
-        return expenseDao.getExpensesByCategory(category.name).map { entities ->
-            entities.map { it.toDomain() }
-        }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
 
     override suspend fun getExpenseById(id: String): Expense? {
@@ -77,10 +81,12 @@ class ExpenseRepositoryImpl @Inject constructor(
         val uid = expense.createdByFirebaseUid ?: firebaseAuthService.getCurrentUser()?.uid
         val owned = expense.copy(
             createdByFirebaseUid = uid,
-            // Which relationship this belongs to, and therefore who may see it. Null while the
-            // account is unpaired: the expense is this parent's alone until there is somebody to
-            // share it with, and inventing an id for a pair of one would say otherwise. Pairing
-            // backfills, the same way the audience on events is re-stamped.
+            // Which relationship this belongs to, and therefore who may see it. A new expense from
+            // the form arrives stamped by `ExpenseViewModel`, which reads the family once for the
+            // whole save. Otherwise null while the account is unpaired: the expense is this
+            // parent's alone until there is somebody to share it with, and inventing an id for a
+            // pair of one would say otherwise. Pairing backfills, the same way the audience on
+            // events is re-stamped.
             familyId = expense.familyId
                 ?: FamilyKey.orNull(uid, userDao.getUserById(uid.orEmpty())?.partnerId)
         )
@@ -296,9 +302,9 @@ class ExpenseRepositoryImpl @Inject constructor(
     /**
      * Tells the co-parent about an expense.
      *
-     * Nothing is suppressed here: an expense is a shared fact by construction — there is no
-     * private expense, and the pair's balance is the reason both parents opened the app. That is
-     * the difference from `EventRepositoryImpl`, which must suppress a private event.
+     * An expense is a shared fact by construction — there is no private expense — so the only
+     * thing that silences it is having no family to tell: an ended family, or no family while the
+     * parent has two (`FamilyAudience.partnerFor`).
      *
      * The amount is passed already formatted, with its currency beside it. The app never converts
      * between currencies (CLAUDE.md), so a reader must be able to group by currency without
@@ -309,6 +315,16 @@ class ExpenseRepositoryImpl @Inject constructor(
      */
     private suspend fun announce(expense: Expense, kind: ActivityKind) {
         val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val me = userDao.getUserById(myUid)
+        // The thread of the expense's own family, never the family on screen: an expense of an
+        // ended family, or of no family while there are two, has nobody to tell (October 2026
+        // isolation audit — such a card carried the title and the amount to the other family).
+        val coParent = FamilyAudience.partnerFor(
+            familyId = expense.familyId,
+            myUid = myUid,
+            livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
+            selectedPartner = me?.partnerId
+        )
         activityAnnouncer.announce(
             announcement = ActivityAnnouncement(
                 kind = kind,
@@ -319,7 +335,9 @@ class ExpenseRepositoryImpl @Inject constructor(
                 amount = "${expense.amount} ${expense.currency}",
                 currency = expense.currency
             ),
-            senderName = userDao.getUserById(myUid)?.name.orEmpty()
+            senderName = me?.name.orEmpty(),
+            suppress = coParent == null,
+            partnerUid = coParent
         )
     }
 

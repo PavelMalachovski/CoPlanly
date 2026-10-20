@@ -60,6 +60,7 @@ import com.coparently.app.BuildConfig
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.activeInviteOrNull
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
@@ -115,6 +116,8 @@ fun PairingScreen(
     viewModel: PairingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    // The co-parent of the family on screen, never the server's first (design refresh item 12).
+    val partnerOnScreen by viewModel.partnerOnScreen.collectAsState()
     val form by viewModel.form.collectAsState()
     val account by viewModel.account.collectAsState()
     val context = LocalContext.current
@@ -194,6 +197,7 @@ fun PairingScreen(
                 is PairingState.Paired ->
                     pairedSection(
                         current = current,
+                        partner = partnerOnScreen ?: current.partner,
                         form = form,
                         viewModel = viewModel,
                         actions = actions,
@@ -213,7 +217,12 @@ fun PairingScreen(
         }
     }
 
-    UnpairFlow(state, showUnpairConfirm, viewModel::unpair)
+    UnpairFlow(
+        partner = partnerOnScreen,
+        state = state,
+        visible = showUnpairConfirm,
+        onUnpair = viewModel::unpair
+    )
     DeepLinkPreview(pendingDeepLinkCode, viewModel)
     form.confirmation?.let { InviteConfirmationDialog(it, viewModel::answerConfirmation) }
 }
@@ -257,16 +266,25 @@ private fun PairingSideEffects(
  * action — **twice**. The first dialog is the reversible-sounding one; the second spells out what
  * is lost and takes a red Yes. Two steps are an owner decision (Aug 2026 walkthrough): unpairing
  * severs the shared calendar, and one habitual tap should never be enough.
+ *
+ * [partner] is the co-parent of the family on screen, the one the unpair ends; the server's partner
+ * stands in only until it is known.
  */
 @Composable
-private fun UnpairFlow(state: PairingState, visible: MutableState<Boolean>, onUnpair: () -> Unit) {
+private fun UnpairFlow(
+    partner: PartnerSummary?,
+    state: PairingState,
+    visible: MutableState<Boolean>,
+    onUnpair: () -> Unit
+) {
     if (!visible.value) return
+    val partnerName = (partner ?: (state as? PairingState.Paired)?.partner)?.name.orEmpty()
     // Keyed on visible.value so reopening the flow always starts back at step one; saveable so a
     // config change mid-flow keeps whichever dialog was up.
     val finalStep = rememberSaveable(visible.value) { mutableStateOf(false) }
     if (!finalStep.value) {
         UnpairConfirmationDialog(
-            partnerName = (state as? PairingState.Paired)?.partner?.name.orEmpty(),
+            partnerName = partnerName,
             onConfirm = { finalStep.value = true },
             onDismiss = { visible.value = false }
         )
@@ -434,6 +452,7 @@ private fun LazyListScope.loadingSection(
 @Suppress("LongParameterList") // section state, split out of the screen body for readability
 private fun LazyListScope.pairedSection(
     current: PairingState.Paired,
+    partner: PartnerSummary,
     form: PairingFormState,
     viewModel: PairingViewModel,
     actions: NotPairedActions,
@@ -441,7 +460,8 @@ private fun LazyListScope.pairedSection(
     mode: MutableState<PairingMode>,
     onUnpairClick: () -> Unit
 ) {
-    item { PairedPartnerCard(partner = current.partner) }
+    // The family on screen's co-parent: with two families `current.partner` is the server's first.
+    item { PairedPartnerCard(partner = partner) }
 
     // **Being paired is no longer the end of this screen.** A person may co-parent with more
     // than one other adult, and this row is the only way in: the server accepts a second

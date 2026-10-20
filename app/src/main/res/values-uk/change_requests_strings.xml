@@ -34,11 +34,13 @@
     <string name="change_request_error_apply_failed">Не вдалося застосувати зміну. Спробуйте ще раз.</string>
     <string name="change_request_error_offer_answered">На цю пропозицію вже відповіли.</string>
     <string name="change_request_error_swap_failed">Не вдалося відповісти на обмін. Спробуйте ще раз.</string>
+    <string name="change_request_error_family_changed">Родина на екрані змінилася. Відповідь не надіслано: перевірте запит і відповідайте знову.</string>
     <string name="change_request_error_proposal_accept_failed">Не вдалося прийняти пропозицію. Спробуйте ще раз.</string>
     <string name="change_request_error_proposal_decline_failed">Не вдалося відхилити пропозицію. Спробуйте ще раз.</string>
     <string name="change_request_error_answer_failed">Не вдалося відповісти. Спробуйте ще раз.</string>
     <string name="change_request_error_signed_out">Ви вийшли з акаунта. Увійдіть і спробуйте ще раз.</string>
     <string name="change_request_error_not_paired">Спершу зʼєднайтеся з другим із батьків, щоб надсилати запити на зміну.</string>
+    <string name="change_request_error_not_in_family">Ця подія не належить до родини, з якою ви повʼязані, тож запит надіслати нікому.</string>
     <string name="change_request_error_send_failed">Не вдалося надіслати запит на зміну. Спробуйте ще раз.</string>
     <string name="request_section_waiting_on_you">Чекають на вашу відповідь</string>
     <string name="request_section_waiting_on_them">Чекають на відповідь: %1$s</string>

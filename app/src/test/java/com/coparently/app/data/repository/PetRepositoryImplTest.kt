@@ -6,6 +6,7 @@ import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Pet
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
@@ -121,6 +122,30 @@ class PetRepositoryImplTest {
         }
 
     @Test
+    fun `an unsent edit of an unstamped pet takes the family the server stamped and stays queued`() =
+        runTest {
+            // The rules refuse an upload that blanks a stamped family, so without this the edit
+            // would be refused on every pass and never leave the phone.
+            val edited = with(repository) { pet().copy(name = "Rex (edited)").toEntity() }
+            coEvery { petDao.getUnsyncedPets() } returns listOf(edited)
+            coEvery { firestorePetDataSource.upsertPet(any(), any()) } returns
+                Result.failure(IOException("denied"))
+            coEvery { petDao.getPetById(PET_ID) } returns edited
+            val document = with(repository) {
+                pet().copy(familyId = BOB_FAMILY).toFirestoreMap(listOf(ALICE, BOB))
+            }
+            every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
+
+            repository.pullOnce()
+
+            coVerify(exactly = 1) {
+                petDao.insertPet(
+                    match { it.familyId == BOB_FAMILY && it.name == "Rex (edited)" && !it.syncedToFirestore }
+                )
+            }
+        }
+
+    @Test
     fun `a pull skips a document that does not parse and takes the rest`() = runTest {
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
@@ -204,13 +229,30 @@ class PetRepositoryImplTest {
         }
 
     @Test
-    fun `with one co-parent the repair still widens an unstamped pet, as before`() = runTest {
-        // Unchanged for a parent in one family: a pet uploaded before the pairing reaches the
-        // co-parent on the owner's next pull.
+    fun `with one co-parent an unstamped pet waits for its family before it is widened`() = runTest {
+        // A pet uploaded before the pairing names no family. Whether it is the Bob family's is
+        // decided where it is not a guess — the server's `stampOwnBlankFamilyIds` when the pair
+        // forms — and the next pull then widens it. The one co-parent there is now is not an
+        // answer on its own: after an unpair it may be about the family that ended.
         coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB), selected = BOB)
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
         val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+        every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
+
+        repository.pullOnce()
+
+        coVerify(exactly = 0) { firestorePetDataSource.updatePet(any(), any()) }
+    }
+
+    @Test
+    fun `with one co-parent the repair widens a pet the server stamped with their family`() = runTest {
+        coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB), selected = BOB)
+        coEvery { petDao.getUnsyncedPets() } returns emptyList()
+        coEvery { petDao.getPetById(any()) } returns null
+        val document = with(repository) {
+            pet().copy(familyId = FamilyKey.of(ALICE, BOB)).toFirestoreMap(listOf(ALICE))
+        }
         every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
         repository.pullOnce()

@@ -35,6 +35,10 @@ object PreferenceKeys {
      * ask that changes is asked again, and one that does not stays put off across launches. Only
      * asks still waiting are kept on each write, so the list never outgrows the inbox.
      *
+     * Each entry is `<familyId>/<revision>`, so one family's "Later" never silences another
+     * family's ask (isolation audit, October 2026); an entry without a family is from before that
+     * and is dropped on the next write.
+     *
      * Not exempt from `EncryptedPreferences.clear()`: the next account on this device is asked.
      */
     const val PUT_OFF_ASKS = "home_put_off_asks"
@@ -154,6 +158,19 @@ object PreferenceKeys {
     const val SPLIT_RATIO_SLOT = "expenses_split_ratio_slot"
 
     /**
+     * Prefix for one family's agreed split, as slot 1's share in basis points — the actual key is
+     * this prefix plus the family id (`family_settings/{id}`).
+     *
+     * Per family since the October 2026 isolation audit. [SPLIT_RATIO_BASIS_POINTS] was one number
+     * for the whole device, so a parent in two families who opened the family with Igor (70/30)
+     * and then switched to the family with Carol (no agreement) was shown 70/30 there, and every
+     * expense saved for Carol was priced at Igor's split — permanently, since an expense keeps the
+     * share it was recorded under. A family with no entry here divides evenly.
+     * [SPLIT_RATIO_BASIS_POINTS] is left with one meaning: the ratio chosen while unpaired.
+     */
+    const val SPLIT_RATIO_FAMILY_PREFIX = "expenses_split_ratio_family_"
+
+    /**
      * Prefix for the per-user key that records the parent slot (`"mom"`/`"dad"`) this device's
      * own records are currently stamped with — the actual key is this prefix plus the Firebase
      * UID.
@@ -240,6 +257,30 @@ object PreferenceKeys {
      * family the account has left must not select itself.
      */
     const val SELECTED_FAMILY_PREFIX = "selected_family_"
+
+    /**
+     * Prefix for the per-user list of records this parent chose to keep only theirs ("Records
+     * without a family", owner decision October 2026) — the actual key is this prefix plus the
+     * Firebase UID, and the value is a [LIST_SEPARATOR]-joined list of `kind:id` keys
+     * (`UnassignedRecord.key`). A record on it is not asked about again; it stays "Only me" and
+     * keeps its mark.
+     *
+     * Per user for the reason [PARENT_SLOT_MARKER_PREFIX] gives. Not exempt from
+     * `EncryptedPreferences.clear()`: losing it costs asking about those records once more, and the
+     * next account on this device must not inherit the answer.
+     */
+    const val UNASSIGNED_KEPT_PREFIX = "unassigned_records_kept_"
+
+    /**
+     * Prefix for the per-user key naming the co-parent set Home last asked about records without a
+     * family for — the actual key is this prefix plus the Firebase UID, and the value is every
+     * co-parent's UID, sorted and comma-joined, the form [EVENT_AUDIENCE_BACKFILL_PREFIX] uses.
+     *
+     * The set, so the question is asked once, and once more only when a new co-parent arrives (a
+     * third family is a new reason to wonder where an old record belongs). Not exempt from
+     * `EncryptedPreferences.clear()`, for the reason [UNASSIGNED_KEPT_PREFIX] gives.
+     */
+    const val UNASSIGNED_ASKED_PREFIX = "unassigned_records_asked_"
 
     /**
      * Prefix for one school-system connection (MON-8) — the actual key is this prefix plus the

@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.profile
 
 import com.coparently.app.domain.model.PairingState
+import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -58,6 +60,7 @@ class ProfileViewModelTest {
         userRepository = mockk(relaxed = true) {
             every { observeCurrentUserId() } returns flowOf(ALICE)
             every { observeUserById(ALICE) } returns meRow
+            every { getAllUsers() } answers { meRow.map { listOfNotNull(it) } }
             coEvery { getUserById(ALICE) } answers { meRow.value }
         }
         pairingRepository = mockk(relaxed = true) {
@@ -164,6 +167,55 @@ class ProfileViewModelTest {
         assertFalse(viewModel.uiState.value.meUnavailable)
     }
 
+    @Test
+    fun `the co-parent's profile is the family on screen's, not the server's first co-parent's`() = runTest {
+        // Alice co-parents with Bob (the server's first link) and Carol, and Carol's family is on
+        // screen: the card names Carol, with her date of birth and phone, never Bob's.
+        every { pairingRepository.observePairingState() } returns flowOf(PairingState.Paired(partner(BOB)))
+        meRow.value = alice(partnerId = CAROL)
+        coEvery { userRepository.getRemoteUserProfile(CAROL) } returns coParent(CAROL, "Carol")
+        coEvery { userRepository.getRemoteUserProfile(BOB) } returns coParent(BOB, "Bob")
+
+        val viewModel = createViewModel()
+        runCurrent()
+
+        assertEquals(CAROL, viewModel.uiState.value.coParent?.id)
+    }
+
+    @Test
+    fun `a switch while the screen is open shows the next family's co-parent`() = runTest {
+        every { pairingRepository.observePairingState() } returns flowOf(PairingState.Paired(partner(BOB)))
+        coEvery { userRepository.getRemoteUserProfile(BOB) } returns coParent(BOB, "Bob")
+        coEvery { userRepository.getRemoteUserProfile(CAROL) } returns coParent(CAROL, "Carol")
+        val viewModel = createViewModel()
+        runCurrent()
+        assertEquals(BOB, viewModel.uiState.value.coParent?.id)
+
+        meRow.value = alice(partnerId = CAROL)
+        runCurrent()
+
+        assertEquals(CAROL, viewModel.uiState.value.coParent?.id)
+    }
+
+    @Test
+    fun `one family is still that family's co-parent before the row names them`() = runTest {
+        // Right after a first pairing the Room row has not caught up: the server's partner stands in.
+        every { pairingRepository.observePairingState() } returns flowOf(PairingState.Paired(partner(BOB)))
+        meRow.value = alice(partnerId = null)
+        coEvery { userRepository.getRemoteUserProfile(BOB) } returns coParent(BOB, "Bob")
+
+        val viewModel = createViewModel()
+        runCurrent()
+
+        assertEquals(BOB, viewModel.uiState.value.coParent?.id)
+    }
+
+    private fun partner(uid: String) =
+        PartnerSummary(id = uid, name = uid, email = "$uid@example.test", pairedSinceMillis = 1L)
+
+    private fun coParent(uid: String, name: String) =
+        User(id = uid, email = "$uid@example.test", name = name, role = "dad", colorCode = "#2196F3")
+
     private fun createViewModel(): ProfileViewModel =
         ProfileViewModel(userRepository, pairingRepository)
 
@@ -179,5 +231,6 @@ class ProfileViewModelTest {
     private companion object {
         const val ALICE = "alice-uid"
         const val BOB = "bob-uid"
+        const val CAROL = "carol-uid"
     }
 }

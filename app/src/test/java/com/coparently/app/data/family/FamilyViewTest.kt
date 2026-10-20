@@ -68,6 +68,57 @@ class FamilyViewTest {
     }
 
     @Test
+    fun `live families count the one on screen and the others`() {
+        val two = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("igor", "carol")))
+        assertEquals(2, two.liveFamilies())
+        assertEquals(1, FamilyView.of(zuzana, row(onScreen = "igor", partners = listOf("igor"))).liveFamilies())
+        assertEquals(0, FamilyView.of(zuzana, row(onScreen = null, partners = emptyList())).liveFamilies())
+    }
+
+    @Test
+    fun `a co-parent's record of no family belongs to the family with them`() {
+        // Igor's records came down with a blank family and were drawn in the family with Carol,
+        // in Carol's name and colour (isolation audit, October 2026).
+        val withCarol = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("igor", "carol")))
+        assertFalse(withCarol.shows(null, createdBy = "igor"))
+        assertEquals(RecordPlace.ON_SCREEN, withCarol.placeOf("", createdBy = "carol"))
+        val withIgor = FamilyView.of(zuzana, row(onScreen = "igor", partners = listOf("igor", "carol")))
+        assertEquals(RecordPlace.ON_SCREEN, withIgor.placeOf(null, createdBy = "igor"))
+        assertEquals(RecordPlace.EARLIER_FAMILY, withIgor.placeOf(null, createdBy = "ex"))
+    }
+
+    @Test
+    fun `an own record of no family is only mine while the parent is in a family`() {
+        // Its audience names nobody until it has a family, so the screen does not draw it as the
+        // family's either.
+        val two = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("igor", "carol")))
+        assertEquals(RecordPlace.ONLY_ME, two.placeOf(null, createdBy = zuzana))
+        assertEquals(RecordPlace.ONLY_ME, two.placeOf("", createdBy = null))
+        assertFalse(two.counts(null, createdBy = zuzana))
+        val one = FamilyView.of(zuzana, row(onScreen = "igor", partners = listOf("igor")))
+        assertEquals(RecordPlace.ONLY_ME, one.placeOf(null, createdBy = zuzana))
+        assertTrue(one.shows(null, createdBy = zuzana))
+        val none = FamilyView.of(zuzana, row(onScreen = null, partners = emptyList()))
+        assertEquals(RecordPlace.ON_SCREEN, none.placeOf(null, createdBy = zuzana))
+        assertTrue(none.counts(null, createdBy = zuzana))
+    }
+
+    @Test
+    fun `an ended family's record is history, shown but counted in no live family`() {
+        val view = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("carol")))
+        assertEquals(RecordPlace.EARLIER_FAMILY, view.placeOf(endedFamily))
+        assertTrue(view.shows(endedFamily))
+        assertFalse(view.counts(endedFamily))
+        assertTrue(view.counts(carolFamily))
+    }
+
+    @Test
+    fun `a family the parent is not in is never shown`() {
+        val view = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("carol")))
+        assertFalse(view.shows(FamilyKey.of("dan", "erin")))
+    }
+
+    @Test
     fun `a malformed partner list hides nothing rather than failing`() {
         val malformed = row(onScreen = "igor", partners = emptyList()).copy(partnerIdsJson = "not json")
         val view = FamilyView.of(zuzana, malformed)

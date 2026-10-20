@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Records without a family (data/family/UnassignedRecords.kt, presentation/family/): a parent's own
+     records that name no family while they co-parent, and the parent's answer for each. -->
+<resources>
+    <string name="unassigned_records_title">Records without a family</string>
+    <!-- Settings → Family row, under the title. %1$d = how many records wait for an answer. -->
+    <plurals name="unassigned_records_count">
+        <item quantity="one">%1$d record belongs to no family yet</item>
+        <item quantity="other">%1$d records belong to no family yet</item>
+    </plurals>
+    <string name="unassigned_records_intro">You added these before you linked with another co-parent, so nothing says which family each one belongs to. For now only you see them. Choose a family for each one, or keep it only yours.</string>
+    <string name="unassigned_records_group_children_pets">Children and pets</string>
+    <string name="unassigned_records_group_events">Events</string>
+    <string name="unassigned_records_group_expenses">Expenses</string>
+    <string name="unassigned_records_group_custody">Custody schedule</string>
+    <string name="unassigned_records_kind_child">Child</string>
+    <string name="unassigned_records_kind_pet">Pet</string>
+    <!-- %1$s = the day the custody schedule starts, e.g. "Aug 3, 2026" -->
+    <string name="unassigned_records_custody_starts">Starts %1$s</string>
+    <string name="unassigned_records_choose_title">Which family is it?</string>
+    <!-- %1$s = the co-parent's name -->
+    <string name="unassigned_records_family_with">Family with %1$s</string>
+    <string name="unassigned_records_family_unnamed">Family with a co-parent not named yet</string>
+    <string name="unassigned_records_keep_mine">Keep it only mine</string>
+    <string name="unassigned_records_keep_mine_hint">Nobody else sees it, and you are not asked again.</string>
+    <string name="unassigned_records_custody_note">A schedule can only go to the family on screen. If that family already has a schedule, your co-parent is asked to agree to this one first. To give it to another family, switch to that family and come back here.</string>
+    <string name="unassigned_records_save">Save</string>
+    <!-- %1$s = the co-parent's name -->
+    <string name="unassigned_records_notice_assigned">Moved to the family with %1$s</string>
+    <string name="unassigned_records_notice_assigned_unnamed">Moved to the family you chose</string>
+    <!-- %1$s = the co-parent's name -->
+    <string name="unassigned_records_notice_proposed">Sent to %1$s as a schedule proposal</string>
+    <string name="unassigned_records_notice_proposed_unnamed">Sent to your co-parent as a schedule proposal</string>
+    <string name="unassigned_records_notice_proposal_waiting">A schedule proposal from your co-parent is waiting. Answer it first.</string>
+    <string name="unassigned_records_notice_not_sent">Could not move it. Try again.</string>
+    <string name="unassigned_records_notice_gone">This record already has a family or no longer exists.</string>
+    <string name="unassigned_records_notice_kept">Kept only yours</string>
+    <string name="unassigned_records_empty_title">Every record has a family</string>
+    <!-- %1$s = the mark such a record carries ("Only me", record_place_only_me) -->
+    <string name="unassigned_records_empty_description">Anything you kept only yours stays marked “%1$s”, and only you see it.</string>
+    <string name="unassigned_records_prompt_title">Which family do these belong to?</string>
+    <!-- Home's one-time question. %1$d = how many records wait for an answer. -->
+    <plurals name="unassigned_records_prompt_body">
+        <item quantity="one">You added %1$d record before you linked with another co-parent, so nothing says which family it belongs to. Only you see it until you choose.</item>
+        <item quantity="other">You added %1$d records before you linked with another co-parent, so nothing says which family each one belongs to. Only you see them until you choose.</item>
+    </plurals>
+    <string name="unassigned_records_prompt_choose">Choose</string>
+    <string name="unassigned_records_prompt_later">Later</string>
+</resources>

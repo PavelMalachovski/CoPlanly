@@ -211,7 +211,7 @@ class PairingRepositoryImpl @Inject constructor(
             .await()
     }
 
-    override suspend fun unpair(): Result<Unit> = pairingFunctions.unpair().map { }
+    override suspend fun unpair(partnerUid: String?): Result<Unit> = pairingFunctions.unpair(partnerUid).map { }
 
     // ---- Local mirroring ------------------------------------------------
 

@@ -47,7 +47,11 @@ class ChildInfoRepositoryImpl @Inject constructor(
     private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     override fun getAllChildInfo(): Flow<List<ChildInfo>> =
-        getAllChildInfoInEveryFamily().inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        getAllChildInfoInEveryFamily().inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
 
     override fun getAllChildInfoInEveryFamily(): Flow<List<ChildInfo>> {
         return childInfoDao.getAllChildInfo().map { entities ->

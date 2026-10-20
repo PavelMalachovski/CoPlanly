@@ -283,6 +283,42 @@ object EmulatorEnvironment {
     }
 
     /**
+     * Every document in the emulator, in every collection and subcollection, read around the rules
+     * like [queryAsAdmin]: each as its path (`events/abc`) and its decoded fields. For a sweep
+     * that must not depend on knowing where a leak would land (`FamilyIsolationTest`).
+     */
+    fun everyDocumentAsAdmin(): List<Pair<String, Map<String, Any?>>> {
+        val root = "projects/$PROJECT_ID/databases/(default)/documents/"
+        val url = URL("http://${requireHost()}:$FIRESTORE_PORT/v1/$root:runQuery".replace("/:", ":"))
+        val query = JSONObject().put(
+            "structuredQuery",
+            JSONObject().put("from", JSONArray().put(JSONObject().put("allDescendants", true)))
+        )
+        val connection = url.openConnection() as HttpURLConnection
+        return try {
+            connection.connectTimeout = CONNECT_TIMEOUT_MS
+            connection.readTimeout = CONNECT_TIMEOUT_MS
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("Authorization", "Bearer owner")
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.outputStream.use { it.write(query.toString().toByteArray()) }
+            check(connection.responseCode == HTTP_OK) {
+                "Firestore emulator answered ${connection.responseCode} for a query of every document"
+            }
+            val rows = JSONArray(connection.inputStream.bufferedReader().readText())
+            (0 until rows.length())
+                .mapNotNull { rows.getJSONObject(it).optJSONObject("document") }
+                .map { document ->
+                    val path = document.getString("name").substringAfter(root)
+                    path to decodeFields(document.optJSONObject("fields") ?: JSONObject())
+                }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
      * Waits for a push of [type] addressed to [targetUid] to appear in `notification_queue` —
      * queued by a phone's `FcmService` or by a Cloud Function — and returns its `data` payload.
      * Delivery is the one thing FCM has no emulator for; what *was* sent, to whom and with which

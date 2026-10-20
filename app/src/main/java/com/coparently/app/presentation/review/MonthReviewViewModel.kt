@@ -3,6 +3,7 @@ package com.coparently.app.presentation.review
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.ai.AiConsentManager
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiAssistRepository
@@ -102,11 +103,13 @@ private data class CustodyInputs(
  *
  * @param sources The records the figures come from
  * @param assist The summary's availability, consent and callable
+ * @param familyViewSource Which expenses the money figures count: the family on screen's own
  */
 @HiltViewModel
 class MonthReviewViewModel @Inject constructor(
     sources: MonthReviewSources,
-    assist: MonthReviewAssist
+    assist: MonthReviewAssist,
+    familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
     private val repository = assist.repository
@@ -158,7 +161,16 @@ class MonthReviewViewModel @Inject constructor(
         ).onStart { emit(emptyList()) }
     }
 
-    private val expenses: Flow<List<Expense>> = sources.expenseRepository.getAllExpenses().onStart { emit(emptyList()) }
+    /**
+     * The expenses the month's money figures add up: the family on screen's own. One that is "only
+     * mine" (this parent's own, naming no family) or from an earlier family is counted in no
+     * family's month (owner decision, October 2026), as on the Expenses tab and Home.
+     */
+    private val expenses: Flow<List<Expense>> = combine(
+        sources.expenseRepository.getAllExpenses(),
+        familyViewSource.observe()
+    ) { all, view -> all.filter { view.counts(it.familyId, it.createdByFirebaseUid) } }
+        .onStart { emit(emptyList()) }
 
     /** The screen's state. */
     val state: StateFlow<MonthReviewUiState> = combine(

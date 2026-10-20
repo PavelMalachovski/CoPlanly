@@ -27,6 +27,8 @@
     <string name="school_import_sync_needs_password">Die Schule fragt erneut nach dem Passwort.</string>
     <string name="school_import_sync_network">Der Server der Schule ist nicht erreichbar. Versuche es später erneut.</string>
     <string name="school_import_sync_server">Der Server der Schule hat mit einem Fehler geantwortet. Versuche es später erneut.</string>
+    <string name="school_import_sync_needs_family">Nichts wurde importiert: Diese Verbindung gehört noch keiner Familie. Trenne sie und verbinde die Schule neu, um die Familie zu wählen.</string>
+    <string name="school_import_status_needs_family">Gehört noch keiner Familie: trennen und neu verbinden</string>
 
     <string name="school_connect_title">Schule verbinden</string>
     <string name="school_connect_reconnect_title">Erneut anmelden</string>

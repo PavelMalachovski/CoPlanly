@@ -59,6 +59,8 @@ sealed interface ParentingPlanUiState {
     /**
      * Both halves, whichever of them exist.
      *
+     * @property familyId The family these halves are of. A save starts from [plan] only while it is
+     *   still the family the save goes to (see `ParentingPlanViewModel.edit`).
      * @property coParentProposalPending The co-parent's own custody proposal is waiting for this
      *   parent's answer, so "Propose as the schedule" (MON-21) says why it cannot send rather than
      *   offering to — [CustodyProposalTransition.pendingFromCoParent], the rule the seasonal
@@ -67,6 +69,7 @@ sealed interface ParentingPlanUiState {
     data class Ready(
         val plan: ParentingPlanPair,
         val coParentUid: String,
+        val familyId: String,
         val coParentProposalPending: Boolean = false
     ) : ParentingPlanUiState {
 
@@ -139,12 +142,14 @@ class ParentingPlanViewModel @Inject constructor(
                 combine(
                     repository.observe(planScope.familyId, planScope.myUid),
                     // Only to know whether the co-parent's proposal is waiting (MON-21); a null
-                    // first so the plan renders before the custody document has answered.
-                    custodyModelRepository.observeShared().onStart { emit(null) }
+                    // first so the plan renders before the custody document has answered. Asked
+                    // by the plan's own family, so another family's proposal never decides it.
+                    custodyModelRepository.observeSharedOf(planScope.familyId).onStart { emit(null) }
                 ) { plan, shared ->
                     ParentingPlanUiState.Ready(
                         plan = plan,
                         coParentUid = planScope.partnerUid,
+                        familyId = planScope.familyId,
                         coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(
                             shared,
                             planScope.myUid
@@ -199,8 +204,12 @@ class ParentingPlanViewModel @Inject constructor(
                 // The on-screen value when there is one; otherwise a fresh read, never an empty
                 // entry. `uiState` is `WhileSubscribed` (CLAUDE.md item 17): if an answer were
                 // saved before the plan had loaded, starting from `ParentingPlanEntry()` would
-                // overwrite every other answer this parent had written with that one.
-                val current = (uiState.value as? ParentingPlanUiState.Ready)?.plan?.yours
+                // overwrite every other answer this parent had written with that one. And only
+                // while the screen still shows this family: a switch between the tap and this
+                // read would otherwise write one family's half, agreements quoting that
+                // co-parent's words included, into the other family's plan (isolation audit F10).
+                val current = (uiState.value as? ParentingPlanUiState.Ready)
+                    ?.takeIf { it.familyId == planScope.familyId }?.plan?.yours
                     ?: repository.observe(planScope.familyId, planScope.myUid).first().yours
                 repository.save(
                     familyId = planScope.familyId,

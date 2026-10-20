@@ -8,6 +8,7 @@ import com.coparently.app.data.remote.google.GoogleAccessException
 import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.domain.events.EventTimestamp
+import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
@@ -54,10 +55,14 @@ class CalendarSyncRepository @Inject constructor(
             val owner = userRepository.getUserById(ownerUid)
                 ?: throw SyncFailureException(SyncFailure.NOT_SIGNED_IN_APP)
             val ownerSlot = owner.role
-            // The family this import belongs to — still stamped, though nothing shares it.
-            // See `toEventEntity` for why an import is private, and why that makes the
-            // "which family" question stop needing an answer.
-            val ownerFamilyId = FamilyKey.orNull(ownerUid, owner.partnerId)
+            // The family a new import belongs to — still stamped, though nothing shares it: the
+            // parent's only family while they have exactly one co-parent, and none with two or
+            // more. A personal calendar's event names no family, and stamping the one on screen
+            // filed it under whichever family the parent happened to be looking at (isolation
+            // audit, October 2026); with two, the parent assigns it ("records without a family").
+            // See `toEventEntity` for why an import is private.
+            val ownerFamilyId = FamilyAudience.coParents(ownerUid, owner.partnerIds, owner.partnerId)
+                .singleOrNull()?.let { FamilyKey.orNull(ownerUid, it) }
 
             emit(SyncResult.Progress(SyncStage.FETCHING))
 
@@ -77,15 +82,10 @@ class CalendarSyncRepository @Inject constructor(
 
             emit(SyncResult.Progress(SyncStage.FOUND, found = imported.events.size))
 
-            val eventsToInsert = mutableListOf<EventEntity>()
-
-            imported.events.forEach { googleEvent ->
-                val eventEntity = googleEvent.toEventEntity(ownerSlot, ownerUid, ownerFamilyId)
-                eventsToInsert.add(eventEntity)
-            }
-
-            if (eventsToInsert.isNotEmpty()) {
-                eventDao.insertEvents(eventsToInsert)
+            val eventsToInsert = imported.events.map { it.toEventEntity(ownerSlot, ownerUid, ownerFamilyId) }
+            val rows = rowsToWrite(eventsToInsert)
+            if (rows.isNotEmpty()) {
+                eventDao.insertEvents(rows)
             }
 
             // Says which window was read and whether anything was left behind. "Synced N events"
@@ -134,6 +134,58 @@ class CalendarSyncRepository @Inject constructor(
             // used to be printed on the Settings screen too, in English, as the whole message.
             crashlyticsManager.recordException(e)
             emit(SyncResult.Error(SyncFailure.UNKNOWN))
+        }
+    }
+
+    /**
+     * What an import writes: a new event as imported, and an event this phone already holds with
+     * only what Google owns brought up to date — or nothing, when Google changed none of it.
+     *
+     * A re-import used to replace the whole row: it re-stamped the family with the one on screen,
+     * made an event the parent had shared private again (whose next edit then removed it from the
+     * co-parent's calendar), cleared its synced flag, and brought back an event deleted while its
+     * deletion waited to be sent (isolation audit, October 2026). The row's family, privacy,
+     * audience, synced flag, tombstone and everything the parent set in the app are kept.
+     */
+    private suspend fun rowsToWrite(imported: List<EventEntity>): List<EventEntity> =
+        imported.mapNotNull { row ->
+            val existing = eventDao.getEventById(row.id) ?: return@mapNotNull row
+            existing.withGoogleFieldsOf(row).takeIf { it != existing }
+        }
+
+    /** This row with [imported]'s Google-owned fields, or itself when they are what it holds. */
+    private fun EventEntity.withGoogleFieldsOf(imported: EventEntity): EventEntity {
+        if (GoogleFields.of(this) == GoogleFields.of(imported)) return this
+        return copy(
+            title = imported.title,
+            description = imported.description,
+            startDateTime = imported.startDateTime,
+            endDateTime = imported.endDateTime,
+            isRecurring = imported.isRecurring,
+            recurrencePattern = imported.recurrencePattern,
+            updatedAt = imported.updatedAt,
+            updatedAtMillis = imported.updatedAtMillis
+        )
+    }
+
+    /** What an import takes from Google; everything else on a row is the app's. */
+    private data class GoogleFields(
+        val title: String,
+        val description: String?,
+        val start: LocalDateTime,
+        val end: LocalDateTime?,
+        val isRecurring: Boolean,
+        val recurrencePattern: String?
+    ) {
+        companion object {
+            fun of(row: EventEntity) = GoogleFields(
+                row.title,
+                row.description,
+                row.startDateTime,
+                row.endDateTime,
+                row.isRecurring,
+                row.recurrencePattern
+            )
         }
     }
 

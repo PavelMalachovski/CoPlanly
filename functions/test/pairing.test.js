@@ -55,6 +55,12 @@ function fakeDb(seed) {
   function merge(stored, update) {
     const next = Object.assign({}, stored);
     Object.keys(update).forEach((key) => {
+      // `FieldValue.delete()` removes the key, as the real SDK does.
+      if (update[key] instanceof admin.firestore.FieldValue &&
+          update[key].constructor.name === 'DeleteTransform') {
+        delete next[key];
+        return;
+      }
       next[key] = resolveValue(next[key], update[key]);
     });
     return next;
@@ -220,6 +226,28 @@ describe('acceptPairingInvitation', () => {
     assert.strictEqual(queued[0].targetUserId, 'alice');
     assert.strictEqual(queued[0].data.type, 'pairing_accepted');
     assert.strictEqual(queued[0].data.familyId, 'alice__bob');
+  });
+
+  it('clears an unfinished revocation of the person being paired again, on both sides', async () => {
+    // Alice's earlier unpair from Bob left its marker. Once they pair again the marker names a
+    // live family, and a later unpair from somebody else would resume it and tear this family's
+    // audiences apart. Other entries stay: they are other ended relationships.
+    const db = fakeDb({
+      invitations: {
+        inv1: {id: 'inv1', status: 'pending', fromUserId: 'alice', toEmail: 'bob@example.com'},
+      },
+      users: {
+        alice: {id: 'alice', name: 'Alice', role: 'mom', pendingRevocationOf: ['bob', 'dave']},
+        bob: {id: 'bob', name: 'Bob', pendingRevocationOf: 'alice'},
+      },
+    });
+
+    await myFunctions.acceptPairingInvitationImpl(
+        db, 'bob', 'bob@example.com', {code: null, invitationId: 'inv1'});
+
+    assert.deepStrictEqual(db._docs.users.alice.pendingRevocationOf, ['dave']);
+    assert.ok(!('pendingRevocationOf' in db._docs.users.bob),
+        'a legacy single-string marker naming the inviter goes too');
   });
 
   it('refuses a code that was spent between the lookup and the transaction', async () => {

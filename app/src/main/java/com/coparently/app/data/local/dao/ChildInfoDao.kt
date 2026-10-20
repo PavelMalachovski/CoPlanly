@@ -154,17 +154,51 @@ interface ChildInfoDao {
     suspend fun markOwnChildInfoUnsynced(myUid: String): Int
 
     /**
-     * Stamps [familyId] on every child_info row that names no family yet.
+     * Stamps [familyId] on every child_info row [authorUid] wrote that names no family yet
+     * (`FamilyIdBackfill`).
      *
-     * The backfill half of docs/DESIGN-multi-family.md M-2: rows written before the column
-     * existed, and rows written before this parent paired, both read as null. A device knows of
-     * exactly one co-parenting relationship, so an unstamped row can only belong to that one.
-     *
-     * Null rows only. A row that already names a family keeps it — re-deriving the stamp is what
-     * would let a re-pairing silently move a record into a different household.
+     * By author, never across the table: a co-parent's row of no family belongs to the family with
+     * them, and this parent's own belongs to their one family only while nothing says there was an
+     * earlier one ([countRowsOfOtherFamilies]). Stamping every null row with one family is how a
+     * parent's records written after an unpair were moved into the next family (isolation audit,
+     * October 2026). A row that already names a family keeps it.
      *
      * @return How many rows were stamped.
      */
-    @Query("UPDATE child_info SET familyId = :familyId WHERE familyId IS NULL")
-    suspend fun stampFamilyId(familyId: String): Int
+    @Query("UPDATE child_info SET familyId = :familyId WHERE familyId IS NULL AND createdByFirebaseUid = :authorUid")
+    suspend fun stampFamilyIdOfAuthor(familyId: String, authorUid: String): Int
+
+    /**
+     * How many child_info rows name a family of [myUid]'s other than [familyId] — evidence of an
+     * earlier family, which makes this parent's own rows of no family ambiguous.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM child_info WHERE familyId IS NOT NULL AND familyId != '' " +
+            "AND familyId != :familyId AND instr(familyId, :myUid) > 0"
+    )
+    suspend fun countRowsOfOtherFamilies(familyId: String, myUid: String): Int
+
+    /**
+     * [myUid]'s own child records that name no family, as they change ("Records without a
+     * family"): "only mine" until the parent assigns them. See [EventDao.observeOwnWithoutFamily].
+     */
+    @Query(
+        "SELECT * FROM child_info WHERE createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL ORDER BY childName ASC"
+    )
+    fun observeOwnWithoutFamily(myUid: String): Flow<List<ChildInfoEntity>>
+
+    /**
+     * Gives [myUid]'s own child record [id] the family the parent chose for it, and queues it for
+     * upload so the sync sends it with that family's audience (`FamilyAudience.recordPartnerFor`).
+     * Only while it still names no family, and never a pending tombstone.
+     *
+     * @return 1 when the record took the family, 0 otherwise.
+     */
+    @Query(
+        "UPDATE child_info SET familyId = :familyId, syncedToFirestore = 0 " +
+            "WHERE id = :id AND createdByFirebaseUid = :myUid AND (familyId IS NULL OR familyId = '') " +
+            "AND deletedAtMillis IS NULL"
+    )
+    suspend fun assignFamily(id: String, familyId: String, myUid: String): Int
 }

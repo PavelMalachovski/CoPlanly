@@ -50,6 +50,9 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TwoParentAgreementsTest : TwoParentTest() {
 
+    /** The family whose split each answer below acts on, as the Expenses screen passes it. */
+    private val aliceAndBob: String get() = FamilyKey.of(alice.uid, bob.uid)
+
     @Test
     fun firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed() = runBlocking<Unit> {
         val submitted = alice.familySettingsRepository.submitRatio(SEVENTY_THIRTY).getOrThrow()
@@ -105,10 +108,10 @@ class TwoParentAgreementsTest : TwoParentTest() {
         assertEquals(alice.uid, pending.proposal?.proposedBy)
         assertTrue(
             "a parent may not answer their own proposal",
-            alice.familySettingsRepository.acceptProposal().isFailure
+            alice.familySettingsRepository.acceptProposal(aliceAndBob).isFailure
         )
 
-        bob.familySettingsRepository.acceptProposal().getOrThrow()
+        bob.familySettingsRepository.acceptProposal(aliceAndBob).getOrThrow()
         assertEquals(1, pushesTo(alice).count { it.type == ACCEPTED })
 
         for (phone in listOf(alice, bob)) {
@@ -117,7 +120,7 @@ class TwoParentAgreementsTest : TwoParentTest() {
             assertEquals(bob.uid, settled.lastDecision?.by)
         }
         // What the next expense on the accepter's phone is priced at, with no round trip.
-        assertEquals(SEVENTY_THIRTY, bob.familySettingsRepository.agreedRatioOrDefault())
+        assertEquals(SEVENTY_THIRTY, bob.familySettingsRepository.agreedRatioOrDefault(aliceAndBob))
     }
 
     @Test
@@ -126,7 +129,7 @@ class TwoParentAgreementsTest : TwoParentTest() {
         alice.familySettingsRepository.submitRatio(SplitRatio.EVEN).getOrThrow()
         bob.settingsWhere { it.proposal != null }
 
-        bob.familySettingsRepository.declineProposal().getOrThrow()
+        bob.familySettingsRepository.declineProposal(aliceAndBob).getOrThrow()
         assertEquals(1, pushesTo(alice).count { it.type == DECLINED })
         assertTrue(pushesTo(alice).none { it.type == ACCEPTED })
 
@@ -145,9 +148,9 @@ class TwoParentAgreementsTest : TwoParentTest() {
 
         assertTrue(
             "only the proposer may withdraw",
-            bob.familySettingsRepository.withdrawProposal().isFailure
+            bob.familySettingsRepository.withdrawProposal(aliceAndBob).isFailure
         )
-        alice.familySettingsRepository.withdrawProposal().getOrThrow()
+        alice.familySettingsRepository.withdrawProposal(aliceAndBob).getOrThrow()
 
         val withdrawn = bob.settingsWhere { it.proposal == null }
         assertEquals(SplitRatio.EVEN, withdrawn.ratio)

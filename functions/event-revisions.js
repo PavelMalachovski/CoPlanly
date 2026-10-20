@@ -42,6 +42,8 @@
  *   deviceTimeMillis  null — no device reported one. An older export build, which requires a
  *                     number here, therefore skips a server revision rather than mislabelling it
  *   recordedAt        the server time of this write
+ *   sharedWith        the saved document's audience, kept to the two parents its `familyId`
+ *                     names when it names one (the rule bounds a client revision the same way)
  *   event             the saved document, as the trigger read it
  */
 
@@ -107,6 +109,20 @@ function editorOf(after, kind) {
 }
 
 /**
+ * The two parents a stamped `familyId` names — `FamilyKey.of`'s two uids sorted and joined with
+ * `__` — or null for a blank or malformed one, whose audience is not bounded here.
+ *
+ * @param {*} familyId The event's `familyId`.
+ * @return {?Array<string>} The two members, or null.
+ */
+function familyMembers(familyId) {
+  if (typeof familyId !== 'string' || familyId === '') return null;
+  const members = familyId.split('__');
+  return members.length === 2 && members.every((uid) => uid !== '') && members[0] !== members[1] ?
+    members : null;
+}
+
+/**
  * Whether this write deserves a server revision, and if so of which kind.
  *
  * @param {?Object} before The document before the write, or null when it was created.
@@ -142,8 +158,13 @@ function decide(before, after) {
   if (!editor) {
     return {skip: 'noEditor'};
   }
+  // A stamped event's revision is read by that family's two parents at most. A revision is kept
+  // for ever and unpair never narrows it, so an outsider written into the event's audience — a
+  // co-parent of another family, before the rules bounded it — must not be frozen into the record.
+  const members = familyMembers(after.familyId);
   const audience = Array.isArray(after.sharedWith) ?
-    after.sharedWith.filter((uid) => typeof uid === 'string' && uid !== '') : [];
+    after.sharedWith.filter((uid) => typeof uid === 'string' && uid !== '' &&
+      (members === null || members.includes(uid))) : [];
   if (audience.length === 0) {
     // Readable by nobody: the revision rule admits only members of its own audience.
     return {skip: 'noAudience'};

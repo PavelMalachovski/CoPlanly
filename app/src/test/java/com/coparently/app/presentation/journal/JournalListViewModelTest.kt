@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.journal
 
+import com.coparently.app.data.family.FamilyView
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -31,6 +33,8 @@ class JournalListViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<JournalRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>()
+    private val view = MutableStateFlow(FamilyView.EVERYTHING)
+    private val familyViewSource = mockk<FamilyViewSource> { every { observe() } returns view }
     private val entry = JournalEntry(
         id = "j1",
         entryDate = LocalDate.of(2026, 9, 1),
@@ -55,7 +59,7 @@ class JournalListViewModelTest {
     fun `the list is the signed-in parent's own entries`() = runTest(dispatcher) {
         every { userRepository.observeCurrentUserId() } returns flowOf(ALICE)
         every { repository.observeEntries(ALICE) } returns flowOf(listOf(entry))
-        val model = JournalListViewModel(repository, userRepository)
+        val model = JournalListViewModel(repository, userRepository, familyViewSource)
         backgroundScope.launch { model.state.collect {} }
         advanceUntilIdle()
 
@@ -65,7 +69,7 @@ class JournalListViewModelTest {
     @Test
     fun `signed out, nobody's entries are shown and none are read`() = runTest(dispatcher) {
         every { userRepository.observeCurrentUserId() } returns flowOf(null)
-        val model = JournalListViewModel(repository, userRepository)
+        val model = JournalListViewModel(repository, userRepository, familyViewSource)
         backgroundScope.launch { model.state.collect {} }
         advanceUntilIdle()
 
@@ -79,7 +83,7 @@ class JournalListViewModelTest {
         every { userRepository.observeCurrentUserId() } returns account
         every { repository.observeEntries(ALICE) } returns flowOf(listOf(entry))
         every { repository.observeEntries(BOB) } returns flowOf(emptyList())
-        val model = JournalListViewModel(repository, userRepository)
+        val model = JournalListViewModel(repository, userRepository, familyViewSource)
         backgroundScope.launch { model.state.collect {} }
         advanceUntilIdle()
 
@@ -92,7 +96,7 @@ class JournalListViewModelTest {
     @Test
     fun `delete removes the entry, and undo puts the same entry back`() = runTest(dispatcher) {
         every { userRepository.observeCurrentUserId() } returns flowOf(ALICE)
-        val model = JournalListViewModel(repository, userRepository)
+        val model = JournalListViewModel(repository, userRepository, familyViewSource)
 
         model.delete(entry)
         advanceUntilIdle()
@@ -103,8 +107,38 @@ class JournalListViewModelTest {
         coVerify { repository.save(entry) }
     }
 
+    @Test
+    fun `the list is the family on screen's notes and the notes of no family, following a switch`() =
+        runTest(dispatcher) {
+            // Alice in two families, with Bob and with Carol: a note about the family with Bob is
+            // not shown under the family with Carol (owner decision, October 2026).
+            val aboutBob = entry.copy(id = "bob", familyId = BOB_FAMILY)
+            val aboutCarol = entry.copy(id = "carol", familyId = CAROL_FAMILY)
+            val aboutNobody = entry.copy(id = "none", familyId = null)
+            every { userRepository.observeCurrentUserId() } returns flowOf(ALICE)
+            every { repository.observeEntries(ALICE) } returns flowOf(listOf(aboutBob, aboutCarol, aboutNobody))
+            view.value = FamilyView(me = ALICE, onScreen = CAROL_FAMILY, others = setOf(BOB_FAMILY))
+            val model = JournalListViewModel(repository, userRepository, familyViewSource)
+            backgroundScope.launch { model.state.collect {} }
+            advanceUntilIdle()
+            assertEquals(
+                listOf("carol", "none"),
+                assertIs<JournalListState.Loaded>(model.state.value).entries.map { it.id }
+            )
+
+            view.value = FamilyView(me = ALICE, onScreen = BOB_FAMILY, others = setOf(CAROL_FAMILY))
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("bob", "none"),
+                assertIs<JournalListState.Loaded>(model.state.value).entries.map { it.id }
+            )
+        }
+
     private companion object {
         const val ALICE = "alice"
         const val BOB = "bob"
+        const val BOB_FAMILY = "alice__bob"
+        const val CAROL_FAMILY = "alice__carol"
     }
 }

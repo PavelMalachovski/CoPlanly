@@ -29,6 +29,8 @@
     <string name="school_import_sync_needs_password">The school asked for the password again.</string>
     <string name="school_import_sync_network">The school’s server could not be reached. Try again later.</string>
     <string name="school_import_sync_server">The school’s server answered with an error. Try again later.</string>
+    <string name="school_import_sync_needs_family">Nothing was imported: this connection belongs to no family yet. Disconnect it and connect the school again to choose the family.</string>
+    <string name="school_import_status_needs_family">Belongs to no family yet: disconnect and connect again</string>
 
     <!-- The connect flow. -->
     <string name="school_connect_title">Connect a school</string>

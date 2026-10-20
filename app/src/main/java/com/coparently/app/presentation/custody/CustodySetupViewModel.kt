@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -25,15 +26,19 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -63,6 +68,10 @@ private const val CONTACT_SUNDAY = 6
  * Scoped to one child (FAM-4, [editSchedule]) it is the same editor for that child's own schedule:
  * it opens on their override, or on the family pattern when they have none, and a save becomes
  * their override — a proposal for a paired family, like any pattern change.
+ *
+ * The form follows the family on screen (isolation audit, October 2026): a push tap can switch the
+ * family while this screen stays on the back stack, and a family with no schedule used to keep the
+ * previous family's pattern in the form, ready to be proposed to the wrong co-parent.
  */
 @HiltViewModel
 class CustodySetupViewModel @Inject constructor(
@@ -70,7 +79,8 @@ class CustodySetupViewModel @Inject constructor(
     parentsSource: ParentsSource,
     savedStateHandle: SavedStateHandle,
     private val planReferenceSource: PlanReferenceSource,
-    familyMembersSource: FamilyMembersSource
+    familyMembersSource: FamilyMembersSource,
+    private val familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
     /**
@@ -151,14 +161,25 @@ class CustodySetupViewModel @Inject constructor(
     }
 
     /**
-     * Loads the currently active custody model.
+     * Loads the family on screen's active custody model, and again after every switch.
+     *
+     * A family that replaces the one the editor opened on starts from an empty form: the previous
+     * family's pattern, half-made edits, child scope and quoted plan answer are not this family's,
+     * and a family with no schedule yet would otherwise have shown — and proposed — them.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadCurrentModel() {
         viewModelScope.launch {
-            custodyModelRepository.getActiveModel().collect { model ->
-                _currentModel.value = model
-                model?.let { updateUiFromModel(it.scopedTo(_uiState.value.childScope)) }
-            }
+            familyViewSource.observe()
+                .map { it.onScreen }
+                .distinctUntilChanged()
+                .withIndex()
+                .onEach { (index, _) -> if (index > 0) _uiState.value = CustodySetupUiState() }
+                .flatMapLatest { custodyModelRepository.getActiveModel() }
+                .collect { model ->
+                    _currentModel.value = model
+                    model?.let { updateUiFromModel(it.scopedTo(_uiState.value.childScope)) }
+                }
         }
     }
 

@@ -7,6 +7,7 @@ import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.data.sync.PetAudience
+import com.coparently.app.data.sync.StampedFamily
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.events.EventTimestamp
@@ -53,8 +54,15 @@ class PetRepositoryImpl @Inject constructor(
     override fun getAllPets(): Flow<List<Pet>> {
         return petDao.getAllPets().map { entities ->
             entities.map { it.toDomain() }
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
+
+    override fun getAllPetsInEveryFamily(): Flow<List<Pet>> =
+        petDao.getAllPets().map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun getPetById(id: String): Pet? {
         // Filtered here rather than in the DAO: `getPetById` deliberately returns a pending
@@ -220,8 +228,24 @@ class PetRepositoryImpl @Inject constructor(
         // upload half ran first and failed, so replacing the row would erase the edit before it
         // was ever sent — it stays queued for the next pull.
         val localWins = local != null && (local.deletedAtMillis != null || !local.syncedToFirestore)
-        if (!localWins) petDao.insertPet(pet.toEntity().copy(syncedToFirestore = true))
+        if (!localWins) {
+            petDao.insertPet(pet.toEntity().copy(syncedToFirestore = true))
+        } else if (local?.deletedAtMillis == null) {
+            adoptServerStamp(local, pet.familyId)
+        }
         return !localWins
+    }
+
+    /**
+     * Gives an unsent edit of a pet this device still holds unstamped the family the server
+     * stamped on it. `stampOwnBlankFamilyIds` stamps on the evidence `FamilyIdBackfill` reads, and
+     * the rules refuse an upload that blanks a stamp — the creator's too — so the edit would
+     * otherwise stay queued for ever. It stays queued here, to go up with its family next pass.
+     */
+    private suspend fun adoptServerStamp(local: PetEntity?, stamped: String?) {
+        val family = StampedFamily.of(local?.familyId, stamped)
+        if (local == null || family == local.familyId) return
+        petDao.insertPet(local.copy(familyId = family))
     }
 
     /**

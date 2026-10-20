@@ -238,6 +238,27 @@ describe('event revisions recorded by the server (MON-4)', () => {
     assert.deepStrictEqual(db._creates, []);
   });
 
+  it('keeps a stamped event\'s revision inside its family\'s two parents', async () => {
+    // A revision is kept for ever and unpair never narrows it, so a co-parent of another family
+    // in the event's audience — written there before the rules bounded it — must not be frozen
+    // into the record. An unstamped event's audience is copied as it stands.
+    const db = fakeDb();
+    const outcome = await run(db, null, eventDoc({sharedWith: [ALICE, BOB, 'carol-uid']}));
+    assert.deepStrictEqual(db._versions[outcome.id].sharedWith, [ALICE, BOB]);
+
+    const blank = fakeDb();
+    const second = await run(blank, null,
+        eventDoc({familyId: '', sharedWith: [ALICE, 'carol-uid']}));
+    assert.deepStrictEqual(blank._versions[second.id].sharedWith, [ALICE, 'carol-uid']);
+  });
+
+  it('records nothing for a stamped event nobody of its family can read', async () => {
+    const db = fakeDb();
+    const outcome = await run(db, null, eventDoc({sharedWith: ['carol-uid']}));
+    assert.strictEqual(outcome.reason, 'noAudience');
+    assert.deepStrictEqual(db._creates, []);
+  });
+
   it('writes once when the trigger is retried', async () => {
     const db = fakeDb();
     await run(db, null, eventDoc({}));

@@ -40,7 +40,8 @@ interface ProfessionalRepository {
     suspend fun acceptInvite(code: String): Result<AcceptProfessionalResult>
 
     /**
-     * Every professional grant over a family this parent is in — active, waiting or expired.
+     * Every professional grant over the family on screen — active, waiting or expired — following
+     * the family switcher; another family's grants are that family's to show (M-8).
      * Expired ones stay listed until the nightly sweep removes them, so a parent sees that access
      * ended rather than a row silently vanishing.
      */

@@ -34,7 +34,9 @@ import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.presentation.common.FamilyViewViewModel
 import com.coparently.app.presentation.common.LocalAppMessages
+import com.coparently.app.presentation.common.LocalFamilyView
 import com.coparently.app.presentation.common.LocalPhotoViewerUid
 import com.coparently.app.presentation.common.ParentPaletteViewModel
 import com.coparently.app.presentation.common.UiText
@@ -169,6 +171,9 @@ class MainActivity : AppCompatActivity() {
     /** Source of [LocalParentPalette] for the whole tree (UX-15). */
     private val parentPaletteViewModel: ParentPaletteViewModel by viewModels()
 
+    /** Source of [LocalFamilyView]: where each record stands for the family on screen. */
+    private val familyViewViewModel: FamilyViewViewModel by viewModels()
+
     // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -290,6 +295,7 @@ class MainActivity : AppCompatActivity() {
             // the app (UX-15). Lifecycle-aware so the ParentsSource upstream can stop while the
             // app is in the background.
             val parentPalette by parentPaletteViewModel.palette.collectAsStateWithLifecycle()
+            val familyView by familyViewViewModel.view.collectAsStateWithLifecycle()
 
             // The signed-in uid, for the record photos only the family's two parents may see
             // (L-4). Follows sign-in and sign-out, so a photo never draws for the wrong account.
@@ -318,6 +324,7 @@ class MainActivity : AppCompatActivity() {
                     CompositionLocalProvider(
                         LocalGoogleSignInCallback provides googleSignInCallback,
                         LocalParentPalette provides parentPalette,
+                        LocalFamilyView provides familyView,
                         LocalAppMessages provides appMessages,
                         LocalPhotoViewerUid provides photoViewerUid
                     ) {

@@ -9,8 +9,11 @@ import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.family.FamilyAudience
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -117,17 +120,7 @@ class RequestChangeViewModel @Inject constructor(
         if (_uiState.value is RequestChangeUiState.Sending) return
 
         viewModelScope.launch {
-            val user = userRepository.getCurrentUser()
-            if (user == null) {
-                _uiState.value = RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_signed_out))
-                return@launch
-            }
-            val partnerId = user.partnerId
-            if (partnerId.isNullOrEmpty()) {
-                _uiState.value =
-                    RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_paired))
-                return@launch
-            }
+            val (user, partnerId) = recipientOf(event) ?: return@launch
 
             _uiState.value = RequestChangeUiState.Sending(event)
             try {
@@ -193,6 +186,41 @@ class RequestChangeViewModel @Inject constructor(
                     RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_send_failed))
             }
         }
+    }
+
+    /**
+     * The signed-in parent and the co-parent a request about [event] goes to, or null with the
+     * form's error set. The co-parent is the one of the event's own family, never the family on
+     * screen: an event of an ended family, of no family, or of the other family must not reach
+     * this co-parent (isolation audit, October 2026 — the chat's event picker offers all three).
+     */
+    private suspend fun recipientOf(event: Event): Pair<User, String>? {
+        val user = userRepository.getCurrentUser()
+        val error = when {
+            user == null -> R.string.change_request_error_signed_out
+            user.partnerId.isNullOrEmpty() -> R.string.change_request_error_not_paired
+            else -> null
+        }
+        val partnerId = user?.takeIf { error == null }?.let { coParentOf(event, it) }
+        if (user == null || partnerId == null) {
+            _uiState.value = RequestChangeUiState.Error(
+                UiText.Res(error ?: R.string.change_request_error_not_in_family)
+            )
+            return null
+        }
+        return user to partnerId
+    }
+
+    /**
+     * The co-parent of [event]'s own family while that pairing is live, or null when it has none
+     * this parent could ask. A co-parent's event of no family is the family with them's
+     * (`FamilyView.placeOf`).
+     */
+    private fun coParentOf(event: Event, user: User): String? {
+        val family = event.familyId?.takeIf { it.isNotBlank() }
+            ?: event.createdByFirebaseUid?.takeIf { it.isNotBlank() && it != user.id }
+                ?.let { FamilyKey.orNull(user.id, it) }
+        return FamilyAudience.partnerFor(family, user.id, user.partnerIds, user.partnerId)
     }
 
     private companion object {

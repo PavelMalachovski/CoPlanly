@@ -44,12 +44,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.RecordPlaceMark
+import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
@@ -118,9 +121,14 @@ internal fun EventPreviewContent(
     onEdit: () -> Unit,
     onDelete: (() -> Unit)?
 ) {
-    val parentColor = when (event.parentOwner) {
-        "mom" -> ParentColors.fill("mom")
-        "dad" -> ParentColors.fill("dad")
+    // An earlier family's event is drawn neutral and names no parent by slot: its slot would now
+    // name the wrong person (design refresh item 12). The mark under the title says why.
+    val place = placeOf(event.familyId, event.createdByFirebaseUid)
+    val earlierFamily = place == RecordPlace.EARLIER_FAMILY
+    val parentColor = when {
+        earlierFamily -> MaterialTheme.colorScheme.tertiary
+        event.parentOwner == "mom" -> ParentColors.fill("mom")
+        event.parentOwner == "dad" -> ParentColors.fill("dad")
         else -> MaterialTheme.colorScheme.tertiary
     }
     val parentLabel = parentNames.labelFor(event.parentOwner)
@@ -147,13 +155,16 @@ internal fun EventPreviewContent(
                 modifier = Modifier.padding(start = Spacing.M)
             )
         }
+        RecordPlaceMark(place)
 
         PreviewRow(icon = Icons.Default.Schedule) {
             Text(text = eventTimeLine(event), style = MaterialTheme.typography.bodyMedium)
         }
 
-        PreviewRow(icon = Icons.Default.Person) {
-            Text(text = parentLabel, style = MaterialTheme.typography.bodyMedium)
+        if (!earlierFamily) {
+            PreviewRow(icon = Icons.Default.Person) {
+                Text(text = parentLabel, style = MaterialTheme.typography.bodyMedium)
+            }
         }
 
         // Who the event is about, named rather than coloured — the parent slot above already

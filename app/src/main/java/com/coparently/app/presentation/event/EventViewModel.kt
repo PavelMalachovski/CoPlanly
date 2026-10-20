@@ -17,8 +17,11 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.toUiText
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -102,6 +105,25 @@ class EventViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<EventUiState>(EventUiState.Loading)
     val uiState: StateFlow<EventUiState> = _uiState.asStateFlow()
+
+    /**
+     * The family the new-event draft belongs to: the family on screen as the form opened, read once.
+     *
+     * Each family keeps its own draft (isolation audit, October 2026), and a switch while a form is
+     * open must not file what was typed for one family under the other's draft. Read eagerly, one
+     * Room row, so the draft calls never wait on it once the form is up — clearing after a save
+     * runs before the form is left.
+     */
+    private val draftFamily: Deferred<String?> = viewModelScope.async {
+        try {
+            parentsSource.familyOnScreen()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Not read: the draft stays under the device-wide key every draft used to be kept under.
+            null
+        }
+    }
 
     // Re-requesting the range already loaded costs nothing: MutableStateFlow conflates equal
     // values, and EventQuery.Range is a data class, so setting it again emits nothing at all.
@@ -504,7 +526,7 @@ class EventViewModel @Inject constructor(
                 )
                 val draftJson = gson.toJson(draft)
                 // EncryptedPreferences seals and writes on the calling thread; keep it off Main.
-                encryptedPreferences.putEventDraft(draftJson)
+                encryptedPreferences.putEventDraft(draftFamily.await(), draftJson)
             } catch (e: Exception) {
                 // Silently fail - draft saving is not critical
             }
@@ -512,24 +534,26 @@ class EventViewModel @Inject constructor(
     }
 
     /**
-     * Loads event draft from local storage.
+     * Loads the draft of the family on screen from local storage — never another family's.
      * Issue 1.3: Draft saving functionality.
      */
-    fun loadEventDraft(): EventDraft? {
+    suspend fun loadEventDraft(): EventDraft? {
         return try {
-            val draftJson = encryptedPreferences.getEventDraft() ?: return null
+            val draftJson = encryptedPreferences.getEventDraft(draftFamily.await()) ?: return null
             gson.fromJson(draftJson, EventDraft::class.java)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             null
         }
     }
 
     /**
-     * Clears event draft from local storage.
+     * Clears the draft of the family on screen from local storage.
      * Issue 1.3: Draft saving functionality.
      */
     fun clearEventDraft() {
-        encryptedPreferences.clearEventDraft()
+        viewModelScope.launch { encryptedPreferences.clearEventDraft(draftFamily.await()) }
     }
 
     /**

@@ -3,6 +3,7 @@ package com.coparently.app.presentation.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
@@ -78,10 +79,14 @@ data class MonthSpend(val byCurrency: List<CurrencyAmount>)
  * of which only ever feed `monthSpend`. Bundling them keeps the real dependency count visible
  * (no `@Suppress`, no widened detekt threshold) while still giving `monthSpend` everything it
  * needs.
+ *
+ * [familyViewSource] joined for the same reason: it decides which of the month's expenses the
+ * tile adds up — the family on screen's own (owner decision, October 2026).
  */
 data class MonthSpendDependencies @Inject constructor(
     val expenseRepository: ExpenseRepository,
-    val preferencesRepository: PreferencesRepository
+    val preferencesRepository: PreferencesRepository,
+    val familyViewSource: FamilyViewSource
 )
 
 /**
@@ -443,15 +448,23 @@ class HomeViewModel @Inject constructor(
     )
 
     /**
-     * Expenses dated in the current calendar month. Shared by [monthSpend] and
-     * [monthBalances] so the tile's total and the "who owes whom" line under it are always
-     * computed from the same set of rows.
+     * Expenses dated in the current calendar month that count for the family on screen. Shared by
+     * [monthSpend] and [monthBalances] so the tile's total and the "who owes whom" line under it
+     * are always computed from the same set of rows.
+     *
+     * Only the family's own: an expense that is "only mine" (this parent's own, of no family)
+     * or from an earlier family is listed on the Expenses tab, marked, and added into no figure
+     * here (owner decision, October 2026) — the same rule as that tab's summary.
      */
-    private val monthExpenses = monthSpendDependencies.expenseRepository.getAllExpenses()
-        .map { expenses ->
-            val month = LocalDate.now()
-            expenses.filter { it.date.year == month.year && it.date.month == month.month }
-        }
+    private val monthExpenses = combine(
+        monthSpendDependencies.expenseRepository.getAllExpenses(),
+        monthSpendDependencies.familyViewSource.observe()
+    ) { expenses, view ->
+        val month = LocalDate.now()
+        expenses
+            .filter { it.date.year == month.year && it.date.month == month.month }
+            .filter { view.counts(it.familyId, it.createdByFirebaseUid) }
+    }
 
     /**
      * Signed-in parent and paired co-parent, for resolving a slot to a name — the handover
