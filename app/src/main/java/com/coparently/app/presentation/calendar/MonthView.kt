@@ -64,12 +64,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.monthPagingTween
+import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
@@ -832,7 +834,15 @@ private fun DayCell(
                                 .padding(EVENT_DOT_HALO)
                                 .background(
                                     color = eventDotColor(
-                                        parentOwner = event.parentOwner,
+                                        // An earlier family's event is drawn neutral: its slot
+                                        // colour would now name the wrong person.
+                                        parentOwner = if (placeOf(event.familyId, event.createdByFirebaseUid) ==
+                                            RecordPlace.EARLIER_FAMILY
+                                        ) {
+                                            ""
+                                        } else {
+                                            event.parentOwner
+                                        },
                                         isCurrentMonth = isCurrentMonth,
                                         friendParticipates =
                                         !event.friendParticipates.isNullOrBlank()

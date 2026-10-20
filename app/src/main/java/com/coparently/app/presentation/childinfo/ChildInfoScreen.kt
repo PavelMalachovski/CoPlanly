@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.guests.GuestGrant
 import com.coparently.app.domain.guests.GuestGrantPolicy
@@ -33,11 +34,13 @@ import com.coparently.app.presentation.common.ErrorState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.PhotoOwner
+import com.coparently.app.presentation.common.RecordPlaceMark
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
@@ -184,6 +187,9 @@ private fun ChildrenList(children: List<ChildInfo>, onOpenChild: (String) -> Uni
             GroupLabel(stringResource(R.string.childinfo_children_group_label))
             SectionGroup {
                 children.forEach { child ->
+                    // A child that is only mine or from an earlier family says so, in the one
+                    // trailing slot a row has (October 2026, owner decision).
+                    val place = placeOf(child.familyId, child.createdByFirebaseUid)
                     SectionRow(
                         icon = Icons.Default.ChildCare,
                         title = child.childName,
@@ -193,7 +199,13 @@ private fun ChildrenList(children: List<ChildInfo>, onOpenChild: (String) -> Uni
                                 dob.toLocalDate().format(dateFormatter)
                             )
                         },
-                        onClick = { onOpenChild(child.id) }
+                        onClick = { onOpenChild(child.id) },
+                        trailing = if (place == RecordPlace.ON_SCREEN) {
+                            null
+                        } else {
+                            { RecordPlaceMark(place) }
+                        },
+                        stackTrailingAtLargeFont = true
                     )
                     if (child != children.last()) Divider()
                 }

@@ -92,11 +92,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.displayName
+import com.coparently.app.presentation.common.placeDescription
+import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.CoPlanlyCorners
@@ -911,22 +914,27 @@ private fun EventChip(
     val totalMinutes = totalDuration.toMinutes().coerceAtLeast(15) // Minimum 15 minutes
     val eventHeightDp = with(density) { (hourHeightPx * totalMinutes / 60f).toDp() }
 
+    // Where the event stands for the family on screen: an earlier family's event is drawn
+    // neutral, because its slot colour would now name the wrong person (design refresh item 12).
+    val place = placeOf(event.familyId, event.createdByFirebaseUid)
+    val colourOwner = if (place == RecordPlace.EARLIER_FAMILY) "" else event.parentOwner
+
     // The owner's colour at the block alpha `ParentColorsTest` holds the title to AA on, over
     // whoever's day the column is washed in.
-    val backgroundColor = when (event.parentOwner) {
-        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
+    val backgroundColor = when (colourOwner) {
+        "mom", "dad" -> ParentColors.container(colourOwner, alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
         else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
     }
 
-    val borderColor = when (event.parentOwner) {
-        "mom", "dad" -> ParentColors.container(event.parentOwner, alpha = 0.8f)
+    val borderColor = when (colourOwner) {
+        "mom", "dad" -> ParentColors.container(colourOwner, alpha = 0.8f)
         else -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
     }
 
     // Full-hue bar on the start edge. This is what carries parent identity in week view, where
     // the block has no room for a label at all.
-    val accentColor = when (event.parentOwner) {
-        "mom", "dad" -> ParentColors.fill(event.parentOwner)
+    val accentColor = when (colourOwner) {
+        "mom", "dad" -> ParentColors.fill(colourOwner)
         else -> MaterialTheme.colorScheme.tertiary
     }
 
@@ -1023,7 +1031,7 @@ private fun EventChip(
             event.title,
             chipStateDescription
         )
-    }
+    }.let { described -> placeDescription(place)?.let { "$described. $it" } ?: described }
     val resizeStartDescription = stringResource(R.string.calendar_resize_start_handle)
     val resizeEndDescription = stringResource(R.string.calendar_resize_end_handle)
     val endLaterLabel = stringResource(R.string.calendar_action_end_later)

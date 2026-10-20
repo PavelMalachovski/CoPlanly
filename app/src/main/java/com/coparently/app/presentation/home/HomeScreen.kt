@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestOutcome
@@ -98,6 +99,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
@@ -962,7 +964,15 @@ internal fun TimelineRow(
                     .padding(top = Spacing.XS)
                     .size(12.dp)
                     .clip(CircleShape)
-                    .background(ParentColors.fill(event.parentOwner))
+                    .background(
+                        // An earlier family's event is drawn neutral: its slot colour would now
+                        // name the wrong person.
+                        if (placeOf(event.familyId, event.createdByFirebaseUid) == RecordPlace.EARLIER_FAMILY) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            ParentColors.fill(event.parentOwner)
+                        }
+                    )
             )
             if (!isLast) {
                 Box(
