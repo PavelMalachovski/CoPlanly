@@ -2462,6 +2462,35 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **A schedule goes only to the family on screen**, through `submitPattern`, so a family that
       has one gets a proposal.
 
+    **Everything else a screen reads or writes follows the family on screen, and a write keeps
+    the family it started in.**
+    - **Money.** `ExpenseViewModel` restarts the remote expense listener on every switch: it
+      `collectLatest`s `FamilyViewSource`'s family on screen. The Tab's ViewModel outlives a switch,
+      so before this it went on listening to the first family. `FamilySettingsRepository.
+      observeSplit()` gives the split of the family on screen, cached per family. Propose, accept,
+      decline and withdraw take the family the screen showed. `addExpense` reads the family and
+      the co-parent once for the whole save. Totals, balances, Home's month tile and the month
+      review count only `FamilyView.counts`. A settle-up card goes to the family whose balance was
+      tapped.
+    - **Screens.** `CustodyModelRepository.observeShared()` answers only for the family on screen.
+      The profile and pairing screens name that family's co-parent, and unpair sends their uid.
+      The following are kept to the family on screen:
+      - professionals' grants;
+      - school connections, plus those of no family;
+      - the journal, plus notes of no family or of an ended family.
+      The event draft, Home's "Later" and the calendar's dismissed custody change are stored per
+      family. The vault, the calendar feed and the custody form follow a switch.
+    - **Writes that cannot follow.** The Requests inbox refuses a decision after a switch
+      (`ChangeRequestViewModel`): the decision would be written into the other family.
+    - **School imports.** A school connection of no family takes the child's own family, or the
+      only family. With two families and no hint it imports nothing (`SchoolSyncResult.
+      NeedsFamily`) and says so.
+    - **Google Calendar.** A re-import updates only Google's fields and keeps the row's family. A
+      new import gets a family only while there is exactly one co-parent.
+    - **Photos.** A stored record of no family files its photo under `solo_{uid}` while there are
+      two co-parents (`StoredRecordFamilies`).
+    - **Export.** It leaves out a record of no family that another family's co-parent wrote.
+
     Five things not to undo.
     - **No fallback to the family on screen** in `partnerFor`, for any record. A guess there is a
       disclosure, and it is what sent an ended family's events to the new co-parent on every
