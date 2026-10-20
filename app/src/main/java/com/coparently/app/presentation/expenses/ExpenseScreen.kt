@@ -148,8 +148,9 @@ private fun Modifier.scrollsAsPage(
 @Composable
 // The body is one screen with two views of a month and the banners above them; the
 // callbacks are its navigation surface. Both are inherent, and splitting either for the
-// metric alone would scatter state this screen owns across functions that share it.
-@Suppress("LongParameterList", "LongMethod")
+// metric alone would scatter state this screen owns across functions that share it. The settle-up
+// dialog it opens is the branch that took it to the complexity threshold.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
 fun ExpenseScreen(
     onAddExpense: () -> Unit,
     onEditExpense: (String) -> Unit = {},
