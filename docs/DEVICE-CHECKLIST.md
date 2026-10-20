@@ -1718,6 +1718,16 @@ for an answer.
       form, while the event would wait for A, the description says "A will see this when answering".
 - [ ] A parent in two families: the row, the inbox and the History hold only the family on screen;
       switching families switches them.
+- [ ] **A split proposal is a request** (October 2026, owner request). B proposes a new expense split in
+      Settings → Expense split, with an "Answer by" of tomorrow. On A's phone: the push; Home's
+      **Requests** row counts it; Home pops up "B proposes: A pays …, B pays …" once (Later keeps it
+      away until it changes); the inbox lists it under **Waiting for your answer** with Accept and
+      Decline; the chat shows B's note with the shares. On B's phone: the inbox lists it under
+      **Waiting for A** with **Withdraw**, the note in the chat reaches ✓✓ and then read, and the card
+      says when A opened it. A accepts: both phones' Expenses use the new split, the History shows
+      "Accepted", and the chat shows A's note. Repeat with Decline, and with B withdrawing (a note
+      "Withdrew the expense split proposal"). With a deadline that passes unanswered (§5.9's short
+      clock), the proposal is withdrawn and both see "No answer".
 - **Fallback (1P):** sign in as B on the same phone to send and answer, then back as A; the states
   arrive on the next open rather than live.
 - **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`; `presentation/changerequests/`,
