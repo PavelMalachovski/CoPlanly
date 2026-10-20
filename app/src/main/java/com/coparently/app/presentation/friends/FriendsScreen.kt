@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.friends.CalendarFriendGrant
+import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
@@ -235,15 +236,17 @@ private fun MyFamilies(
     // Soonest-ending first, so the date shown is the first access to end. With one family the row
     // reads exactly as it always did; a friend of several families is told how many, since a
     // single date would otherwise speak for all of them (L-5).
-    val until = rememberDate(grants.first().expiresAtMillis)
+    val first = grants.first().expiresAtMillis
+    val until = rememberDate(first)
+    val whileLinked = FriendAccessDuration.isWhileLinked(first)
     SectionGroup {
         SectionRow(
             icon = Icons.Default.Diversity3,
             title = stringResource(R.string.friend_profile_title),
-            supporting = if (grants.size == 1) {
-                stringResource(R.string.friend_access_until, until)
-            } else {
-                stringResource(R.string.friend_access_several, grants.size, until)
+            supporting = when {
+                grants.size == 1 -> accessText(first)
+                whileLinked -> stringResource(R.string.friend_access_several_while_linked, grants.size)
+                else -> stringResource(R.string.friend_access_several, grants.size, until)
             },
             onClick = onOpenMyProfile,
             trailing = {}
@@ -259,10 +262,11 @@ private fun FamilyCalendarRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
     SectionRow(
         icon = Icons.Default.CalendarMonth,
         title = stringResource(R.string.friend_calendar_title),
-        supporting = if (names.size == 2) {
-            stringResource(R.string.friend_calendar_row_supporting, names[0], names[1], until)
-        } else {
-            stringResource(R.string.friend_access_until, until)
+        supporting = when {
+            names.size != 2 -> accessText(grant.expiresAtMillis)
+            FriendAccessDuration.isWhileLinked(grant.expiresAtMillis) ->
+                stringResource(R.string.friend_calendar_row_supporting_while_linked, names[0], names[1])
+            else -> stringResource(R.string.friend_calendar_row_supporting, names[0], names[1], until)
         },
         onClick = onOpen,
         trailing = {
@@ -275,6 +279,15 @@ private fun FamilyCalendarRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
     )
 }
 
+/** "Access until 19 Nov 2026", or "Access while the parents are linked" for a grant given so. */
+@Composable
+private fun accessText(expiresAtMillis: Long): String =
+    if (FriendAccessDuration.isWhileLinked(expiresAtMillis)) {
+        stringResource(R.string.friend_access_while_linked)
+    } else {
+        stringResource(R.string.friend_access_until, rememberDate(expiresAtMillis))
+    }
+
 /** An expiry instant as the reader's medium date. */
 @Composable
 private fun rememberDate(epochMillis: Long): String = remember(epochMillis) {
@@ -286,10 +299,9 @@ private fun rememberDate(epochMillis: Long): String = remember(epochMillis) {
 /** One friend: their face, their name, when their access ends, and the way into their card. */
 @Composable
 private fun FriendRow(grant: CalendarFriendGrant, onOpen: () -> Unit) {
-    val until = rememberDate(grant.expiresAtMillis)
     SectionRow(
         title = grant.name,
-        supporting = stringResource(R.string.friend_access_until, until),
+        supporting = accessText(grant.expiresAtMillis),
         // Their Google account's own picture, copied into the grant at accept time so this list
         // needs no second read; `AccountAvatar` falls back to the initial when there is none.
         leading = { AccountAvatar(name = grant.name, photoUrl = grant.photoUrl, size = 32.dp) },

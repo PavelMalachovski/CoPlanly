@@ -6,14 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.CalendarFriendPolicy
+import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
-import com.coparently.app.domain.guests.GuestAccessDuration
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.pairing.pairingMessageRes
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,8 +27,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import javax.inject.Inject
 
 /**
  * The friend-invite sheet's state.
@@ -44,7 +44,7 @@ import javax.inject.Inject
  */
 data class FriendInviteState(
     val isOpen: Boolean = false,
-    val duration: GuestAccessDuration = GuestAccessDuration.DEFAULT,
+    val duration: FriendAccessDuration = FriendAccessDuration.DEFAULT,
     val invite: GuestInvite? = null,
     val isBusy: Boolean = false,
     @StringRes val errorRes: Int? = null
@@ -124,7 +124,7 @@ class FriendViewModel @Inject constructor(
     }
 
     /** Picks a different length. Ignored once a code exists — by then it is already stamped. */
-    fun chooseDuration(duration: GuestAccessDuration) {
+    fun chooseDuration(duration: FriendAccessDuration) {
         _invite.update { if (it.invite != null) it else it.copy(duration = duration) }
     }
 

@@ -5,6 +5,10 @@
     <string name="friend_invite_action">Pozvat přítele rodiny</string>
     <string name="friend_invite_code_label">Předejte jim tento kód</string>
     <string name="friend_access_until">Přístup do %1$s</string>
+    <string name="friend_access_while_linked">Přístup, dokud jsou rodiče propojeni</string>
+    <string name="friend_calendar_row_supporting_while_linked">%1$s a %2$s · přístup, dokud jsou propojeni</string>
+    <string name="friend_access_several_while_linked">Rodiny: %1$d · přístup, dokud jsou rodiče propojeni</string>
+    <string name="friend_invite_duration_while_linked">Dokud jsme propojeni</string>
     <string name="friend_access_several">Rodiny: %1$d · první přístup končí %2$s</string>
     <string name="friend_revoke">Odebrat přístup</string>
     <string name="friend_revoke_confirm_title">Odebrat přístup: %1$s?</string>

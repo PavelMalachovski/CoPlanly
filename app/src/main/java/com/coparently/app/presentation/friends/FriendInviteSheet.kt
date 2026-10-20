@@ -33,7 +33,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
-import com.coparently.app.domain.guests.GuestAccessDuration
+import com.coparently.app.domain.friends.FriendAccessDuration
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.pairing.PLAY_STORE_URL
@@ -61,7 +61,7 @@ import com.coparently.app.presentation.theme.bodyMediumEmphasized
 fun FriendInviteSheet(
     state: FriendInviteState,
     myName: String?,
-    onChooseDuration: (GuestAccessDuration) -> Unit,
+    onChooseDuration: (FriendAccessDuration) -> Unit,
     onCreate: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -99,7 +99,7 @@ fun FriendInviteSheet(
 @Composable
 internal fun FriendInviteContent(
     state: FriendInviteState,
-    onChooseDuration: (GuestAccessDuration) -> Unit,
+    onChooseDuration: (FriendAccessDuration) -> Unit,
     onCreate: () -> Unit,
     onShare: (String) -> Unit,
     onDone: () -> Unit
@@ -130,7 +130,7 @@ internal fun FriendInviteContent(
         val code = state.invite?.code
         if (code == null) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                GuestAccessDuration.entries.forEach { duration ->
+                FriendAccessDuration.entries.forEach { duration ->
                     PillChip(
                         label = stringResource(duration.labelRes()),
                         container = if (duration == state.duration) {
