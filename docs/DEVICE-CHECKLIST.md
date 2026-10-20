@@ -1426,6 +1426,13 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
     person line. Neither changes a total or the balance on Expenses or Home.
   - Open the chat's event picker and ask to change one of **B's** events from **C's** thread: the
     form says the event is not in a family you are linked with; nothing reaches C.
+  - **Asked once.** With an event, an expense and a child A wrote before pairing with anyone,
+    Home asks once, when C's family arrives, where they belong. **Later** closes it, and it does
+    not come back on the next launch. Settings → Family → **Records without a family** lists the
+    three. Give the event to C's family: it appears on **C's** phone after a pull to refresh, and
+    nowhere on B's. Give the expense to B's family: B gets a "new expense" card, and it is split
+    between A and B. Choose **Keep it only mine** for the child: it leaves the list and keeps its
+    "Only me" mark.
   - On **C's** phone, after a pull to refresh, none of B's records is listed anywhere, and no
     notification about B's family arrived.
   - **If it fails:** tags `FamilyView`, `SyncService`, `EventRepository`;

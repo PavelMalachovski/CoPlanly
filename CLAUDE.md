@@ -2447,6 +2447,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
     `MainActivity` provides `LocalFamilyView` from `FamilyViewViewModel`.
 
+    **This parent is asked once where their records of no family belong** (owner decision).
+    `data/family/UnassignedRecords` lists their own events (not private), expenses, children, pets
+    and, from two families, a custody schedule of no family. Settings → Family shows a row while
+    any wait (`UnassignedRecordsRow`). Home asks once per set of co-parents, from two families
+    (`UnassignedRecordsPrompt`). The screen (`presentation/family/UnassignedRecordsScreen`) gives
+    each record one of the parent's live families or "Keep it only mine", which is remembered per
+    account and stops the question. Four things about it:
+    - **An ended family is never offered.**
+    - **An event, a child or a pet is stamped and queued**, and the sync uploads it with that
+      family's audience.
+    - **An expense is added again** through `ExpenseRepository.addExpense`. The co-parent is told
+      of a new expense, and it divides between the family's two parents at its recorded share.
+    - **A schedule goes only to the family on screen**, through `submitPattern`, so a family that
+      has one gets a proposal.
+
     Five things not to undo.
     - **No fallback to the family on screen** in `partnerFor`, for any record. A guess there is a
       disclosure, and it is what sent an ended family's events to the new co-parent on every
