@@ -152,10 +152,10 @@ private fun amountText(card: ActivityAnnouncement): String {
  */
 @Composable
 private fun SettleUpPaymentBlock(message: Message, mine: Boolean, payee: PayeeAccount?, parentNames: ParentNames) {
-    val card = message.activity ?: return
-    if (!card.kind.readerPays(mine) || payee == null) return
-    val amount = card.amount?.toBigDecimalOrNull() ?: return
-    val currency = card.currency ?: return
+    val card = message.activity?.takeIf { it.kind.readerPays(mine) } ?: return
+    val amount = card.amount?.toBigDecimalOrNull()
+    val currency = card.currency
+    if (payee == null || amount == null || currency == null) return
     val name = parentNames.labelForUid(payee.uid)
     Column(
         modifier = Modifier

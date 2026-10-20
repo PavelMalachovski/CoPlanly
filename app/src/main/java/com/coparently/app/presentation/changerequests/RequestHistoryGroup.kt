@@ -55,6 +55,7 @@ import com.coparently.app.utils.dateWithTime
  * @param onProposeChange Opens the change for an accepted swap's row; null draws no action.
  */
 @Composable
+@Suppress("LongParameterList") // the rows, who reads them, the one highlighted, its one action
 internal fun RequestHistoryGroup(
     entries: List<HistoryEntry>,
     parentNames: ParentNames,

@@ -96,6 +96,9 @@ import java.time.format.FormatStyle
  * @param viewModel Change-request state
  */
 @Composable
+// One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
+// change an agreed swap. Splitting it for the metric would scatter state the screen owns.
+@Suppress("LongMethod")
 fun ChangeRequestsScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,

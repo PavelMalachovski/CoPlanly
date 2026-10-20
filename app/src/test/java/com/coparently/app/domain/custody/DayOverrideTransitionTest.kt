@@ -115,9 +115,10 @@ class DayOverrideTransitionTest {
             .decideGroup(offered, listOf(date), mom, "2026-08-23T11:00:00", accept = true)
             .getOrThrow()
 
-        val change = DayOverrideTransition.offerAll(
-            accepted, mapOf(date to "mom"), mom, "2026-08-30T09:00:00", groupId = "g2"
-        ).getOrThrow().getValue(date)
+        val change = DayOverrideTransition
+            .offerAll(accepted, mapOf(date to "mom"), mom, "2026-08-30T09:00:00", groupId = "g2")
+            .getOrThrow()
+            .getValue(date)
 
         assertEquals(DayOverrideStatus.PENDING, change.status)
         assertEquals(
