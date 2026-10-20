@@ -189,6 +189,8 @@ fun HomeScreen(
     val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
     val pendingProposalDiff by changeRequestViewModel.pendingProposalDiff.collectAsState()
     val pendingProposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
+    val pendingSplit by changeRequestViewModel.pendingSplit.collectAsState()
+    val agreedSplit by changeRequestViewModel.agreedSplit.collectAsState()
 
     // The swap and proposal dialogs live here, and until this existed their refusals did not:
     // `ChangeRequestViewModel` wrote every failure into `errorMessage`, and only the inbox
@@ -289,9 +291,12 @@ fun HomeScreen(
                 AwaitingDialogs(
                     state = state,
                     parentNames = parentNames,
-                    proposal = pendingProposal?.let {
-                        ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
-                    },
+                    asks = HomeAsks(
+                        proposal = pendingProposal?.let {
+                            ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
+                        },
+                        split = pendingSplit?.let { SplitAsk(it, agreedSplit) }
+                    ),
                     actions = AwaitingActions(
                         onAcceptSwap = { group ->
                             changeRequestViewModel.decideSwapGroup(group, accept = true)
@@ -303,7 +308,10 @@ fun HomeScreen(
                         onDeclineProposal = changeRequestViewModel::declineProposal,
                         onOpenChangeRequests = onOpenChangeRequests,
                         onSwapSeen = { group -> changeRequestViewModel.markSeen(RequestDeadlineId.forSwap(group)) },
-                        onProposalSeen = changeRequestViewModel::markProposalSeen
+                        onProposalSeen = changeRequestViewModel::markProposalSeen,
+                        onAcceptSplit = changeRequestViewModel::acceptSplit,
+                        onDeclineSplit = changeRequestViewModel::declineSplit,
+                        onSplitSeen = changeRequestViewModel::markSplitSeen
                     )
                 )
             }
