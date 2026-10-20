@@ -366,6 +366,29 @@ class EncryptedPreferences internal constructor(
         store.getString(PreferenceKeys.SPLIT_RATIO_SLOT, null)
 
     /**
+     * Records one family's agreed split, as slot 1's share in basis points.
+     *
+     * @param familyId The family whose `family_settings` document carries the agreement.
+     * @param basisPoints `0..10000`.
+     */
+    fun putFamilySplitRatioBasisPoints(familyId: String, basisPoints: Int) {
+        store.edit()
+            .putInt(PreferenceKeys.SPLIT_RATIO_FAMILY_PREFIX + familyId, basisPoints)
+            .apply()
+    }
+
+    /**
+     * One family's agreed split, or null when this phone has never seen that family agree one.
+     *
+     * Never another family's: see [PreferenceKeys.SPLIT_RATIO_FAMILY_PREFIX].
+     *
+     * @param familyId The family to read the agreement of.
+     */
+    fun getFamilySplitRatioBasisPoints(familyId: String): Int? =
+        store.getInt(PreferenceKeys.SPLIT_RATIO_FAMILY_PREFIX + familyId, -1)
+            .takeIf { it >= 0 }
+
+    /**
      * Stores the app-wide default currency.
      *
      * @param code ISO 4217 currency code, e.g. "CZK"

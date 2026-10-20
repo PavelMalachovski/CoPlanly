@@ -5,12 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.CurrencyBreakdown
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.expenses.breakdownByCurrency
 import com.coparently.app.domain.expenses.calculateExpenseBalancesByCurrency
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Expense
@@ -102,16 +104,24 @@ class ExpenseViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * The agreed split, as this device last saw it.
+     * The family on screen's split — its agreement, its open proposal, and which family it is.
+     *
+     * One subscription for [agreedRatio] and both proposals, and it follows the switcher: the
+     * Expenses tab carries the switcher chip in its own top bar, so this ViewModel outlives a
+     * switch, and a split read once at start went on showing the previous family's agreement.
+     */
+    private val split: StateFlow<FamilySplit> = familySettingsRepository.observeSplit()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), FamilySplit.UNKNOWN)
+
+    /**
+     * The agreed split of the family on screen, as this device last saw it — never another
+     * family's.
      *
      * Kept warm so the screen can label the ratio and offer a per-expense override without a
-     * read on the save path; the cached value is the one an expense is actually stamped with.
+     * read on the save path; a new expense is stamped with its own family's cached agreement.
      */
-    val agreedRatio: StateFlow<SplitRatio> = familySettingsRepository.observeSettings()
-        .map { settings ->
-            settings?.ratio?.also(familySettingsRepository::cacheAgreedRatio)
-                ?: familySettingsRepository.agreedRatioOrDefault()
-        }
+    val agreedRatio: StateFlow<SplitRatio> = split
+        .map { it.ratio }
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -119,10 +129,14 @@ class ExpenseViewModel @Inject constructor(
         )
 
     /**
-     * The two parents a shared expense is split between.
+     * The family a new expense is recorded in, and its co-parent — read **once**, at the start of
+     * the save, and used for everything the save decides: the receipt's folder, who the expense is
+     * split between, the agreement it is priced at, its `familyId` and the write.
      *
-     * Both uids, or just the payer while unpaired: an expense recorded before there is a
-     * co-parent has nobody to owe a share of it, and naming one would invent a debt.
+     * Each of those used to read the family on screen for itself, and a receipt upload is slow: a
+     * switch from a push tap in the middle of it could save an expense stamped with the family with
+     * Carol, split with Igor, priced at Igor's agreement and with its receipt in Igor's folder
+     * (October 2026 isolation audit).
      *
      * Resolved through [ParentsSource.coParentUid], **not** through `parents.value`. That
      * StateFlow is `WhileSubscribed` and the Add Expense screen — a route with its own
@@ -130,9 +144,9 @@ class ExpenseViewModel @Inject constructor(
      * emitted and answered `null` for every save. The result was a `splitBetween` naming only
      * the payer: the payer's own month looked right, and the co-parent's showed nothing owed.
      */
-    private suspend fun sharedWith(userId: String): List<String> {
-        val coParent = parentsSource.coParentUid()
-        return listOfNotNull(userId, coParent?.takeIf { it != userId })
+    private suspend fun familyOfNewExpense(userId: String): NewExpenseFamily {
+        val coParent = parentsSource.coParentUid()?.takeIf { it != userId }
+        return NewExpenseFamily(familyId = FamilyKey.orNull(userId, coParent), coParent = coParent)
     }
 
     /**
@@ -149,12 +163,11 @@ class ExpenseViewModel @Inject constructor(
      *
      * Only the co-parent's — a parent never decides their own, which the transition and
      * `firestore.rules` both refuse. The proposer sees theirs as a "waiting" state instead.
+     *
+     * It carries its family, so the answer goes to the family whose proposal was on screen.
      */
-    val pendingRatioProposal: StateFlow<SplitRatioProposal?> = combine(
-        familySettingsRepository.observeSettings(),
-        _currentUserId
-    ) { settings, uid ->
-        settings?.proposal?.takeIf { uid.isNotEmpty() && it.proposedBy != uid }
+    val pendingRatioProposal: StateFlow<FamilyRatioProposal?> = combine(split, _currentUserId) { shown, uid ->
+        shown.proposalFor(uid, mine = false)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     /**
@@ -164,12 +177,20 @@ class ExpenseViewModel @Inject constructor(
      * proposer sees theirs as a waiting state instead" — without it existing. A parent who
      * proposed 70/30 by mistake had no sign anything was pending and no way to take it back.
      */
-    val myPendingRatioProposal: StateFlow<SplitRatioProposal?> = combine(
-        familySettingsRepository.observeSettings(),
-        _currentUserId
-    ) { settings, uid ->
-        settings?.proposal?.takeIf { uid.isNotEmpty() && it.proposedBy == uid }
+    val myPendingRatioProposal: StateFlow<FamilyRatioProposal?> = combine(split, _currentUserId) { shown, uid ->
+        shown.proposalFor(uid, mine = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * The family's open proposal when it is [uid]'s own ([mine]) or the co-parent's (not [mine]),
+     * or null — also for a family whose document has not answered, and while nobody is signed in.
+     */
+    private fun FamilySplit.proposalFor(uid: String, mine: Boolean): FamilyRatioProposal? {
+        val family = familyId ?: return null
+        return settings?.proposal
+            ?.takeIf { uid.isNotEmpty() && (it.proposedBy == uid) == mine }
+            ?.let { FamilyRatioProposal(family, it) }
+    }
 
     /**
      * Raised when answering the co-parent's proposal was refused.
@@ -195,14 +216,16 @@ class ExpenseViewModel @Inject constructor(
      * is still in the inbox and still on the co-parent's side of the conversation — an answer
      * that quietly meant "no" would be exactly the silent outcome this feature exists to remove.
      *
+     * @param shown The proposal the banner showed; the answer goes to its family, whichever family
+     *   the switcher shows by the time the write runs.
      * @param accept True to agree, false to turn it down.
      */
-    fun decideRatioProposal(accept: Boolean) {
+    fun decideRatioProposal(shown: FamilyRatioProposal, accept: Boolean) {
         viewModelScope.launch {
             val result = if (accept) {
-                familySettingsRepository.acceptProposal()
+                familySettingsRepository.acceptProposal(shown.familyId)
             } else {
-                familySettingsRepository.declineProposal()
+                familySettingsRepository.declineProposal(shown.familyId)
             }
             result.onFailure { e ->
                 // Emitted, not written into `saveState`: nothing on the Expenses screen reads
@@ -222,10 +245,12 @@ class ExpenseViewModel @Inject constructor(
      * both are "the thing you just tapped did not happen", the screen renders one snackbar, and
      * a refusal that left the banner sitting there is the silent outcome this whole family of
      * features exists to remove.
+     *
+     * @param shown This parent's proposal as the banner showed it; withdrawn from its own family.
      */
-    fun withdrawRatioProposal() {
+    fun withdrawRatioProposal(shown: FamilyRatioProposal) {
         viewModelScope.launch {
-            familySettingsRepository.withdrawProposal().onFailure { e ->
+            familySettingsRepository.withdrawProposal(shown.familyId).onFailure { e ->
                 Log.w(TAG, "The split proposal could not be withdrawn", e)
                 _ratioAnswerFailed.trySend(Unit)
             }
@@ -503,28 +528,21 @@ class ExpenseViewModel @Inject constructor(
                 return@launch
             }
             _currentUserId.value = userId
+            // One answer for the whole save, read before the slow part — see [familyOfNewExpense].
+            val family = familyOfNewExpense(userId)
 
             val expenseId = UUID.randomUUID().toString()
-            var receiptUrl: String? = null
-            var warning: UiText? = null
-            if (receiptImageUri != null) {
-                receiptUrl = try {
-                    receiptStorage.upload(RecordPhotoKind.RECEIPT, expenseId, null, receiptImageUri)
-                } catch (
-                    // Any upload failure (IO, storage, decode) must not lose the expense
-                    @Suppress("TooGenericExceptionCaught") e: Exception
-                ) {
-                    android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
-                    warning = UiText.Res(R.string.expense_warning_receipt_upload_failed)
-                    null
-                }
-            }
+            val (receiptUrl, warning) = receiptImageUri
+                ?.let { uploadNewReceipt(expenseId, family.familyId, it) }
+                ?: (null to null)
 
             // `splitBetween` was never populated by any production path, so the guard in
             // `calculateExpenseBalance` could not fire, `currentUserOwes` stayed zero, and both
             // parents were told at once that the other owed them everything they had spent that
-            // month. Every shared expense now names the two parents.
-            val splitBetween = if (shared) sharedWith(userId) else emptyList()
+            // month. Every shared expense now names the two parents — or just the payer while
+            // unpaired: an expense recorded before there is a co-parent has nobody to owe a share
+            // of it, and naming one would invent a debt.
+            val splitBetween = if (shared) listOfNotNull(userId, family.coParent) else emptyList()
             val expense = Expense(
                 id = expenseId,
                 forMembers = forMembers,
@@ -539,15 +557,38 @@ class ExpenseViewModel @Inject constructor(
                 notes = notes,
                 createdAt = LocalDateTime.now(),
                 // Snapshotted, never looked up when the balance is read: a renegotiated split
-                // must not re-price a month the two parents have already settled.
+                // must not re-price a month the two parents have already settled. The agreement
+                // of this expense's own family, never another family's.
                 splitBasisPoints = splitBetween.takeIf { it.isNotEmpty() }?.let {
-                    (splitOverride ?: familySettingsRepository.agreedRatioOrDefault())
+                    (splitOverride ?: familySettingsRepository.agreedRatioOrDefault(family.familyId))
                         .momShareBasisPoints
-                }
+                },
+                // Stamped here rather than left to the repository, which would read the family on
+                // screen again after the upload.
+                familyId = family.familyId
             )
             expenseRepository.addExpense(expense)
             _saveState.value = ExpenseSaveState.Saved(warning)
         }
+    }
+
+    /**
+     * Uploads a new expense's receipt into [familyId]'s folder (L-4) and returns its reference, or
+     * no reference and the warning to show when the upload failed — which must not lose the
+     * expense, so it is saved without the receipt.
+     */
+    private suspend fun uploadNewReceipt(
+        expenseId: String,
+        familyId: String?,
+        localUri: String
+    ): Pair<String?, UiText?> = try {
+        receiptStorage.upload(RecordPhotoKind.RECEIPT, expenseId, familyId, localUri) to null
+    } catch (
+        // Any upload failure (IO, storage, decode) must not lose the expense
+        @Suppress("TooGenericExceptionCaught") e: Exception
+    ) {
+        android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
+        null to UiText.Res(R.string.expense_warning_receipt_upload_failed)
     }
 
     /** Loads a single expense for the edit form, or null when it no longer exists. */
@@ -703,6 +744,26 @@ class ExpenseViewModel @Inject constructor(
         const val TAG = "ExpenseViewModel"
     }
 }
+
+/**
+ * A split proposal as the Expenses screen shows it, with the family it was made in.
+ *
+ * The family travels with the proposal so that Confirm, Decline and Withdraw act on that family's
+ * agreement even when the switcher has moved on by the time the tap lands (October 2026 isolation
+ * audit: an answer read the family again and could accept a proposal the parent never saw).
+ *
+ * @property familyId The family whose `family_settings` document holds the proposal.
+ * @property proposal The proposal itself.
+ */
+data class FamilyRatioProposal(val familyId: String, val proposal: SplitRatioProposal)
+
+/**
+ * The family a new expense is recorded in, read once for its whole save.
+ *
+ * @property familyId The family on screen when the save began, or null while unpaired.
+ * @property coParent That family's other parent, or null while unpaired.
+ */
+private data class NewExpenseFamily(val familyId: String?, val coParent: String?)
 
 /**
  * One month of expenses, carried together with the month they belong to.

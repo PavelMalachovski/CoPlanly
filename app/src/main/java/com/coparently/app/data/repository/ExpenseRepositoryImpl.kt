@@ -87,12 +87,10 @@ class ExpenseRepositoryImpl @Inject constructor(
         val uid = expense.createdByFirebaseUid ?: firebaseAuthService.getCurrentUser()?.uid
         val owned = expense.copy(
             createdByFirebaseUid = uid,
-            // Which relationship this belongs to, and therefore who may see it. Null while the
-            // account is unpaired: the expense is this parent's alone until there is somebody to
-            // share it with, and inventing an id for a pair of one would say otherwise. Pairing
-            // backfills, the same way the audience on events is re-stamped.
-            familyId = expense.familyId
-                ?: FamilyKey.orNull(uid, userDao.getUserById(uid.orEmpty())?.partnerId)
+            // Which relationship this belongs to, and therefore who may see it. A new expense
+            // arrives stamped by `ExpenseViewModel`, which reads the family once for the whole
+            // save; see [familyForUnstamped] for one that names none.
+            familyId = expense.familyId ?: familyForUnstamped(uid)
         )
 
         // Room is the source of truth — persist locally first so the expense is never
@@ -103,6 +101,30 @@ class ExpenseRepositoryImpl @Inject constructor(
 
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
         pushToFirestore(owned, ownerUid = owned.createdByFirebaseUid ?: firebaseUser.uid)
+    }
+
+    /**
+     * The family an expense that names none is stamped with on [addExpense] — an Undo of an
+     * unstamped expense, or a caller that does not stamp.
+     *
+     * Null while the account is unpaired: the expense is this parent's alone until there is
+     * somebody to share it with, and inventing an id for a pair of one would say otherwise.
+     * Pairing backfills, the same way the audience on events is re-stamped. The family on screen
+     * while the parent has exactly one co-parent, and **none while they have two**: nothing says
+     * which family such an expense is about, and the family on screen is a guess that would put an
+     * expense that is "only mine" into one co-parent's ledger (October 2026 isolation audit) —
+     * the record rule `FamilyAudience.recordPartnerFor` states.
+     */
+    private suspend fun familyForUnstamped(uid: String?): String? {
+        val myUid = uid ?: return null
+        val me = userDao.getUserById(myUid)
+        val partner = FamilyAudience.recordPartnerFor(
+            familyId = null,
+            myUid = myUid,
+            livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
+            selectedPartner = me?.partnerId
+        )
+        return FamilyKey.orNull(myUid, partner)
     }
 
     override suspend fun updateExpense(expense: Expense) {

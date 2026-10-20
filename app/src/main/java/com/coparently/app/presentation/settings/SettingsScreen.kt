@@ -246,7 +246,9 @@ fun SettingsScreen(
     // what decides which rows below are drawn. Seeding the dialog from the union made a box the
     // co-parent ticked look like this parent's own.
     val myCaresFor by settingsViewModel.myCaresFor.collectAsState()
-    val agreedRatio by settingsViewModel.agreedRatio.collectAsState()
+    // The family on screen's split, with the family it belongs to, so a change goes to that family.
+    val familySplit by settingsViewModel.split.collectAsState()
+    val agreedRatio = familySplit.ratio
     // The split is two numbers about money; without names they do not say whose is whose.
     val parents by settingsViewModel.parents.collectAsState()
     val splitParentNames = rememberParentNames(parents)
@@ -269,7 +271,7 @@ fun SettingsScreen(
             current = agreedRatio,
             parentNames = splitParentNames,
             onConfirm = { ratio ->
-                settingsViewModel.submitRatio(ratio)
+                settingsViewModel.submitRatio(ratio, familySplit)
                 showSplitPicker = false
             },
             onDismiss = { showSplitPicker = false }
