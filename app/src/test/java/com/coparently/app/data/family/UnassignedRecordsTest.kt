@@ -237,7 +237,7 @@ class UnassignedRecordsTest {
     }
 
     @Test
-    fun `an expense goes back through the repository with only its family changed`() = runTest {
+    fun `an expense goes back as a new expense of the family, divided between its parents`() = runTest {
         val original = Expense(
             id = "shoes",
             title = "Shoes",
@@ -252,13 +252,22 @@ class UnassignedRecordsTest {
         )
         coEvery { expenseRepository.getExpenseById("shoes") } returns original
         val written = slot<Expense>()
-        coEvery { expenseRepository.updateExpense(capture(written)) } returns Unit
+        coEvery { expenseRepository.addExpense(capture(written)) } returns Unit
 
         val outcome = records.assign(ALICE, record(UnassignedKind.EXPENSE, "shoes"), BOB_FAMILY)
 
         assertEquals(AssignOutcome.ASSIGNED, outcome)
-        // The split is a snapshot of the moment it was recorded and is never re-priced.
-        assertEquals(original.copy(familyId = BOB_FAMILY, syncedToFirestore = false), written.captured)
+        // Bob is told of a new expense, never of a change to one he has not seen; the recorded
+        // share is kept, so nothing is re-priced.
+        assertEquals(
+            original.copy(
+                familyId = BOB_FAMILY,
+                splitBetween = listOf(ALICE, BOB),
+                syncedToFirestore = false
+            ),
+            written.captured
+        )
+        coVerify(exactly = 0) { expenseRepository.updateExpense(any()) }
     }
 
     @Test
@@ -276,7 +285,7 @@ class UnassignedRecordsTest {
         val outcome = records.assign(ALICE, record(UnassignedKind.EXPENSE, "shoes"), BOB_FAMILY)
 
         assertEquals(AssignOutcome.GONE, outcome)
-        coVerify(exactly = 0) { expenseRepository.updateExpense(any()) }
+        coVerify(exactly = 0) { expenseRepository.addExpense(any()) }
     }
 
     @Test

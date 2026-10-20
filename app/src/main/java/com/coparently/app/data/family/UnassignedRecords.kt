@@ -122,9 +122,10 @@ enum class AssignOutcome {
  *
  * - **Assign it to a live family.** An event, a child or a pet is stamped and queued, and the sync
  *   uploads it with that family's audience. An expense, which has no upload outbox, is written
- *   back through [ExpenseRepository.updateExpense]. A custody schedule is submitted to the family
- *   on screen through [CustodyModelRepository.submitPattern] — a family with a schedule gets a
- *   proposal, never an overwrite (CLAUDE.md items 30 and 41).
+ *   back through [ExpenseRepository.addExpense], divided between the family's two parents. A
+ *   custody schedule is submitted to the family on screen through
+ *   [CustodyModelRepository.submitPattern] — a family with a schedule gets a proposal, never an
+ *   overwrite (CLAUDE.md items 30 and 41).
  * - **Keep it only mine.** Nothing is written to the record; it is remembered per account and not
  *   asked about again, and it keeps its mark.
  *
@@ -236,14 +237,23 @@ class UnassignedRecords @Inject constructor(
 
     /**
      * An expense has no upload outbox — an add or an edit pushes inline — so it goes back through
-     * the repository's own update, which writes Room, tells the family's co-parent and pushes it.
-     * Every other field is kept: the split it was recorded under is a snapshot, never re-priced.
+     * the repository's add, which writes Room, pushes it and tells the family's co-parent of a
+     * **new** expense: they have never seen it, and "changed" would describe nothing they know.
+     *
+     * Taking a family is sharing it with that family: an expense written while its payer had
+     * nobody to share with names only the payer, and now divides between the family's two parents
+     * (isolation audit, October 2026). Its recorded share is kept — a null one divides evenly — so
+     * nothing already recorded is re-priced.
      */
     private suspend fun assignExpense(uid: String, id: String, familyId: String): AssignOutcome {
         val expense = expenseRepository.getExpenseById(id)
             ?.takeIf { it.familyId.isNullOrBlank() && it.createdByFirebaseUid == uid }
             ?: return AssignOutcome.GONE
-        expenseRepository.updateExpense(expense.copy(familyId = familyId, syncedToFirestore = false))
+        val parents = FamilyKey.membersOf(familyId)?.toList() ?: return AssignOutcome.GONE
+        val between = expense.splitBetween.takeIf { it.toSet().size > 1 } ?: parents
+        expenseRepository.addExpense(
+            expense.copy(familyId = familyId, splitBetween = between, syncedToFirestore = false)
+        )
         return AssignOutcome.ASSIGNED
     }
 
