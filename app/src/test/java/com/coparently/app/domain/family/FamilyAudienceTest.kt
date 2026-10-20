@@ -5,13 +5,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * Which co-parent an event's audience names (MON-8): the other parent of the event's own family
- * while that relationship is live, otherwise the family on screen — so a school import into one
- * family never shares a child's timetable with the other family's adult.
- *
- * And which one a child's or a pet's record names: its own family's, and never the family on
- * screen in its place — that fallback is how a parent in two families leaked one family's children
- * to the other family's adult.
+ * Which co-parent a record's audience names — an event, a child's or a pet's record alike: its own
+ * family's other parent while that relationship is live, and never the family on screen in its
+ * place. That fallback is how a parent in two families leaked one family's children to the other
+ * family's adult, and how an ended family's events reached the next co-parent (October 2026).
  */
 class FamilyAudienceTest {
 
@@ -31,18 +28,25 @@ class FamilyAudienceTest {
     }
 
     @Test
-    fun `a family that has ended never brings its ex-partner back`() {
-        assertEquals("bob", FamilyAudience.partnerFor(carolFamily, "alice", listOf("bob"), selectedPartner = "bob"))
+    fun `an event of a family that has ended names nobody, not the family on screen`() {
+        // The leak: Bob unpaired, Alice paired with Carol, and the first sync re-uploaded every
+        // event of the Bob family to Carol.
+        assertNull(FamilyAudience.partnerFor(carolFamily, "alice", listOf("bob"), selectedPartner = "bob"))
         assertNull(FamilyAudience.partnerFor(carolFamily, "alice", emptyList(), selectedPartner = null))
     }
 
     @Test
-    fun `an event with no family, or one the signed-in parent is not in, falls back to the family on screen`() {
+    fun `an event with no family names the one co-parent there is, and nobody once there are two`() {
         assertEquals("bob", FamilyAudience.partnerFor(null, "alice", listOf("bob"), selectedPartner = "bob"))
         assertEquals("bob", FamilyAudience.partnerFor("", "alice", listOf("bob"), selectedPartner = "bob"))
-        val strangers = FamilyKey.of("dan", "erin")
-        assertEquals("bob", FamilyAudience.partnerFor(strangers, "alice", listOf("bob", "dan"), "bob"))
+        assertNull(FamilyAudience.partnerFor(null, "alice", listOf("bob", "carol"), selectedPartner = "carol"))
         assertNull(FamilyAudience.partnerFor(null, "alice", emptyList(), selectedPartner = ""))
+    }
+
+    @Test
+    fun `an event of a family the signed-in parent is not in names nobody`() {
+        val strangers = FamilyKey.of("dan", "erin")
+        assertNull(FamilyAudience.partnerFor(strangers, "alice", listOf("bob", "dan"), "bob"))
     }
 
     // ---- A child's or a pet's record: the record's own family, and never the one on screen ----

@@ -63,7 +63,11 @@ class EventRepositoryImpl @Inject constructor(
     override fun getAllEvents(): Flow<List<Event>> {
         return eventDao.getAllEvents().map { entities ->
             entities.map { it.toDomain() }
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
 
     /**
@@ -93,14 +97,22 @@ class EventRepositoryImpl @Inject constructor(
                 end
             )
             (singleEvents + occurrences).sortedBy { it.startDateTime }
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
 
     /** One day's events, filtered by the same rule as the range query. */
     override fun getEventsByDate(date: LocalDateTime): Flow<List<Event>> {
         return eventDao.getEventsByDate(date).map { entities ->
             CalendarVisibility.visible(entities.map { it.toDomain() })
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
 
     override suspend fun getEventById(id: String): Event? {
@@ -367,6 +379,16 @@ class EventRepositoryImpl @Inject constructor(
         val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
         val mine = event.lastModifiedBy?.takeIf { it.isNotBlank() }
             ?: event.createdByFirebaseUid
+        val me = userDao.getUserById(myUid)
+        // The thread of the event's own family, never the family on screen: an event of an ended
+        // family, or of no family while there are two, has nobody to tell, and a push tap that
+        // switched families during the upload must not send this event's card to the other one.
+        val coParent = FamilyAudience.partnerFor(
+            familyId = event.familyId,
+            myUid = myUid,
+            livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
+            selectedPartner = me?.partnerId
+        )
         activityAnnouncer.announce(
             announcement = ActivityAnnouncement(
                 kind = kind,
@@ -375,8 +397,9 @@ class EventRepositoryImpl @Inject constructor(
                 title = event.title,
                 whenIso = event.startDateTime.format(dateFormatter)
             ),
-            senderName = userDao.getUserById(myUid)?.name.orEmpty(),
-            suppress = event.isPrivate || (mine != null && mine != myUid)
+            senderName = me?.name.orEmpty(),
+            suppress = event.isPrivate || (mine != null && mine != myUid) || coParent == null,
+            partnerUid = coParent
         )
     }
 

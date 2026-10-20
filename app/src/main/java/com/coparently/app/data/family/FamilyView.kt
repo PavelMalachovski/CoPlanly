@@ -14,34 +14,89 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 
 /**
+ * Where a record stands for the family on screen ([FamilyView.placeOf]).
+ */
+enum class RecordPlace {
+    /**
+     * The family on screen's own record — or, while the parent has at most one live family, their
+     * own record of no family, which is that family's or nobody's. Shown and counted.
+     */
+    ON_SCREEN,
+
+    /**
+     * This parent's own record of no family while they have two or more live families: nothing
+     * says which family it is about, so it is shown in every family marked "Only me", shared with
+     * nobody and counted in no family's totals until the parent assigns it ("Records without a
+     * family", owner decision October 2026).
+     */
+    ONLY_ME,
+
+    /**
+     * A record of a family that has ended: this parent's history. Shown marked "From an earlier
+     * family", never shared with a later co-parent and never counted in a live family's totals
+     * (owner decision October 2026).
+     */
+    EARLIER_FAMILY,
+
+    /** A record of another live family, or of a family this parent is not in: not shown. */
+    OTHER_FAMILY
+}
+
+/**
  * What the family on screen may show: everything except the records of the parent's **other**
  * live families.
  *
- * A parent in two families sees one at a time (M-8). Room holds both families' events and
- * expenses on the phone, and the calendar, Home and Expenses read Room — so without this the
- * family with Carol showed the family with Igor's dentist and shoes (tester report, October
- * 2026). The rule hides only what belongs to another family the parent is still in:
+ * A parent in two families sees one at a time (M-8). Room holds both families' records on the
+ * phone, and the calendar, Home and Expenses read Room — so without this the family with Carol
+ * showed the family with Igor's dentist and shoes (tester report, October 2026). [placeOf] says
+ * where each record stands:
  *
  * - a record of the family on screen is shown;
- * - a record naming no family ("mine alone", item 18) is shown, as it always was — it is this
- *   parent's own and reaches nobody;
- * - a record of a family that has **ended** is shown, as it always was, so an unpair or a new
- *   co-parent never makes a parent's history disappear from their own calendar.
+ * - a record of **no family written by a co-parent** belongs to the family with that co-parent —
+ *   the record cannot be about any other family, and showing it everywhere put Igor's records into
+ *   the family with Carol, in Carol's name and colour (isolation audit, October 2026);
+ * - this parent's **own** record of no family belongs to the one family while there is one, and is
+ *   "only mine" while there are two ([RecordPlace.ONLY_ME]);
+ * - a record of a family that has **ended** stays visible as history
+ *   ([RecordPlace.EARLIER_FAMILY]), so an unpair never makes a parent's past disappear;
+ * - a record of another live family is hidden.
  *
- * With one family, or none, nothing is hidden.
+ * With one family, or none, nothing is hidden. [counts] says what a family's totals and balance
+ * may add up: its own records only.
  *
+ * @property me The signed-in parent, or null when there is nobody to place records for.
  * @property onScreen The family the switcher shows, or null when the account is in none.
  * @property others The parent's other live families.
  */
-data class FamilyView(val onScreen: String?, val others: Set<String>) {
+data class FamilyView(val me: String? = null, val onScreen: String?, val others: Set<String>) {
 
-    /** Whether a record of [familyId] belongs on this screen. */
-    fun shows(familyId: String?): Boolean =
-        familyId.isNullOrBlank() || familyId == onScreen || familyId !in others
+    /** Where a record of [familyId], written by [createdBy], stands on this screen. */
+    fun placeOf(familyId: String?, createdBy: String? = null): RecordPlace {
+        val owner = me ?: return RecordPlace.ON_SCREEN
+        val family = familyId?.takeIf { it.isNotBlank() }
+            ?: createdBy?.takeIf { it.isNotBlank() && it != owner }?.let { FamilyKey.orNull(owner, it) }
+            ?: return if (liveFamilies() > 1) RecordPlace.ONLY_ME else RecordPlace.ON_SCREEN
+        return when {
+            family == onScreen -> RecordPlace.ON_SCREEN
+            family in others -> RecordPlace.OTHER_FAMILY
+            FamilyKey.membersOf(family)?.toList()?.contains(owner) != true -> RecordPlace.OTHER_FAMILY
+            else -> RecordPlace.EARLIER_FAMILY
+        }
+    }
+
+    /** Whether a record of [familyId], written by [createdBy], belongs on this screen. */
+    fun shows(familyId: String?, createdBy: String? = null): Boolean =
+        placeOf(familyId, createdBy) != RecordPlace.OTHER_FAMILY
+
+    /** Whether a record of [familyId], written by [createdBy], counts in this family's totals. */
+    fun counts(familyId: String?, createdBy: String? = null): Boolean =
+        placeOf(familyId, createdBy) == RecordPlace.ON_SCREEN
+
+    private fun liveFamilies(): Int = others.size + (if (onScreen != null) 1 else 0)
 
     companion object {
         /** Shows everything: signed out, or no row yet. */
-        val EVERYTHING = FamilyView(onScreen = null, others = emptySet())
+        val EVERYTHING = FamilyView(me = null, onScreen = null, others = emptySet())
 
         private val gson = Gson()
 
@@ -52,7 +107,7 @@ data class FamilyView(val onScreen: String?, val others: Set<String>) {
             val partners = runCatching { gson.fromJson(row.partnerIdsJson, Array<String>::class.java) }
                 .getOrNull()?.toList().orEmpty()
             val others = partners.mapNotNull { FamilyKey.orNull(uid, it) }.toSet() - setOfNotNull(onScreen)
-            return FamilyView(onScreen, others)
+            return FamilyView(me = uid, onScreen = onScreen, others = others)
         }
     }
 }
@@ -63,10 +118,16 @@ data class FamilyView(val onScreen: String?, val others: Set<String>) {
  * The family is read from the signed-in parent's Room row, which is where the switcher writes it,
  * so a switch re-filters without any Room write to the records themselves. Signed out, nothing is
  * filtered.
+ *
+ * @param creatorOf Who wrote a record: a co-parent's record of no family belongs to the family with
+ *   them ([FamilyView.placeOf]). Every repository passes it; the default exists for lists that
+ *   carry no author.
+ * @param familyOf The record's family, or null for none.
  */
 fun <T> Flow<List<T>>.inFamilyOnScreen(
     auth: FirebaseAuthService,
     userDao: UserDao,
+    creatorOf: (T) -> String? = { null },
     familyOf: (T) -> String?
 ): Flow<List<T>> {
     val records = this
@@ -82,6 +143,6 @@ fun <T> Flow<List<T>>.inFamilyOnScreen(
             .map { FamilyView.of(uid, it) }
             .onStart { emit(FamilyView.of(uid, userDao.getUserById(uid))) }
             .distinctUntilChanged()
-        emitAll(combine(records, views) { list, view -> list.filter { view.shows(familyOf(it)) } })
+        emitAll(combine(records, views) { list, view -> list.filter { view.shows(familyOf(it), creatorOf(it)) } })
     }
 }

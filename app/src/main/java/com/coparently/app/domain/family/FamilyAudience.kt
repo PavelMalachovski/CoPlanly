@@ -1,44 +1,44 @@
 package com.coparently.app.domain.family
 
 /**
- * Which co-parent an event's audience names: the other parent of the family the event belongs
- * to, while that relationship is live.
+ * Which co-parent a record's audience names: the other parent of the family the record belongs
+ * to, while that relationship is live — and nobody otherwise.
  *
- * `UserEntity.partnerId` is the family the device is **showing** (M-8), and the event write
- * paths used to read it for every event. That is right for an event made on screen — it is made
- * in the family on screen — and wrong for one that belongs to another family: a school import
- * (MON-8) runs in the background for the family its connection names, whichever one the switcher
- * shows at that moment, and naming the shown family's co-parent would hand one family's
- * child's timetable to the other family's adult.
+ * `UserEntity.partnerId` is the family the device is **showing** (M-8), and the write paths used to
+ * read it for every record. That is right for a record made on screen — it is made in the family on
+ * screen — and wrong for everything else: a school import (MON-8) runs in the background for the
+ * family its connection names, an event of a family that has **ended** belongs to that family's
+ * history, and a record written before any pairing belongs to no family yet. Naming the shown
+ * family's co-parent for those is how one family's records reached the other family's adult
+ * (October 2026 isolation audit: an ended family's whole event history was re-uploaded to the next
+ * co-parent on the first sync after a new pairing, with no action by the parent).
  *
- * The family's other parent is used **only while they are one of [livePartners]**. After an
- * unpair the pair's id still names them, and re-admitting an ex-partner is exactly what the
- * write paths' intersecting audience exists to prevent (`EventRepositoryImpl.shareTargets`);
- * such an event falls back to what the paths did before, [selectedPartner].
- *
- * A child's or a pet's record is answered by [recordPartnerFor] instead, which never falls back
- * to the family on screen — see there.
+ * So events, children's and pets' records follow **one** rule, [recordPartnerFor]; [partnerFor] is
+ * the name the event paths call it by. Who reads a record is decided by the record, never by the
+ * screen — except for a record of no family while the parent has exactly one co-parent, where the
+ * family on screen is the only family there is.
  */
 object FamilyAudience {
 
     /**
-     * The co-parent to share an event of [familyId] with, or null when there is none.
+     * The co-parent to share an event of [familyId] with, or null when the event must name none.
+     *
+     * The same answer as [recordPartnerFor], and deliberately so: an event of an ended family names
+     * nobody (it stays this parent's history), and an event of no family names nobody while there
+     * are two or more co-parents (the parent assigns it — "Records without a family"). It used to
+     * fall back to the family on screen in both cases.
      *
      * @param familyId The event's family, or null for an event that belongs to nobody yet.
      * @param myUid The signed-in parent.
      * @param livePartners Every co-parent the signed-in parent is paired with now.
-     * @param selectedPartner The co-parent of the family on screen; the answer for an event with
-     *   no family, or one whose family has ended.
+     * @param selectedPartner The co-parent of the family on screen.
      */
     fun partnerFor(
         familyId: String?,
         myUid: String,
         livePartners: Collection<String>,
         selectedPartner: String?
-    ): String? {
-        val other = familyId?.takeIf { it.isNotBlank() }?.let { otherParent(it, myUid) }
-        return other?.takeIf { it in livePartners } ?: selectedPartner?.takeIf { it.isNotBlank() }
-    }
+    ): String? = recordPartnerFor(familyId, myUid, livePartners, selectedPartner)
 
     /**
      * The co-parent to share a child's or a pet's record of [familyId] with, or null when the

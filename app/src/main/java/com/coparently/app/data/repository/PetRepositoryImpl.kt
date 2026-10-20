@@ -53,7 +53,11 @@ class PetRepositoryImpl @Inject constructor(
     override fun getAllPets(): Flow<List<Pet>> {
         return petDao.getAllPets().map { entities ->
             entities.map { it.toDomain() }
-        }.inFamilyOnScreen(firebaseAuthService, userDao) { it.familyId }
+        }.inFamilyOnScreen(
+            firebaseAuthService,
+            userDao,
+            creatorOf = { it.createdByFirebaseUid }
+        ) { it.familyId }
     }
 
     override suspend fun getPetById(id: String): Pet? {

@@ -456,14 +456,14 @@ class EventRepositoryImplTest {
         repository.updateEvent(event, announce = false)
         repository.deleteEvent(event, announce = false)
 
-        coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any()) }
+        coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any(), any()) }
         // The revisions are still recorded: silence is about the chat, not the record.
         coVerify(exactly = 3) {
             eventVersionRecorder.record(any(), any(), any(), any(), any(), any(), any(), any())
         }
 
         repository.insertEvent(event)
-        coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any()) }
+        coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
     }
 
     @Test
@@ -486,6 +486,39 @@ class EventRepositoryImplTest {
 
         assertEquals(listOf("uidA", "uidC"), uploaded.captured["sharedWith"])
         assertEquals(FamilyKey.of("uidA", "uidC"), uploaded.captured["familyId"])
+    }
+
+    @Test
+    fun `an event's card and audience follow its own family, and an ended family's reach nobody`() = runTest {
+        // Alice shows the family with Bob and is also in the family with Carol; the family with
+        // Dan has ended. The October 2026 audit found both following the family on screen.
+        signIn(uid = "uidA", partnerId = "uidB")
+        coEvery { userDao.getUserById("uidA") } returns UserEntity(
+            id = "uidA",
+            email = "uidA@example.com",
+            name = "uidA",
+            role = "mom",
+            colorCode = "#FF4081",
+            partnerId = "uidB",
+            partnerIdsJson = gson.toJson(listOf("uidB", "uidC"))
+        )
+        val uploads = mutableMapOf<String, Map<String, Any?>>()
+        coEvery { firestoreEventDataSource.insertEvent(any(), any()) } answers {
+            uploads[firstArg<String>()] = secondArg<Map<String, Any?>>()
+            Result.success(Unit)
+        }
+
+        repository.insertEvent(
+            baseDomain().copy(id = "carol-event", createdByFirebaseUid = "uidA", familyId = FamilyKey.of("uidA", "uidC"))
+        )
+        repository.insertEvent(
+            baseDomain().copy(id = "dan-event", createdByFirebaseUid = "uidA", familyId = FamilyKey.of("uidA", "uidD"))
+        )
+
+        assertEquals(listOf("uidA", "uidC"), uploads.getValue("carol-event")["sharedWith"])
+        assertEquals(listOf("uidA"), uploads.getValue("dan-event")["sharedWith"])
+        coVerify { activityAnnouncer.announce(match { it.entityId == "carol-event" }, any(), false, "uidC") }
+        coVerify { activityAnnouncer.announce(match { it.entityId == "dan-event" }, any(), true, null) }
     }
 
     private fun signIn(uid: String, partnerId: String?) {
