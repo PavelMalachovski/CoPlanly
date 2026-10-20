@@ -479,14 +479,21 @@ the privacy policy: check Firestore → Settings in the console before release.
 ## Removed functions: delete them from the live project
 
 A deploy creates and updates functions but never deletes one that `index.js` no longer exports, so
-a removed trigger keeps running in production until somebody deletes it by hand. Two are pending:
+a removed trigger keeps running in production until somebody deletes it by hand. Two may still be
+running, and nothing in this repository can say whether they are — only the live project can:
 
 | function | removed | why |
 | --- | --- | --- |
-| `onEventCreated` | September 2026 | Queued an English `title`/`body` push carrying the author's e-mail address to `users/{author}.partnerId` — the family the author was *showing*, not the event's — on every event create, school imports included. The chat activity card and `SyncService` already announce events in typed pushes. |
-| `onChildInfoUpdated` | September 2026 | The same for every `child_info` update; `SyncService` queues the typed `child_info_updated`. |
+| `onEventCreated` | September 2026 | On every event create (Google imports excepted, school imports included) queued an `event_created` push to `users/{author}.partnerId` carrying the event's id, its **title** and the author's **e-mail address** in an English `title`/`body`. On the server `partnerId` is the author's **first** co-parent — `acceptPairingInvitation` writes it only while it is empty and the rules stop a client moving it — whichever family the event belongs to. So for a parent in two families every event of the second family reaches the first family's co-parent: the phone words `event_created` itself and posts the notice, the payload carries the title and address to the device, and the queue document keeps them for 30 days. The chat activity card and `SyncService` already announce events in typed pushes addressed to the event's own family. |
+| `onChildInfoUpdated` | September 2026 | The same for every `child_info` update, to the same first co-parent; `SyncService` queues the typed `child_info_updated` to the record's own family. |
 
-At the next deploy of functions:
+**The owner checks this himself**, before the next deploy of functions and again after it:
+
+```bash
+firebase functions:list
+```
+
+If either name appears in any region, delete it there:
 
 ```bash
 firebase functions:delete onEventCreated onChildInfoUpdated --region europe-west3 --force
@@ -494,7 +501,8 @@ firebase functions:delete onEventCreated onChildInfoUpdated --region europe-west
 firebase functions:delete onEventCreated onChildInfoUpdated --region us-central1 --force
 ```
 
-`firebase functions:list` afterwards should name neither.
+`firebase functions:list` afterwards should name neither. Until then the disclosure above is live
+for every parent in two families, whatever the client and the rules do.
 
 ## Deploying the September 2026 rules and functions (order matters)
 
@@ -587,10 +595,14 @@ included — and each pet pull added that parent beside the first family's.
 
 For every `child_info` and `pets` document whose `familyId` names a family, it drops from
 `sharedWith` every uid that is neither of the family's two parents (read from the id) nor, on a
-child's record, a guest its `guests` map names — a grant's expiry is not judged here,
-`sweepExpiredGuests` does that — and puts the family's other parent back when missing, **only while
-the family is live** (both profiles name each other), so an unpair's narrowing is never undone. It
-writes `sharedWith` and nothing else: never `updatedAt`, never a tombstone's deletion fields. It
+child's record, a guest one of those two parents granted (`guests[uid].grantedBy`) — a grant's
+expiry is not judged here, `sweepExpiredGuests` does that — and puts the family's other parent back
+when missing, **only while the family is live** (both profiles name each other), so an unpair's
+narrowing is never undone. A grant somebody outside the family gave (an outsider the leak had put
+in the audience could mint one) goes from `guests` too, whether or not its guest is still in
+`sharedWith`, because every parent's save re-admits each active grant the map holds. It writes
+`sharedWith` and those dropped grants and nothing else: never `updatedAt`, never a tombstone's
+deletion fields. It
 skips and counts a record whose family is blank (which of a parent's families it is about is
 exactly what the server cannot say), a malformed family id, and one whose family does not name its
 creator.
@@ -604,8 +616,8 @@ creator.
    again.
 3. Invoke it without `dryRun`. It is idempotent: a dry run afterwards reports `repaired: 0`.
 
-It returns and logs counts only — `{scanned, repaired, removed, readded, dryRun, perCollection,
-skipped: {blankFamily, malformedFamily, creatorOutsideFamily}}` — never a uid, a name or a record
+It returns and logs counts only — `{scanned, repaired, removed, readded, guestsDropped, dryRun,
+perCollection, skipped: {blankFamily, malformedFamily, creatorOutsideFamily}}` — never a uid, a name or a record
 id. Tests: `test/child-pet-audience-repair.test.js` here, `rules/child-pet-family-audience.test.js`
 in `firestore-tests/`; `tools/e2e/coverage.json` exempts it as operator-run.
 
@@ -685,7 +697,9 @@ list is empty and the callable rejects every caller with `permission-denied`.
    arguments (e.g. from `firebase functions:shell`, or any authenticated client SDK call to
    `backfillParentSlots`). It returns a summary — `scanned`/`updated`/`skipped`/`failed`
    counts, with `skipped` broken down by reason — rather than a bare success flag, so the
-   result can be checked afterwards.
+   result can be checked afterwards. A pair either of whom co-parents in another family is
+   skipped as `multiFamily` (October 2026): a slot is still one per person, so moving it would
+   move them in their other family too and put that family's two parents in one slot.
 
 **Do not invoke it before the Task 12b client (the one that reacts to a slot changing outside
 the accept flow) has reached users.** Re-slotting a pair on the server before that client
