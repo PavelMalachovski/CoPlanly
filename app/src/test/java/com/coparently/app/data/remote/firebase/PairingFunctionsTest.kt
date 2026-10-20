@@ -121,7 +121,7 @@ class PairingFunctionsTest {
     @Test
     fun `unpair names the co-parent to the callable, and nobody when told nobody`() = runTest {
         val unpairRef = mockk<HttpsCallableReference>()
-        val payloads = mutableListOf<Any?>()
+        val payloads = mutableListOf<Any>()
         every { functions.getHttpsCallable("unpairCoParent") } returns unpairRef
         every { unpairRef.call(capture(payloads)) } returns
             Tasks.forResult(callableResult(mapOf("unpairedFrom" to "user-c")))
@@ -130,7 +130,7 @@ class PairingFunctionsTest {
         pairingFunctions.unpair()
 
         // `partnerId` is the name `unpairCoParent` reads; an empty payload means "the only one".
-        assertEquals(listOf<Any?>(mapOf("partnerId" to "user-c"), emptyMap<String, Any>()), payloads)
+        assertEquals(listOf<Any>(mapOf("partnerId" to "user-c"), emptyMap<String, Any>()), payloads)
     }
 
     private fun stubPreview(task: Task<HttpsCallableResult>) {
