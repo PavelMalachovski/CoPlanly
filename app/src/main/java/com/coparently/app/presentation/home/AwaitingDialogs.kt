@@ -21,8 +21,11 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
+import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
@@ -49,6 +52,31 @@ data class ProposalAsk(
 )
 
 /**
+ * The co-parent's proposed expense split, as Home's dialog asks about it.
+ *
+ * @property proposal The proposal waiting for this parent's answer.
+ * @property agreed The split agreed now — what the proposal would replace — or null while it is not
+ *   known; the dialog then shows the proposal alone.
+ */
+data class SplitAsk(
+    val proposal: SplitRatioProposal,
+    val agreed: SplitRatio?
+)
+
+/**
+ * The proposals waiting on this parent's answer, each of which Home asks about in a dialog of its
+ * own. One value, so [AwaitingDialogs] keeps one parameter for them as they grow — it grew here by
+ * [split].
+ *
+ * @property proposal The co-parent's pending custody proposal, or null.
+ * @property split The co-parent's proposed expense split, or null.
+ */
+data class HomeAsks(
+    val proposal: ProposalAsk? = null,
+    val split: SplitAsk? = null
+)
+
+/**
  * The answers Home's dialogs can give, grouped so the dialogs take one parameter for them.
  *
  * @property onAcceptSwap Accepts a day-swap offer.
@@ -59,6 +87,9 @@ data class ProposalAsk(
  * @property onSwapSeen Records that this parent opened a day-swap offer: its dialog was shown
  *   (phase 3a, spec §4.5).
  * @property onProposalSeen Records that this parent opened the custody proposal: its dialog was shown.
+ * @property onAcceptSplit Accepts the proposed expense split.
+ * @property onDeclineSplit Declines the proposed expense split.
+ * @property onSplitSeen Records that this parent opened the proposed split: its dialog was shown.
  */
 data class AwaitingActions(
     val onAcceptSwap: (DaySwapGroup) -> Unit,
@@ -67,23 +98,27 @@ data class AwaitingActions(
     val onDeclineProposal: () -> Unit,
     val onOpenChangeRequests: () -> Unit,
     val onSwapSeen: (DaySwapGroup) -> Unit,
-    val onProposalSeen: () -> Unit
+    val onProposalSeen: () -> Unit,
+    val onAcceptSplit: () -> Unit,
+    val onDeclineSplit: () -> Unit,
+    val onSplitSeen: () -> Unit
 )
 
 /**
  * The pop-up ask the owner walkthrough called for (items 4/13): what waits on this parent's
  * answer confronts them on open, instead of hiding behind a row they may never tap.
  *
- * One dialog at a time — a custody proposal first, then day swaps. A swap carries enough context
- * to answer right here (who, which day), so it gets real Accept/Decline buttons; event change
- * requests carry times and notes, so their dialog routes to the inbox that can show them. "Later"
- * (or tapping outside) puts the ask off until it changes ([PutOffAsksViewModel]): it stays in the
- * calendar's banner and the inbox, but Home stops interrupting with it. It used to return on
- * every visit, which the UI tour showed as the same dialog five screens running (R-2).
+ * One dialog at a time ([HomeAskQueue]) — a custody proposal first, then a proposed expense split,
+ * then day swaps. A proposal, a split and a swap carry enough context to answer right here (who,
+ * what, which day), so they get real Accept/Decline buttons; event change requests carry times and
+ * notes, so their dialog routes to the inbox that can show them. "Later" (or tapping outside) puts
+ * the ask off until it changes ([PutOffAsksViewModel]): it stays in the calendar's banner and the
+ * inbox, but Home stops interrupting with it. It used to return on every visit, which the UI tour
+ * showed as the same dialog five screens running (R-2).
  *
  * @param state The dashboard, for the swaps and requests awaiting this parent.
  * @param parentNames Resolves a uid to that parent's name.
- * @param proposal The co-parent's pending custody proposal, or null.
+ * @param asks The co-parent's pending custody proposal and proposed split; either may be absent.
  * @param actions What each answer does.
  * @param putOffAsks Which asks this person put off, and until when.
  */
@@ -91,7 +126,7 @@ data class AwaitingActions(
 internal fun AwaitingDialogs(
     state: HomeUiState.Dashboard,
     parentNames: ParentNames,
-    proposal: ProposalAsk?,
+    asks: HomeAsks,
     actions: AwaitingActions,
     putOffAsks: PutOffAsksViewModel = hiltViewModel()
 ) {
@@ -100,31 +135,29 @@ internal fun AwaitingDialogs(
     val putOff by putOffAsks.putOff.collectAsState()
 
     // Each ask under its revision, so a fresh proposal, an amended offer or a new request opens
-    // again even after the last was put off.
-    val proposalKey = proposal?.let { "proposal_${it.proposal.proposedAt}" }
-    val requestsKey = "requests_${state.awaitingRequestCount}"
-    val waiting = buildSet {
-        proposalKey?.let(::add)
-        state.awaitingSwaps.forEach { add("swap_${it.revision}") }
-        if (state.awaitingRequestCount > 0) add(requestsKey)
-    }
+    // again even after the last was put off. One dialog per *offer*, not per day: a week offered as
+    // one agreement used to raise seven dialogs in a row, each asking the same question.
+    val queue = HomeAskQueue.of(asks, state.awaitingSwaps, state.awaitingRequestCount)
+    val waiting = queue.mapTo(mutableSetOf()) { it.key }
     val dismiss: (String) -> Unit = { key -> putOffAsks.putOff(key, waiting) }
-    // One dialog per *offer*, not per day. A week offered as one agreement used to raise seven
-    // dialogs in a row, each dismissal revealing the next and every one asking the same question.
-    val swapGroup = state.awaitingSwaps.firstOrNull { "swap_${it.revision}" !in putOff }
 
-    when {
-        proposal != null && proposalKey != null && proposalKey !in putOff ->
-            ProposalDialog(proposal, parentNames, onDismiss = { dismiss(proposalKey) }, actions = actions)
+    when (val ask = HomeAskQueue.next(queue, putOff)) {
+        is HomeAsk.Proposal ->
+            ProposalDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
 
-        swapGroup != null ->
-            SwapDialog(swapGroup, parentNames, onDismiss = { dismiss("swap_${swapGroup.revision}") }, actions = actions)
+        is HomeAsk.Split ->
+            SplitDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
 
-        state.awaitingRequestCount > 0 && requestsKey !in putOff ->
+        is HomeAsk.Swap ->
+            SwapDialog(ask.group, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
+
+        is HomeAsk.Requests ->
             RequestsDialog(
-                onDismiss = { dismiss(requestsKey) },
+                onDismiss = { dismiss(ask.key) },
                 onReview = actions.onOpenChangeRequests
             )
+
+        null -> Unit
     }
 }
 
@@ -184,6 +217,65 @@ private fun ProposalDialog(
                     onDismiss()
                     actions.onDeclineProposal()
                 }) { Text(stringResource(R.string.custody_proposal_decline)) }
+            }
+        }
+    )
+}
+
+/**
+ * Who proposed a new expense split and what it would be, each share beside the name of the parent
+ * who pays it, as the Expenses banner words it; then the split agreed now, so "35 / 65" says what it
+ * replaces. The answer is the inbox's and the Expenses banner's: accepting prices the expenses
+ * recorded from then on, and the ones already recorded keep their split.
+ */
+@Composable
+private fun SplitDialog(
+    ask: SplitAsk,
+    parentNames: ParentNames,
+    onDismiss: () -> Unit,
+    actions: AwaitingActions
+) {
+    // Shown is opened (spec §4.5): once per proposal, however often the dialog recomposes.
+    LaunchedEffect(ask.proposal.proposedAtMillis) { actions.onSplitSeen() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.expenses_split_proposal_title)) },
+        text = {
+            // Scrolls: names and money at the largest text can outgrow a small phone, and an amount
+            // is never cut off (design item 15).
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            ) {
+                Text(
+                    stringResource(
+                        R.string.expenses_split_proposal_body_named,
+                        parentNames.labelForUid(ask.proposal.proposedBy),
+                        splitSharesText(ask.proposal.ratio, parentNames)
+                    )
+                )
+                ask.agreed?.let { now ->
+                    Text(
+                        text = stringResource(R.string.split_request_now, splitSharesText(now, parentNames)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onDismiss()
+                actions.onAcceptSplit()
+            }) { Text(stringResource(R.string.change_request_accept)) }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
+                TextButton(onClick = {
+                    onDismiss()
+                    actions.onDeclineSplit()
+                }) { Text(stringResource(R.string.change_request_decline)) }
             }
         }
     )

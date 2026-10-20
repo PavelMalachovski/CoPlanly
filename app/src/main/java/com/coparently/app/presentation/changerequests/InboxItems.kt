@@ -8,6 +8,7 @@ import com.coparently.app.domain.changerequests.TimedRequest
 import com.coparently.app.domain.changerequests.Waiting
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
 
@@ -57,6 +58,21 @@ sealed interface InboxItem {
         val timed: TimedRequest? = null
     ) : InboxItem {
         override val key: String get() = if (mine) "p_mine" else "p_theirs"
+    }
+
+    /**
+     * A proposed expense split, waiting on the other parent's answer.
+     *
+     * @property mine Whether this parent proposed it — then the card offers Withdraw, and nothing
+     *   that answers it.
+     * @property timed Its clock as the inbox saw it, or null when it has none.
+     */
+    data class Split(
+        val proposal: SplitRatioProposal,
+        val mine: Boolean,
+        val timed: TimedRequest? = null
+    ) : InboxItem {
+        override val key: String get() = if (mine) "s_mine" else "s_theirs"
     }
 
     /**
@@ -201,6 +217,10 @@ object InboxItems {
         waiting.proposal?.let {
             val timed = inbox.timedFor(RequestDeadlineId.forProposal(it, scope.familyId))
             add(InboxItem.Proposal(it, mine = it.proposedBy == scope.myUid, timed = timed))
+        }
+        waiting.split?.let {
+            val timed = inbox.timedFor(RequestDeadlineId.forSplit(it, scope.familyId))
+            add(InboxItem.Split(it, mine = it.proposedBy == scope.myUid, timed = timed))
         }
         waiting.events.forEach {
             val timed = inbox.timedFor(RequestDeadlineId.forEvent(it))

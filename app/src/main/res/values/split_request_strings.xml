@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A proposed expense split as a request: its card in the Requests inbox and Home's pop-up.
+     Never the words "Mom" or "Dad": every parent label goes through ParentNames. -->
+<resources>
+    <string name="split_request_title">Expense split</string>
+    <!-- %1$s is the co-parent who proposed it, by name. -->
+    <string name="split_request_body_theirs">%1$s proposes a new split for shared expenses. Expenses already recorded keep their split.</string>
+    <string name="split_request_body_yours">You proposed a new split for shared expenses</string>
+    <!-- %1$s is the split, each share beside a name: "Zuzana pays 50 %, Pavel pays 50 %". -->
+    <string name="split_request_now">Now: %1$s</string>
+    <!-- %1$s is the split, each share beside a name: "Zuzana pays 35 %, Pavel pays 65 %". -->
+    <string name="split_request_proposed">Proposed: %1$s</string>
+</resources>

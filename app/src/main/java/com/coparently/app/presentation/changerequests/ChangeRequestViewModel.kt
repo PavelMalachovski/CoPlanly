@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -16,6 +17,8 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.events.EventAcceptanceTransition
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
@@ -55,13 +58,16 @@ import javax.inject.Inject
 
 private const val TAG = "ChangeRequestViewModel"
 
-/** How long marking the pending proposal seen waits for the inbox to answer before giving up. */
+/**
+ * How long marking the pending proposal seen — or finding the family a split answer goes to — waits
+ * for the inbox to answer before giving up.
+ */
 private const val INBOX_WAIT_MS = 10_000L
 
 /**
  * ViewModel for the requests inbox: the family on screen's requests in three sections
  * ([requests]), the month of each event waiting for an answer ([miniMonths]), and the answers —
- * to change requests, day swaps, pending events and the custody proposal.
+ * to change requests, day swaps, pending events, the custody proposal and a proposed expense split.
  *
  * They live together because the inbox is one screen and one back-stack entry — a parent
  * answering "what is waiting for me" should not have to look in two places. They stay separate
@@ -70,8 +76,10 @@ private const val INBOX_WAIT_MS = 10_000L
  * into the other was rejected.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-// one inbox, two request kinds, the repositories behind each, and the clocks' actions (phase 3a)
-@Suppress("LongParameterList")
+// One inbox, its five request kinds, the repositories behind each and the clocks' actions (phase 3a);
+// each kind brings its own answers, and splitting the inbox's answers across ViewModels would put one
+// screen's decisions in two places.
+@Suppress("LongParameterList", "TooManyFunctions")
 @HiltViewModel
 class ChangeRequestViewModel @Inject constructor(
     private val changeRequestRepository: ChangeRequestRepository,
@@ -82,7 +90,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val parentsSource: ParentsSource,
     private val planReferenceSource: PlanReferenceSource,
     private val requestClockActions: RequestClockActions,
-    private val requestsSource: RequestsSource
+    private val requestsSource: RequestsSource,
+    private val familySettingsRepository: FamilySettingsRepository
 ) : ViewModel() {
 
     /**
@@ -442,6 +451,94 @@ class ChangeRequestViewModel @Inject constructor(
                 Log.w(TAG, "Declining a custody proposal failed", e)
                 _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_decline_failed)
             }
+        }
+    }
+
+    /**
+     * The co-parent's proposed expense split this parent must answer now, or null when there is none.
+     *
+     * The inbox's own "Waiting for your answer" split, like [pendingProposal]: Home's pop-up follows
+     * its clock, so past its deadline nothing asks this parent to answer until a last chance is given.
+     * This parent's own proposal is never here — nobody decides their own.
+     */
+    val pendingSplit: StateFlow<SplitRatioProposal?> = requests.map { state ->
+        (state as? RequestsState.Ready)?.inbox?.waitingOnMe?.split
+    }.distinctUntilChanged().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    /**
+     * The split the family on screen has agreed, from the same document as [pendingSplit] — what a
+     * proposal would replace. Null while the family has no split document or it has not arrived.
+     */
+    val agreedSplit: StateFlow<SplitRatio?> = requests.map { state ->
+        (state as? RequestsState.Ready)?.settings?.ratio
+    }.distinctUntilChanged().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    /** Agrees to the co-parent's proposed split; it prices the expenses recorded from then on. */
+    fun acceptSplit() = answerSplit("Accepting", familySettingsRepository::acceptProposal)
+
+    /** Turns the co-parent's proposed split down; the agreed split stays. */
+    fun declineSplit() = answerSplit("Declining", familySettingsRepository::declineProposal)
+
+    /** Takes this parent's own proposed split back; the agreed split never moved. */
+    fun withdrawSplit() = answerSplit("Withdrawing", familySettingsRepository::withdrawProposal)
+
+    /**
+     * Writes an answer to the split proposal of the family the inbox drew.
+     *
+     * The family is the inbox's, never the switcher's at the moment of the write: an answer goes to
+     * the family whose proposal was on screen when it was tapped (isolation audit, October 2026), and
+     * one drawn for a family no longer on screen is refused ([stillShowsItsFamily]). A failure — the
+     * transition refuses a parent answering their own proposal, or one already answered — is said,
+     * never swallowed.
+     *
+     * @param what How the log names the answer.
+     * @param write The repository call, given the family's id.
+     */
+    private fun answerSplit(what: String, write: suspend (familyId: String) -> Result<Unit>) {
+        viewModelScope.launch {
+            if (!stillShowsItsFamily()) return@launch
+            val result = inboxFamilyId()?.let { write(it) }
+                ?: Result.failure(IllegalStateException("No family's split is on screen"))
+            result.onFailure { e ->
+                Log.w(TAG, "$what an expense split failed", e)
+                _errorMessage.value = UiText.Res(R.string.expenses_split_answer_failed)
+            }
+        }
+    }
+
+    /**
+     * The family the inbox drew — [requests] while something collects it, which is what an answer
+     * tapped on screen means — or, when nothing has drawn it, a fresh look at the inbox: [requests]'
+     * value is not kept up to date while nothing collects it (CLAUDE.md item 17).
+     */
+    private suspend fun inboxFamilyId(): String? =
+        (requests.value as? RequestsState.Ready)?.scope?.familyId
+            ?: withTimeoutOrNull(INBOX_WAIT_MS) {
+                requestsSource.observe().filterIsInstance<RequestsState.Ready>().first()
+            }?.scope?.familyId
+
+    /**
+     * Records that this parent opened the co-parent's proposed split — Home's pop-up shows it. As
+     * [markProposalSeen], from a fresh look at the inbox; it waits for the split itself, because the
+     * family's split document arrives after the inbox's first answer, which is placed without it.
+     */
+    fun markSplitSeen() {
+        viewModelScope.launch {
+            val ready = withTimeoutOrNull(INBOX_WAIT_MS) {
+                requestsSource.observe()
+                    .filterIsInstance<RequestsState.Ready>()
+                    .first { it.inbox.waitingOnMe.split != null }
+            } ?: return@launch
+            val split = ready.inbox.waitingOnMe.split ?: return@launch
+            requestClockActions.markSeen(RequestDeadlineId.forSplit(split, ready.scope.familyId))
         }
     }
 

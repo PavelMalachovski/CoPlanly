@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="split_request_title">Kostenaufteilung</string>
+    <string name="split_request_body_theirs">%1$s schlägt eine neue Aufteilung gemeinsamer Ausgaben vor. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
+    <string name="split_request_body_yours">Du hast eine neue Aufteilung gemeinsamer Ausgaben vorgeschlagen</string>
+    <string name="split_request_now">Aktuell: %1$s</string>
+    <string name="split_request_proposed">Vorgeschlagen: %1$s</string>
+</resources>

@@ -9,6 +9,7 @@ import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.session.AccountDeletionService
 import com.coparently.app.data.session.SignedInAccountSource
+import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.AccountSummary
@@ -311,15 +312,19 @@ class SettingsViewModel @Inject constructor(
      * @param ratio The split chosen.
      * @param shown The family split the screen showed while it was chosen; the change goes to that
      *   family, whichever family is on screen by the time it is written.
+     * @param answerBy The deadline picked for the co-parent's answer, or null when the dialog asked
+     *   for none — it asks only when the change will be a proposal. The repository works it out
+     *   again when it sends, and a split that applies outright ignores it.
      */
-    fun submitRatio(ratio: SplitRatio, shown: FamilySplit) {
+    fun submitRatio(ratio: SplitRatio, shown: FamilySplit, answerBy: AnswerByPick? = null) {
         viewModelScope.launch {
             val outcome = if (shown.familyId == null && !shown.answered) {
                 // Chosen before anything had loaded, so the screen showed no family at all: the
-                // family on screen now is the only one the parent can have meant.
+                // family on screen now is the only one the parent can have meant. Nothing was
+                // shown to propose over either, so no deadline was asked for.
                 familySettingsRepository.submitRatio(ratio)
             } else {
-                familySettingsRepository.submitRatio(ratio, shown.familyId)
+                familySettingsRepository.submitRatio(ratio, shown.familyId, answerBy)
             }
             _ratioSubmission.send(outcome.getOrNull())
         }
