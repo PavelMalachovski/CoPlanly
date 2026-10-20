@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
+import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -41,7 +42,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -91,6 +94,19 @@ sealed interface ReceiptScanState {
     data object Failed : ReceiptScanState
 }
 
+/**
+ * The Expenses tab and the Add Expense form: the family on screen's expenses, totals, split and
+ * proposals.
+ *
+ * **It lives across a family switch** (M-8): the switcher chip sits in the Expenses top bar, so
+ * everything here follows the family on screen rather than reading it once — the download, the
+ * split, and what the totals count ([FamilyViewSource]).
+ *
+ * One constructor dependency per thing the money screen reads. It was already past detekt's
+ * parameter limit (baselined) before the family view joined, and splitting it would scatter one
+ * screen's state across holders that exist only to satisfy the count.
+ */
+@Suppress("LongParameterList") // see the class KDoc
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
@@ -100,7 +116,8 @@ class ExpenseViewModel @Inject constructor(
     private val receiptTextRecognizer: ReceiptTextRecognizer,
     private val familySettingsRepository: FamilySettingsRepository,
     private val parentsSource: ParentsSource,
-    familyMembersSource: FamilyMembersSource
+    familyMembersSource: FamilyMembersSource,
+    private val familyViewSource: FamilyViewSource
 ) : ViewModel() {
 
     /**
@@ -269,7 +286,15 @@ class ExpenseViewModel @Inject constructor(
             // here left unpaired accounts with an empty id and a silently-failing Save.
             userRepository.getCurrentUserId()?.let { uid ->
                 _currentUserId.value = uid
-                expenseRepository.observeRemote()
+                // The download follows the family on screen. It used to start once, for the family
+                // shown when the tab opened, and this ViewModel outlives a switch: the other
+                // family's expenses then reached this phone only on the next sync. `collectLatest`
+                // ends the old family's listener before the new one starts, and
+                // `observeRemote` reads the family from the row this view just re-read.
+                familyViewSource.observe()
+                    .map { it.onScreen }
+                    .distinctUntilChanged()
+                    .collectLatest { expenseRepository.observeRemote() }
             }
         }
     }

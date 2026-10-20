@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.expenses
 
+import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.model.Expense
@@ -158,7 +159,8 @@ class ExpenseViewModelSplitTest {
             every { agreedRatioOrDefault(any()) } returns SplitRatio.EVEN
         },
         parentsSource(paired),
-        testFamilyMembersSource()
+        testFamilyMembersSource(),
+        testFamilyViewSource()
     )
 
     /**

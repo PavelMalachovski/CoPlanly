@@ -1,5 +1,8 @@
 package com.coparently.app.presentation.expenses
 
+import com.coparently.app.data.family.familyRow
+import com.coparently.app.data.family.testFamilyViewSource
+import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.FamilySettings
@@ -24,6 +27,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -52,6 +56,9 @@ class ExpenseViewModelFamilyTest {
 
     /** The co-parent of the family on screen, as the switcher has written it into Zuzana's row. */
     private var onScreen = CAROL
+
+    /** Zuzana's Room row as the family view reads it; a new value is a switch. */
+    private val row = MutableStateFlow<UserEntity?>(familyRow(ZUZANA, onScreen = CAROL, partners = listOf(IGOR, CAROL)))
 
     private val users = mockk<UserRepository>(relaxed = true) {
         coEvery { getCurrentUserId() } returns ZUZANA
@@ -157,6 +164,33 @@ class ExpenseViewModelFamilyTest {
             assertEquals(CAROL_SPLIT, saved.captured.splitBasisPoints, "priced at Carol's agreement, not Igor's")
         }
 
+    @Test
+    fun `the download follows a switch and ends the previous family's listener`() = runTest(dispatcher) {
+        var started = 0
+        var ended = 0
+        coEvery { expenseRepository.observeRemote() } coAnswers {
+            started++
+            try {
+                awaitCancellation()
+            } finally {
+                ended++
+            }
+        }
+        viewModel()
+        advanceUntilIdle()
+        assertEquals(1, started)
+
+        row.value = familyRow(ZUZANA, onScreen = IGOR, partners = listOf(IGOR, CAROL))
+        advanceUntilIdle()
+        assertEquals(2, started, "the family with Igor gets its own listener")
+        assertEquals(1, ended, "the family with Carol's listener ends")
+
+        // A change that leaves the same family on screen does not restart the download.
+        row.value = familyRow(ZUZANA, onScreen = IGOR, partners = listOf(IGOR, CAROL, "uid-dan"))
+        advanceUntilIdle()
+        assertEquals(2, started)
+    }
+
     private fun viewModel() = ExpenseViewModel(
         expenseRepository,
         users,
@@ -167,7 +201,8 @@ class ExpenseViewModelFamilyTest {
         mockk(relaxed = true),
         familySettingsRepository,
         ParentsSource(users, mockk<PairingRepository>(relaxed = true)),
-        testFamilyMembersSource()
+        testFamilyMembersSource(),
+        testFamilyViewSource(ZUZANA, row)
     )
 
     private fun zuzana() = User(
