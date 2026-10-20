@@ -2,6 +2,7 @@ package com.coparently.app.domain.export
 
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.chat.ChatAttachment
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.parentingplan.PlanCitationCodec
@@ -23,6 +24,8 @@ import java.time.format.DateTimeFormatter
  *   because the editing phone did not (`docs/DESIGN-court-record.md` §11).
  * @property writeKey Which save of the event this is (`EventVersionDocument.writeKey`), so a server
  *   revision of a save a phone also recorded is printed once; null when the snapshot has no key.
+ * @property creatorUid Who created the event, as the snapshot names it, or null when it names
+ *   nobody. Decides, with [familyId] `""`, which family a revision of no family belongs to.
  */
 data class EventRevisionInput(
     val versionId: String,
@@ -34,7 +37,8 @@ data class EventRevisionInput(
     val familyId: String,
     val facts: EventFacts,
     val recordedByServer: Boolean = false,
-    val writeKey: String? = null
+    val writeKey: String? = null,
+    val creatorUid: String? = null
 )
 
 /**
@@ -91,10 +95,16 @@ data class RecordSources(
 /**
  * What the export covers, and in whose terms.
  *
- * @property families The family ids whose records belong in this export; `""` (no family) is
- *   always included, because it is what a record written before pairing carries.
+ * @property families The family ids whose records belong in this export. A record of no family
+ *   (`""`, what a record written before pairing carries) belongs too when it was written by the
+ *   exporting parent or by one of these families' parents — see [exporterUid].
  * @property nameForUid A parent's name for a uid, from `ParentLabels` — never a role.
  * @property nameForSlot A parent's name for a custody slot, from `ParentLabels`.
+ * @property exporterUid The parent making the export. With the parents [families] name, the only
+ *   authors whose records of no family belong in it: a co-parent's record of no family is about the
+ *   family with them (`FamilyView.placeOf`), so another family's co-parent's never goes into this
+ *   one's record (October 2026 isolation audit). Null — no author known at all — admits every record
+ *   of no family, as before.
  */
 data class RecordScope(
     val from: LocalDate,
@@ -104,8 +114,23 @@ data class RecordScope(
     val families: Set<String>,
     val parents: List<String>,
     val nameForUid: (String) -> String,
-    val nameForSlot: (String) -> String
-)
+    val nameForSlot: (String) -> String,
+    val exporterUid: String? = null
+) {
+    /** Everybody whose record of no family belongs in this export; empty when nobody is known. */
+    internal val blankFamilyAuthors: Set<String> =
+        families.flatMap { FamilyKey.membersOf(it)?.toList().orEmpty() }.toSet() + setOfNotNull(exporterUid)
+
+    /**
+     * Whether a record of [familyId] written by [author] belongs in this export: one of [families],
+     * or none written by somebody in [blankFamilyAuthors]. A record of no family whose author is
+     * not known is admitted, as everywhere a record carries no author (`FamilyView.placeOf`).
+     */
+    internal fun admits(familyId: String?, author: String?): Boolean {
+        if (!familyId.isNullOrEmpty()) return familyId in families
+        return author.isNullOrBlank() || blankFamilyAuthors.isEmpty() || author in blankFamilyAuthors
+    }
+}
 
 /**
  * Decides what a communication record contains (MON-3).
@@ -124,6 +149,9 @@ data class RecordScope(
  * - **An event saved before revisions were kept is printed as its current state**, labelled as
  *   having no history, rather than dressed up as a "created" revision dated today.
  * - **Private events are never in it** (CLAUDE.md item 3), whatever the source hands over.
+ * - **Only this family's records are in it** ([RecordScope.admits]): one of its families, or no
+ *   family when written by the exporting parent or this family's co-parent — never a record of no
+ *   family another family's co-parent wrote.
  * - **The child's medical profile is never in it** (design §4) — this type has no field for it.
  * - **The parenting plan is in it only when asked for**, whole and as it stands now (see
  *   [RecordPlanBuilder]); a plan that could not be read from the server makes the record incomplete.
@@ -149,9 +177,10 @@ object CommunicationRecordBuilder {
         )
 
     private fun events(sources: RecordSources, scope: RecordScope): List<RecordEvent> {
-        val inFamily = { familyId: String -> familyId.isEmpty() || familyId in scope.families }
         val byEvent = sources.revisions
-            .filter { inFamily(it.familyId) }
+            // A revision of no family is the family's when its event's creator (or, where the
+            // snapshot names none, its editor) is one of the family's parents.
+            .filter { scope.admits(it.familyId, it.creatorUid ?: it.editorUid) }
             // The same revision from the server and from the outbox: the server's copy wins,
             // because it carries the time the server received it.
             .groupBy { it.versionId }
@@ -162,7 +191,7 @@ object CommunicationRecordBuilder {
             .filter { revisions -> revisions.any { it.facts.touches(scope.from, scope.to) } }
             .map { revisions -> historyOf(revisions, scope) }
         val withoutHistory = sources.currentEvents
-            .filter { !it.isPrivate && it.eventId !in byEvent && inFamily(it.familyId) }
+            .filter { !it.isPrivate && it.eventId !in byEvent && scope.admits(it.familyId, it.creatorUid) }
             .filter { it.facts.touches(scope.from, scope.to) }
             .map { current ->
                 RecordEvent(
@@ -246,7 +275,7 @@ object CommunicationRecordBuilder {
     }
 
     private fun expenses(expenses: List<Expense>, scope: RecordScope): List<RecordExpense> = expenses
-        .filter { it.familyId.isNullOrEmpty() || it.familyId in scope.families }
+        .filter { scope.admits(it.familyId, it.createdByFirebaseUid ?: it.paidBy) }
         .filter { !it.date.isBefore(scope.from) && !it.date.isAfter(scope.to) }
         .sortedWith(compareBy<Expense> { it.date }.thenBy { it.id })
         .map {

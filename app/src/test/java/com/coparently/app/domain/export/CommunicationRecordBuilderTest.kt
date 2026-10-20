@@ -3,6 +3,7 @@ package com.coparently.app.domain.export
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.export.RecordFixtures.ALICE
 import com.coparently.app.domain.export.RecordFixtures.BOB
+import com.coparently.app.domain.export.RecordFixtures.CAROL
 import com.coparently.app.domain.export.RecordFixtures.MARCH_10_0900
 import com.coparently.app.domain.export.RecordFixtures.expense
 import com.coparently.app.domain.export.RecordFixtures.facts
@@ -196,6 +197,39 @@ class CommunicationRecordBuilderTest {
         )
 
         assertEquals(setOf("e1", "e2"), record.events.map { it.eventId }.toSet())
+    }
+
+    @Test
+    fun `a record of no family goes in only when this family's parents wrote it`() {
+        // Alice co-parents with Bob (exported) and with Carol. A co-parent's record of no family is
+        // about the family with them (`FamilyView.placeOf`), so Carol's never goes into the record
+        // of the family with Bob — it used to, labelled "unknown" (isolation audit, October 2026).
+        val record = CommunicationRecordBuilder.build(
+            sources(
+                revisions = listOf(
+                    revision("bobs", eventId = "e1", familyId = "", editor = BOB).copy(creatorUid = BOB),
+                    revision("carols", eventId = "e2", familyId = "", editor = CAROL).copy(creatorUid = CAROL),
+                    // Alice edited Carol's event: the creator decides whose family it is about.
+                    revision("edited", eventId = "e3", familyId = "", editor = ALICE).copy(creatorUid = CAROL),
+                    revision("old", eventId = "e4", familyId = "", editor = ALICE)
+                ),
+                currentEvents = listOf(
+                    CurrentEventInput("carols-old", "", isPrivate = false, creatorUid = CAROL, facts = facts()),
+                    CurrentEventInput("mine-old", "", isPrivate = false, creatorUid = ALICE, facts = facts())
+                ),
+                expenses = listOf(
+                    expense("x1", LocalDate.of(2026, 3, 5), familyId = null),
+                    expense("x2", LocalDate.of(2026, 3, 5), familyId = null)
+                        .copy(createdByFirebaseUid = CAROL, paidBy = CAROL),
+                    expense("x3", LocalDate.of(2026, 3, 5), familyId = null)
+                        .copy(createdByFirebaseUid = null, paidBy = CAROL)
+                )
+            ),
+            scope().copy(exporterUid = ALICE)
+        )
+
+        assertEquals(setOf("e1", "e4", "mine-old"), record.events.map { it.eventId }.toSet())
+        assertEquals(listOf("x1"), record.expenses.map { it.expenseId })
     }
 
     @Test
