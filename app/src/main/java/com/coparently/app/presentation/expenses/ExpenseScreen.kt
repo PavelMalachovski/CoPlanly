@@ -447,6 +447,9 @@ fun ExpenseScreen(
                                     },
                                     header = header,
                                     state = listState,
+                                    // "Only me" and "From an earlier family" marks: listed here,
+                                    // counted in none of this month's figures.
+                                    places = shownMonth.places,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
