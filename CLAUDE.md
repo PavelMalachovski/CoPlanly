@@ -2192,9 +2192,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       record, a guest its `guests` map names, and puts the family's other parent back only while
       the family is live (both profiles name each other) — an unpair's narrowing is never undone.
       It writes `sharedWith`, and `guests` where a grant was given by anyone outside the family
-      (counted as `guestsDropped`), skips a blank family, and logs counts only. Run it
-      with `{dryRun: true}` first — the counts are the leak's scope for the breach assessment
-      (`docs/legal/DPIA.md` R20) — and for real once the rules above are deployed.
+      (counted as `guestsDropped`), skips a blank family, and logs counts only. **It has not been
+      run on the live project, by the owner's decision of 20 October 2026** (`docs/legal/DPIA.md`
+      R20): what the leak already wrote stays until its own parent saves the record again. Don't
+      run it, or describe it as pending, without a new decision.
 
 39. **A pairing transition is a change of the co-parent set** (October 2026, tester report #4).
     `PairingRepositoryImpl.onPairingStateObserved` keys its applied marker (`AppliedPairing`) on the
@@ -2624,8 +2625,13 @@ below hold what it fixed in place.
    `hadAnotherCoParent` reads) and deletes the departing uid's key from `answers`, `agreedTo`,
    `catalogueVersions` and `updatedAt` there — the former co-parent's half stays. Invitations the
    departing parent *accepted* keep `acceptedBy` (the sender's evidence of an earlier
-   relationship; don't delete them) and lose `toEmail`; a departing guest leaves a child record's
-   `guests` map as well as its `sharedWith`.
+   relationship; don't delete them) and lose `toEmail`. Co-parent invitations the departing
+   parent *sent* and somebody accepted stay too, as the history of that family and the accepter's
+   evidence (`keepAcceptedCoParentInvitations`; audit F8, owner decision, October 2026), with
+   `fromUserName`, `fromUserEmail` and `toEmail` blanked; every other invitation they sent is
+   deleted. Without them the server's backfill stamped the remaining parent's records from that
+   family into their next one. A departing guest leaves a child record's `guests` map as well as
+   its `sharedWith`.
 10. **Google Calendar is read, never written, and what is read stays on the phone** (October 2026,
     ahead of Google's verification of the OAuth consent screen). `GoogleCalendarAccess.SCOPE` is
     `calendar.events.owned.readonly`: the events of calendars the parent owns, which the primary

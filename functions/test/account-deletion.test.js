@@ -538,6 +538,34 @@ describe('deleteAccountDataImpl', () => {
         assert.strictEqual(await myFunctions.hadAnotherCoParent(db, 'carol', 'dave'), true);
       });
 
+  // Audit F8, owner decision (October 2026): a co-parent invitation the departing parent sent and
+  // somebody accepted is the history of a family, and the evidence `hadAnotherCoParent` reads for
+  // the parent who stays. Without it, Bob's records from his family with Alice were stamped into
+  // his next family by the server's backfill. The departing parent's name and both addresses go;
+  // a code nobody redeemed, and a guest's, friend's or professional's invitation, go whole.
+  it('keeps the co-parent invitations the parent sent and somebody accepted, without names',
+      async () => {
+        const seed = family();
+        seed.invitations.push(
+            {id: 'inv-bob', fromUserId: ALICE, acceptedBy: BOB, status: 'accepted', code: 'ABC123',
+              fromUserName: 'Alice', fromUserEmail: 'alice@example.com', toEmail: 'bob@example.com'},
+            {id: 'inv-guest', fromUserId: ALICE, acceptedBy: 'nina', status: 'accepted',
+              kind: 'guest', fromUserName: 'Alice'},
+            {id: 'inv-dead', fromUserId: ALICE, status: 'cancelled', fromUserName: 'Alice'});
+        const db = fakeDb(seed);
+
+        const result = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+        assert.deepStrictEqual(db._store.invitations.map((i) => i.id), ['inv-bob']);
+        assert.deepStrictEqual(db._store.invitations[0], {
+          id: 'inv-bob', fromUserId: ALICE, acceptedBy: BOB, status: 'accepted', code: 'ABC123',
+          fromUserName: '', fromUserEmail: '', toEmail: '',
+        });
+        assert.strictEqual(result.invitations, 3);
+        assert.strictEqual(result.invitations_kept, 1);
+        assert.strictEqual(await myFunctions.hadAnotherCoParent(db, BOB, 'carol'), true);
+      });
+
   it('removes the departing guest from a child record\'s guests as well as its audience',
       async () => {
         const seed = family();

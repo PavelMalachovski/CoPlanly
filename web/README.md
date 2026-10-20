@@ -125,7 +125,10 @@ file layout to the app without adding it there leaves data behind that the page 
 One collection is **scrubbed rather than deleted**, and all three documents say so:
 `export_receipts` (MON-16) keeps the hash of an export already handed to a court, with the
 departing account and its family taken out, so erasing one parent does not un-verify the other's
-evidence.
+evidence. And one kind of `invitations` stays: a co-parent invitation the departing parent sent and
+somebody accepted, with the sender's name and both addresses blanked — the co-parent's record that
+the two were a family, and the evidence that keeps their records out of a later family (audit F8,
+October 2026).
 
 ## `verify/index.html` — checking an exported record (MON-16)
 
