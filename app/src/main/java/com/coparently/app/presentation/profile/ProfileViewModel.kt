@@ -3,16 +3,20 @@ package com.coparently.app.presentation.profile
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.domain.model.PairingState
+import com.coparently.app.data.chat.ChatPartner
+import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.observeSignedInUser
+import com.coparently.app.presentation.common.projectedCoParentUid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -66,7 +70,7 @@ data class ProfileUiState(
  *   never resolve on its own: the name-less identity path in `ensureProfile` creates no local
  *   row at all.
  * - **[coParent]** comes from [UserRepository.getRemoteUserProfile], a direct
- *   `users/{uid}` read, once per co-parent uid reported by [PairingRepository.observePairingState] —
+ *   `users/{uid}` read, once per co-parent of the family on screen ([observeCoParent]) —
  *   never from [UserRepository.getAllUsers], which only ever holds a row for the signed-in
  *   user and, on a device where more than one account has signed in over time, may hold rows
  *   for accounts paired with nobody. Not extended onto
@@ -138,18 +142,30 @@ class ProfileViewModel @Inject constructor(
     }
 
     /**
-     * Loads the co-parent's remote profile whenever the pairing state reports a (possibly new)
-     * co-parent uid, and clears it on unpair. One-shot per uid change, not a live listener: it
-     * reads the whole profile through [UserRepository.getRemoteUserProfile], more than the live
-     * partner summary [PairingRepository] has carried since October 2026, so a change the
-     * co-parent makes reaches this card when the screen is next opened.
+     * Loads the profile of the co-parent of the family on screen whenever that changes — a pairing,
+     * an unpair, or a switch to another family — and clears it on unpair. One-shot per uid change,
+     * not a live listener: it reads the whole profile through [UserRepository.getRemoteUserProfile],
+     * more than the live partner summary [PairingRepository] has carried since October 2026, so a
+     * change the co-parent makes reaches this card when the screen is next opened.
+     *
+     * **Which co-parent is [ChatPartnerSource.resolve]'s rule** (design refresh item 12): the
+     * pairing state says whether there is one, the family switcher's projection on the signed-in
+     * row says which. It used to be the pairing state's partner alone — the server's *first*
+     * co-parent — so a parent showing their second family was shown the first co-parent's name,
+     * date of birth and phone number (isolation audit, October 2026). A switch empties the card
+     * before the next profile arrives, never showing the previous co-parent under the new family.
      */
     private fun observeCoParent() {
         viewModelScope.launch {
-            pairingRepository.observePairingState()
-                .map { state -> (state as? PairingState.Paired)?.partner?.id }
+            combine(
+                pairingRepository.observePairingState(),
+                userRepository.observeSignedInUser().map { it?.projectedCoParentUid() }
+            ) { pairing, projected ->
+                (ChatPartnerSource.resolve(pairing, projected) as? ChatPartner.Linked)?.partnerUid
+            }
                 .distinctUntilChanged()
                 .collectLatest { coParentUid ->
+                    _uiState.update { it.copy(coParent = null) }
                     val coParent = coParentUid?.let { uid ->
                         userRepository.getRemoteUserProfile(uid)
                     }

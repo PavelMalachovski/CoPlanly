@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -855,6 +856,53 @@ class PairingViewModelTest {
         )
     )
 
+    // ---- the co-parent of the family on screen (isolation audit, October 2026) ----------------
+
+    @Test
+    fun `the partner card names the family on screen's co-parent, not the server's first`() =
+        runTest(dispatcher) {
+            coEvery { repository.observePairingState() } returns flowOf(PairingState.Paired(PARTNER))
+            every { userRepository.observeCurrentUserId() } returns flowOf("user-a")
+            every { userRepository.getAllUsers() } returns
+                flowOf(listOf(userWithRole("mom").copy(partnerId = CAROL.id)))
+            every { repository.observeCoParentProfile(CAROL.id) } returns flowOf(CAROL)
+            buildViewModel()
+
+            backgroundScope.launch { viewModel.partnerOnScreen.collect {} }
+            dispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(CAROL, viewModel.partnerOnScreen.value)
+        }
+
+    @Test
+    fun `unpair ends the family on screen, naming its co-parent to the server`() = runTest(dispatcher) {
+        // With two families the callable refuses an unnamed co-parent; the one to name is the
+        // family the screen shows, never the server's first link.
+        coEvery { repository.observePairingState() } returns flowOf(PairingState.Paired(PARTNER))
+        coEvery { userRepository.getCurrentUser() } returns userWithRole("mom").copy(partnerId = CAROL.id)
+        coEvery { repository.unpair(any()) } returns Result.success(Unit)
+        buildViewModel()
+
+        viewModel.unpair()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { repository.unpair(CAROL.id) }
+    }
+
+    @Test
+    fun `one family unpairs from its co-parent even before the row names them`() = runTest(dispatcher) {
+        coEvery { repository.observePairingState() } returns flowOf(PairingState.Paired(PARTNER))
+        coEvery { userRepository.getCurrentUser() } returns userWithRole("mom")
+        coEvery { repository.unpair(any()) } returns Result.success(Unit)
+        buildViewModel()
+
+        viewModel.unpair()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { repository.unpair(PARTNER.id) }
+        assertNull(viewModel.form.value.actionErrorRes)
+    }
+
     private fun userWithRole(role: String) = User(
         id = "user-a",
         email = "alice@example.com",
@@ -875,6 +923,14 @@ class PairingViewModelTest {
             id = "user-b",
             name = "Bob Novak",
             email = "bob@example.com",
+            pairedSinceMillis = null
+        )
+
+        /** Alice's second co-parent, whose family is on screen in the two-family tests. */
+        val CAROL = PartnerSummary(
+            id = "user-c",
+            name = "Carol Dvorak",
+            email = "carol@example.com",
             pairedSinceMillis = null
         )
     }
