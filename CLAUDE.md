@@ -1471,11 +1471,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     not move a child, an expense or a settled month into a different household — and **null is a
     value**, meaning "mine alone", which is what every record written before its owner paired
     honestly is. `FamilyIdBackfill` turns those nulls into a family once there is one to name,
-    locally, once per co-parent — and **only while there is exactly one co-parent** (October
-    2026). With two, nothing on the phone says which family a null row is about, so it stamps
-    nothing and the rows stay "mine alone", the guess the server declines too
-    (`stampOwnBlankFamilyIds`, `ambiguous`); it used to stamp the family on screen, and again after
-    every switch. For the same reason a save leaves an existing unstamped child or pet unstamped
+    locally, on every pass, in two halves (isolation audit, October 2026). **A co-parent's rows**
+    are stamped with the family with that author (`stampFamilyIdOfAuthor`), which is a fact, not a
+    guess. **This parent's own rows** are stamped only while there is exactly one co-parent and no
+    row names an earlier family. With two co-parents, or after a family ended, nothing on the phone
+    says which family a null row is about, so it stamps nothing and the rows stay "mine alone" —
+    until the parent assigns them (item 46). The server declines the same guess
+    (`stampOwnBlankFamilyIds`, `ambiguous`). The backfill used to stamp the family on screen, and
+    again after every switch, which carried an ended family's records into the next one. For the
+    same reason a save leaves an existing unstamped child or pet unstamped
     while there are two co-parents (`familyToStamp` in their repositories); a record created now is
     stamped with the family on screen, because it is created in it. It deliberately does **not**
     clear `syncedToFirestore`, because re-queuing all six tables would put the co-parent's own
@@ -2187,7 +2191,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       and pet's `sharedWith` whoever is neither of the family's two parents nor, on a child's
       record, a guest its `guests` map names, and puts the family's other parent back only while
       the family is live (both profiles name each other) — an unpair's narrowing is never undone.
-      It writes `sharedWith` and nothing else, skips a blank family, and logs counts only. Run it
+      It writes `sharedWith`, and `guests` where a grant was given by anyone outside the family
+      (counted as `guestsDropped`), skips a blank family, and logs counts only. Run it
       with `{dryRun: true}` first — the counts are the leak's scope for the breach assessment
       (`docs/legal/DPIA.md` R20) — and for real once the rules above are deployed.
 
@@ -2380,7 +2385,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `ChildInfoRepositoryImpl.getAllChildInfo` and `PetRepositoryImpl.getAllPets` emit, following
     the signed-in Room row, so a switch re-filters without a reload. It hides **only the records of
     the parent's other live families**: a record naming no family, or an ended one, stays visible
-    (the "mine alone" of item 18), and with one family nothing is hidden. A background job that
+    (the "mine alone" of item 18), and with one family nothing is hidden. Visible is not the same
+    as counted: `FamilyView.placeOf` says where a shown record belongs, and item 46 says what each
+    place means for totals, colours and marks. A co-parent's record that names no family belongs
+    to the family with its author (`creatorOf`). A background job that
     must see every family — health-consent withdrawal, the school import's child picker — reads
     `getAllChildInfoInEveryFamily()`. Room still holds every family; this is a read filter, not
     a second store.
@@ -2417,6 +2425,53 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     is pinned byte for byte to liblzma's encoder** (`PaymentQrTest`); change the document and the
     expected text together, from a reference encoder, never by editing both to agree. And **a real
     bank's app reading the code is device check §3.25**, not something CI proves.
+
+46. **A record belongs to its own family, and to no family by guess** (isolation audit, October
+    2026; owner request: "the families must be isolated one hundred per cent"). Every writer of an
+    audience, a chat card or a push names the other parent of the record's own family, through
+    `FamilyAudience.partnerFor`/`recordPartnerFor`, never the family on screen. The rule has four
+    cases:
+    - **A stamped record of a live family** goes to that family's other parent.
+    - **A stamped record of an ended family** is history. It goes to nobody, not even after an
+      edit, and never moves into the next family (owner decision).
+    - **A co-parent's record with no family** belongs to the family with its author.
+    - **This parent's own record with no family** goes to nobody (`RecordPlace.ONLY_ME`). It
+      stays that way until `FamilyIdBackfill` can stamp it (item 18) or the parent assigns it.
+
+    `FamilyView.placeOf` answers the same question for the screens, as a `RecordPlace`:
+    - `ON_SCREEN` is drawn and counted as usual.
+    - `ONLY_ME` and `EARLIER_FAMILY` are drawn with `RecordPlaceMark` ("Only me", "From an
+      earlier family"). An earlier family's event is drawn in a neutral colour, without a person
+      row. Neither is counted in a live family's totals or balance (`FamilyView.counts`).
+    - `OTHER_FAMILY` is never drawn.
+
+    `MainActivity` provides `LocalFamilyView` from `FamilyViewViewModel`.
+
+    Five things not to undo.
+    - **No fallback to the family on screen** in `partnerFor`, for any record. A guess there is a
+      disclosure, and it is what sent an ended family's events to the new co-parent on every
+      re-upload.
+    - **A change request is addressed to the event's own family's co-parent**
+      (`RequestChangeViewModel.recipientOf`), and refused with `change_request_error_not_in_family`
+      when there is none. The chat's event picker offers events of every family.
+    - **A stamp is never changed once written.** The rules refuse it (`firestore.rules`), so
+      a conflict won locally writes back the server's stamp when this phone still holds the record
+      unstamped, and adopts it (`SyncService.stampedFamily`, `PetRepositoryImpl.adoptServerStamp`).
+      Without that, a phone that missed its backfill would send `""` over the stamp for ever.
+    - **The server holds the same lines**, so an older build that still leaks is refused once the
+      rules are deployed:
+      - an outsider of one family (a co-parent, a friend, a professional, a guest) is refused
+        every record of the other, pinned by `firestore-tests/rules/cross-family-outsiders.test.js`;
+      - unpair narrows only the ended family's records;
+      - a guest or friend grant is honoured only for its own family.
+    - **Two tests sweep for leaks without knowing where one would land.** `FamilyIsolationTest`
+      (e2e) uses three parents: Alice in two families, and the second family with a friend, a
+      professional and a child's guest. It fills each family with a canary word. Then it checks
+      that every document in the emulator carrying a family's canary names only that family, that
+      no table on the other side's phones holds it, that no reader is pushed it, and that each
+      reader of the second family is refused each record of the first.
+      `OnScreenIsolationTest` walks Alice's screens with the second family on screen: each one
+      first draws that family's marker, and none shows the first family's canary.
 
 ## Legal and GDPR (September 2026) — keep consistent
 
