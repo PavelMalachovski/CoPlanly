@@ -77,7 +77,7 @@ class PaymentQrTest {
 
     private fun fromBase32hex(text: String): ByteArray {
         val alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUV"
-        val bits = text.joinToString("") { alphabet.indexOf(it).toString(2).padStart(5, '0') }
+        val bits = text.map { alphabet.indexOf(it).toString(2).padStart(5, '0') }.joinToString("")
         return bits.chunked(8).filter { it.length == 8 }.map { it.toInt(2).toByte() }.toByteArray()
     }
 }
