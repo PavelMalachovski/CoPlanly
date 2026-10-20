@@ -2465,7 +2465,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **Everything else a screen reads or writes follows the family on screen, and a write keeps
     the family it started in.**
     - **Money.** `ExpenseViewModel` restarts the remote expense listener on every switch: it
-      `collectLatest`s `FamilyViewSource`'s family on screen. The Tab's ViewModel outlives a switch,
+      `collectLatest`s `FamilyViewSource`'s family on screen. The tab's ViewModel outlives a switch,
       so before this it went on listening to the first family. `FamilySettingsRepository.
       observeSplit()` gives the split of the family on screen, cached per family. Propose, accept,
       decline and withdraw take the family the screen showed. `addExpense` reads the family and
