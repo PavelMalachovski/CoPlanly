@@ -67,7 +67,8 @@ private const val INBOX_WAIT_MS = 10_000L
 /**
  * ViewModel for the requests inbox: the family on screen's requests in three sections
  * ([requests]), the month of each event waiting for an answer ([miniMonths]), and the answers —
- * to change requests, day swaps, pending events, the custody proposal and a proposed expense split.
+ * to change requests, day swaps, pending events, the custody proposal and a proposed expense split —
+ * and the asker's withdrawal of each.
  *
  * They live together because the inbox is one screen and one back-stack entry — a parent
  * answering "what is waiting for me" should not have to look in two places. They stay separate
@@ -284,6 +285,45 @@ class ChangeRequestViewModel @Inject constructor(
     }
 
     /**
+     * Takes back this parent's own day-swap offer before the co-parent answers it (October 2026):
+     * every day of it still waiting becomes withdrawn, and the co-parent gets one card in their
+     * thread. A day whose earlier offer was agreed stays where that agreement put it.
+     *
+     * Decided against the document each write has just read, as [decideSwapGroup] is: a day the
+     * co-parent answered meanwhile is left as they answered it, and the run goes on to the rest. A
+     * refusal is said, never swallowed.
+     *
+     * @param group The offer being withdrawn.
+     */
+    fun withdrawSwapGroup(group: DaySwapGroup) {
+        viewModelScope.launch {
+            val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
+                ?: userRepository.getCurrentUserId()
+                ?: return@launch
+            if (!group.withdrawableBy(uid)) {
+                _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
+                return@launch
+            }
+            if (!stillShowsItsFamily()) return@launch
+            val now = LocalDateTime.now().toString()
+            custodyModelRepository.applyDayOverridesForDates(
+                dates = group.dates,
+                transform = { current, date ->
+                    if (DayOverrideTransition.mayWithdraw(current, date, uid)) {
+                        DayOverrideTransition.withdraw(current, date, uid, now)
+                    } else {
+                        // Answered meanwhile, or never this parent's: left exactly as it is.
+                        Result.success(current)
+                    }
+                }
+            ).onFailure { e ->
+                Log.w(TAG, "Withdrawing a day swap failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_withdraw_failed)
+            }
+        }
+    }
+
+    /**
      * Asks the co-parent to change days the two of them already agreed to swap (tester feedback,
      * October 2026: "I agreed Lena would be with Igor, then I fell ill — let me suggest a change,
      * and keep the agreement documented").
@@ -455,6 +495,21 @@ class ChangeRequestViewModel @Inject constructor(
     }
 
     /**
+     * Takes this parent's own pending custody proposal back (October 2026); the agreed pattern never
+     * moved. The co-parent gets a card in their thread. Written to the family on screen, so one drawn
+     * for a family no longer on screen is refused ([stillShowsItsFamily]).
+     */
+    fun withdrawProposal() {
+        viewModelScope.launch {
+            if (!stillShowsItsFamily()) return@launch
+            custodyModelRepository.withdrawProposal().onFailure { e ->
+                Log.w(TAG, "Withdrawing a custody proposal failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_withdraw_failed)
+            }
+        }
+    }
+
+    /**
      * The co-parent's proposed expense split this parent must answer now, or null when there is none.
      *
      * The inbox's own "Waiting for your answer" split, like [pendingProposal]: Home's pop-up follows
@@ -550,6 +605,35 @@ class ChangeRequestViewModel @Inject constructor(
      * the answer was no, and an event that silently vanished would read as a bug.
      */
     fun declineEvent(eventId: String) = decideEvent(eventId, accept = false)
+
+    /**
+     * Takes back an event this parent created for the co-parent's days while it still waits for
+     * their answer (October 2026, owner decision): the event is deleted, as the calendar deletes
+     * one, and the co-parent's thread gets the "Event removed" card.
+     *
+     * Re-read first, like [decideEvent]: one the co-parent answered meanwhile is not deleted from
+     * here — it is in both calendars now, or declined, and the calendar is where it is changed.
+     */
+    fun withdrawEvent(eventId: String) {
+        viewModelScope.launch {
+            val fresh = resolveEvent(eventId)
+            if (fresh == null) {
+                _errorMessage.value = UiText.Res(R.string.change_request_error_event_missing)
+                return@launch
+            }
+            val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
+                ?: userRepository.getCurrentUserId()
+                ?: return@launch
+            if (fresh.createdByFirebaseUid != uid || !fresh.acceptance.isPending) {
+                _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
+                return@launch
+            }
+            eventUseCases.deleteEvent(fresh).onFailure { e ->
+                Log.w(TAG, "Withdrawing an event failed", e)
+                _errorMessage.value = UiText.Res(R.string.change_request_error_withdraw_failed)
+            }
+        }
+    }
 
     /**
      * Applies a decision through [EventAcceptanceTransition] and saves it.

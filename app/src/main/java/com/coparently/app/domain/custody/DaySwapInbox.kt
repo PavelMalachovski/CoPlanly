@@ -134,4 +134,8 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
     /** Whether [uid] is the one being asked. True when any day of the offer is waiting on them. */
     fun awaitsAnswerFrom(uid: String): Boolean =
         swaps.any { DaySwapInbox.awaitsAnswerFrom(it, uid) }
+
+    /** Whether [uid] made this offer and may still take it back: any of its days is theirs and unanswered. */
+    fun withdrawableBy(uid: String): Boolean =
+        swaps.any { it.override.isPending && it.override.requestedBy == uid }
 }

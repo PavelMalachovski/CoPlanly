@@ -79,7 +79,11 @@ class ChatCardTargetTest {
         ActivityKind.SPLIT_PROPOSED to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
         ActivityKind.SPLIT_ACCEPTED to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
         ActivityKind.SPLIT_DECLINED to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
-        ActivityKind.SPLIT_WITHDRAWN to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox)
+        ActivityKind.SPLIT_WITHDRAWN to Expectation(ActivityEntityType.SPLIT_PROPOSAL, ChatCardTarget.Inbox),
+        // A withdrawal opens where the request's other cards open: the inbox's History for a swap,
+        // nothing for a custody proposal.
+        ActivityKind.DAY_SWAP_WITHDRAWN to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
+        ActivityKind.CUSTODY_WITHDRAWN to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null)
     )
 
     // ---- the defect -----------------------------------------------------------

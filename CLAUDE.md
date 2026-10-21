@@ -2267,9 +2267,19 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     - **One flat list.** `InboxItems.of` is what the inbox draws *and* what a chat card's highlight
       and the `section` route argument scroll by (`InboxItems.arrival`); an index computed from
       anything else lands a card off, as the pending proposal once made it.
-    - **No new Withdraw for a custody proposal.** A change request can be withdrawn in the UI, as
-      before (spec §6.2), and so can an expense split proposal (its card and the Expenses banner);
-      `CustodyModelRepository.withdrawProposal` has no caller and tells the co-parent nothing.
+    - **Every request is withdrawn by the one who sent it, from its own card** (October 2026, owner
+      request: "we can withdraw a split; let the rest be withdrawn too"). Under *Waiting for
+      {co-parent}* each card carries **Withdraw request**, with no confirmation, as the split's does:
+      a change request (`CANCELLED`, as before, spec §6.2), an expense split proposal (its card and
+      the Expenses banner), a day swap (`DayOverrideStatus.CANCELLED`, item 44), a custody proposal
+      (`CustodyModelRepository.withdrawProposal`) and an event waiting for an answer, which is
+      deleted as the calendar deletes one. The co-parent learns it from a card in their own family's
+      thread — `DAY_SWAP_WITHDRAWN`, `CUSTODY_WITHDRAWN`, `SPLIT_WITHDRAWN`, `EVENT_DELETED` — pushed
+      like any message: a withdrawal has **no push type of its own** (item 15's four places), and
+      none may be added for it without the four. A withdrawn swap is a History row ("withdrew it");
+      a withdrawn custody or split proposal is not, because its document records no decision — its
+      card is the record. A swap or proposal drawn for a family no longer on screen is refused
+      (`stillShowsItsFamily`), as an answer is; an event is deleted from its own family.
     - **The expense split proposal is a request like the custody proposal** (October 2026, owner
       request: "I don't know whether she got it"). It is read from the family's own
       `family_settings/{familyId}` by id (`FamilySettingsRepository.observeSettingsOf`), waits in
@@ -2439,6 +2449,15 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     acceptance in it is an agreement nobody gave. **The string order is a contract with the rule**;
     change both. And **an older build cannot carry the key**: its whole-document writes are refused
     while any day holds one, until it is updated.
+    **An offer can be withdrawn by its author while it waits** (October 2026, item 40): the entry
+    becomes `CANCELLED` (`DayOverrideTransition.withdraw`), credited to the author in `decidedBy`,
+    with its slot, group and `earlier` list as they were, so a withdrawn change leaves the day where it
+    was agreed, and a later offer of the day carries the withdrawal in `earlier` like any answer. The
+    rule's fourth shape (`validDayOverrideAt`) admits exactly that write and only from the author:
+    the co-parent's no is a decline. A withdrawal starts no clock, posts `DAY_SWAP_WITHDRAWN` and no
+    push. **An older build drops an entry in a state it cannot name**, as it drops any unknown status,
+    and then cannot write a swap while the document holds one — the same cost as `earlier`, accepted
+    for the same reason.
 
 45. **Settle up is a card, and the payer's phone draws the payment code** (October 2026, tester
     reports: the settle-up draft could be edited before it was sent; "a QR code for the amount").

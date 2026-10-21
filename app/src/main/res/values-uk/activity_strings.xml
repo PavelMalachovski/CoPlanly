@@ -15,9 +15,11 @@
     <string name="activity_day_swap_offered">Запропоновано обмін днями: %1$s</string>
     <string name="activity_day_swap_accepted">Обмін днями погоджено: %1$s</string>
     <string name="activity_day_swap_declined">Обмін днями відхилено: %1$s</string>
+    <string name="activity_day_swap_withdrawn">Обмін днями відкликано: %1$s</string>
     <string name="activity_custody_proposed">Запропоновано новий графік опіки</string>
     <string name="activity_custody_accepted">Новий графік опіки погоджено</string>
     <string name="activity_custody_declined">Пропозицію щодо опіки відхилено</string>
+    <string name="activity_custody_withdrawn">Пропозицію щодо опіки відкликано</string>
     <string name="activity_request_last_chance">Останній шанс відповісти: %1$s</string>
     <string name="activity_request_unanswered">Немає відповіді: %1$s</string>
     <string name="activity_subject_custody_schedule">графік опіки</string>

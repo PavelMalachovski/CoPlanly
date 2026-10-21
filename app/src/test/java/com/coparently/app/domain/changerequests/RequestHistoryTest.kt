@@ -195,6 +195,27 @@ class RequestHistoryTest {
     }
 
     @Test
+    fun `a swap the offering parent withdrew is a withdrawn row credited to them`() {
+        val withdrawn = swap(DayOverrideStatus.CANCELLED, decidedBy = "u1")
+
+        val entries = history(overrides = mapOf("2026-09-01" to withdrawn, "2026-09-02" to withdrawn))
+
+        assertEquals(
+            listOf(
+                HistoryEntry(
+                    key = "swap_g1",
+                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 1), 2),
+                    outcome = RequestOutcome.WITHDRAWN,
+                    askedBy = "u1",
+                    decidedBy = "u1",
+                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0)
+                )
+            ),
+            entries
+        )
+    }
+
+    @Test
     fun `a swap decided by an older build without decidedAt is dated by requestedAt`() {
         val missing = swap(DayOverrideStatus.DECLINED, decidedAt = null, groupId = null)
         val garbage = swap(DayOverrideStatus.DECLINED, decidedAt = "garbage", groupId = null)

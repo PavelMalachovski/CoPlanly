@@ -151,4 +151,63 @@ class DayOverrideTransitionTest {
 
         assertNull(second.getValue(date).earlier)
     }
+
+    @Test
+    fun `the parent who offered can withdraw a pending offer, keeping its slot, group and earlier answers`() {
+        val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", dad, now, groupId = "g1").getOrThrow()
+        val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, now, accept = true).getOrThrow()
+        val change = DayOverrideTransition
+            .offer(accepted, date, "mom", mom, "2026-08-30T09:00:00", groupId = "g2").getOrThrow()
+
+        val withdrawn = DayOverrideTransition.withdraw(change, date, mom, "2026-08-30T10:00:00")
+            .getOrThrow()
+            .getValue(date)
+
+        assertEquals(DayOverrideStatus.CANCELLED, withdrawn.status)
+        assertEquals(mom, withdrawn.decidedBy)
+        assertEquals("2026-08-30T10:00:00", withdrawn.decidedAt)
+        assertEquals("mom", withdrawn.toParent)
+        assertEquals(mom, withdrawn.requestedBy)
+        assertEquals("g2", withdrawn.groupId)
+        assertEquals(change.getValue(date).earlier, withdrawn.earlier)
+        // A withdrawn change leaves the agreement standing.
+        assertEquals("dad", withdrawn.agreedToParent)
+    }
+
+    @Test
+    fun `a withdrawn first offer gives the day to nobody`() {
+        val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", mom, now).getOrThrow()
+
+        val withdrawn = DayOverrideTransition.withdraw(offered, date, mom, now).getOrThrow().getValue(date)
+
+        assertNull(withdrawn.agreedToParent)
+        assertFalse(withdrawn.isPending)
+    }
+
+    @Test
+    fun `only the parent who offered may withdraw, and only while it waits`() {
+        val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", mom, now).getOrThrow()
+        val accepted = DayOverrideTransition.accept(offered, date, dad, now).getOrThrow()
+
+        assertTrue(DayOverrideTransition.withdraw(offered, date, dad, now).isFailure)
+        assertTrue(DayOverrideTransition.withdraw(accepted, date, mom, now).isFailure)
+        assertTrue(DayOverrideTransition.withdraw(emptyMap(), date, mom, now).isFailure)
+        assertTrue(DayOverrideTransition.mayWithdraw(offered, date, mom))
+        assertFalse(DayOverrideTransition.mayWithdraw(offered, date, dad))
+        assertFalse(DayOverrideTransition.mayWithdraw(accepted, date, mom))
+    }
+
+    @Test
+    fun `offering a withdrawn day again carries the withdrawal in the earlier list`() {
+        val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", mom, now, groupId = "g1").getOrThrow()
+        val withdrawn = DayOverrideTransition.withdraw(offered, date, mom, "2026-08-23T11:00:00").getOrThrow()
+
+        val again = DayOverrideTransition.offer(withdrawn, date, "mom", dad, "2026-08-24T09:00:00").getOrThrow()
+
+        assertEquals(
+            listOf("d1|dad|$mom|$now|CANCELLED|$mom|2026-08-23T11:00:00|g1"),
+            again.getValue(date).earlier
+        )
+        assertNull(again.getValue(date).agreedToParent)
+    }
 }

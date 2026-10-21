@@ -53,6 +53,8 @@ object ActivityFallbackText {
             ActivityKind.SPLIT_ACCEPTED -> "Accepted the expense split"
             ActivityKind.SPLIT_DECLINED -> "Declined the expense split"
             ActivityKind.SPLIT_WITHDRAWN -> "Withdrew the expense split proposal"
+            ActivityKind.DAY_SWAP_WITHDRAWN -> "Day swap withdrawn"
+            ActivityKind.CUSTODY_WITHDRAWN -> "Custody proposal withdrawn"
         }
         return if (announcement.title.isBlank()) prefix else "$prefix: ${announcement.title}"
     }

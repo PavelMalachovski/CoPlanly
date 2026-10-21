@@ -498,7 +498,11 @@ constructor(
             CustodyProposalTransition.decline(current, uid, now, note)
         }
 
-    /** Withdraws this device's own pending proposal. Nothing is decided; the co-parent is told. */
+    /**
+     * Withdraws this device's own pending proposal in the family on screen. Nothing is decided; the
+     * co-parent is told with a card in their thread ([decisionCard]), and the proposal's clock, if it
+     * had one, now times nothing.
+     */
     suspend fun withdrawProposal(): Result<Unit> = decideProposal { current, uid, _, _ ->
         CustodyProposalTransition.withdraw(current, uid)
     }
@@ -590,10 +594,18 @@ constructor(
         )
     }
 
-    /** The card and the push for a decision on [pair]'s proposal, both to the proposer in that family. */
+    /**
+     * The card and the push for a decision on [pair]'s proposal, both to the proposer in that family.
+     * A withdrawal is the card alone: it has no push type of its own, and the card is pushed like any
+     * message.
+     */
     private suspend fun announceDecision(pair: CustodyPair, kind: ActivityKind) {
         announceProposal(pair, kind)
-        notifyPartnerOfProposal(pair, if (kind == ActivityKind.CUSTODY_ACCEPTED) "accepted" else "declined")
+        when (kind) {
+            ActivityKind.CUSTODY_ACCEPTED -> notifyPartnerOfProposal(pair, "accepted")
+            ActivityKind.CUSTODY_DECLINED -> notifyPartnerOfProposal(pair, "declined")
+            else -> Unit
+        }
     }
 
     /**
@@ -1278,8 +1290,8 @@ constructor(
      * that sent the swap may be left, and the swap is on the server either way — a cancelled caller
      * must not cost the co-parent the card and the push, nor the clock their answer is timed by.
      *
-     * @param entry The first day's entry, whose status the whole swap shares: offered, agreed or
-     *   turned down.
+     * @param entry The first day's entry, whose status the whole swap shares: offered, agreed,
+     *   turned down or withdrawn.
      * @param dates The days the swap moved; the card and the push name the first. One picks the
      *   single-day wording on the other phone; more picks the grouped one, which is the whole point of
      *   the group.
@@ -1320,7 +1332,8 @@ constructor(
         answerByMillis: Long?
     ) {
         val partnerUid = pair.participants.firstOrNull { it != pair.myUid } ?: return
-        fcmService.queueNotificationForUser(partnerUid, swapPush(date, status, dayCount).withAnswerBy(answerByMillis))
+        val push = swapPush(date, status, dayCount) ?: return
+        fcmService.queueNotificationForUser(partnerUid, push.withAnswerBy(answerByMillis))
     }
 
     /**
@@ -1523,25 +1536,29 @@ private fun withdrawnIfUnanswered(current: SharedCustody?, proposedAt: String, m
 }
 
 /**
- * The card a proposal write owes the proposer: [ActivityKind.CUSTODY_ACCEPTED] or
- * [ActivityKind.CUSTODY_DECLINED] when [next] records a decision [current] did not hold, and null for
- * a write that decided nothing — a withdrawal, which keeps the last decision as it was. What the
- * transition recorded *is* the announcement, as a swap's status is.
+ * The card a proposal write owes the other parent: [ActivityKind.CUSTODY_ACCEPTED] or
+ * [ActivityKind.CUSTODY_DECLINED] when [next] records a decision [current] did not hold;
+ * [ActivityKind.CUSTODY_WITHDRAWN] when the proposal went with no decision recorded — the proposer
+ * took it back, which keeps the last decision as it was (October 2026); and null for a write that
+ * did neither. What the transition recorded *is* the announcement, as a swap's status is.
  */
-private fun decisionCard(current: SharedCustody, next: SharedCustody): ActivityKind? =
-    next.lastDecision?.takeIf { it != current.lastDecision }?.let { decision ->
-        when (decision.outcome) {
-            CustodyDecisionOutcome.ACCEPTED -> ActivityKind.CUSTODY_ACCEPTED
-            CustodyDecisionOutcome.DECLINED -> ActivityKind.CUSTODY_DECLINED
-        }
+private fun decisionCard(current: SharedCustody, next: SharedCustody): ActivityKind? {
+    val decision = next.lastDecision?.takeIf { it != current.lastDecision }
+    return when {
+        decision?.outcome == CustodyDecisionOutcome.ACCEPTED -> ActivityKind.CUSTODY_ACCEPTED
+        decision?.outcome == CustodyDecisionOutcome.DECLINED -> ActivityKind.CUSTODY_DECLINED
+        current.proposal != null && next.proposal == null -> ActivityKind.CUSTODY_WITHDRAWN
+        else -> null
     }
+}
 
-/** The chat card about a swap of [date]: offered, agreed or turned down, as [status] says. */
+/** The chat card about a swap of [date]: offered, agreed, turned down or withdrawn, as [status] says. */
 private fun swapAnnouncement(date: String, status: DayOverrideStatus) = ActivityAnnouncement(
     kind = when (status) {
         DayOverrideStatus.PENDING -> ActivityKind.DAY_SWAP_OFFERED
         DayOverrideStatus.ACCEPTED -> ActivityKind.DAY_SWAP_ACCEPTED
         DayOverrideStatus.DECLINED -> ActivityKind.DAY_SWAP_DECLINED
+        DayOverrideStatus.CANCELLED -> ActivityKind.DAY_SWAP_WITHDRAWN
     },
     entityType = ActivityEntityType.DAY_SWAP,
     entityId = date,
@@ -1552,12 +1569,15 @@ private fun swapAnnouncement(date: String, status: DayOverrideStatus) = Activity
 /**
  * The push about a swap of [date]: its type and its date, and for a run of [dayCount] days the
  * count — what the receiving device writes its sentence from, in the reader's language (SEC-3).
+ * Null for a withdrawal, which has no push type of its own (adding one takes four places agreeing,
+ * CLAUDE.md item 15): its chat card is pushed like any message.
  */
-private fun swapPush(date: String, status: DayOverrideStatus, dayCount: Int): Map<String, String> {
+private fun swapPush(date: String, status: DayOverrideStatus, dayCount: Int): Map<String, String>? {
     val action = when (status) {
         DayOverrideStatus.PENDING -> "offered"
         DayOverrideStatus.ACCEPTED -> "accepted"
         DayOverrideStatus.DECLINED -> "declined"
+        DayOverrideStatus.CANCELLED -> return null
     }
     // A run of days gets its own type carrying the count, rather than a date the reader
     // would have to expand into a range. The count is a string like every other payload

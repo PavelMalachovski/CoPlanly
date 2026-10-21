@@ -1730,8 +1730,10 @@ requests they had already accepted or declined, and the co-parent's words on an 
 for an answer.
 
 > **[CI]** The rules are unit tests — `RequestHistoryTest`, `RequestInboxTest`, `InboxItemsTest`,
-> `RequestsRowTextTest`, `HomeFeedTest` and `RequestsSourceTest` — and the screens render in the
-> screenshot matrix (`requests_*`). What a phone adds is the two phones answering each other live.
+> `RequestsRowTextTest`, `HomeFeedTest`, `RequestsSourceTest` and `ChangeRequestWithdrawTest` — and
+> the screens render in the screenshot matrix (`requests_*`). A withdrawn swap and a withdrawn custody
+> proposal run between two phones against the real rules in `TwoParentCustodyTest`. What a phone adds
+> is the two phones answering each other live, the cards and the buttons as drawn.
 
 - [ ] Home's **Requests** row, on A, in each state: nothing waiting and no recent answer — "No
       requests yet"; B sends a change request — "1 waiting for your answer", with 1 beside the row;
@@ -1745,8 +1747,23 @@ for an answer.
       answers as "Accepted"/"Declined" rows, one per answer, and its last row opens the History.
 - [ ] B creates an event on A's days with a description: A's card under **Waiting for your answer** shows
       B's words beside B's initial, the time on A's clock, and the month with that day ringed and the
-      custody colours. On B's phone the same card reads "Waiting for A" with no buttons. In B's event
-      form, while the event would wait for A, the description says "A will see this when answering".
+      custody colours. On B's phone the same card reads "Waiting for A" with **Withdraw request** and
+      no answer. In B's event form, while the event would wait for A, the description says "A will see
+      this when answering".
+- [ ] **Every request can be withdrawn by the one who sent it** (October 2026, owner request). On B's
+      phone, under **Waiting for A**, tap **Withdraw request** on each in turn, with no confirmation:
+  - **A day swap** (one day, then a run of days): the card leaves B's waiting list and A's, both
+    Histories show it as withdrawn by B, A's chat shows "Day swap withdrawn: <first day>", and the
+    calendar's swap arrows go from those days on both phones. Offer a change to a day the two already
+    agreed to swap (History → **Propose a change**) and withdraw it: the day stays where it was agreed.
+  - **A custody proposal**: the preview leaves B's calendar, A's Home pop-up and review banner go, A's
+    chat shows "Custody proposal withdrawn", and the pattern in force does not move.
+  - **An event waiting for A**: it leaves both phones' calendars and inboxes, and A's chat shows
+    "Event removed".
+  - With A answering at the same moment, whichever lands first wins and the other phone says "This
+    offer has already been answered." or shows the answer — never both.
+  - An A phone on an older build (if one is at hand): after a withdrawn swap it cannot offer or
+    answer a swap until it is updated (CLAUDE.md item 44).
 - [ ] A parent in two families: the row, the inbox and the History hold only the family on screen;
       switching families switches them.
 - [ ] **A split proposal is a request** (October 2026, owner request). B proposes a new expense split in
@@ -1761,8 +1778,9 @@ for an answer.
       clock), the proposal is withdrawn and both see "No answer".
 - **Fallback (1P):** sign in as B on the same phone to send and answer, then back as A; the states
   arrive on the next open rather than live.
-- **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`; `presentation/changerequests/`,
-  `domain/changerequests/`, `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
+- **If it fails:** tag `ChangeRequestViewModel`, `HomeViewModel`, `CustodyModelRepository`;
+  `presentation/changerequests/`, `domain/changerequests/`, `domain/custody/DayOverrideTransition.kt`,
+  `presentation/home/RequestsRow.kt`, `presentation/home/HomeFeed.kt`.
 
 
 ### 5.9 Deadlines, reminders and the last chance (phase 3a) · 2P, 1P + a second account fallback

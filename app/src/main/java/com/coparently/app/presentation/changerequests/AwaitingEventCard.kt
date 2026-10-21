@@ -43,9 +43,10 @@ private const val CREATOR_WORDS_MAX_LINES = 6
  * An event created for the other parent's days, waiting on their answer (phase 2, spec §5.1).
  *
  * The parent asked sees Accept and Decline; the creator sees the same card under "Waiting for
- * <name>", with no button — there is no withdrawal of an event here (spec §6.2) — so they see what
- * they sent. Both read the creator's own words, when they wrote any, and the event's month with its
- * day ringed, so "Tuesday" means something before the parent answers.
+ * <name>", so they see what they sent, with Withdraw (October 2026, owner decision: it deletes the
+ * event, as the calendar would, and the other parent's thread says "Event removed"). Both read the
+ * creator's own words, when they wrote any, and the event's month with its day ringed, so "Tuesday"
+ * means something before the parent answers.
  *
  * It says plainly that the event is in nobody's calendar yet. Without that line the card reads as a
  * notification about something that already happened, and a parent would reasonably assume the
@@ -54,15 +55,16 @@ private const val CREATOR_WORDS_MAX_LINES = 6
  * @param event The event awaiting a decision.
  * @param miniMonth Its month, or null while it is still being computed.
  * @param parentNames Resolves a uid or a slot to that person's name — never "Mom" or "Dad".
- * @param actions Accept and Decline for the parent asked; null for the creator. The card hides them
- *   while its clock ([LocalCardClock]) says the deadline passed and the next move is the creator's.
+ * @param actions Accept and Decline for the parent asked ([AwaitingEventActions]), hidden while the
+ *   card's clock ([LocalCardClock]) says the deadline passed and the next move is the creator's;
+ *   Withdraw for the creator ([AwaitingEventWithdrawal]); null for a creator's card with no button.
  */
 @Composable
 internal fun AwaitingEventCard(
     event: Event,
     miniMonth: MiniMonthModel?,
     parentNames: ParentNames,
-    actions: AwaitingEventActions?,
+    actions: AwaitingEventButtons?,
     modifier: Modifier = Modifier
 ) {
     Card(modifier = modifier.fillMaxWidth()) {
@@ -85,7 +87,7 @@ internal fun AwaitingEventCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = if (actions != null) {
+                text = if (actions is AwaitingEventActions) {
                     stringResource(
                         R.string.event_acceptance_offered_to_you,
                         parentNames.labelForUid(event.createdByFirebaseUid)
@@ -112,28 +114,41 @@ internal fun AwaitingEventCard(
 }
 
 /**
- * Accept and Decline for the parent asked, or "waiting" for the creator. The parent asked gets
- * neither while the card's clock says the deadline passed and the next move is the creator's: no
- * answer is asked for until a last chance (phase 3a).
+ * Accept and Decline for the parent asked, or "waiting" for the creator, with their Withdraw when
+ * the card has one. The parent asked gets neither answer while the card's clock says the deadline
+ * passed and the next move is the creator's: no answer is asked for until a last chance (phase 3a).
  */
 @Composable
-private fun AnswersOrWaiting(actions: AwaitingEventActions?) {
-    when {
-        actions == null -> Text(
-            text = stringResource(R.string.event_acceptance_waiting),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        LocalCardClock.current?.hidesAnswers == true -> Unit
-        else -> Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-            Button(onClick = actions.onAccept) {
-                Text(stringResource(R.string.event_acceptance_accept))
-            }
-            TextButton(onClick = actions.onDecline) {
-                Text(stringResource(R.string.event_acceptance_decline))
+private fun AnswersOrWaiting(actions: AwaitingEventButtons?) {
+    when (actions) {
+        is AwaitingEventActions -> if (LocalCardClock.current?.hidesAnswers != true) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+                Button(onClick = actions.onAccept) {
+                    Text(stringResource(R.string.event_acceptance_accept))
+                }
+                TextButton(onClick = actions.onDecline) {
+                    Text(stringResource(R.string.event_acceptance_decline))
+                }
             }
         }
+        is AwaitingEventWithdrawal -> {
+            WaitingLine()
+            TextButton(onClick = actions.onWithdraw) {
+                Text(stringResource(R.string.change_request_withdraw))
+            }
+        }
+        null -> WaitingLine()
     }
+}
+
+/** The creator's line: the event waits for the other parent's answer. */
+@Composable
+private fun WaitingLine() {
+    Text(
+        text = stringResource(R.string.event_acceptance_waiting),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 /**

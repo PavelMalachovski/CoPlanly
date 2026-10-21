@@ -44,6 +44,10 @@ import java.util.UUID
  *   answer lands on both phones.
  * - **A run of days is one offer and one answer**: one `day_swap_group_*` push carrying the day
  *   count, not one push per day.
+ * - **An offer and a proposal can be taken back by their author, and only by them** (October
+ *   2026): a withdrawn swap reads CANCELLED on both phones with the agreement it would have changed
+ *   still deciding the day, the co-parent's forged withdrawal is refused, and a withdrawn proposal
+ *   leaves the pattern in force and records no decision.
  * - Every push is the production `notification_queue` document, addressed to the other parent.
  *
  * What it cannot: the delivery of those pushes (FCM has no emulator), the calendar grid and the
@@ -73,6 +77,7 @@ class TwoParentCustodyTest : TwoParentTest() {
 
         acceptOnBobsPhone(agreed, proposed)
         declineASecondProposal(proposed)
+        withdrawAThirdProposal(proposed)
     }
 
     @Test
@@ -107,6 +112,32 @@ class TwoParentCustodyTest : TwoParentTest() {
             awaitOverride(phone, bobDay) { it.status == DayOverrideStatus.DECLINED && it.decidedBy == alice.uid }
             // The earlier agreement is untouched by the later refusal.
             awaitOverride(phone, aliceDay) { it.isAccepted }
+        }
+    }
+
+    @Test
+    fun anOfferIsWithdrawnByItsAuthorAndTheAgreementItWouldChangeStands() = runBlocking<Unit> {
+        val agreed = agreeFirstPattern()
+        val day = START.plusDays(ALICE_OFFER_OFFSET).toString()
+        val swappedTo = otherSlotOn(agreed, day)
+
+        EmulatorEnvironment.step("withdraw: Alice offers a day and Bob accepts it")
+        offerDays(alice, mapOf(day to swappedTo)).getOrThrow()
+        awaitOverride(bob, day) { it.isPending }
+        answerDays(bob, listOf(day), accept = true).getOrThrow()
+        awaitOverride(alice, day) { it.isAccepted }
+
+        EmulatorEnvironment.step("withdraw: Alice asks to change the agreed day, then takes it back")
+        val patternSlot = if (swappedTo == "mom") "dad" else "mom"
+        offerDays(alice, mapOf(day to patternSlot)).getOrThrow()
+        awaitOverride(bob, day) { it.isPending && it.earlierDecisions.isNotEmpty() }
+        refuseWithdrawalByTheCoParent(day)
+        withdrawDays(alice, listOf(day)).getOrThrow()
+        for (phone in listOf(alice, bob)) {
+            val withdrawn = awaitOverride(phone, day) { it.status == DayOverrideStatus.CANCELLED }
+            assertEquals(alice.uid, withdrawn.decidedBy)
+            // The agreement the withdrawn change would have replaced still decides the day.
+            assertEquals(swappedTo, withdrawn.agreedToParent)
         }
     }
 
@@ -214,6 +245,27 @@ class TwoParentCustodyTest : TwoParentTest() {
         }
     }
 
+    /**
+     * A third proposal, taken back by Alice before Bob answers: it leaves Bob's phone, no decision
+     * is recorded, and the pattern in force does not move on either phone (October 2026).
+     */
+    private suspend fun withdrawAThirdProposal(inForce: CustodyModel) {
+        EmulatorEnvironment.step("custody: Alice proposes a third time, then withdraws it")
+        assertEquals(
+            PatternSubmission.PROPOSED,
+            alice.custodyRepository.createTwoTwoThree(START, momStartsFirst = false)
+        )
+        val third = checkNotNull(awaitShared(bob) { it.proposal?.proposedBy == alice.uid }.proposal)
+        // Only the proposer may take it back.
+        assertTrue(bob.custodyRepository.withdrawProposal().isFailure)
+        alice.custodyRepository.withdrawProposal().getOrThrow()
+        for (phone in listOf(alice, bob)) {
+            val shared = awaitShared(phone) { it.proposal == null }
+            assertTrue("a withdrawal decides nothing", shared.lastDecision?.proposalAt != third.proposedAt)
+            assertEquals(inForce.id, phone.custodyRepository.getActiveModelSync()?.id)
+        }
+    }
+
     // ---- swaps ----------------------------------------------------------------------------------
 
     /**
@@ -269,6 +321,54 @@ class TwoParentCustodyTest : TwoParentTest() {
                     Result.success(current)
                 }
             }
+        )
+    }
+
+    /**
+     * Takes back [parent]'s own offer of [dates] the way `ChangeRequestViewModel.withdrawSwapGroup`
+     * does — each day against the live document, a day answered meanwhile left alone.
+     */
+    private suspend fun withdrawDays(parent: EmulatorParent, dates: List<String>): Result<Map<String, DayOverride>> {
+        val now = LocalDateTime.now().toString()
+        return parent.custodyRepository.applyDayOverridesForDates(
+            dates = dates,
+            transform = { current, date ->
+                if (DayOverrideTransition.mayWithdraw(current, date, parent.uid)) {
+                    DayOverrideTransition.withdraw(current, date, parent.uid, now)
+                } else {
+                    Result.success(current)
+                }
+            }
+        )
+    }
+
+    /**
+     * Bob writes a withdrawal of **Alice's** offer straight to the document, past the transition
+     * that would refuse it on the phone — and the rule refuses it on the server: the co-parent's
+     * way to say no is a decline.
+     */
+    private suspend fun refuseWithdrawalByTheCoParent(date: String) {
+        val current = (bob.custodyRepository.readShared() as SharedCustodyRead.Found).custody
+        val offer = current.dayOverrides.getValue(date)
+        val forged: SharedCustody = current.copy(
+            lastModifiedBy = bob.uid,
+            dayOverrides = current.dayOverrides + (
+                date to offer.copy(
+                    status = DayOverrideStatus.CANCELLED,
+                    decidedBy = bob.uid,
+                    decidedAt = LocalDateTime.now().toString()
+                )
+                ),
+            lastSwapDate = date,
+            lastModifiedKind = CustodyWriteKind.SWAP
+        )
+        val refusal = runCatching {
+            FirestoreCustodyDataSource(bob.firestore)
+                .setCustody(CustodyKey.of(alice.uid, bob.uid), listOf(alice.uid, bob.uid), forged)
+        }.exceptionOrNull()
+        assertEquals(
+            FirebaseFirestoreException.Code.PERMISSION_DENIED,
+            (refusal as? FirebaseFirestoreException)?.code
         )
     }
 

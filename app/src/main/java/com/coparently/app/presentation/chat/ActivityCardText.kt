@@ -76,6 +76,8 @@ object ActivityCardText {
         ActivityKind.SPLIT_ACCEPTED -> R.string.activity_split_accepted
         ActivityKind.SPLIT_DECLINED -> R.string.activity_split_declined
         ActivityKind.SPLIT_WITHDRAWN -> R.string.activity_split_withdrawn
+        ActivityKind.DAY_SWAP_WITHDRAWN -> R.string.activity_day_swap_withdrawn
+        ActivityKind.CUSTODY_WITHDRAWN -> R.string.activity_custody_withdrawn
     }
 
     /**

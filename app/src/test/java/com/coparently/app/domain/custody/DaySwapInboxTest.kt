@@ -173,6 +173,22 @@ class DaySwapInboxTest {
     }
 
     @Test
+    fun `only the parent who offered a group may withdraw it, and only while a day waits`() {
+        val waiting = DaySwapInbox.groups(
+            mapOf("2026-09-02" to grouped("g1", requestedBy = mom), "2026-09-03" to grouped("g1", requestedBy = mom)),
+            today
+        ).single()
+        val withdrawn = DaySwapGroup(
+            waiting.swaps.map { it.copy(override = it.override.copy(status = DayOverrideStatus.CANCELLED)) }
+        )
+
+        assertTrue(waiting.withdrawableBy(mom))
+        assertFalse(waiting.withdrawableBy(dad))
+        assertFalse(withdrawn.withdrawableBy(mom))
+        assertFalse(withdrawn.awaitsAnswerFrom(dad))
+    }
+
+    @Test
     fun `a group whose days have already started is bounded by today, like the flat list`() {
         val groups = DaySwapInbox.groups(
             mapOf(
