@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.WorkManager
 import com.coparently.app.R
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
@@ -51,6 +52,7 @@ class CalendarScenarioTest : QaOnScreenTest() {
         val oneOff = "Rodičovská schůzka $id"
         val weekly = "Plavání Lena $id"
         val reminded = "Zubař Lena $id"
+        val wholeDay = "Ředitelské volno $id"
         val aboutLena = "Očkování Lena $id"
 
         report.step("one_off", "Create a one-off event through the form", "\"$oneOff\" is in Day view and on Igor's phone") {
@@ -75,8 +77,15 @@ class CalendarScenarioTest : QaOnScreenTest() {
             val work = WorkManager.getInstance(context).getWorkInfosByTag(REMINDER_TAG).get()
             check(work.isNotEmpty()) { "no reminder work is enqueued" }
         }
-        report.step("all_day", "Create an all-day event", "The form offers an all-day option") {
-            couldNotRun("the event form offers no all-day switch; an all-day event cannot be created on screen")
+        report.step("all_day", "Create an all-day event", "Saved over the whole day, and all day on Igor's phone") {
+            createEvent(wholeDay) { tap(hasContentDescription(string(R.string.event_all_day)) and hasClickAction()) }
+            val saved = mine(wholeDay)
+            val day = saved.startDateTime.toLocalDate()
+            check(saved.startDateTime == day.atStartOfDay() && saved.endDateTime == day.atTime(AllDayEvent.LAST_MINUTE)) {
+                "the saved event runs ${saved.startDateTime}–${saved.endDateTime}, not the whole of $day"
+            }
+            val row = expectOnIgorsPhone(wholeDay)
+            check(AllDayEvent.isAllDay(row)) { "Igor's copy runs ${row.startDateTime}–${row.endDateTime}" }
         }
         report.step("about_lena", "Create an event about Lena, with two children in the family", "The event names Lena and Igor sees that") {
             runBlocking {

@@ -19,10 +19,12 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
 import com.google.gson.Gson
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -44,7 +46,6 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -426,21 +427,50 @@ class EventViewModelTest {
         val form = formInFamilyWith("carol")
         advanceUntilIdle()
 
-        form.saveEventDraft(
-            title = "Dentist",
-            description = "",
-            parentOwner = "dad",
-            eventType = "general",
-            startDate = LocalDate.of(2026, 7, 20),
-            startTime = LocalTime.of(16, 0),
-            endTime = LocalTime.of(17, 0)
-        )
+        form.saveEventDraft(EventDraft("Dentist", "", "dad", "general", "2026-07-20", "16:00", "17:00"))
         // The save writes from the IO dispatcher, outside the test's clock.
         verify(timeout = IO_WRITE_TIMEOUT_MS) { encryptedPreferences.putEventDraft("carol__u1", any()) }
 
         form.clearEventDraft()
         advanceUntilIdle()
         verify { encryptedPreferences.clearEventDraft("carol__u1") }
+    }
+
+    @Test
+    fun `a draft keeps its end date and all-day switch`() = runTest {
+        val form = formInFamilyWith("carol")
+        advanceUntilIdle()
+        val stored = slot<String>()
+        every { encryptedPreferences.putEventDraft("carol__u1", capture(stored)) } just Runs
+
+        val weekend = EventDraft(
+            title = "Weekend at grandma's",
+            description = "",
+            parentOwner = "dad",
+            eventType = "general",
+            startDate = "2026-10-23",
+            startTime = "00:00",
+            endTime = "23:59",
+            endDaySpan = 2,
+            allDay = true
+        )
+        form.saveEventDraft(weekend)
+        verify(timeout = IO_WRITE_TIMEOUT_MS) { encryptedPreferences.putEventDraft("carol__u1", any()) }
+
+        every { encryptedPreferences.getEventDraft("carol__u1") } returns stored.captured
+        assertEquals(weekend, form.loadEventDraft())
+    }
+
+    @Test
+    fun `a draft saved before the end date existed opens as a one-day timed event`() = runTest {
+        every { encryptedPreferences.getEventDraft("carol__u1") } returns
+            """{"title":"Dentist","description":"","parentOwner":"dad","eventType":"general",""" +
+            """"startDate":"2026-07-20","startTime":"16:00","endTime":"17:00"}"""
+
+        val draft = formInFamilyWith("carol").loadEventDraft()
+
+        assertEquals(0, draft?.endDaySpan)
+        assertEquals(false, draft?.allDay)
     }
 
     private companion object {

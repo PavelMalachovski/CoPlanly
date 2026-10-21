@@ -28,12 +28,14 @@
     <string name="event_form_cd_selected_icon">Ausgewählt</string>
     <string name="event_form_cd_event_type">Terminart %1$s, %2$s</string>
     <string name="event_form_date_time">Datum &amp; Uhrzeit</string>
-    <string name="event_form_cd_select_date">Datum wählen, aktuell %1$s</string>
+    <string name="event_form_cd_select_date">Startdatum wählen, aktuell %1$s</string>
+    <string name="event_form_cd_select_end_date">Enddatum wählen, aktuell %1$s</string>
     <string name="event_form_cd_calendar_icon">Kalendersymbol</string>
-    <string name="event_form_date">Datum</string>
+    <string name="event_form_start_date">Startdatum</string>
+    <string name="event_form_end_date">Enddatum</string>
     <string name="event_form_cd_navigate_date_picker">Zur Datumsauswahl</string>
     <string name="event_form_cd_error">Fehler</string>
-    <string name="event_form_end_before_start">Die Endzeit muss nach der Startzeit liegen</string>
+    <string name="event_form_end_before_start">Das Ende muss nach dem Beginn liegen</string>
     <string name="event_form_cd_select_start_time">Startzeit wählen, aktuell %1$s</string>
     <string name="event_form_cd_select_end_time">Endzeit wählen, aktuell %1$s</string>
     <string name="event_form_cd_time_picker_icon">Symbol für Zeitauswahl</string>

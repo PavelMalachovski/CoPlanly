@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.event
 
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
 import org.junit.Test
 import java.time.LocalDate
@@ -7,11 +8,13 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
- * [formEndDateTime] and [endDaySpanOf]: the event form edits one date, and saving the end time
- * on that date used to cut a multi-day event to one day, refuse an overnight one and give an
- * event with no end one.
+ * [formStartDateTime], [formEndDateTime], [endDaySpanOf] and [endDaySpanFor]: what the event form
+ * saves for its start date, end date, times and "All day" switch. Saving the end time on the start
+ * date used to cut a multi-day event to one day, refuse an overnight one and give an event with no
+ * end one, and until October 2026 the form had no way to create an event over several days.
  */
 class EventFormEndTest {
 
@@ -70,5 +73,89 @@ class EventFormEndTest {
             LocalDateTime.of(2026, 7, 20, 3, 0),
             formEndDateTime(LocalDate.of(2026, 7, 20), LocalTime.of(3, 0), 0, keepNoEnd = false)
         )
+    }
+
+    @Test
+    fun `an end date picked after the start spans the days between`() {
+        assertEquals(4, endDaySpanFor(LocalDate.of(2026, 10, 23), LocalDate.of(2026, 10, 27)))
+        assertEquals(0, endDaySpanFor(LocalDate.of(2026, 10, 23), LocalDate.of(2026, 10, 23)))
+    }
+
+    @Test
+    fun `an end date before the start ends before the start, so the form refuses it`() {
+        val span = endDaySpanFor(LocalDate.of(2026, 10, 23), LocalDate.of(2026, 10, 20))
+        assertEquals(-3, span)
+        val start = formStartDateTime(LocalDate.of(2026, 10, 23), LocalTime.of(9, 0), allDay = true)
+        val end = formEndDateTime(
+            LocalDate.of(2026, 10, 23),
+            LocalTime.of(10, 0),
+            span,
+            keepNoEnd = false,
+            allDay = true
+        )
+        assertTrue(checkNotNull(end).isBefore(start))
+    }
+
+    @Test
+    fun `a new event that ends the next morning is saved after its start`() {
+        val start = formStartDateTime(LocalDate.of(2026, 10, 23), LocalTime.of(18, 0), allDay = false)
+        val end = formEndDateTime(LocalDate.of(2026, 10, 23), LocalTime.of(10, 0), 1, keepNoEnd = false)
+        assertEquals(LocalDateTime.of(2026, 10, 23, 18, 0), start)
+        assertEquals(LocalDateTime.of(2026, 10, 24, 10, 0), end)
+    }
+
+    @Test
+    fun `an all-day event runs from the first day's start to the last day's last minute`() {
+        val start = formStartDateTime(LocalDate.of(2026, 10, 23), LocalTime.of(15, 30), allDay = true)
+        val end = formEndDateTime(
+            LocalDate.of(2026, 10, 23),
+            LocalTime.of(16, 30),
+            2,
+            keepNoEnd = false,
+            allDay = true
+        )
+        assertEquals(LocalDateTime.of(2026, 10, 23, 0, 0), start)
+        assertEquals(LocalDateTime.of(2026, 10, 25, 23, 59), end)
+        // Every surface that prints a time reads this shape as all day, over exactly those days.
+        val saved = event(start, end)
+        assertTrue(AllDayEvent.isAllDay(saved))
+        assertEquals(LocalDate.of(2026, 10, 25), AllDayEvent.lastDay(saved))
+    }
+
+    @Test
+    fun `a one-day all-day event ends on its own day`() {
+        val end = formEndDateTime(
+            LocalDate.of(2026, 10, 23),
+            LocalTime.of(9, 0),
+            0,
+            keepNoEnd = false,
+            allDay = true
+        )
+        assertEquals(LocalDateTime.of(2026, 10, 23, 23, 59), end)
+    }
+
+    @Test
+    fun `an all-day event loaded with no end keeps none`() {
+        assertNull(
+            formEndDateTime(LocalDate.of(2026, 10, 23), LocalTime.of(1, 0), 0, keepNoEnd = true, allDay = true)
+        )
+    }
+
+    @Test
+    fun `an all-day event ending at the next midnight opens on its own last day`() {
+        // Older imports closed a whole day at the next midnight; the form's end date is the last
+        // day the event covers, not the midnight after it.
+        val loaded = event(LocalDateTime.of(2026, 10, 23, 0, 0), LocalDateTime.of(2026, 10, 26, 0, 0))
+        assertEquals(2, endDaySpanOf(loaded))
+        val closedAtLastMinute =
+            event(LocalDateTime.of(2026, 10, 23, 0, 0), LocalDateTime.of(2026, 10, 25, 23, 59))
+        assertEquals(2, endDaySpanOf(closedAtLastMinute))
+    }
+
+    @Test
+    fun `a timed event ending at the next midnight keeps that day as its end date`() {
+        val loaded = event(LocalDateTime.of(2026, 10, 23, 22, 0), LocalDateTime.of(2026, 10, 24, 0, 0))
+        assertEquals(1, endDaySpanOf(loaded))
+        assertEquals(loaded.endDateTime, savedEndOf(loaded))
     }
 }

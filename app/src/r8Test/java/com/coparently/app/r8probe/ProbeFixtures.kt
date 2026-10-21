@@ -119,7 +119,9 @@ internal object ProbeFixtures {
         eventType = "APPOINTMENT",
         startDate = "2026-05-12",
         startTime = "14:30",
-        endTime = "15:15"
+        endTime = "15:15",
+        endDaySpan = 2,
+        allDay = true
     )
 
     val conversation = Conversation(

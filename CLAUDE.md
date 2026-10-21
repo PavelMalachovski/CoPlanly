@@ -1192,6 +1192,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 2. **Event editing must preserve fields.** `AddEditEventScreen` keeps a snapshot of the
    loaded event and uses `copy()`. Never rebuild an `Event` from scratch on save —
    that wipes `sharedWith`/`permissions`/`createdByFirebaseUid` (this was a real bug).
+   **The form edits a start date, an end date and an All day switch** (October 2026, owner
+   request). The end date is kept as `endDaySpan`, the days after the start date, so a later start
+   date carries the end along; a day before the start is refused by the form's check, never moved.
+   An all-day event is saved from the start date's midnight to the end date's 23:59
+   (`formStartDateTime`, `formEndDateTime`, `AllDayEvent.LAST_MINUTE`): the shape the Google and
+   school imports write and `AllDayEvent` reads. The schema has no all-day flag and needs none, so
+   an older build reads such an event unchanged; don't add one. The new-event draft carries both
+   (`EventDraft.endDaySpan`, `allDay`, read as 0 and false from an older draft).
 3. **Private events (`isPrivate`)** must never be written to Firestore. Both
    `EventRepositoryImpl` and `SyncService` filter them — keep any new sync path consistent.
 4. **Recurring events** are stored once and expanded to occurrences at query time via

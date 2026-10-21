@@ -96,6 +96,7 @@ import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.files.RecordPhotoCodec
 import com.coparently.app.domain.files.RecordPhotoKind
@@ -291,13 +292,18 @@ fun AddEditEventScreen(
         )
     }
 
-    // The form edits one date, so an edited event keeps the days its end lies after its start
-    // (a weekend away, an overnight stay) and, while the end time is untouched, an end it never
-    // had. Saving `startDate` with the end time used to cut a multi-day event to one day.
+    // The end date is kept as the days it lies after the start date (a weekend away, an overnight
+    // stay), so moving the start date moves the end with it. An edited event keeps its span and,
+    // while its end time and end date are untouched, an end it never had. Saving `startDate` with
+    // the end time used to cut a multi-day event to one day.
     var endDaySpan by rememberSaveable { mutableIntStateOf(0) }
     var keepNoEnd by rememberSaveable { mutableStateOf(false) }
+    // All day saves the start date's midnight and the end date's last minute (`AllDayEvent`); the
+    // times stay in the form, hidden, so turning it off gives them back.
+    var allDay by rememberSaveable { mutableStateOf(false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
@@ -359,9 +365,9 @@ fun AddEditEventScreen(
     }
 
     // Time validation effect
-    LaunchedEffect(startTime, endTime, startDate, endDaySpan, keepNoEnd) {
-        val startDateTime = LocalDateTime.of(startDate, startTime)
-        val endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd)
+    LaunchedEffect(startTime, endTime, startDate, endDaySpan, keepNoEnd, allDay) {
+        val startDateTime = formStartDateTime(startDate, startTime, allDay)
+        val endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay)
 
         if (endDateTime != null && !endDateTime.isAfter(startDateTime)) {
             showTimeValidationError = true
@@ -423,6 +429,7 @@ fun AddEditEventScreen(
                     endTime = it.endDateTime?.toLocalTime() ?: startTime.plusHours(1)
                     endDaySpan = endDaySpanOf(it)
                     keepNoEnd = it.endDateTime == null
+                    allDay = AllDayEvent.isAllDay(it)
                     recurrencePattern = if (it.isRecurring) it.recurrencePattern else null
                     recurrenceEndDate = it.recurrenceEndDate
                     reminderMinutes = it.reminderMinutes
@@ -448,6 +455,8 @@ fun AddEditEventScreen(
                     startDate = LocalDate.parse(it.startDate)
                     startTime = LocalTime.parse(it.startTime)
                     endTime = LocalTime.parse(it.endTime)
+                    endDaySpan = it.endDaySpan.coerceAtLeast(0)
+                    allDay = it.allDay
                     // Only surface the hint when the draft actually carried content the
                     // user would recognise, not for an empty auto-saved shell.
                     if (it.title.isNotBlank() || it.description.isNotBlank()) {
@@ -474,6 +483,9 @@ fun AddEditEventScreen(
                 startDate = initialDate ?: LocalDate.now()
                 startTime = LocalTime.now()
                 endTime = LocalTime.now().plusHours(1)
+                endDaySpan = 0
+                keepNoEnd = false
+                allDay = false
                 recurrencePattern = null
                 recurrenceEndDate = null
                 reminderMinutes = null
@@ -489,7 +501,7 @@ fun AddEditEventScreen(
 
     // Auto-save draft when fields change (debounced)
     // Issue 1.3: Draft saving functionality
-    LaunchedEffect(title, description, parentOwner, eventType, startDate, startTime, endTime) {
+    LaunchedEffect(title, description, parentOwner, eventType, startDate, startTime, endTime, endDaySpan, allDay) {
         // parentOwner can still be null for a beat while ParentsSource resolves the signed-in
         // slot; a draft needs an owner to be worth anything, so skip the save rather than
         // stamp a placeholder.
@@ -497,13 +509,17 @@ fun AddEditEventScreen(
         if (eventId == null && ownerForDraft != null) { // Only save draft for new events
             kotlinx.coroutines.delay(1000) // Debounce 1 second
             viewModel.saveEventDraft(
-                title = title,
-                description = description,
-                parentOwner = ownerForDraft,
-                eventType = eventType,
-                startDate = startDate,
-                startTime = startTime,
-                endTime = endTime
+                EventDraft(
+                    title = title,
+                    description = description,
+                    parentOwner = ownerForDraft,
+                    eventType = eventType,
+                    startDate = startDate.toString(),
+                    startTime = startTime.toString(),
+                    endTime = endTime.toString(),
+                    endDaySpan = endDaySpan,
+                    allDay = allDay
+                )
             )
         }
     }
@@ -518,6 +534,8 @@ fun AddEditEventScreen(
         startDate = startDate,
         startTime = startTime,
         endTime = endTime,
+        endDaySpan = endDaySpan,
+        allDay = allDay,
         recurrencePattern = recurrencePattern,
         recurrenceEndDate = recurrenceEndDate,
         reminderMinutes = reminderMinutes,
@@ -598,8 +616,8 @@ fun AddEditEventScreen(
                     ).copy(
                     title = title,
                     description = description.ifEmpty { null },
-                    startDateTime = LocalDateTime.of(startDate, startTime),
-                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd),
+                    startDateTime = formStartDateTime(startDate, startTime, allDay),
+                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay),
                     eventType = eventType,
                     parentOwner = ownerSlot,
                     isRecurring = recurrencePattern != null,
@@ -1056,60 +1074,51 @@ fun AddEditEventScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // Date Picker Button
-            OutlinedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
-                    .semantics {
-                        role = Role.Button
-                        contentDescription = context.getString(
-                            R.string.event_form_cd_select_date,
-                            startDate.format(localizedDate("yMMMMEEEEd"))
-                        )
-                    },
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    showDatePicker = true
-                }
+            // All day: the times leave the form, and the event covers whole days, from the start
+            // date's midnight to the end date's last minute (`formStartDateTime`, `formEndDateTime`).
+            val allDayLabel = stringResource(R.string.event_all_day)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(dims.paddingMedium),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = stringResource(R.string.event_form_cd_calendar_icon),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.event_form_date),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                // The month in full: Czech abbreviates it to "zář" inside a
-                                // date, where a form field has room for "25. září 2026".
-                                text = startDate.format(localizedDate("yMMMMEEEEd")),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
+                Text(
+                    text = allDayLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = allDay,
+                    // Named for TalkBack, like the Important switch below.
+                    modifier = Modifier.semantics { contentDescription = allDayLabel },
+                    onCheckedChange = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        allDay = it
                     }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = stringResource(R.string.event_form_cd_navigate_date_picker),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                )
             }
+
+            EventDateCard(
+                label = stringResource(R.string.event_form_start_date),
+                date = startDate,
+                description = stringResource(
+                    R.string.event_form_cd_select_date,
+                    startDate.format(localizedDate("yMMMMEEEEd"))
+                ),
+                onClick = { showDatePicker = true }
+            )
+            // The start date until the parent picks another: a weekend away, a holiday at the
+            // grandparents', a night at a friend's. Moving the start date moves it along.
+            val endDate = startDate.plusDays(endDaySpan.toLong())
+            EventDateCard(
+                label = stringResource(R.string.event_form_end_date),
+                date = endDate,
+                description = stringResource(
+                    R.string.event_form_cd_select_end_date,
+                    endDate.format(localizedDate("yMMMMEEEEd"))
+                ),
+                onClick = { showEndDatePicker = true }
+            )
 
             // Time validation error display
             if (showTimeValidationError) {
@@ -1141,92 +1150,94 @@ fun AddEditEventScreen(
                 }
             }
 
-            // Time Pickers
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.M)
-            ) {
-                // Start Time
-                OutlinedCard(
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = context.getString(
-                                R.string.event_form_cd_select_start_time,
-                                startTime.format(shortTime())
-                            )
-                        },
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showStartTimePicker = true
-                    }
+            // Time Pickers, for an event with times: an all-day one has none to pick
+            if (!allDay) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.M)
                 ) {
-                    Column(
+                    // Start Time
+                    OutlinedCard(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(dims.paddingMedium),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = context.getString(
+                                    R.string.event_form_cd_select_start_time,
+                                    startTime.format(shortTime())
+                                )
+                            },
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showStartTimePicker = true
+                        }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(IconSizes.Standard)
-                        )
-                        Spacer(modifier = Modifier.height(dims.paddingSmall))
-                        Text(
-                            text = stringResource(R.string.event_form_start_time),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = startTime.format(shortTime()),
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(dims.paddingMedium),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(IconSizes.Standard)
+                            )
+                            Spacer(modifier = Modifier.height(dims.paddingSmall))
+                            Text(
+                                text = stringResource(R.string.event_form_start_time),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = startTime.format(shortTime()),
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
                     }
-                }
 
-                // End Time
-                OutlinedCard(
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = context.getString(
-                                R.string.event_form_cd_select_end_time,
-                                endTime.format(shortTime())
-                            )
-                        },
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showEndTimePicker = true
-                    }
-                ) {
-                    Column(
+                    // End Time
+                    OutlinedCard(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(dims.paddingMedium),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = context.getString(
+                                    R.string.event_form_cd_select_end_time,
+                                    endTime.format(shortTime())
+                                )
+                            },
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showEndTimePicker = true
+                        }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(IconSizes.Standard)
-                        )
-                        Spacer(modifier = Modifier.height(dims.paddingSmall))
-                        Text(
-                            text = stringResource(R.string.event_form_end_time),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = endTime.format(shortTime()),
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(dims.paddingMedium),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(IconSizes.Standard)
+                            )
+                            Spacer(modifier = Modifier.height(dims.paddingSmall))
+                            Text(
+                                text = stringResource(R.string.event_form_end_time),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = endTime.format(shortTime()),
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
                     }
                 }
             }
@@ -1618,7 +1629,7 @@ fun AddEditEventScreen(
 
             if (waitsForCoParent) {
                 EventDeadline(
-                    start = LocalDateTime.of(startDate, startTime),
+                    start = formStartDateTime(startDate, startTime, allDay),
                     coParentName = parentNames.labelFor(parentOwner),
                     selected = answerBy,
                     onSelect = { answerBy = it }
@@ -1646,6 +1657,20 @@ fun AddEditEventScreen(
             dismissLabel = stringResource(R.string.event_form_cancel),
             onConfirm = { startDate = it },
             onDismiss = { showDatePicker = false }
+        )
+    }
+
+    // End date picker: the span is what is kept, so a later start date carries the end along
+    if (showEndDatePicker) {
+        LocalDatePickerDialog(
+            initialDate = startDate.plusDays(endDaySpan.toLong()),
+            confirmLabel = stringResource(R.string.event_form_ok),
+            dismissLabel = stringResource(R.string.event_form_cancel),
+            onConfirm = {
+                endDaySpan = endDaySpanFor(startDate, it)
+                keepNoEnd = false
+            },
+            onDismiss = { showEndDatePicker = false }
         )
     }
 
@@ -1744,6 +1769,69 @@ fun AddEditEventScreen(
 }
 
 /**
+ * One of the form's two dates, the start and the end: its label, the day with its month in full, and
+ * a tap that opens the date picker. One anatomy for both, so the end date reads as the start's twin.
+ *
+ * @param description What TalkBack reads: the action and the day it would change.
+ */
+@Composable
+private fun EventDateCard(label: String, date: LocalDate, description: String, onClick: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    val dims = dimensions()
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
+            .semantics {
+                role = Role.Button
+                contentDescription = description
+            },
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onClick()
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(dims.paddingMedium),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = stringResource(R.string.event_form_cd_calendar_icon),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        // The month in full: Czech abbreviates it to "zář" inside a
+                        // date, where a form field has room for "25. září 2026".
+                        text = date.format(localizedDate("yMMMMEEEEd")),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.event_form_cd_navigate_date_picker),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
  * When a new event that waits for the co-parent's answer should be answered by (phase 3a, spec
  * §6.1). The event's start is the cap: the moment the request would change the calendar.
  */
@@ -1764,26 +1852,55 @@ private fun EventDeadline(
 }
 
 /**
- * The end the event form saves and validates: [endTime] on the day [endDaySpan] days after
- * [startDate], or none while [keepNoEnd] (an event loaded without an end whose end time the
- * parent has not set). A new event has a span of 0, so an end at or before its start is still
- * refused rather than read as the next day.
+ * The start the event form saves and validates: [startTime] on [startDate], or the start of
+ * [startDate] for an all-day event — the shape [AllDayEvent] reads as all day.
+ */
+internal fun formStartDateTime(startDate: LocalDate, startTime: LocalTime, allDay: Boolean): LocalDateTime =
+    if (allDay) startDate.atStartOfDay() else LocalDateTime.of(startDate, startTime)
+
+/**
+ * The end the event form saves and validates: [endTime] on the end date, [endDaySpan] days after
+ * [startDate], or none while [keepNoEnd] (an event loaded without an end whose end time and end date
+ * the parent has not set). An all-day event ends at the end date's last minute, as the Google and
+ * school imports close a day. A new event has a span of 0, so an end at or before its start is still
+ * refused rather than read as the next day: an overnight event picks the next day as its end date.
  */
 internal fun formEndDateTime(
     startDate: LocalDate,
     endTime: LocalTime,
     endDaySpan: Int,
-    keepNoEnd: Boolean
-): LocalDateTime? =
-    if (keepNoEnd) null else LocalDateTime.of(startDate.plusDays(endDaySpan.toLong()), endTime)
+    keepNoEnd: Boolean,
+    allDay: Boolean = false
+): LocalDateTime? {
+    val endDate = startDate.plusDays(endDaySpan.toLong())
+    return when {
+        keepNoEnd -> null
+        allDay -> endDate.atTime(AllDayEvent.LAST_MINUTE)
+        else -> LocalDateTime.of(endDate, endTime)
+    }
+}
 
-/** How many days [event]'s end lies after its start date; 0 for a same-day event or no end. */
-internal fun endDaySpanOf(event: Event): Int =
-    event.endDateTime
-        ?.let { ChronoUnit.DAYS.between(event.startDateTime.toLocalDate(), it.toLocalDate()) }
-        ?.coerceIn(0L, Int.MAX_VALUE.toLong())
-        ?.toInt()
-        ?: 0
+/**
+ * How many days [event]'s end date lies after its start date; 0 for a same-day event or no end.
+ * An all-day event counts to its last day ([AllDayEvent.lastDay]), so one an older import closed at
+ * the next midnight opens on the day it really ends.
+ */
+internal fun endDaySpanOf(event: Event): Int {
+    val lastDay = if (AllDayEvent.isAllDay(event)) {
+        AllDayEvent.lastDay(event)
+    } else {
+        event.endDateTime?.toLocalDate() ?: return 0
+    }
+    return endDaySpanFor(event.startDateTime.toLocalDate(), lastDay).coerceAtLeast(0)
+}
+
+/**
+ * The span an end date picked in the form gives an event starting on [startDate]: the days
+ * between them. A day before the start gives a negative span on purpose: the end then lies before
+ * the start, and the form says so and keeps Save off rather than quietly moving either date.
+ */
+internal fun endDaySpanFor(startDate: LocalDate, endDate: LocalDate): Int =
+    ChronoUnit.DAYS.between(startDate, endDate).coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
 /**
  * The values the event form edits, compared to tell whether leaving would drop an edit (D-11).
@@ -1797,6 +1914,8 @@ private data class EventFields(
     val startDate: LocalDate,
     val startTime: LocalTime,
     val endTime: LocalTime,
+    val endDaySpan: Int,
+    val allDay: Boolean,
     val recurrencePattern: String?,
     val recurrenceEndDate: LocalDate?,
     val reminderMinutes: Int?,
@@ -1819,6 +1938,8 @@ private data class EventFields(
                 startDate = event.startDateTime.toLocalDate(),
                 startTime = start,
                 endTime = event.endDateTime?.toLocalTime() ?: start.plusHours(1),
+                endDaySpan = endDaySpanOf(event),
+                allDay = AllDayEvent.isAllDay(event),
                 recurrencePattern = if (event.isRecurring) event.recurrencePattern else null,
                 recurrenceEndDate = event.recurrenceEndDate,
                 reminderMinutes = event.reminderMinutes,

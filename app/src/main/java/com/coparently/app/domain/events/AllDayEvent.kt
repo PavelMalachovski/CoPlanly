@@ -10,15 +10,18 @@ import java.time.LocalTime
  * The model has no all-day flag, so this is read from the shape: it starts at midnight and ends
  * at a midnight, at the last minute of a day (23:59 — how the school import's server and some
  * calendars close a whole day), or not at all. A Google import of a birthday or a school holiday
- * arrives as exactly this shape, and every surface that prints a time — Home's week and today
- * cards, the event preview, the "Today" widget — used to print it as "00:00" / "12:00 AM"
- * (D-18, and the UI tour). One definition, so those surfaces cannot disagree about which events
- * are all-day.
+ * arrives as exactly this shape, and so does an all-day event made in the event form (October
+ * 2026). Every surface that prints a time — Home's week and today cards, the event preview, the
+ * "Today" widget, Day view's event block — used to print it as "00:00" / "12:00 AM" (D-18, and the
+ * UI tour). One definition, so those surfaces cannot disagree about which events are all-day.
  */
 object AllDayEvent {
 
-    /** From this time of day an end closes its day, rather than being a timed end. */
-    private val LAST_MINUTE: LocalTime = LocalTime.of(23, 59)
+    /**
+     * From this time of day an end closes its day, rather than being a timed end. The event form
+     * saves an all-day event's end here, as the Google and school imports do.
+     */
+    val LAST_MINUTE: LocalTime = LocalTime.of(23, 59)
 
     /** Whether [event] starts at midnight and ends at a day's end (or has no end). */
     fun isAllDay(event: Event): Boolean {
