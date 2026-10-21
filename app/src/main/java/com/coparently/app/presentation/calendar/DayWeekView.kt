@@ -94,6 +94,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.ParentNames
@@ -1347,10 +1348,15 @@ private fun EventChip(
             // title. It still appears mid-resize in either mode, where the user is actively
             // setting a time and needs the feedback.
             if (showTime && totalMinutes >= 45 || isResizingStart || isResizingEnd) {
+                // An all-day event says so, as every other surface that prints a time does
+                // (`AllDayEvent`), rather than "00:00 - 23:59"; a resize shows what it is setting.
+                val timesBeingSet = isResizingStart || isResizingEnd
                 Text(
-                    text = "${tempStartTime.format(
-                        shortTime()
-                    )} - ${tempEndTime.format(shortTime())}",
+                    text = if (AllDayEvent.isAllDay(event) && !timesBeingSet) {
+                        stringResource(R.string.event_all_day)
+                    } else {
+                        "${tempStartTime.format(shortTime())} - ${tempEndTime.format(shortTime())}"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     softWrap = false,

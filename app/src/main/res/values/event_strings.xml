@@ -37,12 +37,14 @@
     <string name="event_form_cd_selected_icon">Selected</string>
     <string name="event_form_cd_event_type">%1$s event type, %2$s</string>
     <string name="event_form_date_time">Date &amp; time</string>
-    <string name="event_form_cd_select_date">Select date, currently %1$s</string>
+    <string name="event_form_cd_select_date">Select start date, currently %1$s</string>
+    <string name="event_form_cd_select_end_date">Select end date, currently %1$s</string>
     <string name="event_form_cd_calendar_icon">Calendar icon</string>
-    <string name="event_form_date">Date</string>
+    <string name="event_form_start_date">Start date</string>
+    <string name="event_form_end_date">End date</string>
     <string name="event_form_cd_navigate_date_picker">Navigate to date picker</string>
     <string name="event_form_cd_error">Error</string>
-    <string name="event_form_end_before_start">End time must be after start time</string>
+    <string name="event_form_end_before_start">The end must be after the start</string>
     <string name="event_form_cd_select_start_time">Select start time, currently %1$s</string>
     <string name="event_form_cd_select_end_time">Select end time, currently %1$s</string>
     <string name="event_form_cd_time_picker_icon">Time picker icon</string>

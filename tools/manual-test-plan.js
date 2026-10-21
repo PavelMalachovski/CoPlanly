@@ -211,6 +211,12 @@ const RULES = [
       'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/ExpenseSummaryHeader.kt'],
   },
   {
+    sections: ['3.26'],
+    why: 'an event over several days or all day: the form\'s end date and switch, and how they are drawn',
+    paths: ['K/presentation/event/AddEditEventScreen.kt', 'K/presentation/event/EventViewModel.kt',
+      'K/domain/events/AllDayEvent.kt', 'K/presentation/calendar/EventsByDay.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

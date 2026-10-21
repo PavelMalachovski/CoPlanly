@@ -1266,6 +1266,37 @@ bank's app reads them is only provable here.
   `presentation/chat/SettleUpPayment.kt` (the code, the share), `presentation/expenses/SettleUpDialog.kt`
   and `data/payment/` (the IBAN on the profile, the card).
 
+### 3.26 Events over several days, and all-day events · 1P, co-parent check 2P
+
+The event form has an **End date** under the start date and an **All day** switch (October 2026,
+owner request). An all-day event is saved from the start date's midnight to the end date's 23:59,
+the shape the Google and school imports write. What is saved is pinned on the JVM
+(`EventFormEndTest`, `EventViewModelTest` for the draft); what is left is how it reads and how the
+other phone draws it.
+
+- [ ] **Several days, all day.** Calendar → **+**, a title, turn **All day** on: the two time
+      fields leave the form. Tap **End date** and pick the day after tomorrow, then **Save event**.
+      The month grid has the event's dot on all three days, and Day view lists it on each of them
+      as "All day", never "00:00". Tap it: the preview reads the date range and "All day".
+- [ ] **A night away.** **+**, start today at 18:00, end time 10:00: the form says the end must be
+      after the start. Pick tomorrow as the end date: the message goes, and Save stores an event
+      that Day view draws from 18:00 today and on until 10:00 tomorrow.
+- [ ] **The end follows the start.** In a new event with an end date two days after the start,
+      change the start date to next week: the end date moves along and stays two days after it.
+      Pick an end date before the start: the form refuses it until a later one is picked.
+- [ ] **Edit keeps the days.** Open the three-day event, change only its title and save: it still
+      covers the same three days, still all day. Turn **All day** off, set 9:00–17:00 and save: it
+      runs 9:00 on the first day to 17:00 on the last.
+- [ ] **The draft keeps them.** Start a new event, turn **All day** on and pick a later end date,
+      then leave with Back. Tap **+** again: the draft comes back with the switch on and the same
+      end date.
+- [ ] **On the co-parent's phone** (2P). The co-parent syncs: the three-day event is on all three
+      days there too, as "All day". An older build on their side shows it the same way (the
+      schema did not change).
+- **If it fails:** `presentation/event/AddEditEventScreen.kt` (`formStartDateTime`,
+  `formEndDateTime`, `endDaySpanOf`, `EventDateCard`), `domain/events/AllDayEvent.kt`,
+  `presentation/calendar/EventsByDay.kt` and `DayWeekView.kt` (`layoutDayEvents`).
+
 ---
 
 ## 4. Release-build checks

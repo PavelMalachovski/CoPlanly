@@ -28,12 +28,14 @@
     <string name="event_form_cd_selected_icon">Вибрано</string>
     <string name="event_form_cd_event_type">Тип події: %1$s, %2$s</string>
     <string name="event_form_date_time">Дата й час</string>
-    <string name="event_form_cd_select_date">Виберіть дату, зараз %1$s</string>
+    <string name="event_form_cd_select_date">Виберіть дату початку, зараз %1$s</string>
+    <string name="event_form_cd_select_end_date">Виберіть дату завершення, зараз %1$s</string>
     <string name="event_form_cd_calendar_icon">Значок календаря</string>
-    <string name="event_form_date">Дата</string>
+    <string name="event_form_start_date">Дата початку</string>
+    <string name="event_form_end_date">Дата завершення</string>
     <string name="event_form_cd_navigate_date_picker">Перейти до вибору дати</string>
     <string name="event_form_cd_error">Помилка</string>
-    <string name="event_form_end_before_start">Час завершення має бути пізніше часу початку</string>
+    <string name="event_form_end_before_start">Завершення має бути пізніше початку</string>
     <string name="event_form_cd_select_start_time">Виберіть час початку, зараз %1$s</string>
     <string name="event_form_cd_select_end_time">Виберіть час завершення, зараз %1$s</string>
     <string name="event_form_cd_time_picker_icon">Значок вибору часу</string>

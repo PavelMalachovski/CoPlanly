@@ -51,6 +51,10 @@ private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
 /**
  * Data class for event draft.
  * Issue 1.3: Draft saving functionality.
+ *
+ * [endDaySpan] (days from the start date to the end date) and [allDay] came with the form's end
+ * date and "All day" switch (October 2026). A draft saved before them has neither key, and Gson
+ * reads the missing ones as 0 and false: a one-day timed event, which is what it was.
  */
 data class EventDraft(
     val title: String,
@@ -59,7 +63,9 @@ data class EventDraft(
     val eventType: String,
     val startDate: String, // ISO format
     val startTime: String, // ISO format
-    val endTime: String // ISO format
+    val endTime: String, // ISO format
+    val endDaySpan: Int = 0,
+    val allDay: Boolean = false
 )
 
 /**
@@ -501,29 +507,12 @@ class EventViewModel @Inject constructor(
     }
 
     /**
-     * Saves event draft to local storage.
+     * Saves [draft] to local storage, under the family on screen.
      * Issue 1.3: Draft saving functionality.
      */
-    fun saveEventDraft(
-        title: String,
-        description: String,
-        parentOwner: String,
-        eventType: String,
-        startDate: LocalDate,
-        startTime: LocalTime,
-        endTime: LocalTime
-    ) {
+    fun saveEventDraft(draft: EventDraft) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val draft = EventDraft(
-                    title = title,
-                    description = description,
-                    parentOwner = parentOwner,
-                    eventType = eventType,
-                    startDate = startDate.toString(),
-                    startTime = startTime.toString(),
-                    endTime = endTime.toString()
-                )
                 val draftJson = gson.toJson(draft)
                 // EncryptedPreferences seals and writes on the calling thread; keep it off Main.
                 encryptedPreferences.putEventDraft(draftFamily.await(), draftJson)

@@ -294,7 +294,9 @@ internal class R8GsonProbe(private val context: Context) {
             "eventType",
             "startDate",
             "startTime",
-            "endTime"
+            "endTime",
+            "endDaySpan",
+            "allDay"
         )
         private val CALENDAR_EVENT_KEYS = setOf("id", "summary", "start", "end")
     }
