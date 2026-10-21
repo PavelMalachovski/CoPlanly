@@ -38,6 +38,7 @@
     <string name="change_request_error_proposal_accept_failed">Der Vorschlag konnte nicht angenommen werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_proposal_decline_failed">Der Vorschlag konnte nicht abgelehnt werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_answer_failed">Die Antwort konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
+    <string name="change_request_error_withdraw_failed">Die Anfrage konnte nicht zurückgezogen werden. Bitte versuche es erneut.</string>
     <string name="change_request_error_signed_out">Du bist abgemeldet. Melde dich an und versuche es erneut.</string>
     <string name="change_request_error_not_paired">Verknüpfe dich zuerst mit dem anderen Elternteil, um Änderungsanfragen zu senden.</string>
     <string name="change_request_error_not_in_family">Dieser Termin gehört zu keiner Familie, mit der du verbunden bist – es gibt niemanden zu fragen.</string>

@@ -43,6 +43,18 @@ class ActivityCardTextTest {
     }
 
     @Test
+    fun `a withdrawn swap and a withdrawn custody proposal have their own sentences`() {
+        assertEquals(
+            R.string.activity_day_swap_withdrawn,
+            ActivityCardText.resourceFor(ActivityKind.DAY_SWAP_WITHDRAWN)
+        )
+        assertEquals(
+            R.string.activity_custody_withdrawn,
+            ActivityCardText.resourceFor(ActivityKind.CUSTODY_WITHDRAWN)
+        )
+    }
+
+    @Test
     fun `every kind resolves to a real resource`() {
         ActivityKind.entries.forEach { kind ->
             assertEquals(true, ActivityCardText.resourceFor(kind) != 0, "$kind has no string")

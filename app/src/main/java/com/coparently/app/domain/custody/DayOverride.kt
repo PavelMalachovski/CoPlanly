@@ -3,9 +3,9 @@ package com.coparently.app.domain.custody
 /**
  * Where a single day's override stands.
  *
- * Only [ACCEPTED] changes whose day it is. [PENDING] and [DECLINED] are markers — the calendar
- * draws them, but `CustodyResolver` steps straight past them to the agreed pattern. Letting a
- * pending swap move a day would show both parents a day neither of them agreed to.
+ * Only [ACCEPTED] changes whose day it is. [PENDING], [DECLINED] and [CANCELLED] are markers — the
+ * calendar draws a pending one, but `CustodyResolver` steps straight past them to the agreed pattern.
+ * Letting a pending swap move a day would show both parents a day neither of them agreed to.
  */
 enum class DayOverrideStatus {
     /** Offered, and waiting for the other parent's answer. */
@@ -15,7 +15,18 @@ enum class DayOverrideStatus {
     ACCEPTED,
 
     /** Turned down. Kept so the parent who offered learns the outcome. */
-    DECLINED
+    DECLINED,
+
+    /**
+     * Withdrawn by the parent who offered it, before it was answered (October 2026). Moves nothing:
+     * a day whose earlier offer was agreed stays where that agreement put it
+     * ([DayOverride.agreedToParent]). Kept, not deleted, so History says it was taken back and the
+     * agreement it would have replaced stays on the record.
+     *
+     * An older build reads an entry in this state as unknown and drops it, as it drops any status it
+     * cannot name — and then cannot write a swap while the document holds one (CLAUDE.md item 44).
+     */
+    CANCELLED
 }
 
 /**
@@ -40,9 +51,9 @@ enum class DayOverrideStatus {
  * @property requestedAt ISO date-time string, as everywhere else in this Firestore schema — dates
  *   cross the wire as strings, not as Firestore timestamps.
  * @property status Where the offer stands; see [DayOverrideStatus].
- * @property decidedBy Firebase UID of whoever answered, or null while [status] is
- *   [DayOverrideStatus.PENDING].
- * @property decidedAt ISO date-time of that answer, or null while pending.
+ * @property decidedBy Firebase UID of whoever answered — or, for [DayOverrideStatus.CANCELLED], of
+ *   the parent who offered and withdrew it — or null while [status] is [DayOverrideStatus.PENDING].
+ * @property decidedAt ISO date-time of that answer or withdrawal, or null while pending.
  * @property note Optional free text from either side. Blank is stored as null rather than as an
  *   empty string, so the UI has one thing to test for.
  * @property groupId Ties the days of one offer together, or null for a single day an older build

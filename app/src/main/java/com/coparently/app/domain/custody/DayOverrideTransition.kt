@@ -1,8 +1,8 @@
 package com.coparently.app.domain.custody
 
 /**
- * The three things that can happen to a one-off day swap, as pure functions over the whole
- * `date -> `[DayOverride] map.
+ * The four things that can happen to a one-off day swap — offered, accepted, declined, withdrawn —
+ * as pure functions over the whole `date -> `[DayOverride] map.
  *
  * The same shape as [CustodyProposalTransition] at a smaller scale, and matching it is the point:
  * both answer "may this parent do this?" without Firestore, Room or a coroutine, so the rule that
@@ -168,6 +168,49 @@ object DayOverrideTransition {
                 .getOrElse { return Result.failure(it) }
         }
         return Result.success(next)
+    }
+
+    /**
+     * Whether [date] in [current] is an offer [byUid] made and may still take back: their own, and
+     * not answered yet. The predicate a caller writing a group one day at a time applies against the
+     * map the write just read, as [awaitsAnswerFrom] is for an answer.
+     */
+    fun mayWithdraw(current: Map<String, DayOverride>, date: String, byUid: String): Boolean =
+        current[date]?.let { it.isPending && it.requestedBy == byUid } == true
+
+    /**
+     * Takes back this parent's own offer of [date] before the co-parent answers it (October 2026):
+     * the entry becomes [DayOverrideStatus.CANCELLED], with the withdrawal credited to [byUid] and
+     * everything else — the slot, the author, the group and the [DayOverride.earlier] answers — as
+     * it was. A day whose earlier offer was agreed therefore stays where that agreement put it.
+     *
+     * Refuses a day with no entry, the co-parent's offer (the answer to it is a decline; a
+     * withdrawal would credit them with taking back something they still offer), and an offer
+     * already answered: the answer is the record, and a withdrawal over it would rewrite it.
+     */
+    fun withdraw(
+        current: Map<String, DayOverride>,
+        date: String,
+        byUid: String,
+        atIso: String
+    ): Result<Map<String, DayOverride>> {
+        val existing = current[date]
+            ?: return Result.failure(IllegalStateException("No swap is pending for $date"))
+        return when {
+            existing.requestedBy != byUid ->
+                Result.failure(IllegalStateException("Only the parent who offered a swap may withdraw it"))
+            !existing.isPending ->
+                Result.failure(IllegalStateException("The swap for $date has already been decided"))
+            else -> Result.success(
+                current + (
+                    date to existing.copy(
+                        status = DayOverrideStatus.CANCELLED,
+                        decidedBy = byUid,
+                        decidedAt = atIso
+                    )
+                    )
+            )
+        }
     }
 
     /**

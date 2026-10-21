@@ -89,6 +89,18 @@ class ActivityFallbackTextTest {
     }
 
     @Test
+    fun `a withdrawn swap names its day and a withdrawn custody proposal reads plainly`() {
+        assertEquals(
+            "Day swap withdrawn: 2026-11-07",
+            ActivityFallbackText.of(announcement(ActivityKind.DAY_SWAP_WITHDRAWN, "2026-11-07"))
+        )
+        assertEquals(
+            "Custody proposal withdrawn: uA__uB",
+            ActivityFallbackText.of(announcement(ActivityKind.CUSTODY_WITHDRAWN, "uA__uB"))
+        )
+    }
+
+    @Test
     fun `every kind produces something, so no bubble is ever empty`() {
         ActivityKind.entries.forEach { kind ->
             val text = ActivityFallbackText.of(announcement(kind, "Thing"))

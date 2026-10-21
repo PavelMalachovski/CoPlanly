@@ -196,7 +196,21 @@ enum class ActivityKind {
      * The proposer took their expense split proposal back. The payload is [SPLIT_ACCEPTED]'s. Only
      * a withdrawal the parent made: one the clock makes at "No answer" posts [REQUEST_UNANSWERED].
      */
-    SPLIT_WITHDRAWN;
+    SPLIT_WITHDRAWN,
+
+    /**
+     * The parent who offered a day swap took it back before it was answered (October 2026). The
+     * payload is [DAY_SWAP_OFFERED]'s: `DAY_SWAP`, the first ISO date as `entityId` and `title`. A
+     * card in the thread, pushed like any message; it has no push type of its own.
+     */
+    DAY_SWAP_WITHDRAWN,
+
+    /**
+     * The proposer took their custody proposal back before it was answered (October 2026). The
+     * payload is [CUSTODY_PROPOSED]'s. Only a withdrawal the parent made: one the clock makes at "No
+     * answer" posts [REQUEST_UNANSWERED]. Pushed like any message; no push type of its own.
+     */
+    CUSTODY_WITHDRAWN;
 
     /** Whether this is one of the two settle-up cards. */
     val isSettleUp: Boolean get() = this == SETTLE_UP_OWED || this == SETTLE_UP_OWING

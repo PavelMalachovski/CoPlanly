@@ -1364,6 +1364,43 @@ class CustodyModelRepositoryTest {
     }
 
     @Test
+    fun `withdrawing a run posts one withdrawn card and no push, and starts no clock`() = runTest(dispatcher) {
+        val dates = listOf(LocalDate.now().plusDays(10).toString(), LocalDate.now().plusDays(11).toString())
+        val mine = DayOverride(
+            toParent = "dad",
+            requestedBy = MY_UID,
+            requestedAt = "2026-10-15T09:00:00",
+            groupId = GROUP_ID
+        )
+        var stored = remoteCustody().copy(dayOverrides = dates.associateWith { mine })
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
+        coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any()) } answers {
+            stored = thirdArg()
+        }
+
+        val result = repository.applyDayOverridesForDates(
+            dates,
+            { current, day -> DayOverrideTransition.withdraw(current, day, MY_UID, NOW_ISO) },
+            AnswerByPick.DEFAULT
+        )
+
+        assertTrue(result.isSuccess)
+        assertTrue(dates.all { stored.dayOverrides[it]?.status == DayOverrideStatus.CANCELLED })
+        coVerify(exactly = 0) { requestDeadlines.start(any()) }
+        coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
+        coVerify(exactly = 1) {
+            activityAnnouncer.announce(
+                match { it.kind == ActivityKind.DAY_SWAP_WITHDRAWN && it.entityId == dates.first() },
+                any(),
+                any(),
+                PARTNER_UID
+            )
+        }
+        // There is no push type for a withdrawal: its card is pushed like any message.
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+    }
+
+    @Test
     fun `a refused clock still sends the offer, without answerBy`() = runTest(dispatcher) {
         coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
         coEvery { requestDeadlines.start(any()) } returns null
@@ -1597,7 +1634,7 @@ class CustodyModelRepositoryTest {
         }
 
     @Test
-    fun `a withdrawal posts no card and no push, though the document still holds the last decision`() =
+    fun `a withdrawal posts its own card and no push, and leaves the last decision as it was`() =
         runTest(dispatcher) {
             val earlier = CustodyDecision(
                 outcome = CustodyDecisionOutcome.ACCEPTED,
@@ -1612,7 +1649,9 @@ class CustodyModelRepositoryTest {
             assertTrue(repository.withdrawProposal().isSuccess)
 
             // A withdrawal decides nothing, and the decision the document keeps is uidB's old one: telling
-            // anybody of it again would say that a proposal had just been accepted.
+            // anybody of it again would say that a proposal had just been accepted. The co-parent is told
+            // it was withdrawn (October 2026), by a card in their own family's thread, which is pushed like
+            // any message: there is no push type for it.
             coVerify(exactly = 1) {
                 firestoreCustodyDataSource.setCustody(
                     DOCUMENT_ID,
@@ -1620,7 +1659,15 @@ class CustodyModelRepositoryTest {
                     match { it.proposal == null && it.lastDecision == earlier }
                 )
             }
-            coVerify(exactly = 0) { activityAnnouncer.announce(any(), any(), any(), any()) }
+            coVerify(exactly = 1) {
+                activityAnnouncer.announce(
+                    match { it.kind == ActivityKind.CUSTODY_WITHDRAWN },
+                    any(),
+                    any(),
+                    PARTNER_UID
+                )
+            }
+            coVerify(exactly = 1) { activityAnnouncer.announce(any(), any(), any(), any()) }
             coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
         }
 

@@ -545,6 +545,65 @@ describe('custody_models', () => {
       });
     });
 
+    describe('withdrawing an offer (October 2026)', () => {
+      // The parent who offered a day may take it back while it waits; the entry becomes
+      // CANCELLED with its slot, author and earlier answers as they were, so a day agreed earlier
+      // stays where it was agreed. Only the author may: the co-parent's way to say no is a decline.
+      const answer = `d1|dad|${DAD}|2026-08-23T10:00:00|ACCEPTED|${MOM}|2026-08-23T11:00:00|g1`;
+      const offer = Object.assign(pendingSwap(MOM, 'mom'), {groupId: 'g2', earlier: [answer]});
+      const withdrawn = (overrides) => Object.assign({}, offer,
+          {status: 'CANCELLED', decidedBy: MOM, decidedAt: '2026-08-30T10:00:00'}, overrides);
+      const swapWrite = (uid, entry) => ({
+        dayOverrides: {[DATE]: entry},
+        lastModifiedBy: uid,
+        lastModifiedKind: 'SWAP',
+        lastSwapDate: DATE,
+      });
+
+      it('lets the parent who offered a day withdraw it, keeping its earlier answers', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: offer}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        await assertSucceeds(db.doc(PATH).update(swapWrite(MOM, withdrawn({}))));
+      });
+
+      it('refuses the co-parent withdrawing an offer made to them', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: offer}})});
+        const db = env.authenticatedContext(DAD).firestore();
+        await assertFails(db.doc(PATH).update(swapWrite(DAD, withdrawn({decidedBy: DAD}))));
+      });
+
+      it('refuses a withdrawal credited to the other parent', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: offer}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, withdrawn({decidedBy: DAD}))));
+      });
+
+      it('refuses withdrawing an offer already answered', async () => {
+        const accepted = Object.assign({}, offer,
+            {status: 'ACCEPTED', decidedBy: DAD, decidedAt: '2026-08-30T09:30:00'});
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: accepted}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, withdrawn({}))));
+      });
+
+      it('refuses a withdrawal that moves the slot or drops or rewrites the earlier answers', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: offer}})});
+        const db = env.authenticatedContext(MOM).firestore();
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, withdrawn({toParent: 'dad'}))));
+        await assertFails(db.doc(PATH).update(swapWrite(MOM, withdrawn({earlier: []}))));
+        await assertFails(db.doc(PATH).update(
+            swapWrite(MOM, withdrawn({earlier: [answer.replace('|dad|', '|mom|')]}))));
+      });
+
+      it('carries a withdrawn offer into the next offer of the day, as the app does', async () => {
+        await seed(env, {[PATH]: custodyDoc({dayOverrides: {[DATE]: withdrawn({})}})});
+        const db = env.authenticatedContext(DAD).firestore();
+        const cancelled = `d1|mom|${MOM}|2026-08-23T10:00:00|CANCELLED|${MOM}|2026-08-30T10:00:00|g2`;
+        const next = Object.assign(pendingSwap(DAD, 'dad'), {earlier: [answer, cancelled]});
+        await assertSucceeds(db.doc(PATH).update(swapWrite(DAD, next)));
+      });
+    });
+
     it('refuses a non-participant either half', async () => {
       await seed(env, {
         [PATH]: custodyDoc({dayOverrides: {[DATE]: pendingSwap(MOM, 'dad')}}),

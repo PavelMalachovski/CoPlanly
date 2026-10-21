@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -324,8 +325,11 @@ private data class InboxAnswers(
     val answerRequest: (requestId: String, accept: Boolean) -> Unit,
     val withdrawRequest: (requestId: String) -> Unit,
     val answerSwap: (group: DaySwapGroup, accept: Boolean) -> Unit,
+    val withdrawSwap: (group: DaySwapGroup) -> Unit,
     val answerEvent: (eventId: String, accept: Boolean) -> Unit,
+    val withdrawEvent: (eventId: String) -> Unit,
     val answerProposal: (accept: Boolean) -> Unit,
+    val withdrawProposal: () -> Unit,
     val answerSplit: (accept: Boolean) -> Unit,
     val withdrawSplit: () -> Unit,
     val markSeen: (clockId: String) -> Unit,
@@ -342,8 +346,11 @@ private data class InboxAnswers(
             answerRequest = { id, accept -> if (accept) viewModel.accept(id) else viewModel.decline(id) },
             withdrawRequest = viewModel::cancel,
             answerSwap = viewModel::decideSwapGroup,
+            withdrawSwap = viewModel::withdrawSwapGroup,
             answerEvent = { id, accept -> if (accept) viewModel.acceptEvent(id) else viewModel.declineEvent(id) },
+            withdrawEvent = viewModel::withdrawEvent,
             answerProposal = { accept -> if (accept) viewModel.acceptProposal() else viewModel.declineProposal() },
+            withdrawProposal = viewModel::withdrawProposal,
             answerSplit = { accept -> if (accept) viewModel.acceptSplit() else viewModel.declineSplit() },
             withdrawSplit = viewModel::withdrawSplit,
             markSeen = viewModel::markSeen,
@@ -373,8 +380,8 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             diff = cards.proposalDiff,
             citation = cards.proposalCitation,
             parentNames = cards.parentNames,
-            onAccept = { answers.answerProposal(true) }.takeUnless { item.mine },
-            onDecline = { answers.answerProposal(false) }.takeUnless { item.mine }
+            mine = item.mine,
+            answers = answers
         )
         is InboxItem.Split -> SplitProposalCard(
             proposal = item.proposal,
@@ -387,17 +394,20 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             event = item.event,
             miniMonth = cards.miniMonths[item.event.id],
             parentNames = cards.parentNames,
-            actions = AwaitingEventActions(
-                onAccept = { answers.answerEvent(item.event.id, true) },
-                onDecline = { answers.answerEvent(item.event.id, false) }
-            ).takeUnless { item.mine }
+            actions = if (item.mine) {
+                AwaitingEventWithdrawal(onWithdraw = { answers.withdrawEvent(item.event.id) })
+            } else {
+                AwaitingEventActions(
+                    onAccept = { answers.answerEvent(item.event.id, true) },
+                    onDecline = { answers.answerEvent(item.event.id, false) }
+                )
+            }
         )
         is InboxItem.Swap -> DaySwapCard(
             group = item.group,
             currentUserId = cards.scope.myUid,
             parentNames = cards.parentNames,
-            onAccept = { answers.answerSwap(item.group, true) },
-            onDecline = { answers.answerSwap(item.group, false) }
+            answers = answers
         )
         is InboxItem.Request -> ChangeRequestCard(
             request = item.request,
@@ -433,31 +443,27 @@ private fun sectionTitle(section: InboxSection, cards: InboxCards): String = whe
  * One day swap in the inbox.
  *
  * Three states, and the difference between them is who is being asked. A swap the co-parent
- * offered carries Accept and Decline; one this parent offered carries neither, because
- * `DayOverrideTransition` and `firestore.rules` both refuse a parent deciding their own offer —
- * rendering the buttons anyway would promise an action the server rejects. An offer answered in
- * part shows the answer so far; once every day is answered it leaves for the history.
+ * offered carries Accept and Decline; one this parent offered carries Withdraw instead (October
+ * 2026), never an answer, because `DayOverrideTransition` and `firestore.rules` both refuse a parent
+ * deciding their own offer — rendering those buttons would promise an action the server rejects.
+ * An offer answered in part shows the answer so far; once every day is answered or withdrawn it
+ * leaves for the history.
  *
  * @param group The offer and where each of its days stands.
  * @param currentUserId This device's own uid, for telling "offered to you" from "offered by you".
  * @param parentNames Resolves a uid or a slot to that person's name — never "Mom" or "Dad".
- * @param onAccept Takes the offer up.
- * @param onDecline Turns it down.
+ * @param answers Its Accept and Decline, or its Withdraw.
  */
 @Composable
 private fun DaySwapCard(
     group: DaySwapGroup,
     currentUserId: String,
     parentNames: ParentNames,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit
+    answers: InboxAnswers
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
-    val context = LocalContext.current
     val first = group.swaps.first()
-    val awaitsMe = group.awaitsAnswerFrom(currentUserId)
     val offeredByMe = first.override.requestedBy == currentUserId
-    val hidesAnswers = LocalCardClock.current?.hidesAnswers == true
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -477,23 +483,7 @@ private fun DaySwapCard(
                 }
             )
             Text(
-                // The count is in the sentence, so one card answers "how many days" without the
-                // reader counting rows — the thing five separate cards made impossible.
-                text = if (offeredByMe) {
-                    context.resources.getQuantityString(
-                        R.plurals.day_swap_inbox_offered_by_you_days,
-                        group.dayCount,
-                        group.dayCount,
-                        parentNames.labelFor(first.override.toParent)
-                    )
-                } else {
-                    context.resources.getQuantityString(
-                        R.plurals.day_swap_inbox_offered_to_you_days,
-                        group.dayCount,
-                        group.dayCount,
-                        parentNames.labelForUid(first.override.requestedBy)
-                    )
-                },
+                text = daySwapSentence(group, offeredByMe, parentNames),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -501,27 +491,70 @@ private fun DaySwapCard(
                 Text(text = note, style = MaterialTheme.typography.bodyMedium)
             }
             Text(
-                text = stringResource(
-                    when (first.override.status) {
-                        DayOverrideStatus.ACCEPTED -> R.string.day_swap_inbox_accepted
-                        DayOverrideStatus.DECLINED -> R.string.day_swap_inbox_declined
-                        DayOverrideStatus.PENDING -> R.string.day_swap_inbox_waiting
-                    }
-                ),
+                text = stringResource(daySwapStatusLabel(first.override.status)),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             CardClockDetails()
-            if (awaitsMe && !hidesAnswers) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                    Button(onClick = onAccept) {
-                        Text(stringResource(R.string.day_swap_accept))
-                    }
-                    TextButton(onClick = onDecline) {
-                        Text(stringResource(R.string.day_swap_decline))
-                    }
+            DaySwapButtons(group, currentUserId, answers)
+        }
+    }
+}
+
+/**
+ * Who offered the days to whom, with the count in the sentence, so one card answers "how many days"
+ * without the reader counting rows — the thing five separate cards made impossible.
+ */
+@Composable
+private fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNames: ParentNames): String {
+    val first = group.swaps.first()
+    return if (offeredByMe) {
+        pluralStringResource(
+            R.plurals.day_swap_inbox_offered_by_you_days,
+            group.dayCount,
+            group.dayCount,
+            parentNames.labelFor(first.override.toParent)
+        )
+    } else {
+        pluralStringResource(
+            R.plurals.day_swap_inbox_offered_to_you_days,
+            group.dayCount,
+            group.dayCount,
+            parentNames.labelForUid(first.override.requestedBy)
+        )
+    }
+}
+
+/** The line saying where an offer stands. */
+@StringRes
+private fun daySwapStatusLabel(status: DayOverrideStatus): Int = when (status) {
+    DayOverrideStatus.ACCEPTED -> R.string.day_swap_inbox_accepted
+    DayOverrideStatus.DECLINED -> R.string.day_swap_inbox_declined
+    DayOverrideStatus.PENDING -> R.string.day_swap_inbox_waiting
+    DayOverrideStatus.CANCELLED -> R.string.change_request_status_cancelled
+}
+
+/**
+ * The swap card's buttons: Accept and Decline while any day waits on this parent — hidden while the
+ * card's clock says the next move is the offering parent's (phase 3a) — or Withdraw while any day of
+ * their own offer is still unanswered.
+ */
+@Composable
+private fun DaySwapButtons(group: DaySwapGroup, currentUserId: String, answers: InboxAnswers) {
+    val hidesAnswers = LocalCardClock.current?.hidesAnswers == true
+    when {
+        group.awaitsAnswerFrom(currentUserId) -> if (!hidesAnswers) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+                Button(onClick = { answers.answerSwap(group, true) }) {
+                    Text(stringResource(R.string.day_swap_accept))
+                }
+                TextButton(onClick = { answers.answerSwap(group, false) }) {
+                    Text(stringResource(R.string.day_swap_decline))
                 }
             }
+        }
+        group.withdrawableBy(currentUserId) -> TextButton(onClick = { answers.withdrawSwap(group) }) {
+            Text(stringResource(R.string.change_request_withdraw))
         }
     }
 }
@@ -530,22 +563,23 @@ private fun DaySwapCard(
  * A pending custody-pattern proposal.
  *
  * The co-parent's carries what it would change, where it came from, and Accept and Decline. This
- * parent's own, under "Waiting for <name>", says only that it waits: nobody decides their own
- * proposal (the transition and `firestore.rules` both refuse it), and the change and the citation
- * are derived for the co-parent's alone.
+ * parent's own, under "Waiting for <name>", says that it waits and carries Withdraw (October 2026):
+ * nobody decides their own proposal (the transition and `firestore.rules` both refuse it), but the
+ * one who made it may take it back. The change and the citation are derived for the co-parent's
+ * alone.
  *
- * @param onAccept Accepts it; null for this parent's own proposal.
- * @param onDecline Declines it; null for this parent's own proposal.
+ * @param mine Whether this parent proposed it.
+ * @param answers Its Accept and Decline, or its Withdraw.
  */
 @Composable
-@Suppress("LongParameterList") // the proposal, what it changes, where it came from, two answers
+@Suppress("LongParameterList") // the proposal, what it changes, where it came from, whose, the answers
 private fun CustodyProposalCard(
     proposal: CustodyProposal,
     diff: CustodyPatternDiff?,
     citation: CitationStatus,
     parentNames: ParentNames,
-    onAccept: (() -> Unit)?,
-    onDecline: (() -> Unit)?
+    mine: Boolean,
+    answers: InboxAnswers
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -554,7 +588,7 @@ private fun CustodyProposalCard(
         ) {
             CardClockBanner()
             TitleWithClockChip(stringResource(R.string.custody_proposal_inbox_title))
-            if (onAccept == null || onDecline == null) {
+            if (mine) {
                 Text(
                     text = stringResource(R.string.custody_proposal_inbox_body_yours),
                     style = MaterialTheme.typography.bodyMedium,
@@ -566,8 +600,18 @@ private fun CustodyProposalCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 CardClockDetails()
+                TextButton(onClick = answers.withdrawProposal) {
+                    Text(stringResource(R.string.change_request_withdraw))
+                }
             } else {
-                ProposalToAnswer(proposal, diff, citation, parentNames, onAccept, onDecline)
+                ProposalToAnswer(
+                    proposal,
+                    diff,
+                    citation,
+                    parentNames,
+                    onAccept = { answers.answerProposal(true) },
+                    onDecline = { answers.answerProposal(false) }
+                )
             }
         }
     }

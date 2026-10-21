@@ -38,6 +38,7 @@
     <string name="change_request_error_proposal_accept_failed">Návrh se nepodařilo přijmout. Zkuste to prosím znovu.</string>
     <string name="change_request_error_proposal_decline_failed">Návrh se nepodařilo odmítnout. Zkuste to prosím znovu.</string>
     <string name="change_request_error_answer_failed">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu.</string>
+    <string name="change_request_error_withdraw_failed">Žádost se nepodařilo stáhnout. Zkuste to prosím znovu.</string>
     <string name="change_request_error_signed_out">Jste odhlášeni. Přihlaste se a zkuste to znovu.</string>
     <string name="change_request_error_not_paired">Nejdřív se propojte s druhým rodičem, abyste mohli posílat žádosti o změnu.</string>
     <string name="change_request_error_not_in_family">Tato událost nepatří do rodiny, se kterou jste propojeni, takže není koho požádat.</string>

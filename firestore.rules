@@ -373,7 +373,7 @@ service cloud.firestore {
     // diff to affect only that key makes a lie self-defeating — claim the wrong date and the
     // `hasOnly` check fails on the date that actually changed.
     //
-    // Three legitimate shapes, and nothing else:
+    // Four legitimate shapes, and nothing else:
     //
     // 1. **An offer.** No entry for that date yet; the new one is PENDING and credits the caller
     //    as its author. `requestedBy` is what stops a parent deciding their own swap, so a forged
@@ -396,6 +396,10 @@ service cloud.firestore {
     //    forgery `lastModifiedBy` is validated against, one level down. The `earlier` list is
     //    left as it was, for the same reason: dropping it on a decline would hand the day back
     //    to the pattern over the agreement the decline was keeping.
+    // 4. **A withdrawal** (October 2026). The entry was PENDING and the caller *is* its author; it
+    //    becomes CANCELLED, credited to the caller, with its slot, its author and its `earlier`
+    //    list as they were — so a day whose earlier offer was agreed stays where it was agreed. Only
+    //    the author may take an offer back: the co-parent's way to say no is a decline.
     function validDayOverrideWrite(before, after) {
       return validDayOverrideAt(before, after, after.get('lastSwapDate', ''));
     }
@@ -418,6 +422,17 @@ service cloud.firestore {
                 after.dayOverrides[date].decidedBy == request.auth.uid &&
                 (after.dayOverrides[date].status == 'ACCEPTED' ||
                  after.dayOverrides[date].status == 'DECLINED') &&
+                after.dayOverrides[date].get('earlier', []) ==
+                  before.dayOverrides[date].get('earlier', []))
+               ||
+               // 4: the author's withdrawal of their own pending offer.
+               (date in before.get('dayOverrides', {}) &&
+                before.dayOverrides[date].status == 'PENDING' &&
+                before.dayOverrides[date].requestedBy == request.auth.uid &&
+                after.dayOverrides[date].status == 'CANCELLED' &&
+                after.dayOverrides[date].requestedBy == request.auth.uid &&
+                after.dayOverrides[date].decidedBy == request.auth.uid &&
+                after.dayOverrides[date].toParent == before.dayOverrides[date].toParent &&
                 after.dayOverrides[date].get('earlier', []) ==
                   before.dayOverrides[date].get('earlier', []))
              );

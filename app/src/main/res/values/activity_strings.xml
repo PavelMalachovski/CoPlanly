@@ -18,9 +18,11 @@
     <string name="activity_day_swap_offered">Day swap offered: %1$s</string>
     <string name="activity_day_swap_accepted">Day swap agreed: %1$s</string>
     <string name="activity_day_swap_declined">Day swap turned down: %1$s</string>
+    <string name="activity_day_swap_withdrawn">Day swap withdrawn: %1$s</string>
     <string name="activity_custody_proposed">New custody schedule proposed</string>
     <string name="activity_custody_accepted">New custody schedule agreed</string>
     <string name="activity_custody_declined">Custody proposal turned down</string>
+    <string name="activity_custody_withdrawn">Custody proposal withdrawn</string>
     <string name="activity_request_last_chance">Last chance to answer: %1$s</string>
     <string name="activity_request_unanswered">No answer: %1$s</string>
     <!-- The %1$s of the two request cards above when the request is a custody proposal, which has

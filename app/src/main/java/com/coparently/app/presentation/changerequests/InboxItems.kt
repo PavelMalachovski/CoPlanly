@@ -49,7 +49,8 @@ sealed interface InboxItem {
     /**
      * The custody-pattern proposal.
      *
-     * @property mine Whether this parent made it — then nothing on the card answers it.
+     * @property mine Whether this parent made it — then nothing on the card answers it, and it
+     *   carries Withdraw.
      * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
      */
     data class Proposal(
@@ -78,8 +79,8 @@ sealed interface InboxItem {
     /**
      * An event created for the other parent's days, waiting on their answer.
      *
-     * @property mine Whether this parent created it — then the card shows what was sent, with no
-     *   buttons.
+     * @property mine Whether this parent created it — then the card shows what was sent, with
+     *   Withdraw and nothing that answers it.
      * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
      */
     data class AwaitingEvent(val event: Event, val mine: Boolean, val timed: TimedRequest? = null) : InboxItem {
@@ -87,7 +88,8 @@ sealed interface InboxItem {
     }
 
     /**
-     * A day-swap offer, one per offer however many days it covers.
+     * A day-swap offer, one per offer however many days it covers. This parent's own carries
+     * Withdraw while any of its days is unanswered.
      *
      * @property timed Its clock as the inbox saw it, or null when it has none (phase 3a).
      */
@@ -123,13 +125,23 @@ sealed interface InboxArrival {
     data class ScrollTo(val index: Int) : InboxArrival
 }
 
+/** The buttons an event waiting for an answer carries: the answers, or the creator's withdrawal. */
+sealed interface AwaitingEventButtons
+
 /**
  * What answers an event waiting on this parent.
  *
  * @property onAccept Takes it up; it then enters both calendars.
  * @property onDecline Turns it down; it stays out, and the creator learns the answer.
  */
-data class AwaitingEventActions(val onAccept: () -> Unit, val onDecline: () -> Unit)
+data class AwaitingEventActions(val onAccept: () -> Unit, val onDecline: () -> Unit) : AwaitingEventButtons
+
+/**
+ * What the creator of an event waiting on the other parent may do with it (October 2026).
+ *
+ * @property onWithdraw Takes it back: the event is deleted, and the other parent's thread says so.
+ */
+data class AwaitingEventWithdrawal(val onWithdraw: () -> Unit) : AwaitingEventButtons
 
 /**
  * The inbox as one flat list — the single record of what its `LazyColumn` draws, and so the only

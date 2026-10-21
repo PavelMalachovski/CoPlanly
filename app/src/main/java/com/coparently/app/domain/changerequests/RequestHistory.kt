@@ -308,6 +308,7 @@ object RequestHistory {
         DayOverrideStatus.PENDING -> null
         DayOverrideStatus.ACCEPTED -> RequestOutcome.ACCEPTED
         DayOverrideStatus.DECLINED -> RequestOutcome.DECLINED
+        DayOverrideStatus.CANCELLED -> RequestOutcome.WITHDRAWN
     }
 
     private fun EventAcceptance.outcome(): RequestOutcome? = when (this) {
