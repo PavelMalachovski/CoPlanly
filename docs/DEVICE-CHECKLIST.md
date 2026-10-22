@@ -1297,6 +1297,50 @@ other phone draws it.
   `formEndDateTime`, `endDaySpanOf`, `EventDateCard`), `domain/events/AllDayEvent.kt`,
   `presentation/calendar/EventsByDay.kt` and `DayWeekView.kt` (`layoutDayEvents`).
 
+### 3.27 Zuzana's test of 21 October · 1P, push and swap checks 2P
+
+Five changes from the second tester session. What is decided is pinned on the JVM
+(`OnboardingViewModelTest`, `EventOwnerViewModelTest`, `EventAcceptanceTransitionTest`,
+`EventRepositoryImplTest`, `ExpenseRepositoryImplTest`, `SwapSelectionTest`, `SwapMiniMonthsTest`,
+`DaySwapStripStateTest`, `RequestHistoryTest`, `ChangeRequestWithdrawTest`), and the two new pushes
+reach the queue in the `e2e` job (`TwoParentExpensesTest`, `TwoParentRequestsAndEventPushesTest`).
+What is left is what the phones draw and the pushes as they arrive.
+
+- [ ] **Notifications in onboarding.** On Android 13 or later, a fresh account: right after the
+      co-parent step the wizard asks for notifications. **Allow** shows the system dialog and then
+      "Notifications are on"; **Later** goes on without asking. Settings → the push switch still
+      asks again if it was declined.
+- [ ] **The Calendar tab opens the month.** Open Day view on another month, go to Home, tap
+      **Calendar**: it opens Month on today. Tap **Calendar** again while in Week view: the same.
+- [ ] **A shared expense pushes its figures** (2P). Alice adds a shared expense of 1,000 CZK at a
+      70 / 30 split: Bob's phone shows "Alice added "…": 1 000 Kč. Your share is 300 Kč." in his
+      language and currency format, on the money channel, and a tap opens Expenses.
+- [ ] **No "Assigned to".** The event form has no owner cards. A new event on Bob's custody day
+      (from the month grid) is drawn in Bob's colour and waits for his answer; one on Alice's day is
+      hers at once. An edited event keeps its colour when its date changes.
+- [ ] **An important event is not asked about** (2P). Alice creates an event on Bob's day with
+      **Important event** on (its line names Bob): it is on both calendars at once, Bob gets
+      "Your presence is required", and its preview reads "Important: your presence is required" on
+      his phone and "Important: Bob is expected" on hers.
+- [ ] **Any days in one offer.** Long-press one of Alice's days, then tap one of Bob's days and a
+      third day further on: three days, not the run between. Tap the middle one: it alone leaves.
+      The sheet lists the days one by one and says who gives up how many.
+- [ ] **Answer day by day** (2P). On Bob's phone the Home pop-up and the inbox card show the months
+      with each offered day ringed in the colour of whom it would go to. Under **Or answer each
+      day**, accept one and decline another, **Send these answers**: Alice gets one card per
+      answer; the card still waits for the third day and lists the two answered. Once all are
+      answered, History has an "agreed" row and a "declined" row.
+- [ ] **Day view says where the swap stands** (2P). On a day Alice offered, her Day view says it
+      waits and offers **Withdraw**; Bob's says Alice asks and offers **Accept** and **Decline**;
+      once agreed, both say whose day it is and offer **Propose a change** while the day is ahead.
+- **If it fails:** `presentation/onboarding/OnboardingScreen.kt` (`NotificationsStep`),
+  `presentation/navigation/CalendarTabTaps.kt`, `data/repository/ExpenseRepositoryImpl.kt`
+  (`pushNewExpense`), `data/remote/firebase/PushNotifier.kt` (`expenseBody`),
+  `presentation/event/AddEditEventScreen.kt` (`autoEventOwner`), `EventOwnerViewModel.kt`,
+  `data/repository/EventRepositoryImpl.kt` (`pushImportant`),
+  `presentation/calendar/SwapSelection.kt`, `presentation/changerequests/SwapDayAnswers.kt`,
+  `presentation/calendar/components/DaySwapStrip.kt`.
+
 ---
 
 ## 4. Release-build checks

@@ -126,7 +126,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    a Day view chosen in the title's picker keeps the default Back. Day view's header carries
    **"Swap this day"** beside the date (D-10), the visible twin of the month cell's long-press.
    The member filter is **one scrolling row, label first** (`FamilyMemberFilterStrip`) and stays
-   with the banners over the grid on purpose, not in Filters. The month title omits the current
+   with the banners over the grid on purpose, not in Filters. **Every tap on the Calendar tab opens
+   Month on today** (`navigation/CalendarTabTaps`, tester feedback, October 2026), from another
+   tab and from the tab itself; a restored Day view on another month read as a broken calendar. The month title omits the current
    year. In Day and Week view **a drag deletes only when it ends over the red delete button**
    (its bounds, via a file-private local in `DayWeekView`), never over a screen region. *(Aug 2026, second pass: the `DayAgendaCard` no longer sits
    under the grid — it renders on Home as the "today" card (`HomeWeek.todayOf`), fed by the
@@ -462,8 +464,9 @@ When touching the UI, keep these invariants:
    keeps 3:1 on its own parent's wash. `ParentColorsTest` holds what sits on the wash to AA — don't
    raise an alpha without it.
 7. **Notification permission** is requested contextually via
-   `rememberNotificationPermissionRequester()` (push toggle, reminder selection), never on
-   cold start.
+   `rememberNotificationPermissionRequester()` (push toggle, reminder selection, and once in
+   onboarding — the `Notifications` step right after the co-parent link, October 2026, because a
+   parent who never met the push switch never got a push), never on cold start.
 8. **Destructive list actions** use M3 `SwipeToDismissBox` with an Undo snackbar
    (see `ExpenseList`'s `SwipeToDeleteRow` and `ExpenseScreen`'s `deleteWithUndo`; the delete runs
    from `SwipeToDismissBox`'s `onDismiss`, material3 1.4, not the deprecated `confirmValueChange`,
@@ -1195,6 +1198,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    **The form edits a start date, an end date and an All day switch** (October 2026, owner
    request). The end date is kept as `endDaySpan`, the days after the start date, so a later start
    date carries the end along; a day before the start is refused by the form's check, never moved.
+   **There is no owner choice on the form** (21 October 2026, tester feedback): a new event takes
+   the parent the family's schedule gives its start date to, an accepted swap first, else the
+   creator (`autoEventOwner`, `EventOwnerViewModel`); an edit keeps its owner. The two owner cards
+   survive only as the escape for an account whose own slot never resolves
+   (`showParentOwnerSelector`). An event on the co-parent's day waits for their answer unless it is
+   **important**, which lands on both calendars at once and pushes `event_important` (`Event.
+   isImportant`, `EventAcceptanceTransition.required`).
    An all-day event is saved from the start date's midnight to the end date's 23:59
    (`formStartDateTime`, `formEndDateTime`, `AllDayEvent.LAST_MINUTE`): the shape the Google and
    school imports write and `AllDayEvent` reads. The schema has no all-day flag and needs none, so
@@ -1426,6 +1436,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     handover. A new type gets both, and `PushRoutingTest` fails until it does. It words
     through a configuration context because the service does: on API 32 and below AppCompat's
     per-app language reaches activities only, so a push follows the *device* language there.
+    **Two client types carry more than names** (21 October 2026): `expense_added` carries the
+    expense's `amount`, `currency` and, when it is split with the reader, their `share` (plain
+    two-decimal strings the rules bound, worded on the receiving phone), and `event_important` tells
+    the co-parent their presence is required. Both are in the four places.
     **A push may also carry `answerBy`** (phase 3a, item 42) — a field like `familyId`, epoch
     millis as text on a request's first push, which `PushNotifier` turns into a closing "Answer by
     <time>." on the reader's clock. Every push is posted with a `BigTextStyle` beside its content
@@ -2458,6 +2472,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     push. **An older build drops an entry in a state it cannot name**, as it drops any unknown status,
     and then cannot write a swap while the document holds one — the same cost as `earlier`, accepted
     for the same reason.
+    **Any days, answered day by day** (21 October 2026, tester feedback). The month grid's
+    selection is any days, not a run (`SwapSelection`): a tap on a picked day unpicks it alone, and
+    one offer can give this parent's days and take the co-parent's, each day going to whoever does
+    not have it. The answering parent may answer each day (`SwapDayAnswers` →
+    `ChangeRequestViewModel.decideSwapDays`, one run per answer, so one card per answer); a
+    part-answered offer still waits, and History keeps one row per answer
+    (`RequestHistory.fromSwap`). The inbox card and Home's pop-up draw the months the days fall in
+    (`swapMiniMonths`, `MiniMonthMark.SWAP_DAY`, each day in the wash of whom it would go to), and
+    Day view says where the day's swap stands and acts on it (`DaySwapStrip`). Nothing in the
+    stored form changed: a group was always written one date at a time.
 
 45. **Settle up is a card, and the payer's phone draws the payment code** (October 2026, tester
     reports: the settle-up draft could be edited before it was sent; "a QR code for the amount").

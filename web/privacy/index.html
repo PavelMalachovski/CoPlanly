@@ -318,7 +318,9 @@ chat, and the calendar, expenses and records stop being shared. What is already 
 stays there.</p>
 <h3>Technical data</h3>
 <ul>
-<li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes.</li>
+<li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes. A
+notification names who made the change and what it is about (an event&#39;s title, say); one about
+a new shared expense also carries its amount and your share of it.</li>
 <li><strong>Crash reports</strong> (Firebase Crashlytics) and <strong>usage analytics</strong> (Firebase Analytics) in
 release builds. These carry no message content, no event titles and no records about your
 child. They record which screens are opened and which actions succeed or fail, with your
