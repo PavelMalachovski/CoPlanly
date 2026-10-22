@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,6 +58,7 @@ import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
@@ -97,6 +99,23 @@ fun EventPreviewSheet(
             onEdit = onEdit,
             onDelete = onDelete
         )
+    }
+}
+
+/**
+ * What an important event asks of the person reading it: their presence, when the co-parent
+ * created it; the co-parent's, named, when they created it themselves.
+ */
+@Composable
+private fun importantLine(event: Event, parentNames: ParentNames): String {
+    val me = parentNames.parents.me?.uid
+    return if (me != null && event.createdByFirebaseUid == me) {
+        stringResource(
+            R.string.event_preview_important_mine,
+            parentNames.labelForUid(parentNames.parents.coParent?.uid)
+        )
+    } else {
+        stringResource(R.string.event_preview_important_yours)
     }
 }
 
@@ -190,6 +209,19 @@ internal fun EventPreviewContent(
         event.description?.takeIf { it.isNotBlank() }?.let { description ->
             PreviewRow(icon = Icons.Default.Description) {
                 Text(text = description, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        // An important event is on both calendars without asking (21 October 2026), so the sheet
+        // says what it means to the one reading it: the co-parent is required, the creator is told
+        // whom they said is expected.
+        if (event.isImportant && !earlierFamily) {
+            PreviewRow(icon = Icons.Default.PriorityHigh) {
+                Text(
+                    text = importantLine(event, parentNames),
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
 

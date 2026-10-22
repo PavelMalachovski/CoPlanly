@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,12 +63,17 @@ import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
+import com.coparently.app.domain.custody.DaySwap
+import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
+import com.coparently.app.presentation.calendar.components.DaySwapStrip
+import com.coparently.app.presentation.calendar.components.DaySwapStripActions
+import com.coparently.app.presentation.calendar.components.DaySwapStripState
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
@@ -79,6 +85,7 @@ import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
@@ -88,7 +95,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
-import java.time.temporal.ChronoUnit
 
 /**
  * Months loaded either side of the query anchor in MONTH mode.
@@ -249,17 +255,19 @@ fun CalendarScreen(
     // id alone opened the first one on screen and showed its date instead of the tapped one's.
     var previewEventStart by remember { mutableStateOf<LocalDateTime?>(null) }
 
-    // Day-swap selection: a long-press starts a run, further taps extend it, and the sheet opens
-    // when the parent commits. Screen state rather than ViewModel state for the same reason
+    // Day-swap selection: a long-press picks a day, further taps pick or unpick single days (any
+    // days, mine to give and theirs to take — `SwapSelection`), and the sheet opens when the
+    // parent commits. Screen state rather than ViewModel state for the same reason
     // `previewEventId` is: it lives and dies with this grid, and surviving process death would
     // restore a selection over a calendar the user has since paged away from.
     // Plain `remember`, like `previewEventId` above: a half-made selection is transient, and
     // restoring one over a grid the user has since paged away from would be worse than losing it.
     var swapSelection by remember { mutableStateOf(emptySet<LocalDate>()) }
-    // The day a drag started on. A drag must redraw the run from where the finger went down to
-    // where it is now, including *shrinking* it when the finger comes back — which the set alone
-    // cannot say, since `toggledForSwap` reads the run's own ends and would only ever grow.
+    // The day a drag started on, and what was picked before it. A drag must redraw its run from
+    // where the finger went down to where it is now, including *shrinking* it when the finger
+    // comes back — which the set alone cannot say.
     var swapAnchor by remember { mutableStateOf<LocalDate?>(null) }
+    var swapBeforeDrag by remember { mutableStateOf(emptySet<LocalDate>()) }
 
     // Null unless there is a co-parent: unpaired there is nobody to accept a swap, and a swap
     // that applies itself is just an edit the custody editor already does. Null removes the
@@ -267,14 +275,15 @@ fun CalendarScreen(
     val offerSwapDay: ((LocalDate) -> Unit)? = parents.coParent?.let {
         fun(date: LocalDate) {
             swapAnchor = date
-            swapSelection = swapSelection.toggledForSwap(date)
+            swapBeforeDrag = swapSelection - date
+            swapSelection = SwapSelection.toggled(swapSelection, date)
         }
     }
     val dragSwapTo: ((LocalDate) -> Unit)? = parents.coParent?.let {
         fun(date: LocalDate) {
             val anchor = swapAnchor
-            if (anchor != null && swapSelection.isNotEmpty()) {
-                swapSelection = runForSwap(anchor, date)
+            if (anchor != null && anchor in swapSelection) {
+                swapSelection = SwapSelection.dragged(swapBeforeDrag, anchor, date)
             }
         }
     }
@@ -543,6 +552,20 @@ fun CalendarScreen(
         dayOpenedFromMonth = false
         calendarViewModel.setViewMode(CalendarViewMode.MONTH)
     }
+    // Every tap on the Calendar tab opens this month in Month view (tester feedback, 21 October
+    // 2026), the tab's restored state notwithstanding. The count answered last is saved with the
+    // screen, so a tap made from another tab is answered when the screen comes back.
+    val tabTaps by CalendarTabTaps.count.collectAsState()
+    var answeredTabTaps by rememberSaveable { mutableIntStateOf(tabTaps) }
+    LaunchedEffect(tabTaps) {
+        if (tabTaps != answeredTabTaps) {
+            answeredTabTaps = tabTaps
+            dayOpenedFromMonth = false
+            swapSelection = emptySet()
+            calendarViewModel.setViewMode(CalendarViewMode.MONTH)
+            calendarViewModel.showMonth(YearMonth.now())
+        }
+    }
     // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
     // a Day view reached later through the picker keeps the default Back.
     LaunchedEffect(viewMode) {
@@ -797,6 +820,31 @@ fun CalendarScreen(
                             )
                         )
                     }
+
+                    // Day view says where the day's swap stands and lets the parent act on it there
+                    // (21 October 2026, Zuzana's test): withdraw their own offer, answer the
+                    // co-parent's, or propose a change to an agreed day.
+                    if (viewMode == CalendarViewMode.DAY && offerDayFromDayView != null) {
+                        val stripOverride = dayOverrides[anchorDate.toString()]
+                        DaySwapStripState.of(stripOverride, parents.me?.uid, anchorDate, today)?.let { strip ->
+                            val day = DaySwapGroup(listOfNotNull(stripOverride?.let { DaySwap(anchorDate, it) }))
+                            val iso = anchorDate.toString()
+                            DaySwapStrip(
+                                state = strip,
+                                parentNames = parentNames,
+                                actions = DaySwapStripActions(
+                                    onAccept = { changeRequestViewModel.decideSwapDays(day, mapOf(iso to true)) },
+                                    onDecline = { changeRequestViewModel.decideSwapDays(day, mapOf(iso to false)) },
+                                    onWithdraw = { changeRequestViewModel.withdrawSwapGroup(day) },
+                                    onProposeChange = { offerDayFromDayView(anchorDate) }
+                                ),
+                                modifier = Modifier.padding(
+                                    horizontal = dims.paddingMedium,
+                                    vertical = dims.paddingSmall / 2
+                                )
+                            )
+                        }
+                    }
                 }
 
                 // No "Today with X" ribbon here. The day cells already say whose day it is, in
@@ -1039,70 +1087,6 @@ fun CalendarScreen(
             onDismiss = { showTypeFilters = false },
             sheetState = typeFilterSheetState
         )
-    }
-}
-
-/** Longest run a single offer may cover, so one gesture cannot commit a whole term. */
-private const val MAX_SWAP_SELECTION_DAYS = 14
-
-/**
- * The selection after tapping [date], kept a **consecutive** run.
- *
- * A run rather than an arbitrary set because that is what was asked for, and because one popup
- * saying "5 days" is only honest about a range a parent can see at a glance. Tapping outside the
- * current run extends it to reach the new day and fills the gap; tapping the only selected day
- * clears the selection, which is how a mis-started long-press is undone.
- *
- * Capped at [MAX_SWAP_SELECTION_DAYS]: the run is written one day at a time (Firestore Rules can
- * validate a diff naming only one date), so an unbounded selection is an unbounded number of
- * document writes on one tap. Over the cap the run is trimmed from the end nearest the tap, so
- * the day the parent just touched is always in it.
- */
-/**
- * The consecutive run a drag has traced, from the day it started on to the day under the finger.
- *
- * Distinct from [toggledForSwap], which reads the *existing* run's ends and therefore only ever
- * grows: a finger that overshoots and comes back has to shorten the run, and only the anchor
- * says which end is fixed. Capped the same way and for the same reason, keeping the anchor's end
- * so the day the gesture started on never disappears from under the finger.
- *
- * @param anchor The day the long press started on.
- * @param date The day the finger is over now.
- * @return Every day from one to the other, inclusive, at most [MAX_SWAP_SELECTION_DAYS] long.
- */
-private fun runForSwap(anchor: LocalDate, date: LocalDate): Set<LocalDate> {
-    val from = minOf(anchor, date)
-    val to = maxOf(anchor, date)
-    val length = ChronoUnit.DAYS.between(from, to).toInt() + 1
-    if (length <= MAX_SWAP_SELECTION_DAYS) {
-        return generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toSet()
-    }
-    return if (anchor == to) {
-        generateSequence(to) { it.minusDays(1) }.take(MAX_SWAP_SELECTION_DAYS).toSet()
-    } else {
-        generateSequence(from) { it.plusDays(1) }.take(MAX_SWAP_SELECTION_DAYS).toSet()
-    }
-}
-
-private fun Set<LocalDate>.toggledForSwap(date: LocalDate): Set<LocalDate> {
-    if (isEmpty()) return setOf(date)
-    if (size == 1 && contains(date)) return emptySet()
-
-    val from = minOf(minOrNull() ?: date, date)
-    val to = maxOf(maxOrNull() ?: date, date)
-    val length = ChronoUnit.DAYS.between(from, to).toInt() + 1
-    if (length <= MAX_SWAP_SELECTION_DAYS) {
-        return generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toSet()
-    }
-    // Anchor on the tapped end so the trim never drops the day under the finger.
-    return if (date == to) {
-        generateSequence(to) { it.minusDays(1) }
-            .take(MAX_SWAP_SELECTION_DAYS)
-            .toSet()
-    } else {
-        generateSequence(from) { it.plusDays(1) }
-            .take(MAX_SWAP_SELECTION_DAYS)
-            .toSet()
     }
 }
 

@@ -154,6 +154,12 @@ private val REMINDER_OPTIONS: List<Pair<Int?, Int>> = listOf(
 /**
  * Whether the parent-owner picker (the two animated cards) should render.
  *
+ * **Only when the form has no other way to name an owner** (21 October 2026, Zuzana's test: the
+ * "Assigned to" choice is gone). Whose day an event falls on is decided for the parent — the
+ * family's schedule for the start date, else their own slot ([autoEventOwner]) — so the picker is
+ * left only as the escape for an account whose own slot never resolves, which would otherwise sit
+ * in front of a Save that stays disabled.
+ *
  * A plain function, not inlined into the `if`, so the property that decides it can be pinned in
  * a JVM test — this repo has no Compose UI tests, so an expression that only lives inside the
  * composable is untestable.
@@ -175,27 +181,40 @@ private val REMINDER_OPTIONS: List<Pair<Int?, Int>> = listOf(
  */
 internal fun showParentOwnerSelector(
     parentsLoaded: Boolean,
-    isPaired: Boolean,
     parentOwner: String?,
     currentUserSlot: String?
-): Boolean = parentsLoaded && (isPaired || (parentOwner ?: currentUserSlot) == null)
+): Boolean = parentsLoaded && (parentOwner ?: currentUserSlot) == null
+
+/**
+ * Whose day a new event falls on, chosen for the parent (21 October 2026): the parent the
+ * family's schedule gives the start date to, swaps included, else the parent creating it.
+ *
+ * On the co-parent's day it waits for their answer unless it is marked important
+ * ([com.coparently.app.domain.events.EventAcceptanceTransition.required]).
+ *
+ * @param custodyParent The slot `CustodyResolver` answers for the start date, or null.
+ * @param mySlot The signed-in parent's own slot, or null while it resolves.
+ */
+internal fun autoEventOwner(custodyParent: String?, mySlot: String?): String? = custodyParent ?: mySlot
 
 /**
  * Whether a description typed now will be read by the co-parent when they answer (phase 2, spec
  * §5.2): the same rule as [com.coparently.app.domain.events.EventAcceptanceTransition.required], for
- * a new event — paired, not private, and on the co-parent's days. An edit never asks again, so it
- * answers false; so does an owner or a slot not known yet.
+ * a new event — paired, not private, not important, and on the co-parent's days. An edit never asks
+ * again, so it answers false; so does an owner or a slot not known yet.
  *
  * @param isNewEvent Whether the form creates an event rather than editing one.
  * @param mySlot The signed-in parent's own slot.
  */
+@Suppress("LongParameterList") // the rule's own inputs, each pinned by a test
 internal fun descriptionReachesCoParent(
     isNewEvent: Boolean,
     isPaired: Boolean,
     isPrivate: Boolean,
+    isImportant: Boolean,
     parentOwner: String?,
     mySlot: String?
-): Boolean = isNewEvent && isPaired && !isPrivate &&
+): Boolean = isNewEvent && isPaired && !isPrivate && !isImportant &&
     !parentOwner.isNullOrBlank() && !mySlot.isNullOrBlank() && parentOwner != mySlot
 
 /**
@@ -219,15 +238,15 @@ fun AddEditEventScreen(
     // The family's live calendar friends (item 16). Empty for most families, which is why the
     // participation toggle below is absent rather than disabled when there is nobody to name.
     val calendarFriends by friendViewModel.friends.collectAsState()
+    // Whose day the start date is, for a new event's owner (autoEventOwner).
+    val ownerViewModel: EventOwnerViewModel = hiltViewModel()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     // The signed-in parent - the one source of truth for "who am I" already threaded into this
     // screen (see ParentsSource). Nothing here learns the signed-in slot any other way.
     val currentUser = parentNames.parents.me
-    // Whether there is someone to choose between at all. Deliberately not
-    // "parentNames.parents.coParent != null": a legacy pair (paired before slot assignment
-    // shipped) has a real co-parent but a null Parents.coParent, because their slot isn't known
-    // yet - gating the selector on that nullness would hide it from exactly the pairs this
-    // app's slot migration exists to serve.
+    // Whether there is a co-parent at all - what decides whether a new event can wait for one.
+    // Deliberately not "parentNames.parents.coParent != null": a legacy pair (paired before slot
+    // assignment shipped) has a real co-parent but a null Parents.coParent.
     val isPaired = parentNames.parents.isPaired
     // Whether Parents() is a real answer yet. Parents() itself - the synthetic value every
     // stateIn seeds with - is indistinguishable from "an unpaired, unresolved account" without
@@ -407,6 +426,15 @@ fun AddEditEventScreen(
         }
     }
 
+    // A new event's owner follows its start date: whose day the family's schedule gives it, else
+    // the parent's own (21 October 2026 — the "Assigned to" choice is gone). An edit keeps the
+    // owner it was saved with; moving it would re-colour, and re-ask about, an agreed event.
+    LaunchedEffect(startDate, currentUser?.slot) {
+        if (eventId == null) {
+            autoEventOwner(ownerViewModel.custodyParentOn(startDate), currentUser?.slot)?.let { parentOwner = it }
+        }
+    }
+
     // Load event if editing, or load draft if creating new event
     // Issue 1.3: Draft saving functionality
     // Once per form, not once per composition: after a rotation the saved fields already hold
@@ -550,7 +578,7 @@ fun AddEditEventScreen(
     // A new event on the co-parent's days waits for their answer (phase 3a): the parent is asked when
     // it should be answered by, under the same rule that tells them the description will be read.
     val waitsForCoParent =
-        descriptionReachesCoParent(eventId == null, isPaired, isPrivate, parentOwner, currentUser?.slot)
+        descriptionReachesCoParent(eventId == null, isPaired, isPrivate, isImportant, parentOwner, currentUser?.slot)
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     val leave = rememberDiscardGuard(dirty = editsUnsaved && !isSaving && !isDeleting, onLeave = onCancel)
 
@@ -756,8 +784,8 @@ fun AddEditEventScreen(
                 // parentOwner == null is not just a first-frame beat: an account whose
                 // profile UserRepositoryImpl declined to name (see isFormValid) can sit here
                 // indefinitely. Save being merely disabled would leave no clue why - this
-                // says what's missing, next to the selector that (per isPaired || parentOwner
-                // == null above) is showing precisely so there's something to do about it.
+                // says what's missing, next to the selector that (per showParentOwnerSelector) is
+                // showing precisely so there's something to do about it.
                 notice = if (parentOwner == null) {
                     {
                         Text(
@@ -852,6 +880,7 @@ fun AddEditEventScreen(
                         isNewEvent = eventId == null,
                         isPaired = isPaired,
                         isPrivate = isPrivate,
+                        isImportant = isImportant,
                         parentOwner = parentOwner,
                         mySlot = currentUser?.slot
                     ) -> {
@@ -881,16 +910,10 @@ fun AddEditEventScreen(
                 )
             )
 
-            // Parent Owner Selection with animated cards. Shown whenever there is a real choice
-            // to make (isPaired - a co-parent exists even if their slot isn't known yet, in
-            // which case their card falls through to the "unknown" label via parentLabel) or
-            // whenever there is otherwise no way to fill the owner in: an unpaired account whose
-            // own slot has not resolved would else have no escape from a permanently disabled
-            // Save. A family of one with a resolved slot has neither condition and correctly
-            // sees no control - nobody else an event could belong to. See
-            // showParentOwnerSelector's KDoc for why this is a named function rather than the
-            // condition inline.
-            if (showParentOwnerSelector(parentsLoaded, isPaired, parentOwner, currentUser?.slot)) {
+            // Parent Owner Selection with animated cards, only as the escape for an account whose
+            // own slot has not resolved: everyone else has their owner chosen for them from the
+            // start date (autoEventOwner). See showParentOwnerSelector's KDoc.
+            if (showParentOwnerSelector(parentsLoaded, parentOwner, currentUser?.slot)) {
                 Text(
                     text = stringResource(R.string.event_form_assigned_to),
                     style = MaterialTheme.typography.titleMedium
@@ -1394,8 +1417,18 @@ fun AddEditEventScreen(
                                     text = stringResource(R.string.event_form_important_title),
                                     style = MaterialTheme.typography.titleSmall
                                 )
+                                // Names the co-parent of the family on screen, whose presence the
+                                // mark requires (21 October 2026), and stays generic while unpaired.
+                                val expected = parentNames.parents.coParent
                                 Text(
-                                    text = stringResource(R.string.event_form_important_description),
+                                    text = if (expected != null) {
+                                        stringResource(
+                                            R.string.event_form_important_description_named,
+                                            parentNames.labelForUid(expected.uid)
+                                        )
+                                    } else {
+                                        stringResource(R.string.event_form_important_description)
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

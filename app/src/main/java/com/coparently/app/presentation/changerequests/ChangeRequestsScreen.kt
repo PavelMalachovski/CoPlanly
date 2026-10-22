@@ -61,6 +61,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
+import com.coparently.app.presentation.calendar.components.isConsecutive
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalAppMessages
@@ -111,6 +112,7 @@ fun ChangeRequestsScreen(
 ) {
     val state by viewModel.requests.collectAsState()
     val miniMonths by viewModel.miniMonths.collectAsState()
+    val swapMonths by viewModel.swapMonths.collectAsState()
     val proposalDiff by viewModel.pendingProposalDiff.collectAsState()
     val proposalCitation by viewModel.pendingProposalCitation.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -166,6 +168,7 @@ fun ChangeRequestsScreen(
                 cards = InboxCards(
                     scope = ready.scope,
                     miniMonths = miniMonths,
+                    swapMonths = swapMonths,
                     parentNames = parentNames,
                     proposalDiff = proposalDiff,
                     proposalCitation = proposalCitation,
@@ -267,6 +270,7 @@ private fun InboxList(
  *
  * @property scope The family on screen: who "you" are and who the co-parent is.
  * @property miniMonths Each waiting event's month, by event id.
+ * @property swapMonths Each waiting swap's months, by group key.
  * @property proposalDiff What the co-parent's proposal would change; null for this parent's own.
  * @property proposalCitation Where the co-parent's proposal came from (MON-21).
  * @property agreedSplit The family's agreed expense split — what a proposed split would replace —
@@ -277,6 +281,7 @@ private fun InboxList(
 private data class InboxCards(
     val scope: RequestScope,
     val miniMonths: Map<String, MiniMonthModel>,
+    val swapMonths: Map<String, List<MiniMonthModel>>,
     val parentNames: ParentNames,
     val proposalDiff: CustodyPatternDiff?,
     val proposalCitation: CitationStatus,
@@ -325,6 +330,7 @@ private data class InboxAnswers(
     val answerRequest: (requestId: String, accept: Boolean) -> Unit,
     val withdrawRequest: (requestId: String) -> Unit,
     val answerSwap: (group: DaySwapGroup, accept: Boolean) -> Unit,
+    val answerSwapDays: (group: DaySwapGroup, answers: Map<String, Boolean>) -> Unit,
     val withdrawSwap: (group: DaySwapGroup) -> Unit,
     val answerEvent: (eventId: String, accept: Boolean) -> Unit,
     val withdrawEvent: (eventId: String) -> Unit,
@@ -346,6 +352,7 @@ private data class InboxAnswers(
             answerRequest = { id, accept -> if (accept) viewModel.accept(id) else viewModel.decline(id) },
             withdrawRequest = viewModel::cancel,
             answerSwap = viewModel::decideSwapGroup,
+            answerSwapDays = viewModel::decideSwapDays,
             withdrawSwap = viewModel::withdrawSwapGroup,
             answerEvent = { id, accept -> if (accept) viewModel.acceptEvent(id) else viewModel.declineEvent(id) },
             withdrawEvent = viewModel::withdrawEvent,
@@ -407,6 +414,7 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             group = item.group,
             currentUserId = cards.scope.myUid,
             parentNames = cards.parentNames,
+            months = cards.swapMonths[item.group.key].orEmpty(),
             answers = answers
         )
         is InboxItem.Request -> ChangeRequestCard(
@@ -452,6 +460,8 @@ private fun sectionTitle(section: InboxSection, cards: InboxCards): String = whe
  * @param group The offer and where each of its days stands.
  * @param currentUserId This device's own uid, for telling "offered to you" from "offered by you".
  * @param parentNames Resolves a uid or a slot to that person's name — never "Mom" or "Dad".
+ * @param months The months its days fall in, each day in the colour of whom it goes to (21 October
+ *   2026), or empty while they are computed.
  * @param answers Its Accept and Decline, or its Withdraw.
  */
 @Composable
@@ -459,6 +469,7 @@ private fun DaySwapCard(
     group: DaySwapGroup,
     currentUserId: String,
     parentNames: ParentNames,
+    months: List<MiniMonthModel>,
     answers: InboxAnswers
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
@@ -474,6 +485,8 @@ private fun DaySwapCard(
             TitleWithClockChip(
                 if (group.dayCount == 1) {
                     group.firstDate.format(dateFormatter)
+                } else if (!isConsecutive(group.swaps.map { it.date })) {
+                    group.swaps.joinToString(", ") { it.date.format(dateFormatter) }
                 } else {
                     stringResource(
                         R.string.day_swap_range,
@@ -490,13 +503,22 @@ private fun DaySwapCard(
             first.override.note?.let { note ->
                 Text(text = note, style = MaterialTheme.typography.bodyMedium)
             }
+            // An offer answered in part (21 October 2026) still waits, and says how each answered day went.
+            val waiting = group.swaps.any { it.override.isPending }
             Text(
-                text = stringResource(daySwapStatusLabel(first.override.status)),
+                text = stringResource(
+                    daySwapStatusLabel(if (waiting) DayOverrideStatus.PENDING else first.override.status)
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (waiting) AnsweredDays(group)
+            SwapMonths(months, parentNames)
             CardClockDetails()
             DaySwapButtons(group, currentUserId, answers)
+            if (LocalCardClock.current?.hidesAnswers != true) {
+                SwapDayAnswers(group, currentUserId, parentNames) { answers.answerSwapDays(group, it) }
+            }
         }
     }
 }
@@ -523,15 +545,6 @@ private fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNam
             parentNames.labelForUid(first.override.requestedBy)
         )
     }
-}
-
-/** The line saying where an offer stands. */
-@StringRes
-private fun daySwapStatusLabel(status: DayOverrideStatus): Int = when (status) {
-    DayOverrideStatus.ACCEPTED -> R.string.day_swap_inbox_accepted
-    DayOverrideStatus.DECLINED -> R.string.day_swap_inbox_declined
-    DayOverrideStatus.PENDING -> R.string.day_swap_inbox_waiting
-    DayOverrideStatus.CANCELLED -> R.string.change_request_status_cancelled
 }
 
 /**

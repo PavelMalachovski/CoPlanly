@@ -3,6 +3,8 @@
 <resources>
     <string name="push_event_created_title">Нова подія</string>
     <string name="push_event_created_body">%1$s додає «%2$s»</string>
+    <string name="push_event_important_title">Ваша присутність обовʼязкова</string>
+    <string name="push_event_important_body">%1$s додає «%2$s» з позначкою «важливо» — на вас там чекають.</string>
     <string name="push_event_updated_title">Подію змінено</string>
     <string name="push_event_updated_body">%1$s змінює «%2$s»</string>
     <string name="push_event_deleted_title">Подію скасовано</string>
@@ -60,6 +62,9 @@
     <string name="push_split_ratio_declined_body">Другий із батьків відхилив новий поділ. Нічого не змінилося.</string>
     <string name="push_split_ratio_agreed_title">Поділ витрат погоджено</string>
     <string name="push_split_ratio_agreed_body">Поділ спільних витрат було задано ще до зʼєднання. Відкрийте налаштування, щоб переглянути його.</string>
+    <string name="push_expense_added_title">Нова витрата</string>
+    <string name="push_expense_added_body">%1$s додав(ла) витрату «%2$s»: %3$s.</string>
+    <string name="push_expense_added_body_share">%1$s додав(ла) витрату «%2$s»: %3$s. Ваша частка — %4$s.</string>
     <string name="push_records_shared_title">Вам відкрито записи</string>
     <string name="push_records_shared_body">%1$s відкриває вам календар і сімейні записи</string>
 

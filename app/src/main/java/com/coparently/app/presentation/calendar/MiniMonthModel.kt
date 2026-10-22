@@ -10,13 +10,16 @@ import java.time.YearMonth
 
 /**
  * What the mini month marks on a day besides its custody colour and its dot.
- *
- * Phase 3 (day swaps) adds its own kinds; today there is one, for the day of an event that waits
- * for the reader's answer.
  */
 enum class MiniMonthMark {
     /** The day of an event created for the reader, waiting for their answer. */
-    NEW_EVENT
+    NEW_EVENT,
+
+    /**
+     * A day offered in a swap (21 October 2026, Zuzana's test), drawn in the wash of the parent
+     * it would go to, so the reader sees each day's direction before answering.
+     */
+    SWAP_DAY
 }
 
 /**
@@ -107,6 +110,35 @@ data class MiniMonthModel(
         }
     }
 }
+
+/**
+ * The mini months of a day swap: one per month its days fall in, soonest first, with the family's
+ * agreed custody and each offered day ringed in the wash of the parent it would go to.
+ *
+ * @param days Each offered day and the slot it would go to.
+ * @param familyEvents The family's events, as [MiniMonthModel.forAwaitingEvent] takes them.
+ * @param custodyFor Whose custody day a date is now — the agreed schedule, the offer not applied.
+ */
+fun swapMiniMonths(
+    days: Map<LocalDate, String>,
+    familyEvents: List<Event>,
+    custodyFor: (LocalDate) -> String?
+): List<MiniMonthModel> =
+    days.keys.map(YearMonth::from).distinct().sorted().map { month ->
+        val dates = MiniMonthGrid.weeks(month).flatten()
+        val shown = RecurrenceExpander.expandAll(
+            CalendarVisibility.visible(familyEvents),
+            dates.first().atStartOfDay(),
+            dates.last().atTime(LocalTime.MAX)
+        )
+        MiniMonthModel.build(
+            month = month,
+            custodyFor = { date -> days[date] ?: custodyFor(date) },
+            events = shown,
+            // Only the days this grid draws: another month's day would be read out here too.
+            marks = days.keys.filter { it in dates }.associateWith { MiniMonthMark.SWAP_DAY }
+        )
+    }
 
 /** The mini month's layout: whole weeks, Monday first, as `MonthView` lays out its grid. */
 object MiniMonthGrid {

@@ -241,7 +241,9 @@ stays there.
 
 ### Technical data
 
-- **A push notification token**, so we can notify you about changes your co-parent makes.
+- **A push notification token**, so we can notify you about changes your co-parent makes. A
+  notification names who made the change and what it is about (an event's title, say); one about
+  a new shared expense also carries its amount and your share of it.
 - **Crash reports** (Firebase Crashlytics) and **usage analytics** (Firebase Analytics) in
   release builds. These carry no message content, no event titles and no records about your
   child. They record which screens are opened and which actions succeed or fail, with your

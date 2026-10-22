@@ -89,8 +89,10 @@ object PushRouting {
      * opens its thread through the chat link, like a message) and a type this build does not know.
      */
     fun destinationOf(type: String?): PushDestination? = when (type) {
-        PushPayload.EVENT_CREATED, PushPayload.EVENT_UPDATED, PushPayload.EVENT_DELETED ->
-            PushDestination.CALENDAR
+        PushPayload.EVENT_CREATED,
+        PushPayload.EVENT_UPDATED,
+        PushPayload.EVENT_DELETED,
+        PushPayload.EVENT_IMPORTANT -> PushDestination.CALENDAR
         PushPayload.CHILD_INFO_UPDATED -> PushDestination.CHILD_INFO
         PushPayload.CHANGE_REQUEST_CREATED,
         PushPayload.CHANGE_REQUEST_ACCEPTED,
@@ -113,7 +115,8 @@ object PushRouting {
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,
-        PushPayload.SPLIT_RATIO_AGREED -> PushDestination.EXPENSES
+        PushPayload.SPLIT_RATIO_AGREED,
+        PushPayload.EXPENSE_ADDED -> PushDestination.EXPENSES
         PushPayload.PROFESSIONAL_ACCESS_REQUESTED -> PushDestination.PROFESSIONALS
         else -> null
     }
@@ -128,6 +131,7 @@ object PushRouting {
         PushPayload.EVENT_CREATED,
         PushPayload.EVENT_UPDATED,
         PushPayload.EVENT_DELETED,
+        PushPayload.EVENT_IMPORTANT,
         PushPayload.CHANGE_REQUEST_CREATED,
         PushPayload.CHANGE_REQUEST_ACCEPTED,
         PushPayload.CHANGE_REQUEST_DECLINED,
@@ -145,7 +149,8 @@ object PushRouting {
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,
-        PushPayload.SPLIT_RATIO_AGREED -> PushChannel.MONEY
+        PushPayload.SPLIT_RATIO_AGREED,
+        PushPayload.EXPENSE_ADDED -> PushChannel.MONEY
         else -> PushChannel.FAMILY
     }
 }

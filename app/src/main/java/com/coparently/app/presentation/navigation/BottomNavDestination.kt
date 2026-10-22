@@ -154,7 +154,7 @@ fun CoPlanlyBottomBar(
             val selected = currentRoute == destination.route
             NavigationBarItem(
                 selected = selected,
-                onClick = { if (!selected) onNavigate(destination) },
+                onClick = { onTabClick(destination, selected, onNavigate) },
                 icon = { TabIcon(destination, selected, chatUnreadCount) },
                 label = { Text(stringResource(destination.labelRes)) }
             )
@@ -185,12 +185,25 @@ fun CoPlanlyNavigationRail(
             val selected = currentRoute == destination.route
             NavigationRailItem(
                 selected = selected,
-                onClick = { if (!selected) onNavigate(destination) },
+                onClick = { onTabClick(destination, selected, onNavigate) },
                 icon = { TabIcon(destination, selected, chatUnreadCount) },
                 label = { Text(stringResource(destination.labelRes)) }
             )
         }
     }
+}
+
+/**
+ * What a tap on a tab does: switches to it, unless it is the tab on screen, and counts a tap on
+ * the Calendar either way, so the calendar opens on the month ([CalendarTabTaps]).
+ */
+private fun onTabClick(
+    destination: BottomNavDestination,
+    selected: Boolean,
+    onNavigate: (BottomNavDestination) -> Unit
+) {
+    if (destination == BottomNavDestination.CALENDAR) CalendarTabTaps.tap()
+    if (!selected) onNavigate(destination)
 }
 
 /**

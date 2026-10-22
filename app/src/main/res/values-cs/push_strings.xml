@@ -3,6 +3,8 @@
 <resources>
     <string name="push_event_created_title">Nová událost</string>
     <string name="push_event_created_body">%1$s přidal(a) „%2$s“</string>
+    <string name="push_event_important_title">Vaše účast je nutná</string>
+    <string name="push_event_important_body">%1$s přidal(a) „%2$s“ a označil(a) ji jako důležitou: počítá se s vámi.</string>
     <string name="push_event_updated_title">Událost změněna</string>
     <string name="push_event_updated_body">%1$s změnil(a) „%2$s“</string>
     <string name="push_event_deleted_title">Událost zrušena</string>
@@ -60,6 +62,9 @@
     <string name="push_split_ratio_declined_body">Druhý rodič nové rozdělení odmítl. Nic se nezměnilo.</string>
     <string name="push_split_ratio_agreed_title">Rozdělení výdajů dohodnuto</string>
     <string name="push_split_ratio_agreed_body">Rozdělení výdajů bylo nastaveno ještě před propojením. Najdete ho v Nastavení.</string>
+    <string name="push_expense_added_title">Nový výdaj</string>
+    <string name="push_expense_added_body">%1$s přidal(a) %2$s: %3$s.</string>
+    <string name="push_expense_added_body_share">%1$s přidal(a) %2$s: %3$s. Váš podíl je %4$s.</string>
     <string name="push_records_shared_title">Sdílené záznamy</string>
     <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
 

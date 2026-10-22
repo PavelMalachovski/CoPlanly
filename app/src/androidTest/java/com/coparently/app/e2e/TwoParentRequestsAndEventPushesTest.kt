@@ -5,6 +5,7 @@ import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionKind
+import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
@@ -123,6 +124,27 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
         }
         assertEquals(FamilyKey.of(alice.uid, bob.uid), push[PushPayload.FAMILY_ID])
         assertTrue("a client push must not carry its own text (SEC-3)", "title" !in push && "body" !in push)
+    }
+
+    @Test
+    fun anImportantEventOnBobsDayLandsAtOnceAndTellsHimHeIsExpected() = runBlocking<Unit> {
+        // 21 October 2026, Zuzana's test: an important event is not asked about.
+        val bobsSlot = checkNotNull(bob.database.userDao().getUserById(bob.uid)?.role)
+        val event = newEvent("Parents' evening").copy(parentOwner = bobsSlot, isImportant = true)
+        alice.eventRepository.insertEvent(event)
+
+        val push = withTimeout(EmulatorParent.WAIT_MS) {
+            pollPush(bob) {
+                it[PushPayload.TYPE] == PushPayload.EVENT_IMPORTANT && it[PushPayload.EVENT_ID] == event.id
+            }
+        }
+        assertEquals("Parents' evening", push[PushPayload.SUBJECT])
+        assertEquals(FamilyKey.of(alice.uid, bob.uid), push[PushPayload.FAMILY_ID])
+
+        bob.syncService.performFullSync().getOrThrow()
+        val onBobsPhone = checkNotNull(bob.eventRepository.getEventById(event.id))
+        assertEquals(EventAcceptance.NOT_REQUIRED, onBobsPhone.acceptance)
+        assertTrue(onBobsPhone.isImportant)
     }
 
     @Test

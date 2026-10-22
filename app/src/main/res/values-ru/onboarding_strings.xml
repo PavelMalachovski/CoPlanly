@@ -40,6 +40,11 @@
     <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
          the wording the split and custody steps use once there is a co-parent to name. -->
     <string name="onboarding_coparent_title">Подключите второго родителя</string>
+    <string name="onboarding_notifications_title">Включите уведомления</string>
+    <string name="onboarding_notifications_body">Запросы второго родителя, его ответы, напоминания о событиях и сообщения приходят уведомлениями. Без них вы увидите их, только когда откроете приложение.</string>
+    <string name="onboarding_notifications_allow">Разрешить уведомления</string>
+    <string name="onboarding_notifications_on">Уведомления включены.</string>
+    <string name="onboarding_notifications_later">Это можно изменить в любой момент в настройках телефона.</string>
     <string name="onboarding_coparent_body">Если второй родитель уже пользуется CoPlanly, введите его код: дети, питомцы, график опеки и деление расходов подтянутся сами — ничего не придётся вводить дважды. Если ещё нет — отправьте приглашение: второй родитель увидит всё, что вы здесь заполните.</string>
     <string name="onboarding_coparent_enter_code">У меня есть код</string>
     <string name="onboarding_coparent_invite">Пригласить второго родителя</string>

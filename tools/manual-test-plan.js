@@ -217,6 +217,15 @@ const RULES = [
       'K/domain/events/AllDayEvent.kt', 'K/presentation/calendar/EventsByDay.kt'],
   },
   {
+    sections: ['3.27'],
+    why: 'Zuzana\'s 21 October changes: onboarding notifications, the Calendar tab, the expense and important-event pushes, the event owner, day swaps',
+    paths: ['K/presentation/onboarding/OnboardingScreen.kt', 'K/presentation/navigation/CalendarTabTaps.kt',
+      'K/presentation/event/EventOwnerViewModel.kt', 'K/presentation/event/EventPreviewSheet.kt',
+      'K/presentation/calendar/SwapSelection.kt', 'K/presentation/calendar/components/DaySwapStrip.kt',
+      'K/presentation/calendar/components/DaySwapSheet.kt', 'K/presentation/changerequests/SwapDayAnswers.kt',
+      'K/presentation/home/AwaitingDialogs.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

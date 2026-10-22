@@ -58,8 +58,9 @@
     <string name="event_reminder_2_hours">2 hodiny</string>
     <string name="event_reminder_1_day">1 den</string>
     <string name="event_form_important_title">Důležitá událost</string>
-    <string name="event_form_important_description">Označte, pokud se očekává účast druhého rodiče</string>
-    <string name="event_form_important_helper">Očekává se účast druhého rodiče. Je to jen informace, ne žádost.</string>
+    <string name="event_form_important_description">Označte, pokud je účast druhého rodiče nutná</string>
+    <string name="event_form_important_description_named">Označte, pokud musí přijít i %1$s</string>
+    <string name="event_form_important_helper">Objeví se hned v obou kalendářích, bez potvrzování, a druhý rodič dostane upozornění, že se s ním počítá.</string>
     <string name="event_important_mark_description">Důležité: očekává se účast druhého rodiče</string>
     <string name="event_form_private_title">Soukromá událost</string>
     <string name="event_form_private_description">Tuto událost vidíte jen vy</string>

@@ -9,7 +9,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * [showParentOwnerSelector] decides whether AddEditEventScreen's parent-owner picker renders.
+ * [showParentOwnerSelector] decides whether AddEditEventScreen's parent-owner picker renders —
+ * since 21 October 2026 only as the escape for an account whose own slot never resolves.
  *
  * These four cases are the ones a code-review round pinned after the first fix only closed the
  * gap `Parents.loaded` can see: `parentOwner` starts null and is filled in by a `LaunchedEffect`
@@ -25,7 +26,6 @@ class AddEditEventScreenTest {
         assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = false,
-                isPaired = false,
                 parentOwner = null,
                 currentUserSlot = null
             )
@@ -33,7 +33,6 @@ class AddEditEventScreenTest {
         assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = false,
-                isPaired = true,
                 parentOwner = null,
                 currentUserSlot = "mom"
             )
@@ -48,7 +47,6 @@ class AddEditEventScreenTest {
         assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = true,
-                isPaired = false,
                 parentOwner = null,
                 currentUserSlot = "mom"
             )
@@ -60,7 +58,6 @@ class AddEditEventScreenTest {
         assertTrue(
             showParentOwnerSelector(
                 parentsLoaded = true,
-                isPaired = false,
                 parentOwner = null,
                 currentUserSlot = null
             )
@@ -68,11 +65,11 @@ class AddEditEventScreenTest {
     }
 
     @Test
-    fun `a legacy pair is shown even though the co-parent's slot is not known yet`() {
-        assertTrue(
+    fun `a paired account whose own slot resolved is not asked whose event it is`() {
+        // 21 October 2026: the owner is the day's parent, chosen for the parent (autoEventOwner).
+        assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = true,
-                isPaired = true,
                 parentOwner = null,
                 currentUserSlot = "mom"
             )
@@ -84,7 +81,6 @@ class AddEditEventScreenTest {
         assertFalse(
             showParentOwnerSelector(
                 parentsLoaded = true,
-                isPaired = false,
                 parentOwner = "dad",
                 currentUserSlot = null
             )
@@ -92,14 +88,22 @@ class AddEditEventScreenTest {
     }
 
     /** One state of the form when the hint is decided. */
-    private data class HintCase(val isPaired: Boolean, val isPrivate: Boolean, val owner: String?, val mySlot: String?)
+    private data class HintCase(
+        val isPaired: Boolean,
+        val isPrivate: Boolean,
+        val isImportant: Boolean,
+        val owner: String?,
+        val mySlot: String?
+    )
 
-    /** Every combination of the four, so nothing is left to the rule's own reading. */
+    /** Every combination of the five, so nothing is left to the rule's own reading. */
     private val hintCases: List<HintCase> =
         listOf(true, false).flatMap { isPaired ->
             listOf(true, false).flatMap { isPrivate ->
-                listOf("mom", "dad", null).flatMap { owner ->
-                    listOf("mom", null).map { mySlot -> HintCase(isPaired, isPrivate, owner, mySlot) }
+                listOf(true, false).flatMap { isImportant ->
+                    listOf("mom", "dad", null).flatMap { owner ->
+                        listOf("mom", null).map { mySlot -> HintCase(isPaired, isPrivate, isImportant, owner, mySlot) }
+                    }
                 }
             }
         }
@@ -120,16 +124,34 @@ class AddEditEventScreenTest {
         )
         for (case in hintCases) {
             val waits = EventAcceptanceTransition.required(
-                event.copy(isPrivate = case.isPrivate, parentOwner = case.owner ?: "mom"),
+                event.copy(
+                    isPrivate = case.isPrivate,
+                    isImportant = case.isImportant,
+                    parentOwner = case.owner ?: "mom"
+                ),
                 case.mySlot,
                 if (case.isPaired) "u2" else null
             )
-            val newEvent = descriptionReachesCoParent(true, case.isPaired, case.isPrivate, case.owner, case.mySlot)
+            val newEvent = descriptionReachesCoParent(
+                isNewEvent = true,
+                isPaired = case.isPaired,
+                isPrivate = case.isPrivate,
+                isImportant = case.isImportant,
+                parentOwner = case.owner,
+                mySlot = case.mySlot
+            )
 
             assertEquals(waits, newEvent, "$case")
             if (case.owner == null) assertFalse(newEvent, "$case")
             // An edit never asks again, so its description reaches nobody new.
-            val edit = descriptionReachesCoParent(false, case.isPaired, case.isPrivate, case.owner, case.mySlot)
+            val edit = descriptionReachesCoParent(
+                isNewEvent = false,
+                isPaired = case.isPaired,
+                isPrivate = case.isPrivate,
+                isImportant = case.isImportant,
+                parentOwner = case.owner,
+                mySlot = case.mySlot
+            )
             assertFalse(edit, "$case")
         }
     }

@@ -35,6 +35,18 @@ enum class OnboardingStep {
      */
     CoParent,
 
+    /**
+     * Asks for the system's permission to post notifications (Android 13 and later), right after
+     * the link (tester feedback, 21 October 2026, owner decision: "push on by default").
+     *
+     * Every request, answer, reminder and chat message reaches the other phone as a notification,
+     * and without this permission none of them appears: testers saw no reminders and no pushes at
+     * all, because the app only asked when a parent touched the push switch or picked a reminder.
+     * Skippable, like every step that is not needed for the calendar to work; on an older Android,
+     * or once granted, it says notifications are on.
+     */
+    Notifications,
+
     /** Explains what is about to be asked, and why. */
     Intro,
 
@@ -104,6 +116,7 @@ enum class OnboardingStep {
             val kinds = caresFor.ifEmpty { setOf(FamilyKind.CHILDREN) }
             return buildList {
                 add(CoParent)
+                add(Notifications)
                 add(Intro)
                 add(Family)
                 add(Profile)

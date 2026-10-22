@@ -40,6 +40,11 @@
     <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
          the wording the split and custody steps use once there is a co-parent to name. -->
     <string name="onboarding_coparent_title">Mit dem anderen Elternteil verknüpfen</string>
+    <string name="onboarding_notifications_title">Benachrichtigungen einschalten</string>
+    <string name="onboarding_notifications_body">Anfragen des anderen Elternteils, seine Antworten, Terminerinnerungen und Nachrichten kommen als Benachrichtigungen. Ohne sie siehst du sie erst, wenn du die App öffnest.</string>
+    <string name="onboarding_notifications_allow">Benachrichtigungen erlauben</string>
+    <string name="onboarding_notifications_on">Benachrichtigungen sind eingeschaltet.</string>
+    <string name="onboarding_notifications_later">Du kannst das jederzeit in den Einstellungen deines Telefons ändern.</string>
     <string name="onboarding_coparent_body">Wenn der andere Elternteil CoPlanly schon nutzt, gib seinen Code ein: Kinder, Haustiere, Betreuungsplan und Kostenaufteilung werden übernommen – nichts muss zweimal eingegeben werden. Wenn nicht, schick eine Einladung: Dann sieht der andere Elternteil alles, was du hier ausfüllst.</string>
     <string name="onboarding_coparent_enter_code">Ich habe einen Code</string>
     <string name="onboarding_coparent_invite">Anderen Elternteil einladen</string>

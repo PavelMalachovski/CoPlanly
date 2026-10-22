@@ -5,6 +5,7 @@ import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.events.EventAcceptance
@@ -154,7 +155,7 @@ object RequestHistory {
         val offers = DaySwapInbox.allGroups(overrides)
         return (
             changeRequests.mapNotNull { fromRequest(scope, it, clocks) } +
-                offers.mapNotNull { fromSwap(scope, it, clocks) } +
+                offers.flatMap { fromSwap(scope, it, clocks) } +
                 events.mapNotNull { fromEvent(scope, it, clocks) } +
                 listOfNotNull(decision?.let { fromDecision(scope, it) }) +
                 listOfNotNull(splitDecision?.let { splitDecisionRow(scope, it) }) +
@@ -183,37 +184,36 @@ object RequestHistory {
         )
     }
 
-    private fun fromSwap(scope: RequestScope, group: DaySwapGroup, clocks: ClocksAt): HistoryEntry? {
+    /**
+     * The rows of one offer: "no answer" while any of its days waits past its clock, and once every
+     * day is answered, **one row per answer the days were given** — an offer answered day by day
+     * (21 October 2026, Zuzana's test), accepted for two days and declined for three, reads as both.
+     * An offer answered one way keeps the single row, and the key, it always had.
+     */
+    private fun fromSwap(scope: RequestScope, group: DaySwapGroup, clocks: ClocksAt): List<HistoryEntry> {
         val first = group.swaps.first().override
-        if (!scope.isPair(first.requestedBy)) return null
+        if (!scope.isPair(first.requestedBy)) return emptyList()
         val key = "swap_${group.key}"
-        val subject = RequestSubject.DaySwap(group.firstDate, group.dayCount)
         if (group.swaps.any { it.override.isPending }) {
-            return UnansweredRows.ifOver(
-                key,
-                subject,
-                clocks.governing(scope, RequestDeadlineId.forSwap(group), first.requestedBy)
+            return listOfNotNull(
+                UnansweredRows.ifOver(
+                    key,
+                    RequestSubject.DaySwap(group.firstDate, group.dayCount),
+                    clocks.governing(scope, RequestDeadlineId.forSwap(group), first.requestedBy)
+                )
             )
         }
-        val outcome = first.status.outcome()
-        // An older build may have left decidedAt blank or unreadable; the offer's own time still
-        // places the answer in the history rather than dropping it.
-        val decidedAt = parse(first.decidedAt) ?: parse(first.requestedAt)
-        return if (outcome == null || decidedAt == null) {
-            null
-        } else {
-            HistoryEntry(
-                key = key,
-                subject = subject,
-                outcome = outcome,
-                askedBy = first.requestedBy,
-                decidedBy = first.decidedBy ?: scope.otherOf(first.requestedBy),
-                decidedAt = decidedAt,
-                swapDays = if (outcome == RequestOutcome.ACCEPTED) {
-                    group.swaps.associate { it.date to it.override.toParent }
-                } else {
-                    emptyMap()
-                }
+        val byAnswer = group.swaps.groupBy { it.override.status }
+        return byAnswer.mapNotNull { (status, days) ->
+            val answer = days.first().override
+            answeredRow(
+                scope = scope,
+                key = if (byAnswer.size == 1) key else "${key}_${status.name.lowercase()}",
+                days = days,
+                outcome = status.outcome(),
+                // An older build may have left decidedAt blank or unreadable; the offer's own time
+                // still places the answer in the history rather than dropping it.
+                decidedAt = parse(answer.decidedAt) ?: parse(answer.requestedAt)
             )
         }
     }
@@ -466,3 +466,31 @@ private fun splitDecisionRow(scope: RequestScope, decision: SplitRatioDecision):
 /** The history's order: newest first, and equal times by key, so the order never flickers. */
 private val NEWEST_FIRST: Comparator<HistoryEntry> =
     compareByDescending<HistoryEntry> { it.decidedAt }.thenBy { it.key }
+
+/** One answer given to [days] of an offer, or null when it is not an answer or has no time. */
+private fun answeredRow(
+    scope: RequestScope,
+    key: String,
+    days: List<DaySwap>,
+    outcome: RequestOutcome?,
+    decidedAt: LocalDateTime?
+): HistoryEntry? {
+    val first = days.first().override
+    return if (outcome == null || decidedAt == null) {
+        null
+    } else {
+        HistoryEntry(
+            key = key,
+            subject = RequestSubject.DaySwap(days.first().date, days.size),
+            outcome = outcome,
+            askedBy = first.requestedBy,
+            decidedBy = first.decidedBy ?: scope.otherOf(first.requestedBy),
+            decidedAt = decidedAt,
+            swapDays = if (outcome == RequestOutcome.ACCEPTED) {
+                days.associate { it.date to it.override.toParent }
+            } else {
+                emptyMap()
+            }
+        )
+    }
+}

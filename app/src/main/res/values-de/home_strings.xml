@@ -54,6 +54,7 @@
         <item quantity="one">%2$s schlägt einen Tausch für %1$d Tag vor: %3$s.</item>
         <item quantity="other">%2$s schlägt einen Tausch für %1$d Tage vor: %3$s bis %4$s.</item>
     </plurals>
+    <string name="home_dialog_swap_message_days_apart">%1$s schlägt vor, an diesen Tagen zu tauschen, bei wem das Kind ist: %2$s.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Termin hinzufügen</string>

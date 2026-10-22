@@ -232,7 +232,8 @@ class EmulatorParent private constructor(
         firebaseAuthService = authService,
         firestoreEventDataSource = eventDataSource,
         activityAnnouncer = announcer,
-        eventVersionRecorder = eventVersionRecorder
+        eventVersionRecorder = eventVersionRecorder,
+        fcmService = fcmService
     )
 
     val expenseRepository = ExpenseRepositoryImpl(
@@ -240,7 +241,8 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreExpenseDataSource = FirestoreExpenseDataSource(firestore),
-        activityAnnouncer = announcer
+        activityAnnouncer = announcer,
+        fcmService = fcmService
     )
 
     val selectedFamilySource = SelectedFamilySource(

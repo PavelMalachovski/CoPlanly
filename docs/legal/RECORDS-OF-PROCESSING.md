@@ -144,7 +144,7 @@ only what is specific to it.
 | | |
 | --- | --- |
 | Purpose | Tell a parent something changed |
-| Data | Push type, addressee uid, family id, record id — never message text |
+| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026) — never message text. The sentence is written on the receiving phone |
 | Legal basis | Art. 6(1)(b) |
 | Retention | Queue entries swept after **30 days** |
 | Where | `notification_queue`; FCM |

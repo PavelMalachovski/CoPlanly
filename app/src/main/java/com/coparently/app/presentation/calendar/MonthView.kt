@@ -606,7 +606,7 @@ private fun DayCell(
             //
             // Consuming after the press is load-bearing too: without it the release still reads
             // as a tap, and a tap while a selection is open extends it — over the one day just
-            // picked, which `toggledForSwap` turns straight back off. The selection would open
+            // picked, which `SwapSelection.toggled` turns straight back off. The selection would open
             // and vanish in the same gesture.
             .pointerInput(date, isCurrentMonth, onDayLongClick, onSwapDragTo) {
                 val offer = onDayLongClick

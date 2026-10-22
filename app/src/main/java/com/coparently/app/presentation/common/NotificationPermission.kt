@@ -26,9 +26,11 @@ fun hasNotificationPermission(context: Context): Boolean {
 /**
  * Contextual POST_NOTIFICATIONS request helper.
  *
- * The app deliberately does NOT ask for notification permission on app start;
- * instead call [NotificationPermissionRequester.request] from the exact interaction
- * that needs notifications (enabling the push toggle, picking an event reminder).
+ * The app does not ask for notification permission on app start. It asks once in onboarding, on
+ * a step of its own that says what the notifications are for (tester feedback, 21 October 2026:
+ * a parent who never touched the push switch got no reminders and no pushes at all), and again
+ * from the exact interaction that needs notifications (enabling the push toggle, picking an
+ * event reminder) — call [NotificationPermissionRequester.request] there.
  * The wrapped action runs immediately when permission is already granted or not
  * required, otherwise it runs after the user grants the system dialog.
  *

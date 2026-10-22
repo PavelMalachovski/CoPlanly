@@ -5,6 +5,8 @@
     <string name="event_preview_edit">Edit</string>
     <string name="event_preview_delete">Delete</string>
     <string name="event_preview_private">Private event — only you can see it</string>
+    <string name="event_preview_important_yours">Important: your presence is required</string>
+    <string name="event_preview_important_mine">Important: %1$s is expected</string>
     <string name="event_form_save">Save event</string>
     <!-- Shown after deleting an event from the preview sheet; offers an Undo. -->
     <string name="event_deleted_message">Event deleted</string>

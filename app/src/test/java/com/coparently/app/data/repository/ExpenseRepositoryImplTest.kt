@@ -3,8 +3,11 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
@@ -18,6 +21,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -42,6 +46,8 @@ class ExpenseRepositoryImplTest {
     private lateinit var firebaseAuthService: FirebaseAuthService
     private lateinit var firestoreExpenseDataSource: FirestoreExpenseDataSource
     private lateinit var repository: ExpenseRepositoryImpl
+    private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
+    private val fcmService = mockk<FcmService>(relaxed = true)
 
     @Before
     fun setup() {
@@ -54,7 +60,8 @@ class ExpenseRepositoryImplTest {
             userDao,
             firebaseAuthService,
             firestoreExpenseDataSource,
-            mockk(relaxed = true)
+            announcer,
+            fcmService
         )
     }
 
@@ -260,6 +267,60 @@ class ExpenseRepositoryImplTest {
         repository.addExpense(expense().copy(familyId = "uidA__uidB"))
 
         assertEquals("uidA__uidB", captured.captured["familyId"])
+    }
+
+    // ---- the co-parent's push (21 October 2026) -------------------------------------------
+
+    @Test
+    fun `a new shared expense pushes the co-parent its figures and their share`() = runTest {
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidB").copy(name = "Olya", partnerIdsJson = "[\"uidB\"]")
+        coEvery { firestoreExpenseDataSource.setExpense(any(), any()) } returns Unit
+        val pushed = slot<Map<String, String>>()
+        coEvery { fcmService.queueNotificationForUser("uidB", capture(pushed)) } returns Result.success(Unit)
+
+        // Slot 1 (Olya) carries 70 %, so Pavel's share of 1 000 is 300.
+        repository.addExpense(
+            expense().copy(
+                amount = 1000.0,
+                paidBy = "uidA",
+                splitBetween = listOf("uidA", "uidB"),
+                splitBasisPoints = 7_000,
+                familyId = "uidA__uidB"
+            )
+        )
+
+        assertEquals(PushPayload.EXPENSE_ADDED, pushed.captured[PushPayload.TYPE])
+        assertEquals("School trip", pushed.captured[PushPayload.SUBJECT])
+        assertEquals("Olya", pushed.captured[PushPayload.ACTOR])
+        assertEquals("1000.00", pushed.captured[PushPayload.AMOUNT])
+        assertEquals("300.00", pushed.captured[PushPayload.SHARE])
+        assertEquals("CZK", pushed.captured[PushPayload.CURRENCY])
+    }
+
+    @Test
+    fun `an expense not split with the co-parent pushes no share`() = runTest {
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidB").copy(partnerIdsJson = "[\"uidB\"]")
+        coEvery { firestoreExpenseDataSource.setExpense(any(), any()) } returns Unit
+        val pushed = slot<Map<String, String>>()
+        coEvery { fcmService.queueNotificationForUser("uidB", capture(pushed)) } returns Result.success(Unit)
+
+        repository.addExpense(expense().copy(paidBy = "uidA", splitBetween = listOf("uidA"), familyId = "uidA__uidB"))
+
+        assertEquals("42.00", pushed.captured[PushPayload.AMOUNT])
+        assertFalse(PushPayload.SHARE in pushed.captured)
+    }
+
+    @Test
+    fun `an expense with nobody to tell pushes nothing`() = runTest {
+        signIn("uidA")
+
+        repository.addExpense(expense())
+
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
     }
 
     private fun expense() = Expense(

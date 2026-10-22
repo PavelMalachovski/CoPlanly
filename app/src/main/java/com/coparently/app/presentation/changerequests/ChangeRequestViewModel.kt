@@ -26,6 +26,7 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.calendar.swapMiniMonths
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
@@ -156,6 +157,29 @@ class ChangeRequestViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    /**
+     * The mini months of every day swap waiting for an answer, either way, by group key (21 October
+     * 2026, Zuzana's test): the agreed custody, each offered day in the wash of the parent it would
+     * go to ([swapMiniMonths]). Computed off the main thread like [miniMonths], from the same source.
+     */
+    val swapMonths: StateFlow<Map<String, List<MiniMonthModel>>> = requests
+        .mapLatest { state ->
+            val ready = state as? RequestsState.Ready ?: return@mapLatest emptyMap()
+            withContext(Dispatchers.Default) {
+                val custody = ready.custody
+                val agreed = CustodyResolver.resolver(
+                    custody?.model,
+                    custody?.dayOverrides.orEmpty(),
+                    legacy = { null }
+                )
+                (ready.inbox.waitingOnMe.swaps + ready.inbox.waitingOnThem.swaps).associate { group ->
+                    val days = group.swaps.associate { it.date to it.override.toParent }
+                    group.key to swapMiniMonths(days, ready.events, agreed)
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     init {
         viewModelScope.launch {
             userRepository.getCurrentUser()?.let { user ->
@@ -253,7 +277,19 @@ class ChangeRequestViewModel @Inject constructor(
      * @param group The offer being answered.
      * @param accept True to take the days, false to turn them down.
      */
-    fun decideSwapGroup(group: DaySwapGroup, accept: Boolean) {
+    fun decideSwapGroup(group: DaySwapGroup, accept: Boolean) =
+        decideSwapDays(group, group.dates.associateWith { accept })
+
+    /**
+     * Answers an offer day by day (21 October 2026, Zuzana's test): the days in [answers] that are
+     * true are taken, the false ones turned down, and a day left out stays waiting. Two runs — the
+     * accepted days, then the declined — so the offering parent gets one card per answer, as an
+     * offer answered one way gets one. Each run is decided against the document as
+     * [decideSwapGroup] describes.
+     *
+     * @param answers ISO date to the answer for it.
+     */
+    fun decideSwapDays(group: DaySwapGroup, answers: Map<String, Boolean>) {
         viewModelScope.launch {
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
                 ?: userRepository.getCurrentUserId()
@@ -264,25 +300,32 @@ class ChangeRequestViewModel @Inject constructor(
                 return@launch
             }
             if (!stillShowsItsFamily()) return@launch
-            custodyModelRepository.applyDayOverridesForDates(
-                dates = group.dates,
-                transform = { current, date ->
-                    if (DayOverrideTransition.awaitsAnswerFrom(current, date, uid)) {
-                        DayOverrideTransition.decideGroup(current, listOf(date), uid, now, accept)
-                    } else {
-                        // Already decided, or this parent's own offer: leave it exactly as it is.
-                        // `decideGroup` would refuse a one-element list it cannot answer and abort
-                        // the run at that day, which is what stopped a part-answered group from ever
-                        // being finished.
-                        Result.success(current)
-                    }
-                }
-            ).onFailure { e ->
-                Log.w(TAG, "Answering a day swap failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
+            for (accept in listOf(true, false)) {
+                val dates = group.dates.filter { answers[it] == accept }
+                if (dates.isNotEmpty() && !answerSwapDays(dates, uid, now, accept)) return@launch
             }
         }
     }
+
+    /** One run of [decideSwapDays]: [dates] answered one way. False when the run was refused. */
+    private suspend fun answerSwapDays(dates: List<String>, uid: String, now: String, accept: Boolean): Boolean =
+        custodyModelRepository.applyDayOverridesForDates(
+            dates = dates,
+            transform = { current, date ->
+                if (DayOverrideTransition.awaitsAnswerFrom(current, date, uid)) {
+                    DayOverrideTransition.decideGroup(current, listOf(date), uid, now, accept)
+                } else {
+                    // Already decided, or this parent's own offer: leave it exactly as it is.
+                    // `decideGroup` would refuse a one-element list it cannot answer and abort
+                    // the run at that day, which is what stopped a part-answered group from ever
+                    // being finished.
+                    Result.success(current)
+                }
+            }
+        ).onFailure { e ->
+            Log.w(TAG, "Answering a day swap failed", e)
+            _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
+        }.isSuccess
 
     /**
      * Takes back this parent's own day-swap offer before the co-parent answers it (October 2026):

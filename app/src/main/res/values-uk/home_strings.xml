@@ -63,6 +63,7 @@
         <item quantity="many">%2$s пропонує змінити, у кого дитина, на %1$d днів: %3$s – %4$s</item>
         <item quantity="other">%2$s пропонує змінити, у кого дитина, на %1$d днів: %3$s – %4$s</item>
     </plurals>
+    <string name="home_dialog_swap_message_days_apart">%1$s пропонує змінити, у кого дитина, у ці дні: %2$s.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Додати подію</string>

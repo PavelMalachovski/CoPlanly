@@ -183,6 +183,30 @@ class RequestHistoryTest {
     }
 
     @Test
+    fun `an offer answered day by day is one row per answer`() {
+        // 21 October 2026, Zuzana's test: two days taken, one turned down.
+        val entries = history(
+            overrides = mapOf(
+                "2026-09-01" to swap(DayOverrideStatus.ACCEPTED),
+                "2026-09-02" to swap(DayOverrideStatus.DECLINED),
+                "2026-09-03" to swap(DayOverrideStatus.ACCEPTED)
+            )
+        )
+
+        val byOutcome = entries.associateBy { it.outcome }
+        assertEquals(setOf(RequestOutcome.ACCEPTED, RequestOutcome.DECLINED), byOutcome.keys)
+        val accepted = byOutcome.getValue(RequestOutcome.ACCEPTED)
+        assertEquals(RequestSubject.DaySwap(LocalDate.of(2026, 9, 1), 2), accepted.subject)
+        assertEquals(
+            mapOf(LocalDate.of(2026, 9, 1) to "dad", LocalDate.of(2026, 9, 3) to "dad"),
+            accepted.swapDays
+        )
+        val declined = byOutcome.getValue(RequestOutcome.DECLINED)
+        assertEquals(RequestSubject.DaySwap(LocalDate.of(2026, 9, 2), 1), declined.subject)
+        assertEquals(2, entries.map { it.key }.toSet().size)
+    }
+
+    @Test
     fun `a swap group with a day still pending is not history`() {
         val entries = history(
             overrides = mapOf(

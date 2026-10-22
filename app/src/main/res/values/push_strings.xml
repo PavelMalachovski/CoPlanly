@@ -15,6 +15,8 @@
 <resources>
     <string name="push_event_created_title">New event</string>
     <string name="push_event_created_body">%1$s added “%2$s”</string>
+    <string name="push_event_important_title">Your presence is required</string>
+    <string name="push_event_important_body">%1$s added “%2$s” and marked it important: you are expected there.</string>
     <string name="push_event_updated_title">Event changed</string>
     <string name="push_event_updated_body">%1$s changed “%2$s”</string>
     <string name="push_event_deleted_title">Event cancelled</string>
@@ -66,6 +68,9 @@
     <string name="push_split_ratio_declined_body">Your co-parent turned down the new split. Nothing has changed.</string>
     <string name="push_split_ratio_agreed_title">Expense split agreed</string>
     <string name="push_split_ratio_agreed_body">The split you and your co-parent will share by was set before you paired. Open Settings to see it.</string>
+    <string name="push_expense_added_title">New expense</string>
+    <string name="push_expense_added_body">%1$s added %2$s: %3$s.</string>
+    <string name="push_expense_added_body_share">%1$s added %2$s: %3$s. Your share is %4$s.</string>
     <string name="push_records_shared_title">Records shared with you</string>
     <string name="push_records_shared_body">%1$s shared their calendar and family records with you</string>
 

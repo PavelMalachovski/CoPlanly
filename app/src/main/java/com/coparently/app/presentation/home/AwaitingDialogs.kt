@@ -24,7 +24,11 @@ import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.parentingplan.CitationStatus
+import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.calendar.components.isConsecutive
 import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
+import com.coparently.app.presentation.changerequests.SwapDayAnswers
+import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
@@ -70,10 +74,13 @@ data class SplitAsk(
  *
  * @property proposal The co-parent's pending custody proposal, or null.
  * @property split The co-parent's proposed expense split, or null.
+ * @property swapMonths Each waiting swap's months, by group key (21 October 2026); a swap with none
+ *   yet is asked about without them.
  */
 data class HomeAsks(
     val proposal: ProposalAsk? = null,
-    val split: SplitAsk? = null
+    val split: SplitAsk? = null,
+    val swapMonths: Map<String, List<MiniMonthModel>> = emptyMap()
 )
 
 /**
@@ -90,6 +97,8 @@ data class HomeAsks(
  * @property onAcceptSplit Accepts the proposed expense split.
  * @property onDeclineSplit Declines the proposed expense split.
  * @property onSplitSeen Records that this parent opened the proposed split: its dialog was shown.
+ * @property onAnswerSwapDays Answers a day-swap offer day by day (21 October 2026): ISO date to
+ *   the answer, a day left out staying open.
  */
 data class AwaitingActions(
     val onAcceptSwap: (DaySwapGroup) -> Unit,
@@ -101,7 +110,8 @@ data class AwaitingActions(
     val onProposalSeen: () -> Unit,
     val onAcceptSplit: () -> Unit,
     val onDeclineSplit: () -> Unit,
-    val onSplitSeen: () -> Unit
+    val onSplitSeen: () -> Unit,
+    val onAnswerSwapDays: (DaySwapGroup, Map<String, Boolean>) -> Unit = { _, _ -> }
 )
 
 /**
@@ -149,7 +159,13 @@ internal fun AwaitingDialogs(
             SplitDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
 
         is HomeAsk.Swap ->
-            SwapDialog(ask.group, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
+            SwapDialog(
+                ask.group,
+                asks.swapMonths[ask.group.key].orEmpty(),
+                parentNames,
+                onDismiss = { dismiss(ask.key) },
+                actions = actions
+            )
 
         is HomeAsk.Requests ->
             RequestsDialog(
@@ -281,41 +297,38 @@ private fun SplitDialog(
     )
 }
 
-/** One day-swap offer, answered in place. */
+/**
+ * One day-swap offer, answered in place: whole, or day by day (21 October 2026), with the months
+ * its days fall in, each day in the colour of whom it would go to.
+ */
 @Composable
 private fun SwapDialog(
     swapGroup: DaySwapGroup,
+    months: List<MiniMonthModel>,
     parentNames: ParentNames,
     onDismiss: () -> Unit,
     actions: AwaitingActions
 ) {
-    val first = swapGroup.swaps.first()
-    val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-    val context = LocalContext.current
+    val myUid = parentNames.parents.me?.uid
     // Shown is opened (spec §4.5): once per offer, however often the dialog recomposes.
     LaunchedEffect(swapGroup.revision) { actions.onSwapSeen(swapGroup) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_dialog_swap_title)) },
         text = {
-            Text(
-                if (swapGroup.dayCount == 1) {
-                    stringResource(
-                        R.string.home_dialog_swap_message,
-                        parentNames.labelForUid(first.override.requestedBy),
-                        unbreakableDate(swapGroup.firstDate.format(dateFormat))
-                    )
-                } else {
-                    context.resources.getQuantityString(
-                        R.plurals.home_dialog_swap_message_days,
-                        swapGroup.dayCount,
-                        swapGroup.dayCount,
-                        parentNames.labelForUid(first.override.requestedBy),
-                        unbreakableDate(swapGroup.firstDate.format(dateFormat)),
-                        unbreakableDate(swapGroup.lastDate.format(dateFormat))
-                    )
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            ) {
+                Text(swapDialogMessage(swapGroup, parentNames))
+                SwapMonths(months, parentNames)
+                myUid?.let { uid ->
+                    SwapDayAnswers(swapGroup, uid, parentNames) { picked ->
+                        onDismiss()
+                        actions.onAnswerSwapDays(swapGroup, picked)
+                    }
                 }
-            )
+            }
         },
         confirmButton = {
             // Dismissed on tap as well: the answer's round trip through Firestore takes a
@@ -339,6 +352,38 @@ private fun SwapDialog(
             }
         }
     )
+}
+
+/**
+ * Who offers which days: one day, a run from its first to its last day, or days picked apart one by
+ * one (21 October 2026), which "from Monday to Friday" would misdescribe.
+ */
+@Composable
+private fun swapDialogMessage(swapGroup: DaySwapGroup, parentNames: ParentNames): String {
+    val first = swapGroup.swaps.first()
+    val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+    val shortDate = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+    val from = parentNames.labelForUid(first.override.requestedBy)
+    return when {
+        swapGroup.dayCount == 1 -> stringResource(
+            R.string.home_dialog_swap_message,
+            from,
+            unbreakableDate(swapGroup.firstDate.format(dateFormat))
+        )
+        !isConsecutive(swapGroup.swaps.map { it.date }) -> stringResource(
+            R.string.home_dialog_swap_message_days_apart,
+            from,
+            swapGroup.swaps.joinToString(", ") { unbreakableDate(it.date.format(shortDate)) }
+        )
+        else -> LocalContext.current.resources.getQuantityString(
+            R.plurals.home_dialog_swap_message_days,
+            swapGroup.dayCount,
+            swapGroup.dayCount,
+            from,
+            unbreakableDate(swapGroup.firstDate.format(dateFormat)),
+            unbreakableDate(swapGroup.lastDate.format(dateFormat))
+        )
+    }
 }
 
 /** The event change requests waiting, as one summary that routes to the inbox. */

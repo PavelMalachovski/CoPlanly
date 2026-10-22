@@ -259,6 +259,11 @@
         "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
       ]
     },
+    "expense_added": {
+      "e2e": [
+        "TwoParentExpensesTest#bobOwesHalfOfWhatAlicePaid"
+      ]
+    },
     "split_ratio_agreed": {
       "e2e": [
         "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",
@@ -303,6 +308,11 @@
     "event_created": {
       "e2e": [
         "TwoParentRequestsAndEventPushesTest#anEventTheSyncUploadsQueuesEventCreatedForBob"
+      ]
+    },
+    "event_important": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#anImportantEventOnBobsDayLandsAtOnceAndTellsHimHeIsExpected"
       ]
     },
     "event_updated": {

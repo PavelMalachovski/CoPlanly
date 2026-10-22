@@ -3,6 +3,8 @@
 <resources>
     <string name="push_event_created_title">Neuer Termin</string>
     <string name="push_event_created_body">%1$s hat „%2$s“ hinzugefügt</string>
+    <string name="push_event_important_title">Deine Anwesenheit ist nötig</string>
+    <string name="push_event_important_body">%1$s hat „%2$s“ hinzugefügt und als wichtig markiert: Du wirst erwartet.</string>
     <string name="push_event_updated_title">Termin geändert</string>
     <string name="push_event_updated_body">%1$s hat „%2$s“ geändert</string>
     <string name="push_event_deleted_title">Termin abgesagt</string>
@@ -54,6 +56,9 @@
     <string name="push_split_ratio_declined_body">Der andere Elternteil hat die neue Aufteilung abgelehnt. Es hat sich nichts geändert.</string>
     <string name="push_split_ratio_agreed_title">Kostenaufteilung vereinbart</string>
     <string name="push_split_ratio_agreed_body">Eure Aufteilung wurde festgelegt, bevor ihr verknüpft wart. Öffne die Einstellungen, um sie zu sehen.</string>
+    <string name="push_expense_added_title">Neue Ausgabe</string>
+    <string name="push_expense_added_body">%1$s hat %2$s hinzugefügt: %3$s.</string>
+    <string name="push_expense_added_body_share">%1$s hat %2$s hinzugefügt: %3$s. Dein Anteil: %4$s.</string>
     <string name="push_records_shared_title">Einträge mit dir geteilt</string>
     <string name="push_records_shared_body">%1$s hat den Kalender und die Familieneinträge mit dir geteilt</string>
 

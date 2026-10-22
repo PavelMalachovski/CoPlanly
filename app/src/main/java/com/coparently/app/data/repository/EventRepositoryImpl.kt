@@ -5,8 +5,10 @@ import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
@@ -43,13 +45,15 @@ import javax.inject.Singleton
  * stay visible only on the creator's device.
  */
 @Singleton
+@Suppress("LongParameterList") // one more sender: the important-event push (21 October 2026)
 class EventRepositoryImpl @Inject constructor(
     private val eventDao: EventDao,
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreEventDataSource: FirestoreEventDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
-    private val eventVersionRecorder: EventVersionRecorder
+    private val eventVersionRecorder: EventVersionRecorder,
+    private val fcmService: FcmService
 ) : EventRepository {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -204,7 +208,10 @@ class EventRepositoryImpl @Inject constructor(
             }
         }
 
-        if (announce) announceToCoParent(stamped, ActivityKind.EVENT_CREATED)
+        if (announce) {
+            val told = announceToCoParent(stamped, ActivityKind.EVENT_CREATED)
+            if (told != null && stamped.isImportant) pushImportant(stamped, told)
+        }
     }
 
     override suspend fun updateEvent(event: Event, announce: Boolean) {
@@ -375,8 +382,8 @@ class EventRepositoryImpl @Inject constructor(
      * Never throws — see [ActivityAnnouncer]. An announcement that fails is logged and dropped,
      * because a parent's event must not fail to save because chat is down.
      */
-    private suspend fun announceToCoParent(event: Event, kind: ActivityKind) {
-        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
+    private suspend fun announceToCoParent(event: Event, kind: ActivityKind): String? {
+        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return null
         val mine = event.lastModifiedBy?.takeIf { it.isNotBlank() }
             ?: event.createdByFirebaseUid
         val me = userDao.getUserById(myUid)
@@ -389,6 +396,7 @@ class EventRepositoryImpl @Inject constructor(
             livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]"),
             selectedPartner = me?.partnerId
         )
+        val suppressed = event.isPrivate || (mine != null && mine != myUid) || coParent == null
         activityAnnouncer.announce(
             announcement = ActivityAnnouncement(
                 kind = kind,
@@ -398,8 +406,28 @@ class EventRepositoryImpl @Inject constructor(
                 whenIso = event.startDateTime.format(dateFormatter)
             ),
             senderName = me?.name.orEmpty(),
-            suppress = event.isPrivate || (mine != null && mine != myUid) || coParent == null,
+            suppress = suppressed,
             partnerUid = coParent
+        )
+        return coParent.takeUnless { suppressed }
+    }
+
+    /**
+     * Tells the co-parent that an event they are expected at is on their calendar (21 October
+     * 2026, Zuzana's test). An important event is not asked about (`EventAcceptanceTransition.
+     * required`), so this push is how they learn their presence is required; the chat card says
+     * what was added, as for any event. Best-effort, like the card: a save never fails on a push.
+     */
+    private suspend fun pushImportant(event: Event, coParent: String) {
+        val me = firebaseAuthService.getCurrentUser()?.uid?.let { userDao.getUserById(it) }
+        fcmService.queueNotificationForUser(
+            coParent,
+            mapOf(
+                PushPayload.TYPE to PushPayload.EVENT_IMPORTANT,
+                PushPayload.EVENT_ID to event.id,
+                PushPayload.SUBJECT to event.title.take(PushPayload.SUBJECT_MAX),
+                PushPayload.ACTOR to me?.name.orEmpty().take(ACTOR_MAX)
+            )
         )
     }
 
@@ -560,5 +588,8 @@ class EventRepositoryImpl @Inject constructor(
 
     private companion object {
         const val TAG = "EventRepository"
+
+        /** The longest actor name a push carries, as the expense push bounds it. */
+        const val ACTOR_MAX = 100
     }
 }

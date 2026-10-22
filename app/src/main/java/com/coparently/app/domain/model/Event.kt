@@ -36,11 +36,11 @@ import java.time.LocalDateTime
  * fact; see [com.coparently.app.domain.events.EventAcceptance].
  * @property acceptedBy Firebase UID of whoever answered, or null while unanswered
  * @property acceptedAt Timestamp of that answer, or null while unanswered
- * @property isImportant Whether the co-parent is **expected** at this event. Set when the event
- * is created and rendered as an exclamation mark beside the title. Deliberately a statement of
- * expectation and not an obligation the app enforces: nothing blocks saving and nothing chases
- * the other parent. Distinct from [acceptance], which asks the co-parent a question they must
- * answer before the event counts at all — this one only says what the event means.
+ * @property isImportant Whether the co-parent's presence is **required** at this event. Set when
+ * the event is created and rendered as an exclamation mark beside the title. Since 21 October 2026
+ * (owner decision) an important event is never asked about: [acceptance] stays not required, the
+ * event is on both calendars at once, and the co-parent is told by `PushPayload.EVENT_IMPORTANT`.
+ * Nothing blocks saving and nothing chases them afterwards.
  * @property forMembers The children and pets this event is about. Empty means the whole family,
  * which is what every event created before the reference type existed is — see [FamilyMemberRef].
  * Deliberately a different question from [parentOwner]: that is a custody slot, and whose *day*

@@ -4,8 +4,10 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.UserEntity
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -50,6 +52,7 @@ class EventRepositoryImplTest {
     private lateinit var firestoreEventDataSource: FirestoreEventDataSource
     private lateinit var activityAnnouncer: ActivityAnnouncer
     private lateinit var eventVersionRecorder: EventVersionRecorder
+    private lateinit var fcmService: FcmService
     private lateinit var repository: EventRepositoryImpl
 
     private val now = LocalDateTime.of(2026, 7, 23, 10, 0)
@@ -71,13 +74,15 @@ class EventRepositoryImplTest {
         coEvery { firestoreEventDataSource.tombstoneEvent(any(), any(), any()) } returns Result.success(Unit)
         activityAnnouncer = mockk(relaxed = true)
         eventVersionRecorder = mockk(relaxed = true)
+        fcmService = mockk(relaxed = true)
         repository = EventRepositoryImpl(
             eventDao,
             userDao,
             firebaseAuthService,
             firestoreEventDataSource,
             activityAnnouncer,
-            eventVersionRecorder
+            eventVersionRecorder,
+            fcmService
         )
     }
 
@@ -529,6 +534,46 @@ class EventRepositoryImplTest {
         assertEquals(listOf("uidA"), uploads.getValue("dan-event")["sharedWith"])
         coVerify { activityAnnouncer.announce(match { it.entityId == "carol-event" }, any(), false, "uidC") }
         coVerify { activityAnnouncer.announce(match { it.entityId == "dan-event" }, any(), true, null) }
+    }
+
+    @Test
+    fun `an important event on the co-parent's day lands at once and tells them they are expected`() = runTest {
+        // 21 October 2026, Zuzana's test: "important" is not a question for the co-parent.
+        signIn(uid = "uidA", partnerId = "uidB")
+        val stored = slot<EventEntity>()
+        coEvery { eventDao.insertEvent(capture(stored)) } returns Unit
+        val push = slot<Map<String, String>>()
+        coEvery { fcmService.queueNotificationForUser("uidB", capture(push)) } returns Result.success(Unit)
+
+        repository.insertEvent(baseDomain().copy(parentOwner = "dad", isImportant = true, title = "Parents' evening"))
+
+        assertEquals(EventAcceptance.NOT_REQUIRED.name, stored.captured.acceptance)
+        assertEquals(PushPayload.EVENT_IMPORTANT, push.captured[PushPayload.TYPE])
+        assertEquals("Parents' evening", push.captured[PushPayload.SUBJECT])
+        assertEquals("e1", push.captured[PushPayload.EVENT_ID])
+        assertEquals("uidA", push.captured[PushPayload.ACTOR])
+    }
+
+    @Test
+    fun `an ordinary event on the co-parent's day still waits, and pushes nothing of its own`() = runTest {
+        signIn(uid = "uidA", partnerId = "uidB")
+        val stored = slot<EventEntity>()
+        coEvery { eventDao.insertEvent(capture(stored)) } returns Unit
+
+        repository.insertEvent(baseDomain().copy(parentOwner = "dad"))
+
+        assertEquals(EventAcceptance.PENDING.name, stored.captured.acceptance)
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+    }
+
+    @Test
+    fun `an important event nobody else can see pushes nobody`() = runTest {
+        signIn(uid = "uidA", partnerId = null)
+
+        repository.insertEvent(baseDomain().copy(isImportant = true))
+        repository.insertEvent(baseDomain().copy(id = "e2", isImportant = true, isPrivate = true))
+
+        coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
     }
 
     private fun signIn(uid: String, partnerId: String?) {

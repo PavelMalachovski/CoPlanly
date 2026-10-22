@@ -85,6 +85,22 @@ object PushPayload {
      */
     const val ANSWER_BY = "answerBy"
 
+    /** The longest [SUBJECT] `firestore.rules` accepts. */
+    const val SUBJECT_MAX = 200
+
+    /**
+     * An expense's amount ([EXPENSE_ADDED]), a plain decimal with two places ("1000.00"). A figure
+     * rather than a sentence: the receiving phone formats it with [CURRENCY] in its reader's
+     * language. Bounded by `firestore.rules` like every key a client writes.
+     */
+    const val AMOUNT = "amount"
+
+    /** What an expense costs the parent the push is for, in [AMOUNT]'s form; absent when it is not split with them. */
+    const val SHARE = "share"
+
+    /** The ISO 4217 code of [AMOUNT] and [SHARE] ("CZK"). */
+    const val CURRENCY = "currency"
+
     /** Deep-link targets. Ids, not text — nothing renders them. */
     const val EVENT_ID = "eventId"
     const val CHILD_INFO_ID = "childInfoId"
@@ -129,6 +145,13 @@ object PushPayload {
     const val EVENT_CREATED = "event_created"
     const val EVENT_UPDATED = "event_updated"
     const val EVENT_DELETED = "event_deleted"
+
+    /**
+     * The co-parent added an event marked important (21 October 2026, Zuzana's test): it is on
+     * both calendars at once, without asking, and this says their presence is required. Carries
+     * [EVENT_ID], [SUBJECT] and [ACTOR], like [EVENT_CREATED].
+     */
+    const val EVENT_IMPORTANT = "event_important"
     const val CHILD_INFO_UPDATED = "child_info_updated"
     const val CHANGE_REQUEST_CREATED = "change_request_created"
     const val CHANGE_REQUEST_ACCEPTED = "change_request_accepted"
@@ -181,6 +204,17 @@ object PushPayload {
      * No figure rides along, for the reason the three types above give.
      */
     const val SPLIT_RATIO_AGREED = "split_ratio_agreed"
+
+    /**
+     * The co-parent added a shared expense (tester feedback, 21 October 2026): its title
+     * ([SUBJECT]), [AMOUNT], [CURRENCY] and, when it is split with the reader, their [SHARE].
+     *
+     * Unlike the split-ratio types above it carries figures, by owner decision: the expense is
+     * already recorded — nothing here is a proposal to act on from the lock screen — and "what
+     * do I owe" is the one thing the reader asked to be told. A build with no wording for it drops
+     * it, and the chat card about the expense still arrives as a message.
+     */
+    const val EXPENSE_ADDED = "expense_added"
 
     /**
      * Everything this parent entered before pairing has just been shared with the co-parent.
@@ -252,6 +286,7 @@ object PushPayload {
         EVENT_CREATED,
         EVENT_UPDATED,
         EVENT_DELETED,
+        EVENT_IMPORTANT,
         CHILD_INFO_UPDATED,
         CHANGE_REQUEST_CREATED,
         CHANGE_REQUEST_ACCEPTED,
@@ -271,7 +306,8 @@ object PushPayload {
         SPLIT_RATIO_DECLINED,
         SPLIT_RATIO_AGREED,
         RECORDS_SHARED,
-        REQUEST_LAST_CHANCE
+        REQUEST_LAST_CHANCE,
+        EXPENSE_ADDED
     )
 
     /**

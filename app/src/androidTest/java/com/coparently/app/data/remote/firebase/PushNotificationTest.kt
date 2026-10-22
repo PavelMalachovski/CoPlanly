@@ -29,8 +29,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.math.BigDecimal
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Currency
 import java.util.Locale
 
 /**
@@ -337,6 +340,9 @@ class PushNotificationTest {
         PushPayload.DATE to DATE,
         PushPayload.DAY_COUNT to DAY_COUNT.toString(),
         PushPayload.ANSWER_BY to ANSWER_BY.toString(),
+        PushPayload.AMOUNT to EXPENSE_AMOUNT,
+        PushPayload.SHARE to EXPENSE_SHARE,
+        PushPayload.CURRENCY to EXPENSE_CURRENCY,
         PushPayload.TARGET_USER_ID to SIGNED_IN,
         PushPayload.FAMILY_ID to FAMILY
     )
@@ -366,6 +372,14 @@ class PushNotificationTest {
                 isoDateText(DATE, DAY_IN_SENTENCE, context.resources.configuration.locales[0])
             )
             PushNotifier.BodyArgs.DAY_COUNT -> context.resources.getQuantityString(spec.body, DAY_COUNT, DAY_COUNT)
+            // The payload carries a share, so the sentence that says it.
+            PushNotifier.BodyArgs.EXPENSE -> context.getString(
+                R.string.push_expense_added_body_share,
+                ACTOR_NAME,
+                SUBJECT,
+                moneyIn(context, EXPENSE_AMOUNT),
+                moneyIn(context, EXPENSE_SHARE)
+            )
             PushNotifier.BodyArgs.NONE -> context.getString(spec.body)
         }
         if (type !in PushNotifier.ANSWER_BY_TYPES) return body
@@ -373,6 +387,12 @@ class PushNotificationTest {
         val join = if (body.last() in ".!?…") " " else ". "
         return body + join + context.getString(R.string.push_answer_by, answerByIn(context))
     }
+
+    /** [plain] in [EXPENSE_CURRENCY], as [context]'s reader writes money. */
+    private fun moneyIn(context: Context, plain: String): String =
+        NumberFormat.getCurrencyInstance(context.resources.configuration.locales[0])
+            .apply { currency = Currency.getInstance(EXPENSE_CURRENCY) }
+            .format(BigDecimal(plain))
 
     /** [ANSWER_BY] said the way [context]'s reader hears it: their language, clock and zone. */
     private fun answerByIn(context: Context): String = answerByText(
@@ -392,6 +412,7 @@ class PushNotificationTest {
             // The date is said in the reader's language (D-18), so its day is what every one shows.
             PushNotifier.BodyArgs.DATE -> listOf(DATE_DAY)
             PushNotifier.BodyArgs.DAY_COUNT -> listOf(DAY_COUNT.toString())
+            PushNotifier.BodyArgs.EXPENSE -> listOf(ACTOR_NAME, SUBJECT)
             PushNotifier.BodyArgs.NONE -> emptyList()
         }
         for (name in names) assertTrue("$label: \"$body\" shows \"$name\"", body.contains(name))
@@ -484,6 +505,9 @@ class PushNotificationTest {
         const val OTHER_FAMILY = "push-test-uid__second-co-parent-uid"
         const val ACTOR_NAME = "Jana"
         const val SUBJECT = "Dentist"
+        const val EXPENSE_AMOUNT = "1000.00"
+        const val EXPENSE_SHARE = "500.00"
+        const val EXPENSE_CURRENCY = "CZK"
         const val DATE = "2026-05-14"
         const val DATE_DAY = "14"
         const val DAY_COUNT = 3
