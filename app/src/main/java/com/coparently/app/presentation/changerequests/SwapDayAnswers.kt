@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
@@ -48,7 +47,7 @@ internal fun SwapDayAnswers(
 ) {
     val waiting = group.swaps.filter { DaySwapInbox.awaitsAnswerFrom(it, uid) }
     if (waiting.size < 2) return
-    var picks by rememberSaveable(group.revision) { mutableStateOf(emptyMap<String, Boolean>()) }
+    var picks by remember(group.revision) { mutableStateOf(emptyMap<String, Boolean>()) }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(
             text = stringResource(R.string.day_swap_by_day_heading),

@@ -58,6 +58,7 @@ import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime

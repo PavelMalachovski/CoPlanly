@@ -309,7 +309,6 @@ private fun SwapDialog(
     onDismiss: () -> Unit,
     actions: AwaitingActions
 ) {
-    val first = swapGroup.swaps.first()
     val myUid = parentNames.parents.me?.uid
     // Shown is opened (spec §4.5): once per offer, however often the dialog recomposes.
     LaunchedEffect(swapGroup.revision) { actions.onSwapSeen(swapGroup) }

@@ -1,8 +1,5 @@
 package com.coparently.app.presentation.calendar.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
@@ -16,7 +13,6 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.theme.Spacing
 import java.time.LocalDate
 
 /**
@@ -69,7 +65,6 @@ internal data class DaySwapStripActions(
 )
 
 /** The strip over Day view's grid for a day with a swap; see [DaySwapStripState]. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DaySwapStrip(
     state: DaySwapStripState,
@@ -93,27 +88,27 @@ internal fun DaySwapStrip(
         modifier = modifier,
         icon = Icons.Default.SwapHoriz,
         tone = if (state is DaySwapStripState.OfferedToMe) BannerTone.ATTENTION else BannerTone.INFO,
-        actions = when (state) {
-            is DaySwapStripState.OfferedByMe -> {
-                { TextButton(onClick = actions.onWithdraw) { Text(stringResource(R.string.change_request_withdraw)) } }
-            }
-            is DaySwapStripState.OfferedToMe -> {
-                {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                        Button(onClick = actions.onAccept) { Text(stringResource(R.string.day_swap_accept)) }
-                        TextButton(onClick = actions.onDecline) { Text(stringResource(R.string.day_swap_decline)) }
-                    }
-                }
-            }
-            is DaySwapStripState.Agreed -> if (state.canChange) {
-                {
-                    TextButton(onClick = actions.onProposeChange) {
-                        Text(stringResource(R.string.request_history_propose_change))
-                    }
-                }
-            } else {
-                null
-            }
+        // Nothing to do on an agreed day already lived; everything else carries its buttons.
+        actions = if (state !is DaySwapStripState.Agreed || state.canChange) {
+            { DaySwapStripButtons(state, actions) }
+        } else {
+            null
         }
     )
+}
+
+/** The strip's buttons, in the banner's own row; see [DaySwapStrip]. */
+@Composable
+private fun DaySwapStripButtons(state: DaySwapStripState, actions: DaySwapStripActions) {
+    when (state) {
+        is DaySwapStripState.OfferedByMe ->
+            TextButton(onClick = actions.onWithdraw) { Text(stringResource(R.string.change_request_withdraw)) }
+        is DaySwapStripState.OfferedToMe -> {
+            Button(onClick = actions.onAccept) { Text(stringResource(R.string.day_swap_accept)) }
+            TextButton(onClick = actions.onDecline) { Text(stringResource(R.string.day_swap_decline)) }
+        }
+        is DaySwapStripState.Agreed -> TextButton(onClick = actions.onProposeChange) {
+            Text(stringResource(R.string.request_history_propose_change))
+        }
+    }
 }
