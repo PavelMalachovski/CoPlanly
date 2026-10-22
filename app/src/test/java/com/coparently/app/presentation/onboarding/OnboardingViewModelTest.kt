@@ -185,8 +185,17 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `the intro can always be advanced, because it asks for nothing`() = runTest(dispatcher) {
+    fun `notifications are asked for right after the link, and may be declined`() = runTest(dispatcher) {
         viewModel.next()
+        advanceUntilIdle()
+        assertEquals(OnboardingStep.Notifications, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.canAdvance)
+        assertTrue(viewModel.uiState.value.canSkip)
+    }
+
+    @Test
+    fun `the intro can always be advanced, because it asks for nothing`() = runTest(dispatcher) {
+        walkTo(OnboardingStep.Intro)
         advanceUntilIdle()
         assertEquals(OnboardingStep.Intro, viewModel.uiState.value.step)
         assertTrue(viewModel.uiState.value.canAdvance)
@@ -195,10 +204,8 @@ class OnboardingViewModelTest {
 
     @Test
     fun `a blank name is the only thing that blocks progress`() = runTest(dispatcher) {
-        // The link, the intro, then the family question, then the profile.
-        viewModel.next()
-        viewModel.next()
-        viewModel.next()
+        // The link, notifications, the intro, then the family question, then the profile.
+        repeat(STEPS_BEFORE_PROFILE) { viewModel.next() }
         advanceUntilIdle()
         assertEquals(OnboardingStep.Profile, viewModel.uiState.value.step)
 
@@ -213,10 +220,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `nothing medical is ever required`() = runTest(dispatcher) {
-        viewModel.next()
-        viewModel.next()
-        viewModel.next()
-        viewModel.updateName("Olya")
+        walkTo(OnboardingStep.Profile)
         advanceUntilIdle()
 
         // No date of birth, no phone - and still advanceable.
@@ -545,11 +549,9 @@ class OnboardingViewModelTest {
             // is about.
             coEvery { userRepository.getCurrentUser() } returns storedUser.copy(partnerId = null)
 
-            // The link, the intro, then Family, then Profile: the name is entered on the step that
-            // asks for it, and the three Nexts before it are the three steps that precede it.
-            viewModel.next()
-            viewModel.next()
-            viewModel.next()
+            // The link, notifications, the intro, then Family, then Profile: the name is entered on the
+            // step that asks for it, after one Next per step that precedes it.
+            repeat(STEPS_BEFORE_PROFILE) { viewModel.next() }
             viewModel.updateName("Olya")
             viewModel.next()
             advanceUntilIdle()
@@ -566,10 +568,8 @@ class OnboardingViewModelTest {
     @Test
     fun `confirming the country on the profile step suggests its currency`() = runTest(dispatcher) {
         advanceUntilIdle()
-        // The link, the intro and Family, then Profile, as in the test above.
-        viewModel.next()
-        viewModel.next()
-        viewModel.next()
+        // The steps before Profile, as in the test above.
+        repeat(STEPS_BEFORE_PROFILE) { viewModel.next() }
         viewModel.updateName("Olya")
         viewModel.updateCountry(HolidayCountry.SLOVAKIA)
         viewModel.next()
@@ -583,9 +583,7 @@ class OnboardingViewModelTest {
     @Test
     fun `a profile country whose currency the app does not offer suggests none`() = runTest(dispatcher) {
         advanceUntilIdle()
-        viewModel.next()
-        viewModel.next()
-        viewModel.next()
+        repeat(STEPS_BEFORE_PROFILE) { viewModel.next() }
         viewModel.updateName("Olya")
         viewModel.updateCountry(HolidayCountry.UKRAINE)
         viewModel.next()
@@ -683,9 +681,7 @@ class OnboardingViewModelTest {
             coEvery { userRepository.getCurrentUser() } answers { stored }
             coEvery { userRepository.updateUser(any()) } answers { stored = firstArg() }
 
-            viewModel.next()
-            viewModel.next()
-            viewModel.next()
+            repeat(STEPS_BEFORE_PROFILE) { viewModel.next() }
             viewModel.updateName("Olya")
             viewModel.next()
             viewModel.finish()
@@ -866,5 +862,10 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf("Anya", "Petr"), viewModel.uiState.value.children.map { it.name })
+    }
+
+    private companion object {
+        /** The link, notifications, the intro and Family: the steps the wizard walks before Profile. */
+        const val STEPS_BEFORE_PROFILE = 4
     }
 }

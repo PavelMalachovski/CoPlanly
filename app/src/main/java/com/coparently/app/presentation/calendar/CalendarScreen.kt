@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -79,6 +80,7 @@ import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.event.EventOperation
 import com.coparently.app.presentation.event.EventUiState
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
@@ -542,6 +544,20 @@ fun CalendarScreen(
     BackHandler(enabled = viewMode == CalendarViewMode.DAY && dayOpenedFromMonth) {
         dayOpenedFromMonth = false
         calendarViewModel.setViewMode(CalendarViewMode.MONTH)
+    }
+    // Every tap on the Calendar tab opens this month in Month view (tester feedback, 21 October
+    // 2026), the tab's restored state notwithstanding. The count answered last is saved with the
+    // screen, so a tap made from another tab is answered when the screen comes back.
+    val tabTaps by CalendarTabTaps.count.collectAsState()
+    var answeredTabTaps by rememberSaveable { mutableIntStateOf(tabTaps) }
+    LaunchedEffect(tabTaps) {
+        if (tabTaps != answeredTabTaps) {
+            answeredTabTaps = tabTaps
+            dayOpenedFromMonth = false
+            swapSelection = emptySet()
+            calendarViewModel.setViewMode(CalendarViewMode.MONTH)
+            calendarViewModel.showMonth(YearMonth.now())
+        }
     }
     // Leaving Day by any other route (the view picker, the date picker) ends the drill-down, so
     // a Day view reached later through the picker keeps the default Back.

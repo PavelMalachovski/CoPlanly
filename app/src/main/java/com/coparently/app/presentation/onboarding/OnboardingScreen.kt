@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.Button
@@ -60,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -80,7 +82,9 @@ import com.coparently.app.presentation.common.MedicalProfileEditor
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.hasNotificationPermission
 import com.coparently.app.presentation.common.labelRes
+import com.coparently.app.presentation.common.rememberNotificationPermissionRequester
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
@@ -237,6 +241,7 @@ private fun OnboardingBody(
     ) {
         when (state.step) {
             OnboardingStep.CoParent -> CoParentStep(state, onOpenPairing)
+            OnboardingStep.Notifications -> NotificationsStep(onAnswered = viewModel::next)
             OnboardingStep.Intro -> IntroStep()
             OnboardingStep.Family -> FamilyKindStep(state, viewModel)
             OnboardingStep.Pet -> PetStep(state, viewModel)
@@ -287,6 +292,53 @@ private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Bo
                 Text(stringResource(R.string.onboarding_coparent_invite))
             }
         }
+    }
+}
+
+/**
+ * Asks for the permission to post notifications (tester feedback, 21 October 2026): the button
+ * opens the system's dialog, and either answer moves on. Already granted — or an Android older
+ * than 13, which needs no permission — it says so and only Next is left to press.
+ *
+ * @param onAnswered Moves to the next step once the system dialog has been answered.
+ */
+@Composable
+private fun NotificationsStep(onAnswered: () -> Unit) {
+    val context = LocalContext.current
+    var granted by remember { mutableStateOf(hasNotificationPermission(context)) }
+    val requester = rememberNotificationPermissionRequester(onDenied = onAnswered)
+    StepHeading(title = R.string.onboarding_notifications_title, body = R.string.onboarding_notifications_body)
+    if (granted) {
+        StatusRow(text = stringResource(R.string.onboarding_notifications_on)) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    } else {
+        Button(
+            onClick = {
+                requester.request {
+                    granted = true
+                    onAnswered()
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = null,
+                modifier = Modifier.size(IconSizes.Small)
+            )
+            Spacer(modifier = Modifier.width(Spacing.S))
+            Text(stringResource(R.string.onboarding_notifications_allow))
+        }
+        Text(
+            text = stringResource(R.string.onboarding_notifications_later),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

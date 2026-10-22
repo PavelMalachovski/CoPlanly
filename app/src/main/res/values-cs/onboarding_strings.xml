@@ -40,6 +40,11 @@
     <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
          the wording the split and custody steps use once there is a co-parent to name. -->
     <string name="onboarding_coparent_title">Propojte se s druhým rodičem</string>
+    <string name="onboarding_notifications_title">Zapněte oznámení</string>
+    <string name="onboarding_notifications_body">Žádosti druhého rodiče, jeho odpovědi, připomínky událostí a zprávy přicházejí jako oznámení. Bez nich je uvidíte, až když otevřete aplikaci.</string>
+    <string name="onboarding_notifications_allow">Povolit oznámení</string>
+    <string name="onboarding_notifications_on">Oznámení jsou zapnutá.</string>
+    <string name="onboarding_notifications_later">Kdykoli to můžete změnit v nastavení telefonu.</string>
     <string name="onboarding_coparent_body">Pokud druhý rodič už CoPlanly používá, zadejte jeho kód: děti, mazlíčci, rozvrh péče i rozdělení výdajů se přenesou samy – nic nebudete zadávat dvakrát. Pokud ještě ne, pošlete mu pozvánku: uvidí všechno, co tady vyplníte.</string>
     <string name="onboarding_coparent_enter_code">Mám kód</string>
     <string name="onboarding_coparent_invite">Pozvat druhého rodiče</string>

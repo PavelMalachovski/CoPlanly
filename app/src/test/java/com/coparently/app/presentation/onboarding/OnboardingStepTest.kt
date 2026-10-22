@@ -23,6 +23,7 @@ class OnboardingStepTest {
         assertEquals(
             listOf(
                 OnboardingStep.CoParent,
+                OnboardingStep.Notifications,
                 OnboardingStep.Intro,
                 OnboardingStep.Family,
                 OnboardingStep.Profile,
@@ -55,6 +56,7 @@ class OnboardingStepTest {
     fun `the link can be declined, the name and the family answer cannot`() {
         // A parent whose co-parent does not use the app yet still gets a calendar.
         assertTrue(OnboardingStep.CoParent.isSkippable)
+        assertTrue(OnboardingStep.Notifications.isSkippable, "a parent may say no to notifications")
         assertFalse(OnboardingStep.Intro.isSkippable)
         assertFalse(OnboardingStep.Profile.isSkippable)
         assertFalse(OnboardingStep.Family.isSkippable)
