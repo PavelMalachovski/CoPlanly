@@ -3,6 +3,8 @@
 <resources>
     <string name="push_event_created_title">Нова подія</string>
     <string name="push_event_created_body">%1$s додає «%2$s»</string>
+    <string name="push_event_important_title">Ваша присутність обовʼязкова</string>
+    <string name="push_event_important_body">%1$s додає «%2$s» з позначкою «важливо» — на вас там чекають.</string>
     <string name="push_event_updated_title">Подію змінено</string>
     <string name="push_event_updated_body">%1$s змінює «%2$s»</string>
     <string name="push_event_deleted_title">Подію скасовано</string>

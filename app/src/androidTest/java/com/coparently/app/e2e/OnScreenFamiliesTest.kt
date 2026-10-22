@@ -109,15 +109,16 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
         waitFor("Carol's row in the switcher dialog", carolsRow)
         tap(carolsRow)
 
-        // The new-event form names the family on screen: its owner cards are Alice and Carol, not
-        // Alice and Bob, the co-parent the server's link still names (tester report #11).
+        // The new-event form names the family on screen: the important mark asks for Carol, not
+        // Bob, the co-parent the server's link still names (tester report #11). It named the
+        // owner cards until they went (21 October 2026).
         step("families: the new-event form names Carol")
         openTab(BottomNavDestination.CALENDAR)
         tap(hasContentDescription(string(R.string.calendar_add_event)) and hasClickAction())
-        waitFor("the owner card naming Carol", ownerCardNaming(carol.name))
+        waitFor("the important mark naming Carol", importantMarkNaming(carol.name))
         assertTrue(
             "the new-event form in Carol's family still names Bob",
-            composeTestRule.onAllNodes(ownerCardNaming(bob.name)).fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodes(importantMarkNaming(bob.name)).fetchSemanticsNodes().isEmpty()
         )
         step("families: back to the calendar")
         Espresso.pressBackUnconditionally()
@@ -192,16 +193,9 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
         return carol
     }
 
-    /**
-     * An owner card on the event form whose description names [name], selected or not
-     * (`AddEditEventScreen`'s "Assign to …" cards).
-     */
-    private fun ownerCardNaming(name: String): SemanticsMatcher =
-        hasContentDescription(
-            string(R.string.event_form_cd_assign_to, name, string(R.string.event_form_cd_selected))
-        ) or hasContentDescription(
-            string(R.string.event_form_cd_assign_to, name, string(R.string.event_form_cd_not_selected))
-        )
+    /** The event form's important mark, asking for [name] (`AddEditEventScreen`). */
+    private fun importantMarkNaming(name: String): SemanticsMatcher =
+        hasText(string(R.string.event_form_important_description_named, name))
 
     private companion object {
         /** A node showing an invitation code — `InviteCodeText` on the pairing screen's card. */

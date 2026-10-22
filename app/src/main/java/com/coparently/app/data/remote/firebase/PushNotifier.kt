@@ -439,6 +439,11 @@ class PushNotifier(private val context: Context) {
                 R.string.push_event_created_body,
                 BodyArgs.ACTOR_AND_SUBJECT
             ),
+            PushPayload.EVENT_IMPORTANT to PushTextSpec(
+                R.string.push_event_important_title,
+                R.string.push_event_important_body,
+                BodyArgs.ACTOR_AND_SUBJECT
+            ),
             PushPayload.EVENT_UPDATED to PushTextSpec(
                 R.string.push_event_updated_title,
                 R.string.push_event_updated_body,

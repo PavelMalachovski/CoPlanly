@@ -270,7 +270,8 @@ class ChatEventCardViewModelTest {
                 firebaseAuthService = mockk(relaxed = true),
                 firestoreEventDataSource = firestore,
                 activityAnnouncer = mockk(relaxed = true),
-                eventVersionRecorder = mockk(relaxed = true)
+                eventVersionRecorder = mockk(relaxed = true),
+                fcmService = mockk(relaxed = true)
             ),
             userRepository = userRepository
         )

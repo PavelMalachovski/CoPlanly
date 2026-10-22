@@ -52,6 +52,18 @@ class EventAcceptanceTransitionTest {
     }
 
     @Test
+    fun `an important event on the co-parent's day lands at once instead of asking`() {
+        // 21 October 2026: "important" says their presence is required, so it is not a question.
+        assertFalse(
+            EventAcceptanceTransition.required(
+                event = event(parentOwner = "dad").copy(isImportant = true),
+                creatorSlot = "mom",
+                partnerUid = them
+            )
+        )
+    }
+
+    @Test
     fun `an event a parent creates for themselves does not`() {
         assertFalse(
             EventAcceptanceTransition.required(

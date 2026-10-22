@@ -223,6 +223,8 @@ describe('SEC-3: notification payloads', () => {
         'request_last_chance',
         // 21 October 2026. A new shared expense, with its figures.
         'expense_added',
+        // 21 October 2026. An important event: on both calendars at once, presence required.
+        'event_important',
       ];
       for (const type of types) {
         await assertSucceeds(

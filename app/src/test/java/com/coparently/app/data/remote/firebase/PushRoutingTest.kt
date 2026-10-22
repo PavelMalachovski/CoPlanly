@@ -44,6 +44,8 @@ class PushRoutingTest {
         assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(PushPayload.CHANGE_REQUEST_CREATED))
         assertEquals(PushDestination.EXPENSES, PushRouting.destinationOf(PushPayload.SPLIT_RATIO_PROPOSED))
         assertEquals(PushDestination.CALENDAR, PushRouting.destinationOf(PushPayload.EVENT_CREATED))
+        assertEquals(PushDestination.CALENDAR, PushRouting.destinationOf(PushPayload.EVENT_IMPORTANT))
+        assertEquals(PushDestination.EXPENSES, PushRouting.destinationOf(PushPayload.EXPENSE_ADDED))
         assertEquals(
             PushDestination.PROFESSIONALS,
             PushRouting.destinationOf(PushPayload.PROFESSIONAL_ACCESS_REQUESTED)
@@ -61,7 +63,7 @@ class PushRoutingTest {
         assertEquals(PushChannel.CHAT, PushRouting.channelOf(PushPayload.CHAT_MESSAGE))
         for (type in PushPayload.CLIENT_TYPES) {
             val expected = when {
-                type.startsWith("split_ratio_") -> PushChannel.MONEY
+                type.startsWith("split_ratio_") || type == PushPayload.EXPENSE_ADDED -> PushChannel.MONEY
                 type == PushPayload.CHILD_INFO_UPDATED || type == PushPayload.RECORDS_SHARED -> PushChannel.FAMILY
                 else -> PushChannel.SCHEDULE
             }

@@ -15,6 +15,8 @@
 <resources>
     <string name="push_event_created_title">New event</string>
     <string name="push_event_created_body">%1$s added “%2$s”</string>
+    <string name="push_event_important_title">Your presence is required</string>
+    <string name="push_event_important_body">%1$s added “%2$s” and marked it important: you are expected there.</string>
     <string name="push_event_updated_title">Event changed</string>
     <string name="push_event_updated_body">%1$s changed “%2$s”</string>
     <string name="push_event_deleted_title">Event cancelled</string>

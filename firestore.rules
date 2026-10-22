@@ -2095,7 +2095,7 @@ service cloud.firestore {
 
     function isClientPushType(type) {
       return type in [
-        'event_created', 'event_updated', 'event_deleted',
+        'event_created', 'event_updated', 'event_deleted', 'event_important',
         'child_info_updated',
         'change_request_created', 'change_request_accepted',
         'change_request_declined', 'change_request_cancelled',

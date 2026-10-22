@@ -3,6 +3,8 @@
 <resources>
     <string name="push_event_created_title">Nová událost</string>
     <string name="push_event_created_body">%1$s přidal(a) „%2$s“</string>
+    <string name="push_event_important_title">Vaše účast je nutná</string>
+    <string name="push_event_important_body">%1$s přidal(a) „%2$s“ a označil(a) ji jako důležitou: počítá se s vámi.</string>
     <string name="push_event_updated_title">Událost změněna</string>
     <string name="push_event_updated_body">%1$s změnil(a) „%2$s“</string>
     <string name="push_event_deleted_title">Událost zrušena</string>

@@ -3,6 +3,8 @@
     <string name="event_preview_edit">Змінити</string>
     <string name="event_preview_delete">Видалити</string>
     <string name="event_preview_private">Приватна подія — бачите лише ви</string>
+    <string name="event_preview_important_yours">Важливе: ваша присутність обовʼязкова</string>
+    <string name="event_preview_important_mine">Важливе: чекаємо, що прийде %1$s</string>
     <string name="event_form_save">Зберегти подію</string>
     <string name="event_deleted_message">Подію видалено</string>
     <string name="event_deleted_undo">Скасувати</string>

@@ -145,6 +145,13 @@ object PushPayload {
     const val EVENT_CREATED = "event_created"
     const val EVENT_UPDATED = "event_updated"
     const val EVENT_DELETED = "event_deleted"
+
+    /**
+     * The co-parent added an event marked important (21 October 2026, Zuzana's test): it is on
+     * both calendars at once, without asking, and this says their presence is required. Carries
+     * [EVENT_ID], [SUBJECT] and [ACTOR], like [EVENT_CREATED].
+     */
+    const val EVENT_IMPORTANT = "event_important"
     const val CHILD_INFO_UPDATED = "child_info_updated"
     const val CHANGE_REQUEST_CREATED = "change_request_created"
     const val CHANGE_REQUEST_ACCEPTED = "change_request_accepted"
@@ -279,6 +286,7 @@ object PushPayload {
         EVENT_CREATED,
         EVENT_UPDATED,
         EVENT_DELETED,
+        EVENT_IMPORTANT,
         CHILD_INFO_UPDATED,
         CHANGE_REQUEST_CREATED,
         CHANGE_REQUEST_ACCEPTED,

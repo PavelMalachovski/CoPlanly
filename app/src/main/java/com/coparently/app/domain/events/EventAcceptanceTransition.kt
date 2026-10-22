@@ -22,7 +22,12 @@ object EventAcceptanceTransition {
      * [EventAcceptance.NOT_REQUIRED].
      *
      * True only when all of these hold: the account is paired, the event is owned by the *other*
-     * parent's slot, and the event is not private.
+     * parent's slot, the event is not private, and it is not marked important.
+     *
+     * **An important event is never asked** (owner decision, 21 October 2026, after Zuzana's
+     * test): it says the co-parent's presence is required, so it lands on both calendars at once
+     * and the co-parent is told by its own push (`PushPayload.EVENT_IMPORTANT`) rather than asked.
+     * An event on the other parent's day without the mark still waits for their answer.
      *
      * The last two are not symmetry, they are safety. A pending event is hidden from every
      * calendar view, so anything marked pending that the co-parent cannot actually answer is
@@ -46,6 +51,7 @@ object EventAcceptanceTransition {
     fun required(event: Event, creatorSlot: String?, partnerUid: String?): Boolean {
         if (partnerUid.isNullOrBlank()) return false
         if (event.isPrivate) return false
+        if (event.isImportant) return false
         if (creatorSlot.isNullOrBlank()) return false
         return event.parentOwner != creatorSlot
     }

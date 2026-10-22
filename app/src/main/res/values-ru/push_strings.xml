@@ -3,6 +3,8 @@
 <resources>
     <string name="push_event_created_title">Новое событие</string>
     <string name="push_event_created_body">%1$s: добавлено «%2$s»</string>
+    <string name="push_event_important_title">Ваше присутствие обязательно</string>
+    <string name="push_event_important_body">%1$s: добавлено «%2$s» с отметкой «важное» — вас там ждут.</string>
     <string name="push_event_updated_title">Событие изменено</string>
     <string name="push_event_updated_body">%1$s: изменено «%2$s»</string>
     <string name="push_event_deleted_title">Событие отменено</string>

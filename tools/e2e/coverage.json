@@ -310,6 +310,11 @@
         "TwoParentRequestsAndEventPushesTest#anEventTheSyncUploadsQueuesEventCreatedForBob"
       ]
     },
+    "event_important": {
+      "e2e": [
+        "TwoParentRequestsAndEventPushesTest#anImportantEventOnBobsDayLandsAtOnceAndTellsHimHeIsExpected"
+      ]
+    },
     "event_updated": {
       "exempt": "Nothing produces it: SyncService.notifyEventUpdate is only called with \"created\", and no function writes event pushes any more. It survives in PushPayload, PUSH_TEXT and the rules allow-list for older builds."
     },

@@ -58,8 +58,9 @@
     <string name="event_reminder_2_hours">2 часа</string>
     <string name="event_reminder_1_day">1 день</string>
     <string name="event_form_important_title">Важное событие</string>
-    <string name="event_form_important_description">Отметьте, если ожидается второй родитель</string>
-    <string name="event_form_important_helper">Ожидается второй родитель. Это уведомление, а не вопрос к нему.</string>
+    <string name="event_form_important_description">Отметьте, если присутствие второго родителя обязательно</string>
+    <string name="event_form_important_description_named">Отметьте, если %1$s обязательно должен(на) быть</string>
+    <string name="event_form_important_helper">Событие сразу появится в обоих календарях, без подтверждения, а второму родителю придёт уведомление, что его ждут.</string>
     <string name="event_important_mark_description">Важно: ожидается второй родитель</string>
     <string name="event_form_private_title">Личное событие</string>
     <string name="event_form_private_description">Это событие видите только вы</string>

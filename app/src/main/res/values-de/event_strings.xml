@@ -58,8 +58,9 @@
     <string name="event_reminder_2_hours">2 Stunden</string>
     <string name="event_reminder_1_day">1 Tag</string>
     <string name="event_form_important_title">Wichtiger Termin</string>
-    <string name="event_form_important_description">Markiere das, wenn der andere Elternteil erwartet wird</string>
-    <string name="event_form_important_helper">Der andere Elternteil wird erwartet. Das ist eine Mitteilung, keine Anfrage.</string>
+    <string name="event_form_important_description">Markiere das, wenn die Anwesenheit des anderen Elternteils nötig ist</string>
+    <string name="event_form_important_description_named">Markiere das, wenn %1$s dabei sein muss</string>
+    <string name="event_form_important_helper">Der Termin erscheint sofort in beiden Kalendern, ohne Rückfrage, und der andere Elternteil wird benachrichtigt, dass er erwartet wird.</string>
     <string name="event_important_mark_description">Wichtig: Der andere Elternteil wird erwartet</string>
     <string name="event_form_private_title">Privater Termin</string>
     <string name="event_form_private_description">Nur du kannst diesen Termin sehen</string>

@@ -232,7 +232,8 @@ class EmulatorParent private constructor(
         firebaseAuthService = authService,
         firestoreEventDataSource = eventDataSource,
         activityAnnouncer = announcer,
-        eventVersionRecorder = eventVersionRecorder
+        eventVersionRecorder = eventVersionRecorder,
+        fcmService = fcmService
     )
 
     val expenseRepository = ExpenseRepositoryImpl(
