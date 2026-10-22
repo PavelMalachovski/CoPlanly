@@ -2105,7 +2105,8 @@ service cloud.firestore {
         'split_ratio_proposed', 'split_ratio_accepted', 'split_ratio_declined',
         'split_ratio_agreed',
         'records_shared',
-        'request_last_chance'
+        'request_last_chance',
+        'expense_added'
       ];
     }
 
@@ -2148,6 +2149,12 @@ service cloud.firestore {
                       // pushes carry it so their first notification can say when to answer by, and
                       // a last chance carries where it ends. Bounded like every key a client writes.
                       isValidLength(request.resource.data.get('data', {}).get('answerBy', ''), 0, 20) &&
+                      // A new expense's figures (`expense_added`): plain decimals and a currency
+                      // code, which the receiving phone formats. Bounded like every key a client
+                      // writes.
+                      isValidLength(request.resource.data.get('data', {}).get('amount', ''), 0, 24) &&
+                      isValidLength(request.resource.data.get('data', {}).get('share', ''), 0, 24) &&
+                      isValidLength(request.resource.data.get('data', {}).get('currency', ''), 0, 8) &&
                       isPushFamily(request.resource.data.get('data', {}).get('familyId', ''),
                                    request.resource.data.targetUserId);
       allow update, delete: if false;

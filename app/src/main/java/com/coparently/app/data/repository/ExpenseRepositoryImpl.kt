@@ -4,14 +4,18 @@ import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ExpenseEntity
+import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.expenses.shareOf
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
@@ -23,6 +27,8 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -35,7 +41,8 @@ class ExpenseRepositoryImpl @Inject constructor(
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreExpenseDataSource: FirestoreExpenseDataSource,
-    private val activityAnnouncer: ActivityAnnouncer
+    private val activityAnnouncer: ActivityAnnouncer,
+    private val fcmService: FcmService
 ) : ExpenseRepository {
 
     private val gson = Gson()
@@ -95,7 +102,7 @@ class ExpenseRepositoryImpl @Inject constructor(
         // lost, even if the Firestore push below fails.
         expenseDao.insertExpense(owned.toEntity())
 
-        announce(owned, ActivityKind.EXPENSE_ADDED)
+        announce(owned, ActivityKind.EXPENSE_ADDED)?.let { coParent -> pushNewExpense(owned, coParent) }
 
         val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
         pushToFirestore(owned, ownerUid = owned.createdByFirebaseUid ?: firebaseUser.uid)
@@ -313,8 +320,8 @@ class ExpenseRepositoryImpl @Inject constructor(
      * Never throws — see `ActivityAnnouncer`. A parent's expense must not fail to save because
      * their co-parent's chat listener is down.
      */
-    private suspend fun announce(expense: Expense, kind: ActivityKind) {
-        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
+    private suspend fun announce(expense: Expense, kind: ActivityKind): String? {
+        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return null
         val me = userDao.getUserById(myUid)
         // The thread of the expense's own family, never the family on screen: an expense of an
         // ended family, or of no family while there are two, has nobody to tell (October 2026
@@ -339,7 +346,50 @@ class ExpenseRepositoryImpl @Inject constructor(
             suppress = coParent == null,
             partnerUid = coParent
         )
+        return coParent
     }
+
+    /**
+     * Tells [coParent] about a new expense with a push of its own, with what it costs them
+     * (tester feedback, 21 October 2026: "when I add an expense to split, the other parent should
+     * be notified"). The chat card [announce] posts is pushed as a message too; this one says the
+     * figures and lands in the Money channel, and its tap opens Expenses.
+     *
+     * The figures are plain decimals and the currency's code; the receiving phone formats them in
+     * its reader's language (SEC-3: a push carries facts, the reader's phone writes the sentence).
+     * Their share is left out when the expense is not split with them. Never throws: the expense
+     * is saved whether or not the push can be queued.
+     */
+    private suspend fun pushNewExpense(expense: Expense, coParent: String) {
+        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val me = userDao.getUserById(myUid)
+        val mySlot = me?.role?.takeIf { it == ContactWindow.SLOT_ONE || it == ContactWindow.SLOT_TWO }
+        val roleByUid = buildMap {
+            if (mySlot != null) {
+                put(myUid, mySlot)
+                put(coParent, if (mySlot == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE)
+            }
+        }
+        val share = shareOf(expense, coParent, roleByUid).takeIf { coParent in expense.splitBetween }
+        val data = buildMap {
+            put(PushPayload.TYPE, PushPayload.EXPENSE_ADDED)
+            put(PushPayload.ACTOR, me?.name.orEmpty().take(ACTOR_MAX))
+            put(PushPayload.SUBJECT, expense.title.take(PushPayload.SUBJECT_MAX))
+            put(PushPayload.AMOUNT, plainMoney(expense.amount))
+            put(PushPayload.CURRENCY, expense.currency)
+            share?.let { put(PushPayload.SHARE, plainMoney(expense.amount * it)) }
+        }
+        fcmService.queueNotificationForUser(coParent, data)
+    }
+
+    private companion object {
+        /** The longest actor name `firestore.rules` accepts on a push. */
+        const val ACTOR_MAX = 100
+    }
+
+    /** [amount] as a plain decimal with two places, as the push carries it ("1000.00"). */
+    private fun plainMoney(amount: Double): String =
+        BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP).toPlainString()
 
     /**
      * An `expenses` document as a domain expense, as [observeRemote] downloads it. Throws on a

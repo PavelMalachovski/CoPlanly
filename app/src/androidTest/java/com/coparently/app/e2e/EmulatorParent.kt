@@ -240,7 +240,8 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         firebaseAuthService = authService,
         firestoreExpenseDataSource = FirestoreExpenseDataSource(firestore),
-        activityAnnouncer = announcer
+        activityAnnouncer = announcer,
+        fcmService = fcmService
     )
 
     val selectedFamilySource = SelectedFamilySource(

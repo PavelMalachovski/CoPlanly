@@ -259,6 +259,11 @@
         "TwoParentPairingTest#bothProfilesNameTheOtherParentAndTheFamilyHasTwoSlots"
       ]
     },
+    "expense_added": {
+      "e2e": [
+        "TwoParentExpensesTest#bobOwesHalfOfWhatAlicePaid"
+      ]
+    },
     "split_ratio_agreed": {
       "e2e": [
         "TwoParentAgreementsTest#firstRatioOnAFreshPairAppliesAndIsAnnouncedAsAgreed",

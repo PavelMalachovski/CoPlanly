@@ -144,6 +144,23 @@ describe('SEC-3: notification payloads', () => {
     });
   });
 
+  describe('a new expense\'s figures (21 October 2026)', () => {
+    it('accepts the amount, the share and the currency, and bounds each', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      const expense = {
+        type: 'expense_added', actorName: 'Alice', subject: 'School trip',
+        amount: '1000.00', share: '300.00', currency: 'CZK',
+      };
+      await assertSucceeds(db.collection('notification_queue').add(queued(expense)));
+      await assertFails(db.collection('notification_queue').add(queued(
+          Object.assign({}, expense, {amount: '9'.repeat(25)}))));
+      await assertFails(db.collection('notification_queue').add(queued(
+          Object.assign({}, expense, {share: '9'.repeat(25)}))));
+      await assertFails(db.collection('notification_queue').add(queued(
+          Object.assign({}, expense, {currency: 'X'.repeat(9)}))));
+    });
+  });
+
   describe('what a client may claim to be', () => {
     it('refuses a forged pairing notification', async () => {
       // Only `acceptPairingInvitation` produces this, and it writes as admin.
@@ -204,6 +221,8 @@ describe('SEC-3: notification payloads', () => {
         'split_ratio_agreed',
         // Phase 3a. The proposer's phone queues it for the parent who did not answer in time.
         'request_last_chance',
+        // 21 October 2026. A new shared expense, with its figures.
+        'expense_added',
       ];
       for (const type of types) {
         await assertSucceeds(

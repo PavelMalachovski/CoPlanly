@@ -129,7 +129,7 @@ fun calculateExpenseBalance(
 }
 
 /**
- * The fraction of [expense] that [uid] owes.
+ * The fraction of [expense] that [uid] owes: none when the expense is not split with them.
  *
  * The ratio stored on the expense when it is a **two-way** split and both parents' slots are
  * known; an even division among the people it is split between otherwise. The fallback covers
@@ -145,7 +145,8 @@ fun calculateExpenseBalance(
  * by one — the whole thing, net zero — which is what "not split", the label the row prints for
  * exactly this expense, has to mean.
  */
-private fun shareOf(expense: Expense, uid: String, roleByUid: Map<String, String>): Double {
+fun shareOf(expense: Expense, uid: String, roleByUid: Map<String, String>): Double {
+    if (uid !in expense.splitBetween || expense.splitBetween.isEmpty()) return 0.0
     val slot = roleByUid[uid]?.takeIf { expense.isTwoWaySplit() && bothSlotsKnown(roleByUid) }
     val ratio = slot?.let { SplitRatio.fromStored(expense.splitBasisPoints) }
     return ratio?.shareFor(slot) ?: (1.0 / expense.splitBetween.size)

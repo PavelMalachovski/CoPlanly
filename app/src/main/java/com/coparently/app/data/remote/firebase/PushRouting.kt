@@ -113,7 +113,8 @@ object PushRouting {
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,
-        PushPayload.SPLIT_RATIO_AGREED -> PushDestination.EXPENSES
+        PushPayload.SPLIT_RATIO_AGREED,
+        PushPayload.EXPENSE_ADDED -> PushDestination.EXPENSES
         PushPayload.PROFESSIONAL_ACCESS_REQUESTED -> PushDestination.PROFESSIONALS
         else -> null
     }
@@ -145,7 +146,8 @@ object PushRouting {
         PushPayload.SPLIT_RATIO_PROPOSED,
         PushPayload.SPLIT_RATIO_ACCEPTED,
         PushPayload.SPLIT_RATIO_DECLINED,
-        PushPayload.SPLIT_RATIO_AGREED -> PushChannel.MONEY
+        PushPayload.SPLIT_RATIO_AGREED,
+        PushPayload.EXPENSE_ADDED -> PushChannel.MONEY
         else -> PushChannel.FAMILY
     }
 }

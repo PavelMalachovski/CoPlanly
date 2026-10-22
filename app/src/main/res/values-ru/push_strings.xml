@@ -60,6 +60,9 @@
     <string name="push_split_ratio_declined_body">Второй родитель отклонил новое деление. Ничего не изменилось.</string>
     <string name="push_split_ratio_agreed_title">Деление расходов согласовано</string>
     <string name="push_split_ratio_agreed_body">Деление расходов между вами и вторым родителем было задано ещё до подключения. Откройте настройки, чтобы его посмотреть.</string>
+    <string name="push_expense_added_title">Новый расход</string>
+    <string name="push_expense_added_body">%1$s добавил(а) расход «%2$s»: %3$s.</string>
+    <string name="push_expense_added_body_share">%1$s добавил(а) расход «%2$s»: %3$s. Ваша доля — %4$s.</string>
     <string name="push_records_shared_title">Вам открыты записи</string>
     <string name="push_records_shared_body">%1$s: вам открыты календарь и семейные записи</string>
 

@@ -85,6 +85,22 @@ object PushPayload {
      */
     const val ANSWER_BY = "answerBy"
 
+    /** The longest [SUBJECT] `firestore.rules` accepts. */
+    const val SUBJECT_MAX = 200
+
+    /**
+     * An expense's amount ([EXPENSE_ADDED]), a plain decimal with two places ("1000.00"). A figure
+     * rather than a sentence: the receiving phone formats it with [CURRENCY] in its reader's
+     * language. Bounded by `firestore.rules` like every key a client writes.
+     */
+    const val AMOUNT = "amount"
+
+    /** What an expense costs the parent the push is for, in [AMOUNT]'s form; absent when it is not split with them. */
+    const val SHARE = "share"
+
+    /** The ISO 4217 code of [AMOUNT] and [SHARE] ("CZK"). */
+    const val CURRENCY = "currency"
+
     /** Deep-link targets. Ids, not text — nothing renders them. */
     const val EVENT_ID = "eventId"
     const val CHILD_INFO_ID = "childInfoId"
@@ -183,6 +199,17 @@ object PushPayload {
     const val SPLIT_RATIO_AGREED = "split_ratio_agreed"
 
     /**
+     * The co-parent added a shared expense (tester feedback, 21 October 2026): its title
+     * ([SUBJECT]), [AMOUNT], [CURRENCY] and, when it is split with the reader, their [SHARE].
+     *
+     * Unlike the split-ratio types above it carries figures, by owner decision: the expense is
+     * already recorded — nothing here is a proposal to act on from the lock screen — and "what
+     * do I owe" is the one thing the reader asked to be told. A build with no wording for it drops
+     * it, and the chat card about the expense still arrives as a message.
+     */
+    const val EXPENSE_ADDED = "expense_added"
+
+    /**
      * Everything this parent entered before pairing has just been shared with the co-parent.
      *
      * Sent **once** by `SyncService`, after the audience backfills have re-uploaded this
@@ -271,7 +298,8 @@ object PushPayload {
         SPLIT_RATIO_DECLINED,
         SPLIT_RATIO_AGREED,
         RECORDS_SHARED,
-        REQUEST_LAST_CHANCE
+        REQUEST_LAST_CHANCE,
+        EXPENSE_ADDED
     )
 
     /**

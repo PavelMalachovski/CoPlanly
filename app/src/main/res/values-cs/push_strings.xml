@@ -60,6 +60,9 @@
     <string name="push_split_ratio_declined_body">Druhý rodič nové rozdělení odmítl. Nic se nezměnilo.</string>
     <string name="push_split_ratio_agreed_title">Rozdělení výdajů dohodnuto</string>
     <string name="push_split_ratio_agreed_body">Rozdělení výdajů bylo nastaveno ještě před propojením. Najdete ho v Nastavení.</string>
+    <string name="push_expense_added_title">Nový výdaj</string>
+    <string name="push_expense_added_body">%1$s přidal(a) %2$s: %3$s.</string>
+    <string name="push_expense_added_body_share">%1$s přidal(a) %2$s: %3$s. Váš podíl je %4$s.</string>
     <string name="push_records_shared_title">Sdílené záznamy</string>
     <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
 

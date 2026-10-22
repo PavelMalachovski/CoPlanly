@@ -18,8 +18,12 @@ import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
 import com.coparently.app.utils.localizedDate
+import java.math.BigDecimal
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Currency
+import java.util.Locale
 
 /**
  * Turns a push's data into the notification a person sees — or into nothing.
@@ -179,9 +183,34 @@ class PushNotifier(private val context: Context) {
             BodyArgs.DAY_COUNT -> data[PushPayload.DAY_COUNT]?.toIntOrNull()?.let { count ->
                 context.resources.getQuantityString(spec.body, count, count)
             }
+            BodyArgs.EXPENSE -> expenseBody(actor, data)
             BodyArgs.NONE -> context.getString(spec.body)
         }
     }
+
+    /**
+     * A new expense ([PushPayload.EXPENSE_ADDED]): who added what for how much, and what it costs
+     * the reader when it is split with them, the figures in the reader's language. Null — no push —
+     * when the amount or the currency cannot be read: a sentence with a blank figure says less than
+     * the chat card that comes with it.
+     */
+    private fun expenseBody(actor: String, data: Map<String, String>): String? {
+        val locale = context.resources.configuration.locales[0]
+        val currency = data[PushPayload.CURRENCY]?.let { runCatching { Currency.getInstance(it) }.getOrNull() }
+            ?: return null
+        val amount = data[PushPayload.AMOUNT]?.toBigDecimalOrNull()?.let { moneyText(it, currency, locale) }
+            ?: return null
+        val subject = data[PushPayload.SUBJECT].orEmpty()
+        val share = data[PushPayload.SHARE]?.toBigDecimalOrNull()?.let { moneyText(it, currency, locale) }
+        return if (share == null) {
+            context.getString(R.string.push_expense_added_body, actor, subject, amount)
+        } else {
+            context.getString(R.string.push_expense_added_body_share, actor, subject, amount, share)
+        }
+    }
+
+    private fun moneyText(value: BigDecimal, currency: Currency, locale: Locale): String =
+        NumberFormat.getCurrencyInstance(locale).apply { this.currency = currency }.format(value)
 
     /**
      * Where tapping [target] leads: pairing events into the pairing screen, a chat message into
@@ -313,6 +342,7 @@ class PushNotifier(private val context: Context) {
         ACTOR_AND_ANSWER_BY,
         DATE,
         DAY_COUNT,
+        EXPENSE,
         NONE
     }
 
@@ -399,6 +429,11 @@ class PushNotifier(private val context: Context) {
          * handles it before consulting this.
          */
         val PUSH_TEXT: Map<String, PushTextSpec> = mapOf(
+            PushPayload.EXPENSE_ADDED to PushTextSpec(
+                R.string.push_expense_added_title,
+                R.string.push_expense_added_body,
+                BodyArgs.EXPENSE
+            ),
             PushPayload.EVENT_CREATED to PushTextSpec(
                 R.string.push_event_created_title,
                 R.string.push_event_created_body,

@@ -17,7 +17,7 @@ import java.time.LocalDateTime
  */
 internal object ExpenseWireContract : WireContract {
 
-    private val repository by lazy { ExpenseRepositoryImpl(mockk(), mockk(), mockk(), mockk(), mockk()) }
+    private val repository by lazy { ExpenseRepositoryImpl(mockk(), mockk(), mockk(), mockk(), mockk(), mockk()) }
 
     override val collection = "expenses"
 

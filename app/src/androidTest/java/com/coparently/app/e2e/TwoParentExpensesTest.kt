@@ -50,6 +50,13 @@ class TwoParentExpensesTest : TwoParentTest() {
         )
         alice.expenseRepository.addExpense(expense)
 
+        // Bob is told of it with a push of its own, with what it costs him (21 October 2026).
+        val pushed = EmulatorEnvironment.awaitQueuedPush(bob.uid, "expense_added")
+        assertEquals("School trip", pushed["subject"])
+        assertEquals("120.00", pushed["amount"])
+        assertEquals("60.00", pushed["share"])
+        assertEquals("EUR", pushed["currency"])
+
         val downloaded = downloadOnBobsPhone(expense.id)
         assertEquals(setOf(alice.uid, bob.uid), downloaded.splitBetween.toSet())
 
