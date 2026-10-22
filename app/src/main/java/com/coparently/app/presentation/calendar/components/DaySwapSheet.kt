@@ -38,10 +38,11 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 /**
- * Offers one day, or a run of consecutive days, to the other parent.
+ * Offers one day, or several, to the other parent.
  *
  * Reached by long-pressing a day on the month grid; long-pressing and then tapping further days
- * extends the run. Long-press rather than a menu because the calendar's tap is already spoken for
+ * picks or unpicks them one at a time — any days, this parent's to give and the co-parent's to take
+ * (21 October 2026, `SwapSelection`). Long-press rather than a menu because the calendar's tap is already spoken for
  * — it selects the day and opens Day view — and the design refresh removed the unlabelled header
  * actions on purpose.
  *
@@ -117,10 +118,14 @@ fun DaySwapSheet(
     }
 }
 
-/** The sheet's title and the day, or the first and last day of the run. */
+/**
+ * The sheet's title and the day; the first and last day of a consecutive run; or, for days picked
+ * apart, each day — "from Monday to Friday" would claim the days between.
+ */
 @Composable
 private fun SwapHeading(dates: List<LocalDate>) {
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL) }
+    val shortFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
     Text(
         text = stringResource(
             if (dates.size == 1) R.string.day_swap_sheet_title else R.string.day_swap_sheet_title_range
@@ -130,6 +135,8 @@ private fun SwapHeading(dates: List<LocalDate>) {
     Text(
         text = if (dates.size == 1) {
             dates.first().format(dateFormatter)
+        } else if (!isConsecutive(dates)) {
+            dates.joinToString(", ") { it.format(shortFormatter) }
         } else {
             stringResource(
                 R.string.day_swap_range,
@@ -230,3 +237,7 @@ private fun DirectionLines(
         )
     }
 }
+
+/** Whether [dates], soonest first, are one run of consecutive days. */
+internal fun isConsecutive(dates: List<LocalDate>): Boolean =
+    dates.zipWithNext().all { (a, b) -> b == a.plusDays(1) }

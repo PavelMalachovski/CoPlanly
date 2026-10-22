@@ -120,6 +120,8 @@
     <!-- The mini month (phase 2): its legend, and what TalkBack reads for a marked day -->
     <string name="mini_month_legend_new_event">New event</string>
     <string name="mini_month_mark_new_event">new event</string>
+    <string name="mini_month_legend_swap_day">Offered day, in the colour of whom it goes to</string>
+    <string name="mini_month_mark_swap_day">offered in the swap</string>
     <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 </resources>

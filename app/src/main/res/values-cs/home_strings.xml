@@ -60,6 +60,7 @@
         <item quantity="many">%2$s navrhuje změnit, u koho bude dítě %1$d dne: %3$s až %4$s.</item>
         <item quantity="other">%2$s navrhuje změnit, u koho bude dítě %1$d dní: %3$s až %4$s.</item>
     </plurals>
+    <string name="home_dialog_swap_message_days_apart">%1$s navrhuje změnit, u koho bude dítě v tyto dny: %2$s.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Přidat událost</string>

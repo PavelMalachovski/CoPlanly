@@ -106,6 +106,8 @@
     <string name="calendar_agenda_contact_window">%1$s–%2$s · styk: %3$s</string>
     <string name="mini_month_legend_new_event">Nová událost</string>
     <string name="mini_month_mark_new_event">nová událost</string>
+    <string name="mini_month_legend_swap_day">Nabízený den, v barvě toho, komu připadne</string>
+    <string name="mini_month_mark_swap_day">nabízený k výměně</string>
     <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 </resources>

@@ -93,6 +93,8 @@
     <string name="calendar_agenda_contact_window">%1$s–%2$s · спілкування: %3$s</string>
     <string name="mini_month_legend_new_event">Нова подія</string>
     <string name="mini_month_mark_new_event">нова подія</string>
+    <string name="mini_month_legend_swap_day">Запропонований день — кольором того, до кого він перейде</string>
+    <string name="mini_month_mark_swap_day">запропонований для обміну</string>
     <string name="mini_month_marked_day">%1$s, %2$s: %3$s.</string>
     <string name="mini_month_marked_day_no_custody">%1$s: %2$s.</string>
 </resources>

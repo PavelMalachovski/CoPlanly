@@ -197,6 +197,37 @@ class ChangeRequestWithdrawTest {
         }
 
     @Test
+    fun `an offer answered day by day takes the accepted days, then turns down the rest`() = runTest(dispatcher) {
+        // 21 October 2026, Zuzana's test: one run per answer, a day left out stays waiting.
+        val transforms = mutableListOf<Pair<List<String>, SwapTransform>>()
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) } answers {
+            transforms += firstArg<List<String>>() to secondArg()
+            Result.success(emptyMap())
+        }
+        val vm = inboxDrawn()
+        val fromBob = offer(by = "u2")
+
+        vm.decideSwapDays(
+            groupOf(29 to fromBob, 30 to fromBob, 31 to fromBob),
+            mapOf("2026-10-29" to true, "2026-10-31" to false)
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(listOf("2026-10-29"), listOf("2026-10-31")), transforms.map { it.first })
+        val (_, accept) = transforms[0]
+        val (_, decline) = transforms[1]
+        assertEquals(
+            DayOverrideStatus.ACCEPTED,
+            accept(mapOf("2026-10-29" to fromBob), "2026-10-29").getOrThrow().getValue("2026-10-29").status
+        )
+        assertEquals(
+            DayOverrideStatus.DECLINED,
+            decline(mapOf("2026-10-31" to fromBob), "2026-10-31").getOrThrow().getValue("2026-10-31").status
+        )
+        assertNull(vm.errorMessage.value)
+    }
+
+    @Test
     fun `a swap that is not this parent's own, or no longer waits, is not withdrawn`() = runTest(dispatcher) {
         val vm = inboxDrawn()
 
@@ -312,3 +343,6 @@ class ChangeRequestWithdrawTest {
         assertEquals(UiText.Res(R.string.change_request_error_withdraw_failed), vm.errorMessage.value)
     }
 }
+
+/** One day's transition, as `applyDayOverridesForDates` takes it. */
+private typealias SwapTransform = (Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>

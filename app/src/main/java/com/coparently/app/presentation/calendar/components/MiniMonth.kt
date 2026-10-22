@@ -229,8 +229,15 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                 )
             }
         }
-        if (model.marks.values.any { it == MiniMonthMark.NEW_EVENT }) {
-            LegendEntry(label = stringResource(R.string.mini_month_legend_new_event)) {
+        model.marks.values.distinct().sorted().forEach { mark ->
+            LegendEntry(
+                label = stringResource(
+                    when (mark) {
+                        MiniMonthMark.NEW_EVENT -> R.string.mini_month_legend_new_event
+                        MiniMonthMark.SWAP_DAY -> R.string.mini_month_legend_swap_day
+                    }
+                )
+            ) {
                 Box(
                     modifier = Modifier
                         .size(LEGEND_SWATCH)
@@ -266,6 +273,7 @@ private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames
         val day = date.format(localizedDate("EEEEMMMMd"))
         val meaning = when (mark) {
             MiniMonthMark.NEW_EVENT -> stringResource(R.string.mini_month_mark_new_event)
+            MiniMonthMark.SWAP_DAY -> stringResource(R.string.mini_month_mark_swap_day)
         }
         val slot = model.custody[date]
         if (slot != null) {

@@ -18,6 +18,13 @@
     <string name="day_swap_inbox_waiting">Чекає на відповідь</string>
     <string name="day_swap_accept">Прийняти</string>
     <string name="day_swap_decline">Відхилити</string>
+    <string name="day_swap_by_day_heading">Або дайте відповідь на кожен день</string>
+    <string name="day_swap_day_to">%1$s → %2$s</string>
+    <string name="day_swap_send_answers">Надіслати ці відповіді</string>
+    <string name="day_swap_day_answered">%1$s: %2$s</string>
+    <string name="day_swap_strip_offered_by_you">Ви запропонували цей день: %1$s. Чекаємо на відповідь.</string>
+    <string name="day_swap_strip_offered_to_you">%1$s просить, щоб цей день був у: %2$s.</string>
+    <string name="day_swap_strip_agreed">Погоджений обмін: цей день у: %1$s.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Обміняти ці дні</string>
     <string name="day_swap_select_hint">Натискайте інші дні, щоб розширити обмін</string>

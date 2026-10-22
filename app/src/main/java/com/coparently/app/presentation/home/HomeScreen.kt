@@ -191,6 +191,7 @@ fun HomeScreen(
     val pendingProposalCitation by changeRequestViewModel.pendingProposalCitation.collectAsState()
     val pendingSplit by changeRequestViewModel.pendingSplit.collectAsState()
     val agreedSplit by changeRequestViewModel.agreedSplit.collectAsState()
+    val swapMonths by changeRequestViewModel.swapMonths.collectAsState()
 
     // The swap and proposal dialogs live here, and until this existed their refusals did not:
     // `ChangeRequestViewModel` wrote every failure into `errorMessage`, and only the inbox
@@ -295,7 +296,8 @@ fun HomeScreen(
                         proposal = pendingProposal?.let {
                             ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
                         },
-                        split = pendingSplit?.let { SplitAsk(it, agreedSplit) }
+                        split = pendingSplit?.let { SplitAsk(it, agreedSplit) },
+                        swapMonths = swapMonths
                     ),
                     actions = AwaitingActions(
                         onAcceptSwap = { group ->
@@ -311,7 +313,8 @@ fun HomeScreen(
                         onProposalSeen = changeRequestViewModel::markProposalSeen,
                         onAcceptSplit = changeRequestViewModel::acceptSplit,
                         onDeclineSplit = changeRequestViewModel::declineSplit,
-                        onSplitSeen = changeRequestViewModel::markSplitSeen
+                        onSplitSeen = changeRequestViewModel::markSplitSeen,
+                        onAnswerSwapDays = changeRequestViewModel::decideSwapDays
                     )
                 )
             }

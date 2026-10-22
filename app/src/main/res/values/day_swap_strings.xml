@@ -19,6 +19,13 @@
     <string name="day_swap_inbox_waiting">Waiting for an answer</string>
     <string name="day_swap_accept">Accept</string>
     <string name="day_swap_decline">Decline</string>
+    <string name="day_swap_by_day_heading">Or answer each day</string>
+    <string name="day_swap_day_to">%1$s, to %2$s</string>
+    <string name="day_swap_send_answers">Send these answers</string>
+    <string name="day_swap_day_answered">%1$s: %2$s</string>
+    <string name="day_swap_strip_offered_by_you">You offered this day to %1$s. Waiting for an answer.</string>
+    <string name="day_swap_strip_offered_to_you">%1$s asks for this day to be with %2$s.</string>
+    <string name="day_swap_strip_agreed">Agreed swap: this day is with %1$s.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Swap these days</string>
     <string name="day_swap_select_hint">Tap more days to extend the swap</string>

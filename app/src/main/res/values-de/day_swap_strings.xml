@@ -18,6 +18,13 @@
     <string name="day_swap_inbox_waiting">Wartet auf eine Antwort</string>
     <string name="day_swap_accept">Annehmen</string>
     <string name="day_swap_decline">Ablehnen</string>
+    <string name="day_swap_by_day_heading">Oder jeden Tag einzeln beantworten</string>
+    <string name="day_swap_day_to">%1$s, an %2$s</string>
+    <string name="day_swap_send_answers">Diese Antworten senden</string>
+    <string name="day_swap_day_answered">%1$s: %2$s</string>
+    <string name="day_swap_strip_offered_by_you">Du hast diesen Tag %1$s angeboten. Die Antwort steht noch aus.</string>
+    <string name="day_swap_strip_offered_to_you">%1$s bittet darum, dass dieser Tag bei %2$s ist.</string>
+    <string name="day_swap_strip_agreed">Vereinbarter Tausch: Dieser Tag ist bei %1$s.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Diese Tage tauschen</string>
     <string name="day_swap_select_hint">Tippe weitere Tage an, um den Tausch zu erweitern</string>
