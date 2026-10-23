@@ -853,7 +853,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 290 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 410 images — the count the committed baselines hold).
   The window is a phone's, 393 × 851 dp, so a component taller than that at 2.0× is cut at the
   window's bottom edge (a Settings group in German, the friend comparison); the screen itself scrolls.
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
@@ -1616,7 +1616,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 22. **Onboarding links the co-parent first, and everything after that step is written to open on
     what the link brought back** (September 2026, owner decision). `OnboardingStep.stepsFor` walks
     `CoParent → Intro → Family → Profile → …`; the wizard used to end with the invitation, which
-    made the second parent retype everything the first one had entered. Six things hold it up,
+    made the second parent retype everything the first one had entered. Once the link has brought
+    something back, the link step also offers **"Looks right — open the calendar"**
+    (`openCalendarNow`, October 2026): `OnboardingStep.SHORT_PATH` — notifications unless allowed,
+    then a profile of name and country only (the phone's region preselected when it has a holiday
+    table, `HolidayCountry.ofCodeOrNull`) — and the calendar; Continue keeps the full wizard. Six
+    things hold it up,
     and each closes a defect that was found by trying the flow end to end:
     - **`SyncRequester` asks for a sync on the Paired transition** (`PairingRepositoryImpl.
       onPairingStateObserved`), on both phones — and, since October 2026, for every co-parent the
@@ -2167,10 +2172,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
 37. **A pairing code names its inviter before it is redeemed, and the link is a web address only
     once its page exists** (October 2026; beta testers could neither tap the link nor tell whose
-    code they held). Every way a code arrives — typed, scanned, a link — goes through
-    `PairingViewModel.redeemCode`, which calls `previewPairingInvitation` and opens one dialog,
-    "Link with {first name}?"; only its yes (`answerConfirmation`) calls the accept. Five things
-    not to undo.
+    code they held). Every way a code arrives — typed, scanned, a link, the Play install referrer —
+    goes through `PairingViewModel.redeemCode`, which calls `previewPairingInvitation` and asks once;
+    only its yes (`answerConfirmation`) calls the accept. A parent not yet linked is asked by the
+    full-screen **invitation** (`InvitationView`, October 2026: "{first name} invites you to
+    CoPlanly", one line on what it is and four rules both parents share), a parent already linked
+    by the short "Link with {first name}?" dialog. Seven things not to undo.
     - **The preview refuses what the accept refuses.** `assertRedeemableCoParentInvite` holds the
       invitation checks both callables run, and the preview adds the already-paired and slot
       (`slotsForPairing`) refusals, so a dialog that names somebody is never followed by a
@@ -2192,6 +2199,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       and the name is the app's to show to a signed-in account. Its Android button is an `intent:`
       link bound to `app.coplanly` with Google Play as the fallback; its links are absolute, because
       the rewrite serves it at `/pair/CODE/`.
+
+    - **The invitation's facts are true today and worded narrowly.** "A schedule change or a day
+      swap waits for your yes" — never "nothing changes without your yes", because an event marked
+      important lands without an answer (item 2). Change a fact when the rule under it changes.
+    - **The Play link carries the code as the install referrer** (`playStoreUrlFor`,
+      `pair=<code>`; `web/pair/`'s Play fallback too), and `PlayInstallReferrerSource` reads it
+      **once per install** into `MainActivity`'s pending code — only into an empty slot, and only
+      as a prefill. Its mark is a plain preference file, not `EncryptedPreferences`, whose
+      `clear()` at sign-out would hand the code to the next account. Instrumented tests replace it
+      (`FakeInstallReferrerModule`).
 
 38. **A child's or a pet's audience is its own family's** (October 2026, tester feedback phase 0).
     Every writer of a `child_info` or `pets` audience — `SyncService.syncChildInfo`,

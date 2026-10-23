@@ -1780,9 +1780,22 @@ A is signed in and not paired; B is signed in on another phone, with no family.
 > five languages, a bad link, no request leaving the page). What a phone adds is the dialog as
 > drawn, the messenger and the hand-over from the browser to the app.
 
-- [ ] **The name.** B types A's code (or scans A's QR): before anything is linked, a dialog asks
-      "Link with {A's first name}?". **Cancel** leaves the code in the field and A unpaired; **Link
-      accounts** pairs them as before.
+- [ ] **The invitation.** B, not linked yet, types A's code (or scans A's QR): before anything is
+      linked, a full screen says "{A's first name} invites you to CoPlanly", the one-line lede and
+      the four rules (same calendar, schedule changes wait for B's yes, messages can't be edited or
+      deleted, unlink in Settings). **Not now** and Back leave the code in the field and A unpaired;
+      **Accept the invitation** pairs them as before. A parent already linked who enters a second
+      co-parent's code still sees the short "Link with {name}?" dialog.
+- [ ] **The code through a Play install** (needs the listing on an internal-testing track). A shares
+      the invitation; B, without the app, taps its **Install** link, installs from Google Play,
+      opens the app and signs up: the invitation screen opens with A's name and B never types the
+      code. B signs out and in again (or another account signs in): the invitation does **not**
+      open a second time. An install from the plain store listing opens nothing.
+- [ ] **The short path.** Right after B accepts, once "Already entered by A" lists what A set up,
+      **Looks right — open the calendar** asks only for notifications (unless already allowed) and
+      a short "About you" with the name and the country — the country preselected from the phone's
+      region when it is one the app has holidays for — then opens the calendar on A's schedule.
+      While the summary is still loading, or found nothing, the button is not there.
 - [ ] B types A's code **while already paired with A**, or A types A's own code: the field shows
       the refusal at once, with no dialog in front of it.
 - [ ] An account whose name is an e-mail address shares a code: the dialog on the other phone asks
@@ -1798,8 +1811,10 @@ A is signed in and not paired; B is signed in on another phone, with no family.
 - [ ] The page in the phone's language (cs, de, ru, uk, en), and in dark mode.
 - **Fallback (1P):** sign in as B on the same phone after A has shared; open the link from the
   messenger there. The dialog and the page are the same; only the two screens at once are lost.
-- **If it fails:** tag `PairingViewModel`, `PairingFunctions`; `presentation/pairing/`,
-  `domain/pairing/PairingUri.kt`, `functions/index.js` `previewPairingInvitationImpl`,
+- **If it fails:** tag `PairingViewModel`, `PairingFunctions`, `InstallReferrer`; `presentation/pairing/`
+  (`InvitationView.kt`), `domain/pairing/PairingUri.kt`, `domain/pairing/InstallReferrer.kt`,
+  `data/pairing/PlayInstallReferrerSource.kt`, `presentation/onboarding/` (the short path),
+  `functions/index.js` `previewPairingInvitationImpl`,
   `web/pair/index.html`, the App Link filter in `AndroidManifest.xml`.
 
 ### 5.8 Requests on Home and the inbox's history · 2P, 1P fallback

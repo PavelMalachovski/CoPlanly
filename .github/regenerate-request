@@ -90,3 +90,4 @@ requested: 2026-10-15 — per-family custody rows: custody_models gains familyId
 requested: 2026-10-20 — tester fixes: the split banner names who pays which share
            (common_inline_banner, 12 images) and the family-friend comparison offers "while linked"
            (friends_comparison, 9 images); no schema change and no new detekt finding is expected
+Fri Oct 23 12:31:40 UTC 2026 invited parent first run: new screenshot (pairing_invitation) and onboarding/auth copy
