@@ -194,7 +194,10 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val data = result.data
-        if (result.resultCode == RESULT_OK && data != null) {
+        // Google's sign-in answers a refusal, and the parent backing out, with RESULT_CANCELED and
+        // the status inside the intent. Reading only RESULT_OK told a parent whose build Google
+        // refused that they had cancelled; the intent's status decides now, when there is one.
+        if (data != null) {
             val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(data)
             lifecycleScope.launch {
                 syncViewModel.handleSignInResult(task)

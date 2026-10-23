@@ -9,6 +9,7 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.GoogleAccess
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
+import com.coparently.app.data.remote.google.GoogleSignInFailure
 import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
@@ -136,9 +137,10 @@ class SyncViewModel @Inject constructor(
     ): GoogleCalendarSyncState {
         _syncState.value = GoogleCalendarSyncState.Syncing(UiText.Res(R.string.sync_google_processing_sign_in))
 
-        // The service's error text is English and technical; it goes to the log, and the user
-        // reads a localised sentence instead (CQ-14).
-        val (account, error) = credentialManagerService.handleSignInResult(completedTask)
+        // The failure names the step that stopped, and the sentence follows it, so a screenshot
+        // says whether Google, the parent or our server ended the connection (CQ-14: localised,
+        // with nothing but a status code or the server's short reason in it).
+        val (account, failure) = credentialManagerService.handleSignInResult(completedTask)
 
         val state = if (account != null) {
             // Проверяем, можем ли получить access token
@@ -153,13 +155,24 @@ class SyncViewModel @Inject constructor(
                 }
             }
         } else {
-            Log.w(TAG, "Google sign-in failed: $error")
-            GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_sign_in_failed))
+            Log.w(TAG, "Google sign-in failed: $failure")
+            GoogleCalendarSyncState.Error(failureText(failure))
         }
         // A first connection and a reconnect alike: the row reads what is stored now.
         refreshConnection()
         _syncState.value = state
         return state
+    }
+
+    /** What the parent reads when connecting stopped at [failure]. */
+    private fun failureText(failure: GoogleSignInFailure?): UiText = when (failure) {
+        GoogleSignInFailure.Cancelled -> UiText.Res(R.string.sync_google_sign_in_cancelled)
+        is GoogleSignInFailure.Google ->
+            UiText.Res(R.string.sync_google_sign_in_refused, listOf(failure.statusCode))
+        is GoogleSignInFailure.Server ->
+            UiText.Res(R.string.sync_google_server_failed, listOf(failure.diagnosis))
+        GoogleSignInFailure.NoAuthCode, GoogleSignInFailure.Unexpected, null ->
+            UiText.Res(R.string.sync_google_sign_in_failed)
     }
 
     /**

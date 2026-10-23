@@ -120,6 +120,28 @@ class GoogleOAuthFunctions @Inject constructor(
          * backend, a malformed answer — keeps the token to be tried again, because dropping one that
          * still works costs the parent a fresh consent for nothing.
          */
+        /**
+         * A short description of a failed call, for the parent's screen and the log: the reason
+         * the callable named (with Google's own error code when it passed one on), else the
+         * Firebase status code, else the exception's class. Never the message, which for a
+         * failure from Google's token endpoint quotes Google's answer.
+         *
+         * Unwraps the [GoogleAccessException] [call] hands a failure on in.
+         */
+        fun diagnosisOf(e: Throwable): String {
+            val failure = (e as? GoogleAccessException)?.cause ?: e
+            val functionsFailure = failure as? FirebaseFunctionsException
+            val details = functionsFailure?.details as? Map<*, *>
+            val reason = details?.get("reason") as? String
+            val cause = details?.get("cause") as? String
+            return when {
+                reason != null && cause != null -> "$reason: $cause"
+                reason != null -> reason
+                functionsFailure != null -> functionsFailure.code.name
+                else -> failure.javaClass.simpleName
+            }
+        }
+
         fun failureOf(e: Throwable): GoogleAccessFailure {
             val reason = ((e as? FirebaseFunctionsException)?.details as? Map<*, *>)?.get("reason") as? String
             return if (reason != null && reason in RECONNECT_REASONS) {

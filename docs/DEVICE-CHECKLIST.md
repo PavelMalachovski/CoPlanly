@@ -665,6 +665,19 @@ the tap actually landing on that screen.
 - [ ] **Google Calendar** connect and import. This needs REL-3's OAuth env and a functions
       deploy. It also covers SEC-5 (tokens in `EncryptedPreferences`): relaunch the app and the
       account stays connected.
+  - **If connecting fails, the message names the step** (October 2026, `GoogleSignInFailure`).
+    "Google refused the sign-in (error N)": Google's own sign-in said no. Error 10 means the
+    build's package (`app.coplanly`) and signing SHA-1 are not registered on an Android OAuth
+    client of the project; a Play install is signed with the Play app-signing key, a sideloaded
+    one with the upload or debug key, and each needs its own fingerprint. "Google signed you in,
+    but CoPlanly could not finish connecting (…)": the `exchangeGoogleAuthCode` function failed,
+    and the bracket says why. `oauth-not-configured`: the functions were deployed without
+    `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` in `functions/.env` (a deploy from a
+    checkout without that file drops them); deploy again from one that has it.
+    `google-refused: unauthorized_client` or `invalid_client`: those two are not the web client
+    `default_web_client_id` names, or the secret was rotated. `NOT_FOUND`: the function is not
+    deployed in `europe-west3`. The function's log line "Google token endpoint failed" carries
+    Google's full answer.
 - [ ] **Google is asked to read, and nothing more** (October 2026, `GoogleCalendarAccess`). The
       OAuth consent screen's Data access must list `.../auth/calendar.events.owned.readonly` first
       (`docs/AUDIT-2026-09-play-final.md` A-7). Connect afresh: Google's consent lists one

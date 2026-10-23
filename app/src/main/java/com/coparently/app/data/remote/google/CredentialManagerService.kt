@@ -10,10 +10,12 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -139,34 +141,34 @@ class CredentialManagerService @Inject constructor(
      * Обрабатывает результат Google Sign-In и обменивает authorization code на токены.
      *
      * @param completedTask Task с результатом Google Sign-In
-     * @return Pair of (GoogleSignInAccount?, errorMessage?)
+     * @return The account, or why connecting stopped and at which step ([GoogleSignInFailure]).
      */
-    suspend fun handleSignInResult(completedTask: Task<GoogleSignInAccount>): Pair<GoogleSignInAccount?, String?> {
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun handleSignInResult(
+        completedTask: Task<GoogleSignInAccount>
+    ): Pair<GoogleSignInAccount?, GoogleSignInFailure?> {
         return try {
             val account = completedTask.await()
             Log.d(TAG, "Sign-in successful for: ${account.email}")
-
-            // Получаем authorization code
-            val authCode = account.serverAuthCode
-            if (authCode != null) {
-                // Обмениваем authorization code на access и refresh токены
-                exchangeAuthCodeForTokens(authCode, account.email ?: "")
-                Pair(account, null)
-            } else {
-                Pair(null, "No authorization code received")
-            }
+            val authCode = account.serverAuthCode ?: return Pair(null, GoogleSignInFailure.NoAuthCode)
+            // Обмениваем authorization code на access и refresh токены
+            exchangeAuthCodeForTokens(authCode, account.email ?: "")
+            Pair(account, null)
         } catch (e: ApiException) {
             Log.e(TAG, "Sign-in failed with code: ${e.statusCode}", e)
-            val errorMsg = when (e.statusCode) {
-                12500 -> "Google Play Services not available"
-                12501 -> "Sign-in cancelled by user"
-                12502 -> "Sign-in failed"
-                else -> "Sign-in error: ${e.message}"
+            val failure = if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                GoogleSignInFailure.Cancelled
+            } else {
+                GoogleSignInFailure.Google(e.statusCode)
             }
-            Pair(null, errorMsg)
+            Pair(null, failure)
+        } catch (e: GoogleAccessException) {
+            Pair(null, GoogleSignInFailure.Server(GoogleOAuthFunctions.diagnosisOf(e)))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
-            Pair(null, "Unexpected error: ${e.message}")
+            Pair(null, GoogleSignInFailure.Unexpected)
         }
     }
 
@@ -181,7 +183,7 @@ class CredentialManagerService @Inject constructor(
         // client secret for this grant, and that secret used to be compiled into the APK —
         // where it was available to anybody who installed the app.
         val tokens = googleOAuthFunctions.exchangeAuthCode(authCode).getOrElse { e ->
-            Log.e(TAG, "Error exchanging auth code for tokens: ${e.message}", e)
+            Log.e(TAG, "Error exchanging auth code for tokens: ${GoogleOAuthFunctions.diagnosisOf(e)}", e)
             throw e
         }
 

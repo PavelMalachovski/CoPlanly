@@ -8,7 +8,9 @@ import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.HOUR
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.REFRESH
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Tasks
+import com.google.firebase.functions.FirebaseFunctionsException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -245,6 +247,54 @@ class CredentialManagerServiceTest {
         assertEquals(GoogleCalendarConnection.NEEDS_RECONNECT, google.service.connection())
     }
 
+    // ---- why connecting failed -----------------------------------------------------------
+
+    @Test
+    fun `an exchange the server failed says so, with the server's reason`() = runTest {
+        // The tester's screenshot said only "Unable to sign in with Google": Google had signed
+        // her in, and the function that redeems the code had failed.
+        val refusal = mockk<FirebaseFunctionsException>(relaxed = true) {
+            every { code } returns FirebaseFunctionsException.Code.FAILED_PRECONDITION
+            every { details } returns mapOf("reason" to "oauth-not-configured")
+        }
+        coEvery { google.oauth.exchangeAuthCode("code-1") } returns
+            Result.failure(GoogleAccessException(GoogleAccessFailure.UNAVAILABLE, refusal))
+
+        val (account, failure) = google.service.handleSignInResult(Tasks.forResult(signedIn(EMAIL)))
+
+        assertNull(account)
+        assertEquals(GoogleSignInFailure.Server("oauth-not-configured"), failure)
+    }
+
+    @Test
+    fun `Google's own refusal names its status code`() = runTest {
+        val (account, failure) = google.service.handleSignInResult(Tasks.forException(apiException(10)))
+
+        assertNull(account)
+        assertEquals(GoogleSignInFailure.Google(10), failure)
+    }
+
+    @Test
+    fun `backing out of Google's sign-in is a cancellation, not a failure`() = runTest {
+        val (_, failure) = google.service.handleSignInResult(Tasks.forException(apiException(12501)))
+
+        assertEquals(GoogleSignInFailure.Cancelled, failure)
+    }
+
+    @Test
+    fun `a sign-in without a code to redeem says so and asks the server nothing`() = runTest {
+        val noCode = mockk<GoogleSignInAccount> {
+            every { email } returns EMAIL
+            every { serverAuthCode } returns null
+        }
+
+        val (account, failure) = google.service.handleSignInResult(Tasks.forResult(noCode))
+
+        assertNull(account)
+        assertEquals(GoogleSignInFailure.NoAuthCode, failure)
+        coVerify(exactly = 0) { google.oauth.exchangeAuthCode(any()) }
+    }
+
     // ---- disconnecting ------------------------------------------------------------------
 
     @Test
@@ -276,6 +326,11 @@ class CredentialManagerServiceTest {
         assertEquals(GoogleCalendarConnection.NOT_CONNECTED, google.service.connection())
         assertNull(google.preferences.getString(PreferenceKeys.PUSH_ENABLED))
         assertFalse(google.preferences.getBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, false))
+    }
+
+    /** What Google's sign-in fails with, carrying [statusCode]. */
+    private fun apiException(statusCode: Int): ApiException = mockk(relaxed = true) {
+        every { this@mockk.statusCode } returns statusCode
     }
 
     /** The account Google's sign-in hands back for [address], with its one-time code. */

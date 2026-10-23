@@ -143,5 +143,7 @@
     <string name="sync_syncing_from_google">Synchronizovat z Kalendáře Google</string>
     <string name="sync_google_sign_in_cancelled">Přihlášení přes Google bylo zrušeno</string>
     <string name="sync_google_sign_in_failed">Přihlášení přes Google se nezdařilo. Zkuste to prosím znovu.</string>
+    <string name="sync_google_sign_in_refused">Google přihlášení odmítl (chyba %1$d). Zkuste to prosím znovu, a pokud se to opakuje, dejte nám vědět.</string>
+    <string name="sync_google_server_failed">Google vás přihlásil, ale CoPlanly nedokázal dokončit připojení kalendáře (%1$s). Zkuste to prosím později.</string>
 </resources>
 
