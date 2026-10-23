@@ -32,6 +32,7 @@ import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
+import com.coparently.app.domain.pairing.InstallReferrerSource
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.common.FamilyViewViewModel
@@ -102,6 +103,10 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var todayWidgetRefresher: TodayWidgetRefresher
+
+    /** The pairing code an invitation's Play link carried through the install, read once. */
+    @Inject
+    lateinit var installReferrerSource: InstallReferrerSource
 
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
@@ -262,6 +267,17 @@ class MainActivity : AppCompatActivity() {
         // screenshot a message or a schedule as a record (docs/DESIGN-court-record.md).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false)
+        }
+
+        // An invited parent who installed from the invitation's Play link finds the code waiting:
+        // it opens the pairing screen once they are signed in, as a deep link would. Only into
+        // an empty slot — a deep link the parent tapped wins — and only ever as a prefill.
+        if (savedInstanceState == null) {
+            lifecycleScope.launch {
+                installReferrerSource.pairingCodeOnce()?.let { code ->
+                    if (_pendingPairingCode.value == null) _pendingPairingCode.value = code
+                }
+            }
         }
 
         // Load theme preference

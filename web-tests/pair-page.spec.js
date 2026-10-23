@@ -13,6 +13,9 @@ const {startStaticServer} = require('./support/static-server');
 
 const CODE = '4F7K2M';
 const PLAY = 'https://play.google.com/store/apps/details?id=app.coplanly';
+
+/** Play's listing with the code as an install referrer, so the app finds it after installing. */
+const playWith = (code) => `${PLAY}&referrer=${encodeURIComponent(`pair=${code}`)}`;
 const ANDROID_UA = devices['Pixel 7'].userAgent;
 const IPHONE_UA = devices['iPhone 14'].userAgent;
 
@@ -71,8 +74,8 @@ test('on Android the button hands the code to the app, or falls back to Google P
   const href = await open_.getAttribute('href');
   expect(href).toBe(
       `intent://pair?code=${CODE}#Intent;scheme=coplanly;package=app.coplanly;` +
-      `S.browser_fallback_url=${encodeURIComponent(PLAY)};end`);
-  await expect(page.locator('#play')).toHaveAttribute('href', PLAY);
+      `S.browser_fallback_url=${encodeURIComponent(playWith(CODE))};end`);
+  await expect(page.locator('#play')).toHaveAttribute('href', playWith(CODE));
   await expect(page.locator('#ios')).toBeHidden();
   await context.close();
 });

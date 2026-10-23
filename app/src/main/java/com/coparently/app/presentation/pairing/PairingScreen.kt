@@ -419,7 +419,7 @@ private fun shareIntent(context: Context, invite: PairingInvite): Intent {
             invite.fromUserName,
             invite.code,
             pairingLinkFor(invite.code),
-            PLAY_STORE_URL
+            playStoreUrlFor(invite.code)
         )
     }
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
