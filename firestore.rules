@@ -735,6 +735,7 @@ service cloud.firestore {
                       request.resource.data.get('partnerIds', []).size() == 0 &&
                       request.resource.data.get('pendingRevocationOf', []).size() == 0 &&
                       !('role' in request.resource.data) &&
+                      !('slotMovedAt' in request.resource.data) &&
                       parentHealthKeyAbsent('medicalProfile') &&
                       parentHealthKeyAbsent('allergies') &&
                       healthConsentValid(request.resource.data) &&
@@ -771,6 +772,11 @@ service cloud.firestore {
                       request.resource.data.get('partnerId', '') != userId &&
                       !request.resource.data.diff(resource.data).affectedKeys()
                         .hasAny(['role', 'partnerId', 'partnerIds', 'pendingRevocationOf']) &&
+                      // `slotMovedAt` is the server's word to this parent's phone that a pairing
+                      // moved their slot (`slotsForPairing`). The phone removes it once it has
+                      // re-stamped its records; it may never write or move it.
+                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['slotMovedAt']) ||
+                       !('slotMovedAt' in request.resource.data)) &&
                       parentHealthKeyNotWritten('medicalProfile') &&
                       parentHealthKeyNotWritten('allergies') &&
                       healthConsentValid(request.resource.data) &&

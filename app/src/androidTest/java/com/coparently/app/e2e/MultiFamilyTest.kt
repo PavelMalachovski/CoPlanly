@@ -89,4 +89,46 @@ class MultiFamilyTest : TwoParentTest() {
             bobThread.documents.none { (it.get("attachments") as? List<*>).orEmpty().contains(event.id) }
         )
     }
+
+    /**
+     * A parent who already has a family enters a new co-parent's code (October 2026, tester report:
+     * the field refused it with "link the other way round"). Alice keeps her slot in both families;
+     * Carol, who had none, takes the other one, and her phone re-stamps what she entered before.
+     */
+    @Test
+    fun alicesFamilyKeepsHerSlotWhenSheEntersANewCoParentsCode() = runBlocking<Unit> {
+        val aliceSlot = checkNotNull(serverRole(alice, alice.uid)) { "Alice holds no slot after pairing" }
+        val carol = newParent("Carol")
+        val carolsEvent = Event(
+            id = UUID.randomUUID().toString(),
+            title = "Carol's dentist, before linking",
+            startDateTime = LocalDateTime.now().plusDays(3),
+            eventType = "medical",
+            parentOwner = carol.database.userDao().getUserById(carol.uid)?.role ?: "mom",
+            createdAt = LocalDateTime.now(),
+            updatedAt = LocalDateTime.now()
+        )
+        carol.eventRepository.insertEvent(carolsEvent)
+
+        val invite = carol.pairingRepository.createOrReuseInviteCode().getOrThrow()
+        val alicesRole = alice.pairingRepository.redeem(invite.code).getOrThrow()
+        assertEquals("Alice's slot moved in the family she already had", aliceSlot, alicesRole)
+        assertEquals(aliceSlot, serverRole(alice, alice.uid))
+        carol.awaitPairedWith(alice.uid)
+        val carolSlot = if (aliceSlot == "mom") "dad" else "mom"
+        assertEquals(carolSlot, serverRole(carol, carol.uid))
+
+        carol.syncService.performFullSync()
+
+        assertEquals(
+            "Carol's own event still carries the slot she held alone",
+            carolSlot,
+            carol.database.eventDao().getEventById(carolsEvent.id)?.parentOwner
+        )
+        val carolsProfile = carol.firestore.collection("users").document(carol.uid).get().await()
+        assertEquals("the slot-moved mark outlived the re-stamp", null, carolsProfile.get("slotMovedAt"))
+    }
+
+    private suspend fun serverRole(reader: EmulatorParent, uid: String): String? =
+        reader.firestore.collection("users").document(uid).get().await().getString("role")
 }

@@ -1487,17 +1487,18 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
 
 - [ ] **Inviting the second co-parent.** On A, paired with B only: Settings → Family → the pairing
       screen → **Add another co-parent**.
-  - Opening the row shows A's own code and its **QR**, and **no** field for somebody else's code
-    (October 2026: a paired account was given no code at all, and entering one would move its
-    parent slot in B's family).
+  - Opening the row shows A's own code and its **QR**, and a toggle to **Enter a code** for
+    somebody else's (October 2026).
   - Closing and reopening the row shows the **same** code, not a new one. Offline, opening it
     says so instead of spinning silently.
   - If A has a calendar-friend or professional invitation outstanding, the code shown is
     **not** that one, and **New code** leaves it working.
   - C enters the code (or scans the QR) and A ends up with two families. A keeps **the same
     colour** in B's family, and B's calendar and custody band look as they did.
-  - The wrong way round: C (new) shares a code and A opens it as a `coplanly://pair` link. A is
-    told to link the other way round, and nothing changes in B's family.
+  - The other way round (October 2026, tester report): C (new) shares a code and A enters it on
+    **Add another co-parent** → **Enter a code** (or opens it as a `coplanly://pair` link). It
+    links: A keeps **the same colour** in B's family, C takes the other slot, and an event C made
+    before linking is drawn in C's colour on both phones after C's next sync.
 
 - [ ] **The second family reaches A at once** (October 2026, tester report #4). With A's app
       **open** on B's family, C redeems A's code: within seconds, with no pull to refresh and no

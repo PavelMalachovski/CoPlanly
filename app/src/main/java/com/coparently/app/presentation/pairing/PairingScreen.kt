@@ -578,11 +578,12 @@ private fun LazyListScope.inviteSection(
  * or enter the other person's (owner decision, October 2026 — testers looked for the field and
  * found none).
  *
- * A parent slot is still one per person, and whoever *enters* a code takes the slot opposite the
- * inviter's, so entering one could move this parent in the family they already have. The code
- * goes through the same preview as every other code (`PairingViewModel.redeemCode`), and the
- * server refuses that move before anything is linked (`assertAccepterKeepsSlot`): the field then
- * says to link the other way round, with this parent's own code one tap away on the toggle.
+ * A parent slot is still one per person, so this parent keeps the one they hold either way: when
+ * they enter a code, the server gives the inviter the other slot (`slotsForPairing`, October 2026
+ * — entering used to be refused while sharing worked), and the inviter's phone re-stamps its
+ * records. The code goes through the same preview as every other code
+ * (`PairingViewModel.redeemCode`); only two parents who already co-parent elsewhere in the same
+ * slot are refused, before anything is linked.
  *
  * @param activeInvite This user's own outstanding invite, or null while the row's code is minted.
  * @param incoming Invitations addressed to this user's email.
