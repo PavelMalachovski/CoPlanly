@@ -49,6 +49,7 @@
     <string name="onboarding_coparent_enter_code">У меня есть код</string>
     <string name="onboarding_coparent_invite">Пригласить второго родителя</string>
     <string name="onboarding_coparent_later">Не сейчас</string>
+    <string name="onboarding_coparent_open_calendar">Всё верно — открыть календарь</string>
     <string name="onboarding_coparent_linked_title">Подключено: %1$s</string>
     <string name="onboarding_coparent_linked_body">Всё, что второй родитель (%1$s) уже внёс, подтянется к вам. Проверьте это на следующих шагах и дополните недостающее.</string>
     <string name="onboarding_coparent_fetching">Получаем данные: %1$s…</string>

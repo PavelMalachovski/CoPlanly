@@ -49,6 +49,7 @@
     <string name="onboarding_coparent_enter_code">У мене є код</string>
     <string name="onboarding_coparent_invite">Запросити другого з батьків</string>
     <string name="onboarding_coparent_later">Не зараз</string>
+    <string name="onboarding_coparent_open_calendar">Усе правильно — відкрити календар</string>
     <string name="onboarding_coparent_linked_title">Зʼєднано: %1$s</string>
     <string name="onboarding_coparent_linked_body">Дані, які вже вніс другий із батьків (%1$s), підтягнуться до вас. Перевірте їх на наступних кроках і доповніть, чого бракує.</string>
     <string name="onboarding_coparent_fetching">Отримуємо дані (%1$s)…</string>

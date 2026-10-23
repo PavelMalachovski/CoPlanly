@@ -32,6 +32,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -862,6 +863,97 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf("Anya", "Petr"), viewModel.uiState.value.children.map { it.name })
+    }
+
+    // ---- the short path ---------------------------------------------------------------------
+
+    /** Links with Bob after his phone has sent one child, so the summary has something in it. */
+    private fun TestScope.linkWithBobsChild() {
+        every { childInfoRepository.getAllChildInfo() } returns
+            flowOf(listOf(child("c1", "Anya", createdBy = "bob")))
+        viewModel = newViewModel()
+        pairing.value = PairingState.Paired(partner = bob)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `opening the calendar now walks the link, notifications and a short profile`() = runTest(dispatcher) {
+        linkWithBobsChild()
+        assertTrue(viewModel.uiState.value.canOpenCalendarNow)
+
+        viewModel.openCalendarNow(deviceRegion = "DE", notificationsGranted = false)
+
+        val state = viewModel.uiState.value
+        assertEquals(OnboardingStep.Notifications, state.step)
+        assertEquals(
+            listOf(OnboardingStep.CoParent, OnboardingStep.Notifications, OnboardingStep.Profile),
+            state.steps
+        )
+        assertEquals(HolidayCountry.GERMANY, state.country, "the phone's country, not the CZ default")
+    }
+
+    @Test
+    fun `notifications already on are not asked again on the short path`() = runTest(dispatcher) {
+        linkWithBobsChild()
+        val country = viewModel.uiState.value.country
+
+        viewModel.openCalendarNow(deviceRegion = null, notificationsGranted = true)
+
+        assertEquals(OnboardingStep.Profile, viewModel.uiState.value.step)
+        assertEquals(country, viewModel.uiState.value.country)
+    }
+
+    @Test
+    fun `a device region with no holiday table keeps the stored country`() = runTest(dispatcher) {
+        linkWithBobsChild()
+        val country = viewModel.uiState.value.country
+
+        viewModel.openCalendarNow(deviceRegion = "US", notificationsGranted = true)
+
+        assertEquals(country, viewModel.uiState.value.country)
+    }
+
+    @Test
+    fun `the calendar cannot be opened early while nothing has arrived`() = runTest(dispatcher) {
+        pairing.value = PairingState.Paired(partner = bob)
+        runCurrent()
+        assertFalse(viewModel.uiState.value.canOpenCalendarNow, "the fetch is still running")
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.canOpenCalendarNow, "nothing came across")
+
+        viewModel.openCalendarNow(deviceRegion = "DE", notificationsGranted = false)
+
+        assertEquals(OnboardingStep.CoParent, viewModel.uiState.value.step)
+        assertFalse(viewModel.uiState.value.shortPath)
+    }
+
+    @Test
+    fun `next on the short profile saves the country and finishes`() = runTest(dispatcher) {
+        linkWithBobsChild()
+        viewModel.openCalendarNow(deviceRegion = "DE", notificationsGranted = true)
+        viewModel.updateName("Olya")
+
+        viewModel.next()
+        advanceUntilIdle()
+
+        coVerify { userRepository.updateUser(match { it.countryCode == "DE" && it.name == "Olya" }) }
+        coVerify { userRepository.updateUser(match { it.onboardingCompletedAt != null }) }
+        assertTrue(viewModel.uiState.value.isFinished)
+    }
+
+    @Test
+    fun `Continue after coming back from the short path restores the full wizard`() = runTest(dispatcher) {
+        linkWithBobsChild()
+        viewModel.openCalendarNow(deviceRegion = null, notificationsGranted = false)
+        viewModel.back()
+        assertEquals(OnboardingStep.CoParent, viewModel.uiState.value.step)
+
+        viewModel.next()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.shortPath)
+        assertEquals(OnboardingStep.stepsFor(state.caresFor), state.steps)
+        assertEquals(OnboardingStep.Notifications, state.step)
     }
 
     private companion object {

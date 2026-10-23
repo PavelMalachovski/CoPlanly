@@ -52,6 +52,7 @@
     <string name="onboarding_coparent_enter_code">I have their code</string>
     <string name="onboarding_coparent_invite">Invite my co-parent</string>
     <string name="onboarding_coparent_later">Not now</string>
+    <string name="onboarding_coparent_open_calendar">Looks right — open the calendar</string>
     <string name="onboarding_coparent_linked_title">Linked with %1$s</string>
     <string name="onboarding_coparent_linked_body">Whatever %1$s has already entered is pulled in for you. Check it on the next steps and add anything missing.</string>
     <string name="onboarding_coparent_fetching">Fetching what %1$s has entered…</string>

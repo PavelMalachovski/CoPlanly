@@ -152,9 +152,18 @@ enum class HolidayCountry(
          * normalised because the value has been written by a migration default, by a picker and
          * by whatever a co-parent's build sends.
          */
-        fun fromCode(code: String?): HolidayCountry {
+        fun fromCode(code: String?): HolidayCountry = ofCodeOrNull(code) ?: Default
+
+        /**
+         * The country [code] names, or null when it names none this app has a row for.
+         *
+         * For a guess rather than a stored answer — the phone's region offered on the invited
+         * parent's short path — where falling back to [Default] would quietly turn "US" into
+         * Czechia.
+         */
+        fun ofCodeOrNull(code: String?): HolidayCountry? {
             val normalized = code?.trim()?.uppercase().orEmpty()
-            return entries.firstOrNull { it.code == normalized } ?: Default
+            return entries.firstOrNull { it.code == normalized }
         }
     }
 }

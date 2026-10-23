@@ -49,6 +49,7 @@
     <string name="onboarding_coparent_enter_code">Ich habe einen Code</string>
     <string name="onboarding_coparent_invite">Anderen Elternteil einladen</string>
     <string name="onboarding_coparent_later">Jetzt nicht</string>
+    <string name="onboarding_coparent_open_calendar">Passt so – Kalender öffnen</string>
     <string name="onboarding_coparent_linked_title">Verknüpft mit %1$s</string>
     <string name="onboarding_coparent_linked_body">Alles, was %1$s schon eingetragen hat, wird für dich übernommen. Prüfe es in den nächsten Schritten und ergänze, was fehlt.</string>
     <string name="onboarding_coparent_fetching">Angaben von %1$s werden geladen…</string>

@@ -275,6 +275,13 @@ data class OnboardingUiState(
      * nobody made.
      */
     val editedStep: OnboardingStep? = null,
+    /**
+     * The invited parent chose "Looks right — open the calendar": [steps] narrows to
+     * [OnboardingStep.SHORT_PATH] and the profile step shows only the name and the country.
+     */
+    val shortPath: Boolean = false,
+    /** On the short path, notifications were already allowed, so their step is left out. */
+    val skipNotifications: Boolean = false,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false
 ) {
@@ -302,7 +309,20 @@ data class OnboardingUiState(
      * itself, and a list captured at construction would keep asking about a child the parent has
      * just said they do not have.
      */
-    val steps: List<OnboardingStep> get() = OnboardingStep.stepsFor(caresFor)
+    val steps: List<OnboardingStep>
+        get() = if (shortPath) {
+            OnboardingStep.SHORT_PATH.filterNot { skipNotifications && it == OnboardingStep.Notifications }
+        } else {
+            OnboardingStep.stepsFor(caresFor)
+        }
+
+    /**
+     * Whether the link step offers the short path: linked, and the fetch found something the
+     * co-parent set up. Not while it is still running, and not over an empty summary — "looks
+     * right" over nothing would land both parents on an empty calendar with setup skipped.
+     */
+    val canOpenCalendarNow: Boolean
+        get() = coParent is CoParentLink.Linked && (fetch as? CoParentFetch.Done)?.found?.isEmpty == false
 
     /** This step's 1-based position in [steps], for the progress indicator. */
     val displayIndex: Int get() = steps.indexOf(step).coerceAtLeast(0) + 1
@@ -799,6 +819,10 @@ class OnboardingViewModel @Inject constructor(
      * save (or the profile screen later) writes the same fields again.
      */
     fun next() {
+        if (_uiState.value.step == OnboardingStep.CoParent && _uiState.value.shortPath) {
+            // Continue on the link step is the full wizard, even after a trip down the short path.
+            _uiState.update { it.copy(shortPath = false, skipNotifications = false) }
+        }
         val state = _uiState.value
         if (!state.canAdvance) return
 
@@ -812,6 +836,31 @@ class OnboardingViewModel @Inject constructor(
             else -> Unit
         }
         leaveStep(state.step)
+    }
+
+    /**
+     * Takes the invited parent's short path from the link step (spec 2026-10-23, G3): the
+     * notifications question unless [notificationsGranted], then a short profile, then the
+     * calendar. Ignored unless [OnboardingUiState.canOpenCalendarNow].
+     *
+     * [deviceRegion] (the phone's locale region) is offered as the country when this app has a
+     * holiday table for it, because the short profile is the only place the country is asked and
+     * the stored default is Czechia; the parent sees it and can change it. A region outside the
+     * table keeps what is stored.
+     */
+    fun openCalendarNow(deviceRegion: String?, notificationsGranted: Boolean) {
+        if (!_uiState.value.canOpenCalendarNow) return
+        _uiState.update { state ->
+            val guessed = HolidayCountry.ofCodeOrNull(deviceRegion)
+            val country = guessed ?: state.country
+            state.copy(
+                shortPath = true,
+                skipNotifications = notificationsGranted,
+                country = country,
+                region = if (country == state.country) state.region else null
+            )
+        }
+        leaveStep(OnboardingStep.CoParent)
     }
 
     /**

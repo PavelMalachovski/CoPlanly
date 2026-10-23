@@ -49,6 +49,7 @@
     <string name="onboarding_coparent_enter_code">Mám kód</string>
     <string name="onboarding_coparent_invite">Pozvat druhého rodiče</string>
     <string name="onboarding_coparent_later">Teď ne</string>
+    <string name="onboarding_coparent_open_calendar">Vypadá to dobře — otevřít kalendář</string>
     <string name="onboarding_coparent_linked_title">Propojeno: %1$s</string>
     <string name="onboarding_coparent_linked_body">Všechno, co už %1$s zadal(a), se přenese k vám. Zkontrolujte to v dalších krocích a doplňte, co chybí.</string>
     <string name="onboarding_coparent_fetching">Načítáme, co zadal(a) %1$s…</string>
