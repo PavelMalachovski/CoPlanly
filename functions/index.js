@@ -2630,6 +2630,14 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
     } catch (err) {
       console.error(`Calendar-friend grants for ${result.endedFamilyId} were not removed`, err);
     }
+    // Stickers are kept while the family exists (October 2026, owner decision): a badge from a
+    // relationship that ended is not one either parent asked to keep.
+    try {
+      await deleteQueryInBatches(db, db.collection('stickers')
+          .where('familyId', '==', result.endedFamilyId));
+    } catch (err) {
+      console.error(`Stickers of ${result.endedFamilyId} were not removed`, err);
+    }
   }
 
   let revokedDocuments = 0;
@@ -4937,6 +4945,12 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // use to the parent who stays: a request with nobody left to answer it has no deadline to keep.
   removed.request_deadlines = await deleteQueryInBatches(
       db, db.collection('request_deadlines').where('participants', 'array-contains', uid));
+
+  // Stickers this account received or sent (October 2026): each names its receiver, and a
+  // parent's sticker its sender, in `participants`. Kept while the account exists, by owner
+  // decision, and personal data of a deleted account either way.
+  removed.stickers = await deleteQueryInBatches(
+      db, db.collection('stickers').where('participants', 'array-contains', uid));
 
   // Both directions of the calendar-friend relationship: the grant this user holds over
   // somebody's family, and the grants their own family handed out.
