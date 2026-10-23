@@ -69,13 +69,18 @@ rules are the same for both parents, and that there is almost nothing for them t
   the bare link — their codes go to other callables).
 - `web/pair/`'s Play fallback (the `intent:` link's `S.browser_fallback_url` and the plain Play
   button) carries the same referrer, so it is ready when the page is hosted.
-- On launch the app reads the Play Install Referrer **once** (`com.android.installreferrer`), parses
-  `pair=<code>`, validates it with `PairingUri`'s code rules, and hands it to the existing
-  `MainActivity._pendingPairingCode`. The existing `PairingDeepLinkEffect` then opens the pairing
-  screen with the code as soon as the parent is signed in.
-- "Once": a flag in `EncryptedPreferences` records that the referrer was read, so a later launch,
-  sign-out or second account never re-opens it. A referrer older than the code's validity is
-  harmless: the preview refuses an expired code with its normal message.
+- On every launch until it is handed off, the app reads the Play Install Referrer
+  (`com.android.installreferrer`), parses `pair=<code>`, validates it with `PairingUri`'s code
+  rules, and hands it to the existing `MainActivity._pendingPairingCode` (only into an empty slot).
+  The existing `PairingDeepLinkEffect` then opens the pairing screen with the code as soon as the
+  parent is signed in.
+- "Handed off" (revised after the final review): a plain preference file — not
+  `EncryptedPreferences`, whose `clear()` at sign-out would re-arm it — is marked when the
+  referrer's own code reaches a signed-in pairing screen, or when Play says for certain there is no
+  code. Marking it on the first read lost the code on a rotation or a process death before
+  sign-in. A busy Play Store (`SERVICE_UNAVAILABLE`) is asked again next launch. A later sign-out
+  or second account never re-opens it. A referrer older than the code's validity is harmless: the
+  preview refuses an expired code with its normal message.
 - Nothing leaves the phone. Still, it is a new data source → `PRIVACY-POLICY.md`,
   `DATA-SAFETY.md`, `RECORDS-OF-PROCESSING.md` get a line in the same PR, and `web/privacy/` is
   regenerated (Legal item 1).
@@ -93,7 +98,8 @@ Content (English base; final wording is the builder's within these facts):
 - Headline: "**{First name} invites you to CoPlanly**" (no name → "You're invited to CoPlanly").
 - One line: "One calendar for your children's two homes — whose day it is, what changed, who paid."
 - Four facts, each a row with an icon (`SectionGroup`/`SectionRow` or a plain list in that anatomy):
-  1. "You both see the same calendar. Neither of you is in charge of it."
+  1. "You both see one shared calendar. Private entries stay private." (owner decision after
+     review; the first draft, "the same calendar", read as "they see everything of mine")
   2. "A schedule change or a day swap waits for your yes."
   3. "Sent messages can't be edited or deleted — by either of you."
   4. "You can unlink at any time in Settings."
