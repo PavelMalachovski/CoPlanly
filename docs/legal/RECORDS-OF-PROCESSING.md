@@ -41,9 +41,9 @@ only what is specific to it.
 | --- | --- |
 | Purpose | Provide an account; link two co-parents; decide who may read what |
 | Data subjects | Parents |
-| Data | Name, email, optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot, partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15), optional IBAN for being paid a settle-up (`paymentIban`, October 2026) |
+| Data | Name, email, optional profile photo (Google), optional date of birth and phone, auth identifier, parent slot, partner uids, FCM token, country and region, onboarding state, whether the family cares for children, pets or both (`caresFor`), health-data consent record `{version, atMillis}`, AI-assist consent record `{version, grantedAt}` (P15), optional IBAN for being paid a settle-up (`paymentIban`, October 2026), how stickers address the parent (`parentRole`: dad, mom or parent — asked once, used only to word stickers, October 2026) |
 | Legal basis | Art. 6(1)(b) contract; the consent record is kept under Art. 7(1) to demonstrate consent |
-| Recipients | The linked co-parent (name, slot, photo, and the IBAN, from which their phone draws a QR payment code — nothing is sent to a bank); before linking, a signed-in person entering the inviter's code sees the inviter's **first name** only (`previewPairingInvitation`, rate-limited per account, writes nothing) |
+| Recipients | The linked co-parent (name, slot, photo, the sticker role, and the IBAN, from which their phone draws a QR payment code — nothing is sent to a bank); before linking, a signed-in person entering the inviter's code sees the inviter's **first name** only (`previewPairingInvitation`, rate-limited per account, writes nothing) |
 | Retention | Life of the account; deleted at once on account deletion |
 | Where | `users/{uid}`, `families/{id}`, Firebase Auth, Room `users` |
 
@@ -58,6 +58,18 @@ only what is specific to it.
 | Recipients | The co-parent; a calendar friend (calendar only, time-limited); a professional with both parents' consent (calendar, custody, plan; ≤ 180 days); whoever holds a calendar-feed link a parent created. Request clocks: the two parents only |
 | Retention | Life of the account. An individual deletion is a tombstone for **90 days** (so the other phone learns of it), then swept. On account deletion the departing parent's half of the parenting plan is also removed from the plans of families they had already left (found through accepted invitations); the former co-parent's half stays. At unpair a co-parent loses read access to the family's expenses and budgets at once (the family document is deleted). A request's clock is not deleted when the request is answered and stays readable to both parents after unpair; account deletion removes every clock naming the departing parent, for both of them |
 | Where | `events`, `custody_models`, `expenses`, `budgets` (earlier builds only), `parenting_plans`, `change_requests`, `request_deadlines`, `family_settings`; Storage `event_images/{familyId}/…`, `receipts/{familyId}/…` (photos: the two parents only — not calendar friends or professionals; `solo_{uid}/…` for the uploader alone before pairing) |
+
+### P2a. Stickers between the parents (October 2026)
+
+| | |
+| --- | --- |
+| Purpose | Recognition between co-parents: a parent sends the other one of seven fixed phrases; the app gives one for answering a request before its deadline (at most once an ISO week) and for four such weeks in a row |
+| Data subjects | Parents |
+| Data | Receiver and sender uid (`app` for the app's own), the family id, the phrase's kind (no free text), the server's time of sending, and when the receiver first saw it |
+| Legal basis | Art. 6(1)(b) — part of the service the parents use; nothing is inferred from it and nothing is counted against either parent |
+| Recipients | The receiver and the sender only — never a guest, family friend or professional; not in the chat, not in an export. A parent's sticker pushes `sticker_received` (the sender's name only) to the receiver; the app's own push nobody |
+| Retention | Until the family ends (unpair deletes the family's stickers) or either parent deletes their account (every sticker naming them, for both) |
+| Where | `stickers/{id}`; `users/{uid}.parentRole` (P1) |
 
 ### P3. Event revision history
 

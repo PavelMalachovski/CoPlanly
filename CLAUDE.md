@@ -1017,7 +1017,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   and №. Check that with fontTools against the file, not against a specimen page.
 - **Parent colours identify a person, not a role.** The app never shows the words "Mom" or
   "Dad": every parent label goes through `presentation/common/ParentLabels.kt` and renders
-  that person's name. `"mom"`/`"dad"` survive as the two *slot identifiers* in Room, in the
+  that person's name. **One exception, by owner decision (October 2026): a sticker's own
+  sentence** ("You are a great dad"), worded from the receiver's own answer,
+  `users/{uid}.parentRole` (dad, mom or a neutral parent) — never from the slot, the name or the
+  colour (item 47). Nothing else may read that field. `"mom"`/`"dad"` survive as the two *slot identifiers* in Room, in the
   Firestore document schema and in `firestore.rules`, and are never renamed — `Event.parentOwner`
   is part of the schema `EventRepositoryImpl.toFirestoreMap()` defines, and a co-parent on an
   older build must keep reading it. Pairing assigns the slots (`functions/index.js`,
@@ -2590,6 +2593,31 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       reader of the second family is refused each record of the first.
       `OnScreenIsolationTest` walks Alice's screens with the second family on screen: each one
       first draws that family's marker, and none shows the first family's canary.
+
+47. **Stickers are between the receiver and the sender, and only a sticker's sentence says "dad"
+    or "mom"** (October 2026, Zuzana's notes 6 and 8, owner answers of 23 October;
+    `docs/DESIGN-stickers-and-subscription.md` §1). `stickers/{id}` is read by `to` and `from`
+    alone, never by a guest, a friend or a professional, and is not in the chat or the export.
+    A parent sends one of seven fixed kinds (`StickerKind`, no free text) with a `sticker_received`
+    push; the app gives `on_time` and `regular` itself (`StickerAwarder`, called by
+    `ChangeRequestViewModel` after each answer, from the request's clock, item 42). Five things not
+    to undo.
+    - **The role is asked, never guessed.** `users/{uid}.parentRole` (`ParentRoles`, Firestore
+      only), with a neutral answer. Home asks while the server says it is missing
+      (`ParentRoleAnswer.Unanswered`), with no "Later"; a cached or failed read is `Loading` and
+      asks nothing. The on-screen e2e tests answer it in `AliceOnScreenTest`'s setup — a new
+      screen test that starts `MainActivity` on the emulators gets that for free; one that does
+      not extend it must answer it too, or the dialog stands over every screen.
+    - **"Once a week" is the rules'.** An app sticker's id spells receiver, kind and ISO week
+      (`StickerAwards.appStickerId`), so a second write is an update and `firestore.rules` refuses
+      it. Don't give it a random id.
+    - **The app's stickers push nobody and are counted against nobody.** Only a parent's sticker
+      pushes, and nothing about stickers reaches the other parent beyond "delivered" or "seen" on
+      the ones they sent.
+    - **The receiving phone words the sticker** (`StickerText`) from its own role; the sender sees
+      the neutral phrase. Don't send the sentence, and don't read the co-parent's role.
+    - **They end with the family.** `unpairCoParent` deletes the ended family's stickers and
+      account deletion every one naming the parent; a phone shows the family on screen's (item 46).
 
 ## Legal and GDPR (September 2026) — keep consistent
 
