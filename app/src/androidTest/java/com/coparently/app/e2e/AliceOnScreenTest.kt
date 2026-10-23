@@ -25,11 +25,13 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.MainActivity
@@ -130,6 +132,9 @@ abstract class AliceOnScreenTest {
     @Inject
     lateinit var accountSwitchGuard: AccountSwitchGuard
 
+    @Inject
+    lateinit var parentRoles: ParentRoles
+
     protected val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     /**
@@ -206,6 +211,9 @@ abstract class AliceOnScreenTest {
             if (opensOnHome) userDao.updateUser(row.copy(onboardingCompletedAt = "2026-09-01T00:00:00"))
             // "No": nothing in a test should switch collection on.
             preferencesRepository.setTelemetryConsent(TelemetryConsent.DENIED)
+            // Answered, so Home's one question about how stickers address her — which only an answer
+            // closes — does not stand over every screen the tests walk.
+            check(parentRoles.setMine(ParentRole.MOM)) { "Alice's sticker role was not saved" }
         }
         chatMirrorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scope ->
             scope.launch { chatMirror.mirror() }

@@ -341,6 +341,7 @@ class UiTourTest : AliceOnScreenTest() {
         scrolls("export", 1)
         fromSettings("documents_vault", R.string.documents_settings_title, content.document.title)
         fromSettings("journal", R.string.journal_title)
+        fromSettings("my_stickers", R.string.stickers_title)
         fromSettings("calendar_feed", R.string.calendar_feed_settings_title)
         // The school import (MON-8): the list with nobody connected, then the connect flow's
         // first step. The tour signs in to no school.

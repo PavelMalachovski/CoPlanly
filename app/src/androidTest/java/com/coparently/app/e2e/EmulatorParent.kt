@@ -60,11 +60,11 @@ import com.coparently.app.data.requests.RequestNotices
 import com.coparently.app.data.requests.RequestRecords
 import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.requests.RequestTime
+import com.coparently.app.data.security.EncryptionManager
+import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerAwarder
 import com.coparently.app.data.stickers.StickerStore
-import com.coparently.app.data.security.EncryptionManager
-import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
