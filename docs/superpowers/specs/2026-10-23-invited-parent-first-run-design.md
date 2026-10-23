@@ -115,7 +115,12 @@ summary is shown, add a second action: "**Looks right — open the calendar**" b
 Continue. It walks only what is still needed:
 
 - `Notifications`, unless already granted (pushes are how requests reach this parent — keep it);
-- `Profile`, only if the parent's name is blank (the one required field);
+- a **short Profile, always** (owner decision, 23 October 2026): the name (prefilled from the
+  account, required) and the country, preselected from the device's region when it is one
+  `HolidayCountry` has, else the stored value. The region row appears under the same rule as on
+  the full step. Colour and date of birth are left out; the parent can set them later in Settings.
+  The country decides the holidays and school vacations on the calendar (CLAUDE.md item 8), so a
+  parent outside Czechia must not inherit the CZ default unasked;
 - then `finish()`.
 
 The skipped steps stay reachable from Settings, as today. Continue keeps the full wizard.
