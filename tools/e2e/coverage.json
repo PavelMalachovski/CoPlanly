@@ -181,6 +181,11 @@
         "TwoParentRequestDeadlinesTest#aSplitProposalWithADeadlineReachesAliceAndIsWithdrawnAtNoAnswer"
       ],
       "checklist": ["5.9"]
+    },
+    "stickers": {
+      "e2e": [
+        "TwoParentStickersTest"
+      ]
     }
   },
   "storage": {
@@ -399,6 +404,14 @@
         "TwoParentRequestDeadlinesTest#aSwapWithADeadlineIsDeliveredOpenedGivenALastChanceAndAnswered"
       ],
       "checklist": ["5.9"]
+    },
+    "sticker_received": {
+      "e2e": [
+        "TwoParentStickersTest#aStickerReachesTheCoParentWithItsPushAndIsSeen"
+      ],
+      "checklist": [
+        "3.28"
+      ]
     }
   },
   "functions": {

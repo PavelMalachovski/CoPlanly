@@ -1341,6 +1341,40 @@ What is left is what the phones draw and the pushes as they arrive.
   `presentation/calendar/SwapSelection.kt`, `presentation/changerequests/SwapDayAnswers.kt`,
   `presentation/calendar/components/DaySwapStrip.kt`.
 
+### 3.28 Stickers between the parents · 2P
+
+Zuzana's notes of 21 October (items 6 and 8), built from the owner's answers of 23 October:
+a parent says once how stickers address them (dad, mom or a neutral "parent"), the co-parent can
+send one of seven fixed phrases, and the app gives one for answering a request before its deadline
+(once a week) and for four such weeks in a row. What is decided is pinned on the JVM
+(`StickerAwardsTest`, `StickerAwarderTest`, `StickerTextTest`, `StickersViewModelTest`,
+`StickerDocumentTest`), the rules in `firestore-tests/rules/stickers.test.js`, and the sending, the
+push in the queue, the seen mark and the on-time sticker in the `e2e` job (`TwoParentStickersTest`).
+What is left is what the phones draw and the push as it arrives.
+
+- [ ] **The question, once.** On a paired account that has never answered, Home asks "How should
+      your stickers address you?" with Dad, Mom and Parent (neutral). Back and a tap outside do not
+      close it; **Save** stays off until one is picked. After Save it never comes back, on this
+      phone or after reinstalling. Offline, the question does not flash up and vanish.
+- [ ] **Send one** (2P). Alice: Home → **Send a sticker** → **You are a great parent**: the sheet
+      says it is sent. Bob's phone gets "A sticker for you" — "Alice sent you a sticker" — on the
+      family channel, and the tap opens Home.
+- [ ] **Worded by the receiver.** Bob answered Dad: his Home card reads "You are a great dad",
+      "From Alice". Change his answer in Settings → Family → **My stickers** → **Stickers call me**
+      to Parent: the same sticker on the shelf reads "You are a great parent". In Czech, Russian and
+      Ukrainian the sentence agrees with the answer.
+- [ ] **Got it, and seen.** Bob taps **Got it**: the card leaves Home. Alice's **My stickers** →
+      **Sent** reads "Seen" (before, "Delivered").
+- [ ] **The app's own.** Bob answers a request before its deadline: a new card, "On time — you are a
+      reliable dad", "From CoPlanly", and no push. A second answer the same week gives nothing new.
+- [ ] **Nowhere else.** The stickers are not in the chat, not in the export, and a family friend or
+      a professional sees none. In a second family (M-8) the first family's stickers wait until it
+      is on screen. Unpair: the family's stickers are gone from both shelves.
+- **If it fails:** `presentation/stickers/` (`StickersViewModel`, `StickerViews.kt`,
+  `MyStickersScreen.kt`, `StickerText.kt`), `data/stickers/` (`StickerStore`, `ParentRoles`,
+  `StickerAwarder`), `presentation/changerequests/ChangeRequestViewModel.kt` (the answers that
+  call `stickerAwarder.onAnswered`), `firestore.rules` (`stickerCreateValid`, `parentRoleValid`).
+
 ---
 
 ## 4. Release-build checks
