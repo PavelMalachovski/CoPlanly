@@ -224,15 +224,8 @@ fun PairingScreen(
         onUnpair = viewModel::unpair
     )
     DeepLinkPreview(pendingDeepLinkCode, viewModel)
-    // A parent not yet linked sees the full invitation — who invited them and the rules both
-    // parents share; one already linked, entering a second co-parent's code, the short dialog,
-    // whose "invites you to CoPlanly" would be wrong for them.
-    form.confirmation?.let { confirmation ->
-        if (state is PairingState.Paired) {
-            InviteConfirmationDialog(confirmation, viewModel::answerConfirmation)
-        } else {
-            InvitationDialog(confirmation, viewModel::answerConfirmation)
-        }
+    form.confirmation?.let {
+        InviteQuestion(it, isLinked = state is PairingState.Paired, onAnswer = viewModel::answerConfirmation)
     }
 }
 
@@ -778,7 +771,7 @@ private fun UnpairConfirmationDialog(
  * and an empty string produced a malformed sentence ("4F7K2M () will see...").
  */
 @Composable
-private fun InviteConfirmationDialog(confirmation: InviteConfirmation, onAnswer: (Boolean) -> Unit) {
+internal fun InviteConfirmationDialog(confirmation: InviteConfirmation, onAnswer: (Boolean) -> Unit) {
     val name = confirmation.inviterName
     ConfirmationDialog(
         title = if (name != null) {

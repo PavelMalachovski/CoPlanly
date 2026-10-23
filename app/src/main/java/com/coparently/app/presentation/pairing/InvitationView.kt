@@ -96,31 +96,37 @@ internal fun InvitationView(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            SectionGroup(modifier = Modifier.fillMaxWidth()) {
-                SectionRow(
-                    icon = Icons.Default.CalendarMonth,
-                    title = stringResource(R.string.pairing_invitation_fact_same)
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.ThumbUp,
-                    title = stringResource(R.string.pairing_invitation_fact_agree)
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.Lock,
-                    title = stringResource(R.string.pairing_invitation_fact_messages)
-                )
-                Divider()
-                SectionRow(
-                    icon = Icons.Default.LinkOff,
-                    title = stringResource(R.string.pairing_invitation_fact_unlink)
-                )
-            }
+            InvitationFacts()
             TextButton(onClick = { onAnswer(false) }) {
                 Text(stringResource(R.string.pairing_invitation_not_now))
             }
         }
+    }
+}
+
+/** The four rules both parents share, each true of the app today (see [InvitationView]). */
+@Composable
+private fun InvitationFacts() {
+    SectionGroup(modifier = Modifier.fillMaxWidth()) {
+        SectionRow(
+            icon = Icons.Default.CalendarMonth,
+            title = stringResource(R.string.pairing_invitation_fact_same)
+        )
+        Divider()
+        SectionRow(
+            icon = Icons.Default.ThumbUp,
+            title = stringResource(R.string.pairing_invitation_fact_agree)
+        )
+        Divider()
+        SectionRow(
+            icon = Icons.Default.Lock,
+            title = stringResource(R.string.pairing_invitation_fact_messages)
+        )
+        Divider()
+        SectionRow(
+            icon = Icons.Default.LinkOff,
+            title = stringResource(R.string.pairing_invitation_fact_unlink)
+        )
     }
 }
 
@@ -136,4 +142,14 @@ internal fun InvitationDialog(confirmation: InviteConfirmation, onAnswer: (Boole
     ) {
         InvitationView(inviterName = confirmation.inviterName, onAnswer = onAnswer)
     }
+}
+
+/**
+ * How a code waiting for the parent's yes is asked about. A parent not yet linked sees the full
+ * invitation — who invited them and the rules both parents share; one already linked, entering a
+ * second co-parent's code, the short dialog, whose "invites you to CoPlanly" would be wrong for them.
+ */
+@Composable
+internal fun InviteQuestion(confirmation: InviteConfirmation, isLinked: Boolean, onAnswer: (Boolean) -> Unit) {
+    if (isLinked) InviteConfirmationDialog(confirmation, onAnswer) else InvitationDialog(confirmation, onAnswer)
 }
