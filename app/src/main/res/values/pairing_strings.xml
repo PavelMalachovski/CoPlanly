@@ -88,4 +88,15 @@
          arrived: the app cannot know that, and the code works either way. -->
     <string name="pairing_add_another_title">Add another co-parent</string>
     <string name="pairing_add_another_description">Share a code with someone you co-parent with separately. Their family stays separate from this one.</string>
+
+    <!-- The invitation an unlinked parent answers before a code is redeemed (InvitationView). -->
+    <string name="pairing_invitation_title">%1$s invites you to CoPlanly</string>
+    <string name="pairing_invitation_title_unnamed">You\'re invited to CoPlanly</string>
+    <string name="pairing_invitation_lede">One calendar for your children\'s two homes — whose day it is, what changed, who paid.</string>
+    <string name="pairing_invitation_fact_same">You both see the same calendar. Neither of you is in charge of it.</string>
+    <string name="pairing_invitation_fact_agree">A schedule change or a day swap waits for your yes.</string>
+    <string name="pairing_invitation_fact_messages">Sent messages can\'t be edited or deleted — by either of you.</string>
+    <string name="pairing_invitation_fact_unlink">You can unlink at any time in Settings.</string>
+    <string name="pairing_invitation_link">Accept the invitation</string>
+    <string name="pairing_invitation_not_now">Not now</string>
 </resources>

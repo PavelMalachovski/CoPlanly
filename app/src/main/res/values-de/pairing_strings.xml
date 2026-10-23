@@ -83,4 +83,15 @@
          arrived: the app cannot know that, and the code works either way. -->
     <string name="pairing_add_another_title">Weiteren Co-Elternteil hinzufügen</string>
     <string name="pairing_add_another_description">Teile einen Code mit jemandem, mit dem du in einer anderen Familie Kinder betreust. Diese Familie bleibt von der hier getrennt.</string>
+
+    <!-- The invitation an unlinked parent answers before a code is redeemed (InvitationView). -->
+    <string name="pairing_invitation_title">%1$s lädt dich zu CoPlanly ein</string>
+    <string name="pairing_invitation_title_unnamed">Du bist zu CoPlanly eingeladen</string>
+    <string name="pairing_invitation_lede">Ein Kalender für die zwei Zuhause eurer Kinder – wessen Tag es ist, was sich geändert hat, wer was bezahlt hat.</string>
+    <string name="pairing_invitation_fact_same">Ihr seht beide denselben Kalender. Keiner von euch bestimmt darüber.</string>
+    <string name="pairing_invitation_fact_agree">Eine Änderung des Betreuungsplans oder ein Tagestausch wartet auf dein Ja.</string>
+    <string name="pairing_invitation_fact_messages">Gesendete Nachrichten kann keiner von euch bearbeiten oder löschen.</string>
+    <string name="pairing_invitation_fact_unlink">Du kannst die Verknüpfung jederzeit in den Einstellungen aufheben.</string>
+    <string name="pairing_invitation_link">Einladung annehmen</string>
+    <string name="pairing_invitation_not_now">Jetzt nicht</string>
 </resources>

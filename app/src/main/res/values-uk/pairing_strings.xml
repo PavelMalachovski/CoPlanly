@@ -83,4 +83,15 @@
          arrived: the app cannot know that, and the code works either way. -->
     <string name="pairing_add_another_title">Додати ще одного з батьків</string>
     <string name="pairing_add_another_description">Поділіться кодом із людиною, з якою вас повʼязує інша родина. Вона залишиться окремою від цієї.</string>
+
+    <!-- The invitation an unlinked parent answers before a code is redeemed (InvitationView). -->
+    <string name="pairing_invitation_title">%1$s запрошує вас до CoPlanly</string>
+    <string name="pairing_invitation_title_unnamed">Вас запрошують до CoPlanly</string>
+    <string name="pairing_invitation_lede">Один календар для двох домівок ваших дітей: чий сьогодні день, що змінилося, хто що оплатив.</string>
+    <string name="pairing_invitation_fact_same">Ви обоє бачите той самий календар. Ніхто з вас ним не керує.</string>
+    <string name="pairing_invitation_fact_agree">Зміна графіка чи обмін днем чекає на вашу згоду.</string>
+    <string name="pairing_invitation_fact_messages">Надіслане повідомлення ніхто з вас не може змінити чи видалити.</string>
+    <string name="pairing_invitation_fact_unlink">Зв’язок можна розірвати будь-коли в налаштуваннях.</string>
+    <string name="pairing_invitation_link">Прийняти запрошення</string>
+    <string name="pairing_invitation_not_now">Не зараз</string>
 </resources>

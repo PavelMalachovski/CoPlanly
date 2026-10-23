@@ -224,7 +224,16 @@ fun PairingScreen(
         onUnpair = viewModel::unpair
     )
     DeepLinkPreview(pendingDeepLinkCode, viewModel)
-    form.confirmation?.let { InviteConfirmationDialog(it, viewModel::answerConfirmation) }
+    // A parent not yet linked sees the full invitation — who invited them and the rules both
+    // parents share; one already linked, entering a second co-parent's code, the short dialog,
+    // whose "invites you to CoPlanly" would be wrong for them.
+    form.confirmation?.let { confirmation ->
+        if (state is PairingState.Paired) {
+            InviteConfirmationDialog(confirmation, viewModel::answerConfirmation)
+        } else {
+            InvitationDialog(confirmation, viewModel::answerConfirmation)
+        }
+    }
 }
 
 /**
