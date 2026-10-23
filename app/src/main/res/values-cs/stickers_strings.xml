@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stickers between parents (October 2026, owner decisions). The dad/mom/parent variants are the one
+     place the app addresses a person by role; every other label is the person's name. -->
+<resources>
+    <string name="sticker_great_parent_dad">Jsi skvělý táta</string>
+    <string name="sticker_great_parent_mom">Jsi skvělá máma</string>
+    <string name="sticker_great_parent_parent">Jsi skvělý rodič</string>
+    <string name="sticker_on_time_dad">Včas — jsi spolehlivý táta</string>
+    <string name="sticker_on_time_mom">Včas — jsi spolehlivá máma</string>
+    <string name="sticker_on_time_parent">Včas — jsi spolehlivý rodič</string>
+    <string name="sticker_regular_dad">Čtyři týdny odpovědí včas — na takového tátu je spoleh</string>
+    <string name="sticker_regular_mom">Čtyři týdny odpovědí včas — na takovou mámu je spoleh</string>
+    <string name="sticker_regular_parent">Čtyři týdny odpovědí včas — na takového rodiče je spoleh</string>
+    <string name="sticker_thank_you">Děkuju!</string>
+    <string name="sticker_kids_happy">Děti si to s tebou užily</string>
+    <string name="sticker_good_team">Jsme dobrý tým</string>
+    <string name="sticker_well_done">Dobrá práce!</string>
+    <string name="sticker_patience">Díky za trpělivost</string>
+    <string name="sticker_flexible">Díky za vstřícnost</string>
+    <string name="stickers_title">Moje samolepky</string>
+    <string name="stickers_settings_description">Samolepky, které jste dostali a poslali</string>
+    <string name="sticker_new_heading">Samolepka pro vás</string>
+    <string name="sticker_from">Od: %1$s</string>
+    <string name="sticker_from_app">Od CoPlanly</string>
+    <string name="sticker_got_it">Rozumím</string>
+    <string name="stickers_send">Poslat samolepku</string>
+    <string name="stickers_send_supporting">Malé poděkování pro: %1$s</string>
+    <string name="stickers_send_title">Poslat samolepku: %1$s</string>
+    <string name="stickers_send_note">Uvidí ji jen %1$s, na své domovské obrazovce. Není součástí chatu ani exportu.</string>
+    <string name="stickers_sent">Odesláno. %1$s ji uvidí na domovské obrazovce.</string>
+    <string name="stickers_send_failed">Samolepku se nepodařilo odeslat. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="stickers_close">Zavřít</string>
+    <string name="stickers_received_heading">Přijaté</string>
+    <string name="stickers_sent_heading">Odeslané</string>
+    <string name="sticker_status_sending">Odesílá se</string>
+    <string name="sticker_status_delivered">Doručeno</string>
+    <string name="sticker_status_seen">Zobrazeno</string>
+    <string name="stickers_empty_title">Zatím žádné samolepky</string>
+    <string name="stickers_empty_body">Odpovídejte na žádosti do termínu a aplikace vám jednu dá. Samolepku vám může poslat i druhý rodič.</string>
+    <string name="parent_role_title">Jak vás mají samolepky oslovovat?</string>
+    <string name="parent_role_body">Samolepka říká například „Jsi skvělý táta“. Odpověď slouží jen pro samolepky; jinde aplikace používá vaše jméno. Druhý rodič ji vidí.</string>
+    <string name="parent_role_dad">Táta</string>
+    <string name="parent_role_mom">Máma</string>
+    <string name="parent_role_parent">Rodič (neutrálně)</string>
+    <string name="parent_role_save">Uložit</string>
+    <string name="parent_role_save_failed">Odpověď se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="stickers_role_row">Samolepky mi říkají</string>
+    <string name="stickers_role_unanswered">Zatím bez odpovědi</string>
+</resources>

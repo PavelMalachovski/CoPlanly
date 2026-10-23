@@ -69,6 +69,7 @@ import com.coparently.app.presentation.pets.AddEditPetScreen
 import com.coparently.app.presentation.pets.PetsScreen
 import com.coparently.app.presentation.review.MonthReviewScreen
 import com.coparently.app.presentation.settings.SettingsScreen
+import com.coparently.app.presentation.stickers.MyStickersScreen
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Spacing
@@ -534,6 +535,9 @@ fun NavGraph(
                         onNavigateToJournal = {
                             navController.navigate(Screen.Journal.route)
                         },
+                        onNavigateToStickers = {
+                            navController.navigate(Screen.Stickers.route)
+                        },
                         onNavigateToMyProfile = {
                             navController.navigate(Screen.MyProfile.route)
                         },
@@ -642,6 +646,17 @@ fun NavGraph(
                             navController.navigate(Screen.JournalEditor.createRoute(JournalEditorViewModel.NEW_ENTRY))
                         }
                     )
+                }
+
+                // Stickers between the parents (October 2026), off Settings → Family.
+                pane(
+                    route = Screen.Stickers.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    MyStickersScreen(onNavigateUp = { navController.popBackStack() })
                 }
 
                 pane(
@@ -1613,6 +1628,9 @@ sealed class Screen(val route: String) {
 
     /** The private journal's list (MON-22). */
     data object Journal : Screen("journal")
+
+    /** "My stickers": how stickers address this parent, and those received and sent. */
+    data object Stickers : Screen("stickers")
 
     /** One journal entry in the editor; `new` opens an empty one. */
     data object JournalEditor : Screen("journal_entry/{entryId}") {

@@ -105,6 +105,8 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.family.UnassignedRecordsPrompt
+import com.coparently.app.presentation.stickers.HomeStickers
+import com.coparently.app.presentation.stickers.ParentRolePrompt
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -289,6 +291,8 @@ fun HomeScreen(
                 // Asked once per co-parent set (owner decision, October 2026). Composed before the
                 // asks below, so a waiting swap or proposal sits on top of it.
                 onOpenUnassignedRecords?.let { UnassignedRecordsPrompt(onChoose = it) }
+                // How stickers address this parent: asked once, and only an answer closes it.
+                ParentRolePrompt()
                 AwaitingDialogs(
                     state = state,
                     parentNames = parentNames,
@@ -502,6 +506,10 @@ private fun Dashboard(
                 )
             }
         }
+
+        // Stickers (October 2026, owner decisions): a new one waits here until it is seen, and the
+        // co-parent can be sent one. After what waits on this parent, before the schedule.
+        item { HomeStickers(coParentName = parentNames.labelForUid(state.partner?.id)) }
 
         state.nextHandover?.let { handover ->
             item {

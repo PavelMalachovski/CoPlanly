@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stickers between parents (October 2026, owner decisions). The dad/mom/parent variants are the one
+     place the app addresses a person by role; every other label is the person's name. -->
+<resources>
+    <string name="sticker_great_parent_dad">Ты замечательный папа</string>
+    <string name="sticker_great_parent_mom">Ты замечательная мама</string>
+    <string name="sticker_great_parent_parent">Ты замечательный родитель</string>
+    <string name="sticker_on_time_dad">Вовремя — ты надёжный папа</string>
+    <string name="sticker_on_time_mom">Вовремя — ты надёжная мама</string>
+    <string name="sticker_on_time_parent">Вовремя — ты надёжный родитель</string>
+    <string name="sticker_regular_dad">Четыре недели ответов вовремя — на такого папу можно положиться</string>
+    <string name="sticker_regular_mom">Четыре недели ответов вовремя — на такую маму можно положиться</string>
+    <string name="sticker_regular_parent">Четыре недели ответов вовремя — на такого родителя можно положиться</string>
+    <string name="sticker_thank_you">Спасибо!</string>
+    <string name="sticker_kids_happy">Детям было с тобой здорово</string>
+    <string name="sticker_good_team">Мы хорошая команда</string>
+    <string name="sticker_well_done">Отлично получилось!</string>
+    <string name="sticker_patience">Спасибо за терпение</string>
+    <string name="sticker_flexible">Спасибо за гибкость</string>
+    <string name="stickers_title">Мои стикеры</string>
+    <string name="stickers_settings_description">Стикеры, которые вы получили и отправили</string>
+    <string name="sticker_new_heading">Вам стикер</string>
+    <string name="sticker_from">От: %1$s</string>
+    <string name="sticker_from_app">От CoPlanly</string>
+    <string name="sticker_got_it">Понятно</string>
+    <string name="stickers_send">Отправить стикер</string>
+    <string name="stickers_send_supporting">Маленькое спасибо для: %1$s</string>
+    <string name="stickers_send_title">Стикер для: %1$s</string>
+    <string name="stickers_send_note">Его увидит только %1$s, на главном экране. Он не попадает в чат и в экспорт.</string>
+    <string name="stickers_sent">Отправлено. %1$s увидит его на главном экране.</string>
+    <string name="stickers_send_failed">Не удалось отправить стикер. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="stickers_close">Закрыть</string>
+    <string name="stickers_received_heading">Полученные</string>
+    <string name="stickers_sent_heading">Отправленные</string>
+    <string name="sticker_status_sending">Отправляется</string>
+    <string name="sticker_status_delivered">Доставлен</string>
+    <string name="sticker_status_seen">Просмотрен</string>
+    <string name="stickers_empty_title">Стикеров пока нет</string>
+    <string name="stickers_empty_body">Отвечайте на запросы до срока — и приложение подарит вам стикер. Второй родитель тоже может его прислать.</string>
+    <string name="parent_role_title">Как к вам обращаться в стикерах?</string>
+    <string name="parent_role_body">Стикер говорит, например: «Ты замечательный папа». Ответ нужен только для стикеров; везде остальное приложение показывает ваше имя. Второй родитель может его видеть.</string>
+    <string name="parent_role_dad">Папа</string>
+    <string name="parent_role_mom">Мама</string>
+    <string name="parent_role_parent">Родитель (нейтрально)</string>
+    <string name="parent_role_save">Сохранить</string>
+    <string name="parent_role_save_failed">Не удалось сохранить ответ. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="stickers_role_row">Стикеры называют меня</string>
+    <string name="stickers_role_unanswered">Ещё не ответили</string>
+</resources>
