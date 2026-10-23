@@ -19,6 +19,8 @@ object FakeInstallReferrerModule {
     @Provides
     @Singleton
     fun provideInstallReferrerSource(): InstallReferrerSource = object : InstallReferrerSource {
-        override suspend fun pairingCodeOnce(): String? = null
+        override suspend fun pendingPairingCode(): String? = null
+
+        override fun markHandedOff() = Unit
     }
 }

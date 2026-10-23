@@ -1789,7 +1789,8 @@ A is signed in and not paired; B is signed in on another phone, with no family.
 - [ ] **The code through a Play install** (needs the listing on an internal-testing track). A shares
       the invitation; B, without the app, taps its **Install** link, installs from Google Play,
       opens the app and signs up: the invitation screen opens with A's name and B never types the
-      code. B signs out and in again (or another account signs in): the invitation does **not**
+      code — also when B rotates the phone, or leaves to fetch a password and the app is killed,
+      before signing in. B signs out and in again (or another account signs in): the invitation does **not**
       open a second time. An install from the plain store listing opens nothing.
 - [ ] **The short path.** Right after B accepts, once "Already entered by A" lists what A set up,
       **Looks right — open the calendar** asks only for notifications (unless already allowed) and

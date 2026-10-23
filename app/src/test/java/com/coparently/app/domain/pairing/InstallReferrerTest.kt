@@ -1,7 +1,9 @@
 package com.coparently.app.domain.pairing
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InstallReferrerTest {
@@ -45,5 +47,14 @@ class InstallReferrerTest {
     @Test
     fun `encodes the value for Play's referrer parameter`() {
         assertEquals("pair%3D4F7K2M", InstallReferrer.encode("4F7K2M"))
+    }
+
+    @Test
+    fun `the referrer is used up only when its own code reaches the pairing screen`() {
+        assertTrue(InstallReferrer.isHandOff(consumed = "4F7K2M", fromReferrer = "4F7K2M"))
+        // A deep link the parent tapped took the slot: the referrer's code is still owed to them.
+        assertFalse(InstallReferrer.isHandOff(consumed = "ABCDEF", fromReferrer = "4F7K2M"))
+        assertFalse(InstallReferrer.isHandOff(consumed = "4F7K2M", fromReferrer = null))
+        assertFalse(InstallReferrer.isHandOff(consumed = null, fromReferrer = "4F7K2M"))
     }
 }

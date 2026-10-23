@@ -41,18 +41,32 @@ object InstallReferrer {
             ?.takeIf { InviteCodeGenerator.isValid(it) }
     }
 
+    /**
+     * Whether [consumed] — the code the pairing screen just received — is the referrer's own
+     * [fromReferrer], so the referrer is used up. A deep link the parent tapped may have taken the
+     * slot instead, and then the referrer's code is still owed to them on a later launch.
+     */
+    fun isHandOff(consumed: String?, fromReferrer: String?): Boolean =
+        fromReferrer != null && consumed == fromReferrer
+
     /** The value of Play's `referrer` parameter for [code], percent-encoded for a URL. */
     fun encode(code: String): String = URLEncoder.encode("$PAIR_KEY=$code", Charsets.UTF_8.name())
 }
 
 /**
- * Reads the pairing code the install referrer carries, at most once per install.
+ * Reads the pairing code the install referrer carries, until it has reached the pairing screen.
  *
- * Once means once: a later launch, a sign-out or a second account on the same phone never gets
- * the code again, because the invitation was meant for whoever signed in first after installing.
+ * Play serves the same referrer for months, so the code is offered on every launch until
+ * [markHandedOff] — not merely until it was read: a rotation, a language change or a process death
+ * before sign-in would otherwise lose it, and the invited parent would type it after all. Once
+ * handed off it is never offered again, so a later sign-out or a second account on the phone does
+ * not reopen somebody else's invitation.
  */
 interface InstallReferrerSource {
 
-    /** The code, the first time this is asked on this install; null after that, or when none. */
-    suspend fun pairingCodeOnce(): String?
+    /** The code, while it has not been handed off on this install; null when none or Play is unsure. */
+    suspend fun pendingPairingCode(): String?
+
+    /** Records that the code reached a signed-in account's pairing screen; it is not offered again. */
+    fun markHandedOff()
 }

@@ -2204,10 +2204,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       swap waits for your yes" — never "nothing changes without your yes", because an event marked
       important lands without an answer (item 2). Change a fact when the rule under it changes.
     - **The Play link carries the code as the install referrer** (`playStoreUrlFor`,
-      `pair=<code>`; `web/pair/`'s Play fallback too), and `PlayInstallReferrerSource` reads it
-      **once per install** into `MainActivity`'s pending code — only into an empty slot, and only
-      as a prefill. Its mark is a plain preference file, not `EncryptedPreferences`, whose
-      `clear()` at sign-out would hand the code to the next account. Instrumented tests replace it
+      `pair=<code>`; `web/pair/`'s Play fallback too), and `PlayInstallReferrerSource` offers it to
+      `MainActivity`'s pending code on every launch **until it is handed off** to a signed-in
+      pairing screen (`markHandedOff`, `InstallReferrer.isHandOff`) — not merely until read, which
+      lost it on a rotation or a process death before sign-in. Only into an empty slot, only as a
+      prefill, and `SERVICE_UNAVAILABLE` is asked again rather than taken as "none". Its mark is a
+      plain preference file, not `EncryptedPreferences`, whose `clear()` at sign-out would hand the
+      code to the next account. Instrumented tests replace it
       (`FakeInstallReferrerModule`).
 
 38. **A child's or a pet's audience is its own family's** (October 2026, tester feedback phase 0).
