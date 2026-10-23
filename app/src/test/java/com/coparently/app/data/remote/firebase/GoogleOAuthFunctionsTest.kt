@@ -90,6 +90,26 @@ class GoogleOAuthFunctionsTest {
         assertEquals(GoogleAccessFailure.UNAVAILABLE, refreshFailure())
     }
 
+    @Test
+    fun `a failed call is described by the reason the server gave, never by its message`() {
+        val cases = mapOf(
+            functionsException(FirebaseFunctionsException.Code.INTERNAL, "google-refused", "unauthorized_client") to
+                "google-refused: unauthorized_client",
+            functionsException(FirebaseFunctionsException.Code.FAILED_PRECONDITION, "oauth-not-configured") to
+                "oauth-not-configured",
+            // A backend without the callable, or one that crashed, names no reason: its code does.
+            functionsException(FirebaseFunctionsException.Code.NOT_FOUND) to "NOT_FOUND",
+            IllegalStateException("a sentence that may carry anything") to "IllegalStateException"
+        )
+
+        cases.forEach { (failure, expected) ->
+            assertEquals(expected, GoogleOAuthFunctions.diagnosisOf(failure), "for $failure")
+            // The exchange hands its failure on wrapped; the wrapper says nothing of its own.
+            val wrapped = GoogleAccessException(GoogleOAuthFunctions.failureOf(failure), failure)
+            assertEquals(expected, GoogleOAuthFunctions.diagnosisOf(wrapped), "for wrapped $failure")
+        }
+    }
+
     private fun answer(task: Task<HttpsCallableResult>) {
         every { refreshCallable.call(any()) } returns task
     }
@@ -105,11 +125,14 @@ class GoogleOAuthFunctionsTest {
 
     private fun functionsException(
         code: FirebaseFunctionsException.Code,
-        reason: String? = null
+        reason: String? = null,
+        cause: String? = null
     ): FirebaseFunctionsException {
         val exception = mockk<FirebaseFunctionsException>(relaxed = true)
         every { exception.code } returns code
-        every { exception.details } returns reason?.let { mapOf("reason" to it) }
+        every { exception.details } returns reason?.let {
+            mapOf("reason" to it) + listOfNotNull(cause?.let { c -> "cause" to c })
+        }
         return exception
     }
 }

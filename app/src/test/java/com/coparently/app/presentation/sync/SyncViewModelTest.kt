@@ -8,6 +8,7 @@ import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.GoogleAccess
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture
+import com.coparently.app.data.remote.google.GoogleSignInFailure
 import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
@@ -218,6 +219,28 @@ class SyncViewModelTest {
             GoogleCalendarSyncState.Success(UiText.Res(R.string.sync_google_signed_in_as, listOf("Olya"))),
             state
         )
+    }
+
+    @Test
+    fun `a failed connection says which step failed`() = runTest(dispatcher) {
+        every { credentials.connection() } returns GoogleCalendarConnection.NOT_CONNECTED
+        every { preferences.getUserEmail() } returns null
+        val vm = viewModel()
+        val expected = mapOf(
+            GoogleSignInFailure.Server("google-refused: unauthorized_client") to
+                UiText.Res(R.string.sync_google_server_failed, listOf("google-refused: unauthorized_client")),
+            GoogleSignInFailure.Google(10) to UiText.Res(R.string.sync_google_sign_in_refused, listOf(10)),
+            GoogleSignInFailure.Cancelled to UiText.Res(R.string.sync_google_sign_in_cancelled),
+            GoogleSignInFailure.NoAuthCode to UiText.Res(R.string.sync_google_sign_in_failed),
+            GoogleSignInFailure.Unexpected to UiText.Res(R.string.sync_google_sign_in_failed)
+        )
+
+        expected.forEach { (failure, text) ->
+            val task = Tasks.forResult(mockk<GoogleSignInAccount>())
+            coEvery { credentials.handleSignInResult(task) } returns Pair(null, failure)
+
+            assertEquals(GoogleCalendarSyncState.Error(text), vm.handleSignInResult(task), "for $failure")
+        }
     }
 
     @Test

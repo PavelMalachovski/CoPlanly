@@ -143,4 +143,6 @@
     <string name="sync_syncing_from_google">Синхронізувати з Google Календаря</string>
     <string name="sync_google_sign_in_cancelled">Вхід через Google скасовано</string>
     <string name="sync_google_sign_in_failed">Не вдалося увійти через Google. Будь ласка, спробуйте ще раз.</string>
+    <string name="sync_google_sign_in_refused">Google відхилив вхід (помилка %1$d). Спробуйте ще раз і повідомте нам, якщо це повториться.</string>
+    <string name="sync_google_server_failed">Google виконав вхід, але CoPlanly не вдалося завершити підключення календаря (%1$s). Спробуйте пізніше.</string>
 </resources>

@@ -143,4 +143,6 @@
     <string name="sync_syncing_from_google">Aus Google Kalender synchronisieren</string>
     <string name="sync_google_sign_in_cancelled">Google-Anmeldung abgebrochen</string>
     <string name="sync_google_sign_in_failed">Anmeldung mit Google nicht möglich. Bitte versuche es erneut.</string>
+    <string name="sync_google_sign_in_refused">Google hat die Anmeldung abgelehnt (Fehler %1$d). Bitte versuche es erneut und sag uns Bescheid, wenn es wieder passiert.</string>
+    <string name="sync_google_server_failed">Google hat dich angemeldet, aber CoPlanly konnte die Verbindung zu deinem Kalender nicht abschließen (%1$s). Bitte versuche es später erneut.</string>
 </resources>
