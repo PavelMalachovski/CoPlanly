@@ -641,10 +641,13 @@ class ChangeRequestViewModel @Inject constructor(
         inboxNow()?.scope?.familyId
 
     /**
-     * The clock of the request [pick] finds waiting on this parent in the inbox as it stands now,
-     * before the answer moves it — for the stickers an answer may earn ([StickerAwarder]).
+     * The clock of the request [pick] finds waiting on this parent in the inbox as drawn, before the
+     * answer moves it — for the stickers an answer may earn ([StickerAwarder]). Only what is drawn:
+     * the answer is never held up for a sticker, and an answer from a screen that drew no inbox
+     * simply earns none.
      */
-    private suspend fun waitingClockId(pick: (RequestsState.Ready) -> String?): String? = inboxNow()?.let(pick)
+    private fun waitingClockId(pick: (RequestsState.Ready) -> String?): String? =
+        (requests.value as? RequestsState.Ready)?.let(pick)
 
     /** The inbox as drawn, or a fresh look at it when nothing collects [requests]. */
     private suspend fun inboxNow(): RequestsState.Ready? =

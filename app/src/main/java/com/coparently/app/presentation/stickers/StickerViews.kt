@@ -250,17 +250,17 @@ fun ParentRoleDialog(
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
                 Text(stringResource(R.string.parent_role_body))
                 Column(modifier = Modifier.selectableGroup()) {
-                    ParentRole.entries.forEach { role ->
+                    ParentRole.entries.forEach { option ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .selectable(selected = chosen == role, role = Role.RadioButton) { chosen = role }
+                                .selectable(selected = chosen == option, role = Role.RadioButton) { chosen = option }
                                 .padding(vertical = Spacing.XS),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = chosen == role, onClick = null)
+                            RadioButton(selected = chosen == option, onClick = null)
                             Text(
-                                text = stringResource(StickerText.roleName(role)),
+                                text = stringResource(StickerText.roleName(option)),
                                 modifier = Modifier.padding(start = Spacing.M)
                             )
                         }
@@ -280,10 +280,10 @@ fun ParentRoleDialog(
                 Text(stringResource(R.string.parent_role_save))
             }
         },
-        dismissButton = onDismiss?.let { dismiss ->
-            {
-                TextButton(onClick = dismiss) { Text(stringResource(R.string.stickers_close)) }
-            }
+        dismissButton = if (onDismiss != null) {
+            { TextButton(onClick = onDismiss) { Text(stringResource(R.string.stickers_close)) } }
+        } else {
+            null
         }
     )
 }
