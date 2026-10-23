@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="auth_cd_logo">CoPlanly-Logo</string>
-    <string name="auth_tagline">Gemeinsamer Kalender für getrennt erziehende Eltern</string>
+    <string name="auth_tagline">Ein Kalender für Kinder mit zwei Zuhause</string>
     <string name="auth_welcome_back">Willkommen zurück!</string>
     <string name="auth_create_your_account">Konto erstellen</string>
     <string name="auth_sign_in_subtitle">Melde dich an, um euren Betreuungsplan weiter zu verwalten</string>
-    <string name="auth_sign_up_subtitle">Ein gemeinsamer Kalender für euch beide</string>
+    <string name="auth_sign_up_subtitle">Wessen Tag es ist, was sich geändert hat, wer was bezahlt hat – für beide Eltern gleich</string>
     <string name="auth_email_label">E-Mail-Adresse</string>
     <string name="auth_email_placeholder">deine@email.de</string>
     <string name="auth_password_label">Passwort</string>

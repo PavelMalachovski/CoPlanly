@@ -7,7 +7,7 @@
 
     <!-- Pairing call-to-action, shown while the account is not yet paired. -->
     <string name="home_pairing_title">Share this with your co-parent</string>
-    <string name="home_pairing_prompt">Pair with your co-parent to share the calendar, expenses and messages.</string>
+    <string name="home_pairing_prompt">Once your co-parent joins, you both see the same days, agree changes before they happen and split costs in one place.</string>
     <string name="home_pairing_cta">Pair with your co-parent</string>
 
     <!-- Custody handover hero. %1$s = parent taking over, %2$d = whole days until then. -->

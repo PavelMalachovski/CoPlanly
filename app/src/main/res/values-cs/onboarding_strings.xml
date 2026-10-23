@@ -7,8 +7,8 @@
     <string name="onboarding_back">Zpět</string>
     <string name="onboarding_skip">Přeskočit</string>
     <string name="onboarding_finish">Hotovo</string>
-    <string name="onboarding_intro_title">Několik otázek, než začnete</string>
-    <string name="onboarding_intro_body">CoPlanly umí uchovat důležité údaje o vaší rodině – krevní skupinu, alergie, telefon na babičku – aby se ten, kdo je zrovna s dítětem, dokázal v nečekané situaci rychle zorientovat.\n\nVšechno kromě vašeho jména je nepovinné a můžete to doplnit později v nastavení.</string>
+    <string name="onboarding_intro_title">Pár otázek, aby byl kalendář připravený</string>
+    <string name="onboarding_intro_body">Vaše děti, rozvrh péče a jak si dělíte výdaje — aby byl kalendář připravený, až ho otevřete. Povinné je jen vaše jméno, vše ostatní počká.\n\nMůžete sem uložit i údaje pro případ nouze, třeba krevní skupinu nebo číslo na prarodiče, pro toho, kdo je zrovna s dítětem.</string>
     <string name="onboarding_footnote">Uchováváme pro vás a druhého rodiče, pro případ nouze.</string>
     <string name="onboarding_profile_title">O vás</string>
     <string name="onboarding_profile_name_required">Jméno je jediné, co aplikace potřebuje – podepisuje se jím každá událost i každý výdaj.</string>
@@ -45,7 +45,7 @@
     <string name="onboarding_notifications_allow">Povolit oznámení</string>
     <string name="onboarding_notifications_on">Oznámení jsou zapnutá.</string>
     <string name="onboarding_notifications_later">Kdykoli to můžete změnit v nastavení telefonu.</string>
-    <string name="onboarding_coparent_body">Pokud druhý rodič už CoPlanly používá, zadejte jeho kód: děti, mazlíčci, rozvrh péče i rozdělení výdajů se přenesou samy – nic nebudete zadávat dvakrát. Pokud ještě ne, pošlete mu pozvánku: uvidí všechno, co tady vyplníte.</string>
+    <string name="onboarding_coparent_body">Propojením budete mít oba jeden kalendář. Pokud už druhý rodič něco nastavil, uvidíte to hned. Pokud ještě CoPlanly nepoužívá, pošlete mu pozvánku.</string>
     <string name="onboarding_coparent_enter_code">Mám kód</string>
     <string name="onboarding_coparent_invite">Pozvat druhého rodiče</string>
     <string name="onboarding_coparent_later">Teď ne</string>

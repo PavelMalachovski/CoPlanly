@@ -7,8 +7,8 @@
     <string name="onboarding_back">Zurück</string>
     <string name="onboarding_skip">Überspringen</string>
     <string name="onboarding_finish">Fertig</string>
-    <string name="onboarding_intro_title">Ein paar Fragen, bevor du loslegst</string>
-    <string name="onboarding_intro_body">CoPlanly kann die wichtigsten Angaben deiner Familie aufbewahren – Blutgruppe, Allergien, die Telefonnummer der Großeltern –, damit sich jeder, der gerade bei deinem Kind ist, in einer unerwarteten Situation schnell zurechtfindet.\n\nAlles außer deinem Namen ist freiwillig, und du kannst es später in den Einstellungen ergänzen.</string>
+    <string name="onboarding_intro_title">Ein paar Fragen, damit dein Kalender bereit ist</string>
+    <string name="onboarding_intro_body">Deine Kinder, der Betreuungsplan und wie ihr die Kosten aufteilt – damit der Kalender bereit ist, wenn du ihn öffnest. Nur dein Name ist Pflicht, alles andere kann warten.\n\nDu kannst hier auch Notfallangaben ablegen, etwa eine Blutgruppe oder die Nummer der Großeltern, für den, der gerade beim Kind ist.</string>
     <string name="onboarding_footnote">Für dich und den anderen Elternteil gespeichert – für den Notfall.</string>
     <string name="onboarding_profile_title">Über dich</string>
     <string name="onboarding_profile_name_required">Dein Name ist das Einzige, was die App braucht – er steht an jedem Termin und jeder Ausgabe.</string>
@@ -45,7 +45,7 @@
     <string name="onboarding_notifications_allow">Benachrichtigungen erlauben</string>
     <string name="onboarding_notifications_on">Benachrichtigungen sind eingeschaltet.</string>
     <string name="onboarding_notifications_later">Du kannst das jederzeit in den Einstellungen deines Telefons ändern.</string>
-    <string name="onboarding_coparent_body">Wenn der andere Elternteil CoPlanly schon nutzt, gib seinen Code ein: Kinder, Haustiere, Betreuungsplan und Kostenaufteilung werden übernommen – nichts muss zweimal eingegeben werden. Wenn nicht, schick eine Einladung: Dann sieht der andere Elternteil alles, was du hier ausfüllst.</string>
+    <string name="onboarding_coparent_body">Durch die Verknüpfung habt ihr beide einen Kalender. Hat der andere Elternteil schon etwas eingerichtet, siehst du es sofort. Ist er noch nicht dabei, lade ihn ein.</string>
     <string name="onboarding_coparent_enter_code">Ich habe einen Code</string>
     <string name="onboarding_coparent_invite">Anderen Elternteil einladen</string>
     <string name="onboarding_coparent_later">Jetzt nicht</string>

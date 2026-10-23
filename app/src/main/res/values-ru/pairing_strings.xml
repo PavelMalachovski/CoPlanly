@@ -40,10 +40,10 @@
     <string name="pairing_expires_in_hours">Действителен ещё %1$d ч %2$d мин</string>
     <string name="pairing_expires_in_minutes">Действителен ещё %1$d мин</string>
     <string name="pairing_code_expired_generate">Код истёк — нажмите «Новый код»</string>
-    <string name="pairing_share_message">%1$s приглашает вас в CoPlanly. Код: %2$s · %3$s\nНет приложения? %4$s\nУ вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
+    <string name="pairing_share_message">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих.\nУстановить: %4$s (код подставится сам)\nУже есть приложение? %3$s · Код: %2$s\nУ вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
-    <string name="pairing_share_message_web">%1$s приглашает вас в CoPlanly — общий календарь для родителей: %2$s\nКод, если понадобится: %3$s</string>
+    <string name="pairing_share_message_web">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих: %2$s\nКод, если понадобится: %3$s</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">У меня есть код</string>
     <string name="pairing_code_field_label">Код приглашения</string>

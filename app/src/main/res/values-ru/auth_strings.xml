@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="auth_cd_logo">Логотип CoPlanly</string>
-    <string name="auth_tagline">Общий календарь для совместного воспитания</string>
+    <string name="auth_tagline">Один календарь для детей с двумя домами</string>
     <string name="auth_welcome_back">С возвращением!</string>
     <string name="auth_create_your_account">Создайте аккаунт</string>
     <string name="auth_sign_in_subtitle">Войдите, чтобы продолжить вести общее расписание</string>
-    <string name="auth_sign_up_subtitle">Один общий календарь на двоих</string>
+    <string name="auth_sign_up_subtitle">Чей сегодня день, что изменилось, кто что оплатил — одинаково для обоих родителей</string>
     <string name="auth_email_label">Электронная почта</string>
     <string name="auth_email_placeholder">your@email.com</string>
     <string name="auth_password_label">Пароль</string>

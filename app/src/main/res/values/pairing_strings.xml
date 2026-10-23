@@ -45,10 +45,10 @@
     <string name="pairing_expires_in_hours">Valid for %1$d h %2$d min</string>
     <string name="pairing_expires_in_minutes">Valid for %1$d min</string>
     <string name="pairing_code_expired_generate">Code expired — tap “New code”</string>
-    <string name="pairing_share_message">%1$s invites you to CoPlanly. Code: %2$s · %3$s\nNo app yet? %4$s\nOn an iPhone? Ask me for our calendar link, it opens in Apple Calendar.</string>
+    <string name="pairing_share_message">%1$s invites you to CoPlanly — one calendar for our children\'s two homes. We both see the same days, and schedule changes need both of us to agree.\nInstall: %4$s (the code comes along)\nAlready have the app? %3$s · Code: %2$s\nOn an iPhone? Ask me for our calendar link, it opens in Apple Calendar.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
-    <string name="pairing_share_message_web">%1$s invites you to CoPlanly, a shared calendar for co-parents: %2$s\nCode, if you need it: %3$s</string>
+    <string name="pairing_share_message_web">%1$s invites you to CoPlanly — one calendar for our children\'s two homes. We both see the same days, and schedule changes need both of us to agree: %2$s\nCode, if you need it: %3$s</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">I have a code</string>
     <string name="pairing_code_field_label">Invite code</string>

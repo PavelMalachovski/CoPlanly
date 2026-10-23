@@ -40,10 +40,10 @@
     <string name="pairing_expires_in_hours">Platný ještě %1$d h %2$d min</string>
     <string name="pairing_expires_in_minutes">Platný ještě %1$d min</string>
     <string name="pairing_code_expired_generate">Kód vypršel – klepněte na „Nový kód“</string>
-    <string name="pairing_share_message">%1$s vás zve do CoPlanly. Kód: %2$s · %3$s\nNemáte aplikaci? %4$s\nMáte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
+    <string name="pairing_share_message">%1$s vás zve do CoPlanly — jednoho kalendáře pro dva domovy našich dětí. Oba vidíme stejné dny a změny rozvrhu musíme odsouhlasit oba.\nInstalace: %4$s (kód se přenese sám)\nUž aplikaci máte? %3$s · Kód: %2$s\nMáte iPhone? Požádejte mě o odkaz na náš kalendář, otevře se v Kalendáři Apple.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
-    <string name="pairing_share_message_web">%1$s vás zve do CoPlanly, sdíleného kalendáře pro rodiče: %2$s\nKód, kdybyste ho potřebovali: %3$s</string>
+    <string name="pairing_share_message_web">%1$s vás zve do CoPlanly — jednoho kalendáře pro dva domovy našich dětí. Oba vidíme stejné dny a změny rozvrhu musíme odsouhlasit oba: %2$s\nKód, kdybyste ho potřebovali: %3$s</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">Mám kód</string>
     <string name="pairing_code_field_label">Kód pozvánky</string>
