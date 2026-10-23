@@ -190,6 +190,41 @@ class ParentSlotMigratorTest {
     }
 
     @Test
+    fun `an inviter whose slot a pairing moved re-stamps from the opposite slot, with no marker`() = runTest {
+        // A new parent shared a code and a parent who already co-parents entered it: the server
+        // kept her slot and moved this inviter's (`slotsForPairing`). No marker, a placeholder role.
+        val active = custodyModel(momDays = setOf(0, 1, 2))
+        coEvery { custodyModelRepository.getActiveModelSync() } returns active
+        val saved = slot<CustodyModel>()
+        coEvery { custodyModelRepository.saveReslotted(capture(saved)) } returns Unit
+
+        val done = migrator.adoptSlotMovedAtPairing(myUid = "u1", newRole = "dad")
+
+        assertEquals(true, done)
+        coVerify(exactly = 1) { eventDao.reslotOwner("mom", "dad", "u1") }
+        assertEquals(active.complemented().momDayIndices, saved.captured.momDayIndices)
+        assertEquals("dad", markerStore[markerKey("u1")])
+    }
+
+    @Test
+    fun `a moved slot is adopted once, so an interrupted run never complements twice`() = runTest {
+        markerStore[markerKey("u1")] = "dad"
+        coEvery { custodyModelRepository.getActiveModelSync() } returns custodyModel(momDays = setOf(0))
+
+        assertEquals(true, migrator.adoptSlotMovedAtPairing(myUid = "u1", newRole = "dad"))
+
+        coVerify(exactly = 0) { eventDao.reslotOwner(any(), any(), any()) }
+        coVerify(exactly = 0) { custodyModelRepository.saveReslotted(any()) }
+    }
+
+    @Test
+    fun `a moved slot with no readable role keeps the mark for the next sync`() = runTest {
+        assertEquals(false, migrator.adoptSlotMovedAtPairing(myUid = "u1", newRole = ""))
+        assertEquals(false, migrator.adoptSlotMovedAtPairing(myUid = "u1", newRole = null))
+        coVerify(exactly = 0) { eventDao.reslotOwner(any(), any(), any()) }
+    }
+
+    @Test
     fun `a slot change with no active custody model is not an error`() = runTest {
         markerStore[markerKey("u1")] = "mom"
         coEvery { custodyModelRepository.getActiveModelSync() } returns null

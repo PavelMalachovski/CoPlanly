@@ -27,7 +27,9 @@ sealed interface PairingError {
     /**
      * The accepter already co-parents with somebody else, and accepting would move them to the
      * other parent slot — which every family they are in reads. The other way round works: they
-     * share their code and the inviter enters it.
+     * share their code and the inviter enters it. Only a server from before October 2026 says
+     * this: since then it keeps such an accepter's slot and moves the inviter's
+     * (`slotsForPairing`).
      */
     data object EnterTheirCode : PairingError
 

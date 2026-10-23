@@ -484,14 +484,14 @@ describe('pairing with more than one co-parent', () => {
 
   // A parent slot is stored once per person (`users/{uid}.role`) and every client reads it from
   // there, for every family that person is in. An accepter who already co-parents with somebody
-  // else is given the slot opposite the inviter's; when that is not the slot they already hold,
-  // accepting would move them in their first family too — the two parents of that family would
-  // share a colour, and the accepter's phone would re-stamp every record and invert their custody
-  // pattern. So the accept is refused, and the reason says which way round works.
+  // else therefore keeps the slot they hold: moving it would move them in their first family too —
+  // the two parents of that family would share a colour, and the accepter's phone would re-stamp
+  // every record and invert their custody pattern. The inviter takes the other slot when they have
+  // no other family (October 2026, tester report: entering a new co-parent's code was refused while
+  // sharing one's own worked), and the pairing is refused only when both hold the same slot elsewhere.
 
-  it('refuses to move an already-paired accepter to the other slot', async () => {
+  it('keeps an already-paired accepter in her slot and moves an inviter with no family', async () => {
     // Zuzana co-parents with Pavel as mom. Barbora, new, shares a code; Zuzana enters it.
-    // assignSlots would keep Barbora's (default) mom and make Zuzana dad.
     const db = fakeDb({
       invitations: {
         inv2: {id: 'inv2', status: 'pending', fromUserId: 'barbora', toEmail: ''},
@@ -502,19 +502,41 @@ describe('pairing with more than one co-parent', () => {
       },
     });
 
-    await assert.rejects(
-        () => myFunctions.acceptPairingInvitationImpl(
-            db, 'zuzana', 'zuzana@example.com', {code: null, invitationId: 'inv2'}),
-        (err) => err.code === 'failed-precondition' &&
-            err.details && err.details.reason === 'enter-their-code');
-    assert.strictEqual(db._docs.users.zuzana.role, 'mom', 'the slot must not move');
-    assert.deepStrictEqual(db._docs.users.zuzana.partnerIds, ['pavel']);
-    assert.strictEqual(db._docs.invitations.inv2.status, 'pending', 'the code stays usable');
-    assert.strictEqual((db._docs.families || {})['barbora__zuzana'], undefined);
+    const result = await myFunctions.acceptPairingInvitationImpl(
+        db, 'zuzana', 'zuzana@example.com', {code: null, invitationId: 'inv2'});
+
+    assert.deepStrictEqual(result, {partnerId: 'barbora', role: 'mom'});
+    assert.strictEqual(db._docs.users.zuzana.role, 'mom', 'her slot must not move');
+    assert.deepStrictEqual(db._docs.users.zuzana.partnerIds, ['pavel', 'barbora']);
+    assert.strictEqual(db._docs.users.barbora.role, 'dad');
+    assert.strictEqual(typeof db._docs.users.barbora.slotMovedAt, 'number',
+        'the inviter\'s phone is told its slot moved, so it re-stamps its records');
+    assert.strictEqual(db._docs.users.zuzana.slotMovedAt, undefined);
+    assert.deepStrictEqual(db._docs.families['barbora__zuzana'].slots, {barbora: 'dad', zuzana: 'mom'});
+    assert.strictEqual(db._docs.invitations.inv2.status, 'accepted');
+  });
+
+  it('marks nothing when the inviter already holds the other slot', async () => {
+    const db = fakeDb({
+      invitations: {
+        inv2: {id: 'inv2', status: 'pending', fromUserId: 'barbora', toEmail: ''},
+      },
+      users: {
+        barbora: {id: 'barbora', name: 'Barbora', role: 'mom'},
+        zuzana: {id: 'zuzana', name: 'Zuzana', role: 'dad', partnerIds: ['pavel'], partnerId: 'pavel'},
+      },
+    });
+
+    const result = await myFunctions.acceptPairingInvitationImpl(
+        db, 'zuzana', 'zuzana@example.com', {code: null, invitationId: 'inv2'});
+
+    assert.deepStrictEqual(result, {partnerId: 'barbora', role: 'dad'});
+    assert.strictEqual(db._docs.users.barbora.role, 'mom');
+    assert.strictEqual(db._docs.users.barbora.slotMovedAt, undefined);
   });
 
   it('pairs the same two people the other way round', async () => {
-    // The direction the refusal points to: Zuzana shares her code and Barbora enters it.
+    // The other direction: Zuzana shares her code and Barbora enters it.
     // Zuzana keeps mom, Barbora, who has no other family, takes dad.
     const db = fakeDb({
       invitations: {
@@ -708,16 +730,26 @@ describe('previewPairingInvitation', () => {
         (err) => err.details && err.details.reason === 'already-paired');
   });
 
-  it('says which way round works before anybody confirms', async () => {
-    // Bob already co-parents as mom elsewhere; Alice keeps mom, so accepting would move him.
+  it('names the inviter when an already-paired caller enters a new co-parent\'s code', async () => {
+    // Bob already co-parents as mom elsewhere; Alice has no family, so she will take dad.
     const db = seeded({}, {
       alice: {id: 'alice', name: 'Alice', role: 'mom'},
+      bob: {id: 'bob', name: 'Bob', role: 'mom', partnerIds: ['carol'], partnerId: 'carol'},
+    });
+    const result = await myFunctions.previewPairingInvitationImpl(
+        db, 'bob', '', {code: null, invitationId: 'inv1'});
+    assert.deepStrictEqual(result, {inviterName: 'Alice'});
+  });
+
+  it('refuses before anybody confirms when both already hold the same slot elsewhere', async () => {
+    const db = seeded({}, {
+      alice: {id: 'alice', name: 'Alice', role: 'mom', partnerIds: ['dan'], partnerId: 'dan'},
       bob: {id: 'bob', name: 'Bob', role: 'mom', partnerIds: ['carol'], partnerId: 'carol'},
     });
     await assert.rejects(
         () => myFunctions.previewPairingInvitationImpl(
             db, 'bob', '', {code: null, invitationId: 'inv1'}),
-        (err) => err.details && err.details.reason === 'enter-their-code');
+        (err) => err.details && err.details.reason === 'slot-conflict');
   });
 
   it('leaves a caller with no profile yet to the accept', async () => {

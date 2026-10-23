@@ -1546,16 +1546,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     **So a slot is one per person in practice, and a second family must not move it** (October
     2026). `assignSlots` keeps the inviter's slot and gives the accepter the other, so an accepter
     who already co-parents could be moved in their first family too — both parents of it on one
-    colour, every record re-stamped, the custody pattern inverted. `acceptPairingInvitation`
-    refuses that (`assertAccepterKeepsSlot`: `enter-their-code` when the other way round works,
-    `slot-conflict` when both already hold the same slot). A paired account's "Add another
-    co-parent" (`anotherCoParentSection`) opens on sharing its own code and, since October 2026
-    (tester report, owner decision: "a code field, checked by the server"), also offers the field
-    for somebody else's code; the preview and the accept refuse a slot move with those two reasons.
-    Don't drop `assertAccepterKeepsSlot` before the clients read `families/{id}.slots` — the field
-    is safe only because the server says no. `OnScreenFamiliesTest` takes the second family's code
-    from that screen, because every test used to take it from the repository while the screen gave
-    a paired account no code at all.
+    colour, every record re-stamped, the custody pattern inverted. `slotsForPairing` keeps such an
+    accepter's slot instead and gives an inviter with **no** other family the opposite one (tester
+    report, 23 October 2026: entering a new co-parent's code was refused with "link the other way
+    round" while sharing one's own worked). The move is marked on the inviter's profile,
+    `slotMovedAt` (server-only; the rules let its owner only delete it), and the inviter's phone,
+    which called nothing, re-stamps on its next sync (`ParentSlotMigrator.adoptSlotMovedAtPairing`:
+    from the opposite slot, never from a marker it may not have, once — the custody complement is
+    not idempotent) and then removes the mark. Only two parents who both co-parent elsewhere in the
+    same slot are refused (`slot-conflict`), by the preview and the accept alike; `enter-their-code`
+    is no longer sent, and the client keeps its wording for an older server. A paired account's "Add
+    another co-parent" (`anotherCoParentSection`) opens on sharing its own code and also offers the
+    field for somebody else's code. Don't drop the accepter's protection before the clients read
+    `families/{id}.slots` — the field is safe only because the server keeps it. `OnScreenFamiliesTest`
+    takes the second family's code from that screen, and `MultiFamilyTest` enters a new co-parent's
+    code from a paired account and checks the inviter's re-stamp.
 20. **The database file is encrypted, and the passphrase is the one piece of state that must never
     be re-minted** (SEC-2, Aug 2026). Room opens through SQLCipher: `EncryptedDatabase` builds the
     open helper and converts an existing plaintext file on the way, `DatabaseKey` holds 256 random
@@ -2168,7 +2173,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     not to undo.
     - **The preview refuses what the accept refuses.** `assertRedeemableCoParentInvite` holds the
       invitation checks both callables run, and the preview adds the already-paired and slot
-      (`assertAccepterKeepsSlot`) refusals, so a dialog that names somebody is never followed by a
+      (`slotsForPairing`) refusals, so a dialog that names somebody is never followed by a
       refusal. It writes nothing.
     - **A first name, never an address.** `previewFirstName` keeps the first word and drops one
       containing `@`; nothing else about the inviter is returned. The preview is signed-in only and

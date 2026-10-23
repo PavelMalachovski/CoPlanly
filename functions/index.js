@@ -429,8 +429,7 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
           'failed-precondition', 'You are already co-parenting with this person',
           {reason: 'already-paired'});
     }
-    slots = assignSlots(inviterSnap.data().role);
-    assertAccepterKeepsSlot(inviterSnap.data(), accepterSnap.data(), slots);
+    slots = slotsForPairing(inviterSnap.data(), accepterSnap.data());
 
     // The relationship itself, as a document. Its id is `FamilyKey.of` — the same string
     // `custody_models`, `family_settings` and `conversations` are already keyed by — and its
@@ -482,12 +481,16 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     // An unfinished revocation of the person being paired again goes too, on both sides: it names
     // a family that is live once more, and a later unpair from somebody else would resume it and
     // narrow this family's records (`unpairCoParentImpl` drops such an entry as well).
+    // An inviter whose slot this pairing moved (`slotsForPairing`) is told so on their own
+    // profile: their phone never called anything, and its next sync re-stamps the records it
+    // stamped with the old slot, then removes the mark (`ParentSlotMigrator.adoptSlotMovedAtPairing`).
     tx.update(inviterRef, Object.assign({
       partnerIds: FieldValue.arrayUnion(acceptingUserId),
       partnerId: partnersOf(inviterSnap.data())[0] || acceptingUserId,
       pairedAt,
       role: slots.inviterRole,
-    }, pendingRevocationCleared(inviterSnap.data(), acceptingUserId)));
+    }, slots.inviterMoved ? {slotMovedAt: pairedAt} : {},
+    pendingRevocationCleared(inviterSnap.data(), acceptingUserId)));
     tx.update(accepterRef, Object.assign({
       partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
@@ -625,8 +628,7 @@ async function previewPairingInvitationImpl(db, callerId, callerEmail, ref) {
           'failed-precondition', 'You are already co-parenting with this person',
           {reason: 'already-paired'});
     }
-    assertAccepterKeepsSlot(
-        inviterSnap.data(), callerSnap.data(), assignSlots(inviterSnap.data().role));
+    slotsForPairing(inviterSnap.data(), callerSnap.data());
   }
   return {inviterName: previewFirstName(inviterSnap.data().name)};
 }
@@ -2786,44 +2788,45 @@ function assignSlots(inviterRole) {
 exports.assignSlots = assignSlots;
 
 /**
- * Refuses a pairing that would move an accepter who already co-parents with somebody else to the
- * other slot.
+ * The two slots a pairing writes, and whether the inviter's moved — without moving an accepter who
+ * already co-parents with somebody else.
  *
  * A slot is still stored once per person (`users/{uid}.role`), and every client reads it from
  * there for every family that person is in — `families/{id}.slots` is written but not yet read.
- * [assignSlots] keeps the inviter's slot and gives the accepter the other one, so an accepter who
- * already held a slot with their first co-parent could be moved: the two parents of that family
- * would then share a colour, and the accepter's phone would re-stamp every record it holds and
- * invert its custody pattern for the new slot. Refused rather than repaired, because no slot
- * fits both families while it is one per person.
+ * [assignSlots] keeps the inviter's slot and gives the accepter the other one, which would move an
+ * accepter who already holds a slot with their first co-parent: the two parents of that family
+ * would then share a colour, and the accepter's phone would re-stamp every record and invert its
+ * custody pattern. So such an accepter **keeps** their slot:
  *
- * Only an accepter with a live co-parent and a stored slot is protected. One with no other family
- * gives up a slot nobody else reads, which is the ordinary first pairing and what the client's
- * re-stamp is for.
+ * - an inviter with no other family takes the other one (October 2026, tester report: a parent
+ *   with a family could share her code but not enter a new co-parent's). Their slot is read by
+ *   nobody else, so moving it is the ordinary first pairing seen from the other side; the move is
+ *   marked on their profile (`slotMovedAt`) so their phone re-stamps what it holds;
+ * - an inviter who co-parents elsewhere in the same slot cannot be moved either, and the pairing is
+ *   refused (`slot-conflict`): no slot fits both families while it is one per person.
  *
  * @param {?Object} inviter The inviter's user document.
  * @param {?Object} accepter The accepter's user document.
- * @param {{inviterRole: string, accepterRole: string}} slots What [assignSlots] decided.
- * @throws {functions.https.HttpsError} `failed-precondition` with reason `enter-their-code` when
- *     the inviter has no other family (the other way round works: the accepter shares their code
- *     and keeps their slot), or `slot-conflict` when both already co-parent in the same slot.
+ * @return {{inviterRole: string, accepterRole: string, inviterMoved: boolean}} The slots to write,
+ *     and whether the inviter's differs from the one they held.
+ * @throws {functions.https.HttpsError} `failed-precondition` with reason `slot-conflict` when both
+ *     already co-parent in the same slot.
  */
-function assertAccepterKeepsSlot(inviter, accepter, slots) {
+function slotsForPairing(inviter, accepter) {
+  const slots = assignSlots((inviter || {}).role);
   const held = (accepter || {}).role;
   const holdsSlot = held === 'mom' || held === 'dad';
   if (!holdsSlot || partnersOf(accepter).length === 0 || held === slots.accepterRole) {
-    return;
+    return Object.assign({}, slots, {inviterMoved: false});
   }
   if (partnersOf(inviter).length === 0) {
-    throw new functions.https.HttpsError(
-        'failed-precondition',
-        'The accepter already co-parents in the other slot; the inviter should enter their code',
-        {reason: 'enter-their-code'});
+    return {inviterRole: held === 'mom' ? 'dad' : 'mom', accepterRole: held, inviterMoved: true};
   }
   throw new functions.https.HttpsError(
       'failed-precondition', 'Both parents already co-parent in the same slot',
       {reason: 'slot-conflict'});
 }
+exports.slotsForPairing = slotsForPairing;
 
 /**
  * The update that removes exactly one co-parent from a user document.
@@ -3047,7 +3050,7 @@ async function backfillParentSlotsImpl(db) {
         continue;
       }
 
-      // A slot is still stored once per person (`assertAccepterKeepsSlot`), so re-slotting
+      // A slot is still stored once per person (`slotsForPairing`), so re-slotting
       // somebody who co-parents in another family moves them there too: that family's two
       // parents would share a slot and their phones would re-stamp every record. Not ours to
       // decide from one family's invitation.

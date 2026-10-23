@@ -357,6 +357,22 @@ describe('users profile: no self-pairing through delete and re-create', () => {
     await assertSucceeds(as(ALICE).doc(`users/${ALICE}`).update({name: 'Alice N'}));
   });
 
+  it('lets the owner remove the slot-moved mark, and never write or move it', async () => {
+    // `slotsForPairing` marks an inviter whose slot a pairing moved; their phone re-stamps its
+    // records and then deletes the mark. Writing one would let a phone re-stamp on its own say.
+    await assertFails(as(STRANGER).doc(`users/${STRANGER}`)
+        .set({name: 'S', email: 's@example.com', slotMovedAt: 1}));
+    await seed(env, {[`users/${BOB}`]: {name: 'Bob', email: 'bob@example.com'}});
+    await assertFails(as(BOB).doc(`users/${BOB}`).update({slotMovedAt: 1}));
+    await seed(env, {
+      [`users/${ALICE}`]: {name: 'Alice', email: 'alice@example.com', role: 'dad', slotMovedAt: 5},
+    });
+    await assertFails(as(ALICE).doc(`users/${ALICE}`).update({slotMovedAt: 6}));
+    await assertFails(as(BOB).doc(`users/${ALICE}`).update({slotMovedAt: firebase.firestore.FieldValue.delete()}));
+    await assertSucceeds(as(ALICE).doc(`users/${ALICE}`)
+        .set({slotMovedAt: firebase.firestore.FieldValue.delete()}, {merge: true}));
+  });
+
   it('therefore cannot write an event into a stranger\'s audience', async () => {
     // The end-to-end shape of the finding: with no way to name Alice as a co-parent, a create
     // listing her in `sharedWith` is refused by `isMyAudience`.

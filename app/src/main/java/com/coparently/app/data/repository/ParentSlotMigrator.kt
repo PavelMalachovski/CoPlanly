@@ -203,10 +203,39 @@ class ParentSlotMigrator @Inject constructor(
         }
     }
 
+    /**
+     * Re-stamps this parent's records after a pairing moved **their** slot as the inviter
+     * (`slotsForPairing` in `functions/index.js`, October 2026): the server keeps the slot of an
+     * accepter who already co-parents elsewhere and gives an inviter with no other family the
+     * other one, and marks that on the inviter's profile (`slotMovedAt`). This phone called
+     * nothing, so the mark is the only way it learns its records are stamped with the wrong slot.
+     *
+     * Unlike [reslotIfSlotChanged] it does not need a marker to know where it came from: the
+     * server moves a slot only to its opposite, so the records were stamped with the other one.
+     * A marker that already says [newRole] means this ran before (and was interrupted before the
+     * mark was removed), and nothing is done twice — the custody complement is not idempotent.
+     * The re-stamp runs before the complement, as on the accept path.
+     *
+     * @return Whether the mark may be removed: true once this phone's records are in [newRole].
+     */
+    suspend fun adoptSlotMovedAtPairing(myUid: String, newRole: String?): Boolean {
+        val to = newRole?.takeIf { it == SLOT_ONE || it == SLOT_TWO } ?: return false
+        if (knownSlot(myUid) == to) return true
+        val from = if (to == SLOT_ONE) SLOT_TWO else SLOT_ONE
+        val changed = reslot(from = from, to = to, myUid = myUid)
+        Log.i(TAG, "Pairing moved the slot ($from -> $to) for $myUid: re-stamped $changed record(s)")
+        custodyModelRepository.getActiveModelSync()?.complemented()?.let { complemented ->
+            custodyModelRepository.saveReslotted(complemented)
+        }
+        return true
+    }
+
     /** The per-user key this user's slot marker is stored under; see [PreferenceKeys]. */
     private fun slotMarkerKey(myUid: String) = "${PreferenceKeys.PARENT_SLOT_MARKER_PREFIX}$myUid"
 
     private companion object {
         const val TAG = "ParentSlotMigrator"
+        const val SLOT_ONE = "mom"
+        const val SLOT_TWO = "dad"
     }
 }

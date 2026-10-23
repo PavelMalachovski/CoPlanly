@@ -970,6 +970,37 @@ class SyncServiceTest {
     }
 
     @Test
+    fun `a slot a pairing moved is adopted and its mark removed, never treated as a plain change`() = runTest {
+        // The inviter's slot moved at pairing (`slotsForPairing`); the server marked it.
+        pairWith(partnerId = BOB)
+        coEvery { firestoreUserDataSource.getUserById(ALICE) } returns
+            mapOf("role" to "dad", "slotMovedAt" to 1_700_000_000_000L)
+        coEvery { parentSlotMigrator.adoptSlotMovedAtPairing(ALICE, "dad") } returns true
+        val written = slot<Map<String, Any?>>()
+        coEvery { firestoreUserDataSource.updateUser(ALICE, capture(written)) } returns Result.success(Unit)
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 1) { parentSlotMigrator.adoptSlotMovedAtPairing(ALICE, "dad") }
+        coVerify(exactly = 0) { parentSlotMigrator.reslotIfSlotChanged(any(), any()) }
+        assertEquals(setOf("slotMovedAt"), written.captured.keys)
+    }
+
+    @Test
+    fun `a moved slot that could not be adopted keeps its mark`() = runTest {
+        pairWith(partnerId = BOB)
+        coEvery { firestoreUserDataSource.getUserById(ALICE) } returns
+            mapOf("role" to "dad", "slotMovedAt" to 1_700_000_000_000L)
+        coEvery { parentSlotMigrator.adoptSlotMovedAtPairing(ALICE, "dad") } returns false
+
+        syncService.performFullSync()
+
+        coVerify(exactly = 0) {
+            firestoreUserDataSource.updateUser(ALICE, match { "slotMovedAt" in it.keys })
+        }
+    }
+
+    @Test
     fun `a blank remote role does not blank out the role Room already has`() = runTest {
         // `role` is non-nullable, unlike partnerId/fcmToken: there is no "unknown slot" this
         // entity can fall back to on its own, so a document carrying `role: ""` — which

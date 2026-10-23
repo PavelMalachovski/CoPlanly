@@ -33,6 +33,7 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -906,7 +907,15 @@ class SyncService @Inject constructor(
             )
 
             runCatching {
-                parentSlotMigrator.reslotIfSlotChanged(myUid = userId, newRole = updatedUser.role)
+                if (remoteUserData[SLOT_MOVED_AT] != null) {
+                    // A pairing moved this inviter's slot (`slotsForPairing`): re-stamp, then
+                    // remove the server's mark so a later install never acts on it again.
+                    if (parentSlotMigrator.adoptSlotMovedAtPairing(userId, updatedUser.role)) {
+                        firestoreUserDataSource.updateUser(userId, mapOf(SLOT_MOVED_AT to FieldValue.delete()))
+                    }
+                } else {
+                    parentSlotMigrator.reslotIfSlotChanged(myUid = userId, newRole = updatedUser.role)
+                }
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 Log.e(TAG, "Failed to react to a remote slot change", e)
@@ -1096,6 +1105,9 @@ class SyncService @Inject constructor(
 
     private companion object {
         const val TAG = "SyncService"
+
+        /** The server's mark on this parent's profile that a pairing moved their slot. */
+        const val SLOT_MOVED_AT = "slotMovedAt"
 
         /**
          * Joins the co-parents an audience-backfill marker names. Not a Firebase uid character,
