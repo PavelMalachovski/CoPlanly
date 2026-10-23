@@ -4,7 +4,7 @@
     <string name="home_title">Start</string>
 
     <string name="home_pairing_title">Teile das mit dem anderen Elternteil</string>
-    <string name="home_pairing_prompt">Verknüpfe dich mit dem anderen Elternteil, um Kalender, Ausgaben und Nachrichten zu teilen.</string>
+    <string name="home_pairing_prompt">Sobald der andere Elternteil dabei ist, seht ihr beide dieselben Tage, stimmt Änderungen vorher ab und teilt die Kosten an einem Ort.</string>
     <string name="home_pairing_cta">Jetzt verknüpfen</string>
 
     <string name="home_handover_current">Heute bei %1$s</string>

@@ -4,7 +4,7 @@
     <string name="home_title">Головна</string>
 
     <string name="home_pairing_title">Поділіться з другим із батьків</string>
-    <string name="home_pairing_prompt">Зʼєднайтеся з другим із батьків, щоб ділити календар, витрати та повідомлення.</string>
+    <string name="home_pairing_prompt">Коли другий із батьків приєднається, ви обоє бачитимете ті самі дні, погоджуватимете зміни заздалегідь і ділитимете витрати в одному місці.</string>
     <string name="home_pairing_cta">Зʼєднатися з другим із батьків</string>
 
     <string name="home_handover_current">Сьогодні з: %1$s</string>

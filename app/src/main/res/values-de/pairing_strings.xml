@@ -40,10 +40,10 @@
     <string name="pairing_expires_in_hours">Noch %1$d Std. %2$d Min. gültig</string>
     <string name="pairing_expires_in_minutes">Noch %1$d Min. gültig</string>
     <string name="pairing_code_expired_generate">Code abgelaufen – tippe auf „Neuer Code“</string>
-    <string name="pairing_share_message">%1$s lädt dich zu CoPlanly ein. Code: %2$s · %3$s\nNoch keine App? %4$s\nDu hast ein iPhone? Frag mich nach dem Link zu unserem Kalender, er öffnet sich im Apple-Kalender.</string>
+    <string name="pairing_share_message">%1$s lädt dich zu CoPlanly ein – einem Kalender für die zwei Zuhause unserer Kinder. Wir sehen beide dieselben Tage, und Änderungen am Betreuungsplan brauchen unser beider Ja.\nInstallieren: %4$s (der Code kommt mit)\nSchon die App? %3$s · Code: %2$s\nDu hast ein iPhone? Frag mich nach dem Link zu unserem Kalender, er öffnet sich im Apple-Kalender.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
-    <string name="pairing_share_message_web">%1$s lädt dich zu CoPlanly ein, dem gemeinsamen Kalender für Eltern: %2$s\nCode, falls du ihn brauchst: %3$s</string>
+    <string name="pairing_share_message_web">%1$s lädt dich zu CoPlanly ein – einem Kalender für die zwei Zuhause unserer Kinder. Wir sehen beide dieselben Tage, und Änderungen am Betreuungsplan brauchen unser beider Ja: %2$s\nCode, falls du ihn brauchst: %3$s</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">Ich habe einen Code</string>
     <string name="pairing_code_field_label">Einladungscode</string>
@@ -83,4 +83,15 @@
          arrived: the app cannot know that, and the code works either way. -->
     <string name="pairing_add_another_title">Weiteren Co-Elternteil hinzufügen</string>
     <string name="pairing_add_another_description">Teile einen Code mit jemandem, mit dem du in einer anderen Familie Kinder betreust. Diese Familie bleibt von der hier getrennt.</string>
+
+    <!-- The invitation an unlinked parent answers before a code is redeemed (InvitationView). -->
+    <string name="pairing_invitation_title">%1$s lädt dich zu CoPlanly ein</string>
+    <string name="pairing_invitation_title_unnamed">Du bist zu CoPlanly eingeladen</string>
+    <string name="pairing_invitation_lede">Ein Kalender für die zwei Zuhause eurer Kinder – wessen Tag es ist, was sich geändert hat, wer was bezahlt hat.</string>
+    <string name="pairing_invitation_fact_same">Ihr seht beide einen gemeinsamen Kalender. Private Einträge bleiben privat.</string>
+    <string name="pairing_invitation_fact_agree">Eine Änderung des Betreuungsplans oder ein Tagestausch wartet auf dein Ja.</string>
+    <string name="pairing_invitation_fact_messages">Gesendete Nachrichten kann keiner von euch bearbeiten oder löschen.</string>
+    <string name="pairing_invitation_fact_unlink">Du kannst die Verknüpfung jederzeit in den Einstellungen aufheben.</string>
+    <string name="pairing_invitation_link">Einladung annehmen</string>
+    <string name="pairing_invitation_not_now">Jetzt nicht</string>
 </resources>

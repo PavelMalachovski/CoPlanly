@@ -10,8 +10,8 @@
     <string name="onboarding_back">Back</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_finish">Finish</string>
-    <string name="onboarding_intro_title">A few questions before you start</string>
-    <string name="onboarding_intro_body">CoPlanly can hold your family\'s key details — a blood group, allergies, a grandparent\'s phone number — so that whoever is with your child can find their way quickly if something unexpected happens.\n\nAll of it is optional except your name, and you can fill it in later from Settings.</string>
+    <string name="onboarding_intro_title">A few questions to set up your calendar</string>
+    <string name="onboarding_intro_body">Your children, the custody schedule and how you split costs — so the calendar is ready when you open it. Only your name is required; everything else can wait.\n\nYou can also keep emergency details here, such as a blood group or a grandparent\'s number, for whoever is with your child.</string>
     <string name="onboarding_footnote">Kept for you and your co-parent, in case of an emergency.</string>
     <string name="onboarding_profile_title">About you</string>
     <string name="onboarding_profile_name_required">Your name is the one thing the app needs — it labels every event and expense.</string>
@@ -48,10 +48,11 @@
     <string name="onboarding_notifications_allow">Allow notifications</string>
     <string name="onboarding_notifications_on">Notifications are on.</string>
     <string name="onboarding_notifications_later">You can change this any time in your phone\'s settings.</string>
-    <string name="onboarding_coparent_body">If your co-parent already uses CoPlanly, enter their code: the children, pets, custody schedule and cost split they set up are pulled in, so nothing is typed twice. If they don\'t yet, invite them — they will see what you fill in here.</string>
+    <string name="onboarding_coparent_body">Linking puts the two of you on one calendar. If your co-parent has already set things up, you will see it straight away. If they haven\'t joined yet, invite them.</string>
     <string name="onboarding_coparent_enter_code">I have their code</string>
     <string name="onboarding_coparent_invite">Invite my co-parent</string>
     <string name="onboarding_coparent_later">Not now</string>
+    <string name="onboarding_coparent_open_calendar">Looks right — open the calendar</string>
     <string name="onboarding_coparent_linked_title">Linked with %1$s</string>
     <string name="onboarding_coparent_linked_body">Whatever %1$s has already entered is pulled in for you. Check it on the next steps and add anything missing.</string>
     <string name="onboarding_coparent_fetching">Fetching what %1$s has entered…</string>

@@ -207,7 +207,10 @@ or have deleted what was recorded about them — or an adult who was that child 
   is linked, the person entering your code is shown your **first name** only, so they can check
   who invited them, and never your email address. The web page an invitation link opens shows the
   code and nothing about you, and sends nothing to us. We never ask for the other person's
-  details.
+  details. The invitation's Google Play link carries the code too, so a person who installs the
+  app from it does not have to type it: on its first launch the app asks Google Play, once, which
+  link it was installed from, reads the code from it, and opens the invitation for them to accept
+  or decline. That happens on the phone; nothing about it is sent to us.
 - **A guest** (for example a grandparent) whom you grant time-limited access to one child's
   record — without its photographs.
 - **A family friend** (for example a grandparent or a nanny) whom you grant time-limited read

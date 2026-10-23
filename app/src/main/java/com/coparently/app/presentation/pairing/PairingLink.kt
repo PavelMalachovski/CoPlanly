@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.pairing
 
 import com.coparently.app.BuildConfig
+import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.PairingUri
 
 /**
@@ -23,3 +24,11 @@ internal fun pairingLinkFor(code: String, web: Boolean = BuildConfig.PAIRING_WEB
  * rather than pasted.
  */
 internal const val PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.coplanly"
+
+/**
+ * The Play link a co-parent invitation sends: the listing with [code] in Play's `referrer`
+ * parameter, so the invited parent who installs from it finds the code waiting after sign-in
+ * instead of typing it ([InstallReferrer]). Without a code, the plain listing.
+ */
+internal fun playStoreUrlFor(code: String?): String =
+    if (code.isNullOrBlank()) PLAY_STORE_URL else "$PLAY_STORE_URL&referrer=${InstallReferrer.encode(code)}"

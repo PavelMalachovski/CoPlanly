@@ -32,6 +32,8 @@ import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
+import com.coparently.app.domain.pairing.InstallReferrer
+import com.coparently.app.domain.pairing.InstallReferrerSource
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.presentation.common.FamilyViewViewModel
@@ -103,6 +105,10 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var todayWidgetRefresher: TodayWidgetRefresher
 
+    /** The pairing code an invitation's Play link carried through the install, read once. */
+    @Inject
+    lateinit var installReferrerSource: InstallReferrerSource
+
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
 
@@ -114,6 +120,9 @@ class MainActivity : AppCompatActivity() {
      */
     private val _pendingPairingCode = MutableStateFlow<String?>(null)
     private val pendingPairingCode: StateFlow<String?> = _pendingPairingCode
+
+    /** The code the Play install referrer offered on this launch, if any — see [InstallReferrerSource]. */
+    private var referrerCode: String? = null
 
     /**
      * A `coplanly://chat` deep link (opened by a chat-message push notification), awaiting
@@ -140,7 +149,13 @@ class MainActivity : AppCompatActivity() {
      */
     private val pendingInviteCodes = PendingInviteCodes(
         pairing = _pendingPairingCode,
-        onPairingConsumed = { _pendingPairingCode.value = null },
+        onPairingConsumed = {
+            // The referrer is used up only when its own code reached a signed-in pairing screen.
+            if (InstallReferrer.isHandOff(_pendingPairingCode.value, referrerCode)) {
+                installReferrerSource.markHandedOff()
+            }
+            _pendingPairingCode.value = null
+        },
         guest = _pendingGuestCode,
         onGuestConsumed = { _pendingGuestCode.value = null }
     )
@@ -262,6 +277,18 @@ class MainActivity : AppCompatActivity() {
         // screenshot a message or a schedule as a record (docs/DESIGN-court-record.md).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false)
+        }
+
+        // An invited parent who installed from the invitation's Play link finds the code waiting:
+        // it opens the pairing screen once they are signed in, as a deep link would. Only into
+        // an empty slot — a deep link the parent tapped wins — and only ever as a prefill. Read on
+        // every creation until it is handed off, because the slot does not survive a recreation
+        // or a process death before sign-in.
+        lifecycleScope.launch {
+            installReferrerSource.pendingPairingCode()?.let { code ->
+                referrerCode = code
+                if (_pendingPairingCode.value == null) _pendingPairingCode.value = code
+            }
         }
 
         // Load theme preference

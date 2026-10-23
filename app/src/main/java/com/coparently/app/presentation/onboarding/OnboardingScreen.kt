@@ -38,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -240,7 +242,7 @@ private fun OnboardingBody(
         verticalArrangement = Arrangement.spacedBy(Spacing.XL)
     ) {
         when (state.step) {
-            OnboardingStep.CoParent -> CoParentStep(state, onOpenPairing)
+            OnboardingStep.CoParent -> CoParentStep(state, onOpenPairing, viewModel::openCalendarNow)
             OnboardingStep.Notifications -> NotificationsStep(onAnswered = viewModel::next)
             OnboardingStep.Intro -> IntroStep()
             OnboardingStep.Family -> FamilyKindStep(state, viewModel)
@@ -265,12 +267,19 @@ private fun OnboardingBody(
  * the co-parent's phone sends its records on its next sync, and the following steps keep listening.
  */
 @Composable
-private fun CoParentStep(state: OnboardingUiState, onOpenPairing: (enterCode: Boolean) -> Unit) {
+private fun CoParentStep(
+    state: OnboardingUiState,
+    onOpenPairing: (enterCode: Boolean) -> Unit,
+    onOpenCalendarNow: (deviceRegion: String?, notificationsGranted: Boolean) -> Unit
+) {
     when (val link = state.coParent) {
-        is CoParentLink.Linked -> LinkedCoParent(
-            name = link.name.ifBlank { stringResource(R.string.pairing_default_partner_name) },
-            fetch = state.fetch
-        )
+        is CoParentLink.Linked -> {
+            LinkedCoParent(
+                name = link.name.ifBlank { stringResource(R.string.pairing_default_partner_name) },
+                fetch = state.fetch
+            )
+            if (state.canOpenCalendarNow) OpenCalendarNowButton(onOpenCalendarNow)
+        }
         CoParentLink.None, CoParentLink.Unknown -> {
             StepHeading(title = R.string.onboarding_coparent_title, body = R.string.onboarding_coparent_body)
             Button(onClick = { onOpenPairing(true) }, modifier = Modifier.fillMaxWidth()) {
@@ -339,6 +348,24 @@ private fun NotificationsStep(onAnswered: () -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/**
+ * The invited parent's short path (spec 2026-10-23, G3): what the co-parent set up is on screen,
+ * so one tap goes to the calendar through only what is still needed. Continue keeps the full
+ * wizard. The phone's region and the notification permission are read here, where a `Context`
+ * is, and handed to the ViewModel.
+ */
+@Composable
+private fun OpenCalendarNowButton(onOpenCalendarNow: (deviceRegion: String?, notificationsGranted: Boolean) -> Unit) {
+    val context = LocalContext.current
+    val region = LocalConfiguration.current.locales[0]?.country
+    FilledTonalButton(
+        onClick = { onOpenCalendarNow(region, hasNotificationPermission(context)) },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(stringResource(R.string.onboarding_coparent_open_calendar))
     }
 }
 
@@ -518,14 +545,19 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
         modifier = Modifier.fillMaxWidth()
     )
 
-    // Beside the name rather than on a step of its own: this is "who you are" — what you are
-    // called and how you are marked — and a whole wizard step for four swatches would be a step
-    // most people tap straight through.
-    SectionHeading(title = R.string.settings_parent_color)
-    ParentColorSwatches(
-        selected = state.parentColor,
-        onSelect = viewModel::updateParentColor
-    )
+    // The invited parent's short path asks the name and the country only (owner decision,
+    // 23 October 2026): the country decides the holidays the calendar draws, the rest can wait
+    // for Settings.
+    if (!state.shortPath) {
+        // Beside the name rather than on a step of its own: this is "who you are" — what you are
+        // called and how you are marked — and a whole wizard step for four swatches would be a
+        // step most people tap straight through.
+        SectionHeading(title = R.string.settings_parent_color)
+        ParentColorSwatches(
+            selected = state.parentColor,
+            onSelect = viewModel::updateParentColor
+        )
+    }
 
     // Also "who you are", and for the same reason as the colour above: a whole wizard step for
     // one row of chips is a step most people tap straight through. It is here rather than in
@@ -538,6 +570,8 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
         selectedRegion = state.region,
         onSelectRegion = viewModel::updateRegion
     )
+
+    if (state.shortPath) return
 
     DateOfBirthField(
         date = state.dateOfBirth,

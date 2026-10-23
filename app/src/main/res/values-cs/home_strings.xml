@@ -4,7 +4,7 @@
     <string name="home_title">Domů</string>
 
     <string name="home_pairing_title">Sdílejte to s druhým rodičem</string>
-    <string name="home_pairing_prompt">Propojte se s druhým rodičem a sdílejte kalendář, výdaje a zprávy.</string>
+    <string name="home_pairing_prompt">Až se druhý rodič připojí, uvidíte oba stejné dny, změny si nejdřív odsouhlasíte a výdaje si rozdělíte na jednom místě.</string>
     <string name="home_pairing_cta">Propojit s druhým rodičem</string>
 
     <string name="home_handover_current">Dnes v péči: %1$s</string>

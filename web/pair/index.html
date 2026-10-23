@@ -175,6 +175,17 @@ const PACKAGE = 'app.coplanly';
 /** Where somebody without the app gets it; the same address the app's share text used. */
 const PLAY_URL = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
 
+/**
+ * The Play listing with the code in Play's install referrer, so the app finds the code after it
+ * is installed and nobody types it (`domain/pairing/InstallReferrer.kt` reads `pair=`).
+ *
+ * @param {string} code A valid code.
+ * @return {string} The Play URL.
+ */
+function playUrlFor(code) {
+  return PLAY_URL + '&referrer=' + encodeURIComponent('pair=' + code);
+}
+
 const TEXT = {
   en: {
     pageTitle: 'You’re invited to CoPlanly',
@@ -332,7 +343,7 @@ function platform() {
 function intentUrl(code) {
   return 'intent://pair?code=' + code +
     '#Intent;scheme=coplanly;package=' + PACKAGE +
-    ';S.browser_fallback_url=' + encodeURIComponent(PLAY_URL) + ';end';
+    ';S.browser_fallback_url=' + encodeURIComponent(playUrlFor(code)) + ';end';
 }
 
 /** @return {string} The first of the reader's languages this page speaks, else English. */
@@ -373,7 +384,7 @@ if (code) {
   const where = platform();
   document.getElementById('invite').hidden = false;
   document.getElementById('code').textContent = code;
-  document.getElementById('play').href = PLAY_URL;
+  document.getElementById('play').href = playUrlFor(code);
   document.getElementById('open').href = intentUrl(code);
   document.getElementById('android').hidden = where !== 'android';
   document.getElementById('ios').hidden = where !== 'ios';

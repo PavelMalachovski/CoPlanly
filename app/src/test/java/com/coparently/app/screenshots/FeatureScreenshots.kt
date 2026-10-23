@@ -19,6 +19,7 @@ import com.coparently.app.presentation.expenses.CollapsedMonthSummary
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
 import com.coparently.app.presentation.expenses.MonthNavigation
 import com.coparently.app.presentation.expenses.currencyFormat
+import com.coparently.app.presentation.pairing.InvitationView
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
 import com.coparently.app.presentation.settings.ParentColorPicker
 import io.mockk.every
@@ -120,6 +121,12 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         snap("consent_screen", fullScreen = true) {
             TelemetryConsentScreen(onAnswered = {}, viewModel = viewModel)
         }
+    }
+
+    /** The invitation an unlinked parent answers before linking (the invited parent's first screen). */
+    @Test
+    fun invitation() = snap("pairing_invitation", fullScreen = true) {
+        InvitationView(inviterName = "Alice", onAnswer = {})
     }
 
     /**

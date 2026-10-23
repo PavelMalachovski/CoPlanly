@@ -75,6 +75,12 @@ the server moves it into the family. The one caveat `storage.rules` states: the 
 an ex-partner after an unpair. This does not change the declaration (*Photos: collected, shared
 with the co-parent*); it is what makes "shared" mean "with the other parent" and nobody else.
 
+**The install referrer stays on the phone** (October 2026). A co-parent invitation's Google Play
+link carries the invitation code as Play's install referrer; on its first launch the app reads the
+referrer once through Google Play's Install Referrer API, takes the code from it to open the
+invitation, and stores only the fact that it has read it. Nothing from the referrer is sent to our
+servers or to anyone else, so it is not "collected" in Play's sense and adds no data type.
+
 **The Bakaláři school import collects no credentials.** The parent signs in on the phone, which
 talks to the school's server directly; the password is used once and never stored, and only a
 refresh token stays on the device, encrypted. What it imports (school events, the day's first and

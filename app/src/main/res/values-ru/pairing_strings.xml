@@ -40,10 +40,10 @@
     <string name="pairing_expires_in_hours">Действителен ещё %1$d ч %2$d мин</string>
     <string name="pairing_expires_in_minutes">Действителен ещё %1$d мин</string>
     <string name="pairing_code_expired_generate">Код истёк — нажмите «Новый код»</string>
-    <string name="pairing_share_message">%1$s приглашает вас в CoPlanly. Код: %2$s · %3$s\nНет приложения? %4$s\nУ вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
+    <string name="pairing_share_message">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих.\nУстановить: %4$s (код подставится сам)\nУже есть приложение? %3$s · Код: %2$s\nУ вас iPhone? Попросите у меня ссылку на наш календарь, она откроется в Календаре Apple.</string>
     <!-- The share text once the pairing link is a web address (BuildConfig.PAIRING_WEB_LINK):
          %1$s inviter, %2$s the link, %3$s the code for typing by hand -->
-    <string name="pairing_share_message_web">%1$s приглашает вас в CoPlanly — общий календарь для родителей: %2$s\nКод, если понадобится: %3$s</string>
+    <string name="pairing_share_message_web">%1$s приглашает вас в CoPlanly — один календарь для двух домов наших детей. Мы оба видим одни и те же дни, а изменения графика требуют согласия обоих: %2$s\nКод, если понадобится: %3$s</string>
     <!-- Code entry -->
     <string name="pairing_have_a_code">У меня есть код</string>
     <string name="pairing_code_field_label">Код приглашения</string>
@@ -83,4 +83,15 @@
          arrived: the app cannot know that, and the code works either way. -->
     <string name="pairing_add_another_title">Добавить другую семью</string>
     <string name="pairing_add_another_description">Поделитесь кодом с другим родителем, с которым вы воспитываете ребёнка отдельно. Его семья будет отдельной от этой.</string>
+
+    <!-- The invitation an unlinked parent answers before a code is redeemed (InvitationView). -->
+    <string name="pairing_invitation_title">%1$s приглашает вас в CoPlanly</string>
+    <string name="pairing_invitation_title_unnamed">Вас приглашают в CoPlanly</string>
+    <string name="pairing_invitation_lede">Один календарь для двух домов ваших детей: чей сегодня день, что изменилось, кто что оплатил.</string>
+    <string name="pairing_invitation_fact_same">Вы оба видите один общий календарь. Личные записи остаются личными.</string>
+    <string name="pairing_invitation_fact_agree">Изменение графика или обмен днём ждёт вашего согласия.</string>
+    <string name="pairing_invitation_fact_messages">Отправленное сообщение никто из вас не может изменить или удалить.</string>
+    <string name="pairing_invitation_fact_unlink">Связь можно разорвать в любой момент в настройках.</string>
+    <string name="pairing_invitation_link">Принять приглашение</string>
+    <string name="pairing_invitation_not_now">Не сейчас</string>
 </resources>

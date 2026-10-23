@@ -7,8 +7,8 @@
     <string name="onboarding_back">Назад</string>
     <string name="onboarding_skip">Пропустить</string>
     <string name="onboarding_finish">Готово</string>
-    <string name="onboarding_intro_title">Несколько вопросов перед началом</string>
-    <string name="onboarding_intro_body">CoPlanly может хранить важные данные вашей семьи — группу крови, аллергии, телефон бабушки — чтобы тот, кто окажется рядом с ребёнком, мог быстро сориентироваться в непредвиденной ситуации.\n\nВсё это необязательно, кроме вашего имени, и это можно заполнить позже в настройках.</string>
+    <string name="onboarding_intro_title">Несколько вопросов, чтобы настроить календарь</string>
+    <string name="onboarding_intro_body">Ваши дети, график опеки и как вы делите расходы — чтобы календарь был готов, когда вы его откроете. Обязательно только ваше имя, остальное может подождать.\n\nЗдесь же можно хранить данные на крайний случай, например группу крови или телефон бабушки, для того, кто сейчас с ребёнком.</string>
     <string name="onboarding_footnote">Хранится для вас и второго родителя, на случай непредвиденных обстоятельств.</string>
     <string name="onboarding_profile_title">О себе</string>
     <string name="onboarding_profile_name_required">Имя — единственное, что нужно приложению: им подписывается каждое событие и каждый расход.</string>
@@ -45,10 +45,11 @@
     <string name="onboarding_notifications_allow">Разрешить уведомления</string>
     <string name="onboarding_notifications_on">Уведомления включены.</string>
     <string name="onboarding_notifications_later">Это можно изменить в любой момент в настройках телефона.</string>
-    <string name="onboarding_coparent_body">Если второй родитель уже пользуется CoPlanly, введите его код: дети, питомцы, график опеки и деление расходов подтянутся сами — ничего не придётся вводить дважды. Если ещё нет — отправьте приглашение: второй родитель увидит всё, что вы здесь заполните.</string>
+    <string name="onboarding_coparent_body">После связи у вас обоих будет один календарь. Если второй родитель уже всё настроил, вы сразу это увидите. Если он ещё не в CoPlanly — пригласите его.</string>
     <string name="onboarding_coparent_enter_code">У меня есть код</string>
     <string name="onboarding_coparent_invite">Пригласить второго родителя</string>
     <string name="onboarding_coparent_later">Не сейчас</string>
+    <string name="onboarding_coparent_open_calendar">Всё верно — открыть календарь</string>
     <string name="onboarding_coparent_linked_title">Подключено: %1$s</string>
     <string name="onboarding_coparent_linked_body">Всё, что второй родитель (%1$s) уже внёс, подтянется к вам. Проверьте это на следующих шагах и дополните недостающее.</string>
     <string name="onboarding_coparent_fetching">Получаем данные: %1$s…</string>

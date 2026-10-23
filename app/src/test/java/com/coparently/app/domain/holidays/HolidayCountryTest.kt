@@ -33,6 +33,15 @@ class HolidayCountryTest {
     }
 
     @Test
+    fun `a strict lookup names only a country with a table, and never falls back`() {
+        // A device region is a guess to offer, not a stored answer: "US" must not become Czechia.
+        assertEquals(HolidayCountry.GERMANY, HolidayCountry.ofCodeOrNull("de"))
+        assertNull(HolidayCountry.ofCodeOrNull("US"))
+        assertNull(HolidayCountry.ofCodeOrNull(""))
+        assertNull(HolidayCountry.ofCodeOrNull(null))
+    }
+
+    @Test
     fun `an unknown code falls back rather than failing`() {
         // A newer build's country read by an older one, or a blank row. Every call site draws a
         // calendar and has to draw something.

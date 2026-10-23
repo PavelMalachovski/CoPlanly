@@ -107,6 +107,13 @@ enum class OnboardingStep {
 
     companion object {
         /**
+         * The invited parent's short path (spec 2026-10-23): once the co-parent's records have
+         * come across, the link, the notifications question and a short profile — name and
+         * country — and then the calendar. Everything skipped stays reachable from Settings.
+         */
+        val SHORT_PATH: List<OnboardingStep> = listOf(CoParent, Notifications, Profile)
+
+        /**
          * The steps this wizard will actually walk, given what the family co-parents.
          *
          * @param caresFor The answer to [Family]; an empty set is treated as children, which is

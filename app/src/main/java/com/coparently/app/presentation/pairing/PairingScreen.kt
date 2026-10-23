@@ -224,7 +224,9 @@ fun PairingScreen(
         onUnpair = viewModel::unpair
     )
     DeepLinkPreview(pendingDeepLinkCode, viewModel)
-    form.confirmation?.let { InviteConfirmationDialog(it, viewModel::answerConfirmation) }
+    form.confirmation?.let {
+        InviteQuestion(it, isLinked = state is PairingState.Paired, onAnswer = viewModel::answerConfirmation)
+    }
 }
 
 /**
@@ -419,7 +421,7 @@ private fun shareIntent(context: Context, invite: PairingInvite): Intent {
             invite.fromUserName,
             invite.code,
             pairingLinkFor(invite.code),
-            PLAY_STORE_URL
+            playStoreUrlFor(invite.code)
         )
     }
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -769,7 +771,7 @@ private fun UnpairConfirmationDialog(
  * and an empty string produced a malformed sentence ("4F7K2M () will see...").
  */
 @Composable
-private fun InviteConfirmationDialog(confirmation: InviteConfirmation, onAnswer: (Boolean) -> Unit) {
+internal fun InviteConfirmationDialog(confirmation: InviteConfirmation, onAnswer: (Boolean) -> Unit) {
     val name = confirmation.inviterName
     ConfirmationDialog(
         title = if (name != null) {
