@@ -61,6 +61,8 @@
     <string name="push_expense_added_body_share">%1$s hat %2$s hinzugefügt: %3$s. Dein Anteil: %4$s.</string>
     <string name="push_records_shared_title">Einträge mit dir geteilt</string>
     <string name="push_records_shared_body">%1$s hat den Kalender und die Familieneinträge mit dir geteilt</string>
+    <string name="push_sticker_received_title">Ein Sticker für dich</string>
+    <string name="push_sticker_received_body">%1$s hat dir einen Sticker geschickt</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <!-- One notification channel per kind of news (D-13): what system Settings lists. -->

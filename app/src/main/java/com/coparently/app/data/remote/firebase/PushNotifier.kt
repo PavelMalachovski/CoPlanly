@@ -549,6 +549,11 @@ class PushNotifier(private val context: Context) {
                 R.string.push_records_shared_body,
                 BodyArgs.ACTOR
             ),
+            PushPayload.STICKER_RECEIVED to PushTextSpec(
+                R.string.push_sticker_received_title,
+                R.string.push_sticker_received_body,
+                BodyArgs.ACTOR
+            ),
             PushPayload.REQUEST_LAST_CHANCE to PushTextSpec(
                 R.string.push_request_last_chance_title,
                 R.string.push_request_last_chance_body,

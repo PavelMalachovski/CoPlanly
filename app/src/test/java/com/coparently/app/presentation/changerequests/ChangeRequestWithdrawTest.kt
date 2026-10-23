@@ -5,6 +5,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.data.stickers.StickerAwarder
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
@@ -75,6 +76,7 @@ class ChangeRequestWithdrawTest {
         every { observeShared() } returns flowOf(null)
         every { observeSharedOf(any()) } returns flowOf(null)
     }
+    private val stickerAwarder = mockk<StickerAwarder>(relaxed = true)
     private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
         every { observeSettingsOf(any()) } returns flowOf(null)
     }
@@ -137,7 +139,8 @@ class ChangeRequestWithdrawTest {
             },
             familySettingsRepository = familySettingsRepository
         ),
-        familySettingsRepository = familySettingsRepository
+        familySettingsRepository = familySettingsRepository,
+        stickerAwarder = stickerAwarder
     )
 
     /** A view model whose inbox has drawn the family Olya shares with Pavel. */

@@ -7,6 +7,7 @@ import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.RequestClockActions
+import com.coparently.app.data.stickers.StickerAwarder
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.custody.ContactWindow
@@ -93,7 +94,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val planReferenceSource: PlanReferenceSource,
     private val requestClockActions: RequestClockActions,
     private val requestsSource: RequestsSource,
-    private val familySettingsRepository: FamilySettingsRepository
+    private val familySettingsRepository: FamilySettingsRepository,
+    private val stickerAwarder: StickerAwarder
 ) : ViewModel() {
 
     /**
@@ -217,6 +219,7 @@ class ChangeRequestViewModel @Inject constructor(
             result.fold(
                 onSuccess = {
                     changeRequestRepository.updateStatus(requestId, ChangeRequestStatus.ACCEPTED)
+                    stickerAwarder.onAnswered(RequestDeadlineId.forChange(request))
                 },
                 onFailure = { e ->
                     Log.w(TAG, "Applying change request failed", e)
@@ -242,7 +245,9 @@ class ChangeRequestViewModel @Inject constructor(
     /** Declines an incoming request; the event stays unchanged. */
     fun decline(requestId: String) {
         viewModelScope.launch {
+            val request = changeRequestRepository.getChangeRequestById(requestId)
             changeRequestRepository.updateStatus(requestId, ChangeRequestStatus.DECLINED)
+            request?.let { stickerAwarder.onAnswered(RequestDeadlineId.forChange(it)) }
         }
     }
 
@@ -304,6 +309,7 @@ class ChangeRequestViewModel @Inject constructor(
                 val dates = group.dates.filter { answers[it] == accept }
                 if (dates.isNotEmpty() && !answerSwapDays(dates, uid, now, accept)) return@launch
             }
+            stickerAwarder.onAnswered(RequestDeadlineId.forSwap(group))
         }
     }
 
@@ -519,10 +525,15 @@ class ChangeRequestViewModel @Inject constructor(
     fun acceptProposal() {
         viewModelScope.launch {
             if (!stillShowsItsFamily()) return@launch
-            custodyModelRepository.acceptProposal().onFailure { e ->
-                Log.w(TAG, "Accepting a custody proposal failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_accept_failed)
+            val clockId = waitingClockId { ready ->
+                ready.inbox.waitingOnMe.proposal?.let { RequestDeadlineId.forProposal(it, ready.scope.familyId) }
             }
+            custodyModelRepository.acceptProposal()
+                .onSuccess { stickerAwarder.onAnswered(clockId) }
+                .onFailure { e ->
+                    Log.w(TAG, "Accepting a custody proposal failed", e)
+                    _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_accept_failed)
+                }
         }
     }
 
@@ -530,10 +541,15 @@ class ChangeRequestViewModel @Inject constructor(
     fun declineProposal() {
         viewModelScope.launch {
             if (!stillShowsItsFamily()) return@launch
-            custodyModelRepository.declineProposal().onFailure { e ->
-                Log.w(TAG, "Declining a custody proposal failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_decline_failed)
+            val clockId = waitingClockId { ready ->
+                ready.inbox.waitingOnMe.proposal?.let { RequestDeadlineId.forProposal(it, ready.scope.familyId) }
             }
+            custodyModelRepository.declineProposal()
+                .onSuccess { stickerAwarder.onAnswered(clockId) }
+                .onFailure { e ->
+                    Log.w(TAG, "Declining a custody proposal failed", e)
+                    _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_decline_failed)
+                }
         }
     }
 
@@ -603,8 +619,12 @@ class ChangeRequestViewModel @Inject constructor(
     private fun answerSplit(what: String, write: suspend (familyId: String) -> Result<Unit>) {
         viewModelScope.launch {
             if (!stillShowsItsFamily()) return@launch
+            val clockId = waitingClockId { ready ->
+                ready.inbox.waitingOnMe.split?.let { RequestDeadlineId.forSplit(it, ready.scope.familyId) }
+            }
             val result = inboxFamilyId()?.let { write(it) }
                 ?: Result.failure(IllegalStateException("No family's split is on screen"))
+            result.onSuccess { stickerAwarder.onAnswered(clockId) }
             result.onFailure { e ->
                 Log.w(TAG, "$what an expense split failed", e)
                 _errorMessage.value = UiText.Res(R.string.expenses_split_answer_failed)
@@ -618,10 +638,20 @@ class ChangeRequestViewModel @Inject constructor(
      * value is not kept up to date while nothing collects it (CLAUDE.md item 17).
      */
     private suspend fun inboxFamilyId(): String? =
-        (requests.value as? RequestsState.Ready)?.scope?.familyId
+        inboxNow()?.scope?.familyId
+
+    /**
+     * The clock of the request [pick] finds waiting on this parent in the inbox as it stands now,
+     * before the answer moves it — for the stickers an answer may earn ([StickerAwarder]).
+     */
+    private suspend fun waitingClockId(pick: (RequestsState.Ready) -> String?): String? = inboxNow()?.let(pick)
+
+    /** The inbox as drawn, or a fresh look at it when nothing collects [requests]. */
+    private suspend fun inboxNow(): RequestsState.Ready? =
+        (requests.value as? RequestsState.Ready)
             ?: withTimeoutOrNull(INBOX_WAIT_MS) {
                 requestsSource.observe().filterIsInstance<RequestsState.Ready>().first()
-            }?.scope?.familyId
+            }
 
     /**
      * Records that this parent opened the co-parent's proposed split — Home's pop-up shows it. As
@@ -709,7 +739,10 @@ class ChangeRequestViewModel @Inject constructor(
                 EventAcceptanceTransition.decline(fresh, uid, now)
             }
             result.fold(
-                onSuccess = { eventRepository.updateEvent(it) },
+                onSuccess = {
+                    eventRepository.updateEvent(it)
+                    stickerAwarder.onAnswered(RequestDeadlineId.forEvent(fresh))
+                },
                 onFailure = { e ->
                     Log.w(TAG, "Answering an event failed", e)
                     _errorMessage.value = UiText.Res(R.string.change_request_error_answer_failed)
