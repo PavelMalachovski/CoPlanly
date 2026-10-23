@@ -342,6 +342,9 @@ dependencies {
     // AppCompat is required for per-app language preferences
     // (AppCompatDelegate.setApplicationLocales with autoStoreLocales persistence)
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // Play Install Referrer: an invitation's Play link carries the pairing code through the install,
+    // read once on the phone (domain/pairing/InstallReferrer.kt). Nothing is sent anywhere.
+    implementation("com.android.installreferrer:installreferrer:2.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
     // Installs the baseline profile (src/main/baseline-prof.txt) on a device the app did not
