@@ -2176,7 +2176,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     goes through `PairingViewModel.redeemCode`, which calls `previewPairingInvitation` and asks once;
     only its yes (`answerConfirmation`) calls the accept. A parent not yet linked is asked by the
     full-screen **invitation** (`InvitationView`, October 2026: "{first name} invites you to
-    CoPlanly", one line on what it is and four rules both parents share), a parent already linked
+    CoPlanly", one line on what it is and four rules both parents share — one shared calendar where private entries stay private), a parent already linked
     by the short "Link with {first name}?" dialog. Seven things not to undo.
     - **The preview refuses what the accept refuses.** `assertRedeemableCoParentInvite` holds the
       invitation checks both callables run, and the preview adds the already-paired and slot

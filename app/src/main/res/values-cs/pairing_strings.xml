@@ -88,7 +88,7 @@
     <string name="pairing_invitation_title">%1$s vás zve do CoPlanly</string>
     <string name="pairing_invitation_title_unnamed">Máte pozvánku do CoPlanly</string>
     <string name="pairing_invitation_lede">Jeden kalendář pro dva domovy vašich dětí — čí je který den, co se změnilo a kdo co zaplatil.</string>
-    <string name="pairing_invitation_fact_same">Oba vidíte stejný kalendář. Nikdo z vás ho neřídí.</string>
+    <string name="pairing_invitation_fact_same">Oba vidíte jeden společný kalendář. Soukromé záznamy zůstávají soukromé.</string>
     <string name="pairing_invitation_fact_agree">Změna rozvrhu nebo výměna dne čeká na vaše ano.</string>
     <string name="pairing_invitation_fact_messages">Odeslanou zprávu nemůže nikdo z vás upravit ani smazat.</string>
     <string name="pairing_invitation_fact_unlink">Propojení můžete kdykoli zrušit v Nastavení.</string>

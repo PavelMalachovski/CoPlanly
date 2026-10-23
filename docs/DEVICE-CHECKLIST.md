@@ -1782,7 +1782,7 @@ A is signed in and not paired; B is signed in on another phone, with no family.
 
 - [ ] **The invitation.** B, not linked yet, types A's code (or scans A's QR): before anything is
       linked, a full screen says "{A's first name} invites you to CoPlanly", the one-line lede and
-      the four rules (same calendar, schedule changes wait for B's yes, messages can't be edited or
+      the four rules (one shared calendar, private entries stay private, schedule changes wait for B's yes, messages can't be edited or
       deleted, unlink in Settings). **Not now** and Back leave the code in the field and A unpaired;
       **Accept the invitation** pairs them as before. A parent already linked who enters a second
       co-parent's code still sees the short "Link with {name}?" dialog.

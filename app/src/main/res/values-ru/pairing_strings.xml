@@ -88,7 +88,7 @@
     <string name="pairing_invitation_title">%1$s приглашает вас в CoPlanly</string>
     <string name="pairing_invitation_title_unnamed">Вас приглашают в CoPlanly</string>
     <string name="pairing_invitation_lede">Один календарь для двух домов ваших детей: чей сегодня день, что изменилось, кто что оплатил.</string>
-    <string name="pairing_invitation_fact_same">Вы оба видите один и тот же календарь. Никто из вас им не распоряжается.</string>
+    <string name="pairing_invitation_fact_same">Вы оба видите один общий календарь. Личные записи остаются личными.</string>
     <string name="pairing_invitation_fact_agree">Изменение графика или обмен днём ждёт вашего согласия.</string>
     <string name="pairing_invitation_fact_messages">Отправленное сообщение никто из вас не может изменить или удалить.</string>
     <string name="pairing_invitation_fact_unlink">Связь можно разорвать в любой момент в настройках.</string>

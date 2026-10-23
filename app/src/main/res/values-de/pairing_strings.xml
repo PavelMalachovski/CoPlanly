@@ -88,7 +88,7 @@
     <string name="pairing_invitation_title">%1$s lädt dich zu CoPlanly ein</string>
     <string name="pairing_invitation_title_unnamed">Du bist zu CoPlanly eingeladen</string>
     <string name="pairing_invitation_lede">Ein Kalender für die zwei Zuhause eurer Kinder – wessen Tag es ist, was sich geändert hat, wer was bezahlt hat.</string>
-    <string name="pairing_invitation_fact_same">Ihr seht beide denselben Kalender. Keiner von euch bestimmt darüber.</string>
+    <string name="pairing_invitation_fact_same">Ihr seht beide einen gemeinsamen Kalender. Private Einträge bleiben privat.</string>
     <string name="pairing_invitation_fact_agree">Eine Änderung des Betreuungsplans oder ein Tagestausch wartet auf dein Ja.</string>
     <string name="pairing_invitation_fact_messages">Gesendete Nachrichten kann keiner von euch bearbeiten oder löschen.</string>
     <string name="pairing_invitation_fact_unlink">Du kannst die Verknüpfung jederzeit in den Einstellungen aufheben.</string>
