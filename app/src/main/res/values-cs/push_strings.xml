@@ -67,6 +67,8 @@
     <string name="push_expense_added_body_share">%1$s přidal(a) %2$s: %3$s. Váš podíl je %4$s.</string>
     <string name="push_records_shared_title">Sdílené záznamy</string>
     <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
+    <string name="push_sticker_received_title">Samolepka pro vás</string>
+    <string name="push_sticker_received_body">%1$s vám posílá samolepku</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <!-- One notification channel per kind of news (D-13): what system Settings lists. -->

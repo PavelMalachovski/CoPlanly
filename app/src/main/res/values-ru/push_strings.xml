@@ -67,6 +67,8 @@
     <string name="push_expense_added_body_share">%1$s добавил(а) расход «%2$s»: %3$s. Ваша доля — %4$s.</string>
     <string name="push_records_shared_title">Вам открыты записи</string>
     <string name="push_records_shared_body">%1$s: вам открыты календарь и семейные записи</string>
+    <string name="push_sticker_received_title">Вам стикер</string>
+    <string name="push_sticker_received_body">%1$s отправляет вам стикер</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <!-- One notification channel per kind of news (D-13): what system Settings lists. -->

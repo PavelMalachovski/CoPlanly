@@ -105,7 +105,9 @@ object PushRouting {
         PushPayload.CUSTODY_PROPOSAL_PROPOSED,
         PushPayload.DAY_SWAP_OFFERED,
         PushPayload.DAY_SWAP_GROUP_OFFERED,
-        PushPayload.RECORDS_SHARED -> PushDestination.HOME
+        PushPayload.RECORDS_SHARED,
+        // A sticker is drawn on Home, where its card waits to be seen.
+        PushPayload.STICKER_RECEIVED -> PushDestination.HOME
         PushPayload.CUSTODY_PROPOSAL_ACCEPTED,
         PushPayload.CUSTODY_PROPOSAL_DECLINED,
         PushPayload.DAY_SWAP_ACCEPTED,

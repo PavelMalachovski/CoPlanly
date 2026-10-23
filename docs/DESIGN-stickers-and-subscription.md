@@ -1,9 +1,8 @@
 # Stickers between parents, and cancelling a subscription
 
-Status: **design, not built.** Written on 22 October 2026 from the owner's answers to Zuzana's
-test notes of 21 October (items 5, 6 and 8). Nothing here is implemented in the pull request that
-adds this file; it records what was decided, what it collides with, and what has to be decided
-before anyone builds it.
+Status: **§1 built** (October 2026, from the owner's answers of 23 October, §1.3); **§2 designed,
+not built** (it waits for MON-11). Written on 22 October 2026 from the owner's answers to Zuzana's
+test notes of 21 October (items 5, 6 and 8).
 
 ## 1. Stickers: "you are a great dad / mom" (items 6 and 8)
 
@@ -46,32 +45,57 @@ dad" — as recognition for how they co-parent. Four occasions, all chosen by th
    side, or as sarcasm after a dispute. The app-given occasions must be quiet (no push), private to
    the receiver unless they share it, and never counted against the other parent.
 
-### 1.3 Open questions for the owner
+### 1.3 What the owner answered (23 October 2026)
 
-- **A third answer.** "Mandatory" with only "male" and "female" leaves out a parent who is neither,
-  and a parent who prefers not to say. Proposal: three answers — *dad*, *mom*, *parent* — where
-  *parent* words the sticker neutrally ("You are a great parent"). Mandatory then means "answered",
-  not "binary".
-- **Who sees a sticker.** Only the receiver, or both parents? Proposal: the receiver; the giver
-  sees that it was delivered.
-- **Where stickers live.** A small shelf on the parent's own profile card, or cards in the chat?
-  A chat card is a record both parents and an export read (MON-3); a sticker is probably not
-  evidence. Proposal: not in the chat, not in the export.
-- **The automatic thresholds.** "On time" per request is easy (the clock says it). "Regularity"
-  needs a definition — e.g. four weeks with every request answered before its deadline.
-- **Pushes.** A parent-to-parent sticker could push ("Zuzana sent you a sticker"); an automatic one
-  should not. A push type then needs the four places of item 15.
+| Question | Answer |
+| --- | --- |
+| The rule "never Mom or Dad" | An exception **for the sticker's own sentence only**; every other label stays the person's name |
+| A third answer | **Dad, Mom or Parent** — "parent" words the sticker neutrally; "mandatory" means answered, not binary |
+| Accounts that exist already | Asked **once, on Home, with no "Later"**; only an answer closes the question |
+| Who sees a sticker | **The receiver**; the sender sees that it was delivered and seen. Not in the chat, not in the export |
+| Where stickers live | A **card on Home** for a new sticker, and a **shelf** under Settings → Family → *My stickers* |
+| Pushes | **Only for a sticker from the other parent**; the app's own stickers push nobody |
+| Regularity | **Four weeks in a row** with every request answered before its deadline |
+| Answering on time | A sticker **at most once a week** |
+| Parent to parent | **A fixed set of phrases**, no free text (seven: great parent, thank you, the kids had a great time, a good team, well done, patience, flexibility) |
+| Retention | **While the account and the family exist**: unpair deletes the family's stickers, account deletion every sticker naming the parent |
 
-### 1.4 Shape when built (sketch)
+### 1.4 How it is built
 
-- `users/{uid}.parentRole`: `"dad" | "mom" | "parent"`, written by the owner only; the rules bound
-  the value. Room: one nullable column on `users` (a schema bump and a migration).
-- `stickers/{id}`: `{to, from ("app" or a uid), familyId, kind, reason, createdAt}`, readable by
-  `to` and by `from` when it is a uid, created by a parent only for the other parent of a live
-  family, never updated, deleted with either account. A sweep after a retention period the
-  privacy table names.
-- The sentence is worded on the receiving phone from its own strings (as pushes are, SEC-3), in
-  five languages, from `kind` and the receiver's `parentRole`.
+- **The role.** `users/{uid}.parentRole`: `"dad" | "mom" | "parent"`, written by its owner alone
+  (`firestore.rules`' `parentRoleValid` bounds the value; an older build's merge never touches the
+  key). Firestore only, no Room column — the receiving phone reads its own parent's answer
+  (`data/stickers/ParentRoles`). Home asks while the **server** says the field is missing
+  (`ParentRoleAnswer.Unanswered`); a cached or failed read asks nothing, so the question never
+  flashes up and vanishes. *My stickers* changes it.
+- **The sticker.** `stickers/{id}`: `{to, from, participants, familyId, kind, createdAt}`, plus
+  `seenAt` written once by the receiver. `from` is a uid or `"app"`. The rules
+  (`stickerCreateValid`):
+  - a parent's sticker names the other parent of a **live** family, one of the seven kinds,
+    exactly those keys, and the server's time;
+  - an app sticker names its own receiver, an app kind, a blank or own family, and an id that
+    spells receiver, kind and ISO week (`app_<uid>_<kind>_<YYYY>-W<ww>`), so a second write of the
+    same week is an update and refused — "once a week" is the rules', not the phone's;
+  - read by `to` or `from` only, never updated except `seenAt`, never deleted by a client.
+  `data/stickers/StickerDocument` is the wire form, `StickerStore` the reads and writes.
+- **The app's awards.** `StickerAwarder.onAnswered(clockId)` runs after each answer the requests
+  inbox writes (`ChangeRequestViewModel`: change requests, swaps, events, the custody proposal,
+  the split): the request's clock (item 42) says who had to answer and by when, and an answer by
+  this parent before `answerByMillis` gives the week's on-time sticker. Regularity
+  (`StickerAwards.regular`) needs an on-time sticker in each of the four ISO weeks ending this one,
+  no regularity sticker already in them, and no clock of the family waiting on this parent that
+  ended "No answer" in them. A request with no clock — sent without a deadline, or by an older
+  build — earns nothing.
+- **The words.** The receiving phone words a sticker from its kind and its own role
+  (`presentation/stickers/StickerText`), in five languages; the sender sees the neutral phrase,
+  because it never reads the receiver's role. "Great parent", "on time" and "regularity" vary by
+  role; the other phrases say the same to everybody.
+- **The push.** `sticker_received` carries the sender's name only, in the four places of item 15,
+  on the family channel, opening Home.
+- **Cleanup.** `unpairCoParent` deletes the ended family's stickers; account deletion every sticker
+  whose `participants` name the departing parent.
+- **Families.** A phone shows the stickers of the family on screen and the app's that name no
+  family or this one (item 46); a push from the other family switches to it on tap.
 
 ## 2. Cancelling a paid subscription (item 5)
 

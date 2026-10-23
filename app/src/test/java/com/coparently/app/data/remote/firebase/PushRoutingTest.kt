@@ -53,6 +53,12 @@ class PushRoutingTest {
     }
 
     @Test
+    fun `a sticker opens Home, on the family channel`() {
+        assertEquals(PushDestination.HOME, PushRouting.destinationOf(PushPayload.STICKER_RECEIVED))
+        assertEquals(PushChannel.FAMILY, PushRouting.channelOf(PushPayload.STICKER_RECEIVED))
+    }
+
+    @Test
     fun `a last chance opens the inbox, on the schedule channel`() {
         assertEquals(PushDestination.CHANGE_REQUESTS, PushRouting.destinationOf(PushPayload.REQUEST_LAST_CHANCE))
         assertEquals(PushChannel.SCHEDULE, PushRouting.channelOf(PushPayload.REQUEST_LAST_CHANCE))
@@ -61,10 +67,15 @@ class PushRoutingTest {
     @Test
     fun `money, schedule and chat each have their own channel, so one can be muted alone`() {
         assertEquals(PushChannel.CHAT, PushRouting.channelOf(PushPayload.CHAT_MESSAGE))
+        val familyTypes = setOf(
+            PushPayload.CHILD_INFO_UPDATED,
+            PushPayload.RECORDS_SHARED,
+            PushPayload.STICKER_RECEIVED
+        )
         for (type in PushPayload.CLIENT_TYPES) {
             val expected = when {
                 type.startsWith("split_ratio_") || type == PushPayload.EXPENSE_ADDED -> PushChannel.MONEY
-                type == PushPayload.CHILD_INFO_UPDATED || type == PushPayload.RECORDS_SHARED -> PushChannel.FAMILY
+                type in familyTypes -> PushChannel.FAMILY
                 else -> PushChannel.SCHEDULE
             }
             assertEquals(expected, PushRouting.channelOf(type), type)

@@ -423,6 +423,26 @@ describe('deleteAccountDataImpl', () => {
     assert.strictEqual(removed.request_deadlines, 2);
   });
 
+  // October 2026. Stickers the departing parent received or sent go; one between two other
+  // people stays.
+  it('deletes every sticker naming the departing parent', async () => {
+    const seed = family();
+    seed.stickers = [
+      {id: 's-to-alice', to: ALICE, from: BOB, participants: [ALICE, BOB], familyId: `${ALICE}__${BOB}`},
+      {id: 's-from-alice', to: BOB, from: ALICE, participants: [ALICE, BOB], familyId: `${ALICE}__${BOB}`},
+      {id: 's-app-alice', to: ALICE, from: 'app', participants: [ALICE], familyId: ''},
+      {id: 's-bob-carol', to: 'carol', from: BOB, participants: [BOB, 'carol'], familyId: `${BOB}__carol`},
+    ];
+    const db = fakeDb(seed);
+
+    const removed = await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.stickers.map((s) => s.id), ['s-bob-carol']);
+    // The unpair that account deletion runs first has already removed the family's two; the
+    // query here takes the app's, which names no family.
+    assert.strictEqual(removed.stickers, 1);
+  });
+
   // Queued pushes *addressed to* the deleted account go — they would otherwise be delivered
   // to whatever device still holds its token. The one unpair queues *for the co-parent* is a
   // different thing and must survive: it is how Bob learns the link ended, and it is the last

@@ -239,6 +239,14 @@ object PushPayload {
      */
     const val REQUEST_LAST_CHANCE = "request_last_chance"
 
+    /**
+     * The co-parent sent this parent a sticker (October 2026, owner decisions): one of the fixed
+     * phrases, never free text. Carries [ACTOR] alone — the receiving phone words the sticker
+     * itself on Home, from `stickers/{id}.kind` and its own `parentRole`, so the lock screen says
+     * only who sent one. A sticker the app gives sends no push.
+     */
+    const val STICKER_RECEIVED = "sticker_received"
+
     // ---- types only a Cloud Function may produce -------------------------------
 
     /** Queued by `acceptPairingInvitation`. */
@@ -307,7 +315,8 @@ object PushPayload {
         SPLIT_RATIO_AGREED,
         RECORDS_SHARED,
         REQUEST_LAST_CHANCE,
-        EXPENSE_ADDED
+        EXPENSE_ADDED,
+        STICKER_RECEIVED
     )
 
     /**

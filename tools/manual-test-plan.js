@@ -226,6 +226,11 @@ const RULES = [
       'K/presentation/home/AwaitingDialogs.kt'],
   },
   {
+    sections: ['3.28'],
+    why: 'stickers between the parents: the role question, the Home card, sending, the app\'s on-time stickers',
+    paths: ['K/domain/stickers/**', 'K/data/stickers/**', 'K/presentation/stickers/**'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

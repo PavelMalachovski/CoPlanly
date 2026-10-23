@@ -73,6 +73,8 @@
     <string name="push_expense_added_body_share">%1$s added %2$s: %3$s. Your share is %4$s.</string>
     <string name="push_records_shared_title">Records shared with you</string>
     <string name="push_records_shared_body">%1$s shared their calendar and family records with you</string>
+    <string name="push_sticker_received_title">A sticker for you</string>
+    <string name="push_sticker_received_body">%1$s sent you a sticker</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <!-- One notification channel per kind of news (D-13): what system Settings lists. -->

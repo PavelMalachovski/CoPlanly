@@ -64,6 +64,9 @@ Where something is *not* shared, we say so below.
 - Your country and, where it matters for holidays, your region.
 - If you agreed to it, when you gave consent to entering health details about your child, and
   to which version of the wording (see below).
+- How the stickers you receive address you — "dad", "mom" or a neutral "parent" — which the app
+  asks once. It is used only to word your stickers (everywhere else the app uses your name), and
+  your co-parent can see it.
 
 We do **not** ask for or keep any health information about you, the parent. (Earlier test
 versions of the app had an optional medical section on a parent's own profile; it has been
@@ -106,6 +109,13 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   European EPC code). The code is made on their phone and goes to no one else; we send nothing to
   any bank. You can change or remove the IBAN whenever you settle up, and it is deleted with your
   account.
+- **Stickers** — a small badge such as "You are a great parent". Your co-parent can send you one
+  of a fixed set of phrases (there is no free text), and the app gives you one when you answer a
+  request before its deadline, at most once a week, and after four such weeks in a row. We store
+  who sent it, to whom, in which family, the phrase, when it was sent and when the receiver first
+  saw it. Only the receiver and the sender see a sticker; it is not part of the chat or of an
+  export, and your co-parent gets a notification only for a sticker they did not send themselves
+  — the app's own stickers notify nobody.
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
   builds also let you set a monthly budget per category. This version no longer creates, shows
   or syncs budgets; any an earlier build saved stay in your account until you delete it.)
@@ -418,6 +428,7 @@ daily on our servers, not by hand.
 | What | How long |
 | --- | --- |
 | Your account and everything you entered | Until you delete it, or delete the record |
+| A sticker | Until the two of you unlink, or either of you deletes their account |
 | A request's deadline and what was recorded about it (received, opened, reminders, last chance, no answer) | Until either parent deletes their account — it stays after the request is answered, and after the two of you unlink, as part of what you recorded |
 | A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
 | A photograph you remove or replace | Deleted from our servers when you save the change |
@@ -451,6 +462,7 @@ within which a claim arising from the family's affairs can generally still be br
 - keeps an invitation you sent to a co-parent who accepted it, without your name or any email
   address: it is your co-parent's record that the two of you were a family, and it keeps their
   records from that family out of any family they have later;
+- deletes every sticker you sent or received, for your co-parent too;
 - deletes the deadlines of every request you sent or were asked to answer, with what was recorded
   about them (when a request was received and opened, its reminders, a last chance, "no answer") —
   for your co-parent too, since each of these names you both;

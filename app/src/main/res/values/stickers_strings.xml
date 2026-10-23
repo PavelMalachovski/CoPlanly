@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stickers between parents (October 2026, owner decisions). The dad/mom/parent variants are the one
+     place the app addresses a person by role; every other label is the person's name. -->
+<resources>
+    <string name="sticker_great_parent_dad">You are a great dad</string>
+    <string name="sticker_great_parent_mom">You are a great mom</string>
+    <string name="sticker_great_parent_parent">You are a great parent</string>
+    <string name="sticker_on_time_dad">On time — you are a reliable dad</string>
+    <string name="sticker_on_time_mom">On time — you are a reliable mom</string>
+    <string name="sticker_on_time_parent">On time — you are a reliable parent</string>
+    <string name="sticker_regular_dad">Four weeks of answers on time — a dad to count on</string>
+    <string name="sticker_regular_mom">Four weeks of answers on time — a mom to count on</string>
+    <string name="sticker_regular_parent">Four weeks of answers on time — a parent to count on</string>
+    <string name="sticker_thank_you">Thank you!</string>
+    <string name="sticker_kids_happy">The kids had a great time with you</string>
+    <string name="sticker_good_team">We make a good team</string>
+    <string name="sticker_well_done">Well done!</string>
+    <string name="sticker_patience">Thanks for your patience</string>
+    <string name="sticker_flexible">Thanks for being flexible</string>
+    <string name="stickers_title">My stickers</string>
+    <string name="stickers_settings_description">Stickers you received and sent</string>
+    <string name="sticker_new_heading">A sticker for you</string>
+    <string name="sticker_from">From %1$s</string>
+    <string name="sticker_from_app">From CoPlanly</string>
+    <string name="sticker_got_it">Got it</string>
+    <string name="stickers_send">Send a sticker</string>
+    <string name="stickers_send_supporting">A small thank-you for %1$s</string>
+    <string name="stickers_send_title">Send %1$s a sticker</string>
+    <string name="stickers_send_note">Only %1$s sees it, on their Home screen. It is not part of the chat or the export.</string>
+    <string name="stickers_sent">Sent. %1$s will see it on Home.</string>
+    <string name="stickers_send_failed">The sticker could not be sent. Check the connection and try again.</string>
+    <string name="stickers_close">Close</string>
+    <string name="stickers_received_heading">Received</string>
+    <string name="stickers_sent_heading">Sent</string>
+    <string name="sticker_status_sending">Sending</string>
+    <string name="sticker_status_delivered">Delivered</string>
+    <string name="sticker_status_seen">Seen</string>
+    <string name="stickers_empty_title">No stickers yet</string>
+    <string name="stickers_empty_body">Answer requests before their deadline and the app gives you one. Your co-parent can send you one too.</string>
+    <string name="parent_role_title">How should your stickers address you?</string>
+    <string name="parent_role_body">A sticker says, for example, “You are a great dad”. This answer is used only for stickers; everywhere else the app uses your name. Your co-parent can see it.</string>
+    <string name="parent_role_dad">Dad</string>
+    <string name="parent_role_mom">Mom</string>
+    <string name="parent_role_parent">Parent (neutral)</string>
+    <string name="parent_role_save">Save</string>
+    <string name="parent_role_save_failed">Your answer could not be saved. Check the connection and try again.</string>
+    <string name="stickers_role_row">Stickers call me</string>
+    <string name="stickers_role_unanswered">Not answered yet</string>
+</resources>

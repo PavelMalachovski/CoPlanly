@@ -530,6 +530,21 @@ describe('unpairCoParentImpl', () => {
               Object.keys(db._docs.professional_grants), ['alice__carol__pro']);
         });
 
+    it('removes the ended family\'s stickers, and only those', async () => {
+      // October 2026, owner decision: stickers are kept while the family exists.
+      const seed = seedWithCustodyModel();
+      seed.stickers = {
+        s1: {familyId: CUSTODY_KEY, to: 'bob', from: 'alice', participants: ['alice', 'bob']},
+        s2: {familyId: CUSTODY_KEY, to: 'alice', from: 'app', participants: ['alice']},
+        s3: {familyId: 'alice__carol', to: 'carol', from: 'alice', participants: ['alice', 'carol']},
+      };
+      const db = fakeDb(seed);
+
+      await unpairCoParentImpl(db, 'alice');
+
+      assert.deepStrictEqual(Object.keys(db._docs.stickers), ['s3']);
+    });
+
     it('leaves the co-parent local copies alone when unpairing', async () => {
       // The custody_models document is the one *shared* Firestore document a pair has;
       // each parent's own Room copy never leaves the device and this call has no way to

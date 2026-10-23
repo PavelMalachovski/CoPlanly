@@ -144,6 +144,7 @@ import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsRow
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.IconSizes
@@ -180,6 +181,7 @@ import kotlin.math.roundToInt
  * @param onNavigateToMonthReview Opens the month in review
  * @param onNavigateToDocuments Opens the family document vault (MON-23)
  * @param onNavigateToJournal Opens the private journal (MON-22)
+ * @param onNavigateToStickers Opens "My stickers"
  * @param onNavigateToPairing Opens co-parent pairing
  * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
@@ -212,6 +214,7 @@ fun SettingsScreen(
     onNavigateToMonthReview: (() -> Unit)? = null,
     onNavigateToDocuments: (() -> Unit)? = null,
     onNavigateToJournal: (() -> Unit)? = null,
+    onNavigateToStickers: (() -> Unit)? = null,
     onNavigateToPets: (() -> Unit)? = null,
     onNavigateToPairing: (() -> Unit)? = null,
     onNavigateToFriends: (() -> Unit)? = null,
@@ -752,6 +755,9 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
+                    // Stickers between the parents (October 2026): a small thing, kept with the
+                    // family rather than in App, because they are given and received in a family.
+                    onNavigateToStickers?.let { StickersRow(onOpen = it) }
                     onNavigateToMyProfile?.let { navigate ->
                         SectionRow(
                             icon = Icons.Default.Person,

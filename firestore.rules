@@ -705,6 +705,13 @@ service cloud.firestore {
              (data.paymentIban is string && data.paymentIban.size() >= 15 && data.paymentIban.size() <= 34);
     }
 
+    // `parentRole`: how this parent's stickers address them — "dad", "mom" or "parent" (October
+    // 2026, owner decision; docs/DESIGN-stickers-and-subscription.md). Written by its owner alone,
+    // like the rest of the profile, and only as one of the three words.
+    function parentRoleValid(data) {
+      return !('parentRole' in data) || data.parentRole in ['dad', 'mom', 'parent'];
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isPartnerOf(userId);
 
@@ -733,6 +740,7 @@ service cloud.firestore {
                       healthConsentValid(request.resource.data) &&
                       aiConsentCreateValid() &&
                       paymentIbanValid(request.resource.data) &&
+                      parentRoleValid(request.resource.data) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
                        request.resource.data.firebaseUid == request.auth.uid);
@@ -768,6 +776,7 @@ service cloud.firestore {
                       healthConsentValid(request.resource.data) &&
                       aiConsentUpdateValid() &&
                       paymentIbanValid(request.resource.data) &&
+                      parentRoleValid(request.resource.data) &&
                       isValidLength(request.resource.data.get('name', ''), 0, 100) &&
                       (!('firebaseUid' in request.resource.data) ||
                        request.resource.data.firebaseUid == null ||
@@ -1894,6 +1903,71 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---- Stickers ------------------------------------------------------
+    // A small badge one parent receives (October 2026, owner decision;
+    // docs/DESIGN-stickers-and-subscription.md): from the co-parent, or from the app for answering
+    // on time. Seen by its receiver, and by a parent sender as delivered — never by anybody else,
+    // and not part of the chat or the export.
+    //
+    // Two shapes of create, nothing else. **A parent's sticker** goes from the caller to the other
+    // parent of a family that still exists, in one of the fixed phrases (no free text, so nothing
+    // can be turned into sarcasm). **The app's sticker** is the caller's own, under an id that
+    // spells the caller, the kind and the ISO week — so it is create-once per week, a second
+    // create being an update the update rule refuses. The app's stickers are not checked against
+    // the request clocks here: a phone that awards itself a sticker it did not earn shows it to
+    // nobody but itself.
+    function isParentStickerKind(kind) {
+      return kind in ['great_parent', 'thank_you', 'kids_happy', 'good_team', 'well_done',
+                      'patience', 'flexible'];
+    }
+
+    function isAppStickerKind(kind) {
+      return kind in ['on_time', 'regular'];
+    }
+
+    function stickerCreateValid(stickerId, data) {
+      return data.keys().hasOnly(['to', 'from', 'participants', 'familyId', 'kind', 'createdAt']) &&
+             data.keys().hasAll(['to', 'from', 'participants', 'familyId', 'kind', 'createdAt']) &&
+             data.createdAt == request.time &&
+             data.to is string &&
+             data.familyId is string &&
+             ((data.from == request.auth.uid &&
+               data.to != request.auth.uid &&
+               isParentStickerKind(data.kind) &&
+               isLiveFamilyMember(data.familyId) &&
+               data.to in data.familyId.split('__') &&
+               data.participants is list &&
+               data.participants.size() == 2 &&
+               data.participants.toSet() == [data.from, data.to].toSet()) ||
+              (data.from == 'app' &&
+               data.to == request.auth.uid &&
+               isAppStickerKind(data.kind) &&
+               data.participants == [request.auth.uid] &&
+               (data.familyId == '' || isFamilyMember(data.familyId)) &&
+               stickerId.matches('app_' + request.auth.uid + '_' + data.kind + '_[0-9]{4}-W[0-9]{2}')));
+    }
+
+    match /stickers/{stickerId} {
+      // Its receiver and, for a parent's sticker, its sender. A list is keyed on `to` (the
+      // receiver's shelf) or `from` (what this parent sent).
+      allow get, list: if isAuthenticated() &&
+                         (resource.data.to == request.auth.uid ||
+                          resource.data.from == request.auth.uid);
+
+      allow create: if isAuthenticated() && stickerCreateValid(stickerId, request.resource.data);
+
+      // The receiver marks it seen, once, with the server's clock. Nothing else ever changes.
+      allow update: if isAuthenticated() &&
+                      resource.data.to == request.auth.uid &&
+                      !('seenAt' in resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenAt']) &&
+                      request.resource.data.seenAt == request.time;
+
+      // Nobody. Unpair removes a family's stickers and account deletion a departing parent's, as
+      // the server.
+      allow delete: if false;
+    }
+
     // ---- Invitations ---------------------------------------------------
     // A single document backs the short code, the QR image and the share
     // link. Redemption goes through the acceptPairingInvitation callable —
@@ -2096,6 +2170,7 @@ service cloud.firestore {
     function isClientPushType(type) {
       return type in [
         'event_created', 'event_updated', 'event_deleted', 'event_important',
+        'sticker_received',
         'child_info_updated',
         'change_request_created', 'change_request_accepted',
         'change_request_declined', 'change_request_cancelled',

@@ -225,6 +225,8 @@ describe('SEC-3: notification payloads', () => {
         'expense_added',
         // 21 October 2026. An important event: on both calendars at once, presence required.
         'event_important',
+        // October 2026. The co-parent sent a sticker.
+        'sticker_received',
       ];
       for (const type of types) {
         await assertSucceeds(

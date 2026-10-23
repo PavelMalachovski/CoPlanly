@@ -36,14 +36,14 @@ our processor are declared.
 | Email address | Yes | No | No | Account management (email invitations were removed in August 2026) |
 | Phone number | Yes | No | **Yes** | App functionality — `User.phone` on the profile and onboarding, and the phone numbers of emergency, school, activity and vet contacts (third parties' numbers, entered by a parent) |
 | Address | Yes | No | **Yes** | App functionality — addresses on emergency and school contacts in the child's record |
-| Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details |
+| Other info | Yes | No | **Yes** | App functionality — a child's date of birth, school and activity details; how a parent's stickers address them (`users/{uid}.parentRole`: dad, mom or parent, October 2026), read by their co-parent and used only to word stickers |
 | Device or other IDs | Yes | No | No | App functionality (the FCM push token stored on `users/{uid}`) and, with consent, analytics/crash reporting (Firebase installation ID) |
 | User IDs | Yes | No | No | Account management |
 | Photos | Yes | No | Yes | App functionality — receipts, event images, medical and pet photos, photos in the document vault and sent in chat |
 | Files and docs | Yes | No | Yes | App functionality — the family document vault and PDFs sent in chat (MON-23). Always shared with the co-parent by design; optional to use |
 | Calendar events | Yes | No | No | App functionality |
 | Messages (in-app) | Yes | No | No | App functionality |
-| Other user-generated content | Yes | No | **Yes** | App functionality — free text that is not a message or an event: each parent's parenting-plan answers (`parenting_plans`), the reason on a change request (`change_requests`), and notes on expenses, children's and pets' records. Added September 2026 (`docs/AUDIT-2026-09-play-final.md` F-7); the private journal is **not** in it — it never leaves the phone |
+| Other user-generated content | Yes | No | **Yes** | App functionality — stickers between the parents (`stickers`, October 2026: one of seven fixed phrases, no free text, read by receiver and sender only); free text that is not a message or an event: each parent's parenting-plan answers (`parenting_plans`), the reason on a change request (`change_requests`), and notes on expenses, children's and pets' records. Added September 2026 (`docs/AUDIT-2026-09-play-final.md` F-7); the private journal is **not** in it — it never leaves the phone |
 | Health info | Yes | No | Yes | App functionality — the **child's** medical profile, only after the parent's explicit consent (a dialog, recorded with its version and time; withdrawable in Settings). The parent's own medical profile was removed in September 2026 (`LEGAL-REVIEW-2026-09.md` L-1, L-2) |
 | Purchase/financial info | Yes | No | Yes | App functionality — shared expenses. **Not** payment data: the app processes no payments |
 | App interactions | Yes | No | **Yes** | Analytics — consent-gated since REL-5 |
