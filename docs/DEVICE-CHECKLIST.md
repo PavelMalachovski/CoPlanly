@@ -1426,6 +1426,9 @@ The new-user review of 24 October. What is decided is pinned on the JVM (`HomeAs
       spend and who owes whom, by name), Agreements, Children and home, People and Only mine, with
       the stickers at its foot. Its money card opens Expenses with an up-arrow, and Back returns to
       the tab. Home's month tile opens Expenses too.
+- [ ] **Named on the Family tab.** Linked, the money card's balance names the co-parent ("Bob owes
+      you …", "Bob vám dluží …") and the Co-parent row reads "Linked: Bob"; unlinked, the row says
+      what linking gives. With two families, a switch renames both.
 - [ ] **Home leads with today**: the handover, then today's card, then **Requests**. No contacts,
       child or pet rows and no sticker card on Home.
 - [ ] **A money push** (2P, Bob adds an expense): the tap opens Expenses over the Family tab, and
