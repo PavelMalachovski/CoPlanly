@@ -46,6 +46,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 import javax.inject.Inject
 
@@ -247,7 +248,8 @@ class CustodySetupViewModel @Inject constructor(
             selectedModelType = type,
             // Reset custom settings when switching away from custom
             customPatternDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customPatternDays else 14,
-            customMomDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customMomDays else emptySet()
+            customMomDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customMomDays else emptySet(),
+            startDate = anchorFor(type, _uiState.value.startDate)
         ).withWindowsInCycle()
     }
 
@@ -255,7 +257,7 @@ class CustodySetupViewModel @Inject constructor(
      * Sets the start date for the pattern.
      */
     fun setStartDate(date: LocalDate) {
-        _uiState.value = _uiState.value.copy(startDate = date)
+        _uiState.value = _uiState.value.copy(startDate = anchorFor(_uiState.value.selectedModelType, date))
     }
 
     /**
@@ -536,11 +538,29 @@ private fun CustodyModel.isResidentSlotOne(): Boolean =
     momDayIndices.count { it in 0 until patternDays } * 2 > patternDays
 
 /**
+ * The start a pattern can honestly be described from. The presets named by weekdays — 2-2-3,
+ * 3-4-4-3 and every other weekend ("Mon–Tue: Alice") — start on the Monday of [date]'s week, or
+ * their description would name the wrong days; week on / week off and a custom pattern keep the
+ * day the parent chose, which is their handover day.
+ */
+internal fun anchorFor(type: CustodyModelType, date: LocalDate): LocalDate = when (type) {
+    CustodyModelType.TWO_TWO_THREE,
+    CustodyModelType.THREE_FOUR_FOUR_THREE,
+    CustodyModelType.EVERY_OTHER_WEEKEND -> date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    CustodyModelType.WEEK_ON_WEEK_OFF, CustodyModelType.CUSTOM -> date
+}
+
+/**
  * UI state for custody setup screen.
  */
 data class CustodySetupUiState(
     val selectedModelType: CustodyModelType = CustodyModelType.WEEK_ON_WEEK_OFF,
-    val startDate: LocalDate = LocalDate.now(),
+    /**
+     * The pattern's first day. A new schedule starts on this week's Monday (second audit): today
+     * put a Saturday handover in front of a parent who never chose one, and the weekend read as the
+     * other parent's.
+     */
+    val startDate: LocalDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
     val momFirst: Boolean = true,
     val customPatternDays: Int = 14,
     val customMomDays: Set<Int> = emptySet(),

@@ -5,13 +5,11 @@
     <string name="custody_title">Custody schedule</string>
     <string name="custody_back">Back</string>
     <string name="custody_save_button">Save custody schedule</string>
+    <string name="custody_send_for_approval">Send for approval</string>
     <string name="custody_select_schedule_type">Select schedule type</string>
     <string name="custody_pattern_start_date">Pattern start date</string>
-    <string name="custody_start_date_hint">This is the anchor date – the pattern will repeat from this day</string>
+    <string name="custody_start_date_hint">The first day of the pattern. 2-2-3, 3-4-4-3 and every other weekend start on a Monday, so they follow the weekdays.</string>
     <string name="custody_who_starts_first">Who starts first?</string>
-    <!-- Replaces custody_mom_starts_first/custody_dad_starts_first: a label the parent's
-         name can sit next to without a verb agreeing with it. %1$s is that parent's name. -->
-    <string name="custody_starts_first">Starts first: %1$s</string>
     <string name="custody_custom_pattern">Custom pattern</string>
     <!-- The two names are colour labels, not grammatical objects: "Pink: <name>" so
          nothing has to agree with the name. The old value named Mom and Dad outright
@@ -42,7 +40,7 @@
          head of an adjective, so nothing has to agree with it. %1$s/%2$s are the two
          parents in pattern order; custody_preview_custom takes the two day counts
          first and the slot-1 parent last. -->
-    <string name="custody_preview_week_on_week_off">First week: %1$s, then it alternates every week.</string>
+    <string name="custody_preview_week_on_week_off">From %2$s: %1$s for a week, then it alternates every week.</string>
     <string name="custody_preview_two_two_three">Mon–Tue: %1$s. Wed–Thu: %2$s. Fri–Sun alternates.</string>
     <string name="custody_preview_three_four_four_three">Mon–Wed (3 days): %1$s. Thu–Sun (4 days): %2$s. Then it reverses.</string>
     <string name="custody_preview_custom">Custom pattern: %1$d of %2$d days — %3$s.</string>
@@ -72,7 +70,6 @@
     <string name="custody_model_every_other_weekend_desc">The child lives with one parent; the other has every second weekend.</string>
     <string name="custody_preview_every_other_weekend">Every day: %1$s. Every second Sat–Sun: %2$s.</string>
     <string name="custody_who_is_resident">Who does the child live with?</string>
-    <string name="custody_is_resident">Lives with: %1$s</string>
     <string name="custody_midweek_title">Midweek contact</string>
     <string name="custody_midweek_enable">Add a midweek day</string>
     <string name="custody_midweek_overnight_warning">This schedule assigns whole days, so a midweek day includes the overnight. If your order says afternoon only, leave this off and add a contact window below instead.</string>

@@ -59,7 +59,7 @@
     <!-- Parent identity labels. -->
     <string name="home_dialog_swap_title">Day swap</string>
     <string name="home_dialog_swap_message">%1$s proposes changing who has the child on %2$s.</string>
-    <string name="home_dialog_requests_title">Change requests</string>
+    <string name="home_dialog_requests_title">Requests</string>
     <string name="home_dialog_requests_message">Your co-parent has requests waiting for your answer.</string>
     <string name="home_dialog_requests_message_named">%1$s is waiting for your answer on some requests.</string>
     <string name="home_dialog_later">Later</string>
@@ -69,6 +69,11 @@
         <item quantity="other">%2$s proposes changing who has the child on %1$d days, %3$s to %4$s.</item>
     </plurals>
     <string name="home_dialog_swap_message_days_apart">%1$s proposes changing who has the child on these days: %2$s.</string>
+    <!-- Under a day-swap offer: who has the offered days if it is accepted (second audit — the
+         offer said "changing who has the child" and not to whom). %1$s is that parent's name. -->
+    <string name="home_dialog_swap_goes_to_day">If you accept, %1$s gets the day.</string>
+    <string name="home_dialog_swap_goes_to_days">If you accept, %1$s gets the days.</string>
+    <string name="home_dialog_swap_goes_each_way">If you accept, each day goes to the other parent.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Add event</string>

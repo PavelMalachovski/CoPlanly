@@ -1,7 +1,10 @@
 package com.coparently.app.presentation.family
 
 import com.coparently.app.data.family.testFamilyViewSource
+import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.model.ChildInfo
+import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.ExpenseRepository
@@ -27,9 +30,11 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** The Family tab: the month's money card and whether the children row asks for a first child. */
@@ -45,12 +50,15 @@ class FamilyViewModelTest {
         every { getDefaultCurrencyFlow() } returns flowOf(SupportedCurrency.EUR)
     }
     private val userRepository = mockk<UserRepository> { coEvery { getCurrentUserId() } returns "u1" }
+    private val activeSchedule = MutableStateFlow<CustodyModel?>(null)
+    private val custodyRepository = mockk<CustodyModelRepository> { every { getActiveModel() } returns activeSchedule }
 
     private fun viewModel() = FamilyViewModel(
         MonthSpendDependencies(expenseRepository, preferences, testFamilyViewSource()),
         testParentsSource(),
         userRepository,
-        childInfoRepository
+        childInfoRepository,
+        custodyRepository
     )
 
     @Before
@@ -88,4 +96,18 @@ class FamilyViewModelTest {
 
         assertTrue(vm.hasChildren.value)
     }
+
+    @Test
+    fun `the schedule row names the schedule in force, and asks for one only while there is none`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            backgroundScope.launch { vm.schedule.collect {} }
+            advanceUntilIdle()
+            assertNull(vm.schedule.value)
+
+            activeSchedule.value = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 10, 19))
+            advanceUntilIdle()
+
+            assertEquals(CustodyModelType.WEEK_ON_WEEK_OFF, vm.schedule.value)
+        }
 }

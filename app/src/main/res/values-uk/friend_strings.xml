@@ -39,7 +39,7 @@
     <string name="friend_compare_column_coparent">Другий із батьків</string>
     <string name="friend_compare_column_friend">Друг родини</string>
     <string name="friend_compare_calendar">Календар</string>
-    <string name="friend_compare_custody">Графік опіки</string>
+    <string name="friend_compare_custody">Графік проживання</string>
     <string name="friend_compare_expenses">Витрати</string>
     <string name="friend_compare_chat">Чат</string>
     <string name="friend_compare_children">Інформація про дітей</string>
@@ -54,7 +54,7 @@
     <string name="friend_invite_will_see_lead">Побачить</string>
     <string name="friend_invite_will_see_body">події родини в календарі, крім приватних. Лише перегляд — змінити нічого не можна.</string>
     <string name="friend_invite_wont_see_lead">Не побачить</string>
-    <string name="friend_invite_wont_see_body">графік опіки, витрати, чат та інформацію про дітей.</string>
+    <string name="friend_invite_wont_see_body">графік проживання, витрати, чат та інформацію про дітей.</string>
     <string name="friend_invite_where_to_enter">Його вводять у своєму CoPlanly: «Сімʼя» → «Друзі родини» → «У мене є код від батьків».</string>
     <string name="friend_invite_share">Поділитися кодом</string>
     <string name="friend_invite_done">Готово</string>

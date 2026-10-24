@@ -36,7 +36,7 @@
     <string name="calendar_dialog_cancel">Cancel</string>
 
     <!-- Top bar action icons -->
-    <string name="calendar_change_requests">Change requests</string>
+    <string name="calendar_change_requests">Requests</string>
 
     <!-- Filters sheet: event types, custom type creation, holiday switch -->
     <string name="calendar_filter_event_types">Event types</string>
@@ -90,8 +90,8 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d change request</item>
-        <item quantity="other">%1$d change requests</item>
+        <item quantity="one">%1$d waiting for your answer</item>
+        <item quantity="other">%1$d waiting for your answer</item>
     </plurals>
     <string name="calendar_change_requests_review">Review</string>
     <string name="calendar_change_view_mode">Change view, or jump to a date</string>

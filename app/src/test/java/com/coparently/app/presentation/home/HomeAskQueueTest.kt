@@ -119,6 +119,33 @@ class HomeAskQueueTest {
     }
 
     @Test
+    fun `one ask per visit to Home - what already waited beside it waits for the next visit`() {
+        // Two dialogs in a row on opening the app read as pressure (second audit).
+        val queue = HomeAskQueue.of(HomeAsks(), listOf(swap), requestIds = listOf("change:a"))
+        val first = assertIs<HomeAsk.Swap>(HomeAskQueue.nextThisVisit(queue, putOff = emptySet(), held = null))
+        val held = HomeAskQueue.heldBeside(queue, first)
+        assertEquals(setOf("request_change:a"), held)
+
+        // The swap stays until it is answered or put off ...
+        assertIs<HomeAsk.Swap>(HomeAskQueue.nextThisVisit(queue, putOff = emptySet(), held = held))
+        // ... and then nothing more is asked this visit.
+        assertNull(HomeAskQueue.nextThisVisit(queue, putOff = first.keys, held = held))
+        // The next visit asks about the requests.
+        assertIs<HomeAsk.Requests>(HomeAskQueue.nextThisVisit(queue, putOff = first.keys, held = null))
+    }
+
+    @Test
+    fun `an ask that arrives during the visit is asked`() {
+        val queue = HomeAskQueue.of(HomeAsks(), listOf(swap), requestIds = emptyList())
+        val first = assertIs<HomeAsk.Swap>(HomeAskQueue.nextThisVisit(queue, putOff = emptySet(), held = null))
+        val held = HomeAskQueue.heldBeside(queue, first)
+
+        val later = HomeAskQueue.of(HomeAsks(split = split()), emptyList(), requestIds = emptyList())
+
+        assertIs<HomeAsk.Split>(HomeAskQueue.nextThisVisit(later, putOff = first.keys, held = held))
+    }
+
+    @Test
     fun `nothing waiting asks nothing`() {
         val queue = HomeAskQueue.of(HomeAsks(), emptyList(), requestIds = emptyList())
 

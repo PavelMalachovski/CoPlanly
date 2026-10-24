@@ -20,7 +20,7 @@
     <string name="calendar_dialog_ok">OK</string>
     <string name="calendar_dialog_cancel">Abbrechen</string>
 
-    <string name="calendar_change_requests">Änderungsanfragen</string>
+    <string name="calendar_change_requests">Anfragen</string>
 
     <string name="calendar_filter_event_types">Terminarten</string>
     <string name="calendar_filter_hidden_types_hint">Ausgeblendete Arten werden im Kalender nicht angezeigt</string>
@@ -64,8 +64,8 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d Änderungsanfrage</item>
-        <item quantity="other">%1$d Änderungsanfragen</item>
+        <item quantity="one">%1$d wartet auf deine Antwort</item>
+        <item quantity="other">%1$d warten auf deine Antwort</item>
     </plurals>
     <string name="calendar_change_requests_review">Prüfen</string>
     <string name="calendar_change_view_mode">Ansicht wechseln oder zu einem Datum springen</string>

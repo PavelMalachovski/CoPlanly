@@ -19,9 +19,9 @@
     <string name="push_change_request_declined_body">%1$s відхиляє зміну «%2$s»</string>
     <string name="push_change_request_cancelled_title">Запит на зміну відкликано</string>
     <string name="push_change_request_cancelled_body">%1$s відкликає запит щодо «%2$s»</string>
-    <string name="push_custody_proposal_proposed_title">Запропоновано новий графік опіки</string>
+    <string name="push_custody_proposal_proposed_title">Запропоновано новий графік проживання</string>
     <string name="push_custody_proposal_proposed_body">Другий із батьків пропонує новий графік</string>
-    <string name="push_custody_proposal_accepted_title">Новий графік опіки погоджено</string>
+    <string name="push_custody_proposal_accepted_title">Новий графік проживання погоджено</string>
     <string name="push_custody_proposal_accepted_body">Другий із батьків погодився з новим графіком</string>
     <string name="push_custody_proposal_declined_title">Пропозицію щодо графіка відхилено</string>
     <string name="push_custody_proposal_declined_body">Другий із батьків відхилив запропонований графік</string>
@@ -75,7 +75,7 @@
     <string name="push_channel_chat_name">Повідомлення</string>
     <string name="push_channel_chat_description">Нові повідомлення від другого з батьків</string>
     <string name="push_channel_schedule_name">Розклад</string>
-    <string name="push_channel_schedule_description">Події, запити на зміну, пропозиції графіка опіки та обмін днями</string>
+    <string name="push_channel_schedule_description">Події, запити на зміну, пропозиції графіка проживання та обмін днями</string>
     <string name="push_channel_money_name">Витрати</string>
     <string name="push_channel_money_description">Пропозиції та домовленості про поділ спільних витрат</string>
     <string name="push_channel_family_name">Родина</string>

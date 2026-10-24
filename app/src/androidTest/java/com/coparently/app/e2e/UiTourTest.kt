@@ -120,17 +120,17 @@ class UiTourTest : AliceOnScreenTest() {
 
     // ---- Home -----------------------------------------------------------------------------------
 
-    /** Home as the app opens on it: Bob's swap and request pop up first, then the dashboard. */
+    /**
+     * Home as the app opens on it: Bob's swap pops up first — one dialog per visit, so his request
+     * waits on the Requests row (second audit) — then the inbox through that row.
+     */
     private fun homeSection() {
         camera.shot("home_dialog_swap") {
             driver.await("Bob's swap on Home", inDialog(R.string.home_dialog_swap_title), CROSS_DEVICE_TIMEOUT_MS)
         }
         driver.pressIfPresent(dialogButton(R.string.home_dialog_later))
-        camera.shot("home_dialog_requests") {
-            driver.await("the requests pop-up", inDialog(R.string.home_dialog_requests_title), CROSS_DEVICE_TIMEOUT_MS)
-        }
         camera.shot("change_requests_inbox") {
-            driver.press("Review", dialogButton(R.string.home_dialog_review))
+            driver.press("the Requests row", hasText(string(R.string.home_requests_title)) and hasClickAction())
             driver.appeared(hasText(content.events.dentist, substring = true))
             driver.linger()
         }

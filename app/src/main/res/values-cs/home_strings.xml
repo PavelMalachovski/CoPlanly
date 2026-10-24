@@ -50,7 +50,7 @@
 
     <string name="home_dialog_swap_title">Výměna dnů</string>
     <string name="home_dialog_swap_message">%1$s navrhuje změnit, u koho bude dítě: %2$s.</string>
-    <string name="home_dialog_requests_title">Žádosti o změnu</string>
+    <string name="home_dialog_requests_title">Žádosti</string>
     <string name="home_dialog_requests_message">Druhý rodič čeká na vaši odpověď na žádosti.</string>
     <string name="home_dialog_requests_message_named">%1$s čeká na vaši odpověď na žádosti.</string>
     <string name="home_dialog_later">Později</string>
@@ -62,6 +62,9 @@
         <item quantity="other">%2$s navrhuje změnit, u koho bude dítě %1$d dní: %3$s až %4$s.</item>
     </plurals>
     <string name="home_dialog_swap_message_days_apart">%1$s navrhuje změnit, u koho bude dítě v tyto dny: %2$s.</string>
+    <string name="home_dialog_swap_goes_to_day">Pokud souhlasíte, %1$s dostane ten den.</string>
+    <string name="home_dialog_swap_goes_to_days">Pokud souhlasíte, %1$s dostane ty dny.</string>
+    <string name="home_dialog_swap_goes_each_way">Pokud souhlasíte, každý den připadne druhému rodiči.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Přidat událost</string>

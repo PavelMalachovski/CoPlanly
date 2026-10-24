@@ -9,7 +9,7 @@
     <string name="onboarding_finish">Готово</string>
     <string name="onboarding_profile_title">О себе</string>
     <string name="onboarding_profile_name_required">Имя — единственное, что нужно приложению: им подписывается каждое событие и каждый расход.</string>
-    <string name="onboarding_custody_title">График опеки</string>
+    <string name="onboarding_custody_title">График проживания</string>
     <string name="onboarding_custody_body">Укажите, в какие дни ребёнок с кем из вас. Это можно изменить в любой момент, и второй родитель должен будет согласиться с изменением.</string>
     <string name="onboarding_custody_looks_right">Всё верно</string>
     <string name="onboarding_custody_propose_change">Предложить изменение</string>
@@ -37,7 +37,7 @@
     <string name="onboarding_coparent_found_title">Уже внесено: %1$s</string>
     <string name="onboarding_coparent_found_children">Дети</string>
     <string name="onboarding_coparent_found_pets">Питомцы</string>
-    <string name="onboarding_coparent_found_custody">График опеки</string>
+    <string name="onboarding_coparent_found_custody">График проживания</string>
     <string name="onboarding_coparent_found_split">Деление расходов</string>
     <string name="onboarding_coparent_found_set">Настроено</string>
     <string name="onboarding_coparent_nothing_yet">Пока ничего не пришло. Данные придут, когда телефон второго родителя (%1$s) будет в сети, — можно продолжать, а всё внесённое появится позже.</string>

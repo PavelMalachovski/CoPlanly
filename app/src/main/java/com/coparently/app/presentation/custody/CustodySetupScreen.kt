@@ -37,6 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -162,7 +165,10 @@ fun CustodySetupScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             StickyActionBar(
-                label = stringResource(R.string.custody_save_button),
+                // A paired family's save is a proposal (second audit: "Save" read as done).
+                label = stringResource(
+                    if (proposes) R.string.custody_send_for_approval else R.string.custody_save_button
+                ),
                 onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
                 enabled = uiState.isValid,
                 busy = uiState.isLoading
@@ -342,7 +348,7 @@ internal fun CustodyPatternForm(
 
         Spacer(modifier = Modifier.height(dims.paddingMedium))
 
-        // Mom first toggle (for non-custom models)
+        // Who starts first (for non-custom models)
         if (uiState.selectedModelType != CustodyModelType.CUSTOM) {
             Text(
                 text = stringResource(rolesQuestionFor(uiState.selectedModelType)),
@@ -350,35 +356,28 @@ internal fun CustodyPatternForm(
                 modifier = Modifier.padding(vertical = dims.paddingSmall)
             )
 
-            Row(
+            // Two names, one chosen — a switch said only "on" for one of them (second audit).
+            SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = dims.paddingSmall),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(vertical = dims.paddingSmall)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .background(
-                                ParentColors.fill(if (uiState.momFirst) "mom" else "dad"),
-                                CircleShape
+                listOf(true, false).forEachIndexed { index, momFirst ->
+                    val slot = if (momFirst) "mom" else "dad"
+                    SegmentedButton(
+                        selected = uiState.momFirst == momFirst,
+                        onClick = { actions.setMomFirst(momFirst) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                        icon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .background(ParentColors.fill(slot), CircleShape)
                             )
-                    )
-                    Spacer(modifier = Modifier.width(Spacing.S))
-                    Text(
-                        text = stringResource(
-                            rolesAnswerFor(uiState.selectedModelType),
-                            parentNames.labelFor(if (uiState.momFirst) "mom" else "dad")
-                        ),
-                        style = MaterialTheme.typography.bodyLarge
+                        },
+                        label = { Text(parentNames.labelFor(slot)) }
                     )
                 }
-                Switch(
-                    checked = uiState.momFirst,
-                    onCheckedChange = actions.setMomFirst
-                )
             }
 
             Spacer(modifier = Modifier.height(dims.paddingMedium))
@@ -752,28 +751,21 @@ private val WEEKDAYS = listOf(
 private fun modelTypeLabel(modelType: CustodyModelType): String = stringResource(modelType.labelRes())
 
 /**
- * Which question the switch above the preview is actually asking, for the selected pattern.
+ * Which question the two-name choice is actually asking, for the selected pattern.
  *
  * Three of the four patterns alternate blocks of time, so "who starts first" is the whole of
  * it. [CustodyModelType.EVERY_OTHER_WEEKEND] does not alternate: one parent has the child and
  * the other has every second weekend, and asking a parent who "starts" invites them to answer
- * about the first weekend — which sets the switch backwards and hands over the school days.
+ * about the first weekend — which sets the choice backwards and hands over the school days.
  * A schedule that is wrong in that direction is exactly the failure this app exists to prevent,
  * so the question changes with the pattern rather than the parent being expected to translate it.
  *
- * `CUSTOM` never reaches here: the switch is not rendered for it.
+ * `CUSTOM` never reaches here: the choice is not rendered for it.
  */
 @StringRes
 private fun rolesQuestionFor(modelType: CustodyModelType): Int = when (modelType) {
     CustodyModelType.EVERY_OTHER_WEEKEND -> R.string.custody_who_is_resident
     else -> R.string.custody_who_starts_first
-}
-
-/** The matching answer line — see [rolesQuestionFor]. */
-@StringRes
-private fun rolesAnswerFor(modelType: CustodyModelType): Int = when (modelType) {
-    CustodyModelType.EVERY_OTHER_WEEKEND -> R.string.custody_is_resident
-    else -> R.string.custody_starts_first
 }
 
 /**
@@ -820,8 +812,13 @@ internal fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: Paren
     val first = parentNames.labelFor(uiState.firstSlot)
     val second = parentNames.labelFor(uiState.secondSlot)
     return when (uiState.selectedModelType) {
-        CustodyModelType.WEEK_ON_WEEK_OFF ->
-            stringResource(R.string.custody_preview_week_on_week_off, first)
+        // Dated, because "first week" read as the first week drawn, which may be the other
+        // parent's (second audit).
+        CustodyModelType.WEEK_ON_WEEK_OFF -> stringResource(
+            R.string.custody_preview_week_on_week_off,
+            first,
+            uiState.startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        )
         CustodyModelType.EVERY_OTHER_WEEKEND -> {
             val midweek = uiState.midweek
             if (midweek == null) {

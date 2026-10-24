@@ -20,7 +20,7 @@
     <string name="calendar_dialog_ok">OK</string>
     <string name="calendar_dialog_cancel">Отмена</string>
 
-    <string name="calendar_change_requests">Запросы на изменение</string>
+    <string name="calendar_change_requests">Запросы</string>
 
     <string name="calendar_filter_event_types">Типы событий</string>
     <string name="calendar_filter_hidden_types_hint">Скрытые типы не показываются в календаре</string>
@@ -66,10 +66,10 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d запрос на изменение</item>
-        <item quantity="few">%1$d запроса на изменение</item>
-        <item quantity="many">%1$d запросов на изменение</item>
-        <item quantity="other">%1$d запросов на изменение</item>
+        <item quantity="one">%1$d ждёт вашего ответа</item>
+        <item quantity="few">%1$d ждут вашего ответа</item>
+        <item quantity="many">%1$d ждут вашего ответа</item>
+        <item quantity="other">%1$d ждут вашего ответа</item>
     </plurals>
     <string name="calendar_change_requests_review">Посмотреть</string>
     <string name="calendar_change_view_mode">Сменить вид или перейти к дате</string>
@@ -77,7 +77,7 @@
 
     <!-- Noun phrase, not "X изменил(а)" — Russian inflects that verb for gender and a name
          cannot agree with one; the software would end up guessing or hedging with "(а)". -->
-    <string name="calendar_custody_changed_by">%1$s: изменение графика опеки</string>
+    <string name="calendar_custody_changed_by">%1$s: изменение графика проживания</string>
     <string name="calendar_agenda_empty">Ничего не запланировано.</string>
     <string name="calendar_agenda_time_range">%1$s–%2$s</string>
     <!-- Shown when a calendar write or query fails. The calendar used to say nothing at

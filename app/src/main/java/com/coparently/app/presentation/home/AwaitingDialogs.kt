@@ -13,6 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -34,6 +37,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.utils.unbreakableDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -118,13 +122,13 @@ data class AwaitingActions(
  * The pop-up ask the owner walkthrough called for (items 4/13): what waits on this parent's
  * answer confronts them on open, instead of hiding behind a row they may never tap.
  *
- * One dialog at a time ([HomeAskQueue]) — a custody proposal first, then a proposed expense split,
- * then day swaps. A proposal, a split and a swap carry enough context to answer right here (who,
- * what, which day), so they get real Accept/Decline buttons; event change requests carry times and
- * notes, so their dialog routes to the inbox that can show them. "Later" (or tapping outside) puts
- * the ask off until it changes ([PutOffAsksViewModel]): it stays in the calendar's banner and the
- * inbox, but Home stops interrupting with it. It used to return on every visit, which the UI tour
- * showed as the same dialog five screens running (R-2).
+ * One dialog per visit to Home ([HomeAskQueue.nextThisVisit]) — a custody proposal first, then a
+ * proposed expense split, then day swaps. A proposal, a split and a swap carry enough context to
+ * answer right here (who, what, which day), so they get real Accept/Decline buttons; event change
+ * requests carry times and notes, so their dialog routes to the inbox that can show them. "Later"
+ * (or tapping outside) puts the ask off until it changes ([PutOffAsksViewModel]): it stays in the
+ * calendar's banner and the inbox, but Home stops interrupting with it. It used to return on every
+ * visit, which the UI tour showed as the same dialog five screens running (R-2).
  *
  * @param state The dashboard, for the swaps and requests awaiting this parent.
  * @param parentNames Resolves a uid to that parent's name.
@@ -151,7 +155,15 @@ internal fun AwaitingDialogs(
     val waiting = queue.flatMapTo(mutableSetOf()) { it.keys }
     val dismiss: (Set<String>) -> Unit = { keys -> putOffAsks.putOff(keys, waiting) }
 
-    when (val ask = HomeAskQueue.next(queue, putOff)) {
+    // One ask per visit: what already waited beside the first one shown waits for the next visit.
+    // Remembered across a rotation, forgotten when Home leaves the screen.
+    var held by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    val ask = HomeAskQueue.nextThisVisit(queue, putOff, held?.toSet())
+    LaunchedEffect(ask?.keys) {
+        if (held == null && ask != null) held = HomeAskQueue.heldBeside(queue, ask).sorted()
+    }
+
+    when (ask) {
         is HomeAsk.Proposal ->
             ProposalDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.keys) }, actions = actions)
 
@@ -322,6 +334,7 @@ private fun SwapDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
                 Text(swapDialogMessage(swapGroup, parentNames))
+                Text(swapDirection(swapGroup, parentNames), style = MaterialTheme.typography.bodyMediumEmphasized)
                 SwapMonths(months, parentNames)
                 myUid?.let { uid ->
                     SwapDayAnswers(swapGroup, uid, parentNames) { picked ->
@@ -384,6 +397,26 @@ private fun swapDialogMessage(swapGroup: DaySwapGroup, parentNames: ParentNames)
             unbreakableDate(swapGroup.firstDate.format(dateFormat)),
             unbreakableDate(swapGroup.lastDate.format(dateFormat))
         )
+    }
+}
+
+/**
+ * Whom the offered days go to if this parent accepts (second audit: "changing who has the child"
+ * left out the one thing the answer is about). One name when every day goes the same way; an offer
+ * that both gives and takes days says each goes to the other parent.
+ */
+@Composable
+private fun swapDirection(swapGroup: DaySwapGroup, parentNames: ParentNames): String {
+    val to = swapGroup.swaps.map { it.override.toParent }.distinct()
+    val oneWay = if (swapGroup.dayCount == 1) {
+        R.string.home_dialog_swap_goes_to_day
+    } else {
+        R.string.home_dialog_swap_goes_to_days
+    }
+    return if (to.size == 1) {
+        stringResource(oneWay, parentNames.labelFor(to.single()))
+    } else {
+        stringResource(R.string.home_dialog_swap_goes_each_way)
     }
 }
 

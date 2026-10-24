@@ -4,7 +4,7 @@
     <string name="professional_section_supporting">Медіатор, юрист або психолог — лише перегляд, за згодою обох батьків</string>
     <string name="professional_empty">Жоден фахівець не бачить цю родину</string>
     <string name="professional_invite_action">Запросити фахівця</string>
-    <string name="professional_invite_explainer">Він побачить календар, графік опіки та батьківський план — і нічого більше: ніколи чат, витрати чи записи про дітей. Доступ почнеться, лише коли погодиться й другий із батьків, і завершиться в обраний день.</string>
+    <string name="professional_invite_explainer">Він побачить календар, графік проживання та батьківський план — і нічого більше: ніколи чат, витрати чи записи про дітей. Доступ почнеться, лише коли погодиться й другий із батьків, і завершиться в обраний день.</string>
     <string name="professional_invite_role_label">Роль</string>
     <string name="professional_invite_duration_label">Доступ на</string>
     <string name="professional_invite_create">Створити код</string>
@@ -25,7 +25,7 @@
     <string name="professional_status_active_until">Може переглядати до %1$s</string>
     <string name="professional_status_expired">Доступ завершився %1$s</string>
     <string name="professional_row_supporting">%1$s · %2$s</string>
-    <string name="professional_dialog_body">%1$s може до %2$s переглядати календар, графік опіки та батьківський план цієї родини — ніколи чат, витрати чи записи про дітей. Доступ починається лише за згоди обох батьків, і будь-хто з вас може закрити його будь-коли.</string>
+    <string name="professional_dialog_body">%1$s може до %2$s переглядати календар, графік проживання та батьківський план цієї родини — ніколи чат, витрати чи записи про дітей. Доступ починається лише за згоди обох батьків, і будь-хто з вас може закрити його будь-коли.</string>
     <string name="professional_revoke_confirm">Закрити доступ зараз (%1$s)? Згода другого з батьків не потрібна, і скасувати це не можна — знадобиться нове запрошення.</string>
     <string name="professional_dialog_consent">Я погоджуюся</string>
     <string name="professional_dialog_revoke">Закрити доступ</string>

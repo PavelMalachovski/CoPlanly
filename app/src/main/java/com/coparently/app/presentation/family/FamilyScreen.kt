@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.repository.RatioSubmission
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.common.FamilySwitcherChip
 import com.coparently.app.presentation.common.GroupLabel
@@ -58,6 +59,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.home.balanceCaption
 import com.coparently.app.presentation.home.formatMoney
@@ -141,6 +143,7 @@ fun FamilyScreen(
 ) {
     val money by viewModel.money.collectAsState()
     val hasChildren by viewModel.hasChildren.collectAsState()
+    val schedule by viewModel.schedule.collectAsState()
     val caresFor by settingsViewModel.caresFor.collectAsState()
     val myCaresFor by settingsViewModel.myCaresFor.collectAsState()
     val familySplit by settingsViewModel.split.collectAsState()
@@ -219,35 +222,7 @@ fun FamilyScreen(
                 ) { showSplitPicker = true }
             }
 
-            Group(R.string.family_group_agreements) {
-                NavRow(
-                    Icons.Default.DateRange,
-                    R.string.settings_custody_title,
-                    R.string.settings_custody_description,
-                    destinations.custody
-                )
-                Divider()
-                NavRow(
-                    Icons.AutoMirrored.Filled.Assignment,
-                    R.string.parenting_plan_title,
-                    R.string.parenting_plan_settings_description,
-                    destinations.parentingPlan
-                )
-                Divider()
-                NavRow(
-                    Icons.Default.Description,
-                    R.string.export_settings_title,
-                    R.string.export_settings_description,
-                    destinations.export
-                )
-                Divider()
-                NavRow(
-                    Icons.Default.Insights,
-                    R.string.month_review_title,
-                    R.string.month_review_settings_description,
-                    destinations.monthReview
-                )
-            }
+            AgreementsGroup(schedule, destinations)
 
             Group(R.string.family_group_home) {
                 if (FamilyKind.CHILDREN in caresFor) {
@@ -310,13 +285,17 @@ fun FamilyScreen(
                     R.string.settings_my_profile_description,
                     destinations.myProfile
                 )
-                Divider()
-                NavRow(
-                    Icons.Default.PersonOutline,
-                    R.string.settings_coparent_profile_title,
-                    R.string.settings_coparent_profile_description,
-                    destinations.coParentProfile
-                )
+                // Only once linked: before that the screen could say nothing but "not linked",
+                // which the row above already says (second audit).
+                if (linkedCoParent != null) {
+                    Divider()
+                    NavRow(
+                        Icons.Default.PersonOutline,
+                        R.string.settings_coparent_profile_title,
+                        R.string.settings_coparent_profile_description,
+                        destinations.coParentProfile
+                    )
+                }
                 Divider()
                 NavRow(
                     Icons.Default.Diversity3,
@@ -347,6 +326,45 @@ fun FamilyScreen(
             // (owner decision, October 2026).
             HomeStickers(coParentName = parentNames.coParentLabel())
         }
+    }
+}
+
+/**
+ * The schedule, the plan, the record and the month review. The schedule row names the schedule in
+ * force ([schedule]), and asks for one only while there is none.
+ */
+@Composable
+private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDestinations) {
+    Group(R.string.family_group_agreements) {
+        NavRow(
+            Icons.Default.DateRange,
+            R.string.settings_custody_title,
+            // The schedule in force, by kind; the set-up prompt only while there is none.
+            schedule?.let { stringResource(it.labelRes()) }
+                ?: stringResource(R.string.settings_custody_description),
+            destinations.custody
+        )
+        Divider()
+        NavRow(
+            Icons.AutoMirrored.Filled.Assignment,
+            R.string.parenting_plan_title,
+            R.string.parenting_plan_settings_description,
+            destinations.parentingPlan
+        )
+        Divider()
+        NavRow(
+            Icons.Default.Description,
+            R.string.export_settings_title,
+            R.string.export_settings_description,
+            destinations.export
+        )
+        Divider()
+        NavRow(
+            Icons.Default.Insights,
+            R.string.month_review_title,
+            R.string.month_review_settings_description,
+            destinations.monthReview
+        )
     }
 }
 

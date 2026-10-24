@@ -143,6 +143,51 @@ class CustodySetupViewModelTest {
     }
 
     @Test
+    fun `a new schedule starts on this week's Monday, not on today`() {
+        // A Saturday start put the handover on the weekend and read as "weekends with Bob".
+        assertEquals(DayOfWeek.MONDAY, CustodySetupUiState().startDate.dayOfWeek)
+        assertFalse(CustodySetupUiState().startDate.isAfter(LocalDate.now()))
+    }
+
+    @Test
+    fun `a pattern named by weekdays starts on the Monday of the chosen week`() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+        val thursday = start.plusDays(3)
+
+        vm.selectModelType(CustodyModelType.TWO_TWO_THREE)
+        vm.setStartDate(thursday)
+
+        // "Mon–Tue: Alice" is true only of a Monday start.
+        assertEquals(start, vm.uiState.value.startDate)
+    }
+
+    @Test
+    fun `switching to a pattern named by weekdays moves the start to its Monday`() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+        val thursday = start.plusDays(3)
+        vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
+        vm.setStartDate(thursday)
+
+        vm.selectModelType(CustodyModelType.EVERY_OTHER_WEEKEND)
+
+        assertEquals(start, vm.uiState.value.startDate)
+    }
+
+    @Test
+    fun `week on week off keeps the handover day the parent chose`() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+        val friday = start.plusDays(4)
+
+        vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
+        vm.setStartDate(friday)
+
+        assertEquals(friday, vm.uiState.value.startDate)
+    }
+
+    @Test
     fun `a week shortcut assigns the whole week, even when some days were already assigned`() = runTest(dispatcher) {
         val vm = viewModel()
         advanceUntilIdle()

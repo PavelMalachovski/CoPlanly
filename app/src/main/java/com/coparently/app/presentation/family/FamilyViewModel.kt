@@ -2,6 +2,8 @@ package com.coparently.app.presentation.family
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Parents
@@ -34,13 +36,15 @@ private const val STOP_TIMEOUT_MS = 5_000L
  * @param parentsSource The two parents, to attribute who paid what
  * @param userRepository The signed-in parent, whose side of the balance is reported
  * @param childInfoRepository The family on screen's children
+ * @param custodyModelRepository The family on screen's schedule, which the schedule row names
  */
 @HiltViewModel
 class FamilyViewModel @Inject constructor(
     monthSpendDependencies: MonthSpendDependencies,
     parentsSource: ParentsSource,
     userRepository: UserRepository,
-    childInfoRepository: ChildInfoRepository
+    childInfoRepository: ChildInfoRepository,
+    custodyModelRepository: CustodyModelRepository
 ) : ViewModel() {
 
     private val userId = flow { emit(userRepository.getCurrentUserId().orEmpty()) }
@@ -62,4 +66,12 @@ class FamilyViewModel @Inject constructor(
     val hasChildren: StateFlow<Boolean> = childInfoRepository.getAllChildInfo()
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), true)
+
+    /**
+     * The kind of schedule in force for the family on screen, or null while there is none: the
+     * schedule row names it rather than asking to set one up that exists (second audit).
+     */
+    val schedule: StateFlow<CustodyModelType?> = custodyModelRepository.getActiveModel()
+        .map { it?.modelType }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 }

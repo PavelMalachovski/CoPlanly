@@ -43,8 +43,9 @@ internal sealed interface HomeAsk {
 
 /**
  * The order Home asks in: a custody proposal first, then a proposed expense split, then each day-swap
- * offer, then one summary of the change requests. One dialog at a time — the first that was not put
- * off ([next]) — so a parent with several things to answer is asked about them one after another.
+ * offer, then one summary of the change requests. One dialog per visit to Home ([nextThisVisit]) —
+ * the first that was not put off — and the rest on later visits, so opening the app never stacks
+ * them one after another.
  */
 internal object HomeAskQueue {
 
@@ -65,4 +66,20 @@ internal object HomeAskQueue {
 
     /** The ask to show now: the first of [queue] with a key not in [putOff], or null for none. */
     fun next(queue: List<HomeAsk>, putOff: Set<String>): HomeAsk? = queue.firstOrNull { !putOff.containsAll(it.keys) }
+
+    /**
+     * The ask to show now, one per visit to Home (second audit: a swap and then the requests
+     * summary, one dialog after the other, read as pressure on opening the app).
+     *
+     * @param held The keys of the asks that were already waiting, beside the first one shown, when
+     *   this visit showed it; null until it shows one. Those wait for the next visit, on the
+     *   Requests row and the calendar's banner meanwhile. An ask that arrives during the visit is
+     *   new, and is asked.
+     */
+    fun nextThisVisit(queue: List<HomeAsk>, putOff: Set<String>, held: Set<String>?): HomeAsk? =
+        next(queue, putOff + held.orEmpty())
+
+    /** The keys [nextThisVisit] holds once [shown] is on screen: every other ask now in [queue]. */
+    fun heldBeside(queue: List<HomeAsk>, shown: HomeAsk): Set<String> =
+        queue.filter { it.keys != shown.keys }.flatMapTo(mutableSetOf()) { it.keys } - shown.keys
 }

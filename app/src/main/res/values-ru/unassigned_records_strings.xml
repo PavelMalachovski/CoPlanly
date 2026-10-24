@@ -13,7 +13,7 @@
     <string name="unassigned_records_group_children_pets">Дети и питомцы</string>
     <string name="unassigned_records_group_events">События</string>
     <string name="unassigned_records_group_expenses">Расходы</string>
-    <string name="unassigned_records_group_custody">График опеки</string>
+    <string name="unassigned_records_group_custody">График проживания</string>
     <string name="unassigned_records_kind_child">Ребёнок</string>
     <string name="unassigned_records_kind_pet">Питомец</string>
     <string name="unassigned_records_custody_starts">Начало: %1$s</string>

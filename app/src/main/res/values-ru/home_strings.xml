@@ -53,7 +53,7 @@
          an abbreviation takes no second period (it read "2026 г.." — docs/AUDIT-2026-10-design.md
          D-5). The colon keeps the nominative weekday the formatter produces grammatical. -->
     <string name="home_dialog_swap_message">%1$s предлагает изменить, у кого будет ребёнок в этот день: %2$s</string>
-    <string name="home_dialog_requests_title">Запросы на изменение</string>
+    <string name="home_dialog_requests_title">Запросы</string>
     <string name="home_dialog_requests_message">Второй родитель ждёт вашего ответа на запросы.</string>
     <string name="home_dialog_requests_message_named">%1$s ждёт вашего ответа на запросы.</string>
     <string name="home_dialog_later">Позже</string>
@@ -65,6 +65,9 @@
         <item quantity="other">%2$s предлагает изменить, у кого ребёнок, на %1$d дней: %3$s – %4$s</item>
     </plurals>
     <string name="home_dialog_swap_message_days_apart">%1$s предлагает изменить, у кого ребёнок, в эти дни: %2$s.</string>
+    <string name="home_dialog_swap_goes_to_day">Если вы согласитесь, %1$s получает этот день.</string>
+    <string name="home_dialog_swap_goes_to_days">Если вы согласитесь, %1$s получает эти дни.</string>
+    <string name="home_dialog_swap_goes_each_way">Если вы согласитесь, каждый день перейдёт к другому родителю.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Добавить событие</string>

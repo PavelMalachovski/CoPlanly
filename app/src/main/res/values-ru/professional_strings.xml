@@ -4,7 +4,7 @@
     <string name="professional_section_supporting">Медиатор, юрист или психолог — только чтение, с согласия обоих родителей</string>
     <string name="professional_empty">Ни у одного специалиста нет доступа к этой семье</string>
     <string name="professional_invite_action">Пригласить специалиста</string>
-    <string name="professional_invite_explainer">Он увидит календарь, график опеки и родительский план — и ничего больше: никогда чат, расходы или записи о детях. Доступ начнётся, только когда согласится и второй родитель, и закончится в выбранный день.</string>
+    <string name="professional_invite_explainer">Он увидит календарь, график проживания и родительский план — и ничего больше: никогда чат, расходы или записи о детях. Доступ начнётся, только когда согласится и второй родитель, и закончится в выбранный день.</string>
     <string name="professional_invite_role_label">Роль</string>
     <string name="professional_invite_duration_label">Доступ на</string>
     <string name="professional_invite_create">Создать код</string>
@@ -25,7 +25,7 @@
     <string name="professional_status_active_until">Может читать до %1$s</string>
     <string name="professional_status_expired">Доступ закончился %1$s</string>
     <string name="professional_row_supporting">%1$s · %2$s</string>
-    <string name="professional_dialog_body">%1$s может до %2$s читать календарь, график опеки и родительский план этой семьи — никогда чат, расходы или записи о детях. Доступ начинается только с согласия обоих родителей, и любой из вас может закрыть его в любой момент.</string>
+    <string name="professional_dialog_body">%1$s может до %2$s читать календарь, график проживания и родительский план этой семьи — никогда чат, расходы или записи о детях. Доступ начинается только с согласия обоих родителей, и любой из вас может закрыть его в любой момент.</string>
     <string name="professional_revoke_confirm">Закрыть доступ для %1$s? Согласие второго родителя не нужно, и отменить это нельзя — понадобится новое приглашение.</string>
     <string name="professional_dialog_consent">Даю согласие</string>
     <string name="professional_dialog_revoke">Закрыть доступ</string>
