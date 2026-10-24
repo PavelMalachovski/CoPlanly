@@ -374,8 +374,9 @@ class UiTourTest : AliceOnScreenTest() {
     /** Opens the Family tab and presses the row titled [rowTitle] (a part of its text with [substring]). */
     private fun openFamilyRow(rowTitle: Int, substring: Boolean = false) {
         driver.backToTabs()
-        // The bar can be on screen a frame before its items are (it animates back in after a
-        // detail screen): wait for the Family item itself, not only the bar.
+        // After a Back the pop transition is still running on the paused clock: the tab item is in
+        // the tree but cannot take a touch yet. Let the transition finish, then wait for the item.
+        driver.linger()
         driver.await(
             "the Family tab",
             hasAnyAncestor(tabBar) and hasText(string(BottomNavDestination.FAMILY.labelRes)) and hasClickAction()
