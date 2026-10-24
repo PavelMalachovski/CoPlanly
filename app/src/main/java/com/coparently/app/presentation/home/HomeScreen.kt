@@ -162,6 +162,7 @@ private const val STACK_TILES_FONT_SCALE = 1.3f
  * @param onOpenUnassignedRecords Opens "Records without a family" from the one-time question about
  *   them; null asks nothing
  * @param viewModel Screen state
+ * @param putOffAsks Which pop-up asks this parent already dealt with; the Requests row records them too
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,7 +183,8 @@ fun HomeScreen(
     onAddEvent: () -> Unit,
     onOpenUnassignedRecords: (() -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
-    changeRequestViewModel: ChangeRequestViewModel = hiltViewModel()
+    changeRequestViewModel: ChangeRequestViewModel = hiltViewModel(),
+    putOffAsks: PutOffAsksViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val caresFor by viewModel.caresFor.collectAsState()
@@ -273,12 +275,28 @@ fun HomeScreen(
             )
 
             is HomeUiState.Dashboard -> {
+                val homeAsks = HomeAsks(
+                    proposal = pendingProposal?.let {
+                        ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
+                    },
+                    split = pendingSplit?.let { SplitAsk(it, agreedSplit) },
+                    swapMonths = swapMonths
+                )
+                // Opening the inbox from the Requests row deals with the requests as the pop-up's
+                // Review does: they count as seen, and only a new one asks again (new-user review).
+                val openInboxFromRow = {
+                    val queue = HomeAskQueue.of(homeAsks, state.awaitingSwaps, state.awaitingRequestIds)
+                    queue.filterIsInstance<HomeAsk.Requests>().firstOrNull()?.let { requestsAsk ->
+                        putOffAsks.putOff(requestsAsk.keys, queue.flatMapTo(mutableSetOf()) { it.keys })
+                    }
+                    onOpenChangeRequests()
+                }
                 Dashboard(
                     state = state,
                     parentNames = parentNames,
                     contentPadding = padding,
                     onOpenEvent = openEvent,
-                    onOpenChangeRequests = onOpenChangeRequests,
+                    onOpenChangeRequests = openInboxFromRow,
                     onOpenRequestHistory = onOpenRequestHistory,
                     onOpenContacts = onOpenContacts,
                     onOpenChildInfo = onOpenChildInfo,
@@ -296,13 +314,8 @@ fun HomeScreen(
                 AwaitingDialogs(
                     state = state,
                     parentNames = parentNames,
-                    asks = HomeAsks(
-                        proposal = pendingProposal?.let {
-                            ProposalAsk(it, pendingProposalDiff, pendingProposalCitation)
-                        },
-                        split = pendingSplit?.let { SplitAsk(it, agreedSplit) },
-                        swapMonths = swapMonths
-                    ),
+                    asks = homeAsks,
+                    putOffAsks = putOffAsks,
                     actions = AwaitingActions(
                         onAcceptSwap = { group ->
                             changeRequestViewModel.decideSwapGroup(group, accept = true)

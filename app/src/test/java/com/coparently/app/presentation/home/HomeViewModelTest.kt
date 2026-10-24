@@ -524,7 +524,7 @@ class HomeViewModelTest {
             dispatcher.scheduler.advanceUntilIdle()
             val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals(RequestsRowState(waitingOnMe = 1, waitingOnThem = 1), dashboard.requests)
-            assertEquals(1, dashboard.awaitingRequestCount)
+            assertEquals(listOf("change:theirs"), dashboard.awaitingRequestIds)
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -122,7 +122,8 @@ These would make the work a failure even if it builds:
      Expose the waiting change-request ids and event ids.
    - **Seen means "was waiting when the parent last dealt with the ask"** (builder's question;
      designer's call). Both "Later" and "Review" record the waiting ids as seen, and so does
-     opening the Requests inbox by any route.
+     opening the Requests inbox from Home's Requests row (the calendar banner does not; planner's
+     call, so `PutOffAsksViewModel` stays a Home concern).
    - The stored state holds the seen *ids* per family. Today's `PutOffAsksViewModel` stores one
      revision key and prunes it to what is still waiting. That storage changes:
      - keep the seen ids that are still waiting;

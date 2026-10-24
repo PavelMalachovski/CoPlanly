@@ -147,29 +147,29 @@ internal fun AwaitingDialogs(
     // Each ask under its revision, so a fresh proposal, an amended offer or a new request opens
     // again even after the last was put off. One dialog per *offer*, not per day: a week offered as
     // one agreement used to raise seven dialogs in a row, each asking the same question.
-    val queue = HomeAskQueue.of(asks, state.awaitingSwaps, state.awaitingRequestCount)
-    val waiting = queue.mapTo(mutableSetOf()) { it.key }
-    val dismiss: (String) -> Unit = { key -> putOffAsks.putOff(key, waiting) }
+    val queue = HomeAskQueue.of(asks, state.awaitingSwaps, state.awaitingRequestIds)
+    val waiting = queue.flatMapTo(mutableSetOf()) { it.keys }
+    val dismiss: (Set<String>) -> Unit = { keys -> putOffAsks.putOff(keys, waiting) }
 
     when (val ask = HomeAskQueue.next(queue, putOff)) {
         is HomeAsk.Proposal ->
-            ProposalDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
+            ProposalDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.keys) }, actions = actions)
 
         is HomeAsk.Split ->
-            SplitDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.key) }, actions = actions)
+            SplitDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.keys) }, actions = actions)
 
         is HomeAsk.Swap ->
             SwapDialog(
                 ask.group,
                 asks.swapMonths[ask.group.key].orEmpty(),
                 parentNames,
-                onDismiss = { dismiss(ask.key) },
+                onDismiss = { dismiss(ask.keys) },
                 actions = actions
             )
 
         is HomeAsk.Requests ->
             RequestsDialog(
-                onDismiss = { dismiss(ask.key) },
+                onDismiss = { dismiss(ask.keys) },
                 onReview = actions.onOpenChangeRequests
             )
 
