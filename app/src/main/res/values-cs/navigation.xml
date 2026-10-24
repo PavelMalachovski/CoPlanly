@@ -3,7 +3,6 @@
     <string name="nav_home">Domů</string>
     <string name="nav_calendar">Kalendář</string>
     <string name="nav_chat">Chat</string>
-    <string name="nav_expenses">Výdaje</string>
     <string name="nav_settings">Nastavení</string>
     <string name="expenses_title">Výdaje</string>
     <string name="budgets_back">Zpět</string>

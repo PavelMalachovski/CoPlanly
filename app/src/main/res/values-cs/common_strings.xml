@@ -24,7 +24,7 @@
     <string name="common_quick_action_settings">Nastavení</string>
     <string name="common_quick_action_settings_subtitle">Předvolby aplikace</string>
     <!-- Label above the signed-in account's name and email (pairing screen, Settings) -->
-    <string name="common_signed_in_as">Přihlášení jako</string>
+    <string name="common_signed_in_as">Přihlášený účet</string>
 
     <!-- Fallbacks for parentLabel() (presentation/common/ParentLabels.kt): shown instead of a
          name when the signed-in user, the co-parent, or an event's slot cannot be resolved. -->

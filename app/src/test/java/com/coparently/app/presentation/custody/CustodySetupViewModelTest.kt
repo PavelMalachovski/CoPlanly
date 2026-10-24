@@ -9,6 +9,7 @@ import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.ChildScheduleOverride
+import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.FirstSchedule
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
@@ -47,6 +48,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -237,7 +239,7 @@ class CustodySetupViewModelTest {
         // The pair's schedule reached the server after the step showed the form: nothing is
         // written, nothing is proposed, and the step switches to that schedule.
         val agreed = CustodyModel.weekOnWeekOff(id = "agreed", startDate = start)
-        coEvery { repository.activateFirstSchedule(any()) } returns FirstSchedule.SharedExists(agreed)
+        coEvery { repository.activateFirstSchedule(any(), any()) } returns FirstSchedule.SharedExists(agreed)
         val vm = viewModel()
         advanceUntilIdle()
         vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
@@ -253,7 +255,7 @@ class CustodySetupViewModelTest {
 
     @Test
     fun `a first schedule activated finishes the step`() = runTest(dispatcher) {
-        coEvery { repository.activateFirstSchedule(any()) } returns FirstSchedule.Activated
+        coEvery { repository.activateFirstSchedule(any(), any()) } returns FirstSchedule.Activated
         val vm = viewModel()
         advanceUntilIdle()
         vm.selectModelType(CustodyModelType.TWO_TWO_THREE)
@@ -266,14 +268,47 @@ class CustodySetupViewModelTest {
         assertTrue(done)
         coVerify(exactly = 1) {
             repository.activateFirstSchedule(
-                match { it.modelType == CustodyModelType.TWO_TWO_THREE && it.startDate == start }
+                match { it.modelType == CustodyModelType.TWO_TWO_THREE && it.startDate == start },
+                false
             )
         }
     }
 
     @Test
+    fun `a linked parent's first schedule says so, and keeps the stored contact windows`() = runTest(dispatcher) {
+        // Onboarding's form hides the windows section, so a save that dropped them would erase
+        // afternoons the parent never saw; and the link step's answer reaches the repository.
+        val window = ContactWindow(dayIndex = 2, start = LocalTime.of(15, 0), end = LocalTime.of(19, 0), parent = "dad")
+        coEvery { repository.activateFirstSchedule(any(), any()) } returns FirstSchedule.Activated
+        val vm = viewModel(
+            active = CustodyModel.weekOnWeekOff(id = "stored", startDate = start).copy(contactWindows = listOf(window))
+        )
+        advanceUntilIdle()
+
+        vm.saveFirstSchedule(linkedToCoParent = true) {}
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.activateFirstSchedule(match { it.contactWindows == listOf(window) }, true) }
+    }
+
+    @Test
+    fun `a schedule already found stays found when the step is entered again`() = runTest(dispatcher) {
+        val agreed = CustodyModel.weekOnWeekOff(id = "agreed", startDate = start)
+        coEvery { repository.readShared() } returns SharedCustodyRead.Found(sharedCustody(agreed))
+        val vm = viewModel()
+        vm.checkOnboardingMode()
+        advanceUntilIdle()
+        coEvery { repository.readShared() } returns SharedCustodyRead.Unavailable
+
+        vm.checkOnboardingMode()
+        advanceUntilIdle()
+
+        assertEquals("agreed", assertIs<OnboardingScheduleMode.Existing>(vm.onboardingMode.value).model.id)
+    }
+
+    @Test
     fun `a first schedule the server could not check is a failed save, and the form stays`() = runTest(dispatcher) {
-        coEvery { repository.activateFirstSchedule(any()) } returns FirstSchedule.Unavailable
+        coEvery { repository.activateFirstSchedule(any(), any()) } returns FirstSchedule.Unavailable
         val vm = viewModel()
         advanceUntilIdle()
         var done = false

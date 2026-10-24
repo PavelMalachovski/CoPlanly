@@ -148,7 +148,7 @@ private const val STACK_TILES_FONT_SCALE = 1.3f
  * @param onOpenRequestHistory Opens the requests inbox at its History
  * @param onOpenSettings Opens settings
  * @param onNavigateToPairing Opens the pairing screen
- * @param onOpenExpenses Switches to the Expenses tab — the spend tile's deep link
+ * @param onOpenExpenses Opens Expenses — the spend tile's deep link
  * @param onOpenChat Switches to the Chat tab — the unread tile's deep link
  * @param onAddEvent Opens the new-event form — the empty week's way forward
  * @param onOpenUnassignedRecords Opens "Records without a family" from the one-time question about
@@ -419,7 +419,7 @@ private fun PairingInvitation(
  * @param onOpenEvent Opens an event by id, with the tapped occurrence's start when there is one
  * @param onOpenChangeRequests Opens the requests inbox
  * @param onOpenRequestHistory Opens the requests inbox at its History
- * @param onOpenExpenses Switches to the Expenses tab
+ * @param onOpenExpenses Opens Expenses
  * @param onOpenChat Switches to the Chat tab
  * @param onAddEvent Opens the new-event form
  */

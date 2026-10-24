@@ -419,6 +419,9 @@ class CustodySetupViewModel @Inject constructor(
      * whose save ([saveFirstSchedule]) still never proposes.
      */
     fun checkOnboardingMode() {
+        // A schedule already found stays found: coming back from "Propose a change" must not
+        // trade it for the form on a read that happens to time out.
+        if (_onboardingMode.value is OnboardingScheduleMode.Existing) return
         viewModelScope.launch {
             val read = withTimeoutOrNull(SHARED_READ_TIMEOUT_MS) { custodyModelRepository.readShared() }
             _onboardingMode.value = (read as? SharedCustodyRead.Found)
@@ -432,15 +435,22 @@ class CustodySetupViewModel @Inject constructor(
      * [CustodyModelRepository.activateFirstSchedule], which only ever activates. When the pair
      * turns out to share a schedule already nothing is written and the step shows that schedule;
      * when the server cannot answer the form stays, with the ordinary save error. [onDone] runs
-     * only once the schedule is this family's.
+     * only once the schedule is this family's. The contact windows a stored schedule carried are
+     * kept, though the onboarding form does not show them.
+     *
+     * @param linkedToCoParent Whether the link step saw this parent linked; passed on so a save
+     *   made before Room knows the pair writes nothing ([CustodyModelRepository.activateFirstSchedule])
      */
-    fun saveFirstSchedule(onDone: () -> Unit) {
+    fun saveFirstSchedule(linkedToCoParent: Boolean = false, onDone: () -> Unit) {
         val state = _uiState.value
         if (!state.isValid || state.isLoading) return
         _uiState.value = state.copy(isLoading = true)
         viewModelScope.launch {
             val result = try {
-                custodyModelRepository.activateFirstSchedule(state.toPatternModel(UUID.randomUUID().toString()))
+                custodyModelRepository.activateFirstSchedule(
+                    state.toPatternModel(UUID.randomUUID().toString()).copy(contactWindows = state.contactWindows),
+                    linkedToCoParent
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (

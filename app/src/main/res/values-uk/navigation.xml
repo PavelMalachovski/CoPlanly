@@ -3,7 +3,6 @@
     <string name="nav_home">Головна</string>
     <string name="nav_calendar">Календар</string>
     <string name="nav_chat">Чат</string>
-    <string name="nav_expenses">Витрати</string>
     <string name="nav_settings">Налаштування</string>
     <string name="expenses_title">Витрати</string>
     <string name="budgets_back">Назад</string>

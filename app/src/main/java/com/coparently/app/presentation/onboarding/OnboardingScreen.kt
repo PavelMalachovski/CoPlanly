@@ -79,6 +79,7 @@ import com.coparently.app.presentation.custody.OnboardingScheduleMode
 import com.coparently.app.presentation.custody.SchedulePreviewMonth
 import com.coparently.app.presentation.custody.createTempModel
 import com.coparently.app.presentation.custody.custodyPreviewText
+import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColorChoice
@@ -142,7 +143,12 @@ fun OnboardingScreen(
         scheduleMode is OnboardingScheduleMode.Form -> PrimaryAction(
             R.string.onboarding_finish,
             enabled = schedule.isValid && !schedule.isLoading,
-            onClick = { scheduleViewModel.saveFirstSchedule(onDone = viewModel::finish) }
+            onClick = {
+                scheduleViewModel.saveFirstSchedule(
+                    linkedToCoParent = uiState.coParent is CoParentLink.Linked,
+                    onDone = viewModel::finish
+                )
+            }
         )
         else -> PrimaryAction(R.string.onboarding_finish, enabled = false, onClick = {})
     }
@@ -560,7 +566,11 @@ private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, o
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            SchedulePreviewMonth(model = mode.model, parentNames = parentNames, description = null)
+            SchedulePreviewMonth(
+                model = mode.model,
+                parentNames = parentNames,
+                description = stringResource(mode.model.modelType.labelRes())
+            )
             TextButton(onClick = onOpenEditor) {
                 Text(stringResource(R.string.onboarding_custody_propose_change))
             }

@@ -34,6 +34,7 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -210,7 +211,7 @@ class CustodyModelRepositoryTest {
     fun `the first schedule never proposes over a schedule the pair already shares`() = runTest(dispatcher) {
         // Onboarding's Next must never send a proposal (new-user review, October 2026): with a
         // shared document present nothing is written anywhere, and the step shows that schedule.
-        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, Source.SERVER) } returns remoteCustody()
 
         val result = repository.activateFirstSchedule(localModel())
 
@@ -221,7 +222,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `the first schedule activates when the pair has no document yet`() = runTest(dispatcher) {
-        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns null
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, Source.SERVER) } returns null
 
         val result = repository.activateFirstSchedule(localModel())
 
@@ -237,12 +238,26 @@ class CustodyModelRepositoryTest {
 
         assertEquals(FirstSchedule.Activated, result)
         coVerify(exactly = 1) { custodyModelDao.insertModel(any()) }
-        coVerify(exactly = 0) { firestoreCustodyDataSource.getCustody(any()) }
+        coVerify(exactly = 0) { firestoreCustodyDataSource.getCustody(any(), any()) }
+    }
+
+    @Test
+    fun `the first schedule writes nothing while Room has not caught up with a link`() = runTest(dispatcher) {
+        // The link step saw the parent linked; Room does not know the pair yet. An unstamped row
+        // saved now would be newer than the pair's document when it arrives, and the mirror
+        // would republish it over the agreed schedule.
+        pairedWith(partnerUid = null)
+
+        val result = repository.activateFirstSchedule(localModel(), linkedToCoParent = true)
+
+        assertEquals(FirstSchedule.Unavailable, result)
+        coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
     }
 
     @Test
     fun `the first schedule writes nothing when the server cannot answer`() = runTest(dispatcher) {
-        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } throws permissionDenied()
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, Source.SERVER) } throws permissionDenied()
 
         val result = repository.activateFirstSchedule(localModel())
 

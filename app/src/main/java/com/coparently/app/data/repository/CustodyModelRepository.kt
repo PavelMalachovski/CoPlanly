@@ -33,6 +33,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -347,9 +348,9 @@ constructor(
         currentPair()?.let { readShared(it) } ?: SharedCustodyRead.Unavailable
 
     /** [readShared] for [pair]'s document, so a caller reads the family it already decided on. */
-    private suspend fun readShared(pair: CustodyPair): SharedCustodyRead {
+    private suspend fun readShared(pair: CustodyPair, source: Source = Source.DEFAULT): SharedCustodyRead {
         return try {
-            firestoreCustodyDataSource.getCustody(pair.documentId)
+            firestoreCustodyDataSource.getCustody(pair.documentId, source)
                 ?.let { SharedCustodyRead.Found(it) }
                 ?: SharedCustodyRead.Absent
         } catch (e: CancellationException) {
@@ -430,17 +431,28 @@ constructor(
      * ([FirstSchedule.SharedExists]); a read that cannot answer writes nothing either. The
      * proposal branch of [submitPattern] is not reachable from here, so an invited parent's Next
      * can never send their co-parent a proposal, however late the pair's document reaches Room.
+     *
+     * The read is from the server: "absent" from a cache that has not seen the inviter's schedule
+     * would let this write over it. And a parent the link step saw linked ([linkedToCoParent])
+     * while Room does not know the pair yet writes nothing: an unstamped row saved then would be
+     * newer than the pair's document when it arrives, and the mirror would republish it over the
+     * agreed schedule.
+     *
+     * @param linkedToCoParent Whether the caller already knows this parent is linked
      */
-    suspend fun activateFirstSchedule(model: CustodyModel): FirstSchedule {
+    suspend fun activateFirstSchedule(model: CustodyModel, linkedToCoParent: Boolean = false): FirstSchedule {
         val families = currentFamilies()
         val pair = families.pair
-        if (pair != null) {
-            when (val read = readShared(pair)) {
-                is SharedCustodyRead.Found -> return FirstSchedule.SharedExists(read.custody.model)
-                SharedCustodyRead.Unavailable -> return FirstSchedule.Unavailable
-                SharedCustodyRead.Absent -> Unit
+        // What stops the save, if anything: the pair's own schedule, or no answer to read.
+        val stopped: FirstSchedule? = when {
+            pair == null -> FirstSchedule.Unavailable.takeIf { linkedToCoParent }
+            else -> when (val read = readShared(pair, Source.SERVER)) {
+                is SharedCustodyRead.Found -> FirstSchedule.SharedExists(read.custody.model)
+                SharedCustodyRead.Unavailable -> FirstSchedule.Unavailable
+                SharedCustodyRead.Absent -> null
             }
         }
+        if (stopped != null) return stopped
         saveAndActivate(withActiveLayers(model, families), families)
         return FirstSchedule.Activated
     }
