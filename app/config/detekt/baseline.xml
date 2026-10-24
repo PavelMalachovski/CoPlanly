@@ -12,7 +12,6 @@
     <ID>CyclomaticComplexMethod:AddExpenseScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddExpenseScreen( onBack: () -&gt; Unit, expenseId: String? = null, viewModel: ExpenseViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:AuthScreen.kt$@Composable fun AuthScreen( onAuthSuccess: () -&gt; Unit, onViewModelReady: ((AuthViewModel) -&gt; Unit)? = null, viewModel: AuthViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:ConflictResolver.kt$ConflictResolver$private fun countNonNullFields(childInfo: ChildInfoEntity): Int</ID>
-    <ID>CyclomaticComplexMethod:CustodySetupScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable fun CustodySetupScreen( onNavigateBack: () -&gt; Unit, viewModel: CustodySetupViewModel = hiltViewModel() )</ID>
     <ID>CyclomaticComplexMethod:DayWeekView.kt$private fun layoutDayEvents(events: List&lt;Event&gt;, date: LocalDate): List&lt;EventSegment&gt;</ID>
     <ID>CyclomaticComplexMethod:MessagesList.kt$@Composable // Already over detekt's LongMethod threshold before this task added the clickable chevron (the // codebase's own baseline records that); explicit like the other screen composables that carry // the same suppression rather than relying on a baseline entry keyed to an exact signature. @Suppress("LongMethod") fun MessageItem( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>CyclomaticComplexMethod:PairingFunctions.kt$PairingFunctions.Companion$fun toPairingError(e: Throwable): PairingError</ID>
@@ -47,7 +46,6 @@
     <ID>LongParameterList:CalendarFilters.kt$( allEventTypes: List&lt;String&gt;, hiddenEventTypes: Set&lt;String&gt;, showHolidays: Boolean, parentFilter: ParentFilter, parentNames: ParentNames, friendName: String?, onParentFilterChange: (ParentFilter) -&gt; Unit, onToggleType: (String) -&gt; Unit, onAddCustomType: (String) -&gt; Unit, onShowHolidaysChange: (Boolean) -&gt; Unit, onDismiss: () -&gt; Unit, sheetState: SheetState )</ID>
     <ID>LongParameterList:EventViewModel.kt$EventViewModel$( private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases, private val errorHandler: com.coparently.app.domain.error.ErrorHandler, private val encryptedPreferences: EncryptedPreferences, private val gson: Gson, private val photoStorage: RecordPhotoStorage, private val parentsSource: ParentsSource, familyMembersSource: FamilyMembersSource )</ID>
     <ID>LongParameterList:ExpenseAnalytics.kt$( title: String, titleColor: androidx.compose.ui.graphics.Color, expenses: List&lt;Expense&gt;, currency: String, modifier: Modifier = Modifier, photoUrl: String? = null )</ID>
-    <ID>LongParameterList:HomeViewModel.kt$HomeViewModel$( eventRepository: EventRepository, requestsSource: RequestsSource, custodyModelRepository: CustodyModelRepository, monthSpendDependencies: MonthSpendDependencies, messageRepository: MessageRepository, familyKindSource: FamilyKindSource, homeIdentityDependencies: HomeIdentityDependencies )</ID>
     <ID>LongParameterList:MessagesList.kt$( message: Message, isCurrentUser: Boolean, startsGroup: Boolean = true, endsGroup: Boolean = true, onEventLinkClick: ((String) -&gt; Unit)? = null, onOpenInbox: (() -&gt; Unit)? = null, onRetryFailed: (() -&gt; Unit)? = null )</ID>
     <ID>LongParameterList:PairingRepositoryImpl.kt$PairingRepositoryImpl$( private val firestore: FirebaseFirestore, private val authService: FirebaseAuthService, private val pairingFunctions: PairingFunctions, private val postPairingConversationSetup: PostPairingConversationSetup, private val userDao: UserDao, private val selectedFamilySource: SelectedFamilySource, private val syncRequester: SyncRequester, // Application context only, for the localized conversation-title fallback. This is a // repository, not a ViewModel, so it is allowed to resolve resources directly. @ApplicationContext private val context: Context )</ID>
     <ID>LongParameterList:ParentLabels.kt$( slot: String, me: NamedParent?, coParent: NamedParent?, youFallback: String, coParentFallback: String, unknownFallback: String )</ID>
@@ -89,7 +87,6 @@
     <ID>MagicNumber:CustodyModel.kt$CustodyModel.Companion$7</ID>
     <ID>MagicNumber:CustodyModel.kt$CustodyModel.Companion$8</ID>
     <ID>MagicNumber:CustodyModel.kt$CustodyModel.Companion$9</ID>
-    <ID>MagicNumber:CustodySetupScreen.kt$14</ID>
     <ID>MagicNumber:CustodySetupScreen.kt$7</ID>
     <ID>MagicNumber:CustodySetupViewModel.kt$CustodySetupViewModel$28</ID>
     <ID>MagicNumber:CustodySetupViewModel.kt$CustodySetupViewModel$7</ID>
@@ -228,7 +225,6 @@
     <ID>TooManyFunctions:EventDao.kt$EventDao</ID>
     <ID>TooManyFunctions:EventViewModel.kt$EventViewModel : ViewModel</ID>
     <ID>TooManyFunctions:Extensions.kt$com.coparently.app.utils.Extensions.kt</ID>
-    <ID>TooManyFunctions:OnboardingScreen.kt$com.coparently.app.presentation.onboarding.OnboardingScreen.kt</ID>
     <ID>TooManyFunctions:PetDao.kt$PetDao</ID>
     <ID>TooManyFunctions:ValidationUtils.kt$ValidationUtils</ID>
     <ID>UnusedParameter:DayWeekView.kt$baseDate: LocalDate</ID>
