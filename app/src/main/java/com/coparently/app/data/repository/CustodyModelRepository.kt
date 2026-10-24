@@ -25,6 +25,7 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.CustodyWriteKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.FirstSchedule
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
@@ -32,6 +33,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -118,7 +120,9 @@ class PartialSwapRun(
 ) : IllegalStateException("Only $written of $total days went through", cause)
 
 @Singleton
-@Suppress("TooManyFunctions")
+// The one owner of the custody document's writes: splitting it would give the read-then-write
+// rules (items 24, 30, 33, 41) two homes.
+@Suppress("TooManyFunctions", "LargeClass")
 class CustodyModelRepository
 @Suppress("LongParameterList") // the request clock joins the collaborators (phase 3a)
 constructor(
@@ -344,9 +348,9 @@ constructor(
         currentPair()?.let { readShared(it) } ?: SharedCustodyRead.Unavailable
 
     /** [readShared] for [pair]'s document, so a caller reads the family it already decided on. */
-    private suspend fun readShared(pair: CustodyPair): SharedCustodyRead {
+    private suspend fun readShared(pair: CustodyPair, source: Source = Source.DEFAULT): SharedCustodyRead {
         return try {
-            firestoreCustodyDataSource.getCustody(pair.documentId)
+            firestoreCustodyDataSource.getCustody(pair.documentId, source)
                 ?.let { SharedCustodyRead.Found(it) }
                 ?: SharedCustodyRead.Absent
         } catch (e: CancellationException) {
@@ -416,6 +420,42 @@ constructor(
         planCitation: String? = null,
         answerBy: AnswerByPick? = null
     ): PatternSubmission = submit(model, planCitation, currentFamilies(), answerBy)
+
+    /**
+     * Saves [model] as the family's first schedule, from onboarding, and **never proposes**
+     * (new-user review, October 2026).
+     *
+     * Unpaired, or paired with a read that proves the pair has no document, the schedule is
+     * activated as [saveAndActivate] would, carrying the active layers like any pattern save.
+     * When the pair already shares a schedule nothing is written and the step is told so
+     * ([FirstSchedule.SharedExists]); a read that cannot answer writes nothing either. The
+     * proposal branch of [submitPattern] is not reachable from here, so an invited parent's Next
+     * can never send their co-parent a proposal, however late the pair's document reaches Room.
+     *
+     * The read is from the server: "absent" from a cache that has not seen the inviter's schedule
+     * would let this write over it. And a parent the link step saw linked ([linkedToCoParent])
+     * while Room does not know the pair yet writes nothing: an unstamped row saved then would be
+     * newer than the pair's document when it arrives, and the mirror would republish it over the
+     * agreed schedule.
+     *
+     * @param linkedToCoParent Whether the caller already knows this parent is linked
+     */
+    suspend fun activateFirstSchedule(model: CustodyModel, linkedToCoParent: Boolean = false): FirstSchedule {
+        val families = currentFamilies()
+        val pair = families.pair
+        // What stops the save, if anything: the pair's own schedule, or no answer to read.
+        val stopped: FirstSchedule? = when {
+            pair == null -> FirstSchedule.Unavailable.takeIf { linkedToCoParent }
+            else -> when (val read = readShared(pair, Source.SERVER)) {
+                is SharedCustodyRead.Found -> FirstSchedule.SharedExists(read.custody.model)
+                SharedCustodyRead.Unavailable -> FirstSchedule.Unavailable
+                SharedCustodyRead.Absent -> null
+            }
+        }
+        if (stopped != null) return stopped
+        saveAndActivate(withActiveLayers(model, families), families)
+        return FirstSchedule.Activated
+    }
 
     /**
      * [submitPattern] for the [families] read once when the change began, so every step of it —

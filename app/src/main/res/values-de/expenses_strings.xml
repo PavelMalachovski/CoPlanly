@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Zurück</string>
     <string name="expenses_add">Ausgabe hinzufügen</string>
     <string name="expenses_summary_this_month">Übersicht (dieser Monat)</string>
     <string name="expenses_summary_total">Gesamt</string>
@@ -24,6 +25,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Der andere Elternteil schuldet dir %1$s</string>
     <string name="expenses_balance_you_owe">Du schuldest dem anderen Elternteil %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">%1$s schuldet dir %2$s</string>
+    <string name="expenses_balance_you_owe_named">Du schuldest %1$s %2$s</string>
     <string name="expenses_balance_settled">Alles ausgeglichen</string>
     <string name="expenses_settle_up">Ausgleichen</string>
     <string name="expenses_this_month">Dieser Monat</string>

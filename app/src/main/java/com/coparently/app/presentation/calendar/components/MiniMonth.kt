@@ -42,7 +42,6 @@ import com.coparently.app.presentation.calendar.dayCellOverlayColor
 import com.coparently.app.presentation.calendar.eventDotColor
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
-import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
 import java.time.DayOfWeek
@@ -218,16 +217,8 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.M),
         verticalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
-        PARENT_SLOTS.filter { parentNames.isKnown(it) }.forEach { slot ->
-            LegendEntry(label = parentNames.labelFor(slot)) {
-                Box(
-                    modifier = Modifier
-                        .size(LEGEND_SWATCH)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .background(ParentColors.container(slot, alpha = ParentColors.custodyTintAlpha))
-                )
-            }
+        LEGEND_PARENT_SLOTS.filter { parentNames.isKnown(it) }.forEach { slot ->
+            LegendEntry(label = parentNames.labelFor(slot)) { ParentSwatch(slot) }
         }
         model.marks.values.distinct().sorted().forEach { mark ->
             LegendEntry(
@@ -245,21 +236,6 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LegendEntry(label: String, swatch: @Composable () -> Unit) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.XS),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        swatch()
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -290,9 +266,6 @@ private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames
     return (listOf("$month.") + markedDays).joinToString(" ")
 }
 
-/** The two parent slots, in the order the legend names them. */
-private val PARENT_SLOTS = listOf("mom", "dad")
-
 /** A cell's least height; it grows with the text rather than clipping it at 200 %. */
 private val CELL_MIN_HEIGHT = 34.dp
 
@@ -301,9 +274,6 @@ private val NUMBER_DISC = 24.dp
 
 /** The ring around a marked day, and around its swatch in the legend. */
 private val MARK_RING_WIDTH = 2.dp
-
-/** A legend swatch. */
-private val LEGEND_SWATCH = 12.dp
 
 /** A borrowed day's number, as faint as the month grid draws it. */
 private const val OUTSIDE_MONTH_NUMBER_ALPHA = 0.3f

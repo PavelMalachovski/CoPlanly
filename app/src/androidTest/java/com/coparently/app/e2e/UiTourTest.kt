@@ -267,9 +267,16 @@ class UiTourTest : AliceOnScreenTest() {
     // ---- Expenses -------------------------------------------------------------------------------
 
     private fun expensesSection() {
-        camera.shot("expenses_list") {
+        // The Family tab replaced the Expenses tab (new-user review, October 2026): the tab first,
+        // then Expenses from its money card. The shot names are kept for the Play listing.
+        camera.shot("family") {
             driver.backToTabs()
-            openTab(BottomNavDestination.EXPENSES)
+            openTab(BottomNavDestination.FAMILY)
+            driver.linger()
+        }
+        scrolls("family", FAMILY_SCREENFULS)
+        camera.shot("expenses_list") {
+            pressFamilyRow(R.string.family_money_this_month, substring = true)
             driver.appeared(hasText(content.expenses.jacket, substring = true))
             driver.linger()
         }
@@ -280,7 +287,6 @@ class UiTourTest : AliceOnScreenTest() {
         }
         driver.pressIfPresent(textButton(R.string.expense_analytics_tab_list))
         camera.shot("expense_add") {
-            driver.backToTabs()
             driver.press("Add expense", hasContentDescription(string(R.string.expenses_add)) and hasClickAction())
             driver.await("the expense form", hasSetTextAction())
             driver.linger()
@@ -309,26 +315,26 @@ class UiTourTest : AliceOnScreenTest() {
     }
 
     private fun familyScreens() {
-        fromSettings("child_info_list", R.string.settings_child_info_title, UiTourSeed.EMMA)
+        fromFamily("child_info_list", R.string.settings_child_info_title, UiTourSeed.EMMA)
         camera.shot("child_detail") {
             driver.press("Emma", hasText(UiTourSeed.EMMA, substring = true) and hasClickAction())
             driver.linger()
         }
         scrolls("child_detail", 2)
-        fromSettings("pets_list", R.string.settings_pets_title, UiTourSeed.MAX)
+        fromFamily("pets_list", R.string.settings_pets_title, UiTourSeed.MAX)
         camera.shot("pet_edit") {
             driver.press("Max", hasText(UiTourSeed.MAX, substring = true) and hasClickAction())
             driver.linger()
         }
-        fromSettings("custody_setup", R.string.settings_custody_title)
+        fromFamily("custody_setup", R.string.settings_custody_title)
         scrolls("custody_setup", CUSTODY_SCREENFULS)
-        fromSettings("parenting_plan", R.string.parenting_plan_title)
+        fromFamily("parenting_plan", R.string.parenting_plan_title)
         scrolls("parenting_plan", 2)
     }
 
     private fun recordScreens() {
-        fromSettings("pairing", R.string.settings_pairing_title)
-        fromSettings("friends", R.string.friend_section_title)
+        fromFamily("pairing", R.string.settings_pairing_title)
+        fromFamily("friends", R.string.friend_section_title)
         // The sheet's button repeats the invite row's label, and the row stays behind the sheet.
         camera.shot("friends_invite_sheet") {
             driver.press("Invite a family friend", row(R.string.friend_invite_action))
@@ -336,12 +342,12 @@ class UiTourTest : AliceOnScreenTest() {
             driver.pressLast("the sheet's Invite", textButton(R.string.friend_invite_action))
             driver.await("the friend's code", textButton(R.string.friend_invite_share), CROSS_DEVICE_TIMEOUT_MS)
         }
-        fromSettings("professionals", R.string.professional_section_title)
-        fromSettings("export", R.string.export_settings_title)
+        fromFamily("professionals", R.string.professional_section_title)
+        fromFamily("export", R.string.export_settings_title)
         scrolls("export", 1)
-        fromSettings("documents_vault", R.string.documents_settings_title, content.document.title)
-        fromSettings("journal", R.string.journal_title)
-        fromSettings("my_stickers", R.string.stickers_title)
+        fromFamily("documents_vault", R.string.documents_settings_title, content.document.title)
+        fromFamily("journal", R.string.journal_title)
+        fromFamily("my_stickers", R.string.stickers_title)
         fromSettings("calendar_feed", R.string.calendar_feed_settings_title)
         // The school import (MON-8): the list with nobody connected, then the connect flow's
         // first step. The tour signs in to no school.
@@ -350,10 +356,35 @@ class UiTourTest : AliceOnScreenTest() {
             driver.press("school_connect", hasText(string(R.string.school_import_connect)) and hasClickAction())
             driver.linger()
         }
-        fromSettings("my_profile", R.string.settings_my_profile_title)
-        fromSettings("coparent_profile", R.string.settings_coparent_profile_title)
+        fromFamily("my_profile", R.string.settings_my_profile_title)
+        fromFamily("coparent_profile", R.string.settings_coparent_profile_title)
         fromSettings("data_sources", R.string.settings_data_sources_title)
         driver.backToTabs()
+    }
+
+    /** A screen opened from its Family tab row; [content] is a text worth waiting a moment for. */
+    private fun fromFamily(name: String, rowTitle: Int, content: String? = null) {
+        camera.shot(name) {
+            pressFamilyRow(rowTitle)
+            content?.let { driver.appeared(hasText(it, substring = true)) }
+            driver.linger()
+        }
+    }
+
+    /**
+     * Opens the Family tab and presses the row titled [rowTitle] (a part of its text with [substring]).
+     * Not named `openFamilyRow`: with one argument Kotlin picks `AliceOnScreenTest`'s exact match over
+     * this one's default parameter, which is how three tours ran the base class's version instead.
+     */
+    private fun pressFamilyRow(rowTitle: Int, substring: Boolean = false) {
+        driver.backToTabs()
+        // Through the item's click action, as every row is pressed: right after a Back the item is
+        // in the tree but a touch injected at its bounds is refused (the tour lost seven screens).
+        driver.press(
+            "the Family tab",
+            hasAnyAncestor(tabBar) and hasText(string(BottomNavDestination.FAMILY.labelRes)) and hasClickAction()
+        )
+        driver.press(string(rowTitle), hasText(string(rowTitle), substring = substring) and hasClickAction())
     }
 
     /** A screen opened from its Settings row; [content] is a text worth waiting a moment for. */
@@ -440,8 +471,7 @@ class UiTourTest : AliceOnScreenTest() {
         val familyRow = row(R.string.friend_calendar_title)
         camera.shot("friend_calendar_list") {
             joined.getOrThrow()
-            openSettings()
-            driver.press("Family friends", row(R.string.friend_section_title))
+            pressFamilyRow(R.string.friend_section_title)
             driver.await("the friend's family row", familyRow, CROSS_DEVICE_TIMEOUT_MS)
         }
         camera.shot("friend_calendar") {
@@ -485,7 +515,10 @@ class UiTourTest : AliceOnScreenTest() {
         private const val MAX_DIALOGS = 4
         private const val MAX_INBOX_SCROLLS = 4
         private const val CARD_WAIT_MS = 1_000L
-        private const val SETTINGS_SCREENFULS = 4
+        private const val SETTINGS_SCREENFULS = 2
+
+        /** The Family tab's screenfuls below its first. */
+        private const val FAMILY_SCREENFULS = 2
         private const val CUSTODY_SCREENFULS = 3
         private const val KEYBOARD_MS = 1_500L
 

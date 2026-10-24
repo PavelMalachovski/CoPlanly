@@ -51,7 +51,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Зʼєднано з %1$s</string>
-    <string name="pairing_partner_email_unknown">Електронна пошта недоступна</string>
     <string name="pairing_unpair_confirm_title">Розірвати звʼязок із другим із батьків?</string>
     <string name="pairing_unpair_confirm_message">Ви перестанете ділитися календарем і витратами з %1$s, і ніхто з вас більше не зможе писати в чаті. Дані, вже збережені на цьому телефоні, залишаться.</string>
     <string name="pairing_unpair_confirm_action">Розʼєднати</string>
@@ -77,7 +76,7 @@
     <string name="pairing_share_link">Надіслати посилання</string>
     <string name="pairing_trust_title">Що стає спільним</string>
     <string name="pairing_trust_body">Спільний календар і графік опіки, спільні витрати та баланси, а також чат. Приватні події ніколи не залишають ваш пристрій. Звʼязок можна розірвати будь-коли.</string>
-    <string name="pairing_error_friend_invitation">Це запрошення для друга родини. Відкрийте «Налаштування» → «Друзі родини» → «У мене є код від батьків».</string>
+    <string name="pairing_error_friend_invitation">Це запрошення для друга родини. Відкрийте «Сімʼя» → «Друзі родини» → «У мене є код від батьків».</string>
     <string name="pairing_error_not_friend_invitation">Це не запрошення для друга.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->

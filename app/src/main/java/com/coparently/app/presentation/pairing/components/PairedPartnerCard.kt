@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import com.coparently.app.R
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.presentation.common.AccountAvatar
@@ -29,7 +28,7 @@ import java.time.format.FormatStyle
  * profile document fails to load, rather than dropping the pairing itself.
  * This card must not render that as if it were real data: a blank name shows
  * a translated placeholder (and feeds the avatar initial instead of an empty
- * circle), and a blank email shows its own placeholder.
+ * circle). The address is not shown at all.
  *
  * [PartnerSummary.photoUrl] is null until the co-parent's own phone runs a build
  * that stores one, so the initial-letter fallback in [AccountAvatar] is the
@@ -41,7 +40,6 @@ fun PairedPartnerCard(
     modifier: Modifier = Modifier
 ) {
     val displayName = partner.name.ifBlank { stringResource(R.string.pairing_unknown_sender) }
-    val displayEmail = partner.email.ifBlank { stringResource(R.string.pairing_partner_email_unknown) }
 
     Card(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -49,10 +47,9 @@ fun PairedPartnerCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AccountAvatar(name = displayName, photoUrl = partner.photoUrl)
-            // The name and the date first, the address last on one line (D-22): a long address
-            // wrapped over three lines above the one fact this card is for, the pairing.
-            // Middle ellipsis keeps both ends of an address, which is how people recognise one;
-            // TalkBack still reads it whole.
+            // The name and the date, and no address (new-user review, October 2026): the
+            // co-parent's e-mail is theirs, and on a screen two former partners both look at it
+            // said more than the card needs to.
             Column(modifier = Modifier.padding(start = Spacing.L)) {
                 Text(text = displayName, style = MaterialTheme.typography.titleMedium)
                 partner.pairedSinceMillis?.let { millis ->
@@ -62,13 +59,6 @@ fun PairedPartnerCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    text = displayEmail,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.MiddleEllipsis
-                )
             }
         }
     }

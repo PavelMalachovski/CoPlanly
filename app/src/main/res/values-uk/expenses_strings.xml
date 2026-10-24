@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Назад</string>
     <string name="expenses_add">Додати витрату</string>
     <string name="expenses_summary_this_month">Огляд (цей місяць)</string>
     <string name="expenses_summary_total">Разом</string>
@@ -21,6 +22,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Другий із батьків винен вам %1$s</string>
     <string name="expenses_balance_you_owe">Ви винні другому з батьків %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">%1$s: вам винні %2$s</string>
+    <string name="expenses_balance_you_owe_named">%1$s: ви винні %2$s</string>
     <string name="expenses_balance_settled">Боргів немає</string>
     <string name="expenses_settle_up">Розрахуватися</string>
     <string name="expenses_this_month">Цей місяць</string>
@@ -84,7 +87,7 @@
     <string name="expenses_filter_members">Показати для</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Чекаємо на відповідь</string>
-    <string name="expenses_split_proposal_waiting_body_named">Ви запропонували: %1$s. %2$s ще не відповів(ла).</string>
+    <string name="expenses_split_proposal_waiting_body_named">Ви запропонували: %1$s. Відповіді ще немає (%2$s).</string>
     <string name="expenses_split_proposal_withdraw">Відкликати</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

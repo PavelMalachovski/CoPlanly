@@ -5,11 +5,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -81,11 +81,16 @@ enum class BottomNavDestination(
         // The pattern carries an optional draft argument; the tab opens the plain list.
         navRoute = Screen.Conversations.createRoute()
     ),
-    EXPENSES(
-        route = Screen.Expenses.route,
-        labelRes = R.string.nav_expenses,
-        selectedIcon = Icons.Filled.Payments,
-        unselectedIcon = Icons.Outlined.Payments
+
+    /**
+     * The family's money, arrangements, records and people (new-user review, October 2026). It
+     * replaced the Expenses tab: the month's money is its first card, and Expenses opens from it.
+     */
+    FAMILY(
+        route = Screen.Family.route,
+        labelRes = R.string.nav_family,
+        selectedIcon = Icons.Filled.Groups,
+        unselectedIcon = Icons.Outlined.Groups
     );
 
     // Settings is intentionally NOT a bottom-nav destination — it is reached via a

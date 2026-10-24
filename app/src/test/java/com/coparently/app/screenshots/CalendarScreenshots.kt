@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.MonthView
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
+import com.coparently.app.presentation.calendar.components.CustodyLegend
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,6 +45,12 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
             VacationBanner(label = "Summer holidays · 27 Jun – 31 Aug")
             CustodyChangedBanner(byName = "Pavel", onDismiss = {})
         }
+    }
+
+    /** The legend over the grid: both parents, the handover diagonal and the contact-time corner. */
+    @Test
+    fun legend() = snap("calendar_legend") {
+        CustodyLegend(parentNames = ScreenshotFixtures.parentNames, showContactWindows = true)
     }
 
     companion object {

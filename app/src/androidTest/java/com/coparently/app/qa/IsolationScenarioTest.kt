@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
 import com.coparently.app.data.family.SelectedFamilySource
@@ -14,6 +15,7 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
 import com.coparently.app.testing.exists
+import com.coparently.app.testing.settle
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -117,14 +119,17 @@ class IsolationScenarioTest : QaOnScreenTest() {
 
         report.step(
             id = "expenses_list",
-            title = "The Expenses tab in the family with $onScreenCoParent",
+            title = "Expenses in the family with $onScreenCoParent",
             expected = "\"${mine.expense}\" is listed; \"${theirs.expense}\" is not"
         ) {
-            openTab(BottomNavDestination.EXPENSES)
+            openExpenses()
             awaitDelivered(this, "the family's expense", hasText(mine.expense, substring = true), false)
             check(!composeTestRule.exists(hasText(theirs.expense, substring = true))) {
                 "the other family's expense \"${theirs.expense}\" is listed"
             }
+            // Expenses is a detail screen with no bottom bar: back to the Family tab for the next step.
+            Espresso.pressBackUnconditionally()
+            composeTestRule.settle()
         }
 
         report.step(

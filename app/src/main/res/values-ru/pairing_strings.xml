@@ -51,7 +51,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Связаны с %1$s</string>
-    <string name="pairing_partner_email_unknown">Эл. почта неизвестна</string>
     <string name="pairing_unpair_confirm_title">Разорвать связь со вторым родителем?</string>
     <string name="pairing_unpair_confirm_message">Вы перестанете делиться календарём и расходами со вторым родителем (%1$s), и никто из вас больше не сможет писать в чат. Данные на этом телефоне сохранятся.</string>
     <string name="pairing_unpair_confirm_action">Разорвать</string>
@@ -77,7 +76,7 @@
     <string name="pairing_share_link">Отправить ссылку</string>
     <string name="pairing_trust_title">Что становится общим</string>
     <string name="pairing_trust_body">Общий календарь и график опеки, общие расходы и балансы, а также чат. Личные события никогда не покидают ваше устройство. Связь можно разорвать в любой момент.</string>
-    <string name="pairing_error_friend_invitation">Это приглашение для друга семьи. Откройте «Настройки» → «Друзья семьи» → «У меня есть код от родителей».</string>
+    <string name="pairing_error_friend_invitation">Это приглашение для друга семьи. Откройте «Семья» → «Друзья семьи» → «У меня есть код от родителей».</string>
     <string name="pairing_error_not_friend_invitation">Это не приглашение для друга.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->

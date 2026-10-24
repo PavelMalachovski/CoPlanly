@@ -22,34 +22,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Balance
-import androidx.compose.material.icons.filled.ChildCare
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Diversity3
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FamilyRestroom
-import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonOutline
-import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
@@ -103,7 +90,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.consent.HealthConsentWithdrawal
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
-import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.expenses.SplitRatio
@@ -137,14 +123,11 @@ import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionName
 import com.coparently.app.presentation.common.regionSummaryRes
 import com.coparently.app.presentation.common.rememberAnswerByOffer
-import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.consent.HealthConsentSettingsRow
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
-import com.coparently.app.presentation.family.UnassignedRecordsRow
 import com.coparently.app.presentation.parentingplan.coParentLabel
-import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.IconSizes
@@ -165,8 +148,11 @@ import kotlin.math.roundToInt
  * is a prerequisite for, and no two cards agreed on whether a title got an icon, whether a row
  * was a `ListItem` or bespoke, or how many controls one card could carry.
  *
- * What replaced it: four labelled groups in dependency order — **Family** (the product),
- * **Sync**, **App**, **Account** — sharing one row anatomy (icon, title, status or value, at
+ * What replaced it: labelled groups sharing one row anatomy. Since the new-user review (October
+ * 2026, owner decision) the family's rows — the co-parent, the schedule, the plan, the export,
+ * the records and the people — live on the Family tab, which is the product; Settings keeps
+ * **Sync**, **App** (this parent's colour and country among them) and **Account**, sharing one row
+ * anatomy (icon, title, status or value, at
  * most one trailing control). Google Calendar's toggle-plus-status-plus-two-buttons collapses
  * into a single row that expands on demand, and signing out is a red text row at the bottom
  * rather than a full-width error-coloured button.
@@ -174,25 +160,9 @@ import kotlin.math.roundToInt
  * Stateless composable: state lives in the ViewModels, this only renders and forwards events.
  *
  * @param onNavigateUp Returns to the screen that opened Settings
- * @param onNavigateToChildInfo Opens child information
- * @param onNavigateToParentingPlan Opens the parenting plan (MON-5)
- * @param onNavigateToPets Opens the pets list
- * @param onNavigateToExport Opens the communication-record export (MON-3)
- * @param onNavigateToMonthReview Opens the month in review
- * @param onNavigateToDocuments Opens the family document vault (MON-23)
- * @param onNavigateToJournal Opens the private journal (MON-22)
- * @param onNavigateToStickers Opens "My stickers"
- * @param onNavigateToPairing Opens co-parent pairing
- * @param onNavigateToFriends Opens the calendar-friend list (item 16)
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
  *   only while the account is in a family, since a link serves one
- * @param onNavigateToProfessionals Opens professional access (MON-18)
- * @param onNavigateToCustodySetup Opens custody schedule setup
- * @param onNavigateToMyProfile Opens the signed-in user's own profile, editable
- * @param onNavigateToCoParentProfile Opens the co-parent's profile, read-only
  * @param onNavigateToDataSources Opens the data sources and licences (MON-13's ODbL notice)
- * @param onNavigateToUnassignedRecords Opens "Records without a family"; the row shows only while
- *   such records wait
  * @param onStartGoogleSignIn Launches the Google Sign-In activity
  * @param onSignOut Called after the user signs out of the app
  * @param syncViewModel Sync operations
@@ -208,24 +178,9 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
     onNavigateUp: (() -> Unit)? = null,
-    onNavigateToChildInfo: (() -> Unit)? = null,
-    onNavigateToParentingPlan: (() -> Unit)? = null,
-    onNavigateToExport: (() -> Unit)? = null,
-    onNavigateToMonthReview: (() -> Unit)? = null,
-    onNavigateToDocuments: (() -> Unit)? = null,
-    onNavigateToJournal: (() -> Unit)? = null,
-    onNavigateToStickers: (() -> Unit)? = null,
-    onNavigateToPets: (() -> Unit)? = null,
-    onNavigateToPairing: (() -> Unit)? = null,
-    onNavigateToFriends: (() -> Unit)? = null,
     onNavigateToCalendarFeed: (() -> Unit)? = null,
     onNavigateToSchoolImport: (() -> Unit)? = null,
-    onNavigateToProfessionals: (() -> Unit)? = null,
-    onNavigateToCustodySetup: (() -> Unit)? = null,
-    onNavigateToMyProfile: (() -> Unit)? = null,
-    onNavigateToCoParentProfile: (() -> Unit)? = null,
     onNavigateToDataSources: (() -> Unit)? = null,
-    onNavigateToUnassignedRecords: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
@@ -253,18 +208,8 @@ fun SettingsScreen(
     LaunchedEffect(Unit) { syncViewModel.refreshConnection() }
 
     val settingsUiState by settingsViewModel.settingsState.collectAsState()
-    val caresFor by settingsViewModel.caresFor.collectAsState()
-    // The dialog edits this parent's own answer; `caresFor` above is the union of both and is
-    // what decides which rows below are drawn. Seeding the dialog from the union made a box the
-    // co-parent ticked look like this parent's own.
-    val myCaresFor by settingsViewModel.myCaresFor.collectAsState()
-    // The family on screen's split, with the family it belongs to, so a change goes to that family.
-    val familySplit by settingsViewModel.split.collectAsState()
-    val agreedRatio = familySplit.ratio
     // The split is two numbers about money; without names they do not say whose is whose.
     val parents by settingsViewModel.parents.collectAsState()
-    val splitParentNames = rememberParentNames(parents)
-    var showFamilyKindPicker by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showCountryPicker by rememberSaveable { mutableStateOf(false) }
     val country by settingsViewModel.country.collectAsState()
@@ -276,36 +221,7 @@ fun SettingsScreen(
     // than reloaded on entry; the co-parents' names are the one remote read, and it is cached.
     val familySwitcherViewModel: FamilySwitcherViewModel = hiltViewModel()
     val familySwitcher by familySwitcherViewModel.state.collectAsState()
-    var showSplitPicker by rememberSaveable { mutableStateOf(false) }
 
-    if (showSplitPicker) {
-        SplitRatioDialog(
-            current = agreedRatio,
-            parentNames = splitParentNames,
-            // A family that has agreed a split already is asked, not told: the change becomes a
-            // proposal, and a proposal asks when it should be answered by. A first agreement, or
-            // an account with nobody to ask, applies at once and has no deadline to set; and while
-            // the co-parent's own proposal waits, a new one is refused, so there is nothing to time.
-            proposes = familySplit.familyId != null && familySplit.settings != null &&
-                familySplit.settings?.proposal?.proposedBy.let { it == null || it == settingsUiState.myUid },
-            onConfirm = { ratio, answerBy ->
-                settingsViewModel.submitRatio(ratio, familySplit, answerBy)
-                showSplitPicker = false
-            },
-            onDismiss = { showSplitPicker = false }
-        )
-    }
-
-    if (showFamilyKindPicker) {
-        FamilyKindDialog(
-            selected = myCaresFor,
-            onConfirm = { kinds ->
-                settingsViewModel.setCaresFor(kinds)
-                showFamilyKindPicker = false
-            },
-            onDismiss = { showFamilyKindPicker = false }
-        )
-    }
     if (showFamilySwitcher) {
         FamilySwitcherDialog(
             families = familySwitcher.families,
@@ -395,23 +311,6 @@ fun SettingsScreen(
         }
     }
 
-    // "Saved" and "sent to your co-parent to confirm" are different outcomes, and a parent told
-    // the first when the second is true will spend against a split nobody has agreed.
-    val splitApplied = stringResource(R.string.settings_split_ratio_applied)
-    val splitProposed = stringResource(R.string.settings_split_ratio_proposed)
-    val splitRefused = stringResource(R.string.settings_split_ratio_refused)
-    LaunchedEffect(Unit) {
-        settingsViewModel.ratioSubmission.collect { outcome ->
-            snackbarHostState.showSnackbar(
-                when (outcome) {
-                    RatioSubmission.APPLIED -> splitApplied
-                    RatioSubmission.PROPOSED -> splitProposed
-                    null -> splitRefused
-                }
-            )
-        }
-    }
-
     // A withdrawal deletes data on both phones, so how it ended is always said out loud.
     val healthWithdrawn = stringResource(R.string.health_consent_withdrawn)
     val healthPhotosKept = stringResource(R.string.health_consent_withdraw_photos_failed)
@@ -425,24 +324,6 @@ fun SettingsScreen(
                 HealthConsentWithdrawal.SIGNED_OUT -> null
             }
             message?.let { snackbarHostState.showSnackbar(it) }
-        }
-    }
-
-    // Both non-obvious outcomes of the family answer. Unticking a kind the co-parent still keeps
-    // saves onto this parent's record and changes nothing on screen, because what the app draws
-    // is the union of the two answers — silence there reads as a control that does not work.
-    val familyKeptByCoParent = stringResource(R.string.settings_family_kind_kept_by_co_parent)
-    val familyNotSaved = stringResource(R.string.settings_family_kind_not_saved)
-    val familyRecordsKept = stringResource(R.string.settings_family_kind_records_kept)
-    LaunchedEffect(Unit) {
-        settingsViewModel.caresForOutcome.collect { outcome ->
-            snackbarHostState.showSnackbar(
-                when (outcome) {
-                    SettingsViewModel.CaresForOutcome.KEPT_BY_CO_PARENT -> familyKeptByCoParent
-                    SettingsViewModel.CaresForOutcome.RECORDS_KEPT -> familyRecordsKept
-                    SettingsViewModel.CaresForOutcome.NOT_SAVED -> familyNotSaved
-                }
-            )
         }
     }
 
@@ -472,70 +353,10 @@ fun SettingsScreen(
                 .padding(horizontal = Spacing.L, vertical = Spacing.S),
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
-            // ── FAMILY ─────────────────────────────────────────────────────────
-            // First, because it is what the product is. It used to sit below the sync
-            // cards that depend on it being set up.
+            // ── SYNC ───────────────────────────────────────────────────────────
             Column {
-                GroupLabel(stringResource(R.string.settings_group_family))
+                GroupLabel(stringResource(R.string.settings_group_sync))
                 SectionGroup {
-                    onNavigateToPairing?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Group,
-                            title = stringResource(R.string.settings_pairing_title),
-                            supporting = stringResource(R.string.settings_pairing_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // The trusted third person (item 16), directly under pairing: a friend can
-                    // only be admitted once the pair exists, so this is where a parent already
-                    // is when the thought occurs.
-                    onNavigateToFriends?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Diversity3,
-                            title = stringResource(R.string.friend_section_title),
-                            supporting = stringResource(R.string.friend_section_supporting),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // A mediator or lawyer (MON-18), beside the friend: both are somebody outside
-                    // the pair reading the family, and a parent looks for them in the same place.
-                    onNavigateToProfessionals?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Gavel,
-                            title = stringResource(R.string.professional_section_title),
-                            supporting = stringResource(R.string.professional_section_supporting),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // What this family co-parents, and the way back into that answer. Without
-                    // this row a family that gets a dog a year after signing up could never
-                    // reach the (fully built) pet records — design item 8 in reverse.
-                    SectionRow(
-                        icon = Icons.Default.FamilyRestroom,
-                        title = stringResource(R.string.settings_family_kind_title),
-                        supporting = caresForSummary(caresFor),
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showFamilyKindPicker = true
-                        },
-                        trailing = { Chevron() }
-                    )
-                    Divider()
                     // **At two, not at one.** A parent with a single co-parent sees the screen
                     // they always saw; a picker for a set of one is design item 8 in miniature.
                     // The same rule the child filter follows.
@@ -552,244 +373,6 @@ fun SettingsScreen(
                         )
                         Divider()
                     }
-                    // Beside the families: records that name none of them (owner decision,
-                    // October 2026). Draws itself and its divider only while some wait.
-                    onNavigateToUnassignedRecords?.let { UnassignedRecordsRow(onOpen = it) }
-                    // The parent's own colour. In the Family group rather than under App
-                    // preferences because it is how this person is identified to the other one —
-                    // the same kind of fact as their name, not a device setting like the theme.
-                    SectionRow(
-                        icon = Icons.Default.Palette,
-                        title = stringResource(R.string.settings_parent_color),
-                        supporting = stringResource(R.string.settings_parent_color_desc),
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showColorPicker = true
-                        },
-                        trailing = {
-                            // The swatch rather than a chevron: one trailing control, and the
-                            // colour itself says more than an arrow would.
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        ParentColors.choiceFill(
-                                            ParentColor.fromStored(parents.me?.colorCode)
-                                                ?: ParentColorChoice.defaultFor(
-                                                    parents.me?.slot.orEmpty()
-                                                ).color
-                                        )
-                                    )
-                            )
-                        }
-                    )
-                    Divider()
-                    // Beside the colour rather than under App preferences: both are answers about
-                    // this parent — how they are marked and where they are — while the language
-                    // and the theme are answers about this device.
-                    SectionRow(
-                        icon = Icons.Default.Public,
-                        title = stringResource(R.string.country_label),
-                        supporting = stringResource(R.string.country_settings_summary),
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showCountryPicker = true
-                        },
-                        // The value in the trailing slot, the way Language and Currency show
-                        // theirs — one trailing control, and it says more than a chevron would.
-                        trailing = { ValueLabel(stringResource(country.labelRes())) }
-                    )
-                    // Only for a country whose holidays vary by region — Germany's Länder,
-                    // Slovakia's kraje. For every other country the row would change nothing
-                    // (design rule 8).
-                    val regionLabel = country.regionLabelRes()
-                    val regionSummary = country.regionSummaryRes()
-                    if (regionLabel != null && regionSummary != null) {
-                        Divider()
-                        SectionRow(
-                            icon = Icons.Default.Public,
-                            title = stringResource(regionLabel),
-                            supporting = stringResource(regionSummary),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                showRegionPicker = true
-                            },
-                            trailing = { ValueLabel(country.regionName(holidayRegion)) }
-                        )
-                    }
-                    Divider()
-                    // The money agreement lives with the family, not under App preferences: it
-                    // is something the two parents agree, like the custody pattern, not a device
-                    // setting like the language.
-                    SectionRow(
-                        icon = Icons.Default.Balance,
-                        title = stringResource(R.string.settings_split_ratio_title),
-                        supporting = stringResource(
-                            R.string.settings_split_ratio_value_named,
-                            splitParentNames.labelFor(SLOT_MOM),
-                            agreedRatio.momPercent,
-                            splitParentNames.labelFor(SLOT_DAD),
-                            agreedRatio.dadPercent
-                        ),
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showSplitPicker = true
-                        },
-                        trailing = { Chevron() }
-                    )
-                    Divider()
-                    onNavigateToChildInfo?.takeIf { FamilyKind.CHILDREN in caresFor }?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.ChildCare,
-                            title = stringResource(R.string.settings_child_info_title),
-                            supporting = stringResource(R.string.settings_child_info_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    onNavigateToPets?.takeIf { FamilyKind.PETS in caresFor }?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Pets,
-                            title = stringResource(R.string.settings_pets_title),
-                            supporting = stringResource(R.string.settings_pets_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    onNavigateToCustodySetup?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.DateRange,
-                            title = stringResource(R.string.settings_custody_title),
-                            supporting = stringResource(R.string.settings_custody_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // Below custody on purpose: the schedule is what a family runs on day to
-                    // day, and the plan is the longer conversation around it.
-                    onNavigateToParentingPlan?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.AutoMirrored.Filled.Assignment,
-                            title = stringResource(R.string.parenting_plan_title),
-                            supporting = stringResource(
-                                R.string.parenting_plan_settings_description
-                            ),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // Beside the plan: the other document two parents may hand to a court. In
-                    // Family rather than Account because it is the family's record, not a
-                    // setting of this login — and it is where a parent who needs it will look.
-                    onNavigateToExport?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Description,
-                            title = stringResource(R.string.export_settings_title),
-                            supporting = stringResource(R.string.export_settings_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // Beside the export: the same records, looked back over one month at a time.
-                    onNavigateToMonthReview?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Insights,
-                            title = stringResource(R.string.month_review_title),
-                            supporting = stringResource(R.string.month_review_settings_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // The vault (MON-23) sits with the record: both are the family's papers.
-                    onNavigateToDocuments?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.FolderShared,
-                            title = stringResource(R.string.documents_settings_title),
-                            supporting = stringResource(R.string.documents_settings_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // The private journal (MON-22) after the shared papers: it is family business
-                    // a parent may put in an export, but it is theirs alone and never leaves the
-                    // phone — the row's description says so before it is opened.
-                    onNavigateToJournal?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Lock,
-                            title = stringResource(R.string.journal_title),
-                            supporting = stringResource(R.string.journal_settings_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    // Stickers between the parents (October 2026): a small thing, kept with the
-                    // family rather than in App, because they are given and received in a family.
-                    onNavigateToStickers?.let { StickersRow(onOpen = it) }
-                    onNavigateToMyProfile?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.Person,
-                            title = stringResource(R.string.settings_my_profile_title),
-                            supporting = stringResource(R.string.settings_my_profile_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                        Divider()
-                    }
-                    onNavigateToCoParentProfile?.let { navigate ->
-                        SectionRow(
-                            icon = Icons.Default.PersonOutline,
-                            title = stringResource(R.string.settings_coparent_profile_title),
-                            supporting = stringResource(R.string.settings_coparent_profile_description),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                navigate()
-                            },
-                            trailing = { Chevron() }
-                        )
-                    }
-                }
-            }
-
-            // ── SYNC ───────────────────────────────────────────────────────────
-            Column {
-                GroupLabel(stringResource(R.string.settings_group_sync))
-                SectionGroup {
                     SectionRow(
                         icon = Icons.Default.Sync,
                         title = stringResource(R.string.settings_co_parent_sync),
@@ -928,6 +511,70 @@ fun SettingsScreen(
             Column {
                 GroupLabel(stringResource(R.string.settings_group_app))
                 SectionGroup {
+                    // The parent's own colour. In the Family group rather than under App
+                    // preferences because it is how this person is identified to the other one —
+                    // the same kind of fact as their name, not a device setting like the theme.
+                    SectionRow(
+                        icon = Icons.Default.Palette,
+                        title = stringResource(R.string.settings_parent_color),
+                        supporting = stringResource(R.string.settings_parent_color_desc),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showColorPicker = true
+                        },
+                        trailing = {
+                            // The swatch rather than a chevron: one trailing control, and the
+                            // colour itself says more than an arrow would.
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        ParentColors.choiceFill(
+                                            ParentColor.fromStored(parents.me?.colorCode)
+                                                ?: ParentColorChoice.defaultFor(
+                                                    parents.me?.slot.orEmpty()
+                                                ).color
+                                        )
+                                    )
+                            )
+                        }
+                    )
+                    Divider()
+                    // Beside the colour rather than under App preferences: both are answers about
+                    // this parent — how they are marked and where they are — while the language
+                    // and the theme are answers about this device.
+                    SectionRow(
+                        icon = Icons.Default.Public,
+                        title = stringResource(R.string.country_label),
+                        supporting = stringResource(R.string.country_settings_summary),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showCountryPicker = true
+                        },
+                        // The value in the trailing slot, the way Language and Currency show
+                        // theirs — one trailing control, and it says more than a chevron would.
+                        trailing = { ValueLabel(stringResource(country.labelRes())) }
+                    )
+                    // Only for a country whose holidays vary by region — Germany's Länder,
+                    // Slovakia's kraje. For every other country the row would change nothing
+                    // (design rule 8).
+                    val regionLabel = country.regionLabelRes()
+                    val regionSummary = country.regionSummaryRes()
+                    if (regionLabel != null && regionSummary != null) {
+                        Divider()
+                        SectionRow(
+                            icon = Icons.Default.Public,
+                            title = stringResource(regionLabel),
+                            supporting = stringResource(regionSummary),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                showRegionPicker = true
+                            },
+                            trailing = { ValueLabel(country.regionName(holidayRegion)) }
+                        )
+                    }
+                    Divider()
                     SectionRow(
                         icon = Icons.Default.Palette,
                         title = stringResource(R.string.settings_theme),
@@ -1638,7 +1285,7 @@ private fun SyncStatus.summaryDot(): Color? = when (this) {
  * reader's language, which a ViewModel has no `Context` to resolve.
  */
 @Composable
-private fun caresForSummary(kinds: Set<FamilyKind>): String {
+internal fun caresForSummary(kinds: Set<FamilyKind>): String {
     val children = stringResource(R.string.onboarding_family_children)
     val pets = stringResource(R.string.onboarding_family_pets)
     return when {
@@ -1730,7 +1377,7 @@ private fun CountryDialog(
  * @param onDismiss Closes without changing anything.
  */
 @Composable
-private fun FamilyKindDialog(
+internal fun FamilyKindDialog(
     selected: Set<FamilyKind>,
     onConfirm: (Set<FamilyKind>) -> Unit,
     onDismiss: () -> Unit
@@ -1799,7 +1446,7 @@ private fun FamilyKindDialog(
  * @param onDismiss Closes without proposing anything.
  */
 @Composable
-private fun SplitRatioDialog(
+internal fun SplitRatioDialog(
     current: SplitRatio,
     parentNames: ParentNames,
     proposes: Boolean,

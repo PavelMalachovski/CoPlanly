@@ -51,7 +51,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Verknüpft seit %1$s</string>
-    <string name="pairing_partner_email_unknown">E-Mail nicht verfügbar</string>
     <string name="pairing_unpair_confirm_title">Verknüpfung mit dem anderen Elternteil aufheben?</string>
     <string name="pairing_unpair_confirm_message">Du teilst dann Kalender und Ausgaben nicht mehr mit %1$s, und ihr könnt euch im Chat keine Nachrichten mehr schicken. Daten, die bereits auf diesem Telefon sind, bleiben erhalten.</string>
     <string name="pairing_unpair_confirm_action">Aufheben</string>
@@ -77,7 +76,7 @@
     <string name="pairing_share_link">Link teilen</string>
     <string name="pairing_trust_title">Was beim Verknüpfen geteilt wird</string>
     <string name="pairing_trust_body">Gemeinsamer Kalender und Betreuungsplan, gemeinsame Ausgaben und Salden sowie der Chat. Private Termine verlassen dein Gerät nie. Du kannst die Verknüpfung jederzeit aufheben.</string>
-    <string name="pairing_error_friend_invitation">Das ist eine Einladung für Freunde der Familie. Öffne Einstellungen → Freunde der Familie → Ich habe einen Code von den Eltern.</string>
+    <string name="pairing_error_friend_invitation">Das ist eine Einladung für Freunde der Familie. Öffne Familie → Freunde der Familie → Ich habe einen Code von den Eltern.</string>
     <string name="pairing_error_not_friend_invitation">Das ist keine Freundeseinladung.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->

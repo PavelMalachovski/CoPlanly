@@ -3,7 +3,6 @@
     <string name="nav_home">Start</string>
     <string name="nav_calendar">Kalender</string>
     <string name="nav_chat">Chat</string>
-    <string name="nav_expenses">Ausgaben</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="expenses_title">Ausgaben</string>
     <string name="budgets_back">Zurück</string>

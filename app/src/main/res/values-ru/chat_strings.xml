@@ -151,6 +151,6 @@
     <string name="settle_up_share_chooser">Поделиться платёжным кодом</string>
     <string name="settle_up_copy_iban">Скопировать IBAN</string>
     <string name="settle_up_iban_copied">IBAN скопирован</string>
-    <string name="settle_up_no_account">%1$s пока не добавил(а) счёт для платежей.</string>
+    <string name="settle_up_no_account">Счёта для платежей пока нет (%1$s).</string>
     <string name="settle_up_qr_description">QR-код для оплаты %1$s: %2$s</string>
 </resources>

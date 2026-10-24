@@ -345,6 +345,17 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     `NoSuchMethodError`/`ClassNotFoundException` under `com.google.firebase`.
 - [ ] **Onboarding, co-parent first** (CLAUDE.md item 22). The wizard opens on the co-parent
       step. "Next" and "Not now" behave the same, which is a known open item (AUDIT §4.2).
+- [ ] **Four steps, and the schedule in place** (new-user review, October 2026). After the link
+      come the notification question, a profile (name, colour, country — the phone's region
+      preselected) and the custody schedule. Pick "Week on / week off": the month under the form
+      shows the two colours, a handover mark and the legend; change the start date and the month
+      follows. Finish opens Home on today. An unpaired account, or the first parent of a pair, sees
+      the form; Settings → Custody then holds the same schedule.
+- [ ] **The second parent confirms, never proposes** (2P). Bob pairs with Alice after she saved a
+      schedule. His schedule step shows her schedule in the month, with **Looks right** and
+      **Propose a change**. Looks right opens Home, and Alice's phone shows **no** proposal.
+      Offline at that step: "Checking…" and then the form, whose Finish saves nothing over a
+      document it could not read.
 
 ### 2.3 What signing in agrees to (L-12) · 1P
 
@@ -464,7 +475,7 @@ zone back to automatic afterwards.
 
 ### 3.3 Parent colour reaches every screen (UX-15) · 1P, full check 2P
 
-Settings → Family → **My colour** → choose a **non-default** colour (purple or orange), then
+Settings → App → **My colour** → choose a **non-default** colour (purple or orange), then
 once more with **Custom**: the hue strip under it has no teal (that is the calendar friend's), and
 the swatch beside "Custom" follows the slider. Since October 2026 the colours are brighter: the
 custody wash is about 20 % in the light theme and 30 % in the dark one, and every event dot sits
@@ -514,7 +525,7 @@ Day/Week, the event form, Filters, Custody setup and the onboarding picker.
 
 ### 3.4 Holidays by country and Land (MON-13) · 1P
 
-Settings → Family → **Country** (and **State** when it appears). Open the calendar at
+Settings → App → **Country** (and **State** when it appears). Open the calendar at
 October–November 2026 and check the dates below.
 
 - [ ] **Czechia:** 28 Sep, 28 Oct, 17 Nov drawn. The coverage note mentions school vacations.
@@ -822,7 +833,7 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
 
 ### 3.12 From the parenting plan to the schedule (MON-21) · 2P, 1P fallback
 
-Settings → Family → **Parenting plan**, then Custody setup. Needs two paired accounts that already
+Family tab → **Parenting plan**, then Custody setup. Needs two paired accounts that already
 share a custody schedule, and **`firebase deploy --only firestore:rules`** with the
 `proposalPlanCitation` clauses — until then the live rules refuse every proposal that cites the
 plan (their `hasOnly` lists do not name the key), and the repository falls back to a local save.
@@ -848,7 +859,7 @@ plan (their `hasOnly` lists do not name the key), and the repository falls back 
       A edits the answer (next check) the banner reads **"Plan answer changed since proposed: …"**
       and the pop-up the long "changed since" sentence. A proposal made without the plan leaves
       both exactly as they were before MON-21 (a one-line banner).
-- [ ] **Export:** B, Settings → Family → *Export the record*, a period covering the proposal, both
+- [ ] **Export:** B, Family tab → *Export the record*, a period covering the proposal, both
       formats. The chat's "proposed a new schedule" message carries **"Proposed from the parenting
       plan answer to: How will you divide weekdays, …"** — under the message text in the PDF, in
       the *Notes* column of that message's row in the CSV. It still names the question after the
@@ -881,7 +892,7 @@ plan (their `hasOnly` lists do not name the key), and the repository falls back 
 
 ### 3.13 A child's own schedule (FAM-4) · 1P, proposal check 2P
 
-Custody setup with a saved family pattern and **two children** (Settings → Family → children).
+Custody setup with a saved family pattern and **two children** (Family tab → children).
 Schema 42 (the Regenerate workflow must have exported `42.json` for CI to be green); the
 `childOverridesKeptOrDropped` rule needs `firebase deploy --only firestore:rules` before a paired
 family's proposal can carry an override.
@@ -1062,7 +1073,7 @@ is the first time the import meets a real server. Needs a parent (or student) Ba
 Preconditions: an account that has **never** agreed (a fresh account, or one that withdrew), with
 at least one child. Settings → Account → **Health details consent** reads "Not given".
 
-- [ ] **The medical section is locked.** Settings → Family → **Child information**, open a child
+- [ ] **The medical section is locked.** Family tab → **Child information**, open a child
       (or add one). Allergies, medications, the medical profile, medical notes and medical photos
       are replaced by one line — medical details are optional and need your consent first — and an
       **Add medical details** button. The rest of the form (name, date of birth, activities,
@@ -1192,7 +1203,7 @@ few messages from both, a custody schedule and a couple of expenses this month. 
 - [ ] **The row words each refusal.** In airplane mode tap **Suggest a reply**: the row says the
       service could not be reached and can be tapped again. In a thread with no messages it says
       there is nothing to reply to yet.
-- [ ] **Month in review.** Settings → Family → **Month in review**: this month, with days per
+- [ ] **Month in review.** Family tab → **Month in review**: this month, with days per
       parent **by name**, handovers, special days, swaps offered and agreed, shared events, and one
       block per currency with who paid what and the transfer that evens it out (or "Even"). The
       right arrow is disabled on the current month; the left arrow goes back a month and the
@@ -1384,17 +1395,17 @@ What is left is what the phones draw and the push as it arrives.
       your stickers address you?" with Dad, Mom and Parent (neutral). Back and a tap outside do not
       close it; **Save** stays off until one is picked. After Save it never comes back, on this
       phone or after reinstalling. Offline, the question does not flash up and vanish.
-- [ ] **Send one** (2P). Alice: Home → **Send a sticker** → **You are a great parent**: the sheet
+- [ ] **Send one** (2P). Alice: the Family tab → **Send a sticker** → **You are a great parent**: the sheet
       says it is sent. Bob's phone gets "A sticker for you" — "Alice sent you a sticker" — on the
       family channel, and the tap opens Home.
-- [ ] **Worded by the receiver.** Bob answered Dad: his Home card reads "You are a great dad",
-      "From Alice". Change his answer in Settings → Family → **My stickers** → **Stickers call me**
+- [ ] **Worded by the receiver.** Bob answered Dad: his card at the foot of the Family tab reads "You are a great dad",
+      "From Alice". Change his answer in Family tab → **My stickers** → **Stickers call me**
       to Parent: the same sticker on the shelf reads "You are a great parent". In Czech, Russian and
       Ukrainian the sentence agrees with the answer.
-- [ ] **Got it, and seen.** Bob taps **Got it**: the card leaves Home. Alice's **My stickers** →
+- [ ] **Got it, and seen.** Bob taps **Got it**: the card leaves the Family tab. Alice's **My stickers** →
       **Sent** reads "Seen" (before, "Delivered").
 - [ ] **The app's own.** Bob answers a request before its deadline: a new card, "On time — you are a
-      reliable dad", "From CoPlanly", and no push. A second answer the same week gives nothing new.
+      reliable dad", "From CoPlanly", on the Family tab, and no push. A second answer the same week gives nothing new.
 - [ ] **Nowhere else.** The stickers are not in the chat, not in the export, and a family friend or
       a professional sees none. In a second family (M-8) the first family's stickers wait until it
       is on screen. Unpair: the family's stickers are gone from both shelves.
@@ -1402,6 +1413,40 @@ What is left is what the phones draw and the push as it arrives.
   `MyStickersScreen.kt`, `StickerText.kt`), `data/stickers/` (`StickerStore`, `ParentRoles`,
   `StickerAwarder`), `presentation/changerequests/ChangeRequestViewModel.kt` (the answers that
   call `stickerAwarder.onAnswered`), `firestore.rules` (`stickerCreateValid`, `parentRoleValid`).
+
+
+### 3.29 A new user's first week: Home, the Family tab, Expenses · 1P, requests check 2P
+
+The new-user review of 24 October. What is decided is pinned on the JVM (`HomeAskQueueTest`,
+`PutOffAsksViewModelTest`, `MonthMoneyTest`, `FamilyViewModelTest`, `CustodySetupViewModelTest`,
+`OnboardingViewModelTest`) and the screens in the screenshots (`calendar_legend`,
+`custody_schedule_preview`, the chat card); the navigation in `MainNavigationSmokeTest`.
+
+- [ ] **Four tabs.** Home, Calendar, Chat, **Family**. The Family tab shows Money (this month's
+      spend and who owes whom, by name), Agreements, Children and home, People and Only mine, with
+      the stickers at its foot. Its money card opens Expenses with an up-arrow, and Back returns to
+      the tab. Home's month tile opens Expenses too.
+- [ ] **Named on the Family tab.** Linked, the money card's balance names the co-parent ("Bob owes
+      you …", "Bob vám dluží …") and the Co-parent row reads "Linked: Bob"; unlinked, the row says
+      what linking gives. With two families, a switch renames both.
+- [ ] **Home leads with today**: the handover, then today's card, then **Requests**. No contacts,
+      child or pet rows and no sticker card on Home.
+- [ ] **A money push** (2P, Bob adds an expense): the tap opens Expenses over the Family tab, and
+      Back lands on Family.
+- [ ] **Requests ask once** (2P). Bob sends two change requests. Alice's Home asks once, naming
+      Bob. Answer one from the inbox and go back: the pop-up does not return for the other. A third
+      request, sent later, asks again.
+- [ ] **The calendar legend** sits under the member filter with both parents' names, the handover
+      mark and, when a window exists, the contact band.
+- [ ] **A chat card reads as a card**: centred, no ticks, its first line naming who did it.
+- [ ] **No e-mail addresses** on the pairing screen, and the pause before sending is on for a new
+      install (Settings → App).
+- [ ] **Settings is Sync, App, Account.** My colour, Country and Region are in App; the family
+      switcher's row is in Sync.
+- **If it fails:** `presentation/family/` (`FamilyScreen`, `FamilyViewModel`), `home/HomeScreen.kt`,
+  `home/HomeAskQueue.kt`, `home/MonthMoney.kt`, `navigation/NavGraph.kt`,
+  `navigation/BottomNavDestination.kt`, `calendar/components/CustodyLegend.kt`,
+  `chat/MessagesList.kt` (`MessageItem`), `settings/SettingsScreen.kt`.
 
 ---
 
@@ -1511,9 +1556,9 @@ Preconditions: A and B are paired, and each phone has its own account signed in.
 
 > **[CI e2e]** `MultiFamilyTest` proves the data side: A's own pairing listener brings C's family in without taking over the screen, with a second co-parent selected a new event gets that family's audience and `familyId` and its announcement goes to that thread, and none of it reaches the first co-parent. `MultiFamilyRecordsTest` pins the October 2026 leak: with C's family on screen, A's edit and sync leave a child and a pet of B's family with B's audience, and C is refused both. `MultiFamilyCustodyTest` pins its custody twin: each family keeps its own schedule, and neither reaches the other's document. `OnScreenFamiliesTest` drives the switcher on A's real screens: C's family reaches the open app by itself, with B's family on screen C's chat message puts the dot on Home's chip (its description names "New messages"), C's row in the dialog says the same, choosing it makes the new-event form name C rather than B and brings C's thread onto the Chat tab, and A's reply reaches C. `FamilyIsolationTest` sweeps every document in the emulator, both other phones' databases and every push for a canary word written in each family, with C's family also admitting a friend, a professional and a child's guest; `OnScreenIsolationTest` walks Home, the Day view, Expenses, Child information and Pets with C's family on screen and finds none of B's records. Still manual: the marks, totals and colours below, the ask-once dialog, the push from the other family, the chip on Expenses, the change-request and schedule kinds of the dot, TalkBack, and live arrival on several screens at once.
 
-Preconditions: A is paired with **both** B and C (two families). Invite C from Settings → Family.
+Preconditions: A is paired with **both** B and C (two families). Invite C from the Family tab.
 
-- [ ] **Inviting the second co-parent.** On A, paired with B only: Settings → Family → the pairing
+- [ ] **Inviting the second co-parent.** On A, paired with B only: Family tab → the pairing
       screen → **Add another co-parent**.
   - Opening the row shows A's own code and its **QR**, and a toggle to **Enter a code** for
     somebody else's (October 2026).
@@ -1564,7 +1609,7 @@ Preconditions: A is paired with **both** B and C (two families). Invite C from S
     form says the event is not in a family you are linked with; nothing reaches C.
   - **Asked once.** With an event, an expense and a child A wrote before pairing with anyone,
     Home asks once, when C's family arrives, where they belong. **Later** closes it, and it does
-    not come back on the next launch. Settings → Family → **Records without a family** lists the
+    not come back on the next launch. Family tab → **Records without a family** lists the
     three. Give the event to C's family: it appears on **C's** phone after a pull to refresh, and
     nowhere on B's. Give the expense to B's family: B gets a "new expense" card, and it is split
     between A and B. Choose **Keep it only mine** for the child: it leaves the list and keeps its
@@ -1677,7 +1722,7 @@ Needs the REL-3 functions **and** rules deploys: without the functions the code 
 without the rules the grant opens nothing. Accounts: A and B paired, P a third account (the
 professional), signed in on its own phone or after A/B on the fallback phone.
 
-- [ ] A: Settings → Family → **Professionals** → Invite. Role and length are chosen first; the
+- [ ] A: Family tab → **Professionals** → Invite. Role and length are chosen first; the
       sheet says what is and is not shared. The code shares through the share sheet.
 - [ ] P: Settings → Professionals → enter the code. It says the code was accepted and that
       reading starts once both parents consent. The family appears with Calendar and Parenting
@@ -1712,7 +1757,7 @@ a tombstone; a chat file stays off the server while its upload fails and arrives
 with B's download matching its SHA-256; a stranger's download is refused. What is left here is
 the screens, the pickers, the camera, a viewer app and a real network.
 
-- [ ] A: Settings → Family → **Documents**. The first line says everything here is shared and
+- [ ] A: Family tab → **Documents**. The first line says everything here is shared and
       nothing is private. **Add a file** → pick a PDF → name it, choose *Court orders* → **Upload
       and share**. "Uploading…" shows, then the row appears under *Court orders* with size, "added
       by" A's name and the date.
@@ -1758,7 +1803,7 @@ nothing). Accounts: A and B paired, D and E paired (a second, unrelated family),
 > no private event and no event of the inviter's other family, and "access ended" after a revoke.
 > What a phone adds is the screens.
 
-- [ ] A: Settings → Family → **Family friends**. Above the list: one line on who a family friend
+- [ ] A: Family tab → **Family friends**. Above the list: one line on who a family friend
       is, and the table (Calendar, Custody schedule, Expenses, Chat, Children's records, How long)
       with a check or a cross beside each yes and no, and "1 week, 30 days or 90 days" as the
       friend's how long. At 150 % and 200 % text the two columns become lines under each row, and
@@ -1767,7 +1812,7 @@ nothing). Accounts: A and B paired, D and E paired (a second, unrelated family),
       family's events, except private ones; view only) and **won't see** (the custody schedule,
       expenses, chat, children's records). After **Invite a family friend**: the code, where F types
       it, **Share code** and **Done**. Share code opens the share sheet with one message naming A,
-      the code, the path "Settings → Family friends → I have a code from the parents" and the Play
+      the code, the path "Family tab → Family friends → I have a code from the parents" and the Play
       Store link — in A's language.
 - [ ] F: Settings → **Family friends** → **I have a code from the parents** opens a field in place;
       **Open the family calendar** redeems the code and opens the calendar at once. F's list then
@@ -1972,7 +2017,7 @@ to another time zone.
 
 ## 6. Export (MON-3) · 1P
 
-Expected: event versions, plus a PDF and CSV export started from Settings → Family → **Export the
+Expected: event versions, plus a PDF and CSV export started from Family tab → **Export the
 record**.
 
 **[CI]** `ExportFileWriterTest` writes both files on the emulator from a fixture (two revisions
@@ -2004,7 +2049,7 @@ Preconditions:
       that question now reads **Not agreed**. Untick the box: the section is gone.
 - [ ] In **airplane mode**, the plan section says it is **this phone's copy** and the record's face
       carries the incomplete line.
-- [ ] **Private journal (MON-22, schema 41).** Settings → Family → **Private journal**: the screen
+- [ ] **Private journal (MON-22, schema 41).** Family tab → **Private journal**: the screen
       says the entries stay on this phone and are never shared. Add two entries (one dated inside
       the export range, one outside it), edit one, swipe one away and tap **Undo** — it comes back
       with its text and day. On the **co-parent's phone** nothing of the journal appears anywhere.
@@ -2081,7 +2126,7 @@ the check reads A's side). Push notifications on for A.
 - [ ] **Export it.** Tap **Export** on the banner. The export screen opens for **that** thread
       (route `export?thread=<conversationId>`), names the departed parent by name, and a CSV or PDF
       of the period contains the thread's messages under both names.
-- [ ] A is unpaired (Settings → Family names no co-parent), yet the kept thread is still there.
+- [ ] A is unpaired (the Family tab names no co-parent), yet the kept thread is still there.
 - [ ] *(optional, operator)* **The sweep.** In the console, set the conversation's
       `retainedUntilMillis` to a time in the past and wait for the next 07:00 UTC run of
       `sweepRetentionLimits` (or check back after 30 days). **Expected:** the conversation, its

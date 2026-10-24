@@ -70,7 +70,7 @@
     <string name="calendar_event_long_pressed">Podrženo, zobrazeno tlačítko smazání</string>
     <string name="calendar_event_chip_hint">Klepnutím zobrazíte, podržením zobrazíte smazání, tažením rohů změníte délku</string>
     <string name="calendar_event_private">Soukromá událost</string>
-    <string name="calendar_event_pickup_confirmed">Vyzvednutí potvrdil(a) %1$s</string>
+    <string name="calendar_event_pickup_confirmed">Vyzvednutí potvrzeno (%1$s)</string>
     <string name="calendar_resize_start_handle">Změna času začátku. Táhněte nahoru nebo dolů (po 15 minutách).</string>
     <string name="calendar_resize_end_handle">Změna času konce. Táhněte nahoru nebo dolů (po 15 minutách).</string>
     <!-- Accessibility actions on an event block in Day and Week view (D-10). -->
@@ -98,8 +98,10 @@
     <string name="calendar_operation_failed">Změnu se nepodařilo uložit. Nemusela dorazit druhému rodiči.</string>
     <string name="calendar_retry">Zkusit znovu</string>
     <!-- UX-8. -->
-    <string name="calendar_agenda_custody_day">Den rodiče %1$s</string>
+    <string name="calendar_agenda_custody_day">Péče: %1$s</string>
     <string name="calendar_filter_members">Zobrazit pro</string>
+    <string name="calendar_legend_handover">Předání</string>
+    <string name="calendar_legend_contact">Čas na styk</string>
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Styk: %1$s, %2$s–%3$s</string>

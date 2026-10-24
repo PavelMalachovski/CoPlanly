@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,7 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -60,8 +58,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -80,15 +76,14 @@ import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
-import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import com.coparently.app.presentation.theme.titleSmallEmphasized
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
@@ -117,7 +112,6 @@ fun CustodySetupScreen(
     // Scoped to one child (FAM-4), Back returns to the family schedule rather than leaving.
     BackHandler(enabled = childScope != null) { viewModel.editSchedule(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDatePicker by remember { mutableStateOf(false) }
 
     // Show error snackbar
     val context = LocalContext.current
@@ -203,243 +197,11 @@ fun CustodySetupScreen(
                 )
             }
 
-            // Model type selection
-            Text(
-                text = stringResource(R.string.custody_select_schedule_type),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                modifier = Modifier.padding(vertical = dims.paddingSmall)
+            CustodyPatternForm(
+                uiState = uiState,
+                parentNames = parentNames,
+                actions = CustodyPatternActions.of(viewModel)
             )
-
-            Column(
-                modifier = Modifier.selectableGroup(),
-                verticalArrangement = Arrangement.spacedBy(dims.paddingSmall)
-            ) {
-                CustodyModelType.entries.forEach { modelType ->
-                    ModelTypeCard(
-                        modelType = modelType,
-                        isSelected = uiState.selectedModelType == modelType,
-                        onClick = { viewModel.selectModelType(modelType) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(dims.paddingMedium))
-
-            // Start date picker
-            Text(
-                text = stringResource(R.string.custody_pattern_start_date),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                modifier = Modifier.padding(vertical = dims.paddingSmall)
-            )
-            Text(
-                text = stringResource(R.string.custody_start_date_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            OutlinedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = dims.paddingSmall)
-                    .clickable { showDatePicker = true }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(dims.paddingMedium),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(dims.paddingMedium))
-                    Text(
-                        // Locale-aware, not a hardcoded US pattern — day and month names
-                        // already follow the app language, their order must too.
-                        text = uiState.startDate.format(
-                            DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-                        ),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(dims.paddingMedium))
-
-            // Mom first toggle (for non-custom models)
-            if (uiState.selectedModelType != CustodyModelType.CUSTOM) {
-                Text(
-                    text = stringResource(rolesQuestionFor(uiState.selectedModelType)),
-                    style = MaterialTheme.typography.titleMediumEmphasized,
-                    modifier = Modifier.padding(vertical = dims.paddingSmall)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = dims.paddingSmall),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .background(
-                                    ParentColors.fill(if (uiState.momFirst) "mom" else "dad"),
-                                    CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.S))
-                        Text(
-                            text = stringResource(
-                                rolesAnswerFor(uiState.selectedModelType),
-                                parentNames.labelFor(if (uiState.momFirst) "mom" else "dad")
-                            ),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                    Switch(
-                        checked = uiState.momFirst,
-                        onCheckedChange = { viewModel.setMomFirst(it) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(dims.paddingMedium))
-            }
-
-            // Midweek contact — only `výhradní péče se stykem` has one.
-            AnimatedVisibility(
-                visible = uiState.selectedModelType == CustodyModelType.EVERY_OTHER_WEEKEND,
-                enter = sectionEnter(),
-                exit = sectionExit()
-            ) {
-                MidweekContactSection(
-                    uiState = uiState,
-                    onEnabledChange = viewModel::setMidweekEnabled,
-                    onDayChange = viewModel::setMidweekDay,
-                    onEveryWeekChange = viewModel::setMidweekEveryWeek
-                )
-            }
-
-            // Custom pattern editor
-            AnimatedVisibility(
-                visible = uiState.selectedModelType == CustodyModelType.CUSTOM,
-                enter = sectionEnter(),
-                exit = sectionExit()
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.custody_custom_pattern),
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        modifier = Modifier.padding(vertical = dims.paddingSmall)
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.custody_custom_pattern_hint,
-                            parentNames.labelFor("mom"),
-                            parentNames.labelFor("dad")
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(dims.paddingSmall))
-
-                    // Pattern days grid
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
-                    ) {
-                        repeat(uiState.customPatternDays) { dayIndex ->
-                            val isMomDay = uiState.customMomDays.contains(dayIndex)
-                            val weekNumber = dayIndex / 7 + 1
-                            val dayInWeek = dayIndex % 7 + 1
-
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(MaterialTheme.shapes.extraSmall)
-                                    .background(
-                                        ParentColors.container(
-                                            if (isMomDay) "mom" else "dad",
-                                            alpha = 0.3f
-                                        )
-                                    )
-                                    .border(
-                                        width = 2.dp,
-                                        color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
-                                        shape = MaterialTheme.shapes.extraSmall
-                                    )
-                                    .clickable { viewModel.toggleCustomMomDay(dayIndex) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    // `MomPink`/`DadBlue` are fill-only — `Color.kt` says so in
-                                    // as many words, and they measure 3.7:1-4.6:1, below AA.
-                                    // Here they were foreground text *over a 30% wash of the
-                                    // same hue*, at 8sp, on the one screen a Czech parent
-                                    // cannot skip. `ParentColors.text()` picks the theme-aware
-                                    // partner; the type scale's own smallest size is 11sp, so
-                                    // the override goes rather than being nudged.
-                                    Text(
-                                        text = stringResource(R.string.custody_week_abbrev, weekNumber),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = ParentColors.text(if (isMomDay) "mom" else "dad")
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.custody_day_abbrev, dayInWeek),
-                                        style = MaterialTheme.typography.labelMediumEmphasized,
-                                        color = ParentColors.text(if (isMomDay) "mom" else "dad")
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(dims.paddingSmall))
-
-                    // Quick selection buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall)
-                    ) {
-                        TextButton(
-                            onClick = {
-                                viewModel.assignCustomWeekToMom(0)
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.custody_week_to,
-                                    1,
-                                    parentNames.labelFor("mom")
-                                )
-                            )
-                        }
-                        TextButton(
-                            onClick = {
-                                viewModel.assignCustomWeekToMom(1)
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.custody_week_to,
-                                    2,
-                                    parentNames.labelFor("mom")
-                                )
-                            )
-                        }
-                    }
-                }
-            }
 
             // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent
             // who does not have that day, on top of the whole days chosen above.
@@ -450,113 +212,14 @@ fun CustodySetupScreen(
                 onRemove = viewModel::removeContactWindow
             )
 
-            // Preview section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = dims.paddingMedium),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            // Preview: the month the schedule starts in, as the calendar will draw it.
+            createTempModel(uiState)?.let { model ->
+                SchedulePreviewMonth(
+                    model = model,
+                    parentNames = parentNames,
+                    description = custodyPreviewText(uiState, parentNames),
+                    modifier = Modifier.padding(vertical = dims.paddingMedium)
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(dims.paddingMedium)
-                ) {
-                    Text(
-                        text = stringResource(R.string.custody_preview),
-                        style = MaterialTheme.typography.titleSmallEmphasized,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(dims.paddingSmall))
-                    Text(
-                        text = custodyPreviewText(uiState, parentNames),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(dims.paddingSmall))
-
-                    // Visual preview - show next 14 days
-                    Text(
-                        text = stringResource(R.string.custody_next_14_days),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.XS))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.XXS)
-                    ) {
-                        val tempModel = createTempModel(uiState)
-                        repeat(14) { dayOffset ->
-                            val date = uiState.startDate.plusDays(dayOffset.toLong())
-                            val custody = tempModel?.getCustodyFor(date)
-                            // The deep chip tone with a label colour picked for contrast — the
-                            // week band's recipe. White on the full hue at 70 % failed AA for
-                            // pink, and for any lighter colour a parent picks.
-                            val color = when (custody) {
-                                "mom" -> ParentColors.chipFill("mom")
-                                "dad" -> ParentColors.chipFill("dad")
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    // `heightIn`, not `height`: a fixed box clips its own
-                                    // label as soon as the reader's font scale grows.
-                                    .heightIn(min = 24.dp)
-                                    .background(color, CoPlanlyCorners.Tag),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = date.dayOfMonth.toString(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = ParentColors.onFill(color),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-
-                    // Legend
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = dims.paddingSmall),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(ParentColors.chipFill("mom"), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.XS))
-                        Text(
-                            text = parentNames.labelFor("mom"),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.L))
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(ParentColors.chipFill("dad"), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.XS))
-                        Text(
-                            text = parentNames.labelFor("dad"),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                    }
-                }
             }
 
             if (proposes) {
@@ -585,15 +248,308 @@ fun CustodySetupScreen(
             Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
         }
     }
+}
 
-    // Date picker dialog
+/**
+ * What a family pattern is: its type, the day it starts and who starts, plus the midweek contact
+ * of every-other-weekend and the custom days. One form for the custody screen and onboarding's
+ * schedule step (new-user review, October 2026), so the two can never describe a fortnight
+ * differently. Contact windows, a child's own schedule and the answer-by stay on the custody
+ * screen.
+ *
+ * @param uiState The form's state
+ * @param parentNames Names each parent
+ * @param actions What each choice does
+ * @param showMidweek Whether every-other-weekend offers its midweek contact; onboarding keeps the
+ *   step short and leaves it to the custody screen
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+@Suppress("LongMethod") // the form's sections in order, moved here whole from the custody screen
+internal fun CustodyPatternForm(
+    uiState: CustodySetupUiState,
+    parentNames: ParentNames,
+    actions: CustodyPatternActions,
+    modifier: Modifier = Modifier,
+    showMidweek: Boolean = true
+) {
+    val dims = dimensions()
+    var showDatePicker by remember { mutableStateOf(false) }
+    Column(modifier = modifier) {
+        // Model type selection
+        Text(
+            text = stringResource(R.string.custody_select_schedule_type),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            modifier = Modifier.padding(vertical = dims.paddingSmall)
+        )
+
+        Column(
+            modifier = Modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(dims.paddingSmall)
+        ) {
+            CustodyModelType.entries.forEach { modelType ->
+                ModelTypeCard(
+                    modelType = modelType,
+                    isSelected = uiState.selectedModelType == modelType,
+                    onClick = { actions.selectType(modelType) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(dims.paddingMedium))
+
+        // Start date picker
+        Text(
+            text = stringResource(R.string.custody_pattern_start_date),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            modifier = Modifier.padding(vertical = dims.paddingSmall)
+        )
+        Text(
+            text = stringResource(R.string.custody_start_date_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        OutlinedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = dims.paddingSmall)
+                .clickable { showDatePicker = true }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(dims.paddingMedium),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(dims.paddingMedium))
+                Text(
+                    // Locale-aware, not a hardcoded US pattern — day and month names
+                    // already follow the app language, their order must too.
+                    text = uiState.startDate.format(
+                        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+                    ),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(dims.paddingMedium))
+
+        // Mom first toggle (for non-custom models)
+        if (uiState.selectedModelType != CustodyModelType.CUSTOM) {
+            Text(
+                text = stringResource(rolesQuestionFor(uiState.selectedModelType)),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                modifier = Modifier.padding(vertical = dims.paddingSmall)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = dims.paddingSmall),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                ParentColors.fill(if (uiState.momFirst) "mom" else "dad"),
+                                CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.S))
+                    Text(
+                        text = stringResource(
+                            rolesAnswerFor(uiState.selectedModelType),
+                            parentNames.labelFor(if (uiState.momFirst) "mom" else "dad")
+                        ),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                Switch(
+                    checked = uiState.momFirst,
+                    onCheckedChange = actions.setMomFirst
+                )
+            }
+
+            Spacer(modifier = Modifier.height(dims.paddingMedium))
+        }
+
+        // Midweek contact — only `výhradní péče se stykem` has one.
+        AnimatedVisibility(
+            visible = showMidweek && uiState.selectedModelType == CustodyModelType.EVERY_OTHER_WEEKEND,
+            enter = sectionEnter(),
+            exit = sectionExit()
+        ) {
+            MidweekContactSection(
+                uiState = uiState,
+                onEnabledChange = actions.setMidweekEnabled,
+                onDayChange = actions.setMidweekDay,
+                onEveryWeekChange = actions.setMidweekEveryWeek
+            )
+        }
+
+        // Custom pattern editor
+        AnimatedVisibility(
+            visible = uiState.selectedModelType == CustodyModelType.CUSTOM,
+            enter = sectionEnter(),
+            exit = sectionExit()
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.custody_custom_pattern),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    modifier = Modifier.padding(vertical = dims.paddingSmall)
+                )
+                Text(
+                    text = stringResource(
+                        R.string.custody_custom_pattern_hint,
+                        parentNames.labelFor("mom"),
+                        parentNames.labelFor("dad")
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(dims.paddingSmall))
+
+                // Pattern days grid
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                ) {
+                    repeat(uiState.customPatternDays) { dayIndex ->
+                        val isMomDay = uiState.customMomDays.contains(dayIndex)
+                        val weekNumber = dayIndex / 7 + 1
+                        val dayInWeek = dayIndex % 7 + 1
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .background(
+                                    ParentColors.container(
+                                        if (isMomDay) "mom" else "dad",
+                                        alpha = 0.3f
+                                    )
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
+                                    shape = MaterialTheme.shapes.extraSmall
+                                )
+                                .clickable { actions.toggleCustomDay(dayIndex) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // `MomPink`/`DadBlue` are fill-only — `Color.kt` says so in
+                                // as many words, and they measure 3.7:1-4.6:1, below AA.
+                                // Here they were foreground text *over a 30% wash of the
+                                // same hue*, at 8sp, on the one screen a Czech parent
+                                // cannot skip. `ParentColors.text()` picks the theme-aware
+                                // partner; the type scale's own smallest size is 11sp, so
+                                // the override goes rather than being nudged.
+                                Text(
+                                    text = stringResource(R.string.custody_week_abbrev, weekNumber),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ParentColors.text(if (isMomDay) "mom" else "dad")
+                                )
+                                Text(
+                                    text = stringResource(R.string.custody_day_abbrev, dayInWeek),
+                                    style = MaterialTheme.typography.labelMediumEmphasized,
+                                    color = ParentColors.text(if (isMomDay) "mom" else "dad")
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(dims.paddingSmall))
+
+                // Quick selection buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall)
+                ) {
+                    TextButton(
+                        onClick = {
+                            actions.assignCustomWeek(0)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.custody_week_to,
+                                1,
+                                parentNames.labelFor("mom")
+                            )
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            actions.assignCustomWeek(1)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.custody_week_to,
+                                2,
+                                parentNames.labelFor("mom")
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     if (showDatePicker) {
         LocalDatePickerDialog(
             initialDate = uiState.startDate,
             confirmLabel = stringResource(R.string.custody_ok),
             dismissLabel = stringResource(R.string.custody_cancel),
-            onConfirm = viewModel::setStartDate,
+            onConfirm = actions.setStartDate,
             onDismiss = { showDatePicker = false }
+        )
+    }
+}
+
+/**
+ * The choices [CustodyPatternForm] makes, as callbacks, so the form holds no ViewModel.
+ */
+internal data class CustodyPatternActions(
+    val selectType: (CustodyModelType) -> Unit,
+    val setStartDate: (LocalDate) -> Unit,
+    val setMomFirst: (Boolean) -> Unit,
+    val setMidweekEnabled: (Boolean) -> Unit,
+    val setMidweekDay: (DayOfWeek) -> Unit,
+    val setMidweekEveryWeek: (Boolean) -> Unit,
+    val toggleCustomDay: (Int) -> Unit,
+    val assignCustomWeek: (Int) -> Unit
+) {
+    companion object {
+        /** The form's choices, made on [viewModel]. */
+        fun of(viewModel: CustodySetupViewModel) = CustodyPatternActions(
+            selectType = viewModel::selectModelType,
+            setStartDate = viewModel::setStartDate,
+            setMomFirst = viewModel::setMomFirst,
+            setMidweekEnabled = viewModel::setMidweekEnabled,
+            setMidweekDay = viewModel::setMidweekDay,
+            setMidweekEveryWeek = viewModel::setMidweekEveryWeek,
+            toggleCustomDay = viewModel::toggleCustomMomDay,
+            assignCustomWeek = viewModel::assignCustomWeekToMom
         )
     }
 }
@@ -837,7 +793,7 @@ private fun getModelTypeDescription(modelType: CustodyModelType): String = strin
 /**
  * Creates a temporary CustodyModel from the UI state for preview purposes.
  */
-private fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
+internal fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
     // A custom pattern with no slot-1 day yet has nothing to preview for the family schedule; a
     // child's own schedule (FAM-4) may mean exactly that — every day with the other parent.
     val nothingToDraw = state.selectedModelType == CustodyModelType.CUSTOM && state.customMomDays.isEmpty()
@@ -859,7 +815,7 @@ private fun createTempModel(state: CustodySetupUiState): com.coparently.app.doma
  * @param parentNames Resolves a slot to that parent's name
  */
 @Composable
-private fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: ParentNames): String {
+internal fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: ParentNames): String {
     val first = parentNames.labelFor(uiState.firstSlot)
     val second = parentNames.labelFor(uiState.secondSlot)
     return when (uiState.selectedModelType) {

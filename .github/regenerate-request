@@ -93,3 +93,5 @@ requested: 2026-10-20 — tester fixes: the split banner names who pays which sh
 Fri Oct 23 12:31:40 UTC 2026 invited parent first run: new screenshot (pairing_invitation) and onboarding/auth copy
 Fri Oct 23 12:44:50 UTC 2026 invitation: first fact reworded (owner decision) — pairing_invitation baselines
 Sat Oct 24 13:41:42 UTC 2026 calendar colours (PR #147): the "My colour" picker is a grid of eighteen colours — parent_color_picker baselines; detekt clean, no schema change
+# new-user review screenshots, 2026-10-24
+# Family tab: the balance and the co-parent row name the co-parent, 2026-10-24

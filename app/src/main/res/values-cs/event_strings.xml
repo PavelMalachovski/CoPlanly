@@ -69,7 +69,7 @@
     <string name="event_form_change_photo">Změnit fotku</string>
     <string name="event_form_cd_remove_photo">Odebrat fotku</string>
     <string name="event_form_pickup">Vyzvednutí</string>
-    <string name="event_form_pickup_confirmed_by">Potvrdil(a) %1$s</string>
+    <string name="event_form_pickup_confirmed_by">Potvrzeno (%1$s)</string>
     <string name="event_form_pickup_not_confirmed">Zatím nepotvrzeno</string>
     <string name="event_form_pickup_confirm">Potvrdit vyzvednutí</string>
     <string name="event_form_pickup_undo">Vrátit</string>

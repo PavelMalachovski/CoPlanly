@@ -109,9 +109,17 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    authored in dark and its palette *is* `DarkColorScheme`, so every value has a role
    (`#1F1F25` = `surfaceContainer`, `#C2C1FF` = `primary`, …). Using roles is what keeps
    light theme working on the redesigned screens.
-4. **Settings is four labelled groups** — Family, Sync, App, Account, in that order (Family
-   first: it is the product, and it used to sit below the sync cards that depend on it).
-   Google Calendar's actions expand from its row rather than stacking buttons in a card.
+4. **Settings is three labelled groups** — Sync, App, Account, in that order. The Family group
+   left for the Family tab (new-user review, October 2026; UX item 1): Settings is the app and the
+   account, and the family is the product, so it has a tab. The parent's own colour, country and
+   region sit in App, the family switcher's row in Sync. Google Calendar's actions expand from its
+   row rather than stacking buttons in a card.
+   **The Family tab** (`presentation/family/FamilyScreen.kt`, `FamilyViewModel`) is a hub of
+   labelled groups — Money (this month's spend and balance, which opens Expenses), Agreements,
+   Children and home, People (the unassigned-records row first), Only mine — with the stickers at
+   the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
+   drawing its own, and its money figures come from `home/MonthMoney`, the one computation Home's
+   tile reads too.
 5. **Calendar header is one row**: title (which *is* the Month/Week/Day picker), Today,
    Filters, gear. What waits on this parent's answer is an inline banner over the grid
    (`components/CalendarBanners.kt`), not a badged glyph, and its number is the one Home's
@@ -200,7 +208,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     screen is a bug** — it draws pink for a parent who chose purple. Resolve the colour in
     composable scope before a draw lambda if you need it there. A label *on* a solid parent
     colour uses `chipFill` (the deep tone) with `ParentColors.onFill(...)` for the text, never
-    white on the full hue (4.35:1 on pink). The picker (Settings → Family, onboarding profile
+    white on the full hue (4.35:1 on pink). The picker (Settings → App, onboarding profile
     step) was hidden behind `PARENT_COLOUR_PICKER_ENABLED` until this landed; the flag is gone.
     `ParentColors.fill` is theme-aware: in the dark theme it draws the colour's `darkFill`, a
     brighter partner of the light-theme hue. `ParentColors.choiceFill` is the same for a picker's
@@ -254,8 +262,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     `acceptPairingInvitation` keeps on the *first* co-parent, and it is how the new-event form in a
     parent's second family named the first family's co-parent, in their colour.
 13. **The family switcher is one state and one dialog, and it appears at two** (M-8, September
-    2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home and Expenses
-    top bars, beside the gear) and `FamilySwitcherDialog`, which the Settings row opens too; both
+    2026). `presentation/common/FamilySwitcher.kt` holds `FamilySwitcherChip` (Home, Family and
+    Expenses top bars, beside the gear; a `Groups` icon) and `FamilySwitcherDialog`, which the
+    Settings row opens too; both
     read `FamilySwitcherViewModel`, observed off the signed-in Room row. Don't give Settings its
     own copy of the family list again — two sources for "which family is on screen" is how they
     come to disagree. With one co-parent the chip renders nothing. It is deliberately not on the
@@ -386,7 +395,7 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     1280 × 800 dp display) shows it next to the rail.
     **The tabs go to two panes from 840 dp** (release audit R-8, week 8; `common/TwoPane.kt`,
     `rememberTwoPane()` off the window width, as the rail is). Home puts what the parent acts on
-    now — contacts, what waits on them, the handover, today — beside what they read after — the
+    now — the handover, today, what waits on them — beside what they read after — the
     week, the co-parent's changes, the month's figures; Expenses puts the month's summary and
     where the money went beside its expenses, with no List/Analytics switch; Chat puts the list
     beside the open thread when there is more than one, and caps a single thread at 840 dp
@@ -407,12 +416,14 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 Direction agreed after a live walkthrough and shipped on `feature/ux-overhaul`.
 When touching the UI, keep these invariants:
 
-1. **Bottom navigation bar** (Home / Calendar / Chat / Expenses) is the top-level
+1. **Bottom navigation bar** (Home / Calendar / Chat / Family) is the top-level
    navigation — see `presentation/navigation/BottomNavDestination.kt`. **On a window 600 dp wide
    or more it is a rail instead** (`NavigationLayout`: a tablet, an unfolded foldable, a phone on
    its side; October 2026 audit, week 5), with the same destinations and badge. It shows only on
    those routes (`BottomNavDestination.topLevelRoutes`); detail screens hide it and keep
-   an up-arrow. **Settings is NOT a tab** — it opens from a gear action in each top-level
+   an up-arrow. **Expenses is not a tab either since October 2026** (new-user review): it is a
+   detail screen opened from the Family tab's money card and Home's month tile, with an up-arrow,
+   and a money push opens Family and then Expenses so Back lands on the tab. **Settings is NOT a tab** — it opens from a gear action in each top-level
    screen's top bar and is a detail screen (`onNavigateUp = popBackStack`, bottom bar
    hidden). `QuickActionsBottomSheet` was dead code and is gone — genuinely so as of the
    August 2026 audit; the file had in fact survived this note by several months.
@@ -1097,7 +1108,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the grant still ends with its family (unpair deletes it) or a revoke, and the screens say "while
   linked" for anything past 2100 (`isWhileLinked`). A child's guest keeps a real end.
   **The friend reads the calendar in the app since October 2026** (tester feedback phase 2; the
-  UI calls the role a **family friend**, Settings → Family → *Family friends*). `FriendCalendarScreen`
+  UI calls the role a **family friend**, Family tab → *Family friends*). `FriendCalendarScreen`
   (`presentation/friends/`, route `friend_calendar/{familyId}`) is the professional's list agenda
   (`ProfessionalAgenda`, `WindowPager`) over `FriendRepository.observeFamilyEvents`: a live
   listener on the family-scoped query above, **no Room copy** (as for a professional, item 29),
@@ -1623,15 +1634,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the disclaimer stays — see ROADMAP MON-5 for why the form could not be fetched.
 
 22. **Onboarding links the co-parent first, and everything after that step is written to open on
-    what the link brought back** (September 2026, owner decision). `OnboardingStep.stepsFor` walks
-    `CoParent → Intro → Family → Profile → …`; the wizard used to end with the invitation, which
-    made the second parent retype everything the first one had entered. Once the link has brought
-    something back, the link step also offers **"Looks right — open the calendar"**
-    (`openCalendarNow`, October 2026): `OnboardingStep.SHORT_PATH` — notifications unless allowed,
-    then a profile of name and country only (the phone's region preselected when it has a holiday
-    table, `HolidayCountry.ofCodeOrNull`) — and the calendar; Continue keeps the full wizard. Six
-    things hold it up,
-    and each closes a defect that was found by trying the flow end to end:
+    what the link brought back** (September 2026, owner decision). **The wizard is four steps
+    since October 2026** (new-user review, owner decision): `OnboardingStep.steps` is `CoParent →
+    Notifications → Profile → Custody` — the link, the notification question, a name, colour and
+    country (the phone's region preselected when the account has not finished onboarding and has a
+    holiday table), and the custody schedule picked in place with its `MiniMonth` preview
+    (`CustodyPatternForm` and `SchedulePreviewMonth`, the custody screen's own form). Children,
+    contacts, pets and the split left the wizard for the screens that already hold them. Two things
+    not to undo. **Finishing never proposes**: the Custody step reads the pair's shared document
+    first (`CustodySetupViewModel.checkOnboardingMode`); when one exists it shows that schedule to
+    confirm, with "Propose a change" leading to the custody screen, and its Finish writes nothing;
+    otherwise `CustodyModelRepository.activateFirstSchedule` saves only on a read that proved no
+    document (`FirstSchedule`). **Only Profile is unskippable.** The wizard used to end with the
+    invitation, which made the second parent retype everything the first one had entered. Four
+    things hold it up, and each closes a defect that was found by trying the flow end to end:
     - **`SyncRequester` asks for a sync on the Paired transition** (`PairingRepositoryImpl.
       onPairingStateObserved`), on both phones — and, since October 2026, for every co-parent the
       account's set gains, a second family included (item 39). The mirror there says *that* the
@@ -1639,19 +1655,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       accepter's side. Before it both waited on the fifteen-minute tick. `SyncWorker.syncNow` also
       remembers a request that lands mid-run and appends one more run — `ExistingWorkPolicy.KEEP`
       used to drop it, and during pairing that was the normal case.
-    - **The wizard observes Room rather than reading once**, and the drafts take an emission only
-      while every one of them is blank (`orStoredChildren`). That guard is the whole difference
-      from the `ChildInfoViewModel` defect below: a form with anything typed into it is never
-      touched. `ChildDraft.byCoParent` is what lets the step say whose records it opened on.
     - **Only records this account created are evidence that it has been through the wizard**
       (`OnboardingState.isOwnRecord`). A second parent's phone holds the first one's children
       within seconds of pairing, and a Google sign-in arrives with a name, so "named, and there
       is a child" was true of an account that had answered nothing.
-    - **The split step writes only a slider that was moved**, and converts this parent's share to
-      slot 1's on save from a fresh read of the slot. An untouched Next on a paired account would
-      otherwise create the pair's agreement out of "half each" ahead of the ratio the first parent
-      chose. `submitRatio`'s first-write branch now announces `SPLIT_RATIO_AGREED` like
-      `publishCachedRatioIfMissing` does.
     - **`CustodyModelRepository.publishLocalIfMissing` runs on every sync.** A schedule saved
       before pairing never left the phone: the save pushes only when paired, the mirror only over
       a document that exists, and the accepter reconciles only when the accepter has a pattern.
@@ -1802,7 +1809,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     changed it: `lastModifiedBy` is not pinned.
 
 26. **The export is a communication record, says so on its face, and is made on the phone**
-    (MON-3, September 2026; the owner's MON-4 answer). Settings → Family → *Export the record*
+    (MON-3, September 2026; the owner's MON-4 answer). Family tab → *Export the record*
     (`presentation/export`) picks a period and writes a CSV or an A4 PDF to `cache/exports/`,
     shared through the existing `FileProvider` (`file_paths.xml` → `exports/`). What goes in is
     decided in pure Kotlin — `domain/export/CommunicationRecordBuilder` builds the model,
@@ -1891,7 +1898,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     "simplify" it into a bare `LIKE` — four of the five languages break — and don't put an FTS4 table
     in front of it: `unicode61` matches token prefixes and does not fold й/ё/ї, so it would drop
     messages the search accepts (measured, ROADMAP MON-15; `ChatSearchTest` pins both). If a thread
-    is ever measured slow, the prefilter is a `TextFold`ed column under the same `LIKE`. The hold (`SendHold`) keeps a
+    is ever measured slow, the prefilter is a `TextFold`ed column under the same `LIKE`. The hold (`SendHold`, on by default since October 2026 — `PreferencesRepositoryImpl`) keeps a
     message out of Room and the outbox until the pause ends, which is what makes Undo real, and hands
     a held message back to the draft store if the ViewModel is cleared rather than sending it. The
     hint (`ToneCheck`) is three string tests computed while rendering: it never disables Send, is
@@ -1991,7 +1998,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
 31. **A shared file is indexed in Firestore, stored in Storage under its family's path, and never
     reached by a download URL** (MON-23, September 2026). Two surfaces: the **vault**,
-    `family_documents/{docId}` (Settings → Family → Documents, `presentation/documents`), with the
+    `family_documents/{docId}` (Family tab → Documents, `presentation/documents`), with the
     bytes at `family_documents/{familyId}/{docId}/{fileName}`; and **chat attachments**, bytes at
     `chat_attachments/{conversationId}/{messageId}/{fileName}`, referenced from the message.
     `domain/files/SharedFilePolicy` holds the cap (under 20 MB) and the types (PDF, JPEG, PNG,
@@ -2576,7 +2583,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
     **This parent is asked once where their records of no family belong** (owner decision).
     `data/family/UnassignedRecords` lists their own events (not private), expenses, children, pets
-    and, from two families, a custody schedule of no family. Settings → Family shows a row while
+    and, from two families, a custody schedule of no family. The Family tab shows a row while
     any wait (`UnassignedRecordsRow`). Home asks once per set of co-parents, from two families
     (`UnassignedRecordsPrompt`). The screen (`presentation/family/UnassignedRecordsScreen`) gives
     each record one of the parent's live families or "Keep it only mine", which is remembered per
@@ -2667,6 +2674,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       the ones they sent.
     - **The receiving phone words the sticker** (`StickerText`) from its own role; the sender sees
       the neutral phrase. Don't send the sentence, and don't read the co-parent's role.
+    - **They live on the Family tab, not Home** (new-user review, October 2026): `HomeStickers` is
+      drawn at the bottom of `FamilyScreen`; Home keeps only the role question.
     - **They end with the family.** `unpairCoParent` deletes the ended family's stickers and
       account deletion every one naming the parent; a phone shows the family on screen's (item 46).
 

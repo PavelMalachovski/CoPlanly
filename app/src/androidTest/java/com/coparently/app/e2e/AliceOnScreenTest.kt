@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -156,6 +158,7 @@ abstract class AliceOnScreenTest {
      */
     private var chatMirrorScope: CoroutineScope? = null
     private var savedConsent: String? = null
+    private var savedPause: Boolean = true
 
     /**
      * Whether `@Before` marks Alice's onboarding done and waits for Home. `UiTourOnboardingTest`
@@ -193,6 +196,7 @@ abstract class AliceOnScreenTest {
         initializeWorkManager()
         hiltRule.inject()
         savedConsent = encryptedPreferences.getString(PreferenceKeys.TELEMETRY_CONSENT, null)
+        savedPause = encryptedPreferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, true)
         step("before: sign up Alice")
         runBlocking {
             aliceUid = signUpAlice()
@@ -211,6 +215,9 @@ abstract class AliceOnScreenTest {
             if (opensOnHome) userDao.updateUser(row.copy(onboardingCompletedAt = "2026-09-01T00:00:00"))
             // "No": nothing in a test should switch collection on.
             preferencesRepository.setTelemetryConsent(TelemetryConsent.DENIED)
+            // Off, so a message typed into the composer leaves at once: these tests are about what
+            // reaches the other phone, and the pause (on by default) is ChatViewModel's own test's.
+            preferencesRepository.setPauseBeforeSending(false)
             // Answered, so Home's one question about how stickers address her — which only an answer
             // closes — does not stand over every screen the tests walk.
             check(parentRoles.setMine(ParentRole.MOM)) { "Alice's sticker role was not saved" }
@@ -254,6 +261,7 @@ abstract class AliceOnScreenTest {
         // The database is a file on the emulator; nothing Alice's account wrote may outlive the test.
         runCatching { database.clearAllTables() }
         encryptedPreferences.putString(PreferenceKeys.TELEMETRY_CONSENT, savedConsent.orEmpty())
+        encryptedPreferences.putBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, savedPause)
         // Each test builds a new Hilt graph (a new Room instance on the same file) but shares the
         // process-wide FirebaseAuth and Firestore. This graph's shared streams (the custody mirror,
         // ParentsSource, FamilyKindSource) stay up for their WhileSubscribed(5 s) after the
@@ -292,6 +300,28 @@ abstract class AliceOnScreenTest {
     /** Opens one of the four tabs through the tab bar. */
     protected fun openTab(destination: BottomNavDestination) {
         tap(hasAnyAncestor(tabBar) and hasText(string(destination.labelRes)) and hasClickAction())
+    }
+
+    /**
+     * Opens Expenses the way a parent does since the Family tab replaced its tab (new-user review,
+     * October 2026): the tab, then its money card.
+     */
+    protected fun openExpenses() {
+        openTab(BottomNavDestination.FAMILY)
+        tap(hasText(string(R.string.family_money_this_month), substring = true) and hasClickAction())
+        waitFor("Expenses", hasText(string(R.string.expenses_title)))
+    }
+
+    /**
+     * Opens a row of the Family tab by its title, through the row's click action: the row may sit
+     * below the fold, and `performScrollTo` waits on a scroll the paused clock never advances.
+     */
+    protected fun openFamilyRow(titleRes: Int) {
+        openTab(BottomNavDestination.FAMILY)
+        val row = hasText(string(titleRes)) and hasClickAction()
+        waitFor("the ${string(titleRes)} row on the Family tab", row)
+        composeTestRule.onAllNodes(row).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.settle()
     }
 
     /** Types [text] into the chat composer on screen and presses Send. */

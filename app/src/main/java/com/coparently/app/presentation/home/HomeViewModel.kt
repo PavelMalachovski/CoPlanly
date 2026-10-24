@@ -20,7 +20,6 @@ import com.coparently.app.domain.home.WeekEntry
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
-import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
@@ -33,7 +32,6 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.CoParentOnScreen
-import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
@@ -171,8 +169,9 @@ sealed interface HomeUiState {
      * @property awaitingSwaps Day-swap offers still waiting for **this** parent's answer, soonest
      *   first. Owner ask (Aug 2026 walkthrough, items 4/13): an incoming swap must be visible —
      *   and answerable — from the main page, not only from an inbox nothing pointed at.
-     * @property awaitingRequestCount Incoming event change requests and pending events still
-     *   waiting for this parent's answer, in the family on screen — what the pop-ups count.
+     * @property awaitingRequestIds Incoming event change requests and pending events still
+     *   waiting for this parent's answer, in the family on screen, as `change:<id>` and
+     *   `event:<id>` — what the requests pop-up is keyed on ([HomeAsk.Requests]).
      * @property requests What the Requests row says: what waits on each parent and the
      *   co-parent's latest answer (phase 2, spec §6.1).
      * @property childrenToday Each child with the parent they are with today, on a day the
@@ -189,7 +188,7 @@ sealed interface HomeUiState {
         val monthBalances: List<CurrencyBalance>,
         val unreadCount: Int,
         val awaitingSwaps: List<DaySwapGroup> = emptyList(),
-        val awaitingRequestCount: Int = 0,
+        val awaitingRequestIds: List<String> = emptyList(),
         val childrenToday: List<ChildWithParent> = emptyList(),
         val requests: RequestsRowState = RequestsRowState()
     ) : HomeUiState
@@ -208,7 +207,6 @@ class HomeViewModel @Inject constructor(
     custodyModelRepository: CustodyModelRepository,
     monthSpendDependencies: MonthSpendDependencies,
     messageRepository: MessageRepository,
-    familyKindSource: FamilyKindSource,
     homeIdentityDependencies: HomeIdentityDependencies
 ) : ViewModel() {
 
@@ -459,12 +457,7 @@ class HomeViewModel @Inject constructor(
     private val monthExpenses = combine(
         monthSpendDependencies.expenseRepository.getAllExpenses(),
         monthSpendDependencies.familyViewSource.observe()
-    ) { expenses, view ->
-        val month = LocalDate.now()
-        expenses
-            .filter { it.date.year == month.year && it.date.month == month.month }
-            .filter { view.counts(it.familyId, it.createdByFirebaseUid) }
-    }
+    ) { expenses, view -> MonthMoney.thisMonthCounted(expenses, view, LocalDate.now()) }
 
     /**
      * Signed-in parent and paired co-parent, for resolving a slot to a name — the handover
@@ -489,12 +482,9 @@ class HomeViewModel @Inject constructor(
         monthExpenses,
         defaultCurrency
     ) { expenses, fallbackCurrency ->
-        val byCurrency = expenses.groupBy { it.currency }
-            .map { (currency, group) -> CurrencyAmount(currency, group.sumOf { it.amount }) }
-            .sortedByDescending { it.amount }
         // Keep a zero in the app's default currency when the month is empty, so the tile still
         // renders a figure instead of blank.
-        MonthSpend(byCurrency.ifEmpty { listOf(CurrencyAmount(fallbackCurrency.code, 0.0)) })
+        MonthMoney.spendOf(expenses, fallbackCurrency)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -604,15 +594,6 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), RequestsRowState())
 
     /**
-     * Whether this family's app offers child records, pet records, or both.
-     *
-     * The union of the two parents' answers; an account that has never been asked reads as both,
-     * so an upgrade never hides a section somebody was already using.
-     */
-    val caresFor: StateFlow<Set<FamilyKind>> = familyKindSource.observe()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), FamilyKind.ALL)
-
-    /**
      * Day swaps still waiting for this parent's answer in the family on screen, soonest first.
      *
      * The inbox's own list, from [requests], so the main page can never disagree with the screen
@@ -627,15 +608,16 @@ class HomeViewModel @Inject constructor(
 
     /**
      * Incoming change requests plus pending events still waiting for this parent's answer, in the
-     * family on screen — what the pop-ups count. Read from [requests], so it counts what the inbox
-     * lists and nothing from another family.
+     * family on screen, by id — what the requests pop-up is keyed on. Read from [requests], so it
+     * names what the inbox lists and nothing from another family.
      */
-    private val awaitingRequestCount: StateFlow<Int> = requests
+    private val awaitingRequestIds: StateFlow<List<String>> = requests
         .map { state ->
             val waiting = (state as? RequestsState.Ready)?.inbox?.waitingOnMe
-            waiting?.let { it.changeRequests.size + it.events.size } ?: 0
+            waiting?.let { w -> w.changeRequests.map { "change:${it.id}" } + w.events.map { "event:${it.id}" } }
+                .orEmpty()
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), 0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
      * The paired dashboard's own content, kept whole so [uiState] has one thing to wrap.
@@ -654,8 +636,8 @@ class HomeViewModel @Inject constructor(
             Triple(spend, balances, unread)
         },
         combine(recentChanges, childrenToday) { changes, children -> changes to children },
-        combine(awaitingSwaps, awaitingRequestCount, requestsRow) { swaps, count, row -> Triple(swaps, count, row) }
-    ) { (coParent, handover, sections), (spend, balances, unread), (changes, children), (swaps, count, row) ->
+        combine(awaitingSwaps, awaitingRequestIds, requestsRow) { swaps, ids, row -> Triple(swaps, ids, row) }
+    ) { (coParent, handover, sections), (spend, balances, unread), (changes, children), (swaps, requestIds, row) ->
         HomeUiState.Dashboard(
             partner = coParent,
             nextHandover = handover,
@@ -666,7 +648,7 @@ class HomeViewModel @Inject constructor(
             monthBalances = balances,
             unreadCount = unread,
             awaitingSwaps = swaps,
-            awaitingRequestCount = count,
+            awaitingRequestIds = requestIds,
             childrenToday = children,
             requests = row
         )

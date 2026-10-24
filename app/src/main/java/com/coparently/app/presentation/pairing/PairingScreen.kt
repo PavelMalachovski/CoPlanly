@@ -187,7 +187,7 @@ fun PairingScreen(
             // looks identical on both, so the account is what tells them apart. Kept to a
             // quiet strip so it never competes with the code, which is the real action.
             account?.let { signedIn ->
-                item { SignedInAsRow(account = signedIn) }
+                item { SignedInAsRow(account = signedIn, showEmail = false) }
                 item { HorizontalDivider() }
             }
 

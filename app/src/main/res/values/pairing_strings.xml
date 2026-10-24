@@ -56,7 +56,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Paired since %1$s</string>
-    <string name="pairing_partner_email_unknown">Email unavailable</string>
     <string name="pairing_unpair_confirm_title">Unlink your co-parent?</string>
     <string name="pairing_unpair_confirm_message">You will stop sharing the calendar and expenses with %1$s, and neither of you will be able to send messages in the chat. Data already on this phone is kept.</string>
     <string name="pairing_unpair_confirm_action">Unlink</string>
@@ -82,7 +81,7 @@
     <string name="pairing_share_link">Share link</string>
     <string name="pairing_trust_title">What pairing shares</string>
     <string name="pairing_trust_body">Shared calendar and custody schedule, shared expenses and balances, and chat. Private events never leave your device. You can unlink at any time.</string>
-    <string name="pairing_error_friend_invitation">This is a family friend invitation. Open Settings → Family friends → I have a code from the parents to use it.</string>
+    <string name="pairing_error_friend_invitation">This is a family friend invitation. Open Family → Family friends → I have a code from the parents to use it.</string>
     <string name="pairing_error_not_friend_invitation">This is not a friend invitation.</string>
     <!-- Shown after an email invitation is created. Deliberately does not claim the email
          arrived: the app cannot know that, and the code works either way. -->

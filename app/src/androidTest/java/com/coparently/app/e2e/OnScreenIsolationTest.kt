@@ -1,14 +1,11 @@
 package com.coparently.app.e2e
 
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
@@ -65,8 +62,11 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
         runBlocking { syncService.performFullSync().getOrThrow() }
         waitFor("Bob's event on Alice's Home", showing(canary))
         step("isolation: Bob's expense on Expenses, which starts its listener")
-        openTab(BottomNavDestination.EXPENSES)
+        openExpenses()
         waitFor("Bob's expense on Alice's Expenses", showing(canary))
+        // Expenses is a detail screen with no bottom bar: back to the Family tab first.
+        Espresso.pressBackUnconditionally()
+        composeTestRule.settle()
         openTab(BottomNavDestination.HOME)
 
         step("isolation: Carol pairs and fills family B")
@@ -83,16 +83,15 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
         tap(hasContentDescription(string(R.string.calendar_change_view_mode)) and hasClickAction())
         tap(hasText(string(R.string.calendar_viewmode_day)) and hasClickAction())
         assertScreenShowsOnly("the calendar's Day view", marker, canary)
-        openTab(BottomNavDestination.EXPENSES)
+        openExpenses()
         assertScreenShowsOnly("Expenses", marker, canary)
-        openTab(BottomNavDestination.HOME)
-        openSettingsRow(R.string.settings_child_info_title)
+        Espresso.pressBackUnconditionally()
+        composeTestRule.settle()
+        openFamilyRow(R.string.settings_child_info_title)
         assertScreenShowsOnly("Child information", marker, canary)
         Espresso.pressBackUnconditionally()
         composeTestRule.settle()
-        Espresso.pressBackUnconditionally()
-        composeTestRule.settle()
-        openSettingsRow(R.string.settings_pets_title)
+        openFamilyRow(R.string.settings_pets_title)
         assertScreenShowsOnly("Pets", marker, canary)
     }
 
@@ -101,19 +100,6 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
         waitFor("family B's records on $screen", showing(marker))
         val leaked = composeTestRule.onAllNodes(showing(canary), useUnmergedTree = true).fetchSemanticsNodes()
         assertTrue("$screen shows family A's records with family B on screen: $leaked", leaked.isEmpty())
-    }
-
-    /**
-     * Opens a row of Settings by its title, from a tab. Through the row's click action, as the UI
-     * tour presses one: the row may sit below the fold, and `performScrollTo` waits on a scroll
-     * animation the paused clock never advances (it held this test for its whole limit).
-     */
-    private fun openSettingsRow(titleRes: Int) {
-        tap(hasContentDescription(string(R.string.nav_settings)) and hasClickAction())
-        val row = hasText(string(titleRes)) and hasClickAction()
-        waitFor("the ${string(titleRes)} row in Settings", row)
-        composeTestRule.onAllNodes(row).onFirst().performSemanticsAction(SemanticsActions.OnClick)
-        composeTestRule.settle()
     }
 
     /**
