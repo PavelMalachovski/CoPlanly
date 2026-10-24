@@ -64,6 +64,9 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
         step("isolation: Bob's expense on Expenses, which starts its listener")
         openExpenses()
         waitFor("Bob's expense on Alice's Expenses", showing(canary))
+        // Expenses is a detail screen with no bottom bar: back to the Family tab first.
+        Espresso.pressBackUnconditionally()
+        composeTestRule.settle()
         openTab(BottomNavDestination.HOME)
 
         step("isolation: Carol pairs and fills family B")
