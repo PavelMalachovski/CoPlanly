@@ -1384,11 +1384,11 @@ What is left is what the phones draw and the pushes as they arrive.
 
 Zuzana's notes of 21 October (items 6 and 8), built from the owner's answers of 23 October:
 a parent says once how stickers address them (dad, mom or a neutral "parent"), the co-parent can
-send one of seven fixed phrases, and the app gives one for answering a request before its deadline
-(once a week) and for four such weeks in a row. What is decided is pinned on the JVM
-(`StickerAwardsTest`, `StickerAwarderTest`, `StickerTextTest`, `StickersViewModelTest`,
-`StickerDocumentTest`), the rules in `firestore-tests/rules/stickers.test.js`, and the sending, the
-push in the queue, the seen mark and the on-time sticker in the `e2e` job (`TwoParentStickersTest`).
+send one of seven fixed phrases. The app gives none of its own since the second audit (24 October:
+answer times read as a score); stickers it gave before still show. What is decided is pinned on the
+JVM (`StickerTextTest`, `StickersViewModelTest`, `StickerDocumentTest`), the rules in
+`firestore-tests/rules/stickers.test.js`, and the sending, the push in the queue and the seen mark
+in the `e2e` job (`TwoParentStickersTest`).
 What is left is what the phones draw and the push as it arrives.
 
 - [ ] **The question, once.** On a paired account that has never answered, Home asks "How should
@@ -1404,15 +1404,14 @@ What is left is what the phones draw and the push as it arrives.
       Ukrainian the sentence agrees with the answer.
 - [ ] **Got it, and seen.** Bob taps **Got it**: the card leaves the Family tab. Alice's **My stickers** →
       **Sent** reads "Seen" (before, "Delivered").
-- [ ] **The app's own.** Bob answers a request before its deadline: a new card, "On time — you are a
-      reliable dad", "From CoPlanly", on the Family tab, and no push. A second answer the same week gives nothing new.
+- [ ] **No app stickers.** Bob answers a request before its deadline: no new card appears. The
+      shelf's empty state speaks of the co-parent's thank-you only.
 - [ ] **Nowhere else.** The stickers are not in the chat, not in the export, and a family friend or
       a professional sees none. In a second family (M-8) the first family's stickers wait until it
       is on screen. Unpair: the family's stickers are gone from both shelves.
 - **If it fails:** `presentation/stickers/` (`StickersViewModel`, `StickerViews.kt`,
-  `MyStickersScreen.kt`, `StickerText.kt`), `data/stickers/` (`StickerStore`, `ParentRoles`,
-  `StickerAwarder`), `presentation/changerequests/ChangeRequestViewModel.kt` (the answers that
-  call `stickerAwarder.onAnswered`), `firestore.rules` (`stickerCreateValid`, `parentRoleValid`).
+  `MyStickersScreen.kt`, `StickerText.kt`), `data/stickers/` (`StickerStore`, `ParentRoles`),
+  `firestore.rules` (`stickerCreateValid`, `parentRoleValid`).
 
 
 ### 3.29 A new user's first week: Home, the Family tab, Expenses · 1P, requests check 2P
@@ -1447,6 +1446,33 @@ The new-user review of 24 October. What is decided is pinned on the JVM (`HomeAs
   `home/HomeAskQueue.kt`, `home/MonthMoney.kt`, `navigation/NavGraph.kt`,
   `navigation/BottomNavDestination.kt`, `calendar/components/CustodyLegend.kt`,
   `chat/MessagesList.kt` (`MessageItem`), `settings/SettingsScreen.kt`.
+
+### 3.30 The second audit's fixes · 1P, money and friend checks 2P
+
+The three-persona audit of 24 October (CLAUDE.md design refresh item 21). Pinned on the JVM by
+`HomeAskQueueTest`, `CustodySetupViewModelTest`, `OpeningHourTest`, `FamilyViewModelTest`,
+`ExpenseViewModelSplitTest`, `ExpenseRepositoryImplTest` and `PushRoutingTest`, and the friend's
+push in the `e2e` job (`TwoParentAccessTest`). What is left is what the phone draws.
+
+- [ ] **One dialog per visit.** With a swap and a change request waiting, opening the app shows the
+      swap; after **Later** no second dialog follows. Back to Home later shows the requests summary.
+- [ ] **The swap says to whom.** "If you accept, Bob gets the day." under the offer.
+- [ ] **The schedule's caption is dated.** Custody schedule, week on / week off: "From <date>: Alice
+      for a week…", and the grid agrees with it. Pick 2-2-3 and a Thursday: the start moves to that
+      week's Monday. A new account's onboarding preview starts on this week's Monday.
+- [ ] **Send for approval.** Paired, the custody screen's button reads **Send for approval**.
+- [ ] **Day view at four in the afternoon** with a 3:30 pickup opens with the pickup in view.
+- [ ] **Who paid** (2P). Add an expense, **Who paid? → Bob**: the row says Bob paid, and the
+      balance moves Alice's way by her share.
+- [ ] **Question an expense** (2P). Alice taps Bob's expense: the dialog explains, **Question it**
+      posts a card in the chat on both phones; the expense is unchanged.
+- [ ] **A family friend** (2P). Alice invites a friend who redeems the code: Bob's phone gets "A
+      family friend joined", and the tap opens Family friends, where he can end it.
+- [ ] **130 % in Russian.** The calendar's month title is whole; Filters is a glyph.
+- **If it fails:** `home/AwaitingDialogs.kt`, `home/HomeAskQueue.kt`, `custody/CustodySetupScreen.kt`,
+  `custody/CustodySetupViewModel.kt` (`anchorFor`), `calendar/OpeningHour.kt`,
+  `calendar/DayWeekView.kt`, `expenses/AddExpenseScreen.kt`, `expenses/ExpenseScreen.kt`,
+  `data/repository/ExpenseRepositoryImpl.kt` (`questionExpense`), `data/remote/firebase/PushRouting.kt`.
 
 ---
 

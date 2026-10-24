@@ -410,6 +410,28 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     both, and the schema holds no handover hour or place for it to show. Don't add one. If the
     owner wants the feature, it is a parent-started "on my way to the handover" flow, and that is
     the owner's decision to make first.
+21. **The second new-user audit (24 October 2026) fixed these; keep them** (each with its test):
+    - **Home asks one thing per visit** (`HomeAskQueue.nextThisVisit`): what already waited beside
+      the first ask waits for the next visit, on the Requests row; an ask that arrives during the
+      visit is asked. Two dialogs in a row on opening the app read as pressure.
+    - **A request is called "Requests" everywhere** — Home, the inbox, the calendar's banner and
+      Home's dialog — and the banner counts "waiting for your answer", as the row does.
+    - **A swap says whom the days go to** (`home_dialog_swap_goes_to_*`), and nothing about a
+      schedule says "the child": a family with two read it as wrong.
+    - **A schedule is described from its dated start, and the presets named by weekdays start on a
+      Monday** (`anchorFor`); a new schedule starts on this week's Monday, never on today. Who
+      starts first is a two-name choice. A paired family's save is labelled **Send for approval**.
+    - **Day and Week view open at the day's first timed event** (`OpeningHour`), on today never later
+      than an hour before now.
+    - **A request card's month is folded** (`FoldedMonth`) on an event waiting for an answer; a
+      swap's months stay open, because they show where each day goes.
+    - **An expense can be the co-parent's** ("Who paid?") **and can be questioned** by the parent
+      who did not record it: an `EXPENSE_QUESTIONED` card in the family's thread, never an edit.
+    - **A family friend is announced to both parents** (`calendar_friend_accepted`, opening Family
+      friends), and either parent ends the access there.
+    - **No score between the parents**: no app stickers (item 47), "more time" rather than a
+      "last chance" on screen (the code keeps the name), and no total of nights on the holiday card.
+    - **RU/UK say "проживание"/"проживання", never "опека"/"опіка"** (legal guardianship).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -2657,21 +2679,21 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `docs/DESIGN-stickers-and-subscription.md` §1). `stickers/{id}` is read by `to` and `from`
     alone, never by a guest, a friend or a professional, and is not in the chat or the export.
     A parent sends one of seven fixed kinds (`StickerKind`, no free text) with a `sticker_received`
-    push; the app gives `on_time` and `regular` itself (`StickerAwarder`, called by
-    `ChangeRequestViewModel` after each answer, from the request's clock, item 42). Five things not
-    to undo.
+    push. **The app gives none of its own** (second audit, 24 October 2026, owner decision): it gave
+    `on_time` and `regular` for answering before a request's deadline, and answer times read as a
+    score between two parents in conflict. `StickerKind` keeps both, so the ones already given are
+    still worded and shown; don't bring an award back, and never tie one to a deadline. Five things
+    not to undo.
     - **The role is asked, never guessed.** `users/{uid}.parentRole` (`ParentRoles`, Firestore
       only), with a neutral answer. Home asks while the server says it is missing
       (`ParentRoleAnswer.Unanswered`), with no "Later"; a cached or failed read is `Loading` and
       asks nothing. The on-screen e2e tests answer it in `AliceOnScreenTest`'s setup — a new
       screen test that starts `MainActivity` on the emulators gets that for free; one that does
       not extend it must answer it too, or the dialog stands over every screen.
-    - **"Once a week" is the rules'.** An app sticker's id spells receiver, kind and ISO week
-      (`StickerAwards.appStickerId`), so a second write is an update and `firestore.rules` refuses
-      it. Don't give it a random id.
-    - **The app's stickers push nobody and are counted against nobody.** Only a parent's sticker
-      pushes, and nothing about stickers reaches the other parent beyond "delivered" or "seen" on
-      the ones they sent.
+    - **The rules keep the app's id shape** (receiver, kind, ISO week), for what an older build
+      may still write; this build writes no app sticker.
+    - **Stickers are counted against nobody.** Only a parent's sticker pushes, and nothing about
+      stickers reaches the other parent beyond "delivered" or "seen" on the ones they sent.
     - **The receiving phone words the sticker** (`StickerText`) from its own role; the sender sees
       the neutral phrase. Don't send the sentence, and don't read the co-parent's role.
     - **They live on the Family tab, not Home** (new-user review, October 2026): `HomeStickers` is

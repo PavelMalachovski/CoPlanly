@@ -110,12 +110,12 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   any bank. You can change or remove the IBAN whenever you settle up, and it is deleted with your
   account.
 - **Stickers** — a small badge such as "You are a great parent". Your co-parent can send you one
-  of a fixed set of phrases (there is no free text), and the app gives you one when you answer a
-  request before its deadline, at most once a week, and after four such weeks in a row. We store
-  who sent it, to whom, in which family, the phrase, when it was sent and when the receiver first
-  saw it. Only the receiver and the sender see a sticker; it is not part of the chat or of an
-  export, and your co-parent gets a notification only for a sticker they did not send themselves
-  — the app's own stickers notify nobody.
+  of a fixed set of phrases (there is no free text). Earlier test builds also gave one for
+  answering a request before its deadline; this version gives none, and the ones already given
+  stay on your shelf. We store who sent it, to whom, in which family, the phrase, when it was sent
+  and when the receiver first saw it. Only the receiver and the sender see a sticker; it is not
+  part of the chat or of an export, and the receiver gets a notification for a sticker from their
+  co-parent.
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
   builds also let you set a monthly budget per category. This version no longer creates, shows
   or syncs budgets; any an earlier build saved stay in your account until you delete it.)

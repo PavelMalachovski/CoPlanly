@@ -1,7 +1,10 @@
 # Stickers between parents, and cancelling a subscription
 
-Status: **§1 built** (October 2026, from the owner's answers of 23 October, §1.3); **§2 designed,
-not built** (it waits for MON-11). Written on 22 October 2026 from the owner's answers to Zuzana's
+Status: **§1 built** (October 2026, from the owner's answers of 23 October, §1.3), **then cut back
+on 24 October**: the second new-user audit found the app's own stickers ("answering on time",
+"regularity") turned answer times into a score between two parents in conflict, and the owner had
+them removed. The parent-to-parent stickers stay; stickers the app gave before are still shown.
+The app's rows below are history. **§2 designed, not built** (it waits for MON-11). Written on 22 October 2026 from the owner's answers to Zuzana's
 test notes of 21 October (items 5, 6 and 8).
 
 ## 1. Stickers: "you are a great dad / mom" (items 6 and 8)
