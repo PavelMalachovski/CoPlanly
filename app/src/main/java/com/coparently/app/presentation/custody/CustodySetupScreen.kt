@@ -197,6 +197,17 @@ fun CustodySetupScreen(
                 )
             }
 
+            // Preview first: the month the schedule starts in, as the calendar will draw it, above the
+            // choices that change it — below them it sat a screen down, out of sight (as onboarding).
+            createTempModel(uiState)?.let { model ->
+                SchedulePreviewMonth(
+                    model = model,
+                    parentNames = parentNames,
+                    description = custodyPreviewText(uiState, parentNames),
+                    modifier = Modifier.padding(vertical = dims.paddingMedium)
+                )
+            }
+
             CustodyPatternForm(
                 uiState = uiState,
                 parentNames = parentNames,
@@ -211,16 +222,6 @@ fun CustodySetupScreen(
                 onAdd = viewModel::addContactWindows,
                 onRemove = viewModel::removeContactWindow
             )
-
-            // Preview: the month the schedule starts in, as the calendar will draw it.
-            createTempModel(uiState)?.let { model ->
-                SchedulePreviewMonth(
-                    model = model,
-                    parentNames = parentNames,
-                    description = custodyPreviewText(uiState, parentNames),
-                    modifier = Modifier.padding(vertical = dims.paddingMedium)
-                )
-            }
 
             if (proposes) {
                 AnswerByField(
