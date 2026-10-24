@@ -536,12 +536,7 @@ private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, o
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            CustodyPatternForm(
-                uiState = schedule.form,
-                parentNames = parentNames,
-                actions = CustodyPatternActions.of(schedule.viewModel),
-                showMidweek = false
-            )
+            // The month first, so each choice below is seen changing it without a scroll.
             createTempModel(schedule.form)?.let { model ->
                 SchedulePreviewMonth(
                     model = model,
@@ -549,6 +544,12 @@ private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, o
                     description = custodyPreviewText(schedule.form, parentNames)
                 )
             }
+            CustodyPatternForm(
+                uiState = schedule.form,
+                parentNames = parentNames,
+                actions = CustodyPatternActions.of(schedule.viewModel),
+                showMidweek = false
+            )
             schedule.form.error?.let { error ->
                 Text(
                     text = error.asString(),
