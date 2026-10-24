@@ -157,9 +157,12 @@ the co-parent may still be on an older build.
    dropped first, never a real layer. Do not raise `MAX_LAYER_DAYS`: an older build would read a
    longer layer as unreadable and stop drawing it.
 6. **Marking.** History layers have ids `hist-<E as yyyyMMdd>-<n>` (the id regex allows
-   `[A-Za-z0-9-]`). `SeasonalLayer.isHistory` reads the prefix. The name is data in the
-   accepter's language, e.g. "Earlier schedule (until 9 Oct 2026)", from a new string in all five
-   locales; it is what an older build's layer list shows.
+   `[A-Za-z0-9-]`). `SeasonalLayer.isHistory` reads the prefix. The name is stored data in English, "Earlier schedule until 2026-10-09" (`CustodyHistory.layerName`):
+   the repository that writes it has no `Context`, and stored text must not carry one parent's
+   language — the same status as a parent-typed layer name. Only an older build's layer list
+   shows it. (Changed during implementation from "a string in all five locales".)
+   A change that starts sooner than an earlier one still waiting to start cuts that earlier
+   history short at the new effective date.
 7. **Hidden, and carried.** The seasonal-layer editor and holiday fairness's "Propose a change"
    list do not show `isHistory` layers. Every path that rewrites the layer list keeps them
    verbatim: `withActiveLayers` already carries all active layers; `submitSeasonalLayers` must
