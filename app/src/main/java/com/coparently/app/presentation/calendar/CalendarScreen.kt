@@ -62,6 +62,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
@@ -91,10 +92,10 @@ import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import kotlinx.coroutines.launch
 
 /**
  * Months loaded either side of the query anchor in MONTH mode.
@@ -315,12 +316,18 @@ fun CalendarScreen(
     // separate from `getCustody`, and for the same reason a pending swap is: a proposal has
     // changed nothing yet, and folding it into the lookup would move days both parents are still
     // arguing about. The grid draws it as a preview over the agreed day instead.
+    // Nor does it preview the past: accepted today, a proposal decides only from
+    // `CustodyHistory.effectiveFrom` on, and the days before keep the agreed pattern.
     val getProposedCustody: (LocalDate) -> String? = remember(pendingProposal) {
         val proposed = pendingProposal?.model
         if (proposed == null) {
             { _ -> null }
         } else {
-            { date -> proposed.getCustodyFor(date) }
+            val from = CustodyHistory.effectiveFrom(proposed, LocalDate.now())
+            val preview: (LocalDate) -> String? = { date ->
+                if (date.isBefore(from)) null else proposed.getCustodyFor(date)
+            }
+            preview
         }
     }
 

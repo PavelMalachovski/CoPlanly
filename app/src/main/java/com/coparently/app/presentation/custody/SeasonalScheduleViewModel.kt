@@ -16,6 +16,7 @@ import com.coparently.app.domain.custody.HolidayFairnessCalculator
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
+import com.coparently.app.domain.custody.isHistory
 import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.holidays.SchoolVacationSuggestions
 import com.coparently.app.domain.holidays.VacationSuggestion
@@ -29,6 +30,10 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,10 +50,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.UUID
-import javax.inject.Inject
 
 /** Keeps the flows warm across a configuration change. */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -156,7 +157,9 @@ class SeasonalScheduleViewModel @Inject constructor(
         val proposer = remote?.proposal?.proposedBy
         local.copy(
             hasBasePattern = model != null,
-            layers = model?.seasonalLayers.orEmpty(),
+            // History layers (`CustodyHistory`) keep the past of an earlier schedule; nobody made
+            // them, so nobody edits them. Every edit below works on the full list and keeps them.
+            layers = model?.seasonalLayers.orEmpty().filterNot { it.isHistory },
             coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(remote, uid),
             ownProposalPending = proposer != null && proposer == uid,
             suggestions = SchoolVacationSuggestions.upcoming(location.provider, today)
