@@ -178,6 +178,9 @@ fun FamilyScreen(
     }
     FamilyOutcomes(settingsViewModel, snackbarHostState)
 
+    // The co-parent of the family on screen, by name, once linked; null until then.
+    val linkedCoParent = parentNames.parents.coParent?.let { parentNames.labelForUid(it.uid) }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -201,7 +204,7 @@ fun FamilyScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             Group(R.string.family_group_money) {
-                FamilyMoneyCard(money = money, onOpen = destinations.expenses)
+                FamilyMoneyCard(money = money, coParentName = linkedCoParent, onOpen = destinations.expenses)
                 Divider()
                 NavRow(
                     Icons.Default.Balance,
@@ -295,7 +298,9 @@ fun FamilyScreen(
                 NavRow(
                     Icons.Default.Group,
                     R.string.settings_pairing_title,
-                    R.string.settings_pairing_description,
+                    // Linked: who with. Not yet: what linking gives.
+                    linkedCoParent?.let { stringResource(R.string.family_pairing_linked, it) }
+                        ?: stringResource(R.string.settings_pairing_description),
                     destinations.pairing
                 )
                 Divider()
@@ -387,16 +392,17 @@ private fun FamilyOutcomes(settingsViewModel: SettingsViewModel, snackbarHostSta
  * Amounts are never cut (design item 15): each currency has its own line and wraps.
  *
  * @param money This month's money, or null while it loads
+ * @param coParentName The linked co-parent's name, so the balance says who owes whom; null unlinked
  * @param onOpen Opens the Expenses screen
  */
 @Composable
-internal fun SectionGroupScope.FamilyMoneyCard(money: MonthMoney?, onOpen: () -> Unit) {
+internal fun SectionGroupScope.FamilyMoneyCard(money: MonthMoney?, coParentName: String?, onOpen: () -> Unit) {
     val amounts = money?.spend?.byCurrency.orEmpty().joinToString("\n") { formatMoney(it.amount, it.currency) }
     SectionRow(
         icon = Icons.Default.Payments,
         title = amounts.ifBlank { stringResource(R.string.family_money_this_month) },
         supporting = money?.let {
-            stringResource(R.string.family_money_this_month) + "\n" + balanceCaption(it.balances)
+            stringResource(R.string.family_money_this_month) + "\n" + balanceCaption(it.balances, coParentName)
         },
         onClick = onOpen,
         trailing = { Chevron() }

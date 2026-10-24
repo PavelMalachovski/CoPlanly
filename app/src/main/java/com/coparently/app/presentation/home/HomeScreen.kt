@@ -826,17 +826,25 @@ internal fun StatTiles(
  * the other way in another gets both sentences, one per line — there is no honest single one.
  */
 @Composable
-internal fun balanceCaption(balances: List<CurrencyBalance>): String {
+internal fun balanceCaption(balances: List<CurrencyBalance>, coParentName: String? = null): String {
     val position = SettleUpPosition.of(balances)
     if (position.settled) return stringResource(R.string.home_stat_settled)
     val amounts: (List<CurrencyAmount>) -> String = { list ->
         list.joinToString(", ") { formatMoney(it.amount, it.currency) }
     }
+    // With a name, the sentence says who owes whom, as the Expenses balance does; the Family tab's
+    // card passes one, Home's tile keeps its shorter line and arrow.
+    val owedToYou: @Composable (String) -> String = { sum ->
+        coParentName?.let { stringResource(R.string.expenses_balance_owed_to_you_named, it, sum) }
+            ?: stringResource(R.string.home_stat_owed_to_you, sum)
+    }
+    val youOwe: @Composable (String) -> String = { sum ->
+        coParentName?.let { stringResource(R.string.expenses_balance_you_owe_named, it, sum) }
+            ?: stringResource(R.string.home_stat_you_owe, sum)
+    }
     return listOfNotNull(
-        position.owedToYou.takeIf { it.isNotEmpty() }
-            ?.let { stringResource(R.string.home_stat_owed_to_you, amounts(it)) },
-        position.youOwe.takeIf { it.isNotEmpty() }
-            ?.let { stringResource(R.string.home_stat_you_owe, amounts(it)) }
+        position.owedToYou.takeIf { it.isNotEmpty() }?.let { owedToYou(amounts(it)) },
+        position.youOwe.takeIf { it.isNotEmpty() }?.let { youOwe(amounts(it)) }
     ).joinToString("\n")
 }
 

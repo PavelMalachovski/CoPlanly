@@ -10,4 +10,6 @@
     <string name="family_group_mine">Only mine</string>
     <string name="family_money_this_month">This month</string>
     <string name="family_children_add">Add your children</string>
+    <!-- The co-parent row on the Family tab once linked. %1$s = the co-parent's name. -->
+    <string name="family_pairing_linked">Linked: %1$s</string>
 </resources>

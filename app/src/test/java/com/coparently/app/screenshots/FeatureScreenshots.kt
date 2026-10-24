@@ -137,7 +137,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             userId = ScreenshotFixtures.MY_UID,
             roleByUid = mapOf(ScreenshotFixtures.MY_UID to "mom", ScreenshotFixtures.CO_PARENT_UID to "dad")
         )
-        SectionGroup { FamilyMoneyCard(money = money, onOpen = {}) }
+        SectionGroup { FamilyMoneyCard(money = money, coParentName = "Bob", onOpen = {}) }
     }
 
     @Test

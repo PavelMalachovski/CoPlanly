@@ -9,4 +9,6 @@
     <string name="family_group_mine">Тільки моє</string>
     <string name="family_money_this_month">Цей місяць</string>
     <string name="family_children_add">Додайте своїх дітей</string>
+    <!-- The co-parent row on the Family tab once linked. %1$s = the co-parent's name. -->
+    <string name="family_pairing_linked">Звʼязок встановлено: %1$s</string>
 </resources>
