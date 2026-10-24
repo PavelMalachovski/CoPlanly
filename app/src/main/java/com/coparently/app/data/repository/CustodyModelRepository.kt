@@ -27,6 +27,7 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.custody.FirstSchedule
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.MidweekContact
@@ -416,6 +417,31 @@ constructor(
         planCitation: String? = null,
         answerBy: AnswerByPick? = null
     ): PatternSubmission = submit(model, planCitation, currentFamilies(), answerBy)
+
+    /**
+     * Saves [model] as the family's first schedule, from onboarding, and **never proposes**
+     * (new-user review, October 2026).
+     *
+     * Unpaired, or paired with a read that proves the pair has no document, the schedule is
+     * activated as [saveAndActivate] would, carrying the active layers like any pattern save.
+     * When the pair already shares a schedule nothing is written and the step is told so
+     * ([FirstSchedule.SharedExists]); a read that cannot answer writes nothing either. The
+     * proposal branch of [submitPattern] is not reachable from here, so an invited parent's Next
+     * can never send their co-parent a proposal, however late the pair's document reaches Room.
+     */
+    suspend fun activateFirstSchedule(model: CustodyModel): FirstSchedule {
+        val families = currentFamilies()
+        val pair = families.pair
+        if (pair != null) {
+            when (val read = readShared(pair)) {
+                is SharedCustodyRead.Found -> return FirstSchedule.SharedExists(read.custody.model)
+                SharedCustodyRead.Unavailable -> return FirstSchedule.Unavailable
+                SharedCustodyRead.Absent -> Unit
+            }
+        }
+        saveAndActivate(withActiveLayers(model, families), families)
+        return FirstSchedule.Activated
+    }
 
     /**
      * [submitPattern] for the [families] read once when the change began, so every step of it —

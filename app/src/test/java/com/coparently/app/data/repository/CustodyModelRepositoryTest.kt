@@ -25,6 +25,7 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.custody.FirstSchedule
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.custody.isHistory
 import com.coparently.app.domain.model.CustodyModel
@@ -69,6 +70,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertIs
 
 /**
  * Unit tests for [CustodyModelRepository]'s Firestore path, in both directions.
@@ -202,6 +204,51 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 1) { custodyModelDao.insertModel(capture(entity)) }
         assertEquals(LOCAL_MODEL_ID, entity.captured.id)
         assertTrue(entity.captured.isActive)
+    }
+
+    @Test
+    fun `the first schedule never proposes over a schedule the pair already shares`() = runTest(dispatcher) {
+        // Onboarding's Next must never send a proposal (new-user review, October 2026): with a
+        // shared document present nothing is written anywhere, and the step shows that schedule.
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
+
+        val result = repository.activateFirstSchedule(localModel())
+
+        assertEquals(REMOTE_MODEL_ID, assertIs<FirstSchedule.SharedExists>(result).model.id)
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
+        coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+    }
+
+    @Test
+    fun `the first schedule activates when the pair has no document yet`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns null
+
+        val result = repository.activateFirstSchedule(localModel())
+
+        assertEquals(FirstSchedule.Activated, result)
+        coVerify(exactly = 1) { custodyModelDao.insertModel(any()) }
+    }
+
+    @Test
+    fun `the first schedule activates unpaired without reading the server`() = runTest(dispatcher) {
+        pairedWith(partnerUid = null)
+
+        val result = repository.activateFirstSchedule(localModel())
+
+        assertEquals(FirstSchedule.Activated, result)
+        coVerify(exactly = 1) { custodyModelDao.insertModel(any()) }
+        coVerify(exactly = 0) { firestoreCustodyDataSource.getCustody(any()) }
+    }
+
+    @Test
+    fun `the first schedule writes nothing when the server cannot answer`() = runTest(dispatcher) {
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } throws permissionDenied()
+
+        val result = repository.activateFirstSchedule(localModel())
+
+        assertEquals(FirstSchedule.Unavailable, result)
+        coVerify(exactly = 0) { custodyModelDao.insertModel(any()) }
+        coVerify(exactly = 0) { firestoreCustodyDataSource.setCustody(any(), any(), any()) }
     }
 
     @Test
