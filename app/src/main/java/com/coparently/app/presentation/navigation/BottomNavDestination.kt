@@ -81,6 +81,7 @@ enum class BottomNavDestination(
         // The pattern carries an optional draft argument; the tab opens the plain list.
         navRoute = Screen.Conversations.createRoute()
     ),
+
     /**
      * The family's money, arrangements, records and people (new-user review, October 2026). It
      * replaced the Expenses tab: the month's money is its first card, and Expenses opens from it.

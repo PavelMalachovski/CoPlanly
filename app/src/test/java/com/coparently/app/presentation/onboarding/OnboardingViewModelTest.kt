@@ -150,8 +150,6 @@ class OnboardingViewModelTest {
         createdByFirebaseUid = createdBy
     )
 
-
-
     // ---- the order of the walk --------------------------------------------------------------
 
     @Test

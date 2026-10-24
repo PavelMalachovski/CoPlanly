@@ -25,9 +25,9 @@ import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.CustodyWriteKind
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
+import com.coparently.app.domain.custody.FirstSchedule
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
-import com.coparently.app.domain.custody.FirstSchedule
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.MidweekContact
@@ -119,7 +119,9 @@ class PartialSwapRun(
 ) : IllegalStateException("Only $written of $total days went through", cause)
 
 @Singleton
-@Suppress("TooManyFunctions")
+// The one owner of the custody document's writes: splitting it would give the read-then-write
+// rules (items 24, 30, 33, 41) two homes.
+@Suppress("TooManyFunctions", "LargeClass")
 class CustodyModelRepository
 @Suppress("LongParameterList") // the request clock joins the collaborators (phase 3a)
 constructor(

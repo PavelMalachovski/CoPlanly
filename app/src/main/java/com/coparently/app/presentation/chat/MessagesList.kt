@@ -536,7 +536,11 @@ fun MessageItem(
                 modifier = Modifier
                     .widthIn(max = BUBBLE_MAX_WIDTH)
                     .clip(
-                        if (isCard) MaterialTheme.shapes.medium else chatBubbleShape(isCurrentUser, startsGroup, endsGroup)
+                        if (isCard) {
+                            MaterialTheme.shapes.medium
+                        } else {
+                            chatBubbleShape(isCurrentUser, startsGroup, endsGroup)
+                        }
                     )
                     .background(
                         if (isCard) {

@@ -46,8 +46,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.repository.RatioSubmission
@@ -58,10 +58,10 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
-import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.home.balanceCaption
 import com.coparently.app.presentation.home.formatMoney
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.settings.FamilyKindDialog
 import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.settings.SplitRatioDialog
