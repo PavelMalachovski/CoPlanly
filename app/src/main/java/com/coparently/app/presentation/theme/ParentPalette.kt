@@ -83,7 +83,14 @@ enum class ParentColorChoice(
     // four above clear.
 
     /** Reference #D50000. */
-    TOMATO(swatch("tomato"), TOMATO_FILL, TOMATO_DARK_FILL, TOMATO_TEXT_ON_DARK, TOMATO_TEXT_ON_LIGHT, R.string.parent_color_tomato),
+    TOMATO(
+        swatch("tomato"),
+        TOMATO_FILL,
+        TOMATO_DARK_FILL,
+        TOMATO_TEXT_ON_DARK,
+        TOMATO_TEXT_ON_LIGHT,
+        R.string.parent_color_tomato
+    ),
 
     /** Reference #E67C73; the light theme's fill is a deeper coral. */
     FLAMINGO(
@@ -106,13 +113,27 @@ enum class ParentColorChoice(
     ),
 
     /** Reference #F6BF26; ochre on the light theme, where a yellow could not show on white. */
-    BANANA(swatch("banana"), BANANA_FILL, BANANA_DARK_FILL, BANANA_TEXT_ON_DARK, BANANA_TEXT_ON_LIGHT, R.string.parent_color_banana),
+    BANANA(
+        swatch("banana"),
+        BANANA_FILL,
+        BANANA_DARK_FILL,
+        BANANA_TEXT_ON_DARK,
+        BANANA_TEXT_ON_LIGHT,
+        R.string.parent_color_banana
+    ),
 
     /** Reference #33B679. */
     SAGE(swatch("sage"), SAGE_FILL, SAGE_DARK_FILL, SAGE_TEXT_ON_DARK, SAGE_TEXT_ON_LIGHT, R.string.parent_color_sage),
 
     /** Reference #0B8043. */
-    BASIL(swatch("basil"), BASIL_FILL, BASIL_DARK_FILL, BASIL_TEXT_ON_DARK, BASIL_TEXT_ON_LIGHT, R.string.parent_color_basil),
+    BASIL(
+        swatch("basil"),
+        BASIL_FILL,
+        BASIL_DARK_FILL,
+        BASIL_TEXT_ON_DARK,
+        BASIL_TEXT_ON_LIGHT,
+        R.string.parent_color_basil
+    ),
 
     /** Reference #039BE5, hue 200° — outside the calendar friend's teal band. */
     PEACOCK(
@@ -145,19 +166,54 @@ enum class ParentColorChoice(
     ),
 
     /** Reference #8E24AA. */
-    GRAPE(swatch("grape"), GRAPE_FILL, GRAPE_DARK_FILL, GRAPE_TEXT_ON_DARK, GRAPE_TEXT_ON_LIGHT, R.string.parent_color_grape),
+    GRAPE(
+        swatch("grape"),
+        GRAPE_FILL,
+        GRAPE_DARK_FILL,
+        GRAPE_TEXT_ON_DARK,
+        GRAPE_TEXT_ON_LIGHT,
+        R.string.parent_color_grape
+    ),
 
     /** Reference #795548. */
-    COCOA(swatch("cocoa"), COCOA_FILL, COCOA_DARK_FILL, COCOA_TEXT_ON_DARK, COCOA_TEXT_ON_LIGHT, R.string.parent_color_cocoa),
+    COCOA(
+        swatch("cocoa"),
+        COCOA_FILL,
+        COCOA_DARK_FILL,
+        COCOA_TEXT_ON_DARK,
+        COCOA_TEXT_ON_LIGHT,
+        R.string.parent_color_cocoa
+    ),
 
     /** Reference #AD1457. */
-    CHERRY(swatch("cherry"), CHERRY_FILL, CHERRY_DARK_FILL, CHERRY_TEXT_ON_DARK, CHERRY_TEXT_ON_LIGHT, R.string.parent_color_cherry),
+    CHERRY(
+        swatch("cherry"),
+        CHERRY_FILL,
+        CHERRY_DARK_FILL,
+        CHERRY_TEXT_ON_DARK,
+        CHERRY_TEXT_ON_LIGHT,
+        R.string.parent_color_cherry
+    ),
 
     /** Reference #827717. */
-    OLIVE(swatch("olive"), OLIVE_FILL, OLIVE_DARK_FILL, OLIVE_TEXT_ON_DARK, OLIVE_TEXT_ON_LIGHT, R.string.parent_color_olive),
+    OLIVE(
+        swatch("olive"),
+        OLIVE_FILL,
+        OLIVE_DARK_FILL,
+        OLIVE_TEXT_ON_DARK,
+        OLIVE_TEXT_ON_LIGHT,
+        R.string.parent_color_olive
+    ),
 
     /** Reference #283593. */
-    INDIGO(swatch("indigo"), INDIGO_FILL, INDIGO_DARK_FILL, INDIGO_TEXT_ON_DARK, INDIGO_TEXT_ON_LIGHT, R.string.parent_color_indigo);
+    INDIGO(
+        swatch("indigo"),
+        INDIGO_FILL,
+        INDIGO_DARK_FILL,
+        INDIGO_TEXT_ON_DARK,
+        INDIGO_TEXT_ON_LIGHT,
+        R.string.parent_color_indigo
+    );
 
     /** This preset as the palette draws it. */
     val color: ParentColor by lazy {

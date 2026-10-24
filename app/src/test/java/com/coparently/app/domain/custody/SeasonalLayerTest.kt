@@ -198,7 +198,9 @@ class SeasonalLayerTest {
         // The agreed document's own list is untouched by a proposal write.
         assertNull(proposed.seasonalLayersWire)
 
-        val accepted = CustodyProposalTransition.accept(proposed, "bob", "2026-09-08T10:00:00", 2L, date("2026-09-08")).getOrThrow()
+        val accepted = CustodyProposalTransition.accept(
+            proposed, "bob", "2026-09-08T10:00:00", 2L, date("2026-09-08")
+        ).getOrThrow()
         assertEquals(listOf(JULY_MUM_AUGUST_DAD), accepted.seasonalLayersWire)
         assertEquals("mom", accepted.model.getCustodyFor(date("2026-07-06")))
     }

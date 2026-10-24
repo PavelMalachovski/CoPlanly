@@ -81,9 +81,11 @@ object CustodyHistory {
             outgoing.startDate,
             effective.minusYears(MAX_YEARS_BACK)
         )
-        val added = chunks(from, lastDay).mapIndexed { index, range ->
+        val added = chunks(from, lastDay).map { range ->
             SeasonalLayer(
-                id = "$ID_PREFIX${effective.format(ID_DATE)}-$index",
+                // Named by its own first day: history never overlaps, so no two stretches share
+                // it, while two changes may share an effective date (one cut short by a sooner one).
+                id = "$ID_PREFIX${range.start.format(ID_DATE)}",
                 name = layerName(lastDay),
                 fromDate = range.start,
                 toDate = range.endInclusive,
@@ -115,7 +117,10 @@ object CustodyHistory {
         else -> layer
     }
 
-    /** [from]..[to] in consecutive stretches of at most a layer's length, oldest first; empty when [from] is after [to]. */
+    /**
+     * [from]..[to] in consecutive stretches of at most a layer's length, oldest first; empty when
+     * [from] is after [to].
+     */
     private fun chunks(from: LocalDate, to: LocalDate): List<ClosedRange<LocalDate>> {
         val out = mutableListOf<ClosedRange<LocalDate>>()
         var start = from

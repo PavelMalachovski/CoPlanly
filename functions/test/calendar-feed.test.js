@@ -295,7 +295,7 @@ describe('calendar feed: the custody port', () => {
 
   // `CustodyHistory` on the Kotlin side: an accepted change keeps the past as the lowest-priority
   // layer, so the feed serves the days already lived as they were drawn.
-  const HISTORY_ALL_DAD = 'L1;hist-20260907-0;-1000;2026-03-01;2026-09-06;2026-03-01;1;;;' +
+  const HISTORY_ALL_DAD = 'L1;hist-20260301;-1000;2026-03-01;2026-09-06;2026-03-01;1;;;' +
       'Earlier%20schedule%20until%202026-09-06';
 
   it('serves a history layer below a real layer and above the base pattern', () => {

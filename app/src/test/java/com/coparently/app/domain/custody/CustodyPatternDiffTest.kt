@@ -43,6 +43,21 @@ class CustodyPatternDiffTest {
     }
 
     @Test
+    fun `a proposal that starts later moves no day before its start`() {
+        // From Thursday, every day with the other parent. Accepted today it keeps the agreed
+        // days until then (CustodyHistory), so only the days from its start move — and keeping the
+        // past is not a change to the seasonal schedules.
+        val agreed = model((0..6).toSet())
+        val proposed = model(emptySet(), days = 1, start = monday.plusDays(3))
+
+        val diff = CustodyPatternDiff.of(agreed, proposed, monday)
+
+        assertTrue(diff.movedDays.all { !it.date.isBefore(monday.plusDays(3)) })
+        assertTrue(diff.movedDayCount > 0)
+        assertFalse(diff.seasonalLayersChanged)
+    }
+
+    @Test
     fun `moving one weekend reports one day per weekend day, not the whole cycle`() {
         val agreed = model((0..13).toSet() - setOf(5, 6))
         val proposed = model((0..13).toSet() - setOf(5, 6, 12, 13))

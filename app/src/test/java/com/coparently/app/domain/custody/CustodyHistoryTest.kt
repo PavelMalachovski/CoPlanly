@@ -106,9 +106,35 @@ class CustodyHistoryTest {
 
         assertEquals(old.getCustodyFor(day(10, 19)), frozen.getCustodyFor(day(10, 19)))
         (20..31).forEach { d ->
-            assertEquals("Oct $d", sooner.copy(seasonalLayers = emptyList()).getCustodyFor(day(10, d)), frozen.getCustodyFor(day(10, d)))
+            val expected = sooner.copy(seasonalLayers = emptyList()).getCustodyFor(day(10, d))
+            assertEquals("Oct $d", expected, frozen.getCustodyFor(day(10, d)))
         }
         assertTrue(frozen.seasonalLayers.filter { it.isHistory }.all { it.toDate < day(10, 20) })
+    }
+
+    @Test
+    fun `two stretches that end on the same effective date keep both after a later change`() {
+        // A starts 1 Nov (accepted 10 Oct); B starts 20 Oct (accepted 15 Oct) and cuts A's history
+        // short; C starts 1 Nov again (accepted 18 Oct) and freezes B over 20-31 Oct. Every stretch
+        // must survive D, accepted on 1 Feb 2027.
+        val a = new(day(11, 1))
+        val afterA = CustodyHistory.freeze(old, a, day(10, 10))
+        val b = old.copy(id = "b", momDayIndices = setOf(0, 1, 2), startDate = day(10, 20))
+            .copy(seasonalLayers = afterA.seasonalLayers)
+        val afterB = CustodyHistory.freeze(afterA, b, day(10, 15))
+        val c = old.copy(id = "c", momDayIndices = setOf(3, 4), startDate = day(11, 1))
+            .copy(seasonalLayers = afterB.seasonalLayers)
+        val afterC = CustodyHistory.freeze(afterB, c, day(10, 18))
+        val d = old.copy(id = "d", momDayIndices = setOf(5), startDate = day(2, 1, 2027))
+            .copy(seasonalLayers = afterC.seasonalLayers)
+        val afterD = CustodyHistory.freeze(afterC, d, day(2, 1, 2027))
+
+        val bBase = b.copy(seasonalLayers = emptyList())
+        (20..31).forEach { dd ->
+            assertEquals("Oct $dd", bBase.getCustodyFor(day(10, dd)), afterD.getCustodyFor(day(10, dd)))
+        }
+        val ids = afterD.seasonalLayers.map { it.id }
+        assertEquals(ids.size, ids.toSet().size)
     }
 
     @Test
@@ -152,7 +178,7 @@ class CustodyHistoryTest {
         assertTrue(history.isNotEmpty())
         history.forEach {
             assertEquals(SeasonalLayer.PRIORITY_RANGE.first, it.priority)
-            assertTrue(it.id, it.id.startsWith("hist-20261010-"))
+            assertEquals("hist-${it.fromDate.toString().replace("-", "")}", it.id)
         }
         // And they survive the wire, as any layer must.
         val wire = frozen.seasonalLayersWire()

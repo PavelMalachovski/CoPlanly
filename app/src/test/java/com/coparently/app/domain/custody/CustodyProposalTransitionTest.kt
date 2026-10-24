@@ -137,7 +137,7 @@ class CustodyProposalTransitionTest {
         assertTrue(agreed.getCustodyFor(before) != later.getCustodyFor(before))
         val from = LocalDate.of(2026, 8, 10)
         assertEquals(later.getCustodyFor(from), next.model.getCustodyFor(from))
-        assertTrue(next.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-20260810-") })
+        assertTrue(next.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-20260803;") })
     }
 
     @Test
