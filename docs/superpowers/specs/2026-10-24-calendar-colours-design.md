@@ -1,6 +1,6 @@
 # Calendar colours: a colour grid, and a schedule change that keeps the past
 
-Date: 2026-10-24. Owner: Pavel. Status: approved approach, design for review.
+Date: 2026-10-24. Owner: Pavel. Status: approach chosen, builder-checked; awaiting owner approval.
 
 Two independent changes, built and reviewed one after the other: **A. the colour grid** and
 **B. schedule history**. Either can ship without the other.
@@ -82,7 +82,12 @@ draw. The four existing presets keep their current tones exactly.
   Flamingo, Lavender, Sage) will draw darker than their reference in the light theme.
 - `ParentColorsTest` iterates `ParentColorChoice.entries`, so the new entries are covered by
   adding them; add a test that every stored code round-trips and no two codes collide.
-- `ParentPalette`'s fallback ("first preset clear of the other") walks `entries` in grid order.
+- `ParentPalette`'s fallback ("first preset clear of the other", `firstPresetClearOf`) **keeps
+  its own order, not the grid's**: Pink, Blue, Purple, Orange first, then the new colours. Walking
+  the grid order would turn an existing "both chose Pink" family's second parent from Blue to
+  Tangerine, breaking the no-change goal. `ParentPaletteTest`'s "first preset clear of pink is
+  BLUE" stays; its "no two presets collide" assertion is narrowed to the four original presets.
+  (My call, from the stated goal.)
 - Teal stays out of reach (`CustomHueRange.RESERVED`); no grid colour is in 158°–188°.
 - Each colour has a name string in all five locales (`values`, `-cs`, `-de`, `-ru`, `-uk`) for the
   label and TalkBack; the grid cell's content description is the name, selected state announced.
@@ -182,6 +187,10 @@ the co-parent may still be on an older build.
   past may still repaint when their override changes. Possible follow-up.
 - A change that only edits real seasonal layers (no base-pattern change) creates no history; a
   deleted past summer layer repaints that summer. Follow-up if it matters.
+- **An accepter on an older build makes no history** (owner decision, accepted loss): history is
+  written only by `CustodyProposalTransition.accept` on the accepting phone; an older build writes
+  the proposal as it stands, and the past repaints as today. No second writer on the proposer's
+  phone. It goes away once both parents have updated.
 - Repairing schedules already repainted before this ships: nothing records what the old pattern
   was. Such a family sees the current colours for the past.
 - No new Firestore key, rule, Room column or schema bump.
