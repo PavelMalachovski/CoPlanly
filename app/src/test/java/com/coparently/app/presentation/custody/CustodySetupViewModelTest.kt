@@ -9,6 +9,9 @@ import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.ChildScheduleOverride
+import com.coparently.app.domain.custody.FirstSchedule
+import com.coparently.app.domain.custody.SharedCustody
+import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
@@ -47,6 +50,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -200,6 +204,95 @@ class CustodySetupViewModelTest {
         coVerify(exactly = 0) { repository.createEveryOtherWeekend(any(), any(), any()) }
         assertNull(vm.uiState.value.midweek)
     }
+
+    // ---- onboarding's schedule step (new-user review, October 2026) ------------------------------
+
+    @Test
+    fun `onboarding shows the shared schedule when the pair already has one`() = runTest(dispatcher) {
+        val agreed = CustodyModel.weekOnWeekOff(id = "agreed", startDate = start)
+        coEvery { repository.readShared() } returns SharedCustodyRead.Found(sharedCustody(agreed))
+        val vm = viewModel()
+
+        vm.checkOnboardingMode()
+        advanceUntilIdle()
+
+        assertEquals("agreed", assertIs<OnboardingScheduleMode.Existing>(vm.onboardingMode.value).model.id)
+    }
+
+    @Test
+    fun `onboarding shows the form when nothing is shared or the server cannot answer`() = runTest(dispatcher) {
+        listOf(SharedCustodyRead.Absent, SharedCustodyRead.Unavailable).forEach { read ->
+            coEvery { repository.readShared() } returns read
+            val vm = viewModel()
+
+            vm.checkOnboardingMode()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingScheduleMode.Form, vm.onboardingMode.value, "for $read")
+        }
+    }
+
+    @Test
+    fun `saving the first schedule never proposes`() = runTest(dispatcher) {
+        // The pair's schedule reached the server after the step showed the form: nothing is
+        // written, nothing is proposed, and the step switches to that schedule.
+        val agreed = CustodyModel.weekOnWeekOff(id = "agreed", startDate = start)
+        coEvery { repository.activateFirstSchedule(any()) } returns FirstSchedule.SharedExists(agreed)
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
+        var done = false
+
+        vm.saveFirstSchedule { done = true }
+        advanceUntilIdle()
+
+        assertFalse(done)
+        assertEquals("agreed", assertIs<OnboardingScheduleMode.Existing>(vm.onboardingMode.value).model.id)
+        coVerify(exactly = 0) { repository.submitPattern(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a first schedule activated finishes the step`() = runTest(dispatcher) {
+        coEvery { repository.activateFirstSchedule(any()) } returns FirstSchedule.Activated
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.selectModelType(CustodyModelType.TWO_TWO_THREE)
+        vm.setStartDate(start)
+        var done = false
+
+        vm.saveFirstSchedule { done = true }
+        advanceUntilIdle()
+
+        assertTrue(done)
+        coVerify(exactly = 1) {
+            repository.activateFirstSchedule(
+                match { it.modelType == CustodyModelType.TWO_TWO_THREE && it.startDate == start }
+            )
+        }
+    }
+
+    @Test
+    fun `a first schedule the server could not check is a failed save, and the form stays`() = runTest(dispatcher) {
+        coEvery { repository.activateFirstSchedule(any()) } returns FirstSchedule.Unavailable
+        val vm = viewModel()
+        advanceUntilIdle()
+        var done = false
+
+        vm.saveFirstSchedule { done = true }
+        advanceUntilIdle()
+
+        assertFalse(done)
+        assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    /** The pair's document holding [model], written by Bob. */
+    private fun sharedCustody(model: CustodyModel) = SharedCustody(
+        model = model,
+        lastModifiedBy = "u2",
+        lastModifiedAtMillis = 1L,
+        createdAt = "2026-09-01T10:00:00"
+    )
 
     @Test
     fun `a save sent as a proposal says so`() = runTest(dispatcher) {

@@ -53,7 +53,11 @@ class UiTourOnboardingTest : AliceOnScreenTest() {
     fun onboarding() {
         runBlocking { runCatching { syncService.performFullSync() } }
         val next = hasText(string(R.string.onboarding_next)) and hasClickAction()
-        val last = hasText(string(R.string.onboarding_finish)) and hasClickAction()
+        // The schedule step ends on Finish over its form, or on "Looks right" over the schedule the
+        // pair already shares — Alice's case, since Bob set one up.
+        val finish = hasText(string(R.string.onboarding_finish)) or
+            hasText(string(R.string.onboarding_custody_looks_right))
+        val last = finish and hasClickAction()
         for (index in 1..MAX_STEPS) {
             camera.shot("onboarding_step_$index") {
                 driver.await("an onboarding step", next or last, WIZARD_WAIT_MS)
