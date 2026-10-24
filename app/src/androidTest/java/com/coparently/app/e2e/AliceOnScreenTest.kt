@@ -158,6 +158,7 @@ abstract class AliceOnScreenTest {
      */
     private var chatMirrorScope: CoroutineScope? = null
     private var savedConsent: String? = null
+    private var savedPause: Boolean = true
 
     /**
      * Whether `@Before` marks Alice's onboarding done and waits for Home. `UiTourOnboardingTest`
@@ -195,6 +196,7 @@ abstract class AliceOnScreenTest {
         initializeWorkManager()
         hiltRule.inject()
         savedConsent = encryptedPreferences.getString(PreferenceKeys.TELEMETRY_CONSENT, null)
+        savedPause = encryptedPreferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, true)
         step("before: sign up Alice")
         runBlocking {
             aliceUid = signUpAlice()
@@ -213,6 +215,9 @@ abstract class AliceOnScreenTest {
             if (opensOnHome) userDao.updateUser(row.copy(onboardingCompletedAt = "2026-09-01T00:00:00"))
             // "No": nothing in a test should switch collection on.
             preferencesRepository.setTelemetryConsent(TelemetryConsent.DENIED)
+            // Off, so a message typed into the composer leaves at once: these tests are about what
+            // reaches the other phone, and the pause (on by default) is ChatViewModel's own test's.
+            preferencesRepository.setPauseBeforeSending(false)
             // Answered, so Home's one question about how stickers address her — which only an answer
             // closes — does not stand over every screen the tests walk.
             check(parentRoles.setMine(ParentRole.MOM)) { "Alice's sticker role was not saved" }
@@ -256,6 +261,7 @@ abstract class AliceOnScreenTest {
         // The database is a file on the emulator; nothing Alice's account wrote may outlive the test.
         runCatching { database.clearAllTables() }
         encryptedPreferences.putString(PreferenceKeys.TELEMETRY_CONSENT, savedConsent.orEmpty())
+        encryptedPreferences.putBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, savedPause)
         // Each test builds a new Hilt graph (a new Room instance on the same file) but shares the
         // process-wide FirebaseAuth and Firestore. This graph's shared streams (the custody mirror,
         // ParentsSource, FamilyKindSource) stay up for their WhileSubscribed(5 s) after the
