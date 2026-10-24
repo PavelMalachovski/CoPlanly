@@ -374,6 +374,12 @@ class UiTourTest : AliceOnScreenTest() {
     /** Opens the Family tab and presses the row titled [rowTitle] (a part of its text with [substring]). */
     private fun openFamilyRow(rowTitle: Int, substring: Boolean = false) {
         driver.backToTabs()
+        // The bar can be on screen a frame before its items are (it animates back in after a
+        // detail screen): wait for the Family item itself, not only the bar.
+        driver.await(
+            "the Family tab",
+            hasAnyAncestor(tabBar) and hasText(string(BottomNavDestination.FAMILY.labelRes)) and hasClickAction()
+        )
         openTab(BottomNavDestination.FAMILY)
         driver.press(string(rowTitle), hasText(string(rowTitle), substring = substring) and hasClickAction())
     }
