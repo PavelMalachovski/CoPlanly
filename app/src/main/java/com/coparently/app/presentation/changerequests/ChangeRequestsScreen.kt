@@ -54,6 +54,7 @@ import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.SwapDirection
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
@@ -530,21 +531,25 @@ private fun DaySwapCard(
 @Composable
 private fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNames: ParentNames): String {
     val first = group.swaps.first()
-    return if (offeredByMe) {
-        pluralStringResource(
-            R.plurals.day_swap_inbox_offered_by_you_days,
-            group.dayCount,
-            group.dayCount,
-            parentNames.labelFor(first.override.toParent)
-        )
-    } else {
-        pluralStringResource(
-            R.plurals.day_swap_inbox_offered_to_you_days,
-            group.dayCount,
-            group.dayCount,
-            parentNames.labelForUid(first.override.requestedBy)
-        )
+    val offerer = first.override.requestedBy
+    // Which way the days go, from the offer itself (second audit: "Bob is offering you a day" over
+    // a day Bob was asking for).
+    val direction = group.direction(parentNames.parents.roleByUid[offerer])
+    val (mine, theirs) = when (direction) {
+        SwapDirection.GIVES ->
+            R.plurals.day_swap_inbox_offered_by_you_days to R.plurals.day_swap_inbox_offered_to_you_days
+        SwapDirection.ASKS -> R.plurals.day_swap_inbox_asked_by_you_days to R.plurals.day_swap_inbox_asked_of_you_days
+        SwapDirection.BOTH -> R.plurals.day_swap_inbox_swap_by_you_days to R.plurals.day_swap_inbox_swap_with_you_days
     }
+    val resource = if (offeredByMe) mine else theirs
+    // The other parent: whom the offerer's days go to, or who offered them.
+    val other = if (offeredByMe) {
+        parentNames.parents.coParent?.uid?.let { parentNames.labelForUid(it) }
+            ?: parentNames.labelFor(first.override.toParent)
+    } else {
+        parentNames.labelForUid(offerer)
+    }
+    return pluralStringResource(resource, group.dayCount, group.dayCount, other)
 }
 
 /**

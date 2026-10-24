@@ -189,6 +189,21 @@ class DaySwapInboxTest {
     }
 
     @Test
+    fun `an offer says whether it gives days, asks for them, or does both`() {
+        fun group(vararg toParents: String) = DaySwapGroup(
+            toParents.mapIndexed { i, slot ->
+                DaySwap(today.plusDays(i + 1L), DayOverride(toParent = slot, requestedBy = dad, requestedAt = "t"))
+            }
+        )
+
+        assertEquals(SwapDirection.GIVES, group("mom", "mom").direction(offererSlot = "dad"))
+        // The inbox used to say "Bob is offering you a day" over a day Bob asked for.
+        assertEquals(SwapDirection.ASKS, group("dad").direction(offererSlot = "dad"))
+        assertEquals(SwapDirection.BOTH, group("mom", "dad").direction(offererSlot = "dad"))
+        assertEquals(SwapDirection.GIVES, group("dad").direction(offererSlot = null))
+    }
+
+    @Test
     fun `a group whose days have already started is bounded by today, like the flat list`() {
         val groups = DaySwapInbox.groups(
             mapOf(

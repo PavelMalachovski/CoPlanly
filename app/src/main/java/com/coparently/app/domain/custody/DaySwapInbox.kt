@@ -138,4 +138,33 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
     /** Whether [uid] made this offer and may still take it back: any of its days is theirs and unanswered. */
     fun withdrawableBy(uid: String): Boolean =
         swaps.any { it.override.isPending && it.override.requestedBy == uid }
+
+    /**
+     * Which way the offer moves its days, from the slot of the parent who made it (second audit:
+     * the inbox said "Bob is offering you a day" over a day Bob was asking for). Since 21 October
+     * an offer may give some days and take others.
+     *
+     * @param offererSlot The offering parent's slot, or null when it is not known — then the offer
+     *   reads as it always did, as giving.
+     */
+    fun direction(offererSlot: String?): SwapDirection {
+        val toOfferer = swaps.count { it.override.toParent == offererSlot }
+        return when {
+            offererSlot == null || toOfferer == 0 -> SwapDirection.GIVES
+            toOfferer == swaps.size -> SwapDirection.ASKS
+            else -> SwapDirection.BOTH
+        }
+    }
+}
+
+/** Which way a day-swap offer moves its days, from the offering parent's side. */
+enum class SwapDirection {
+    /** Every day goes to the other parent: the offerer gives them. */
+    GIVES,
+
+    /** Every day goes to the offerer: they ask for them. */
+    ASKS,
+
+    /** Some days go each way. */
+    BOTH
 }

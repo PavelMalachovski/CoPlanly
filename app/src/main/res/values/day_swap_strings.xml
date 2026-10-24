@@ -50,4 +50,20 @@
         <item quantity="one">%2$s is offering you %1$d day</item>
         <item quantity="other">%2$s is offering you %1$d days</item>
     </plurals>
+    <plurals name="day_swap_inbox_asked_of_you_days">
+        <item quantity="one">%2$s asks you for %1$d day</item>
+        <item quantity="other">%2$s asks you for %1$d days</item>
+    </plurals>
+    <plurals name="day_swap_inbox_asked_by_you_days">
+        <item quantity="one">You asked %2$s for %1$d day</item>
+        <item quantity="other">You asked %2$s for %1$d days</item>
+    </plurals>
+    <plurals name="day_swap_inbox_swap_with_you_days">
+        <item quantity="one">%2$s proposes swapping %1$d day</item>
+        <item quantity="other">%2$s proposes swapping %1$d days</item>
+    </plurals>
+    <plurals name="day_swap_inbox_swap_by_you_days">
+        <item quantity="one">You proposed swapping %1$d day with %2$s</item>
+        <item quantity="other">You proposed swapping %1$d days with %2$s</item>
+    </plurals>
 </resources>
