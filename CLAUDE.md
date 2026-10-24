@@ -206,8 +206,16 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     brighter partner of the light-theme hue. `ParentColors.choiceFill` is the same for a picker's
     swatch. **Bright, and any colour at all, since October 2026** (owner decision: "the colours
     look dull; make them bright, and let me pick my own"). A colour is a `ParentColor` — one of
-    four presets (`ParentColorChoice`, Material accents now: Pink 500/A200, Blue A400/A200,
-    Purple A700/A200, Deep Orange 700/A200) or a hue picked on the wheel (`ParentColor.custom`).
+    eighteen presets (`ParentColorChoice`: the four originals, Material accents — Pink 500/A200,
+    Blue A400/A200, Purple A700/A200, Deep Orange 700/A200 — and, since 24 October 2026, fourteen
+    named grid colours, owner decision "more ready colours, as a grid like Google Calendar's") or a
+    hue picked on the wheel (`ParentColor.custom`). **A grid colour is stored as `sw1|<name>`**
+    (`ParentColorCode.SWATCH_PREFIX`), for the reason a custom one is not a hex; its tones keep the
+    reference colour's hue and saturation and are placed by the same luminance targets, so a pastel
+    draws darker in the light theme. **The originals are declared first, and the grid's order is
+    `ParentColorChoice.GRID`, not the enum's**: the collision fallback walks `entries`, and a family
+    where both chose pink must keep seeing blue for the second parent. No grey, white or black: grey
+    is the weekend, white vanishes in the light theme and black in the dark.
     Four things not to undo. **A custom colour is stored as `hue1|<degrees>`** in the same
     `users/{uid}.colorCode` (`ParentColorCode`), never as a bare hex: every profile an older build
     saved holds `#FF4081` for "not chosen", and a hex reader would turn those parents pink. An older
@@ -224,7 +232,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     colour** (`ParentColor.closeTo`), **and a pick beats a default**: a parent who never chose is
     drawn in the first preset clear of one who did, and when both chose, slot 2 yields to slot 1,
     as for two identical presets — two codes in, so both phones draw the same. The picker is
-    `presentation/settings/ParentColorDialog.kt`; onboarding keeps the four presets.
+    `presentation/settings/ParentColorDialog.kt` (the grid, five to a row, then "Custom"); onboarding
+    keeps the four originals (`ParentColorChoice.ORIGINAL`).
     **The co-parent's colour arrives live.** `PairingRepositoryImpl.observePairingState` listens to
     the co-parent's own `users/{uid}` (`data/repository/PartnerProfileFlow.kt`) for as long as the
     link names them; it used to read it once, so their rename or new colour waited for the app to
