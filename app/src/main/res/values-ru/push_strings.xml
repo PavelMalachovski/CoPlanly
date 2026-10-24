@@ -93,6 +93,6 @@
     <string name="push_answer_by">Ответьте до %1$s.</string>
     <!-- The proposer gave the parent who did not answer in time a last chance
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
-    <string name="push_request_last_chance_title">Последний шанс ответить</string>
+    <string name="push_request_last_chance_title">Больше времени на ответ</string>
     <string name="push_request_last_chance_body">%1$s ждёт вашего ответа до %2$s.</string>
 </resources>

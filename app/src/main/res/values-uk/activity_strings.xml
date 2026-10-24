@@ -20,7 +20,7 @@
     <string name="activity_custody_accepted">Новий графік проживання погоджено</string>
     <string name="activity_custody_declined">Пропозицію щодо графіка проживання відхилено</string>
     <string name="activity_custody_withdrawn">Пропозицію щодо графіка проживання відкликано</string>
-    <string name="activity_request_last_chance">Останній шанс відповісти: %1$s</string>
+    <string name="activity_request_last_chance">Більше часу на відповідь: %1$s</string>
     <string name="activity_request_unanswered">Немає відповіді: %1$s</string>
     <string name="activity_subject_custody_schedule">графік проживання</string>
     <string name="activity_settle_up_you_owe">Розрахунок за %1$s: ви винні %2$s</string>

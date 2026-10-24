@@ -2,12 +2,9 @@ package com.coparently.app.e2e
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.PushPayload
-import com.coparently.app.domain.changerequests.RequestKind
-import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
-import com.coparently.app.domain.stickers.StickerAwards
 import com.coparently.app.domain.stickers.StickerKind
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.first
@@ -19,12 +16,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
-import java.time.ZoneId
 
 /**
  * Stickers between two phones (October 2026, owner decisions), through the production
- * `StickerStore`, `ParentRoles` and `StickerAwarder` against the real `firestore.rules`.
+ * `StickerStore` and `ParentRoles` against the real `firestore.rules`.
  *
  * What it proves:
  * - **A parent's sticker reaches the co-parent** with its `sticker_received` push, read back from
@@ -85,42 +80,7 @@ class TwoParentStickersTest : TwoParentTest() {
         )
     }
 
-    @Test
-    fun anAnswerBeforeTheDeadlineGivesTheOnTimeStickerOnceAWeek() = runBlocking<Unit> {
-        EmulatorEnvironment.step("stickers: Alice's request waits on Bob, with a day to answer")
-        val now = System.currentTimeMillis()
-        val clock = checkNotNull(
-            alice.requestDeadlineRepository.start(
-                RequestStart(
-                    kind = RequestKind.SWAP,
-                    ref = "stickers-g1",
-                    familyId = familyId,
-                    responderUid = bob.uid,
-                    answerByMillis = now + DAY_MS,
-                    capMillis = now + 2 * DAY_MS
-                )
-            )
-        ) { "the rules refused the request's clock" }
-
-        EmulatorEnvironment.step("stickers: Bob answers in time, twice in one week")
-        bob.stickerAwarder.onAnswered(clock.id)
-        bob.stickerAwarder.onAnswered(clock.id)
-        val week = StickerAwards.isoWeek(Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate())
-        val received = withTimeout(WAIT_MS) {
-            bob.stickerStore.observeReceived(bob.uid).first { it.isNotEmpty() }
-        }
-        assertEquals(listOf(StickerAwards.appStickerId(bob.uid, StickerKind.ON_TIME, week)), received.map { it.id })
-        assertEquals(null, received.single().fromUid)
-        assertTrue(
-            "the app's sticker pushed somebody",
-            EmulatorEnvironment.queryAsAdmin("notification_queue", "targetUserId", bob.uid)
-                .mapNotNull { it["data"] as? Map<*, *> }
-                .none { it["type"] == PushPayload.STICKER_RECEIVED }
-        )
-    }
-
     private companion object {
         const val WAIT_MS = 30_000L
-        const val DAY_MS = 24L * 60 * 60 * 1000
     }
 }

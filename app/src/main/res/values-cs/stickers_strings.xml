@@ -36,7 +36,7 @@
     <string name="sticker_status_delivered">Doručeno</string>
     <string name="sticker_status_seen">Zobrazeno</string>
     <string name="stickers_empty_title">Zatím žádné samolepky</string>
-    <string name="stickers_empty_body">Odpovídejte na žádosti do termínu a aplikace vám jednu dá. Samolepku vám může poslat i druhý rodič.</string>
+    <string name="stickers_empty_body">Druhý rodič vám může poslat samolepku: malé poděkování, nic víc.</string>
     <string name="parent_role_title">Jak vás mají samolepky oslovovat?</string>
     <string name="parent_role_body">Samolepka říká například „Jsi skvělý táta“. Odpověď slouží jen pro samolepky; jinde aplikace používá vaše jméno. Druhý rodič ji vidí.</string>
     <string name="parent_role_dad">Táta</string>

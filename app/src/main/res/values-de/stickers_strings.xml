@@ -36,7 +36,7 @@
     <string name="sticker_status_delivered">Zugestellt</string>
     <string name="sticker_status_seen">Gesehen</string>
     <string name="stickers_empty_title">Noch keine Sticker</string>
-    <string name="stickers_empty_body">Beantworte Anfragen vor ihrer Frist, dann bekommst du einen von der App. Auch der andere Elternteil kann dir einen senden.</string>
+    <string name="stickers_empty_body">Der andere Elternteil kann dir einen Sticker senden: ein kleines Dankeschön, mehr nicht.</string>
     <string name="parent_role_title">Wie sollen dich deine Sticker ansprechen?</string>
     <string name="parent_role_body">Ein Sticker sagt zum Beispiel „Du bist ein toller Papa“. Die Antwort wird nur für Sticker verwendet; sonst zeigt die App deinen Namen. Der andere Elternteil kann sie sehen.</string>
     <string name="parent_role_dad">Papa</string>

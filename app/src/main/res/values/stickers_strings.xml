@@ -36,7 +36,7 @@
     <string name="sticker_status_delivered">Delivered</string>
     <string name="sticker_status_seen">Seen</string>
     <string name="stickers_empty_title">No stickers yet</string>
-    <string name="stickers_empty_body">Answer requests before their deadline and the app gives you one. Your co-parent can send you one too.</string>
+    <string name="stickers_empty_body">Your co-parent can send you a sticker: a small thank-you, nothing more.</string>
     <string name="parent_role_title">How should your stickers address you?</string>
     <string name="parent_role_body">A sticker says, for example, “You are a great dad”. This answer is used only for stickers; everywhere else the app uses your name. Your co-parent can see it.</string>
     <string name="parent_role_dad">Dad</string>

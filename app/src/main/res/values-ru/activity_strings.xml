@@ -20,7 +20,7 @@
     <string name="activity_custody_accepted">Новый график проживания согласован</string>
     <string name="activity_custody_declined">Предложение графика проживания отклонено</string>
     <string name="activity_custody_withdrawn">Предложение графика проживания отозвано</string>
-    <string name="activity_request_last_chance">Последний шанс ответить: %1$s</string>
+    <string name="activity_request_last_chance">Больше времени на ответ: %1$s</string>
     <string name="activity_request_unanswered">Нет ответа: %1$s</string>
     <string name="activity_subject_custody_schedule">график проживания</string>
     <string name="activity_settle_up_you_owe">Расчёт за %1$s: вы должны %2$s</string>

@@ -36,7 +36,7 @@
     <string name="sticker_status_delivered">Доставлен</string>
     <string name="sticker_status_seen">Просмотрен</string>
     <string name="stickers_empty_title">Стикеров пока нет</string>
-    <string name="stickers_empty_body">Отвечайте на запросы до срока — и приложение подарит вам стикер. Второй родитель тоже может его прислать.</string>
+    <string name="stickers_empty_body">Второй родитель может прислать вам стикер — маленькое «спасибо», не больше.</string>
     <string name="parent_role_title">Как к вам обращаться в стикерах?</string>
     <string name="parent_role_body">Стикер говорит, например: «Ты замечательный папа». Ответ нужен только для стикеров; везде остальное приложение показывает ваше имя. Второй родитель может его видеть.</string>
     <string name="parent_role_dad">Папа</string>

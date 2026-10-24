@@ -36,7 +36,7 @@
     <string name="sticker_status_delivered">Доставлено</string>
     <string name="sticker_status_seen">Переглянуто</string>
     <string name="stickers_empty_title">Стікерів поки немає</string>
-    <string name="stickers_empty_body">Відповідайте на запити до терміну — і застосунок подарує вам стікер. Інший із батьків теж може його надіслати.</string>
+    <string name="stickers_empty_body">Інший із батьків може надіслати вам стікер — маленьке «дякую», не більше.</string>
     <string name="parent_role_title">Як до вас звертатися в стікерах?</string>
     <string name="parent_role_body">Стікер каже, наприклад: «Ти чудовий тато». Відповідь потрібна лише для стікерів; деінде застосунок показує ваше ім’я. Інший із батьків може її бачити.</string>
     <string name="parent_role_dad">Тато</string>

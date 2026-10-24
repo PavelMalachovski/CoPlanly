@@ -20,7 +20,7 @@
     <string name="activity_custody_accepted">Nový rozvrh péče schválen</string>
     <string name="activity_custody_declined">Návrh rozvrhu péče odmítnut</string>
     <string name="activity_custody_withdrawn">Návrh rozvrhu péče stažen</string>
-    <string name="activity_request_last_chance">Poslední šance odpovědět: %1$s</string>
+    <string name="activity_request_last_chance">Více času na odpověď: %1$s</string>
     <string name="activity_request_unanswered">Bez odpovědi: %1$s</string>
     <string name="activity_subject_custody_schedule">rozvrh péče</string>
     <string name="activity_settle_up_you_owe">Vyrovnání za %1$s: dlužíte %2$s</string>

@@ -29,9 +29,8 @@
     <string name="seasonal_delete">Delete</string>
     <string name="seasonal_cancel">Cancel</string>
     <string name="seasonal_ok">OK</string>
-    <string name="fairness_title">Holiday fairness</string>
+    <string name="fairness_title">Holiday overview</string>
     <string name="fairness_no_schedule">Save a schedule to see who has which holidays.</string>
-    <string name="fairness_nights">Nights</string>
     <string name="fairness_christmas_eve">Christmas Eve</string>
     <string name="fairness_christmas_day">Christmas Day</string>
     <string name="fairness_new_year">New Year’s Day</string>
@@ -40,7 +39,7 @@
     <string name="fairness_show_holidays">Show other public holidays</string>
     <string name="fairness_hide_holidays">Hide other public holidays</string>
     <string name="fairness_not_set">Not set</string>
-    <string name="fairness_note">Counted as the calendar shows it, agreed swaps and seasonal schedules included. Contact afternoons are not nights.</string>
+    <string name="fairness_note">Counted as the calendar shows it, agreed swaps and seasonal schedules included.</string>
     <string name="fairness_propose">Propose a change</string>
     <string name="custody_diff_layers_changed">The seasonal schedules change too.</string>
 </resources>
