@@ -4,18 +4,23 @@ import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.unit.dp
+import com.coparently.app.data.family.FamilyView
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.model.Expense
+import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.chat.ChatThreadHeader
 import com.coparently.app.presentation.chat.MessageItem
+import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.custody.SchedulePreviewMonth
@@ -24,6 +29,8 @@ import com.coparently.app.presentation.expenses.CollapsedMonthSummary
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
 import com.coparently.app.presentation.expenses.MonthNavigation
 import com.coparently.app.presentation.expenses.currencyFormat
+import com.coparently.app.presentation.family.FamilyMoneyCard
+import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.pairing.InvitationView
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
 import com.coparently.app.presentation.settings.ParentColorPicker
@@ -112,6 +119,27 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
     }
 
+    /**
+     * The Family tab's first card: the month's spend in two currencies and who owes whom. Amounts
+     * are never cut, so the 2.0× German variant shows how the card grows rather than clips.
+     */
+    @Test
+    fun familyMoneyCard() = snap("family_money_card") {
+        val month = listOf(
+            familyExpense("shoes", MOM_PAID, "CZK"),
+            familyExpense("ski", EUR_TOTAL, "EUR")
+        )
+        val money = MonthMoney.of(
+            expenses = month,
+            view = FamilyView(me = ScreenshotFixtures.MY_UID, onScreen = FAMILY_ID, others = emptySet()),
+            today = ScreenshotFixtures.TODAY,
+            fallbackCurrency = SupportedCurrency.CZK,
+            userId = ScreenshotFixtures.MY_UID,
+            roleByUid = mapOf(ScreenshotFixtures.MY_UID to "mom", ScreenshotFixtures.CO_PARENT_UID to "dad")
+        )
+        SectionGroup { FamilyMoneyCard(money = money, onOpen = {}) }
+    }
+
     @Test
     fun eventPreview() = snap("event_preview") {
         EventPreviewContent(
@@ -197,6 +225,20 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
     }
 
+    /** A shared expense this parent paid in the family on screen, in May 2026. */
+    private fun familyExpense(id: String, amount: Double, currency: String) = Expense(
+        id = id,
+        title = id,
+        amount = amount,
+        currency = currency,
+        category = ExpenseCategory.CLOTHING,
+        paidBy = ScreenshotFixtures.MY_UID,
+        splitBetween = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID),
+        date = ScreenshotFixtures.TODAY,
+        createdByFirebaseUid = ScreenshotFixtures.MY_UID,
+        familyId = FAMILY_ID
+    )
+
     private fun message(
         id: String,
         sender: String,
@@ -214,6 +256,9 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     )
 
     companion object {
+        /** The family on screen in the money card's fixture. */
+        private const val FAMILY_ID = "u1__u2"
+
         /** A Monday far enough ahead that the preview never draws today's month. */
         private val PREVIEW_START = LocalDate.of(2030, 5, 6)
         private const val MOM_PAID = 3_120.0

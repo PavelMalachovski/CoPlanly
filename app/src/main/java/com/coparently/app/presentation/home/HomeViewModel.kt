@@ -457,12 +457,7 @@ class HomeViewModel @Inject constructor(
     private val monthExpenses = combine(
         monthSpendDependencies.expenseRepository.getAllExpenses(),
         monthSpendDependencies.familyViewSource.observe()
-    ) { expenses, view ->
-        val month = LocalDate.now()
-        expenses
-            .filter { it.date.year == month.year && it.date.month == month.month }
-            .filter { view.counts(it.familyId, it.createdByFirebaseUid) }
-    }
+    ) { expenses, view -> MonthMoney.thisMonthCounted(expenses, view, LocalDate.now()) }
 
     /**
      * Signed-in parent and paired co-parent, for resolving a slot to a name — the handover
@@ -487,12 +482,9 @@ class HomeViewModel @Inject constructor(
         monthExpenses,
         defaultCurrency
     ) { expenses, fallbackCurrency ->
-        val byCurrency = expenses.groupBy { it.currency }
-            .map { (currency, group) -> CurrencyAmount(currency, group.sumOf { it.amount }) }
-            .sortedByDescending { it.amount }
         // Keep a zero in the app's default currency when the month is empty, so the tile still
         // renders a figure instead of blank.
-        MonthSpend(byCurrency.ifEmpty { listOf(CurrencyAmount(fallbackCurrency.code, 0.0)) })
+        MonthMoney.spendOf(expenses, fallbackCurrency)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),

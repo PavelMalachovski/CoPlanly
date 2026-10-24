@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Family tab (new-user review, October 2026): money, agreements, children and home, people, and what is only mine. -->
+    <string name="nav_family">Family</string>
+    <string name="family_title">Family</string>
+    <string name="family_group_money">Money</string>
+    <string name="family_group_agreements">Agreements</string>
+    <string name="family_group_home">Children and home</string>
+    <string name="family_group_people">People</string>
+    <string name="family_group_mine">Only mine</string>
+    <string name="family_money_this_month">This month</string>
+    <string name="family_children_add">Add your children</string>
+</resources>

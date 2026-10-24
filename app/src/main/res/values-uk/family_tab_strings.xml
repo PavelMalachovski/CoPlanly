@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_family">Сімʼя</string>
+    <string name="family_title">Сімʼя</string>
+    <string name="family_group_money">Гроші</string>
+    <string name="family_group_agreements">Домовленості</string>
+    <string name="family_group_home">Діти й дім</string>
+    <string name="family_group_people">Люди</string>
+    <string name="family_group_mine">Тільки моє</string>
+    <string name="family_money_this_month">Цей місяць</string>
+    <string name="family_children_add">Додайте своїх дітей</string>
+</resources>

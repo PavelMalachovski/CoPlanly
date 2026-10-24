@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_family">Familie</string>
+    <string name="family_title">Familie</string>
+    <string name="family_group_money">Geld</string>
+    <string name="family_group_agreements">Vereinbarungen</string>
+    <string name="family_group_home">Kinder und Zuhause</string>
+    <string name="family_group_people">Personen</string>
+    <string name="family_group_mine">Nur meins</string>
+    <string name="family_money_this_month">Dieser Monat</string>
+    <string name="family_children_add">Füge deine Kinder hinzu</string>
+</resources>

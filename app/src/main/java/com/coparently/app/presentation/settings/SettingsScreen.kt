@@ -1638,7 +1638,7 @@ private fun SyncStatus.summaryDot(): Color? = when (this) {
  * reader's language, which a ViewModel has no `Context` to resolve.
  */
 @Composable
-private fun caresForSummary(kinds: Set<FamilyKind>): String {
+internal fun caresForSummary(kinds: Set<FamilyKind>): String {
     val children = stringResource(R.string.onboarding_family_children)
     val pets = stringResource(R.string.onboarding_family_pets)
     return when {
@@ -1730,7 +1730,7 @@ private fun CountryDialog(
  * @param onDismiss Closes without changing anything.
  */
 @Composable
-private fun FamilyKindDialog(
+internal fun FamilyKindDialog(
     selected: Set<FamilyKind>,
     onConfirm: (Set<FamilyKind>) -> Unit,
     onDismiss: () -> Unit
@@ -1799,7 +1799,7 @@ private fun FamilyKindDialog(
  * @param onDismiss Closes without proposing anything.
  */
 @Composable
-private fun SplitRatioDialog(
+internal fun SplitRatioDialog(
     current: SplitRatio,
     parentNames: ParentNames,
     proposes: Boolean,

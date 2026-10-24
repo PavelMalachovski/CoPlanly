@@ -826,7 +826,7 @@ internal fun StatTiles(
  * the other way in another gets both sentences, one per line — there is no honest single one.
  */
 @Composable
-private fun balanceCaption(balances: List<CurrencyBalance>): String {
+internal fun balanceCaption(balances: List<CurrencyBalance>): String {
     val position = SettleUpPosition.of(balances)
     if (position.settled) return stringResource(R.string.home_stat_settled)
     val amounts: (List<CurrencyAmount>) -> String = { list ->
@@ -1143,7 +1143,7 @@ private fun answerLabel(answer: HistoryEntry): String {
  * Czech user's home screen, where `1 234,56 Kč` is what they expect on a figure two parents are
  * about to settle between them.
  */
-private fun formatMoney(amount: Double, currencyCode: String): String {
+internal fun formatMoney(amount: Double, currencyCode: String): String {
     val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
     runCatching { format.currency = Currency.getInstance(currencyCode) }
     return format.format(amount)
