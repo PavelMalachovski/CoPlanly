@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Message
@@ -138,7 +141,11 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         ParentColorPicker(chosen = CUSTOM_COLOUR, customHue = CUSTOM_HUE, onChoose = {}, onCustomHue = {})
     }
 
-    /** An incoming message, one of mine the co-parent has read, and one of mine that failed. */
+    /**
+     * An incoming message, one of mine the co-parent has read, a card the app composed for the
+     * co-parent's decline (drawn centred and neutral, not in either bubble), and one of mine that
+     * failed.
+     */
     private fun chatMessages(): List<Message> {
         val base = ScreenshotFixtures.TODAY.atTime(MESSAGE_HOUR, 0)
             .atZone(ZoneId.of("Europe/Prague")).toInstant().toEpochMilli()
@@ -150,6 +157,19 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
                 "Yes, I'll pick her up from school at three.",
                 base + MINUTE_MS,
                 MessageSendStatus.READ
+            ),
+            message(
+                "c1",
+                ScreenshotFixtures.CO_PARENT_UID,
+                "Event declined: Parent-teacher meeting",
+                base + MINUTE_MS + MINUTE_MS / 2
+            ).copy(
+                activity = ActivityAnnouncement(
+                    kind = ActivityKind.EVENT_DECLINED,
+                    entityType = ActivityEntityType.EVENT,
+                    entityId = "e1",
+                    title = "Parent-teacher meeting"
+                )
             ),
             message(
                 "m3",

@@ -500,11 +500,25 @@ fun MessageItem(
         }
         ?: message.content
 
+    // A card the app composed is not either parent's words, and in a thread a court may read it
+    // must not look like them: it is drawn centred and neutral, with who acted on its first line,
+    // instead of in the sender's bubble (new-user review, October 2026 — "Event declined" in the
+    // reader's own blue read as something they had written).
+    val isCard = activity != null
+    val cardActor = when {
+        !isCard -> null
+        isCurrentUser -> stringResource(R.string.parent_label_you)
+        else -> message.senderName.takeIf { it.isNotBlank() }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (startsGroup) Spacing.S else 0.dp),
-        horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
+            .padding(top = if (startsGroup || isCard) Spacing.S else 0.dp),
+        horizontalAlignment = when {
+            isCard -> Alignment.CenterHorizontally
+            isCurrentUser -> Alignment.End
+            else -> Alignment.Start
+        }
     ) {
         // Files the message carries (MON-23), above its bubble. The bubble below still carries the
         // text — the file's name for a file sent alone — with the time and the honest tick.
@@ -521,9 +535,14 @@ fun MessageItem(
             Row(
                 modifier = Modifier
                     .widthIn(max = BUBBLE_MAX_WIDTH)
-                    .clip(chatBubbleShape(isCurrentUser, startsGroup, endsGroup))
+                    .clip(
+                        if (isCard) MaterialTheme.shapes.medium else chatBubbleShape(isCurrentUser, startsGroup, endsGroup)
+                    )
                     .background(
-                        if (isCurrentUser) {
+                        if (isCard) {
+                            // The day pill's surface: a note in the thread, not a message.
+                            MaterialTheme.colorScheme.surfaceContainer
+                        } else if (isCurrentUser) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             // A step above the day pill's surfaceContainer, so a bubble and a
@@ -546,18 +565,26 @@ fun MessageItem(
                 // multi-line message, hugging the bubble's bottom-end corner.
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(
-                    text = bubbleText,
-                    color = if (isCurrentUser) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    // Hyphenated, because the bubble is capped in dp while the text scales: at
-                    // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
-                    style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
-                    modifier = Modifier.weight(1f, fill = false)
-                )
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    cardActor?.let { actor ->
+                        Text(
+                            text = actor,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = bubbleText,
+                        color = when {
+                            isCard -> MaterialTheme.colorScheme.onSurfaceVariant
+                            isCurrentUser -> MaterialTheme.colorScheme.onPrimary
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
+                        // Hyphenated, because the bubble is capped in dp while the text scales: at
+                        // 1.5x a German compound broke mid-word with no hyphen ("…erklär / ung").
+                        style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto)
+                    )
+                }
                 if (onCardTap != null) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -565,16 +592,18 @@ fun MessageItem(
                         modifier = Modifier
                             .padding(start = Spacing.XS)
                             .size(RECEIPT_ICON_SIZE * CHEVRON_SCALE),
-                        tint = if (isCurrentUser) {
+                        tint = if (isCurrentUser && !isCard) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         }
                     )
                 }
+                // A card carries its time and no ticks: the neutral surface has no onPrimary to
+                // draw them in, and whether the other phone has the card is the thread's business.
                 BubbleMeta(
                     message = message,
-                    isCurrentUser = isCurrentUser,
+                    isCurrentUser = isCurrentUser && !isCard,
                     modifier = Modifier.padding(start = Spacing.S)
                 )
             }
