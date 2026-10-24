@@ -231,6 +231,15 @@ const RULES = [
     paths: ['K/domain/stickers/**', 'K/data/stickers/**', 'K/presentation/stickers/**'],
   },
   {
+    sections: ['3.29'],
+    why: 'a new user\'s first week: the Family tab, Home leading with today, Expenses as a detail screen, the requests pop-up, the legend',
+    paths: ['K/presentation/family/**', 'K/presentation/home/HomeScreen.kt', 'K/presentation/home/HomeAskQueue.kt',
+      'K/presentation/home/MonthMoney.kt', 'K/presentation/navigation/NavGraph.kt',
+      'K/presentation/navigation/BottomNavDestination.kt', 'K/presentation/calendar/components/CustodyLegend.kt',
+      'K/presentation/chat/MessagesList.kt', 'K/presentation/settings/SettingsScreen.kt',
+      'K/presentation/expenses/ExpenseScreen.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

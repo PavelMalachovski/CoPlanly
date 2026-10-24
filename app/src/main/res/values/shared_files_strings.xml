@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Files the two parents share (MON-23): the document vault (Settings → Family → Documents) and
+  Files the two parents share (MON-23): the document vault (Family tab → Documents) and
   chat attachments. The vault has no private documents, and the screen says so before anything is
   added (documents_shared_notice) — keep that sentence plain.
 -->

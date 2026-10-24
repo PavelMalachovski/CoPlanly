@@ -4571,7 +4571,7 @@ exports.scrubRevisionAudiences = scrubRevisionAudiences;
  * whole thread is the other parent's record of what was said to them — in a custody dispute it
  * is often the evidence. Erasing it the moment one side leaves took the second parent's record
  * without a word. Thirty days, announced by a push and a banner in the thread, lets them export
- * it (Settings → Family → Export the record) first; Art. 17(3)(e) and 6(1)(f) are what carry the
+ * it (the Family tab → Export the record) first; Art. 17(3)(e) and 6(1)(f) are what carry the
  * retention. After that the thread goes whole, as it always did ([sweepRetainedConversationsImpl]).
  * Thirty days rather than longer because the only thing it has to allow is one export.
  */

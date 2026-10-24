@@ -24,7 +24,7 @@ import org.robolectric.annotation.Config
  * The family friend's side of the Friends screen (final review of phase 2, finding 4).
  *
  * A grandmother admitted by one family is sent a second family's code, and the message tells her
- * where to type it: Settings → Family friends → "I have a code from the parents". Her side of the
+ * where to type it: Family → Family friends → "I have a code from the parents". Her side of the
  * screen listed only her families and her profile, so the row was not there, and a friend of two
  * families — which the grants support since L-5 — could not be admitted to the second in the app.
  */

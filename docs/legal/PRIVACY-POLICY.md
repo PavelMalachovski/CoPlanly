@@ -524,7 +524,7 @@ Under the GDPR you have the right to:
 - have it **corrected** (Art. 16);
 - have it **deleted** (Art. 17);
 - **restrict** its processing (Art. 18);
-- **receive it in a portable form** (Art. 20) — the export in Settings → Family gives you your
+- **receive it in a portable form** (Art. 20) — the export in the Family tab gives you your
   family's record as CSV or PDF;
 - **object** to processing we base on our or someone else's legitimate interests (Art. 21) — the
   90-day deletion markers, the message thread kept for your co-parent, export receipts, and your

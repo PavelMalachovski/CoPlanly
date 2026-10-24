@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Settings → Family → Month in review: a month in figures, and an optional AI summary -->
+    <!-- Family tab → Month in review: a month in figures, and an optional AI summary -->
     <string name="month_review_title">Month in review</string>
     <string name="month_review_settings_description">Days with each parent, handovers, swaps, events and expenses, month by month</string>
     <string name="month_review_previous">Previous month</string>
