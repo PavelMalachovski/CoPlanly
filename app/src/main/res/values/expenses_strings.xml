@@ -113,4 +113,11 @@
     <string name="settle_up_send">Send</string>
     <string name="settle_up_cancel">Cancel</string>
     <string name="settle_up_iban_save_failed">Your IBAN could not be saved. The settle-up was not sent.</string>
+    <!-- Questioning the co-parent's expense (second audit): a card in the chat, never an edit. -->
+    <string name="expense_question_title">Question this expense?</string>
+    <string name="expense_question_body">%1$s recorded “%2$s”. A card in your chat says you question it, and it stays in the record. Only %1$s can change or delete the expense — say why in the chat.</string>
+    <string name="expense_question_confirm">Question it</string>
+    <string name="expense_question_sent">Sent to the chat. Say why there.</string>
+    <string name="expense_question_failed">The question could not be sent.</string>
+    <string name="expense_question_cancel">Cancel</string>
 </resources>

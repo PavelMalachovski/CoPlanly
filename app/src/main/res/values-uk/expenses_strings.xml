@@ -103,4 +103,10 @@
     <string name="settle_up_send">Надіслати</string>
     <string name="settle_up_cancel">Скасувати</string>
     <string name="settle_up_iban_save_failed">Не вдалося зберегти IBAN. Розрахунок не надіслано.</string>
+    <string name="expense_question_title">Поставити витрату під сумнів?</string>
+    <string name="expense_question_body">Витрату «%2$s» вніс(-ла) %1$s. У чат надійде картка про те, що ви ставите її під сумнів, і вона залишиться в записі. Змінити чи видалити витрату може лише %1$s — напишіть причину в чаті.</string>
+    <string name="expense_question_confirm">Поставити під сумнів</string>
+    <string name="expense_question_sent">Надіслано в чат. Напишіть там причину.</string>
+    <string name="expense_question_failed">Не вдалося надіслати запит.</string>
+    <string name="expense_question_cancel">Скасувати</string>
 </resources>

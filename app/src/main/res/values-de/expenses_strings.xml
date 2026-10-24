@@ -104,4 +104,10 @@
     <string name="settle_up_send">Senden</string>
     <string name="settle_up_cancel">Abbrechen</string>
     <string name="settle_up_iban_save_failed">Deine IBAN konnte nicht gespeichert werden. Der Ausgleich wurde nicht gesendet.</string>
+    <string name="expense_question_title">Diese Ausgabe infrage stellen?</string>
+    <string name="expense_question_body">%1$s hat „%2$s“ eingetragen. Eine Karte im Chat sagt, dass du sie infrage stellst, und bleibt im Verlauf. Nur %1$s kann die Ausgabe ändern oder löschen — sag im Chat, warum.</string>
+    <string name="expense_question_confirm">Infrage stellen</string>
+    <string name="expense_question_sent">Im Chat gesendet. Sag dort, warum.</string>
+    <string name="expense_question_failed">Der Einwand konnte nicht gesendet werden.</string>
+    <string name="expense_question_cancel">Abbrechen</string>
 </resources>

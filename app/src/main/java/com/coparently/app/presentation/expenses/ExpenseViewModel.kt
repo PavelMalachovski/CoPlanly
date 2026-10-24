@@ -106,9 +106,10 @@ sealed interface ReceiptScanState {
  *
  * One constructor dependency per thing the money screen reads. It was already past detekt's
  * parameter limit (baselined) before the family view joined, and splitting it would scatter one
- * screen's state across holders that exist only to satisfy the count.
+ * screen's state across holders that exist only to satisfy the count. The same goes for its
+ * functions: each is one thing the money screen does.
  */
-@Suppress("LongParameterList") // see the class KDoc
+@Suppress("LongParameterList", "TooManyFunctions") // see the class KDoc
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
@@ -762,6 +763,15 @@ class ExpenseViewModel @Inject constructor(
         viewModelScope.launch {
             expenseRepository.deleteExpense(expenseId)
         }
+    }
+
+    /**
+     * Questions an expense the co-parent recorded: a card in their family's thread (second audit).
+     *
+     * @param onDone Told whether the card was sent.
+     */
+    fun questionExpense(expense: Expense, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch { onDone(expenseRepository.questionExpense(expense)) }
     }
 
     /**

@@ -1220,7 +1220,8 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
   //
   // A type, the friend's profile name and the family — never a sentence (SEC-3, CLAUDE.md item
   // 15). This used to send an English `title`/`body` carrying the friend's verified e-mail
-  // address; no build has wording for the type yet, so phones drop it until one does.
+  // address. Builds from October 2026 word it and open the Family friends screen, where either
+  // parent can end the access; older ones drop it.
   const actorName = await profileName(accepterRef);
   await Promise.all(familyParents.map((parentUid) =>
     db.collection('notification_queue').add({

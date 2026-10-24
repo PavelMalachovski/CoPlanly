@@ -574,6 +574,11 @@ class PushNotifier(private val context: Context) {
                 R.string.push_professional_access_requested_body,
                 BodyArgs.ACTOR
             ),
+            PushPayload.CALENDAR_FRIEND_ACCEPTED to PushTextSpec(
+                R.string.push_calendar_friend_accepted_title,
+                R.string.push_calendar_friend_accepted_body,
+                BodyArgs.ACTOR
+            ),
             PushPayload.COPARENT_ACCOUNT_DELETED to PushTextSpec(
                 R.string.push_coparent_account_deleted_title,
                 R.string.push_coparent_account_deleted_body,

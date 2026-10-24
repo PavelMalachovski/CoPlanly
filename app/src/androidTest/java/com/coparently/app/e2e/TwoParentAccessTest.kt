@@ -105,6 +105,11 @@ class TwoParentAccessTest : TwoParentTest() {
         withTimeout(EmulatorParent.WAIT_MS) {
             bob.friendRepository.observeFamilyFriends().first { list -> list.any { it.friendUid == grandma.uid } }
         }
+        // And is told, by name, so a friend is never admitted behind one parent's back (second
+        // audit) — a type and the friend's name, never a sentence (item 15).
+        val told = EmulatorEnvironment.awaitQueuedPush(bob.uid, CALENDAR_FRIEND_ACCEPTED)
+        assertEquals(familyId, told["familyId"])
+        assertEquals(grandma.name, told["actorName"])
 
         // The friend authors her own profile; a parent reads it and cannot write it.
         grandma.friendRepository.saveMyProfile(
@@ -722,6 +727,7 @@ class TwoParentAccessTest : TwoParentTest() {
         const val POLL_MS = 250L
 
         const val PROFESSIONAL_ACCESS_REQUESTED = "professional_access_requested"
+        const val CALENDAR_FRIEND_ACCEPTED = "calendar_friend_accepted"
         const val PAIRING_REMOVED = "pairing_removed"
         const val COPARENT_ACCOUNT_DELETED = "coparent_account_deleted"
 

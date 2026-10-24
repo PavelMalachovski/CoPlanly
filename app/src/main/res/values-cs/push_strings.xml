@@ -82,6 +82,8 @@
     <string name="push_channel_family_description">Propojení s druhým rodičem, záznamy dětí, sdílené záznamy a přístup odborníků</string>
     <string name="push_professional_access_requested_title">Žádost o přístup odborníka</string>
     <string name="push_professional_access_requested_body">Pozvánka ke čtení kalendáře a rodičovského plánu rodiny byla použita (%1$s). Přístup se otevře až se souhlasem obou rodičů.</string>
+    <string name="push_calendar_friend_accepted_title">Přibyl rodinný přítel</string>
+    <string name="push_calendar_friend_accepted_body">%1$s teď může číst rodinný kalendář. Kdokoli z vás to může ukončit v sekci Přátelé rodiny.</string>
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Účet druhého rodiče byl smazán</string>
     <string name="push_coparent_account_deleted_body">%1$s už nemá účet. Vaše konverzace bude smazána %2$s – do té doby si ji vyexportujte.</string>

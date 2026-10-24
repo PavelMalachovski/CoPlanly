@@ -40,6 +40,17 @@ interface ExpenseRepository {
     suspend fun deleteExpense(expenseId: String)
 
     /**
+     * Tells the co-parent, in their family's thread, that this parent questions an expense the
+     * co-parent recorded (second audit: one parent could enter costs and the app called the other a
+     * debtor, with no way to say "not this one"). Only the creator changes an expense, so the
+     * question is a card that stays in the record; the reason is said in the chat.
+     *
+     * @return Whether the card was sent: false for this parent's own expense, or one whose family
+     *   has no co-parent to tell.
+     */
+    suspend fun questionExpense(expense: Expense): Boolean
+
+    /**
      * Syncs expenses with Firestore.
      */
     /**

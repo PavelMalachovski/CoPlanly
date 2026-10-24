@@ -12,6 +12,7 @@
     <string name="activity_expense_added">Neue Ausgabe: %1$s</string>
     <string name="activity_expense_updated">Ausgabe geändert: %1$s</string>
     <string name="activity_expense_deleted">Ausgabe gelöscht: %1$s</string>
+    <string name="activity_expense_questioned">Stellt die Ausgabe infrage: %1$s</string>
     <string name="activity_day_swap_offered">Tagestausch angeboten: %1$s</string>
     <string name="activity_day_swap_accepted">Tagestausch vereinbart: %1$s</string>
     <string name="activity_day_swap_declined">Tagestausch abgelehnt: %1$s</string>

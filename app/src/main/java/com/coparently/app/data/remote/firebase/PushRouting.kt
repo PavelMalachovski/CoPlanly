@@ -33,7 +33,10 @@ enum class PushDestination(val key: String) {
     CHILD_INFO("child_info"),
 
     /** The professionals screen, where a request for access is consented to. */
-    PROFESSIONALS("professionals");
+    PROFESSIONALS("professionals"),
+
+    /** The family friends screen, where either parent sees who reads the calendar and ends it. */
+    FRIENDS("friends");
 
     /** The intent extra, and reading it back. */
     companion object {
@@ -120,6 +123,7 @@ object PushRouting {
         PushPayload.SPLIT_RATIO_AGREED,
         PushPayload.EXPENSE_ADDED -> PushDestination.EXPENSES
         PushPayload.PROFESSIONAL_ACCESS_REQUESTED -> PushDestination.PROFESSIONALS
+        PushPayload.CALENDAR_FRIEND_ACCEPTED -> PushDestination.FRIENDS
         else -> null
     }
 

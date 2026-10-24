@@ -15,6 +15,7 @@
     <string name="activity_expense_added">New expense: %1$s</string>
     <string name="activity_expense_updated">Expense changed: %1$s</string>
     <string name="activity_expense_deleted">Expense removed: %1$s</string>
+    <string name="activity_expense_questioned">Questions the expense: %1$s</string>
     <string name="activity_day_swap_offered">Day swap offered: %1$s</string>
     <string name="activity_day_swap_accepted">Day swap agreed: %1$s</string>
     <string name="activity_day_swap_declined">Day swap turned down: %1$s</string>

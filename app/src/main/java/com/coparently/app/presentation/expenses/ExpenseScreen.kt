@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -188,6 +189,10 @@ fun ExpenseScreen(
     // The balance a parent tapped Settle up on, while its dialog asks before anything is sent.
     var pendingSettleUp by remember { mutableStateOf<PendingSettleUp?>(null) }
     val scope = rememberCoroutineScope()
+    // The co-parent's expense this parent tapped, while its dialog asks whether to question it.
+    var questioned by remember { mutableStateOf<Expense?>(null) }
+    val questionSent = stringResource(R.string.expense_question_sent)
+    val questionFailed = stringResource(R.string.expense_question_failed)
     val deletedMessage = stringResource(R.string.expenses_deleted)
     val undoLabel = stringResource(R.string.expenses_deleted_undo)
 
@@ -443,6 +448,7 @@ fun ExpenseScreen(
                                     parentNames = parentNames,
                                     onDelete = deleteWithUndo,
                                     onExpenseClick = { onEditExpense(it.id) },
+                                    onQuestion = { questioned = it },
                                     // Only the creator edits or deletes an expense. A row whose creator
                                     // was never recorded (pre-schema-23, or written signed-out) stays
                                     // editable by both — all this device can honestly say about it.
@@ -564,6 +570,20 @@ fun ExpenseScreen(
         }
     }
 
+    questioned?.let { expense ->
+        QuestionExpenseDialog(
+            expense = expense,
+            coParentName = parentNames.coParentLabel(),
+            onDismiss = { questioned = null },
+            onConfirm = {
+                questioned = null
+                viewModel.questionExpense(expense) { sent ->
+                    scope.launch { snackbarHostState.showSnackbar(if (sent) questionSent else questionFailed) }
+                }
+            }
+        )
+    }
+
     pendingSettleUp?.let { pending ->
         SettleUpDialog(
             pending = pending,
@@ -575,6 +595,30 @@ fun ExpenseScreen(
             }
         )
     }
+}
+
+/**
+ * Asks before questioning the co-parent's [expense] (second audit). Questioning changes nothing in
+ * the ledger: it posts a card to the chat, which stays in the record, and the reason is said there.
+ */
+@Composable
+private fun QuestionExpenseDialog(
+    expense: Expense,
+    coParentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.expense_question_title)) },
+        text = { Text(stringResource(R.string.expense_question_body, coParentName, expense.title)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.expense_question_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.expense_question_cancel)) }
+        }
+    )
 }
 
 /**

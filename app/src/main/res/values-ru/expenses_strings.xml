@@ -103,4 +103,10 @@
     <string name="settle_up_send">Отправить</string>
     <string name="settle_up_cancel">Отмена</string>
     <string name="settle_up_iban_save_failed">Не удалось сохранить IBAN. Расчёт не отправлен.</string>
+    <string name="expense_question_title">Поставить расход под вопрос?</string>
+    <string name="expense_question_body">Расход «%2$s» внёс(ла) %1$s. В чат придёт карточка о том, что вы ставите его под вопрос, и она останется в записи. Изменить или удалить расход может только %1$s — напишите причину в чате.</string>
+    <string name="expense_question_confirm">Поставить под вопрос</string>
+    <string name="expense_question_sent">Отправлено в чат. Напишите там причину.</string>
+    <string name="expense_question_failed">Не удалось отправить вопрос.</string>
+    <string name="expense_question_cancel">Отмена</string>
 </resources>

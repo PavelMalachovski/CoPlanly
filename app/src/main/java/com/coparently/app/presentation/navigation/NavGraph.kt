@@ -1465,6 +1465,8 @@ private fun PushDestinationEffect(
                     navController.navigate(Screen.ChildInfo.route) { launchSingleTop = true }
                 PushDestination.PROFESSIONALS ->
                     navController.navigate(Screen.Professionals.route) { launchSingleTop = true }
+                PushDestination.FRIENDS ->
+                    navController.navigate(Screen.Friends.route) { launchSingleTop = true }
             }
             open.onConsumed()
         }

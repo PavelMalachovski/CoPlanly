@@ -105,4 +105,10 @@
     <string name="settle_up_send">Odeslat</string>
     <string name="settle_up_cancel">Zrušit</string>
     <string name="settle_up_iban_save_failed">IBAN se nepodařilo uložit. Vyrovnání nebylo odesláno.</string>
+    <string name="expense_question_title">Zpochybnit tento výdaj?</string>
+    <string name="expense_question_body">Výdaj „%2$s“ zapsal(a) %1$s. Do chatu přijde karta, že ho zpochybňujete, a zůstane v záznamu. Změnit nebo smazat ho může jen %1$s — napište důvod do chatu.</string>
+    <string name="expense_question_confirm">Zpochybnit</string>
+    <string name="expense_question_sent">Odesláno do chatu. Napište tam důvod.</string>
+    <string name="expense_question_failed">Námitku se nepodařilo odeslat.</string>
+    <string name="expense_question_cancel">Zrušit</string>
 </resources>

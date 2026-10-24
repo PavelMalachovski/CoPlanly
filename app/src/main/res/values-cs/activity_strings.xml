@@ -12,6 +12,7 @@
     <string name="activity_expense_added">Nový výdaj: %1$s</string>
     <string name="activity_expense_updated">Výdaj změněn: %1$s</string>
     <string name="activity_expense_deleted">Výdaj smazán: %1$s</string>
+    <string name="activity_expense_questioned">Zpochybňuje výdaj: %1$s</string>
     <string name="activity_day_swap_offered">Nabídnuta výměna dne: %1$s</string>
     <string name="activity_day_swap_accepted">Výměna dne domluvena: %1$s</string>
     <string name="activity_day_swap_declined">Výměna dne odmítnuta: %1$s</string>

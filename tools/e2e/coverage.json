@@ -381,6 +381,11 @@
         "TwoParentFamilyRecordsTest#recordsMadeBeforePairingAreSharedWithTheNewCoParentAndAnnouncedOnce"
       ]
     },
+    "calendar_friend_accepted": {
+      "e2e": [
+        "TwoParentAccessTest#aCalendarFriendReadsTheFamilysEventsUntilAParentRevokesTheGrant"
+      ]
+    },
     "professional_access_requested": {
       "e2e": [
         "TwoParentAccessTest#aProfessionalReadsNothingUntilBothParentsConsentAndNeverTheChat"

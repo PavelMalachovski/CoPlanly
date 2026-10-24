@@ -62,6 +62,7 @@ class ChatCardTargetTest {
         ActivityKind.EXPENSE_ADDED to Expectation(ActivityEntityType.EXPENSE, null),
         ActivityKind.EXPENSE_UPDATED to Expectation(ActivityEntityType.EXPENSE, null),
         ActivityKind.EXPENSE_DELETED to Expectation(ActivityEntityType.EXPENSE, null),
+        ActivityKind.EXPENSE_QUESTIONED to Expectation(ActivityEntityType.EXPENSE, null),
         ActivityKind.DAY_SWAP_OFFERED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
         ActivityKind.DAY_SWAP_ACCEPTED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
         ActivityKind.DAY_SWAP_DECLINED to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
