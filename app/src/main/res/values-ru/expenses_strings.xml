@@ -21,6 +21,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Второй родитель должен вам %1$s</string>
     <string name="expenses_balance_you_owe">Вы должны второму родителю %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">%1$s: вам должны %2$s</string>
+    <string name="expenses_balance_you_owe_named">%1$s: вы должны %2$s</string>
     <string name="expenses_balance_settled">Вы в расчёте</string>
     <string name="expenses_settle_up">Рассчитаться</string>
     <string name="expenses_this_month">Этот месяц</string>

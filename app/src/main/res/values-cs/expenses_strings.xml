@@ -21,6 +21,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Druhý rodič vám dluží %1$s</string>
     <string name="expenses_balance_you_owe">Dlužíte druhému rodiči %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">%1$s vám dluží %2$s</string>
+    <string name="expenses_balance_you_owe_named">%1$s: dlužíte %2$s</string>
     <string name="expenses_balance_settled">Máte vyrovnáno</string>
     <string name="expenses_settle_up">Vyrovnat</string>
     <string name="expenses_this_month">Tento měsíc</string>

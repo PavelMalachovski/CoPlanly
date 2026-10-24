@@ -169,6 +169,7 @@ internal fun AwaitingDialogs(
 
         is HomeAsk.Requests ->
             RequestsDialog(
+                coParentName = parentNames.parents.coParent?.name?.takeIf { it.isNotBlank() },
                 onDismiss = { dismiss(ask.keys) },
                 onReview = actions.onOpenChangeRequests
             )
@@ -386,13 +387,21 @@ private fun swapDialogMessage(swapGroup: DaySwapGroup, parentNames: ParentNames)
     }
 }
 
-/** The event change requests waiting, as one summary that routes to the inbox. */
+/**
+ * The event change requests waiting, as one summary that routes to the inbox. It names the
+ * co-parent when the name is known.
+ */
 @Composable
-private fun RequestsDialog(onDismiss: () -> Unit, onReview: () -> Unit) {
+private fun RequestsDialog(coParentName: String?, onDismiss: () -> Unit, onReview: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_dialog_requests_title)) },
-        text = { Text(stringResource(R.string.home_dialog_requests_message)) },
+        text = {
+            Text(
+                coParentName?.let { stringResource(R.string.home_dialog_requests_message_named, it) }
+                    ?: stringResource(R.string.home_dialog_requests_message)
+            )
+        },
         confirmButton = {
             TextButton(onClick = {
                 onDismiss()

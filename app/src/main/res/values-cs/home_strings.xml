@@ -52,6 +52,7 @@
     <string name="home_dialog_swap_message">%1$s navrhuje změnit, u koho bude dítě: %2$s.</string>
     <string name="home_dialog_requests_title">Žádosti o změnu</string>
     <string name="home_dialog_requests_message">Druhý rodič čeká na vaši odpověď na žádosti.</string>
+    <string name="home_dialog_requests_message_named">%1$s čeká na vaši odpověď na žádosti.</string>
     <string name="home_dialog_later">Později</string>
     <string name="home_dialog_review">Zkontrolovat</string>
     <plurals name="home_dialog_swap_message_days">
