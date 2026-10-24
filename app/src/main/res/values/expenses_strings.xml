@@ -2,6 +2,7 @@
 <!-- Expenses feature strings. Kept out of strings.xml because
      strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
+    <string name="expenses_back">Back</string>
     <string name="expenses_add">Add expense</string>
     <string name="expenses_summary_this_month">Summary (this month)</string>
     <string name="expenses_summary_total">Total</string>

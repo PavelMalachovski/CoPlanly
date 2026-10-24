@@ -117,10 +117,10 @@ class IsolationScenarioTest : QaOnScreenTest() {
 
         report.step(
             id = "expenses_list",
-            title = "The Expenses tab in the family with $onScreenCoParent",
+            title = "Expenses in the family with $onScreenCoParent",
             expected = "\"${mine.expense}\" is listed; \"${theirs.expense}\" is not"
         ) {
-            openTab(BottomNavDestination.EXPENSES)
+            openExpenses()
             awaitDelivered(this, "the family's expense", hasText(mine.expense, substring = true), false)
             check(!composeTestRule.exists(hasText(theirs.expense, substring = true))) {
                 "the other family's expense \"${theirs.expense}\" is listed"

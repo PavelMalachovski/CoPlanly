@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Zpět</string>
     <string name="expenses_add">Přidat výdaj</string>
     <string name="expenses_summary_this_month">Přehled (tento měsíc)</string>
     <string name="expenses_summary_total">Celkem</string>

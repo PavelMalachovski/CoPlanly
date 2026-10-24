@@ -90,7 +90,7 @@ class MainNavigationSmokeTest {
         for (destination in listOf(
             BottomNavDestination.CALENDAR,
             BottomNavDestination.CHAT,
-            BottomNavDestination.EXPENSES,
+            BottomNavDestination.FAMILY,
             BottomNavDestination.HOME
         )) {
             openTab(destination)
@@ -125,10 +125,35 @@ class MainNavigationSmokeTest {
         composeTestRule.assertIconOnlyControlsAreAccessible("Calendar (month)")
         openTab(BottomNavDestination.CHAT)
         composeTestRule.assertIconOnlyControlsAreAccessible("Chat")
-        openTab(BottomNavDestination.EXPENSES)
+        openTab(BottomNavDestination.FAMILY)
+        composeTestRule.assertIconOnlyControlsAreAccessible("Family")
+        openExpensesFromFamily()
         composeTestRule.assertIconOnlyControlsAreAccessible("Expenses")
         openSettingsFromHome()
         composeTestRule.assertIconOnlyControlsAreAccessible("Settings")
+    }
+
+    /**
+     * The Family tab replaced the Expenses tab (new-user review, October 2026): Expenses opens from
+     * its money card as a detail screen, without the bottom bar, and Back returns to the tab.
+     */
+    @Test
+    fun expenses_opensFromTheFamilyTab_andBackReturnsThere() {
+        openTab(BottomNavDestination.FAMILY)
+        openExpensesFromFamily()
+        assertFalse("the bottom bar is hidden on Expenses", composeTestRule.exists(bottomBar))
+
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.pumpUntil("the Family tab again after Back") { exists(bottomBar) }
+        tab(BottomNavDestination.FAMILY).assertIsSelected()
+    }
+
+    private fun openExpensesFromFamily() {
+        composeTestRule.onNode(
+            hasText(string(R.string.family_money_this_month), substring = true) and hasClickAction()
+        ).performClick()
+        composeTestRule.pumpUntil("Expenses") { exists(hasText(string(R.string.expenses_title))) }
+        composeTestRule.settle()
     }
 
     private fun tab(destination: BottomNavDestination) =

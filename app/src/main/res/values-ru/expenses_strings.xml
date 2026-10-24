@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Назад</string>
     <string name="expenses_add">Добавить расход</string>
     <string name="expenses_summary_this_month">Сводка за месяц</string>
     <string name="expenses_summary_total">Итого</string>

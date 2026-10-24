@@ -303,11 +303,11 @@ fun NavGraph(
                         onNavigateToPairing = {
                             navController.navigate(Screen.Pairing.routeWithCode(null))
                         },
-                        // The dashboard's stat tiles deep-link into the tabs that own those
-                        // numbers, so they behave exactly like tapping the tab itself — same
-                        // back stack, same restored state, bottom bar highlights correctly.
+                        // The dashboard's stat tiles deep-link into what owns those numbers:
+                        // Expenses, a detail screen since the Family tab replaced its tab, and the
+                        // Chat tab, through navigateToTab like tapping the tab itself.
                         onOpenExpenses = {
-                            navController.navigateToTab(BottomNavDestination.EXPENSES)
+                            navController.navigate(Screen.Expenses.route)
                         },
                         onOpenChat = {
                             navController.navigateToTab(BottomNavDestination.CHAT)
@@ -1133,31 +1133,58 @@ fun NavGraph(
                     )
                 }
 
-                // Expenses
+                // The Family tab (new-user review, October 2026): it replaced the Expenses tab and
+                // holds what Settings used to — the family's money, arrangements, records and people.
                 composable(
-                    route = Screen.Expenses.route,
+                    route = Screen.Family.route,
                     enterTransition = { tabEnter(forward = true) },
                     exitTransition = { tabExit(forward = true) },
                     popEnterTransition = { tabEnter(forward = false) },
                     popExitTransition = { tabExit(forward = false) }
                 ) {
+                    com.coparently.app.presentation.family.FamilyScreen(
+                        destinations = com.coparently.app.presentation.family.FamilyDestinations(
+                            expenses = { navController.navigate(Screen.Expenses.route) },
+                            custody = { navController.navigate(Screen.CustodySetup.routeFor()) },
+                            parentingPlan = { navController.navigate(Screen.ParentingPlan.route) },
+                            export = { navController.navigate(Screen.Export.createRoute()) },
+                            monthReview = { navController.navigate(Screen.MonthReview.route) },
+                            childInfo = { navController.navigate(Screen.ChildInfo.route) },
+                            pets = { navController.navigate(Screen.Pets.route) },
+                            contacts = { navController.navigate(Screen.Contacts.route) },
+                            documents = { navController.navigate(Screen.Documents.route) },
+                            pairing = { navController.navigate(Screen.Pairing.routeWithCode(null)) },
+                            myProfile = { navController.navigate(Screen.MyProfile.route) },
+                            coParentProfile = { navController.navigate(Screen.CoParentProfile.route) },
+                            friends = { navController.navigate(Screen.Friends.route) },
+                            professionals = { navController.navigate(Screen.Professionals.route) },
+                            unassignedRecords = { navController.navigate(Screen.UnassignedRecords.route) },
+                            journal = { navController.navigate(Screen.Journal.route) },
+                            stickers = { navController.navigate(Screen.Stickers.route) },
+                            settings = { navController.navigate(Screen.Settings.route) }
+                        )
+                    )
+                }
+
+                // Expenses: a detail screen since the Family tab replaced its tab, opened from the
+                // tab's money card, Home's spend tile and a push. Full width rather than `pane()`
+                // (design item 19's one exception): from 840 dp it lays the month out in two panes,
+                // which a 640 dp column would squeeze.
+                composable(route = Screen.Expenses.route) {
                     com.coparently.app.presentation.expenses.ExpenseScreen(
+                        onNavigateUp = { navController.popBackStack() },
                         onAddExpense = {
                             navController.navigate(Screen.AddExpense.route)
                         },
                         onEditExpense = { expenseId ->
                             navController.navigate(Screen.EditExpense.createRoute(expenseId))
                         },
-                        onOpenSettings = {
-                            navController.navigate(Screen.Settings.route)
-                        },
                         onSettleUp = {
                             // The settle-up card is already in the thread (`SettleUpDialog`); this
                             // only shows it. Same tab semantics as navigateToTab — a plain
-                            // navigate() here was the one path that pushed the Chat route onto the
-                            // Expenses tab's stack, so the next tab switch saved that mixed stack
-                            // and every later visit to Expenses restored the chat screen on top of
-                            // it instead of the expenses list.
+                            // navigate() here pushed the Chat route onto the tab Expenses was
+                            // opened from, so the next tab switch saved that mixed stack and a
+                            // later visit restored the chat screen on top of it.
                             navController.navigate(Screen.Conversations.createRoute()) {
                                 popUpTo(Screen.Home.route) { saveState = true }
                                 launchSingleTop = true
@@ -1472,7 +1499,11 @@ private fun PushDestinationEffect(
             when (target) {
                 PushDestination.HOME -> navController.navigateToTab(BottomNavDestination.HOME)
                 PushDestination.CALENDAR -> navController.navigateToTab(BottomNavDestination.CALENDAR)
-                PushDestination.EXPENSES -> navController.navigateToTab(BottomNavDestination.EXPENSES)
+                PushDestination.EXPENSES -> {
+                    // Expenses over the Family tab, so Back lands on the tab it belongs to.
+                    navController.navigateToTab(BottomNavDestination.FAMILY)
+                    navController.navigate(Screen.Expenses.route) { launchSingleTop = true }
+                }
                 PushDestination.CHANGE_REQUESTS ->
                     navController.navigate(Screen.ChangeRequests.createRoute()) { launchSingleTop = true }
                 PushDestination.CHILD_INFO ->
@@ -1832,6 +1863,7 @@ sealed class Screen(val route: String) {
         }
     }
     data object Expenses : Screen("expenses")
+    data object Family : Screen("family")
     data object AddExpense : Screen("add_expense")
     data object EditExpense : Screen("edit_expense/{expenseId}") {
         const val ARG_EXPENSE_ID = "expenseId"

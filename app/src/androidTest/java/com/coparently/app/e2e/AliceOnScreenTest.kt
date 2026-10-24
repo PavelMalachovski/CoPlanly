@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -292,6 +294,28 @@ abstract class AliceOnScreenTest {
     /** Opens one of the four tabs through the tab bar. */
     protected fun openTab(destination: BottomNavDestination) {
         tap(hasAnyAncestor(tabBar) and hasText(string(destination.labelRes)) and hasClickAction())
+    }
+
+    /**
+     * Opens Expenses the way a parent does since the Family tab replaced its tab (new-user review,
+     * October 2026): the tab, then its money card.
+     */
+    protected fun openExpenses() {
+        openTab(BottomNavDestination.FAMILY)
+        tap(hasText(string(R.string.family_money_this_month), substring = true) and hasClickAction())
+        waitFor("Expenses", hasText(string(R.string.expenses_title)))
+    }
+
+    /**
+     * Opens a row of the Family tab by its title, through the row's click action: the row may sit
+     * below the fold, and `performScrollTo` waits on a scroll the paused clock never advances.
+     */
+    protected fun openFamilyRow(titleRes: Int) {
+        openTab(BottomNavDestination.FAMILY)
+        val row = hasText(string(titleRes)) and hasClickAction()
+        waitFor("the ${string(titleRes)} row on the Family tab", row)
+        composeTestRule.onAllNodes(row).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.settle()
     }
 
     /** Types [text] into the chat composer on screen and presses Send. */

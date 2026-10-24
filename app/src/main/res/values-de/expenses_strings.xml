@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Zurück</string>
     <string name="expenses_add">Ausgabe hinzufügen</string>
     <string name="expenses_summary_this_month">Übersicht (dieser Monat)</string>
     <string name="expenses_summary_total">Gesamt</string>
