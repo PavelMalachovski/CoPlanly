@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.home.MonthSpendDependencies
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import javax.inject.Inject
@@ -49,7 +51,9 @@ class FamilyViewModel @Inject constructor(
         monthSpendDependencies.familyViewSource.observe(),
         monthSpendDependencies.preferencesRepository.getDefaultCurrencyFlow(),
         userId,
-        parentsSource.observe()
+        // Nobody known yet is an answer, as on Home: the spend shows at once and the balance
+        // joins when the profiles load, rather than the whole card waiting on them.
+        parentsSource.observe().onStart { emit(Parents()) }
     ) { expenses, view, currency, uid, parents ->
         MonthMoney.of(expenses, view, LocalDate.now(), currency, uid, parents.roleByUid)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
