@@ -7,8 +7,8 @@ import com.coparently.app.R
 import kotlin.math.abs
 
 /**
- * One of the four colours a parent may pick with one tap. Any other colour is a custom one,
- * picked on the wheel ([ParentColor.custom]).
+ * One of the eighteen colours a parent may pick with one tap from the grid ([GRID]). Any other
+ * colour is a custom one, picked on the wheel ([ParentColor.custom]).
  *
  * **The colour stopped being derived from the slot** (owner decision, Aug 2026). It used to be:
  * slot 1 pink, slot 2 blue, with pairing deciding who got which. That was already arbitrary —
@@ -73,7 +73,91 @@ enum class ParentColorChoice(
         DEEP_ORANGE_TEXT_ON_DARK,
         DEEP_ORANGE_TEXT_ON_LIGHT,
         R.string.parent_color_orange
-    );
+    ),
+
+    // The grid's other fourteen (October 2026, owner decision: "more ready colours, as a grid like
+    // Google Calendar's"). Each keeps its reference colour's hue and saturation and moves only as
+    // far as every tone's luminance target needs (`ParentToneMath`'s targets, at the reference
+    // saturation rather than full), so a pastel draws darker on the light theme than its name
+    // suggests and keeps its softness in the dark one. `ParentColorsTest` holds them to what the
+    // four above clear.
+
+    /** Reference #D50000. */
+    TOMATO(swatch("tomato"), TOMATO_FILL, TOMATO_DARK_FILL, TOMATO_TEXT_ON_DARK, TOMATO_TEXT_ON_LIGHT, R.string.parent_color_tomato),
+
+    /** Reference #E67C73; the light theme's fill is a deeper coral. */
+    FLAMINGO(
+        swatch("flamingo"),
+        FLAMINGO_FILL,
+        FLAMINGO_DARK_FILL,
+        FLAMINGO_TEXT_ON_DARK,
+        FLAMINGO_TEXT_ON_LIGHT,
+        R.string.parent_color_flamingo
+    ),
+
+    /** Reference #F4511E. */
+    TANGERINE(
+        swatch("tangerine"),
+        TANGERINE_FILL,
+        TANGERINE_DARK_FILL,
+        TANGERINE_TEXT_ON_DARK,
+        TANGERINE_TEXT_ON_LIGHT,
+        R.string.parent_color_tangerine
+    ),
+
+    /** Reference #F6BF26; ochre on the light theme, where a yellow could not show on white. */
+    BANANA(swatch("banana"), BANANA_FILL, BANANA_DARK_FILL, BANANA_TEXT_ON_DARK, BANANA_TEXT_ON_LIGHT, R.string.parent_color_banana),
+
+    /** Reference #33B679. */
+    SAGE(swatch("sage"), SAGE_FILL, SAGE_DARK_FILL, SAGE_TEXT_ON_DARK, SAGE_TEXT_ON_LIGHT, R.string.parent_color_sage),
+
+    /** Reference #0B8043. */
+    BASIL(swatch("basil"), BASIL_FILL, BASIL_DARK_FILL, BASIL_TEXT_ON_DARK, BASIL_TEXT_ON_LIGHT, R.string.parent_color_basil),
+
+    /** Reference #039BE5, hue 200° — outside the calendar friend's teal band. */
+    PEACOCK(
+        swatch("peacock"),
+        PEACOCK_FILL,
+        PEACOCK_DARK_FILL,
+        PEACOCK_TEXT_ON_DARK,
+        PEACOCK_TEXT_ON_LIGHT,
+        R.string.parent_color_peacock
+    ),
+
+    /** Reference #3F51B5. */
+    BLUEBERRY(
+        swatch("blueberry"),
+        BLUEBERRY_FILL,
+        BLUEBERRY_DARK_FILL,
+        BLUEBERRY_TEXT_ON_DARK,
+        BLUEBERRY_TEXT_ON_LIGHT,
+        R.string.parent_color_blueberry
+    ),
+
+    /** Reference #7986CB. */
+    LAVENDER(
+        swatch("lavender"),
+        LAVENDER_FILL,
+        LAVENDER_DARK_FILL,
+        LAVENDER_TEXT_ON_DARK,
+        LAVENDER_TEXT_ON_LIGHT,
+        R.string.parent_color_lavender
+    ),
+
+    /** Reference #8E24AA. */
+    GRAPE(swatch("grape"), GRAPE_FILL, GRAPE_DARK_FILL, GRAPE_TEXT_ON_DARK, GRAPE_TEXT_ON_LIGHT, R.string.parent_color_grape),
+
+    /** Reference #795548. */
+    COCOA(swatch("cocoa"), COCOA_FILL, COCOA_DARK_FILL, COCOA_TEXT_ON_DARK, COCOA_TEXT_ON_LIGHT, R.string.parent_color_cocoa),
+
+    /** Reference #AD1457. */
+    CHERRY(swatch("cherry"), CHERRY_FILL, CHERRY_DARK_FILL, CHERRY_TEXT_ON_DARK, CHERRY_TEXT_ON_LIGHT, R.string.parent_color_cherry),
+
+    /** Reference #827717. */
+    OLIVE(swatch("olive"), OLIVE_FILL, OLIVE_DARK_FILL, OLIVE_TEXT_ON_DARK, OLIVE_TEXT_ON_LIGHT, R.string.parent_color_olive),
+
+    /** Reference #283593. */
+    INDIGO(swatch("indigo"), INDIGO_FILL, INDIGO_DARK_FILL, INDIGO_TEXT_ON_DARK, INDIGO_TEXT_ON_LIGHT, R.string.parent_color_indigo);
 
     /** This preset as the palette draws it. */
     val color: ParentColor by lazy {
@@ -111,6 +195,28 @@ enum class ParentColorChoice(
          * somebody actually picks something.
          */
         fun defaultFor(slot: String): ParentColorChoice = if (slot == "dad") BLUE else PINK
+
+        /**
+         * The four colours the app had before the grid, in the order they were always offered.
+         * Onboarding still shows these four; the grid in Settings shows them among [GRID].
+         */
+        val ORIGINAL: List<ParentColorChoice> = listOf(PINK, BLUE, PURPLE, ORANGE)
+
+        /**
+         * The order the Settings grid shows, five to a row, the hues running round the wheel.
+         *
+         * **Not the declaration order, on purpose.** When two parents' colours collide,
+         * `ParentPalette` draws the yielding one in the first entry of [entries] clear of the
+         * other. Declaring [ORIGINAL] first keeps that fallback exactly what it was — a family
+         * where both chose pink still sees blue for the second parent — whatever order the grid
+         * puts on screen.
+         */
+        val GRID: List<ParentColorChoice> = listOf(
+            TOMATO, FLAMINGO, PINK, TANGERINE, BANANA,
+            SAGE, BASIL, PEACOCK, BLUE, BLUEBERRY,
+            LAVENDER, GRAPE, PURPLE, COCOA, ORANGE,
+            CHERRY, OLIVE, INDIGO
+        )
     }
 }
 
@@ -313,3 +419,66 @@ private const val DEEP_ORANGE_700 = 0xFFE64A19
 private const val DEEP_ORANGE_A200 = 0xFFFF6E40
 private const val DEEP_ORANGE_TEXT_ON_DARK = 0xFFFFA98F
 private const val DEEP_ORANGE_TEXT_ON_LIGHT = 0xFFA02F00
+
+// The grid colours' tones: fill (light theme), dark-theme fill, text on the dark theme, text on the
+// light theme (also the chip). Placed by `ParentToneMath`'s luminance targets at each reference
+// colour's own saturation.
+private const val TOMATO_FILL = 0xFFD50000
+private const val TOMATO_DARK_FILL = 0xFFFF4D4D
+private const val TOMATO_TEXT_ON_DARK = 0xFFFFA3A3
+private const val TOMATO_TEXT_ON_LIGHT = 0xFFA50000
+private const val FLAMINGO_FILL = 0xFFDC463A
+private const val FLAMINGO_DARK_FILL = 0xFFE67C73
+private const val FLAMINGO_TEXT_ON_DARK = 0xFFEFABA5
+private const val FLAMINGO_TEXT_ON_LIGHT = 0xFF97251B
+private const val TANGERINE_FILL = 0xFFE33F0B
+private const val TANGERINE_DARK_FILL = 0xFFF55B2A
+private const val TANGERINE_TEXT_ON_DARK = 0xFFF9A88E
+private const val TANGERINE_TEXT_ON_LIGHT = 0xFF952907
+private const val BANANA_FILL = 0xFF9D7507
+private const val BANANA_DARK_FILL = 0xFFE3A909
+private const val BANANA_TEXT_ON_DARK = 0xFFF9D46C
+private const val BANANA_TEXT_ON_LIGHT = 0xFF654C04
+private const val SAGE_FILL = 0xFF278C5D
+private const val SAGE_DARK_FILL = 0xFF33B679
+private const val SAGE_TEXT_ON_DARK = 0xFF87DEB5
+private const val SAGE_TEXT_ON_LIGHT = 0xFF195A3C
+private const val BASIL_FILL = 0xFF0B8043
+private const val BASIL_DARK_FILL = 0xFF0EA456
+private const val BASIL_TEXT_ON_DARK = 0xFF72F3B0
+private const val BASIL_TEXT_ON_LIGHT = 0xFF085C30
+private const val PEACOCK_FILL = 0xFF0382C1
+private const val PEACOCK_DARK_FILL = 0xFF039BE5
+private const val PEACOCK_TEXT_ON_DARK = 0xFF68CCFD
+private const val PEACOCK_TEXT_ON_LIGHT = 0xFF02557D
+private const val BLUEBERRY_FILL = 0xFF3F51B5
+private const val BLUEBERRY_DARK_FILL = 0xFF7D8AD2
+private const val BLUEBERRY_TEXT_ON_DARK = 0xFFB2BAE4
+private const val BLUEBERRY_TEXT_ON_LIGHT = 0xFF3847A0
+private const val LAVENDER_FILL = 0xFF6876C4
+private const val LAVENDER_DARK_FILL = 0xFF7E8ACD
+private const val LAVENDER_TEXT_ON_DARK = 0xFFB2BAE1
+private const val LAVENDER_TEXT_ON_LIGHT = 0xFF3B4998
+private const val GRAPE_FILL = 0xFF8E24AA
+private const val GRAPE_DARK_FILL = 0xFFC667DF
+private const val GRAPE_TEXT_ON_DARK = 0xFFDEA9ED
+private const val GRAPE_TEXT_ON_LIGHT = 0xFF802199
+private const val COCOA_FILL = 0xFF795548
+private const val COCOA_DARK_FILL = 0xFFAE8576
+private const val COCOA_TEXT_ON_DARK = 0xFFCFB7AE
+private const val COCOA_TEXT_ON_LIGHT = 0xFF67493E
+private const val CHERRY_FILL = 0xFFAD1457
+private const val CHERRY_DARK_FILL = 0xFFEC5898
+private const val CHERRY_TEXT_ON_DARK = 0xFFF5A4C7
+private const val CHERRY_TEXT_ON_LIGHT = 0xFF9B124E
+private const val OLIVE_FILL = 0xFF827717
+private const val OLIVE_DARK_FILL = 0xFF9D901C
+private const val OLIVE_TEXT_ON_DARK = 0xFFE8DD7D
+private const val OLIVE_TEXT_ON_LIGHT = 0xFF585110
+private const val INDIGO_FILL = 0xFF283593
+private const val INDIGO_DARK_FILL = 0xFF7C88DB
+private const val INDIGO_TEXT_ON_DARK = 0xFFB2B9EA
+private const val INDIGO_TEXT_ON_LIGHT = 0xFF3242B7
+
+/** The stored code of a grid colour: see [ParentColorCode.SWATCH_PREFIX]. */
+private fun swatch(name: String): String = ParentColorCode.SWATCH_PREFIX + name

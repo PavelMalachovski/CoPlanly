@@ -22,6 +22,17 @@ object ParentColorCode {
     /** The version tag of a custom colour. A new format gets a new tag, never a new meaning. */
     const val CUSTOM_PREFIX = "hue1|"
 
+    /**
+     * The version tag of a grid colour added in October 2026 (`sw1|tomato`), beside the four
+     * original presets, which keep the hex they were always stored as.
+     *
+     * A tag and not a hex for [CUSTOM_PREFIX]'s reason: a hex reader cannot tell a chosen colour
+     * from the `#FF4081` older builds wrote for nobody's choice. An older build reads the tag as
+     * "not chosen" and draws its slot default, which is honest for a colour it cannot draw. The
+     * name after the tag is an identifier: it is never renamed, whatever the label says.
+     */
+    const val SWATCH_PREFIX = "sw1|"
+
     /** The stored form of [hue], brought onto the wheel first. */
     fun custom(hue: Int): String = CUSTOM_PREFIX + hue.mod(FULL_TURN)
 
