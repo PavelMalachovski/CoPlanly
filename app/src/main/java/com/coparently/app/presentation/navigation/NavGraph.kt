@@ -484,15 +484,6 @@ fun NavGraph(
                         // Reached via the gear action in the top-level top bars — it opens as
                         // a detail screen, so it gets a back arrow.
                         onNavigateUp = { navController.popBackStack() },
-                        onNavigateToChildInfo = {
-                            navController.navigate(Screen.ChildInfo.route)
-                        },
-                        onNavigateToPets = {
-                            navController.navigate(Screen.Pets.route)
-                        },
-                        onNavigateToFriends = {
-                            navController.navigate(Screen.Friends.route)
-                        },
                         onNavigateToCalendarFeed = {
                             navController.navigate(Screen.CalendarFeed.route)
                         },
@@ -501,42 +492,6 @@ fun NavGraph(
                         },
                         onNavigateToDataSources = {
                             navController.navigate(Screen.DataSources.route)
-                        },
-                        onNavigateToProfessionals = {
-                            navController.navigate(Screen.Professionals.route)
-                        },
-                        onNavigateToPairing = {
-                            navController.navigate(Screen.Pairing.routeWithCode(null))
-                        },
-                        onNavigateToCustodySetup = {
-                            navController.navigate(Screen.CustodySetup.routeFor())
-                        },
-                        onNavigateToParentingPlan = {
-                            navController.navigate(Screen.ParentingPlan.route)
-                        },
-                        onNavigateToExport = {
-                            navController.navigate(Screen.Export.createRoute())
-                        },
-                        onNavigateToMonthReview = {
-                            navController.navigate(Screen.MonthReview.route)
-                        },
-                        onNavigateToDocuments = {
-                            navController.navigate(Screen.Documents.route)
-                        },
-                        onNavigateToJournal = {
-                            navController.navigate(Screen.Journal.route)
-                        },
-                        onNavigateToStickers = {
-                            navController.navigate(Screen.Stickers.route)
-                        },
-                        onNavigateToMyProfile = {
-                            navController.navigate(Screen.MyProfile.route)
-                        },
-                        onNavigateToCoParentProfile = {
-                            navController.navigate(Screen.CoParentProfile.route)
-                        },
-                        onNavigateToUnassignedRecords = {
-                            navController.navigate(Screen.UnassignedRecords.route)
                         },
                         onStartGoogleSignIn = googleSignInCallback,
                         onSignOut = {

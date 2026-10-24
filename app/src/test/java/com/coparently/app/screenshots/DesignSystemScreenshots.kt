@@ -130,11 +130,11 @@ private fun Chevron() {
     )
 }
 
-/** Settings' Family group as the screen draws it; shared with [ContrastScreenshots]. */
+/** The Family tab's People rows in Settings' row anatomy; shared with [ContrastScreenshots]. */
 @Composable
 internal fun SettingsFamilyGroupFixture() {
     Column {
-        GroupLabel(stringResource(R.string.settings_group_family))
+        GroupLabel(stringResource(R.string.family_group_people))
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.Group,

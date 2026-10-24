@@ -74,7 +74,7 @@ class PerAppLocaleTest {
     fun settings_rendersInEachShippedLanguage() {
         for (tag in listOf("cs", "de", "ru", "uk")) {
             val title = localized(tag, R.string.settings_title)
-            val familyGroup = localized(tag, R.string.settings_group_family)
+            val firstGroup = localized(tag, R.string.settings_group_sync)
             val gear = localized(tag, R.string.nav_settings)
             assertNotEquals("$tag has its own Settings title", localized("en", R.string.settings_title), title)
 
@@ -84,7 +84,7 @@ class PerAppLocaleTest {
                 composeTestRule.settle()
                 composeTestRule.onNode(hasContentDescription(gear) and hasClickAction()).performClick()
                 composeTestRule.pumpUntil("Settings titled \"$title\"") {
-                    exists(hasText(title)) && exists(hasText(familyGroup, ignoreCase = true))
+                    exists(hasText(title)) && exists(hasText(firstGroup, ignoreCase = true))
                 }
             }
         }

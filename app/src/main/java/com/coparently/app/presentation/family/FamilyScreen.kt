@@ -186,7 +186,7 @@ fun FamilyScreen(
                 actions = {
                     FamilySwitcherChip()
                     IconButton(onClick = destinations.settings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings_title))
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings))
                     }
                 }
             )

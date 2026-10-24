@@ -52,7 +52,6 @@
     <string name="settings_navigate">Open</string>
 
     <!-- Group headers for the four settings sections. -->
-    <string name="settings_group_family">FAMILY</string>
     <string name="settings_group_sync">SYNC</string>
     <string name="settings_group_app">APP</string>
     <string name="settings_group_account">ACCOUNT</string>
