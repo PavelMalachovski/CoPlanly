@@ -374,14 +374,12 @@ class UiTourTest : AliceOnScreenTest() {
     /** Opens the Family tab and presses the row titled [rowTitle] (a part of its text with [substring]). */
     private fun openFamilyRow(rowTitle: Int, substring: Boolean = false) {
         driver.backToTabs()
-        // After a Back the pop transition is still running on the paused clock: the tab item is in
-        // the tree but cannot take a touch yet. Let the transition finish, then wait for the item.
-        driver.linger()
-        driver.await(
+        // Through the item's click action, as every row is pressed: right after a Back the item is
+        // in the tree but a touch injected at its bounds is refused (the tour lost seven screens).
+        driver.press(
             "the Family tab",
             hasAnyAncestor(tabBar) and hasText(string(BottomNavDestination.FAMILY.labelRes)) and hasClickAction()
         )
-        openTab(BottomNavDestination.FAMILY)
         driver.press(string(rowTitle), hasText(string(rowTitle), substring = substring) and hasClickAction())
     }
 
