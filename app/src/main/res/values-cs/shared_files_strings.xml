@@ -23,7 +23,7 @@
     <string name="documents_add_dialog_category_label">Kategorie</string>
     <string name="documents_add_dialog_confirm">Nahrát a sdílet</string>
     <string name="documents_uploading">Nahrávání…</string>
-    <string name="documents_row_meta">%1$s · přidal(a) %2$s · %3$s</string>
+    <string name="documents_row_meta">%1$s · autor: %2$s · %3$s</string>
     <string name="documents_delete">Smazat dokument</string>
     <string name="documents_delete_confirm_title">Smazat tento dokument?</string>
     <string name="documents_delete_confirm_body">Zmizí z dokumentů obou rodičů. Samotný soubor bude ze serveru odstraněn po 90 dnech.</string>

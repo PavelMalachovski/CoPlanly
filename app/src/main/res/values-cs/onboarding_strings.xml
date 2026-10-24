@@ -31,10 +31,10 @@
     <string name="onboarding_coparent_invite">Pozvat druhého rodiče</string>
     <string name="onboarding_coparent_later">Teď ne</string>
     <string name="onboarding_coparent_linked_title">Propojeno: %1$s</string>
-    <string name="onboarding_coparent_linked_body">Všechno, co už %1$s zadal(a), se přenese k vám. Zkontrolujte to v dalších krocích a doplňte, co chybí.</string>
-    <string name="onboarding_coparent_fetching">Načítáme, co zadal(a) %1$s…</string>
+    <string name="onboarding_coparent_linked_body">Všechno, co je už zadané (%1$s), se přenese k vám. Zkontrolujte to v dalších krocích a doplňte, co chybí.</string>
+    <string name="onboarding_coparent_fetching">Načítáme záznamy (%1$s)…</string>
     <string name="onboarding_coparent_fetching_hint">Můžete pokračovat. Co ještě nedorazilo, dorazí na pozadí.</string>
-    <string name="onboarding_coparent_found_title">Už zadal(a) %1$s</string>
+    <string name="onboarding_coparent_found_title">Už zadáno (%1$s)</string>
     <string name="onboarding_coparent_found_children">Děti</string>
     <string name="onboarding_coparent_found_pets">Mazlíčci</string>
     <string name="onboarding_coparent_found_custody">Rozvrh péče</string>

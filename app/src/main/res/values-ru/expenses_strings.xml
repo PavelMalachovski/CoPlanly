@@ -87,7 +87,7 @@
     <string name="expenses_filter_members">Показать для</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Ждём ответа</string>
-    <string name="expenses_split_proposal_waiting_body_named">Вы предложили: %1$s. %2$s ещё не ответил(а).</string>
+    <string name="expenses_split_proposal_waiting_body_named">Вы предложили: %1$s. Ответа пока нет (%2$s).</string>
     <string name="expenses_split_proposal_withdraw">Отозвать</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->

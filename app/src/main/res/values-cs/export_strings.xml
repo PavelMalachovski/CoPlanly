@@ -44,7 +44,7 @@
     <string name="export_col_item">ID položky</string>
     <string name="export_col_revision">Verze</string>
     <string name="export_col_action">Akce</string>
-    <string name="export_col_by">Zaznamenal(a)</string>
+    <string name="export_col_by">Autor záznamu</string>
     <string name="export_col_device_time">Čas zařízení (kdy rodič uložil)</string>
     <string name="export_col_server_time">Čas serveru (kdy server přijal)</string>
     <string name="export_col_text">Název nebo zpráva</string>

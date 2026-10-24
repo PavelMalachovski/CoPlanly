@@ -18,7 +18,7 @@
     <string name="parenting_plan_needs_coparent_body">Smyslem rodičovského plánu je, že odpovíte oba a pak odpovědi porovnáte. Propojte se s druhým rodičem a můžete začít.</string>
     <string name="parenting_plan_your_answer">Vaše odpověď</string>
     <string name="parenting_plan_their_answer">Odpověď: %1$s</string>
-    <string name="parenting_plan_their_answer_missing">%1$s zatím neodpověděl(a)</string>
+    <string name="parenting_plan_their_answer_missing">Zatím bez odpovědi (%1$s)</string>
     <string name="parenting_plan_not_answered">Bez odpovědi</string>
     <string name="parenting_plan_answer_hint">Napište to tak, jak byste to řekli mediátorovi</string>
     <string name="parenting_plan_status_unanswered">Nezačato</string>

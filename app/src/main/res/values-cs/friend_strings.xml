@@ -30,7 +30,7 @@
     <string name="friend_calendar_title">Kalendář rodiny</string>
     <string name="friend_calendar_family">%1$s a %2$s</string>
     <string name="friend_calendar_read_only">Jen k prohlížení. Soukromé události se nikdy nesdílejí.</string>
-    <string name="friend_calendar_added_by">Přidal(a) %1$s</string>
+    <string name="friend_calendar_added_by">Přidáno (%1$s)</string>
     <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
     <string name="friend_calendar_you_take_part">Účastníte se</string>
     <string name="friend_calendar_access_ended">Váš přístup k tomuto kalendáři skončil</string>
