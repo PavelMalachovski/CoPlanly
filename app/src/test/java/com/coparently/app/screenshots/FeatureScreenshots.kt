@@ -9,6 +9,7 @@ import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.repository.PreferencesRepository
@@ -17,6 +18,7 @@ import com.coparently.app.presentation.chat.ChatThreadHeader
 import com.coparently.app.presentation.chat.MessageItem
 import com.coparently.app.presentation.consent.TelemetryConsentScreen
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.custody.SchedulePreviewMonth
 import com.coparently.app.presentation.event.EventPreviewContent
 import com.coparently.app.presentation.expenses.CollapsedMonthSummary
 import com.coparently.app.presentation.expenses.ExpenseSummaryHeader
@@ -33,6 +35,7 @@ import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -94,6 +97,19 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
                 MessageItem(message = message, isCurrentUser = message.senderId == ScreenshotFixtures.MY_UID)
             }
         }
+    }
+
+    /**
+     * A schedule as the custody editor and onboarding preview it: the month it starts in. The
+     * start is years ahead so the month drawn never follows the real calendar.
+     */
+    @Test
+    fun schedulePreview() = snap("custody_schedule_preview") {
+        SchedulePreviewMonth(
+            model = CustodyModel.weekOnWeekOff(id = "preview", startDate = PREVIEW_START, momFirst = true),
+            parentNames = ScreenshotFixtures.parentNames,
+            description = "Week on, week off: Olya has the first week."
+        )
     }
 
     @Test
@@ -198,6 +214,8 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     )
 
     companion object {
+        /** A Monday far enough ahead that the preview never draws today's month. */
+        private val PREVIEW_START = LocalDate.of(2030, 5, 6)
         private const val MOM_PAID = 3_120.0
         private const val DAD_PAID = 1_480.0
         private const val OWED_TO_ME = 820.0

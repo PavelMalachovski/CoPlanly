@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,8 +59,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -80,15 +77,14 @@ import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
-import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import com.coparently.app.presentation.theme.titleSmallEmphasized
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
@@ -117,7 +113,6 @@ fun CustodySetupScreen(
     // Scoped to one child (FAM-4), Back returns to the family schedule rather than leaving.
     BackHandler(enabled = childScope != null) { viewModel.editSchedule(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDatePicker by remember { mutableStateOf(false) }
 
     // Show error snackbar
     val context = LocalContext.current
@@ -203,6 +198,86 @@ fun CustodySetupScreen(
                 )
             }
 
+            CustodyPatternForm(
+                uiState = uiState,
+                parentNames = parentNames,
+                actions = CustodyPatternActions.of(viewModel)
+            )
+
+            // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent
+            // who does not have that day, on top of the whole days chosen above.
+            ContactWindowsSection(
+                uiState = uiState,
+                parentNames = parentNames,
+                onAdd = viewModel::addContactWindows,
+                onRemove = viewModel::removeContactWindow
+            )
+
+            // Preview: the month the schedule starts in, as the calendar will draw it.
+            createTempModel(uiState)?.let { model ->
+                SchedulePreviewMonth(
+                    model = model,
+                    parentNames = parentNames,
+                    description = custodyPreviewText(uiState, parentNames),
+                    modifier = Modifier.padding(vertical = dims.paddingMedium)
+                )
+            }
+
+            if (proposes) {
+                AnswerByField(
+                    offer = rememberAnswerByOffer(answerByCap),
+                    selected = answerBy,
+                    onSelect = { answerBy = it },
+                    coParentName = parentNames.coParentLabel(),
+                    modifier = Modifier.padding(vertical = dims.paddingMedium)
+                )
+            }
+
+            // Seasonal schedules (MON-14) and holiday fairness (MON-20). Sent on their own, not by
+            // the Save button below, which saves only the base pattern above. Both belong to the
+            // family schedule, and so does "Different schedule for a child" (FAM-4), which appears
+            // only at two children: none of the three is shown while the editor is on one child.
+            if (childScope == null) {
+                SeasonalScheduleSection()
+                ChildSchedulesSection(
+                    children = children,
+                    childrenWithOwnSchedule = currentModel?.childOverrides.orEmpty().map { it.childId }.toSet(),
+                    onEdit = { viewModel.editSchedule(it) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
+        }
+    }
+
+}
+
+/**
+ * What a family pattern is: its type, the day it starts and who starts, plus the midweek contact
+ * of every-other-weekend and the custom days. One form for the custody screen and onboarding's
+ * schedule step (new-user review, October 2026), so the two can never describe a fortnight
+ * differently. Contact windows, a child's own schedule and the answer-by stay on the custody
+ * screen.
+ *
+ * @param uiState The form's state
+ * @param parentNames Names each parent
+ * @param actions What each choice does
+ * @param showMidweek Whether every-other-weekend offers its midweek contact; onboarding keeps the
+ *   step short and leaves it to the custody screen
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+@Suppress("LongMethod") // the form's sections in order, moved here whole from the custody screen
+internal fun CustodyPatternForm(
+    uiState: CustodySetupUiState,
+    parentNames: ParentNames,
+    actions: CustodyPatternActions,
+    modifier: Modifier = Modifier,
+    showMidweek: Boolean = true
+) {
+    val dims = dimensions()
+    var showDatePicker by remember { mutableStateOf(false) }
+    Column(modifier = modifier) {
             // Model type selection
             Text(
                 text = stringResource(R.string.custody_select_schedule_type),
@@ -218,7 +293,7 @@ fun CustodySetupScreen(
                     ModelTypeCard(
                         modelType = modelType,
                         isSelected = uiState.selectedModelType == modelType,
-                        onClick = { viewModel.selectModelType(modelType) }
+                        onClick = { actions.selectType(modelType) }
                     )
                 }
             }
@@ -303,7 +378,7 @@ fun CustodySetupScreen(
                     }
                     Switch(
                         checked = uiState.momFirst,
-                        onCheckedChange = { viewModel.setMomFirst(it) }
+                        onCheckedChange = actions.setMomFirst
                     )
                 }
 
@@ -312,15 +387,15 @@ fun CustodySetupScreen(
 
             // Midweek contact — only `výhradní péče se stykem` has one.
             AnimatedVisibility(
-                visible = uiState.selectedModelType == CustodyModelType.EVERY_OTHER_WEEKEND,
+                visible = showMidweek && uiState.selectedModelType == CustodyModelType.EVERY_OTHER_WEEKEND,
                 enter = sectionEnter(),
                 exit = sectionExit()
             ) {
                 MidweekContactSection(
                     uiState = uiState,
-                    onEnabledChange = viewModel::setMidweekEnabled,
-                    onDayChange = viewModel::setMidweekDay,
-                    onEveryWeekChange = viewModel::setMidweekEveryWeek
+                    onEnabledChange = actions.setMidweekEnabled,
+                    onDayChange = actions.setMidweekDay,
+                    onEveryWeekChange = actions.setMidweekEveryWeek
                 )
             }
 
@@ -374,7 +449,7 @@ fun CustodySetupScreen(
                                         color = ParentColors.fill(if (isMomDay) "mom" else "dad"),
                                         shape = MaterialTheme.shapes.extraSmall
                                     )
-                                    .clickable { viewModel.toggleCustomMomDay(dayIndex) },
+                                    .clickable { actions.toggleCustomDay(dayIndex) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(
@@ -411,7 +486,7 @@ fun CustodySetupScreen(
                     ) {
                         TextButton(
                             onClick = {
-                                viewModel.assignCustomWeekToMom(0)
+                                actions.assignCustomWeek(0)
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -425,7 +500,7 @@ fun CustodySetupScreen(
                         }
                         TextButton(
                             onClick = {
-                                viewModel.assignCustomWeekToMom(1)
+                                actions.assignCustomWeek(1)
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -440,160 +515,43 @@ fun CustodySetupScreen(
                     }
                 }
             }
-
-            // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent
-            // who does not have that day, on top of the whole days chosen above.
-            ContactWindowsSection(
-                uiState = uiState,
-                parentNames = parentNames,
-                onAdd = viewModel::addContactWindows,
-                onRemove = viewModel::removeContactWindow
-            )
-
-            // Preview section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = dims.paddingMedium),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(dims.paddingMedium)
-                ) {
-                    Text(
-                        text = stringResource(R.string.custody_preview),
-                        style = MaterialTheme.typography.titleSmallEmphasized,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(dims.paddingSmall))
-                    Text(
-                        text = custodyPreviewText(uiState, parentNames),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(dims.paddingSmall))
-
-                    // Visual preview - show next 14 days
-                    Text(
-                        text = stringResource(R.string.custody_next_14_days),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.XS))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.XXS)
-                    ) {
-                        val tempModel = createTempModel(uiState)
-                        repeat(14) { dayOffset ->
-                            val date = uiState.startDate.plusDays(dayOffset.toLong())
-                            val custody = tempModel?.getCustodyFor(date)
-                            // The deep chip tone with a label colour picked for contrast — the
-                            // week band's recipe. White on the full hue at 70 % failed AA for
-                            // pink, and for any lighter colour a parent picks.
-                            val color = when (custody) {
-                                "mom" -> ParentColors.chipFill("mom")
-                                "dad" -> ParentColors.chipFill("dad")
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    // `heightIn`, not `height`: a fixed box clips its own
-                                    // label as soon as the reader's font scale grows.
-                                    .heightIn(min = 24.dp)
-                                    .background(color, CoPlanlyCorners.Tag),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = date.dayOfMonth.toString(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = ParentColors.onFill(color),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-
-                    // Legend
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = dims.paddingSmall),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(ParentColors.chipFill("mom"), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.XS))
-                        Text(
-                            text = parentNames.labelFor("mom"),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.L))
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(ParentColors.chipFill("dad"), CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.XS))
-                        Text(
-                            text = parentNames.labelFor("dad"),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                    }
-                }
-            }
-
-            if (proposes) {
-                AnswerByField(
-                    offer = rememberAnswerByOffer(answerByCap),
-                    selected = answerBy,
-                    onSelect = { answerBy = it },
-                    coParentName = parentNames.coParentLabel(),
-                    modifier = Modifier.padding(vertical = dims.paddingMedium)
-                )
-            }
-
-            // Seasonal schedules (MON-14) and holiday fairness (MON-20). Sent on their own, not by
-            // the Save button below, which saves only the base pattern above. Both belong to the
-            // family schedule, and so does "Different schedule for a child" (FAM-4), which appears
-            // only at two children: none of the three is shown while the editor is on one child.
-            if (childScope == null) {
-                SeasonalScheduleSection()
-                ChildSchedulesSection(
-                    children = children,
-                    childrenWithOwnSchedule = currentModel?.childOverrides.orEmpty().map { it.childId }.toSet(),
-                    onEdit = { viewModel.editSchedule(it) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
-        }
     }
 
-    // Date picker dialog
     if (showDatePicker) {
         LocalDatePickerDialog(
             initialDate = uiState.startDate,
             confirmLabel = stringResource(R.string.custody_ok),
             dismissLabel = stringResource(R.string.custody_cancel),
-            onConfirm = viewModel::setStartDate,
+            onConfirm = actions.setStartDate,
             onDismiss = { showDatePicker = false }
+        )
+    }
+}
+
+/**
+ * The choices [CustodyPatternForm] makes, as callbacks, so the form holds no ViewModel.
+ */
+internal data class CustodyPatternActions(
+    val selectType: (CustodyModelType) -> Unit,
+    val setStartDate: (LocalDate) -> Unit,
+    val setMomFirst: (Boolean) -> Unit,
+    val setMidweekEnabled: (Boolean) -> Unit,
+    val setMidweekDay: (DayOfWeek) -> Unit,
+    val setMidweekEveryWeek: (Boolean) -> Unit,
+    val toggleCustomDay: (Int) -> Unit,
+    val assignCustomWeek: (Int) -> Unit
+) {
+    companion object {
+        /** The form's choices, made on [viewModel]. */
+        fun of(viewModel: CustodySetupViewModel) = CustodyPatternActions(
+            selectType = viewModel::selectModelType,
+            setStartDate = viewModel::setStartDate,
+            setMomFirst = viewModel::setMomFirst,
+            setMidweekEnabled = viewModel::setMidweekEnabled,
+            setMidweekDay = viewModel::setMidweekDay,
+            setMidweekEveryWeek = viewModel::setMidweekEveryWeek,
+            toggleCustomDay = viewModel::toggleCustomMomDay,
+            assignCustomWeek = viewModel::assignCustomWeekToMom
         )
     }
 }
@@ -837,7 +795,7 @@ private fun getModelTypeDescription(modelType: CustodyModelType): String = strin
 /**
  * Creates a temporary CustodyModel from the UI state for preview purposes.
  */
-private fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
+internal fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
     // A custom pattern with no slot-1 day yet has nothing to preview for the family schedule; a
     // child's own schedule (FAM-4) may mean exactly that — every day with the other parent.
     val nothingToDraw = state.selectedModelType == CustodyModelType.CUSTOM && state.customMomDays.isEmpty()
@@ -859,7 +817,7 @@ private fun createTempModel(state: CustodySetupUiState): com.coparently.app.doma
  * @param parentNames Resolves a slot to that parent's name
  */
 @Composable
-private fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: ParentNames): String {
+internal fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: ParentNames): String {
     val first = parentNames.labelFor(uiState.firstSlot)
     val second = parentNames.labelFor(uiState.secondSlot)
     return when (uiState.selectedModelType) {

@@ -21,7 +21,6 @@
     <!-- Replaces custody_week1_to_mom/custody_week2_to_mom: "týden" (week) does not inflect
          for the referent's gender. %1$d is the week number, %2$s is the parent's name. -->
     <string name="custody_week_to">Týden %1$d: %2$s</string>
-    <string name="custody_preview">Náhled</string>
     <string name="custody_next_14_days">Dalších 14 dní:</string>
     <string name="custody_ok">OK</string>
     <string name="custody_cancel">Zrušit</string>
