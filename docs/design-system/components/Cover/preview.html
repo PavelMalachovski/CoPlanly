@@ -1,0 +1,51 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Cover</title>
+<style>
+  html, body { margin: 0; background: var(--background); }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--background); }
+  svg { position: absolute; inset: 0; }
+  .brand { fill: var(--primary); }
+  .pink { fill: var(--parent-pink); }
+  .blue { fill: var(--parent-blue); }
+  .wash { fill: var(--parent-pink-wash); }
+  .day { fill: var(--on-primary); }
+  .slab { rx: var(--radius-xl); }
+  .tile { rx: var(--radius-lg); }
+  .cell { rx: var(--radius-xs); }
+  .text { position: absolute; left: 48px; bottom: 40px; max-width: 440px; }
+  .name { font-family: var(--font-sans); font-weight: 700; font-size: 88px; line-height: .95; letter-spacing: -1px; color: var(--on-surface); }
+  .tag { font-family: var(--font-sans); font-size: 14px; line-height: 20px; color: var(--on-surface-variant); margin-top: 12px; }
+</style></head>
+<body>
+<div class="cover">
+  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+    <!--
+      blocks: primary slab 224×320 (7×space-xxl, bleeds top and bottom); parent-pink 256×128 (bleeds right); parent-blue 256×152 (bleeds right and bottom); parent-pink-wash 112×40 relief between them.
+      arrangement: one tall brand slab with the two default parent colours stacked to its right, space-l gaps — the product between two people.
+      pattern: literal motif, the app icon's 3×3 grid of day dots, cut in on-primary out of the brand slab — "a calendar is the product".
+      scales: pitch 48 (space-xxl + space-l), cells 24 with radius-xs, slab radius-xl, tiles radius-lg, gaps space-l 16.
+    -->
+    <rect class="brand slab" x="496" y="-32" width="224" height="352"/>
+    <rect class="day cell" x="536" y="72" width="24" height="24"/>
+    <rect class="day cell" x="584" y="72" width="24" height="24"/>
+    <rect class="day cell" x="632" y="72" width="24" height="24"/>
+    <rect class="day cell" x="536" y="120" width="24" height="24"/>
+    <rect class="day cell" x="584" y="120" width="24" height="24"/>
+    <rect class="day cell" x="632" y="120" width="24" height="24"/>
+    <rect class="day cell" x="536" y="168" width="24" height="24"/>
+    <rect class="day cell" x="584" y="168" width="24" height="24"/>
+    <rect class="day cell" x="632" y="168" width="24" height="24"/>
+    <rect class="pink tile" x="736" y="-24" width="256" height="152"/>
+    <rect class="wash tile" x="736" y="144" width="112" height="40"/>
+    <rect class="blue tile" x="864" y="144" width="128" height="168"/>
+    <rect class="blue tile" x="736" y="200" width="112" height="112"/>
+  </svg>
+  <div class="text">
+    <div class="name">CoPlanly</div>
+    <div class="tag">One shared calendar for two homes.</div>
+  </div>
+</div>
+</body>
+</html>
