@@ -124,6 +124,43 @@ class ExpenseViewModelSplitTest {
         }
 
     @Test
+    fun `an expense the co-parent paid names them as the payer, and still both parents`() = runTest {
+        // Logging a cost the other parent paid was impossible: every expense was the logger's.
+        val viewModel = createViewModel(paired = true)
+        advanceUntilIdle()
+
+        viewModel.addExpense(
+            title = "school shoes",
+            amount = 1_200.0,
+            category = ExpenseCategory.OTHER,
+            currency = SupportedCurrency.DEFAULT.code,
+            paidByCoParent = true
+        )
+        advanceUntilIdle()
+
+        val expense = saved()
+        assertEquals(PARTNER, expense.paidBy)
+        assertEquals(listOf(ME, PARTNER), expense.splitBetween)
+    }
+
+    @Test
+    fun `an unpaired account cannot name a co-parent as the payer`() = runTest {
+        val viewModel = createViewModel(paired = false)
+        advanceUntilIdle()
+
+        viewModel.addExpense(
+            title = "nappies",
+            amount = 300.0,
+            category = ExpenseCategory.OTHER,
+            currency = SupportedCurrency.DEFAULT.code,
+            paidByCoParent = true
+        )
+        advanceUntilIdle()
+
+        assertEquals(ME, saved().paidBy)
+    }
+
+    @Test
     fun `a one-off override is stamped on the expense, not on the family agreement`() = runTest {
         val viewModel = createViewModel(paired = true)
         advanceUntilIdle()

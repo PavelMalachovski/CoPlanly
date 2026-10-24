@@ -10,7 +10,7 @@
     <string name="onboarding_profile_title">Про вас</string>
     <string name="onboarding_profile_name_required">Імʼя — єдине, що потрібно застосунку: ним підписується кожна подія й кожна витрата.</string>
     <string name="onboarding_custody_title">Ваш графік проживання</string>
-    <string name="onboarding_custody_body">Визначте, у які дні дитина з ким із вас. Це можна змінити будь-коли, і другий із батьків має погодитися зі зміною.</string>
+    <string name="onboarding_custody_body">Визначте, які дні в кого з вас. Це можна змінити будь-коли, і другий із батьків має погодитися зі зміною.</string>
     <string name="onboarding_custody_looks_right">Усе правильно</string>
     <string name="onboarding_custody_propose_change">Запропонувати зміну</string>
     <string name="onboarding_custody_existing_body">Цей графік у вас спільний: %1$s. Зміну буде запропоновано, і вона чекатиме на відповідь.</string>

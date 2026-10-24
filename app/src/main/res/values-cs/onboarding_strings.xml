@@ -10,7 +10,7 @@
     <string name="onboarding_profile_title">O vás</string>
     <string name="onboarding_profile_name_required">Jméno je jediné, co aplikace potřebuje – podepisuje se jím každá událost i každý výdaj.</string>
     <string name="onboarding_custody_title">Rozvrh péče</string>
-    <string name="onboarding_custody_body">Určete, které dny je dítě u koho z vás. Kdykoli to můžete změnit a druhý rodič bude muset změnu schválit.</string>
+    <string name="onboarding_custody_body">Určete, které dny připadají komu z vás. Kdykoli to můžete změnit a druhý rodič bude muset změnu schválit.</string>
     <string name="onboarding_custody_looks_right">Vypadá dobře</string>
     <string name="onboarding_custody_propose_change">Navrhnout změnu</string>
     <string name="onboarding_custody_existing_body">Tento rozpis sdílíte s: %1$s. Změna se navrhne a čeká na odpověď.</string>

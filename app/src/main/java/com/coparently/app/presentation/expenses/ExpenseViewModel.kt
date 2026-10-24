@@ -561,7 +561,8 @@ class ExpenseViewModel @Inject constructor(
         notes: String? = null,
         receiptImageUri: String? = null,
         shared: Boolean = true,
-        splitOverride: SplitRatio? = null
+        splitOverride: SplitRatio? = null,
+        paidByCoParent: Boolean = false
     ) {
         if (_saveState.value is ExpenseSaveState.Saving) return
 
@@ -598,7 +599,9 @@ class ExpenseViewModel @Inject constructor(
                 amount = amount,
                 category = category,
                 currency = currency,
-                paidBy = userId,
+                // The co-parent, when the parent logs what the other one paid (second audit); never
+                // while unpaired or unshared, where there is no one else to name.
+                paidBy = family.coParent?.takeIf { paidByCoParent && shared } ?: userId,
                 splitBetween = splitBetween,
                 date = date,
                 receiptUrl = receiptUrl,

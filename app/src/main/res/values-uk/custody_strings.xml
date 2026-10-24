@@ -25,7 +25,7 @@
     <string name="custody_model_two_two_three">Схема 2-2-3</string>
     <string name="custody_model_three_four_four_three">Схема 3-4-4-3</string>
     <string name="custody_model_custom">Власний графік</string>
-    <string name="custody_model_week_on_week_off_desc">Дитина цілий тиждень в одного з батьків, потім батьки міняються.</string>
+    <string name="custody_model_week_on_week_off_desc">Цілий тиждень в одного з батьків, потім цілий тиждень в іншого.</string>
     <string name="custody_model_two_two_three_desc">Схема 2 дні, 2 дні, 3 дні. Частіші передачі.</string>
     <string name="custody_model_three_four_four_three_desc">Чергування 3 і 4 днів. Збалансований час у будні та вихідні.</string>
     <string name="custody_model_custom_desc">Створіть власний шаблон графіка.</string>
@@ -57,9 +57,9 @@
     <string name="custody_proposal_review">%1$s пропонує новий графік проживання</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Кожні другі вихідні</string>
-    <string name="custody_model_every_other_weekend_desc">Дитина живе в одного з батьків, у другого — кожні другі вихідні.</string>
+    <string name="custody_model_every_other_weekend_desc">Щоденний догляд в одного з батьків, кожні другі вихідні — в іншого.</string>
     <string name="custody_preview_every_other_weekend">Усі інші дні: %1$s. Кожні другі сб–нд: %2$s.</string>
-    <string name="custody_who_is_resident">З ким живе дитина?</string>
+    <string name="custody_who_is_resident">У кого щоденний догляд?</string>
     <string name="custody_midweek_title">Спілкування посеред тижня</string>
     <string name="custody_midweek_enable">Додати день посеред тижня</string>
     <string name="custody_midweek_overnight_warning">Цей графік розподіляє цілі дні, тож день посеред тижня включає й ніч. Якщо у вашому рішенні йдеться лише про другу половину дня, залиште це вимкненим і натомість додайте нижче період спілкування.</string>

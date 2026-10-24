@@ -10,7 +10,7 @@
     <string name="onboarding_profile_title">Über dich</string>
     <string name="onboarding_profile_name_required">Dein Name ist das Einzige, was die App braucht – er steht an jedem Termin und jeder Ausgabe.</string>
     <string name="onboarding_custody_title">Euer Betreuungsplan</string>
-    <string name="onboarding_custody_body">Lege fest, an welchen Tagen dein Kind bei wem von euch ist. Du kannst das jederzeit ändern, und der andere Elternteil muss einer Änderung zustimmen.</string>
+    <string name="onboarding_custody_body">Lege fest, welche Tage bei wem von euch sind. Du kannst das jederzeit ändern, und der andere Elternteil muss einer Änderung zustimmen.</string>
     <string name="onboarding_custody_looks_right">Passt so</string>
     <string name="onboarding_custody_propose_change">Änderung vorschlagen</string>
     <string name="onboarding_custody_existing_body">Diesen Plan teilst du mit %1$s. Eine Änderung wird vorgeschlagen und wartet auf die Antwort.</string>

@@ -201,7 +201,9 @@ class UiTourTest : AliceOnScreenTest() {
         camera.shot("calendar_day") { viewMode(R.string.calendar_viewmode_day) }
         camera.shot("calendar_filters") {
             viewMode(R.string.calendar_viewmode_month)
-            driver.press("Filters", textButton(R.string.calendar_filters_button))
+            // A labelled chip, or from 1.3x its glyph alone (the light-ru-130 variant).
+            val filters = string(R.string.calendar_filters_button)
+            driver.press("Filters", (hasText(filters) or hasContentDescription(filters)) and hasClickAction())
             driver.linger()
         }
         driver.back()

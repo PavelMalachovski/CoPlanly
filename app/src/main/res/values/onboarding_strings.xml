@@ -13,7 +13,7 @@
     <string name="onboarding_profile_title">About you</string>
     <string name="onboarding_profile_name_required">Your name is the one thing the app needs — it labels every event and expense.</string>
     <string name="onboarding_custody_title">Your custody schedule</string>
-    <string name="onboarding_custody_body">Set out which days your child is with each of you. You can change it at any time, and your co-parent has to agree to a change.</string>
+    <string name="onboarding_custody_body">Set out which days are with each of you. You can change it at any time, and your co-parent has to agree to a change.</string>
     <string name="onboarding_custody_looks_right">Looks right</string>
     <string name="onboarding_custody_propose_change">Propose a change</string>
     <string name="onboarding_custody_existing_body">This is the schedule you share with %1$s. A change is proposed to them and waits for their answer.</string>

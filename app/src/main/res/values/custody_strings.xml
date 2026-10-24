@@ -30,7 +30,7 @@
     <string name="custody_model_two_two_three">2-2-3 split</string>
     <string name="custody_model_three_four_four_three">3-4-4-3 split</string>
     <string name="custody_model_custom">Custom schedule</string>
-    <string name="custody_model_week_on_week_off_desc">One parent has the child for a full week, then they switch.</string>
+    <string name="custody_model_week_on_week_off_desc">A full week with one parent, then a full week with the other.</string>
     <string name="custody_model_two_two_three_desc">2 days, 2 days, 3 days pattern. More frequent transitions.</string>
     <string name="custody_model_three_four_four_three_desc">3 days, 4 days alternating. Balanced mid-week and weekend time.</string>
     <string name="custody_model_custom_desc">Create your own schedule pattern.</string>
@@ -67,9 +67,9 @@
          share of Czech families have. The switch above the preview asks a different question
          for this pattern than for the alternating ones — see CustodySetupScreen.rolesQuestionFor. -->
     <string name="custody_model_every_other_weekend">Every other weekend</string>
-    <string name="custody_model_every_other_weekend_desc">The child lives with one parent; the other has every second weekend.</string>
+    <string name="custody_model_every_other_weekend_desc">Everyday care with one parent; every second weekend with the other.</string>
     <string name="custody_preview_every_other_weekend">Every day: %1$s. Every second Sat–Sun: %2$s.</string>
-    <string name="custody_who_is_resident">Who does the child live with?</string>
+    <string name="custody_who_is_resident">Who has the everyday care?</string>
     <string name="custody_midweek_title">Midweek contact</string>
     <string name="custody_midweek_enable">Add a midweek day</string>
     <string name="custody_midweek_overnight_warning">This schedule assigns whole days, so a midweek day includes the overnight. If your order says afternoon only, leave this off and add a contact window below instead.</string>

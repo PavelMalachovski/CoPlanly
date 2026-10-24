@@ -25,7 +25,7 @@
     <string name="custody_model_two_two_three">Schéma 2-2-3</string>
     <string name="custody_model_three_four_four_three">Schéma 3-4-4-3</string>
     <string name="custody_model_custom">Vlastní rozvrh</string>
-    <string name="custody_model_week_on_week_off_desc">Jeden rodič má dítě celý týden, pak se vystřídají.</string>
+    <string name="custody_model_week_on_week_off_desc">Celý týden u jednoho rodiče, pak celý týden u druhého.</string>
     <string name="custody_model_two_two_three_desc">Vzor 2 dny, 2 dny, 3 dny. Častější střídání.</string>
     <string name="custody_model_three_four_four_three_desc">Střídání 3 a 4 dnů. Vyvážený čas ve všední dny i o víkendu.</string>
     <string name="custody_model_custom_desc">Vytvořte si vlastní vzor rozvrhu.</string>
@@ -57,9 +57,9 @@
     <string name="custody_proposal_review">%1$s navrhuje nový rozvrh péče</string>
     <!-- MON-6. -->
     <string name="custody_model_every_other_weekend">Každý druhý víkend</string>
-    <string name="custody_model_every_other_weekend_desc">Dítě žije u jednoho rodiče, druhý má každý druhý víkend.</string>
+    <string name="custody_model_every_other_weekend_desc">Každodenní péče u jednoho rodiče, každý druhý víkend u druhého.</string>
     <string name="custody_preview_every_other_weekend">Ostatní dny: %1$s. Každou druhou so–ne: %2$s.</string>
-    <string name="custody_who_is_resident">U koho dítě žije?</string>
+    <string name="custody_who_is_resident">Kdo má každodenní péči?</string>
     <string name="custody_midweek_title">Kontakt uprostřed týdne</string>
     <string name="custody_midweek_enable">Přidat den uprostřed týdne</string>
     <string name="custody_midweek_overnight_warning">Tento rozvrh přiděluje celé dny, takže den uprostřed týdne zahrnuje i noc. Pokud vaše rozhodnutí mluví jen o odpoledni, nechte tuto volbu vypnutou a níže místo toho přidejte čas styku.</string>

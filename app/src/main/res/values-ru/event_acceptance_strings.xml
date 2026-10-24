@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Russian translations of event_acceptance_strings.xml. -->
 <resources>
-    <string name="event_acceptance_offered_to_you">%1$s: добавлено в ваши дни</string>
+    <string name="event_acceptance_offered_to_you">%1$s предлагает это событие на ваш день</string>
     <string name="event_acceptance_offered_by_you">Вы добавили это в дни: %1$s</string>
     <string name="event_acceptance_waiting">Ждёт ответа</string>
     <string name="event_acceptance_accepted">Согласовано</string>

@@ -22,8 +22,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Другий із батьків винен вам %1$s</string>
     <string name="expenses_balance_you_owe">Ви винні другому з батьків %1$s</string>
-    <string name="expenses_balance_owed_to_you_named">%1$s: вам винні %2$s</string>
-    <string name="expenses_balance_you_owe_named">%1$s: ви винні %2$s</string>
+    <string name="expenses_balance_owed_to_you_named">Вам винні %2$s, платник — %1$s</string>
+    <string name="expenses_balance_you_owe_named">Ви винні %2$s, отримувач — %1$s</string>
     <string name="expenses_balance_settled">Боргів немає</string>
     <string name="expenses_settle_up">Розрахуватися</string>
     <string name="expenses_this_month">Цей місяць</string>
@@ -36,7 +36,6 @@
     <string name="expenses_row_subtitle">%1$s · платник: %2$s · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">розділено 50/50</string>
-    <string name="expenses_split_ratio">розділено %1$s %2$d/%3$d</string>
     <string name="expenses_split_n_ways">розділено 1/%1$d</string>
     <string name="expenses_split_none">не розділено</string>
     <string name="expenses_delete">Видалити витрату</string>
@@ -79,6 +78,8 @@
     <string name="expenses_split_proposal_decline">Відхилити</string>
     <string name="expenses_split_proposal_later">Пізніше</string>
     <string name="expenses_split_answer_failed">Не вдалося відповісти на пропозицію поділу. Перевірте зʼєднання та спробуйте ще раз.</string>
+    <string name="expense_paid_by_title">Хто заплатив?</string>
+    <string name="expense_paid_by_you">Ви</string>
     <string name="expense_split_shared">Ділити з другим із батьків</string>
     <string name="expense_split_not_shared_hint">Зараховується до ваших витрат, але ніхто нікому за неї не винен.</string>
     <string name="expense_split_ratio">Поділ %1$d / %2$d</string>

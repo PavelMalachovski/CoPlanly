@@ -10,7 +10,7 @@
     <string name="onboarding_profile_title">О себе</string>
     <string name="onboarding_profile_name_required">Имя — единственное, что нужно приложению: им подписывается каждое событие и каждый расход.</string>
     <string name="onboarding_custody_title">График проживания</string>
-    <string name="onboarding_custody_body">Укажите, в какие дни ребёнок с кем из вас. Это можно изменить в любой момент, и второй родитель должен будет согласиться с изменением.</string>
+    <string name="onboarding_custody_body">Укажите, какие дни у кого из вас. Это можно изменить в любой момент, и второй родитель должен будет согласиться с изменением.</string>
     <string name="onboarding_custody_looks_right">Всё верно</string>
     <string name="onboarding_custody_propose_change">Предложить изменение</string>
     <string name="onboarding_custody_existing_body">Этот график у вас общий: %1$s. Изменение отправляется как предложение и ждёт ответа.</string>

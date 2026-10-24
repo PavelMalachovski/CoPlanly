@@ -43,6 +43,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -92,8 +95,10 @@ import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.toggling
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
 import java.io.File
@@ -175,6 +180,10 @@ fun AddExpenseScreen(
     // A new expense is shared by default: that is what a co-parenting expense tracker is for, and
     // the alternative — every row unshared unless ticked — is how the balance came to read zero.
     var shared by rememberSaveable { mutableStateOf(true) }
+    // Who paid: this parent unless they say the co-parent did (second audit).
+    var paidByCoParent by rememberSaveable { mutableStateOf(false) }
+    val parents by viewModel.parents.collectAsState()
+    val coParentName = rememberParentNames(parents).coParentLabel().takeIf { parents.coParent != null }
     // Null means "follow whatever the family agreed", which is the case that must not need a tap.
     var overrideMomPercent by rememberSaveable { mutableStateOf<Int?>(null) }
     val amountValue = amount.toDoubleOrNull()
@@ -266,7 +275,8 @@ fun AddExpenseScreen(
                 notes = notes.takeIf { it.isNotBlank() },
                 receiptImageUri = receiptUri?.toString(),
                 shared = shared,
-                splitOverride = overrideMomPercent?.let { SplitRatio.ofMomPercent(it) }
+                splitOverride = overrideMomPercent?.let { SplitRatio.ofMomPercent(it) },
+                paidByCoParent = paidByCoParent
             )
         } else {
             viewModel.updateExpense(
@@ -434,6 +444,14 @@ fun AddExpenseScreen(
             // Only on a new expense: an edit keeps the split it was recorded under, which is the
             // whole point of snapshotting it — re-opening a settled month must not re-price it.
             if (editedExpense == null) {
+                if (shared && coParentName != null) {
+                    PaidBySection(
+                        coParentName = coParentName,
+                        paidByCoParent = paidByCoParent,
+                        onChange = { paidByCoParent = it },
+                        enabled = !isSaving
+                    )
+                }
                 SplitSection(
                     agreedRatio = agreedRatio,
                     shared = shared,
@@ -900,6 +918,40 @@ private fun createReceiptCaptureUri(context: Context): Uri {
     val directory = File(context.cacheDir, "receipts").apply { mkdirs() }
     val file = File(directory, "receipt_${System.currentTimeMillis()}.jpg")
     return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+}
+
+/**
+ * Who paid this expense: this parent, or the co-parent (second audit — a cost the other parent
+ * paid could not be logged at all, because every expense was its logger's). Shown on a new shared
+ * expense once there is a co-parent to name.
+ *
+ * @param coParentName The co-parent's name.
+ * @param paidByCoParent Whether the co-parent paid.
+ * @param onChange Sets that.
+ * @param enabled False while a save is in flight.
+ */
+@Composable
+private fun PaidBySection(
+    coParentName: String,
+    paidByCoParent: Boolean,
+    onChange: (Boolean) -> Unit,
+    enabled: Boolean
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
+        Text(text = stringResource(R.string.expense_paid_by_title), style = MaterialTheme.typography.bodyLarge)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            listOf(false to stringResource(R.string.expense_paid_by_you), true to coParentName)
+                .forEachIndexed { index, (coParentPaid, label) ->
+                    SegmentedButton(
+                        selected = paidByCoParent == coParentPaid,
+                        onClick = { onChange(coParentPaid) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                        enabled = enabled,
+                        label = { Text(label) }
+                    )
+                }
+        }
+    }
 }
 
 /**

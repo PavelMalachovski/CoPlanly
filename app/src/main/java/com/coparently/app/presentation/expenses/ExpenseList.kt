@@ -81,6 +81,7 @@ private val TILE_SIZE = 40.dp
  * into that person's name, which is the whole reason the row can print a ratio at all.
  */
 private const val MOM_SLOT = "mom"
+private const val DAD_SLOT = "dad"
 
 /**
  * List of expenses for the period. Each row swipes left to delete ([SwipeToDeleteRow]).
@@ -362,10 +363,12 @@ private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: Par
         // parent — the payer — so "split 70/30" beside it reads as *their* share, and the first
         // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
         // the difference between a label and a wrong claim about money.
+        // Each name with its own share (second audit: "split Alice 60/40" left the 40 to guess).
         ratio != null -> stringResource(
-            R.string.expenses_split_ratio,
+            R.string.expenses_split_shares_named,
             parentNames.labelFor(MOM_SLOT),
             ratio.momPercent,
+            parentNames.labelFor(DAD_SLOT),
             ratio.dadPercent
         )
         expense.isTwoWaySplit() ->
