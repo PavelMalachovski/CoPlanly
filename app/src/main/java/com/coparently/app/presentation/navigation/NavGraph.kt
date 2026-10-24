@@ -297,15 +297,6 @@ fun NavGraph(
                                 )
                             )
                         },
-                        onOpenContacts = {
-                            navController.navigate(Screen.Contacts.route)
-                        },
-                        onOpenChildInfo = {
-                            navController.navigate(Screen.ChildInfo.route)
-                        },
-                        onOpenPets = {
-                            navController.navigate(Screen.Pets.route)
-                        },
                         onOpenSettings = {
                             navController.navigate(Screen.Settings.route)
                         },

@@ -29,14 +29,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -87,7 +84,6 @@ import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.home.WeekEntry
-import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.swapDatesText
@@ -105,7 +101,6 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.family.UnassignedRecordsPrompt
-import com.coparently.app.presentation.stickers.HomeStickers
 import com.coparently.app.presentation.stickers.ParentRolePrompt
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
@@ -151,9 +146,6 @@ private const val STACK_TILES_FONT_SCALE = 1.3f
  * @param onOpenEvent Opens an event by id
  * @param onOpenChangeRequests Opens the requests inbox
  * @param onOpenRequestHistory Opens the requests inbox at its History
- * @param onOpenContacts Opens the contacts list
- * @param onOpenChildInfo Opens the child records
- * @param onOpenPets Opens the pet records
  * @param onOpenSettings Opens settings
  * @param onNavigateToPairing Opens the pairing screen
  * @param onOpenExpenses Switches to the Expenses tab — the spend tile's deep link
@@ -173,9 +165,6 @@ fun HomeScreen(
     onOpenEvent: (String) -> Unit,
     onOpenChangeRequests: () -> Unit,
     onOpenRequestHistory: () -> Unit,
-    onOpenContacts: () -> Unit,
-    onOpenChildInfo: () -> Unit,
-    onOpenPets: () -> Unit,
     onOpenSettings: () -> Unit,
     onNavigateToPairing: () -> Unit,
     onOpenExpenses: () -> Unit,
@@ -187,7 +176,6 @@ fun HomeScreen(
     putOffAsks: PutOffAsksViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val caresFor by viewModel.caresFor.collectAsState()
     val today by rememberToday()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     val pendingProposal by changeRequestViewModel.pendingProposal.collectAsState()
@@ -298,10 +286,6 @@ fun HomeScreen(
                     onOpenEvent = openEvent,
                     onOpenChangeRequests = openInboxFromRow,
                     onOpenRequestHistory = onOpenRequestHistory,
-                    onOpenContacts = onOpenContacts,
-                    onOpenChildInfo = onOpenChildInfo,
-                    onOpenPets = onOpenPets,
-                    caresFor = caresFor,
                     onOpenExpenses = onOpenExpenses,
                     onOpenChat = onOpenChat,
                     onAddEvent = onAddEvent
@@ -435,9 +419,6 @@ private fun PairingInvitation(
  * @param onOpenEvent Opens an event by id, with the tapped occurrence's start when there is one
  * @param onOpenChangeRequests Opens the requests inbox
  * @param onOpenRequestHistory Opens the requests inbox at its History
- * @param onOpenContacts Opens the contacts list
- * @param onOpenChildInfo Opens the child records
- * @param onOpenPets Opens the pet records
  * @param onOpenExpenses Switches to the Expenses tab
  * @param onOpenChat Switches to the Chat tab
  * @param onAddEvent Opens the new-event form
@@ -453,10 +434,6 @@ private fun Dashboard(
     onOpenEvent: (String, LocalDateTime?) -> Unit,
     onOpenChangeRequests: () -> Unit,
     onOpenRequestHistory: () -> Unit,
-    onOpenContacts: () -> Unit,
-    onOpenChildInfo: () -> Unit,
-    onOpenPets: () -> Unit,
-    caresFor: Set<FamilyKind>,
     onOpenExpenses: () -> Unit,
     onOpenChat: () -> Unit,
     onAddEvent: () -> Unit
@@ -466,64 +443,10 @@ private fun Dashboard(
     // on a phone, in that order; two side by side from 840 dp (release audit R-8), where one
     // column of cards ran 1200 dp wide beside the rail.
     val actNow: LazyListScope.() -> Unit = {
-        item {
-            // First, by owner decision (Aug 2026 walkthrough): the emergency surface — who to
-            // call and the child's own record — belongs above the schedule, because the moment
-            // it is needed is the moment nobody scrolls. Child and pet records used to be
-            // reachable only through Settings; the rows reuse Settings' own titles so the two
-            // entrances can never drift apart.
-            SectionGroup {
-                SectionRow(
-                    title = stringResource(R.string.home_contacts),
-                    icon = Icons.Default.Contacts,
-                    supporting = stringResource(R.string.home_contacts_supporting),
-                    onClick = onOpenContacts,
-                    trailing = { HomeChevron() }
-                )
-                // Only what this family actually co-parents. An account that never answered the
-                // question reads as both, so nothing an upgrade was already showing disappears.
-                if (FamilyKind.CHILDREN in caresFor) {
-                    Divider()
-                    SectionRow(
-                        title = stringResource(R.string.settings_child_info_title),
-                        icon = Icons.Default.ChildCare,
-                        supporting = stringResource(R.string.settings_child_info_description),
-                        onClick = onOpenChildInfo,
-                        trailing = { HomeChevron() }
-                    )
-                }
-                if (FamilyKind.PETS in caresFor) {
-                    Divider()
-                    SectionRow(
-                        title = stringResource(R.string.settings_pets_title),
-                        icon = Icons.Default.Pets,
-                        supporting = stringResource(R.string.settings_pets_description),
-                        onClick = onOpenPets,
-                        trailing = { HomeChevron() }
-                    )
-                }
-            }
-        }
-
-        // Items 4/13 (Aug 2026 walkthrough): whatever waits on this parent's answer — a day
-        // swap, an event change, a pending event — must be visible on the main page, with one
-        // tap into the inbox that answers it. Since phase 2 (spec §6.1) the row is always there
-        // while paired, and says what waits on each parent and the co-parent's latest answer, so
-        // a parent who answered everything still has a way to what they answered.
-        item {
-            SectionGroup {
-                RequestsRow(
-                    state = state.requests,
-                    coParentName = parentNames.labelForUid(state.partner?.id),
-                    onClick = onOpenChangeRequests
-                )
-            }
-        }
-
-        // Stickers (October 2026, owner decisions): a new one waits here until it is seen, and the
-        // co-parent can be sent one. After what waits on this parent, before the schedule.
-        item { HomeStickers(coParentName = parentNames.labelForUid(state.partner?.id)) }
-
+        // Today first (new-user review, October 2026, owner decision): whose day it is and when
+        // the next handover is, then today's events, then what waits on this parent's answer.
+        // It supersedes the August 2026 "emergency surface first" order, whose contacts, child and
+        // pet rows now live one tap away on the Family tab; the sticker row went there too.
         state.nextHandover?.let { handover ->
             item {
                 HandoverHero(
@@ -550,10 +473,24 @@ private fun Dashboard(
                 contactWindows = state.today.contactWindows
             )
         }
+
+        // Items 4/13 (Aug 2026 walkthrough): whatever waits on this parent's answer — a day
+        // swap, an event change, a pending event — must be visible on the main page, with one
+        // tap into the inbox that answers it. Since phase 2 (spec §6.1) the row is always there
+        // while paired, and says what waits on each parent and the co-parent's latest answer, so
+        // a parent who answered everything still has a way to what they answered.
+        item {
+            SectionGroup {
+                RequestsRow(
+                    state = state.requests,
+                    coParentName = parentNames.labelForUid(state.partner?.id),
+                    onClick = onOpenChangeRequests
+                )
+            }
+        }
     }
     val readAfter: LazyListScope.() -> Unit = {
-        // The week follows the emergency group and the day cards (spec §3 had it lead; the
-        // Aug 2026 walkthrough moved the emergency surface above it).
+        // The week follows today and the requests.
         item { SectionHeader(stringResource(R.string.home_section_this_week)) }
         if (state.week.isEmpty()) {
             // The shared empty state (UX-9), not the `Card { Text }` the refresh outlawed — and
