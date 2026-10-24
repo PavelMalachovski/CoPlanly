@@ -1971,6 +1971,23 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Kotlin, change the fixture both suites share. **Holiday fairness (MON-20) only counts**:
     `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a
     contact window is never a night; its "Propose a change" opens the layer editor.
+    **An accepted schedule change keeps the past as history layers** (owner decision, 24 October
+    2026: "change the colour only into the future"). `domain/custody/CustodyHistory.kt` freezes the
+    outgoing base pattern over the days before the proposal takes effect — the later of its start
+    date and the accepter's own date (`effectiveFrom`) — as ordinary layers with three marks: an id
+    starting `hist-` (`isHistory`), priority −1000 (a real past layer still decides its dates; the
+    new base pattern does not), and an English stored name ("Earlier schedule until …") that only an
+    older build's list shows. Five things not to undo. **Only `CustodyProposalTransition.accept`
+    makes them** — an unpaired save rewrites the past on purpose (it corrects a setup mistake), and
+    an accepter on an older build makes none (an accepted loss, owner decision). **Layers, not a new
+    key**, so an older build, the calendar feed and the export draw the kept past unchanged; don't
+    move them to a key of their own. **They reach back to the outgoing anchor and at most three
+    years, in layers of at most `MAX_LAYER_DAYS`**, never a longer one an older build cannot read;
+    inside `MAX_LAYERS` the oldest history goes first, never a real layer; and a change that starts
+    sooner cuts short the history of one still waiting to start. **They are hidden, and carried**:
+    the seasonal editor lists real layers only, and every edit works on the full list. And **the
+    calendar's proposal preview starts at `effectiveFrom`**, so it never previews a repainted past.
+    A child's own schedule (item 33) has no history yet.
 
 31. **A shared file is indexed in Firestore, stored in Storage under its family's path, and never
     reached by a download URL** (MON-23, September 2026). Two surfaces: the **vault**,

@@ -1,6 +1,6 @@
 # Calendar colours: a colour grid, and a schedule change that keeps the past
 
-Date: 2026-10-24. Owner: Pavel. Status: approach chosen, builder-checked; awaiting owner approval.
+Date: 2026-10-24. Owner: Pavel. Status: approved by the owner; implemented on `claude/ecstatic-edison-4z85w8`.
 
 Two independent changes, built and reviewed one after the other: **A. the colour grid** and
 **B. schedule history**. Either can ship without the other.
