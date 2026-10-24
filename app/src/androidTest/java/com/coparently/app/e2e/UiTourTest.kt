@@ -276,7 +276,7 @@ class UiTourTest : AliceOnScreenTest() {
         }
         scrolls("family", FAMILY_SCREENFULS)
         camera.shot("expenses_list") {
-            openFamilyRow(R.string.family_money_this_month, substring = true)
+            pressFamilyRow(R.string.family_money_this_month, substring = true)
             driver.appeared(hasText(content.expenses.jacket, substring = true))
             driver.linger()
         }
@@ -365,14 +365,18 @@ class UiTourTest : AliceOnScreenTest() {
     /** A screen opened from its Family tab row; [content] is a text worth waiting a moment for. */
     private fun fromFamily(name: String, rowTitle: Int, content: String? = null) {
         camera.shot(name) {
-            openFamilyRow(rowTitle)
+            pressFamilyRow(rowTitle)
             content?.let { driver.appeared(hasText(it, substring = true)) }
             driver.linger()
         }
     }
 
-    /** Opens the Family tab and presses the row titled [rowTitle] (a part of its text with [substring]). */
-    private fun openFamilyRow(rowTitle: Int, substring: Boolean = false) {
+    /**
+     * Opens the Family tab and presses the row titled [rowTitle] (a part of its text with [substring]).
+     * Not named `openFamilyRow`: with one argument Kotlin picks `AliceOnScreenTest`'s exact match over
+     * this one's default parameter, which is how three tours ran the base class's version instead.
+     */
+    private fun pressFamilyRow(rowTitle: Int, substring: Boolean = false) {
         driver.backToTabs()
         // Through the item's click action, as every row is pressed: right after a Back the item is
         // in the tree but a touch injected at its bounds is refused (the tour lost seven screens).
@@ -467,7 +471,7 @@ class UiTourTest : AliceOnScreenTest() {
         val familyRow = row(R.string.friend_calendar_title)
         camera.shot("friend_calendar_list") {
             joined.getOrThrow()
-            openFamilyRow(R.string.friend_section_title)
+            pressFamilyRow(R.string.friend_section_title)
             driver.await("the friend's family row", familyRow, CROSS_DEVICE_TIMEOUT_MS)
         }
         camera.shot("friend_calendar") {
