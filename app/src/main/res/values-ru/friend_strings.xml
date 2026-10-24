@@ -39,7 +39,7 @@
     <string name="friend_compare_column_coparent">Второй родитель</string>
     <string name="friend_compare_column_friend">Друг семьи</string>
     <string name="friend_compare_calendar">Календарь</string>
-    <string name="friend_compare_custody">График опеки</string>
+    <string name="friend_compare_custody">График проживания</string>
     <string name="friend_compare_expenses">Расходы</string>
     <string name="friend_compare_chat">Чат</string>
     <string name="friend_compare_children">Информация о детях</string>
@@ -54,11 +54,11 @@
     <string name="friend_invite_will_see_lead">Увидит</string>
     <string name="friend_invite_will_see_body">события семьи в календаре, кроме личных. Только просмотр — изменить ничего нельзя.</string>
     <string name="friend_invite_wont_see_lead">Не увидит</string>
-    <string name="friend_invite_wont_see_body">график опеки, расходы, чат и информацию о детях.</string>
-    <string name="friend_invite_where_to_enter">Его вводят в своём CoPlanly: «Настройки» → «Друзья семьи» → «У меня есть код от родителей».</string>
+    <string name="friend_invite_wont_see_body">график проживания, расходы, чат и информацию о детях.</string>
+    <string name="friend_invite_where_to_enter">Его вводят в своём CoPlanly: «Семья» → «Друзья семьи» → «У меня есть код от родителей».</string>
     <string name="friend_invite_share">Поделиться кодом</string>
     <string name="friend_invite_done">Готово</string>
-    <string name="friend_share_message">%1$s приглашает вас в календарь семьи в CoPlanly. Ваш код: %2$s. В CoPlanly откройте «Настройки» → «Друзья семьи» → «У меня есть код от родителей». Приложение: %3$s</string>
+    <string name="friend_share_message">%1$s приглашает вас в календарь семьи в CoPlanly. Ваш код: %2$s. В CoPlanly откройте «Семья» → «Друзья семьи» → «У меня есть код от родителей». Приложение: %3$s</string>
     <string name="friend_redeem_row_title">У меня есть код от родителей</string>
     <string name="friend_redeem_row_supporting">Если вас пригласили как друга семьи</string>
     <string name="friend_redeem_open_calendar">Открыть календарь семьи</string>

@@ -21,7 +21,7 @@ import javax.inject.Inject
  * The pop-ups used to forget "Later" with the screen, so a day-swap offer came back on every
  * visit to Home — five times in a row in the UI tour, and again after a family switch. Now a
  * put-off ask stays put off until it changes: the key it is stored under is its revision
- * (`DaySwapGroup.revision`, a proposal's time, the number of requests), so a new or amended ask
+ * (`DaySwapGroup.revision`, a proposal's time, each waiting request's id), so a new or amended ask
  * opens again. The offer itself stays where it always was, in the calendar's banner and the
  * inbox; this only decides whether Home interrupts.
  *
@@ -53,19 +53,19 @@ class PutOffAsksViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
     /**
-     * Puts [revision] off in the family on screen and forgets every revision of that family no
+     * Puts [revisions] off in the family on screen and forgets every revision of that family no
      * longer in [waiting] — an ask that was answered, withdrawn or changed will never be shown under
      * that revision again. The other families' put-offs are kept as they are; an entry from before
      * revisions named their family is dropped.
      *
-     * @param revision The ask being put off
+     * @param revisions The keys of the ask being put off ([HomeAsk.keys])
      * @param waiting The revisions of every ask still waiting on this parent in the family on screen
      */
-    fun putOff(revision: String, waiting: Set<String>) {
+    fun putOff(revisions: Set<String>, waiting: Set<String>) {
         val familyId = family.value
         val prefix = familyId + FAMILY_SEPARATOR
         val otherFamilies = stored.value.filter { it.contains(FAMILY_SEPARATOR) && !it.startsWith(prefix) }
-        val thisFamily = (revisionsOf(stored.value, familyId) intersect waiting) + revision
+        val thisFamily = (revisionsOf(stored.value, familyId) intersect waiting) + revisions
         val next = otherFamilies.toSet() + thisFamily.map { prefix + it }
         stored.value = next
         preferences.putString(PreferenceKeys.PUT_OFF_ASKS, next.joinToString(PreferenceKeys.LIST_SEPARATOR))

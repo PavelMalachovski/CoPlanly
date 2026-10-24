@@ -12,7 +12,6 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isNotSelected
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.R
@@ -143,7 +142,7 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
 
     /**
      * The code Alice, already Bob's co-parent, hands a second one — read off her own pairing
-     * screen, the way a parent gets it: the gear, Co-parent pairing, Add another co-parent.
+     * screen, the way a parent gets it: the Family tab, Co-parent pairing, Add another co-parent.
      *
      * Through the screen rather than the repository on purpose. The repository could always mint
      * a paired account a code, and every test took it from there, while the screen gave a paired
@@ -153,11 +152,7 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
      */
     private fun aliceCodeFromHerPairingScreen(): String {
         step("families: Alice opens Add another co-parent")
-        tap(hasContentDescription(string(R.string.nav_settings)) and hasClickAction())
-        val pairingRow = hasText(string(R.string.settings_pairing_title)) and hasClickAction()
-        waitFor("the co-parent pairing row in Settings", pairingRow)
-        composeTestRule.onAllNodes(pairingRow).onFirst().performScrollTo()
-        tap(pairingRow)
+        openFamilyRow(R.string.settings_pairing_title)
         val addAnother = hasText(string(R.string.pairing_add_another_title)) and hasClickAction()
         waitFor("Add another co-parent", addAnother)
         tap(addAnother)
@@ -174,6 +169,8 @@ class OnScreenFamiliesTest : AliceOnScreenTest() {
             Espresso.pressBackUnconditionally()
             composeTestRule.settle()
         }
+        // Back lands on the Family tab the pairing screen opened from.
+        openTab(BottomNavDestination.HOME)
         return code
     }
 

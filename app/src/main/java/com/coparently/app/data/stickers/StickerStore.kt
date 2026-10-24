@@ -84,32 +84,6 @@ class StickerStore @Inject constructor(
         return stored
     }
 
-    /**
-     * Gives the signed-in parent the app's [kind] sticker under [id] — once: the id spells the
-     * week, and the rules refuse a second write of it, which is what a refusal here means.
-     */
-    suspend fun award(id: String, kind: StickerKind, familyId: String): Boolean {
-        val me = signedInUid() ?: return false
-        if (!kind.fromApp) return false
-        return write(id, StickerDocument.appSticker(me, familyId, kind, FieldValue.serverTimestamp()))
-    }
-
-    /** Every sticker the signed-in parent received, read once; empty when they cannot be read. */
-    suspend fun receivedOnce(): List<Sticker> {
-        val me = signedInUid() ?: return emptyList()
-        return try {
-            firestore.collection(COLLECTION).whereEqualTo("to", me).get().await().documents
-                .mapNotNull { doc -> doc.data?.let { StickerDocument.read(doc.id, it) } }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (
-            @Suppress("TooGenericExceptionCaught") e: Exception
-        ) {
-            Log.w(TAG, "Stickers could not be read", e)
-            emptyList()
-        }
-    }
-
     /** Records that the signed-in parent saw [sticker]; the server's clock, once. */
     suspend fun markSeen(sticker: Sticker) {
         if (sticker.seenAtMillis != null || sticker.toUid != signedInUid()) return

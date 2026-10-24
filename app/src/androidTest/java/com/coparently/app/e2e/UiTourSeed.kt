@@ -106,6 +106,15 @@ class UiTourSeed @Inject constructor(
      */
     suspend fun seedSettled(aliceUid: String, bob: EmulatorParent, content: UiTourContent) {
         val family = family(aliceUid, bob, content)
+        // Bob redeemed Alice's code through the bare repository, which leaves his Room row on the
+        // slot it had before pairing; the real app re-slots it (the pairing screen, then the sync).
+        // Without this his own events are stamped with the server's slot and judged against the
+        // stale one, so every event on his own days waited for Alice's answer.
+        attempt("bob's slot") {
+            bob.syncService.performFullSync().getOrThrow()
+            val local = bob.database.userDao().getUserById(bob.uid)?.role
+            check(local == family.bobSlot) { "Bob's phone holds slot $local, the server ${family.bobSlot}" }
+        }
         attempt("custody") { seedCustody(family) }
         attempt("children and pet") { seedChildrenAndPet(family) }
         attempt("events") { seedEvents(family) }

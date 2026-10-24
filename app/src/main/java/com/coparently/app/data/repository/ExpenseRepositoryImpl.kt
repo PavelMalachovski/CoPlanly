@@ -306,6 +306,13 @@ class ExpenseRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun questionExpense(expense: Expense): Boolean {
+        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return false
+        val creator = expense.createdByFirebaseUid
+        if (creator.isNullOrBlank() || creator == myUid) return false
+        return announce(expense, ActivityKind.EXPENSE_QUESTIONED) != null
+    }
+
     /**
      * Tells the co-parent about an expense.
      *

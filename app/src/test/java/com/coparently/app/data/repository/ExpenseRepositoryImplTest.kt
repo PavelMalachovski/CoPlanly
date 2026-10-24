@@ -7,7 +7,9 @@ import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
@@ -23,6 +25,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -321,6 +324,49 @@ class ExpenseRepositoryImplTest {
         repository.addExpense(expense())
 
         coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
+    }
+
+    // ---- questioning the co-parent's expense (second audit) --------------------------------
+
+    @Test
+    fun `questioning the co-parent's expense posts a card to that family's thread`() = runTest {
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidB").copy(name = "Olya", partnerIdsJson = "[\"uidB\"]")
+        val card = slot<ActivityAnnouncement>()
+
+        val sent = repository.questionExpense(
+            expense().copy(createdByFirebaseUid = "uidB", paidBy = "uidB", familyId = "uidA__uidB")
+        )
+
+        assertTrue(sent)
+        coVerify { announcer.announce(capture(card), "Olya", false, "uidB") }
+        assertEquals(ActivityKind.EXPENSE_QUESTIONED, card.captured.kind)
+        assertEquals("e1", card.captured.entityId)
+        assertEquals("School trip", card.captured.title)
+    }
+
+    @Test
+    fun `a parent cannot question their own expense`() = runTest {
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidB").copy(partnerIdsJson = "[\"uidB\"]")
+
+        val sent = repository.questionExpense(expense().copy(createdByFirebaseUid = "uidA", familyId = "uidA__uidB"))
+
+        assertFalse(sent)
+        coVerify(exactly = 0) { announcer.announce(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `an expense of a family that ended has nobody to question it to`() = runTest {
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidC").copy(partnerIdsJson = "[\"uidC\"]")
+
+        val sent = repository.questionExpense(expense().copy(createdByFirebaseUid = "uidB", familyId = "uidA__uidB"))
+
+        assertFalse(sent)
     }
 
     private fun expense() = Expense(

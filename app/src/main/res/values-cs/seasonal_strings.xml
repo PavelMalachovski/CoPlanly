@@ -29,9 +29,8 @@
     <string name="seasonal_delete">Smazat</string>
     <string name="seasonal_cancel">Zrušit</string>
     <string name="seasonal_ok">OK</string>
-    <string name="fairness_title">Rozdělení svátků</string>
+    <string name="fairness_title">Přehled svátků</string>
     <string name="fairness_no_schedule">Uložte rozvrh a uvidíte, kdo má které svátky.</string>
-    <string name="fairness_nights">Noci</string>
     <string name="fairness_christmas_eve">Štědrý den</string>
     <string name="fairness_christmas_day">1. svátek vánoční</string>
     <string name="fairness_new_year">Nový rok</string>
@@ -40,7 +39,7 @@
     <string name="fairness_show_holidays">Zobrazit další státní svátky</string>
     <string name="fairness_hide_holidays">Skrýt další státní svátky</string>
     <string name="fairness_not_set">Nenastaveno</string>
-    <string name="fairness_note">Počítáno tak, jak to ukazuje kalendář, včetně dohodnutých výměn a sezónních rozvrhů. Odpoledne styku se jako noc nepočítá.</string>
+    <string name="fairness_note">Počítáno tak, jak to ukazuje kalendář, včetně dohodnutých výměn a sezónních rozvrhů.</string>
     <string name="fairness_propose">Navrhnout změnu</string>
     <string name="custody_diff_layers_changed">Mění se i sezónní rozvrhy.</string>
 </resources>

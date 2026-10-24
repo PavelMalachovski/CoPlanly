@@ -63,7 +63,7 @@ only what is specific to it.
 
 | | |
 | --- | --- |
-| Purpose | Recognition between co-parents: a parent sends the other one of seven fixed phrases; the app gives one for answering a request before its deadline (at most once an ISO week) and for four such weeks in a row |
+| Purpose | Recognition between co-parents: a parent sends the other one of seven fixed phrases. Since 24 October 2026 the app gives none of its own (earlier test builds gave one for answering a request before its deadline); those already given are kept |
 | Data subjects | Parents |
 | Data | Receiver and sender uid (`app` for the app's own), the family id, the phrase's kind (no free text), the server's time of sending, and when the receiver first saw it |
 | Legal basis | Art. 6(1)(b) — part of the service the parents use; nothing is inferred from it and nothing is counted against either parent |

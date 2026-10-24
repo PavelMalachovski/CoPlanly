@@ -20,13 +20,6 @@ class StickerDocumentTest {
     }
 
     @Test
-    fun `the app's sticker comes from the app and names only its receiver`() {
-        val doc = StickerDocument.appSticker("uB", "", StickerKind.ON_TIME, "ts")
-        assertEquals("app", doc["from"])
-        assertEquals(listOf("uB"), doc["participants"])
-    }
-
-    @Test
     fun `a stored sticker reads back, the app's with no sender`() {
         val read = StickerDocument.read(
             "app_uB_on_time_2026-W43",

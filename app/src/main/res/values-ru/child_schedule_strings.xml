@@ -9,5 +9,5 @@
     <string name="custody_child_scope_hint">Этому графику следует только %1$s. Сезонные графики и разовые обмены днями его не меняют, а остальные дети следуют семейному графику.</string>
     <string name="custody_child_follow_family">Снова следовать семейному графику</string>
     <string name="custody_diff_child_schedule_changed">Меняется и собственный график ребёнка.</string>
-    <string name="home_child_with_parent_today">%1$s сегодня с: %2$s</string>
+    <string name="home_child_with_parent_today">Сегодня %1$s и %2$s вместе</string>
 </resources>

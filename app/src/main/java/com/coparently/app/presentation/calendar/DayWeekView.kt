@@ -119,6 +119,7 @@ import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import kotlin.math.roundToInt
@@ -204,6 +205,8 @@ fun DayWeekView(
         mutableIntStateOf((java.time.LocalTime.now().hour - 1).coerceIn(0, 23))
     }
     var savedHourOffset by remember { mutableIntStateOf(0) }
+    var positioned by remember(anchorDate, daysCount) { mutableStateOf(false) }
+    val today by rememberToday()
 
     HorizontalPager(
         state = pagerState,
@@ -214,6 +217,20 @@ fun DayWeekView(
             anchorDate.plusDays((page - PAGER_BASE_PAGE).toLong() * daysCount)
         }
         val scrollState = rememberLazyListState(savedHourIndex, savedHourOffset)
+        // Open where the day's events are (second audit), once per span the parent jumps to and
+        // before they scroll: a swipe keeps the hour window, as it always did.
+        if (page == PAGER_BASE_PAGE && page == pagerState.settledPage && !positioned) {
+            val opening = remember(events, pageDate, daysCount, today) {
+                val dates = DateRangeHelper.calculateDateRange(pageDate, daysCount)
+                OpeningHour.of(events, dates, today, LocalTime.now())
+            }
+            LaunchedEffect(opening, events.isEmpty()) {
+                if (events.isNotEmpty()) {
+                    scrollState.scrollToItem(opening)
+                    positioned = true
+                }
+            }
+        }
         if (page == pagerState.settledPage) {
             LaunchedEffect(scrollState) {
                 snapshotFlow {

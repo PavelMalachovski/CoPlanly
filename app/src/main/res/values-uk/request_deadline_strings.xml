@@ -4,7 +4,7 @@
     <string name="request_notice_reminder_title">Очікується ваша відповідь</string>
     <string name="request_notice_reminder_body">%1$s чекає на вашу відповідь до %2$s.</string>
     <string name="request_notice_deadline_title">%1$s: немає відповіді до терміну</string>
-    <string name="request_notice_deadline_body">У календарі нічого не змінилося. Можна дати останній шанс.</string>
+    <string name="request_notice_deadline_body">У календарі нічого не змінилося. Можна дати більше часу.</string>
     <string name="request_notice_no_answer_title">%1$s: немає відповіді</string>
     <string name="request_notice_no_answer_body">Запит закрито як «Немає відповіді». У календарі нічого не змінилося.</string>
     <string name="answer_by_title">Відповісти до</string>
@@ -19,8 +19,8 @@
         <item quantity="many">До %1$s. %2$s отримає до %3$d нагадувань, вночі — без нагадувань.</item>
         <item quantity="other">До %1$s. %2$s отримає до %3$d нагадування, вночі — без нагадувань.</item>
     </plurals>
-    <string name="answer_by_outcome">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати останній шанс на 24 години. Без відповіді в календарі нічого не зміниться.</string>
-    <string name="answer_by_outcome_short">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати коротший останній шанс. Без відповіді в календарі нічого не зміниться.</string>
+    <string name="answer_by_outcome">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати ще 24 години. Без відповіді в календарі нічого не зміниться.</string>
+    <string name="answer_by_outcome_short">Якщо до цього часу відповіді не буде, ви отримаєте сповіщення й зможете дати ще трохи часу. Без відповіді в календарі нічого не зміниться.</string>
     <string name="answer_by_fixed">Відповісти до %1$s</string>
     <string name="answer_by_too_soon">Надто скоро для терміну — запит піде як звичайний.</string>
     <string name="answer_by_picker_ok">OK</string>
@@ -34,16 +34,16 @@
     <string name="request_clock_not_opened">%1$s: ще не відкрито</string>
     <string name="request_clock_reminders">Нагадування: %1$d з %2$d</string>
     <string name="request_clock_reminders_next">Нагадування: %1$d з %2$d · наступне %3$s</string>
-    <string name="request_clock_last_chance_until">Останній шанс до %1$s · %2$s</string>
+    <string name="request_clock_last_chance_until">Більше часу до %1$s · %2$s</string>
     <string name="request_clock_deadline_passed">Термін минув %1$s</string>
     <string name="request_clock_calendar_unchanged">У календарі нічого не змінилося.</string>
-    <string name="request_clock_give_last_chance">Дати останній шанс — 24 години</string>
-    <string name="request_clock_give_last_chance_until">Дати останній шанс — до %1$s</string>
+    <string name="request_clock_give_last_chance">Дати ще 24 години</string>
+    <string name="request_clock_give_last_chance_until">Дати більше часу — до %1$s</string>
     <string name="request_clock_last_chance_once">Лише один раз. %1$s зможе відповісти до %2$s.</string>
-    <string name="request_clock_responder_unanswered">Ви не відповіли до терміну. %1$s може дати вам останній шанс до %2$s.</string>
-    <string name="request_last_chance_banner_title">Останній шанс · залишилося %1$s</string>
+    <string name="request_clock_responder_unanswered">Ви не відповіли до терміну. %1$s може дати вам більше часу, до %2$s.</string>
+    <string name="request_last_chance_banner_title">Більше часу · залишилося %1$s</string>
     <string name="request_last_chance_banner_text">Дайте відповідь до %1$s. Без відповіді запит закриється як «Немає відповіді».</string>
-    <string name="request_last_chance_failed">Не вдалося надіслати останній шанс. Спробуйте ще раз.</string>
+    <string name="request_last_chance_failed">Не вдалося продовжити термін. Спробуйте ще раз.</string>
     <plurals name="request_left_days">
         <item quantity="one">%1$d день</item>
         <item quantity="few">%1$d дні</item>
@@ -64,7 +64,7 @@
     </plurals>
     <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
     <string name="request_history_meta_deadline">Термін %1$s</string>
-    <string name="request_history_meta_last_chance">останній шанс до %1$s</string>
+    <string name="request_history_meta_last_chance">більше часу до %1$s</string>
     <string name="request_history_meta_opened">відкрито %1$s</string>
     <string name="request_history_meta_unchanged">календар без змін</string>
     <plurals name="request_history_meta_reminders">

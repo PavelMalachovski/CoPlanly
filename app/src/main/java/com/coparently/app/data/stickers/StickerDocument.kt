@@ -7,7 +7,9 @@ import com.google.firebase.Timestamp
 /**
  * The wire form of `stickers/{id}` (October 2026), in both directions — the one place it is
  * defined, as `EventDocument` is for events. `firestore.rules`' `stickerCreateValid` admits
- * exactly the keys [parentSticker] and [appSticker] write.
+ * exactly the keys [parentSticker] writes. The app's own stickers ([FROM_APP]) are read, and no
+ * longer written: they were given for answering before a deadline, which the second audit found
+ * turned answer times into a score between two parents in conflict.
  */
 object StickerDocument {
 
@@ -26,17 +28,6 @@ object StickerDocument {
             "to" to toUid,
             "from" to fromUid,
             "participants" to listOf(fromUid, toUid),
-            "familyId" to familyId,
-            "kind" to kind.wire,
-            "createdAt" to createdAt
-        )
-
-    /** A sticker the app gives [uid]; [familyId] blank when it belongs to no family. */
-    fun appSticker(uid: String, familyId: String, kind: StickerKind, createdAt: Any): Map<String, Any> =
-        mapOf(
-            "to" to uid,
-            "from" to FROM_APP,
-            "participants" to listOf(uid),
             "familyId" to familyId,
             "kind" to kind.wire,
             "createdAt" to createdAt

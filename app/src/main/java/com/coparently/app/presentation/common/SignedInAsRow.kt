@@ -26,11 +26,14 @@ import com.coparently.app.presentation.theme.Spacing
  * without it there is nothing on the screen that tells the two devices apart.
  *
  * @param account The signed-in account; callers render nothing when there is none
+ * @param showEmail Whether the address is shown under the name; the pairing screen, which the
+ *   co-parent may be looking at too, shows the name only
  * @param modifier Modifier for the row
  */
 @Composable
 fun SignedInAsRow(
     account: AccountSummary,
+    showEmail: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     // AccountSummary already falls back to the email local part, so a blank name means the
@@ -54,7 +57,7 @@ fun SignedInAsRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (account.email.isNotBlank() && account.email != displayName) {
+            if (showEmail && account.email.isNotBlank() && account.email != displayName) {
                 Text(
                     text = account.email,
                     style = MaterialTheme.typography.bodySmall,

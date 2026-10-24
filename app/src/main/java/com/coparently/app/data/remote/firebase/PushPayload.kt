@@ -267,6 +267,15 @@ object PushPayload {
     const val PROFESSIONAL_ACCESS_REQUESTED = "professional_access_requested"
 
     /**
+     * Queued by `acceptCalendarFriendInvitation` to **both** parents: a family friend redeemed a
+     * code and now reads the family's calendar. The actor is the friend's name. The parent who did
+     * not send the invitation learns it here, and either parent can end the access on the Family
+     * friends screen the tap opens (second audit: one parent could admit a friend unseen). The
+     * server queued it since August 2026; no build had wording for it until now.
+     */
+    const val CALENDAR_FRIEND_ACCEPTED = "calendar_friend_accepted"
+
+    /**
      * Queued by `deleteAccount` for the parent who **remains** when their co-parent deletes their
      * account (GDPR review, September 2026). The conversation is not deleted with the account: it is
      * kept for 30 days so this parent can export it, then deleted. The actor is the departed

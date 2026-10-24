@@ -20,7 +20,7 @@
     <string name="calendar_dialog_ok">OK</string>
     <string name="calendar_dialog_cancel">Скасувати</string>
 
-    <string name="calendar_change_requests">Запити на зміну</string>
+    <string name="calendar_change_requests">Запити</string>
 
     <string name="calendar_filter_event_types">Типи подій</string>
     <string name="calendar_filter_hidden_types_hint">Приховані типи не показуються в календарі</string>
@@ -66,10 +66,10 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d запит на зміну</item>
-        <item quantity="few">%1$d запити на зміну</item>
-        <item quantity="many">%1$d запитів на зміну</item>
-        <item quantity="other">%1$d запитів на зміну</item>
+        <item quantity="one">%1$d чекає на вашу відповідь</item>
+        <item quantity="few">%1$d чекають на вашу відповідь</item>
+        <item quantity="many">%1$d чекають на вашу відповідь</item>
+        <item quantity="other">%1$d чекають на вашу відповідь</item>
     </plurals>
     <string name="calendar_change_requests_review">Переглянути</string>
     <string name="calendar_change_view_mode">Змінити вигляд або перейти до дати</string>
@@ -77,7 +77,7 @@
 
     <!-- Noun phrase, not "X змінив(ла)" — Ukrainian inflects that verb for gender and a name
          cannot agree with one; the software would end up guessing or hedging with "(ла)". -->
-    <string name="calendar_custody_changed_by">Графік опіки змінено — %1$s</string>
+    <string name="calendar_custody_changed_by">Графік проживання змінено — %1$s</string>
     <string name="calendar_agenda_empty">Нічого не заплановано.</string>
     <string name="calendar_agenda_time_range">%1$s–%2$s</string>
     <!-- Shown when a calendar write or query fails. The calendar used to say nothing at
@@ -85,8 +85,10 @@
     <string name="calendar_operation_failed">Не вдалося зберегти зміну. Можливо, вона не дійшла до другого з батьків.</string>
     <string name="calendar_retry">Повторити</string>
     <!-- UX-8. -->
-    <string name="calendar_agenda_custody_day">День опіки: %1$s</string>
+    <string name="calendar_agenda_custody_day">Чий день: %1$s</string>
     <string name="calendar_filter_members">Показати для</string>
+    <string name="calendar_legend_handover">Передача</string>
+    <string name="calendar_legend_contact">Час спілкування</string>
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Спілкування: %1$s, %2$s–%3$s</string>

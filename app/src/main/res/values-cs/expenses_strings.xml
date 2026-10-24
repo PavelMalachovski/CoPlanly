@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Zpět</string>
     <string name="expenses_add">Přidat výdaj</string>
     <string name="expenses_summary_this_month">Přehled (tento měsíc)</string>
     <string name="expenses_summary_total">Celkem</string>
@@ -21,6 +22,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Druhý rodič vám dluží %1$s</string>
     <string name="expenses_balance_you_owe">Dlužíte druhému rodiči %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">%1$s vám dluží %2$s</string>
+    <string name="expenses_balance_you_owe_named">Dlužíte %2$s (příjemce %1$s)</string>
     <string name="expenses_balance_settled">Máte vyrovnáno</string>
     <string name="expenses_settle_up">Vyrovnat</string>
     <string name="expenses_this_month">Tento měsíc</string>
@@ -32,10 +35,9 @@
         <item quantity="many">%1$d\u00A0výdaje</item>
         <item quantity="other">%1$d\u00A0výdajů</item>
     </plurals>
-    <string name="expenses_row_subtitle">%1$s · zaplatil(a) %2$s · %3$s</string>
+    <string name="expenses_row_subtitle">%1$s · platba: %2$s · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">rozděleno 50/50</string>
-    <string name="expenses_split_ratio">rozděleno %1$s %2$d/%3$d</string>
     <string name="expenses_split_n_ways">rozděleno 1/%1$d</string>
     <string name="expenses_split_none">nerozděleno</string>
     <string name="expenses_delete">Smazat výdaj</string>
@@ -78,6 +80,8 @@
     <string name="expenses_split_proposal_decline">Odmítnout</string>
     <string name="expenses_split_proposal_later">Později</string>
     <string name="expenses_split_answer_failed">Odpověď na rozdělení se nepodařilo odeslat. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="expense_paid_by_title">Kdo platil?</string>
+    <string name="expense_paid_by_you">Vy</string>
     <string name="expense_split_shared">Sdílet s druhým rodičem</string>
     <string name="expense_split_not_shared_hint">Započítá se do vašich výdajů, ale nikdo nikomu za něj nic nedluží.</string>
     <string name="expense_split_ratio">Rozdělení %1$d / %2$d</string>
@@ -86,7 +90,7 @@
     <string name="expenses_filter_members">Zobrazit pro</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Čeká se na odpověď</string>
-    <string name="expenses_split_proposal_waiting_body_named">Navrhli jste: %1$s. %2$s zatím neodpověděl(a).</string>
+    <string name="expenses_split_proposal_waiting_body_named">Navrhli jste: %1$s. Čeká se na odpověď (%2$s).</string>
     <string name="expenses_split_proposal_withdraw">Stáhnout</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
@@ -101,4 +105,10 @@
     <string name="settle_up_send">Odeslat</string>
     <string name="settle_up_cancel">Zrušit</string>
     <string name="settle_up_iban_save_failed">IBAN se nepodařilo uložit. Vyrovnání nebylo odesláno.</string>
+    <string name="expense_question_title">Zpochybnit tento výdaj?</string>
+    <string name="expense_question_body">Výdaj „%2$s“ zapsal(a) %1$s. Do chatu přijde karta, že ho zpochybňujete, a zůstane v záznamu. Změnit nebo smazat ho může jen %1$s — napište důvod do chatu.</string>
+    <string name="expense_question_confirm">Zpochybnit</string>
+    <string name="expense_question_sent">Odesláno do chatu. Napište tam důvod.</string>
+    <string name="expense_question_failed">Námitku se nepodařilo odeslat.</string>
+    <string name="expense_question_cancel">Zrušit</string>
 </resources>

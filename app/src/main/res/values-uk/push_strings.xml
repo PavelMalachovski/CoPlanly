@@ -19,9 +19,9 @@
     <string name="push_change_request_declined_body">%1$s відхиляє зміну «%2$s»</string>
     <string name="push_change_request_cancelled_title">Запит на зміну відкликано</string>
     <string name="push_change_request_cancelled_body">%1$s відкликає запит щодо «%2$s»</string>
-    <string name="push_custody_proposal_proposed_title">Запропоновано новий графік опіки</string>
+    <string name="push_custody_proposal_proposed_title">Запропоновано новий графік проживання</string>
     <string name="push_custody_proposal_proposed_body">Другий із батьків пропонує новий графік</string>
-    <string name="push_custody_proposal_accepted_title">Новий графік опіки погоджено</string>
+    <string name="push_custody_proposal_accepted_title">Новий графік проживання погоджено</string>
     <string name="push_custody_proposal_accepted_body">Другий із батьків погодився з новим графіком</string>
     <string name="push_custody_proposal_declined_title">Пропозицію щодо графіка відхилено</string>
     <string name="push_custody_proposal_declined_body">Другий із батьків відхилив запропонований графік</string>
@@ -63,8 +63,8 @@
     <string name="push_split_ratio_agreed_title">Поділ витрат погоджено</string>
     <string name="push_split_ratio_agreed_body">Поділ спільних витрат було задано ще до зʼєднання. Відкрийте налаштування, щоб переглянути його.</string>
     <string name="push_expense_added_title">Нова витрата</string>
-    <string name="push_expense_added_body">%1$s додав(ла) витрату «%2$s»: %3$s.</string>
-    <string name="push_expense_added_body_share">%1$s додав(ла) витрату «%2$s»: %3$s. Ваша частка — %4$s.</string>
+    <string name="push_expense_added_body">Нова витрата «%2$s»: %3$s (%1$s).</string>
+    <string name="push_expense_added_body_share">Нова витрата «%2$s»: %3$s (%1$s). Ваша частка — %4$s.</string>
     <string name="push_records_shared_title">Вам відкрито записи</string>
     <string name="push_records_shared_body">%1$s відкриває вам календар і сімейні записи</string>
     <string name="push_sticker_received_title">Вам стікер</string>
@@ -75,13 +75,15 @@
     <string name="push_channel_chat_name">Повідомлення</string>
     <string name="push_channel_chat_description">Нові повідомлення від другого з батьків</string>
     <string name="push_channel_schedule_name">Розклад</string>
-    <string name="push_channel_schedule_description">Події, запити на зміну, пропозиції графіка опіки та обмін днями</string>
+    <string name="push_channel_schedule_description">Події, запити на зміну, пропозиції графіка проживання та обмін днями</string>
     <string name="push_channel_money_name">Витрати</string>
     <string name="push_channel_money_description">Пропозиції та домовленості про поділ спільних витрат</string>
     <string name="push_channel_family_name">Родина</string>
     <string name="push_channel_family_description">Звʼязок із другим із батьків, записи про дітей, спільні записи та доступ фахівців</string>
     <string name="push_professional_access_requested_title">Запит доступу фахівця</string>
     <string name="push_professional_access_requested_body">Фахівець %1$s прийняв запрошення переглядати календар і батьківський план родини. Доступ відкриється лише за згоди обох батьків.</string>
+    <string name="push_calendar_friend_accepted_title">Додано друга родини</string>
+    <string name="push_calendar_friend_accepted_body">%1$s тепер бачить родинний календар. Будь-хто з вас може закрити доступ у розділі «Друзі родини».</string>
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Акаунт другого з батьків видалено</string>
     <string name="push_coparent_account_deleted_body">%1$s: акаунт видалено. Вашу розмову буде видалено %2$s — експортуйте її до того часу.</string>
@@ -93,6 +95,6 @@
     <string name="push_answer_by">Дайте відповідь до %1$s.</string>
     <!-- The proposer gave the parent who did not answer in time a last chance
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
-    <string name="push_request_last_chance_title">Останній шанс відповісти</string>
+    <string name="push_request_last_chance_title">Більше часу на відповідь</string>
     <string name="push_request_last_chance_body">%1$s чекає на вашу відповідь до %2$s.</string>
 </resources>

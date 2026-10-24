@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -100,18 +98,18 @@ fun HolidayFairnessCard(
     }
 }
 
-/** The nights line and one row per occasion; other public holidays only when [showAll]. */
+/**
+ * One row per occasion; other public holidays only when [showAll]. There is no total of nights:
+ * the second audit read "Alice 178 / Bob 187" as a score of the children's time, and a mediator
+ * as a flashpoint over nine nights.
+ */
 @Composable
 private fun FairnessRows(fairness: HolidayFairness, parentNames: ParentNames, showAll: Boolean) {
     val rows = fairness.rows.filter { showAll || it.occasion !is FairnessOccasion.PublicHoliday }
+    if (rows.isEmpty()) return
     SectionGroup {
-        SectionRow(
-            title = stringResource(R.string.fairness_nights),
-            icon = Icons.Default.Nightlight,
-            trailing = { SlotCounts(fairness.nightsBySlot, parentNames) }
-        )
-        rows.forEach { row ->
-            Divider()
+        rows.forEachIndexed { index, row ->
+            if (index > 0) Divider()
             SectionRow(
                 title = occasionLabel(row.occasion),
                 supporting = datesLabel(row),

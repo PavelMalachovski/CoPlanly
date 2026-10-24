@@ -29,9 +29,8 @@
     <string name="seasonal_delete">Видалити</string>
     <string name="seasonal_cancel">Скасувати</string>
     <string name="seasonal_ok">OK</string>
-    <string name="fairness_title">Свята порівну</string>
+    <string name="fairness_title">Огляд свят</string>
     <string name="fairness_no_schedule">Збережіть графік, щоб побачити, у кого які свята.</string>
-    <string name="fairness_nights">Ночі</string>
     <string name="fairness_christmas_eve">Святвечір</string>
     <string name="fairness_christmas_day">Різдво</string>
     <string name="fairness_new_year">Новий рік</string>
@@ -40,7 +39,7 @@
     <string name="fairness_show_holidays">Показати інші свята</string>
     <string name="fairness_hide_holidays">Сховати інші свята</string>
     <string name="fairness_not_set">Не задано</string>
-    <string name="fairness_note">Підраховано так, як показує календар, з погодженими обмінами та сезонними графіками. Денний час спілкування ніччю не вважається.</string>
+    <string name="fairness_note">Підраховано так, як показує календар, з погодженими обмінами та сезонними графіками.</string>
     <string name="fairness_propose">Запропонувати зміну</string>
     <string name="custody_diff_layers_changed">Сезонні графіки теж змінюються.</string>
 </resources>

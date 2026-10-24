@@ -39,7 +39,7 @@ class ActivityFallbackTextTest {
     @Test
     fun `the two request cards read as plain text on an older build`() {
         assertEquals(
-            "Last chance to answer: Swimming",
+            "More time to answer: Swimming",
             ActivityFallbackText.of(announcement(ActivityKind.REQUEST_LAST_CHANCE, "Swimming"))
         )
         // A proposal's card has no title of its own, and must not end in a dangling colon.

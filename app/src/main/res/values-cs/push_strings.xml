@@ -2,23 +2,23 @@
 <!-- Push notification text (SEC-3). Composed on the receiving device. -->
 <resources>
     <string name="push_event_created_title">Nová událost</string>
-    <string name="push_event_created_body">%1$s přidal(a) „%2$s“</string>
+    <string name="push_event_created_body">Nová událost „%2$s“ (%1$s)</string>
     <string name="push_event_important_title">Vaše účast je nutná</string>
-    <string name="push_event_important_body">%1$s přidal(a) „%2$s“ a označil(a) ji jako důležitou: počítá se s vámi.</string>
+    <string name="push_event_important_body">Důležitá událost „%2$s“ (%1$s): počítá se s vámi.</string>
     <string name="push_event_updated_title">Událost změněna</string>
-    <string name="push_event_updated_body">%1$s změnil(a) „%2$s“</string>
+    <string name="push_event_updated_body">Změna události „%2$s“ (%1$s)</string>
     <string name="push_event_deleted_title">Událost zrušena</string>
-    <string name="push_event_deleted_body">%1$s zrušil(a) „%2$s“</string>
+    <string name="push_event_deleted_body">Zrušená událost „%2$s“ (%1$s)</string>
     <string name="push_child_info_updated_title">Informace o dítěti aktualizovány</string>
-    <string name="push_child_info_updated_body">%1$s upravil(a) údaje o dítěti: %2$s</string>
+    <string name="push_child_info_updated_body">Upravené údaje o dítěti: %2$s (%1$s)</string>
     <string name="push_change_request_created_title">Žádost o změnu</string>
     <string name="push_change_request_created_body">%1$s žádá o změnu „%2$s“</string>
     <string name="push_change_request_accepted_title">Změna přijata</string>
-    <string name="push_change_request_accepted_body">%1$s přijal(a) změnu „%2$s“</string>
+    <string name="push_change_request_accepted_body">Změna „%2$s“ přijata (%1$s)</string>
     <string name="push_change_request_declined_title">Změna odmítnuta</string>
-    <string name="push_change_request_declined_body">%1$s odmítl(a) změnu „%2$s“</string>
+    <string name="push_change_request_declined_body">Změna „%2$s“ odmítnuta (%1$s)</string>
     <string name="push_change_request_cancelled_title">Žádost o změnu stažena</string>
-    <string name="push_change_request_cancelled_body">%1$s stáhl(a) žádost o změnu „%2$s“</string>
+    <string name="push_change_request_cancelled_body">Žádost o změnu „%2$s“ stažena (%1$s)</string>
     <string name="push_custody_proposal_proposed_title">Návrh nového rozvrhu péče</string>
     <string name="push_custody_proposal_proposed_body">Druhý rodič navrhuje nový rozvrh</string>
     <string name="push_custody_proposal_accepted_title">Nový rozvrh péče schválen</string>
@@ -32,9 +32,9 @@
     <string name="push_day_swap_declined_title">Výměna dne odmítnuta</string>
     <string name="push_day_swap_declined_body">Druhý rodič odmítl výměnu dne %1$s</string>
     <string name="push_pairing_accepted_title">Pozvánka přijata</string>
-    <string name="push_pairing_accepted_body">%1$s je teď s vámi propojen(a) v CoPlanly</string>
+    <string name="push_pairing_accepted_body">Jste teď propojeni v CoPlanly (%1$s)</string>
     <string name="push_pairing_removed_title">Propojení zrušeno</string>
-    <string name="push_pairing_removed_body">%1$s zrušil(a) propojení</string>
+    <string name="push_pairing_removed_body">Propojení zrušeno (%1$s)</string>
     <string name="push_actor_fallback">Druhý rodič</string>
     <plurals name="push_day_swap_group_offered_body">
         <item quantity="one">Druhý rodič navrhuje vyměnit %1$d den</item>
@@ -63,8 +63,8 @@
     <string name="push_split_ratio_agreed_title">Rozdělení výdajů dohodnuto</string>
     <string name="push_split_ratio_agreed_body">Rozdělení výdajů bylo nastaveno ještě před propojením. Najdete ho v Nastavení.</string>
     <string name="push_expense_added_title">Nový výdaj</string>
-    <string name="push_expense_added_body">%1$s přidal(a) %2$s: %3$s.</string>
-    <string name="push_expense_added_body_share">%1$s přidal(a) %2$s: %3$s. Váš podíl je %4$s.</string>
+    <string name="push_expense_added_body">Nový výdaj %2$s: %3$s (%1$s).</string>
+    <string name="push_expense_added_body_share">Nový výdaj %2$s: %3$s (%1$s). Váš podíl je %4$s.</string>
     <string name="push_records_shared_title">Sdílené záznamy</string>
     <string name="push_records_shared_body">%1$s s vámi sdílí kalendář a rodinné záznamy</string>
     <string name="push_sticker_received_title">Samolepka pro vás</string>
@@ -81,10 +81,12 @@
     <string name="push_channel_family_name">Rodina</string>
     <string name="push_channel_family_description">Propojení s druhým rodičem, záznamy dětí, sdílené záznamy a přístup odborníků</string>
     <string name="push_professional_access_requested_title">Žádost o přístup odborníka</string>
-    <string name="push_professional_access_requested_body">%1$s použil(a) pozvánku ke čtení kalendáře a rodičovského plánu rodiny. Přístup se otevře až se souhlasem obou rodičů.</string>
+    <string name="push_professional_access_requested_body">Pozvánka ke čtení kalendáře a rodičovského plánu rodiny byla použita (%1$s). Přístup se otevře až se souhlasem obou rodičů.</string>
+    <string name="push_calendar_friend_accepted_title">Přibyl rodinný přítel</string>
+    <string name="push_calendar_friend_accepted_body">%1$s teď může číst rodinný kalendář. Kdokoli z vás to může ukončit v sekci Přátelé rodiny.</string>
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Účet druhého rodiče byl smazán</string>
-    <string name="push_coparent_account_deleted_body">%1$s smazal(a) svůj účet. Vaše konverzace bude smazána %2$s – do té doby si ji vyexportujte.</string>
+    <string name="push_coparent_account_deleted_body">%1$s už nemá účet. Vaše konverzace bude smazána %2$s – do té doby si ji vyexportujte.</string>
 
     <!-- Phase 3a: a request waits for an answer. The first push of a day swap, a change request or a
          custody proposal ends with this sentence when the proposer chose a deadline. It travels as
@@ -93,6 +95,6 @@
     <string name="push_answer_by">Odpovězte do %1$s.</string>
     <!-- The proposer gave the parent who did not answer in time a last chance
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
-    <string name="push_request_last_chance_title">Poslední šance odpovědět</string>
+    <string name="push_request_last_chance_title">Více času na odpověď</string>
     <string name="push_request_last_chance_body">%1$s čeká na vaši odpověď do %2$s.</string>
 </resources>

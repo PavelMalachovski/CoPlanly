@@ -49,7 +49,7 @@ class PutOffAsksViewModelTest {
     @Test
     fun `a put-off ask survives a new view model`() {
         val prefs = preferences(initial = null)
-        PutOffAsksViewModel(prefs, familyViewSource).putOff("swap_a", waiting = setOf("swap_a"))
+        PutOffAsksViewModel(prefs, familyViewSource).putOff(setOf("swap_a"), waiting = setOf("swap_a"))
 
         assertEquals(setOf("swap_a"), PutOffAsksViewModel(prefs, familyViewSource).putOff.value)
     }
@@ -61,13 +61,26 @@ class PutOffAsksViewModelTest {
             familyViewSource
         )
 
-        viewModel.putOff("swap_new", waiting = setOf("swap_new", "requests_2"))
+        viewModel.putOff(setOf("swap_new"), waiting = setOf("swap_new", "requests_2"))
 
         assertEquals(setOf("requests_2", "swap_new"), viewModel.putOff.value)
         assertEquals(
             setOf("$BOB_FAMILY/requests_2", "$BOB_FAMILY/swap_new"),
             stored.captured.split("|").toSet()
         )
+    }
+
+    @Test
+    fun `several revisions put off at once are all kept, and answered ones forgotten next time`() {
+        val viewModel = PutOffAsksViewModel(preferences(initial = null), familyViewSource)
+
+        val both = setOf("request_change:a", "request_change:b")
+        viewModel.putOff(both, waiting = both)
+        assertEquals(setOf("request_change:a", "request_change:b"), viewModel.putOff.value)
+
+        // change:a was answered; a swap is put off while change:b still waits.
+        viewModel.putOff(setOf("swap_c"), waiting = setOf("request_change:b", "swap_c"))
+        assertEquals(setOf("request_change:b", "swap_c"), viewModel.putOff.value)
     }
 
     @Test
@@ -80,11 +93,11 @@ class PutOffAsksViewModelTest {
         // Two requests wait in both families: putting off the family with Bob's says nothing about
         // the family with Carol's, and a dismissal there keeps Bob's family's put-off.
         val viewModel = PutOffAsksViewModel(preferences(initial = null), familyViewSource)
-        viewModel.putOff("requests_2", waiting = setOf("requests_2"))
+        viewModel.putOff(setOf("requests_2"), waiting = setOf("requests_2"))
 
         view.value = onScreen(CAROL_FAMILY)
         assertEquals(emptySet(), viewModel.putOff.value)
-        viewModel.putOff("swap_c", waiting = setOf("swap_c", "requests_2"))
+        viewModel.putOff(setOf("swap_c"), waiting = setOf("swap_c", "requests_2"))
         assertEquals(setOf("swap_c"), viewModel.putOff.value)
 
         view.value = onScreen(BOB_FAMILY)
@@ -96,7 +109,7 @@ class PutOffAsksViewModelTest {
         val viewModel = PutOffAsksViewModel(preferences(initial = "requests_2"), familyViewSource)
         assertEquals(emptySet(), viewModel.putOff.value)
 
-        viewModel.putOff("swap_a", waiting = setOf("swap_a"))
+        viewModel.putOff(setOf("swap_a"), waiting = setOf("swap_a"))
 
         assertEquals(setOf("$BOB_FAMILY/swap_a"), stored.captured.split("|").toSet())
     }

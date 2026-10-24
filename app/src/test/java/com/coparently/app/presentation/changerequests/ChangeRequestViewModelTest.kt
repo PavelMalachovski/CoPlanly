@@ -5,7 +5,6 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
-import com.coparently.app.data.stickers.StickerAwarder
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -94,7 +93,6 @@ class ChangeRequestViewModelTest {
 
     /** The family's split document; none unless a test says so. */
     private val splitSettings = MutableStateFlow<FamilySettings?>(null)
-    private val stickerAwarder = mockk<StickerAwarder>(relaxed = true)
     private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
         every { observeSettingsOf(any()) } returns splitSettings
         coEvery { acceptProposal(any()) } returns Result.success(Unit)
@@ -172,8 +170,7 @@ class ChangeRequestViewModelTest {
             requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns clocks },
             familySettingsRepository = familySettingsRepository
         ),
-        familySettingsRepository = familySettingsRepository,
-        stickerAwarder = stickerAwarder
+        familySettingsRepository = familySettingsRepository
     )
 
     /** The split document of the family Olya shares with Pavel, agreed half each, with [by]'s 35/65 proposal. */
@@ -227,23 +224,6 @@ class ChangeRequestViewModelTest {
         assertEquals(request.proposedEndDateTime, moved.captured.endDateTime)
         assertEquals("u1", moved.captured.lastModifiedBy)
         coVerify(exactly = 1) { changeRequestRepository.updateStatus("r1", ChangeRequestStatus.ACCEPTED) }
-    }
-
-    @Test
-    fun `an answer asks for the stickers it may earn, a failed one does not`() = runTest(dispatcher) {
-        coEvery { changeRequestRepository.getChangeRequestById("r1") } returns request
-        coEvery { eventRepository.getEventById("e1") } returns event
-        coEvery { updateEvent.invoke(any()) } returns Result.failure(IllegalStateException("validation"))
-        val vm = viewModel()
-        advanceUntilIdle()
-
-        vm.accept("r1")
-        advanceUntilIdle()
-        coVerify(exactly = 0) { stickerAwarder.onAnswered(any()) }
-
-        vm.decline("r1")
-        advanceUntilIdle()
-        coVerify(exactly = 1) { stickerAwarder.onAnswered(RequestDeadlineId.forChange(request)) }
     }
 
     @Test

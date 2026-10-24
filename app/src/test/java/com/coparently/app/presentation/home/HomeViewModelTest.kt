@@ -25,7 +25,6 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.changerequests.RequestsSource
-import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import io.mockk.coEvery
@@ -143,7 +142,6 @@ class HomeViewModelTest {
             custodyModelRepository = custodyModelRepository,
             monthSpendDependencies = monthSpendDependencies,
             messageRepository = messageRepository,
-            familyKindSource = FamilyKindSource(userRepository, pairingRepository),
             homeIdentityDependencies = HomeIdentityDependencies(
                 userRepository,
                 pairingRepository,
@@ -524,7 +522,7 @@ class HomeViewModelTest {
             dispatcher.scheduler.advanceUntilIdle()
             val dashboard = expectMostRecentItem() as HomeUiState.Dashboard
             assertEquals(RequestsRowState(waitingOnMe = 1, waitingOnThem = 1), dashboard.requests)
-            assertEquals(1, dashboard.awaitingRequestCount)
+            assertEquals(listOf("change:theirs"), dashboard.awaitingRequestIds)
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -12,6 +12,8 @@ import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.ContactWindowCodec
+import com.coparently.app.domain.custody.FirstSchedule
+import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
@@ -40,13 +42,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
+import java.util.UUID
 import javax.inject.Inject
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
+
+/** How long onboarding's schedule step waits for the server before showing the form. */
+private const val SHARED_READ_TIMEOUT_MS = 5_000L
 
 /** Days in one week of a custom custody pattern. */
 private const val DAYS_PER_WEEK = 7
@@ -74,6 +82,9 @@ private const val CONTACT_SUNDAY = 6
  * previous family's pattern in the form, ready to be proposed to the wrong co-parent.
  */
 @HiltViewModel
+// One form, two hosts (the custody screen and onboarding's schedule step): the step's two entry
+// points sit beside the form's setters rather than in a second ViewModel over the same state.
+@Suppress("TooManyFunctions")
 class CustodySetupViewModel @Inject constructor(
     private val custodyModelRepository: CustodyModelRepository,
     parentsSource: ParentsSource,
@@ -237,7 +248,8 @@ class CustodySetupViewModel @Inject constructor(
             selectedModelType = type,
             // Reset custom settings when switching away from custom
             customPatternDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customPatternDays else 14,
-            customMomDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customMomDays else emptySet()
+            customMomDays = if (type == CustodyModelType.CUSTOM) _uiState.value.customMomDays else emptySet(),
+            startDate = anchorFor(type, _uiState.value.startDate)
         ).withWindowsInCycle()
     }
 
@@ -245,7 +257,7 @@ class CustodySetupViewModel @Inject constructor(
      * Sets the start date for the pattern.
      */
     fun setStartDate(date: LocalDate) {
-        _uiState.value = _uiState.value.copy(startDate = date)
+        _uiState.value = _uiState.value.copy(startDate = anchorFor(_uiState.value.selectedModelType, date))
     }
 
     /**
@@ -393,6 +405,79 @@ class CustodySetupViewModel @Inject constructor(
         }
     }
 
+    private val _onboardingMode = MutableStateFlow<OnboardingScheduleMode>(OnboardingScheduleMode.Checking)
+
+    /**
+     * What onboarding's schedule step shows (new-user review, October 2026): the form, or the
+     * schedule the pair already shares. Starts [OnboardingScheduleMode.Checking] until
+     * [checkOnboardingMode] has asked the server.
+     */
+    val onboardingMode: StateFlow<OnboardingScheduleMode> = _onboardingMode.asStateFlow()
+
+    /**
+     * Asks the server, for a few seconds at most, whether the pair already shares a schedule: an
+     * invited parent reaches the step seconds after pairing, before Room holds the pair's
+     * document. A schedule found is shown to confirm; nothing found, or no answer, shows the form —
+     * whose save ([saveFirstSchedule]) still never proposes.
+     */
+    fun checkOnboardingMode() {
+        // A schedule already found stays found: coming back from "Propose a change" must not
+        // trade it for the form on a read that happens to time out.
+        if (_onboardingMode.value is OnboardingScheduleMode.Existing) return
+        viewModelScope.launch {
+            val read = withTimeoutOrNull(SHARED_READ_TIMEOUT_MS) { custodyModelRepository.readShared() }
+            _onboardingMode.value = (read as? SharedCustodyRead.Found)
+                ?.let { OnboardingScheduleMode.Existing(it.custody.model) }
+                ?: OnboardingScheduleMode.Form
+        }
+    }
+
+    /**
+     * Saves the form as the family's first schedule, from onboarding, through
+     * [CustodyModelRepository.activateFirstSchedule], which only ever activates. When the pair
+     * turns out to share a schedule already nothing is written and the step shows that schedule;
+     * when the server cannot answer the form stays, with the ordinary save error. [onDone] runs
+     * only once the schedule is this family's. The contact windows a stored schedule carried are
+     * kept, though the onboarding form does not show them.
+     *
+     * @param linkedToCoParent Whether the link step saw this parent linked; passed on so a save
+     *   made before Room knows the pair writes nothing ([CustodyModelRepository.activateFirstSchedule])
+     */
+    fun saveFirstSchedule(linkedToCoParent: Boolean = false, onDone: () -> Unit) {
+        val state = _uiState.value
+        if (!state.isValid || state.isLoading) return
+        _uiState.value = state.copy(isLoading = true)
+        viewModelScope.launch {
+            val result = try {
+                custodyModelRepository.activateFirstSchedule(
+                    state.toPatternModel(UUID.randomUUID().toString()).copy(contactWindows = state.contactWindows),
+                    linkedToCoParent
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception
+            ) {
+                Log.w(TAG, "Saving the first custody schedule failed", e)
+                FirstSchedule.Unavailable
+            }
+            when (result) {
+                FirstSchedule.Activated -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    onDone()
+                }
+                is FirstSchedule.SharedExists -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    _onboardingMode.value = OnboardingScheduleMode.Existing(result.model)
+                }
+                FirstSchedule.Unavailable -> _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = UiText.Res(R.string.custody_setup_save_failed)
+                )
+            }
+        }
+    }
+
     /**
      * Clears any error message.
      */
@@ -453,11 +538,29 @@ private fun CustodyModel.isResidentSlotOne(): Boolean =
     momDayIndices.count { it in 0 until patternDays } * 2 > patternDays
 
 /**
+ * The start a pattern can honestly be described from. The presets named by weekdays — 2-2-3,
+ * 3-4-4-3 and every other weekend ("Mon–Tue: Alice") — start on the Monday of [date]'s week, or
+ * their description would name the wrong days; week on / week off and a custom pattern keep the
+ * day the parent chose, which is their handover day.
+ */
+internal fun anchorFor(type: CustodyModelType, date: LocalDate): LocalDate = when (type) {
+    CustodyModelType.TWO_TWO_THREE,
+    CustodyModelType.THREE_FOUR_FOUR_THREE,
+    CustodyModelType.EVERY_OTHER_WEEKEND -> date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    CustodyModelType.WEEK_ON_WEEK_OFF, CustodyModelType.CUSTOM -> date
+}
+
+/**
  * UI state for custody setup screen.
  */
 data class CustodySetupUiState(
     val selectedModelType: CustodyModelType = CustodyModelType.WEEK_ON_WEEK_OFF,
-    val startDate: LocalDate = LocalDate.now(),
+    /**
+     * The pattern's first day. A new schedule starts on this week's Monday (second audit): today
+     * put a Saturday handover in front of a parent who never chose one, and the weekend read as the
+     * other parent's.
+     */
+    val startDate: LocalDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
     val momFirst: Boolean = true,
     val customPatternDays: Int = 14,
     val customMomDays: Set<Int> = emptySet(),
@@ -541,4 +644,22 @@ data class CustodySetupUiState(
         /** Every preset pattern repeats over a fortnight. */
         const val PRESET_CYCLE_DAYS = 14
     }
+}
+
+/**
+ * What onboarding's schedule step shows (new-user review, October 2026).
+ */
+sealed interface OnboardingScheduleMode {
+
+    /** The server is being asked whether the pair already shares a schedule. */
+    data object Checking : OnboardingScheduleMode
+
+    /** No shared schedule is known: the parent picks one in the form. */
+    data object Form : OnboardingScheduleMode
+
+    /**
+     * The pair already shares [model]; the step shows it to confirm and never offers a form whose
+     * save would propose a change.
+     */
+    data class Existing(val model: CustodyModel) : OnboardingScheduleMode
 }

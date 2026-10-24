@@ -29,9 +29,8 @@
     <string name="seasonal_delete">Löschen</string>
     <string name="seasonal_cancel">Abbrechen</string>
     <string name="seasonal_ok">OK</string>
-    <string name="fairness_title">Feiertagsverteilung</string>
+    <string name="fairness_title">Feiertage im Überblick</string>
     <string name="fairness_no_schedule">Speichere einen Plan, um zu sehen, wer welche Feiertage hat.</string>
-    <string name="fairness_nights">Nächte</string>
     <string name="fairness_christmas_eve">Heiligabend</string>
     <string name="fairness_christmas_day">Erster Weihnachtstag</string>
     <string name="fairness_new_year">Neujahr</string>
@@ -40,7 +39,7 @@
     <string name="fairness_show_holidays">Weitere Feiertage anzeigen</string>
     <string name="fairness_hide_holidays">Weitere Feiertage ausblenden</string>
     <string name="fairness_not_set">Nicht festgelegt</string>
-    <string name="fairness_note">Gezählt wie im Kalender, vereinbarte Tausche und saisonale Pläne eingeschlossen. Umgangsnachmittage zählen nicht als Nächte.</string>
+    <string name="fairness_note">Gezählt wie im Kalender, vereinbarte Tausche und saisonale Pläne eingeschlossen.</string>
     <string name="fairness_propose">Änderung vorschlagen</string>
     <string name="custody_diff_layers_changed">Auch die saisonalen Pläne ändern sich.</string>
 </resources>

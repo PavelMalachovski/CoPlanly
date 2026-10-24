@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.MiniMonthModel
-import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -101,7 +100,7 @@ internal fun AwaitingEventCard(
             event.description?.takeIf { it.isNotBlank() }?.let { words ->
                 CreatorWords(words = words, authorUid = event.createdByFirebaseUid, parentNames = parentNames)
             }
-            miniMonth?.let { MiniMonth(model = it, parentNames = parentNames) }
+            miniMonth?.let { FoldedMonth(model = it, parentNames = parentNames, key = event.id) }
             Text(
                 text = stringResource(R.string.event_acceptance_hidden_note),
                 style = MaterialTheme.typography.labelMedium,

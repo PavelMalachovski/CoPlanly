@@ -2,18 +2,22 @@
 <!-- An event created for the other parent, which does not enter either calendar until
      they agree to it. Every parent label goes through ParentLabels: never "Mom" or "Dad". -->
 <resources>
-    <string name="event_acceptance_offered_to_you">%1$s added this to your days</string>
-    <string name="event_acceptance_offered_by_you">You added this to %1$s\'s days</string>
+    <string name="event_acceptance_offered_to_you">%1$s added this on your day</string>
+    <string name="event_acceptance_offered_by_you">You added this on %1$s\'s day</string>
     <string name="event_acceptance_waiting">Waiting for an answer</string>
     <string name="event_acceptance_accepted">Agreed</string>
     <string name="event_acceptance_declined">Turned down</string>
     <string name="event_acceptance_accept">Accept</string>
     <string name="event_acceptance_decline">Decline</string>
     <string name="event_acceptance_withdraw">Withdraw</string>
-    <string name="event_acceptance_hidden_note">It stays out of both calendars until they answer.</string>
+    <string name="event_acceptance_hidden_note">It stays out of both calendars until there is an answer.</string>
     <!-- When an event waiting for an answer happens: a date and two times, a date and a start, or
          two dates with times when it ends on another day. -->
     <string name="event_acceptance_when">%1$s · %2$s–%3$s</string>
     <string name="event_acceptance_when_start">%1$s · %2$s</string>
     <string name="event_acceptance_when_span">%1$s – %2$s</string>
+    <!-- A request card's month folds away, so the inbox is a list rather than a wall of grids
+         (second audit). -->
+    <string name="request_card_show_month">Show the month</string>
+    <string name="request_card_hide_month">Hide the month</string>
 </resources>

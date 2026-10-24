@@ -19,11 +19,11 @@
     <string name="push_change_request_declined_body">%1$s: изменение «%2$s» отклонено</string>
     <string name="push_change_request_cancelled_title">Запрос на изменение отозван</string>
     <string name="push_change_request_cancelled_body">%1$s: запрос по «%2$s» отозван</string>
-    <string name="push_custody_proposal_proposed_title">Предложен новый график опеки</string>
+    <string name="push_custody_proposal_proposed_title">Предложен новый график проживания</string>
     <string name="push_custody_proposal_proposed_body">Второй родитель предлагает новый график</string>
-    <string name="push_custody_proposal_accepted_title">Новый график опеки согласован</string>
+    <string name="push_custody_proposal_accepted_title">Новый график проживания согласован</string>
     <string name="push_custody_proposal_accepted_body">Второй родитель согласился с новым графиком</string>
-    <string name="push_custody_proposal_declined_title">Предложение графика опеки отклонено</string>
+    <string name="push_custody_proposal_declined_title">Предложение графика проживания отклонено</string>
     <string name="push_custody_proposal_declined_body">Второй родитель отклонил предложенный график</string>
     <string name="push_day_swap_offered_title">Предложен обмен днями</string>
     <string name="push_day_swap_offered_body">Второй родитель предлагает обмен днями: %1$s</string>
@@ -63,8 +63,8 @@
     <string name="push_split_ratio_agreed_title">Деление расходов согласовано</string>
     <string name="push_split_ratio_agreed_body">Деление расходов между вами и вторым родителем было задано ещё до подключения. Откройте настройки, чтобы его посмотреть.</string>
     <string name="push_expense_added_title">Новый расход</string>
-    <string name="push_expense_added_body">%1$s добавил(а) расход «%2$s»: %3$s.</string>
-    <string name="push_expense_added_body_share">%1$s добавил(а) расход «%2$s»: %3$s. Ваша доля — %4$s.</string>
+    <string name="push_expense_added_body">Новый расход «%2$s»: %3$s (%1$s).</string>
+    <string name="push_expense_added_body_share">Новый расход «%2$s»: %3$s (%1$s). Ваша доля — %4$s.</string>
     <string name="push_records_shared_title">Вам открыты записи</string>
     <string name="push_records_shared_body">%1$s: вам открыты календарь и семейные записи</string>
     <string name="push_sticker_received_title">Вам стикер</string>
@@ -75,13 +75,15 @@
     <string name="push_channel_chat_name">Сообщения</string>
     <string name="push_channel_chat_description">Новые сообщения от второго родителя</string>
     <string name="push_channel_schedule_name">Расписание</string>
-    <string name="push_channel_schedule_description">События, запросы на изменение, предложения графика опеки и обмен днями</string>
+    <string name="push_channel_schedule_description">События, запросы на изменение, предложения графика проживания и обмен днями</string>
     <string name="push_channel_money_name">Расходы</string>
     <string name="push_channel_money_description">Предложения и договорённости о делении общих расходов</string>
     <string name="push_channel_family_name">Семья</string>
     <string name="push_channel_family_description">Связь со вторым родителем, записи о детях, общие записи и доступ специалистов</string>
     <string name="push_professional_access_requested_title">Запрос доступа специалиста</string>
     <string name="push_professional_access_requested_body">%1$s использует приглашение, чтобы читать календарь и родительский план семьи. Доступ откроется только с согласия обоих родителей.</string>
+    <string name="push_calendar_friend_accepted_title">Добавлен друг семьи</string>
+    <string name="push_calendar_friend_accepted_body">%1$s теперь видит семейный календарь. Любой из вас может закрыть доступ в разделе «Друзья семьи».</string>
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Второй родитель удалил аккаунт</string>
     <string name="push_coparent_account_deleted_body">%1$s: аккаунт удалён. Ваша переписка будет удалена %2$s — экспортируйте её до этого срока.</string>
@@ -93,6 +95,6 @@
     <string name="push_answer_by">Ответьте до %1$s.</string>
     <!-- The proposer gave the parent who did not answer in time a last chance
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
-    <string name="push_request_last_chance_title">Последний шанс ответить</string>
+    <string name="push_request_last_chance_title">Больше времени на ответ</string>
     <string name="push_request_last_chance_body">%1$s ждёт вашего ответа до %2$s.</string>
 </resources>

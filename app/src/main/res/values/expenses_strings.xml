@@ -2,6 +2,7 @@
 <!-- Expenses feature strings. Kept out of strings.xml because
      strings.xml is gitignored in this project (it holds local OAuth values). -->
 <resources>
+    <string name="expenses_back">Back</string>
     <string name="expenses_add">Add expense</string>
     <string name="expenses_summary_this_month">Summary (this month)</string>
     <string name="expenses_summary_total">Total</string>
@@ -24,6 +25,9 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Your co-parent owes you %1$s</string>
     <string name="expenses_balance_you_owe">You owe your co-parent %1$s</string>
+    <!-- The same lines naming the co-parent; the plain ones above are kept for when no name is known. -->
+    <string name="expenses_balance_owed_to_you_named">%1$s owes you %2$s</string>
+    <string name="expenses_balance_you_owe_named">You owe %1$s %2$s</string>
     <string name="expenses_balance_settled">You are all square</string>
     <string name="expenses_settle_up">Settle up</string>
     <!-- Drafted into the chat composer; the user reviews and sends it themselves -->
@@ -37,7 +41,6 @@
     <string name="expenses_row_subtitle">%1$s · %2$s paid · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">split 50/50</string>
-    <string name="expenses_split_ratio">split %1$s %2$d/%3$d</string>
     <string name="expenses_split_n_ways">split 1/%1$d</string>
     <string name="expenses_split_none">not split</string>
     <string name="expenses_delete">Delete expense</string>
@@ -84,6 +87,9 @@
     <string name="expenses_split_proposal_decline">Decline</string>
     <string name="expenses_split_proposal_later">Later</string>
     <string name="expenses_split_answer_failed">Could not answer the split. Check your connection and try again.</string>
+    <!-- A new shared expense can be one the co-parent paid (second audit). -->
+    <string name="expense_paid_by_title">Who paid?</string>
+    <string name="expense_paid_by_you">You</string>
     <string name="expense_split_shared">Share with your co-parent</string>
     <string name="expense_split_not_shared_hint">Counts towards your spending, but neither of you owes the other for it.</string>
     <string name="expense_split_ratio">Split %1$d / %2$d</string>
@@ -107,4 +113,11 @@
     <string name="settle_up_send">Send</string>
     <string name="settle_up_cancel">Cancel</string>
     <string name="settle_up_iban_save_failed">Your IBAN could not be saved. The settle-up was not sent.</string>
+    <!-- Questioning the co-parent's expense (second audit): a card in the chat, never an edit. -->
+    <string name="expense_question_title">Question this expense?</string>
+    <string name="expense_question_body">%1$s recorded “%2$s”. A card in your chat says you question it, and it stays in the record. Only %1$s can change or delete the expense — say why in the chat.</string>
+    <string name="expense_question_confirm">Question it</string>
+    <string name="expense_question_sent">Sent to the chat. Say why there.</string>
+    <string name="expense_question_failed">The question could not be sent.</string>
+    <string name="expense_question_cancel">Cancel</string>
 </resources>

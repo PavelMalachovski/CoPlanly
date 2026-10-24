@@ -58,10 +58,10 @@
     <string name="friend_invite_will_see_body">the family\'s events in the calendar, except private ones. View only — they can\'t change anything.</string>
     <string name="friend_invite_wont_see_lead">Won\'t see</string>
     <string name="friend_invite_wont_see_body">the custody schedule, expenses, chat or children\'s records.</string>
-    <string name="friend_invite_where_to_enter">They enter it in their own CoPlanly: Settings → Family friends → I have a code from the parents.</string>
+    <string name="friend_invite_where_to_enter">They enter it in their own CoPlanly: Family → Family friends → I have a code from the parents.</string>
     <string name="friend_invite_share">Share code</string>
     <string name="friend_invite_done">Done</string>
-    <string name="friend_share_message">%1$s invited you to the family calendar in CoPlanly. Your code: %2$s. In CoPlanly, open Settings → Family friends → I have a code from the parents. Get the app: %3$s</string>
+    <string name="friend_share_message">%1$s invited you to the family calendar in CoPlanly. Your code: %2$s. In CoPlanly, open Family → Family friends → I have a code from the parents. Get the app: %3$s</string>
     <string name="friend_redeem_row_title">I have a code from the parents</string>
     <string name="friend_redeem_row_supporting">If you were invited as a family friend</string>
     <string name="friend_redeem_open_calendar">Open the family calendar</string>

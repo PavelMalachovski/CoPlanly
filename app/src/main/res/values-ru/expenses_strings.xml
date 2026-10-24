@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="expenses_back">Назад</string>
     <string name="expenses_add">Добавить расход</string>
     <string name="expenses_summary_this_month">Сводка за месяц</string>
     <string name="expenses_summary_total">Итого</string>
@@ -21,6 +22,8 @@
     <string name="expenses_paid_by">%1$s: %2$s</string>
     <string name="expenses_balance_owed_to_you">Второй родитель должен вам %1$s</string>
     <string name="expenses_balance_you_owe">Вы должны второму родителю %1$s</string>
+    <string name="expenses_balance_owed_to_you_named">Вам должны %2$s, плательщик — %1$s</string>
+    <string name="expenses_balance_you_owe_named">Вы должны %2$s, получатель — %1$s</string>
     <string name="expenses_balance_settled">Вы в расчёте</string>
     <string name="expenses_settle_up">Рассчитаться</string>
     <string name="expenses_this_month">Этот месяц</string>
@@ -33,7 +36,6 @@
     <string name="expenses_row_subtitle">%1$s · оплата: %2$s · %3$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">разделено 50/50</string>
-    <string name="expenses_split_ratio">разделено %1$s %2$d/%3$d</string>
     <string name="expenses_split_n_ways">разделено 1/%1$d</string>
     <string name="expenses_split_none">не разделено</string>
     <string name="expenses_delete">Удалить расход</string>
@@ -76,6 +78,8 @@
     <string name="expenses_split_proposal_decline">Отклонить</string>
     <string name="expenses_split_proposal_later">Позже</string>
     <string name="expenses_split_answer_failed">Не удалось ответить на предложение о делении. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="expense_paid_by_title">Кто заплатил?</string>
+    <string name="expense_paid_by_you">Вы</string>
     <string name="expense_split_shared">Делить со вторым родителем</string>
     <string name="expense_split_not_shared_hint">Учитывается в ваших тратах, но никто никому за него не должен.</string>
     <string name="expense_split_ratio">Деление %1$d / %2$d</string>
@@ -84,7 +88,7 @@
     <string name="expenses_filter_members">Показать для</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
     <string name="expenses_split_proposal_waiting_title">Ждём ответа</string>
-    <string name="expenses_split_proposal_waiting_body_named">Вы предложили: %1$s. %2$s ещё не ответил(а).</string>
+    <string name="expenses_split_proposal_waiting_body_named">Вы предложили: %1$s. Ответа пока нет (%2$s).</string>
     <string name="expenses_split_proposal_withdraw">Отозвать</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
@@ -99,4 +103,10 @@
     <string name="settle_up_send">Отправить</string>
     <string name="settle_up_cancel">Отмена</string>
     <string name="settle_up_iban_save_failed">Не удалось сохранить IBAN. Расчёт не отправлен.</string>
+    <string name="expense_question_title">Поставить расход под вопрос?</string>
+    <string name="expense_question_body">Расход «%2$s» внёс(ла) %1$s. В чат придёт карточка о том, что вы ставите его под вопрос, и она останется в записи. Изменить или удалить расход может только %1$s — напишите причину в чате.</string>
+    <string name="expense_question_confirm">Поставить под вопрос</string>
+    <string name="expense_question_sent">Отправлено в чат. Напишите там причину.</string>
+    <string name="expense_question_failed">Не удалось отправить вопрос.</string>
+    <string name="expense_question_cancel">Отмена</string>
 </resources>

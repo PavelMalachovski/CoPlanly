@@ -8,7 +8,7 @@
     <string name="settings_gcal_enable_sync">Увімкнути синхронізацію</string>
     <string name="settings_gcal_private_note">Імпортовані події залишаються на цьому пристрої. Google Календар — особистий, тому другому з батьків із нього нічого не передається.</string>
     <string name="settings_parent_color">Мій колір</string>
-    <string name="settings_parent_color_desc">Як позначаються ваші події, дні опіки та витрати. Другий із батьків обирає свій колір.</string>
+    <string name="settings_parent_color_desc">Як позначаються ваші події, дні проживання та витрати. Другий із батьків обирає свій колір.</string>
     <string name="parent_color_pink">Рожевий</string>
     <string name="parent_color_blue">Синій</string>
     <string name="parent_color_purple">Фіолетовий</string>
@@ -38,20 +38,19 @@
     <string name="settings_account_description">Повний вихід із застосунку. Щоб отримати доступ до акаунта, потрібно буде ввійти знову.</string>
     <string name="settings_account_sign_out">Вийти із застосунку</string>
     <string name="settings_pairing_title">Другий із батьків</string>
-    <string name="settings_pairing_description">Другий із батьків вашої дитини: спільний календар, графік опіки, витрати й чат</string>
+    <string name="settings_pairing_description">Другий із батьків вашої дитини: спільний календар, графік проживання, витрати й чат</string>
     <string name="settings_child_info_title">Інформація про дитину</string>
     <string name="settings_child_info_description">Ліки, заняття, алергії</string>
     <string name="settings_pets_title">Улюбленці</string>
     <string name="settings_pets_description">Фото, ліки, особливості</string>
-    <string name="settings_custody_title">Графік опіки</string>
-    <string name="settings_custody_description">Налаштуйте схему опіки (тиждень через тиждень, 2-2-3 тощо)</string>
+    <string name="settings_custody_title">Графік проживання</string>
+    <string name="settings_custody_description">Налаштуйте схему проживання (тиждень через тиждень, 2-2-3 тощо)</string>
     <string name="settings_about">Про CoPlanly</string>
     <string name="settings_about_tagline">Спільний календар для спільного виховання дітей</string>
     <string name="settings_version">Версія %1$s</string>
     <string name="settings_navigate">Відкрити</string>
 
     <!-- Group headers for the four settings sections. -->
-    <string name="settings_group_family">РОДИНА</string>
     <string name="settings_group_sync">СИНХРОНІЗАЦІЯ</string>
     <string name="settings_group_app">ЗАСТОСУНОК</string>
     <string name="settings_group_account">АКАУНТ</string>
@@ -96,8 +95,8 @@
     <string name="family_switcher_unread_row">Нові повідомлення</string>
     <string name="family_switcher_request_other">В іншій родині чекає запит на зміну</string>
     <string name="family_switcher_request_row">Чекає запит на зміну</string>
-    <string name="family_switcher_schedule_other">В іншій родині чекає пропозиція щодо графіка опіки</string>
-    <string name="family_switcher_schedule_row">Чекає пропозиція щодо графіка опіки</string>
+    <string name="family_switcher_schedule_other">В іншій родині чекає пропозиція щодо графіка проживання</string>
+    <string name="family_switcher_schedule_row">Чекає пропозиція щодо графіка проживання</string>
     <string name="family_switcher_split_other">В іншій родині чекає пропозиція щодо поділу витрат</string>
     <string name="family_switcher_split_row">Чекає пропозиція щодо поділу витрат</string>
     <string name="settings_school_import_title">Імпорт із Bakaláři</string>

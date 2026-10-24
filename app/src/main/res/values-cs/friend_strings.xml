@@ -30,7 +30,7 @@
     <string name="friend_calendar_title">Kalendář rodiny</string>
     <string name="friend_calendar_family">%1$s a %2$s</string>
     <string name="friend_calendar_read_only">Jen k prohlížení. Soukromé události se nikdy nesdílejí.</string>
-    <string name="friend_calendar_added_by">Přidal(a) %1$s</string>
+    <string name="friend_calendar_added_by">Přidáno (%1$s)</string>
     <string name="friend_calendar_event_supporting">%1$s · %2$s</string>
     <string name="friend_calendar_you_take_part">Účastníte se</string>
     <string name="friend_calendar_access_ended">Váš přístup k tomuto kalendáři skončil</string>
@@ -55,10 +55,10 @@
     <string name="friend_invite_will_see_body">události rodiny v kalendáři kromě soukromých. Jen k prohlížení – nic nemůže změnit.</string>
     <string name="friend_invite_wont_see_lead">Neuvidí</string>
     <string name="friend_invite_wont_see_body">rozvrh péče, výdaje, chat ani informace o dětech.</string>
-    <string name="friend_invite_where_to_enter">Zadá ho ve své aplikaci CoPlanly: Nastavení → Přátelé rodiny → Mám kód od rodičů.</string>
+    <string name="friend_invite_where_to_enter">Zadá ho ve své aplikaci CoPlanly: Rodina → Přátelé rodiny → Mám kód od rodičů.</string>
     <string name="friend_invite_share">Sdílet kód</string>
     <string name="friend_invite_done">Hotovo</string>
-    <string name="friend_share_message">%1$s vás zve do rodinného kalendáře v CoPlanly. Váš kód: %2$s. V CoPlanly otevřete Nastavení → Přátelé rodiny → Mám kód od rodičů. Aplikace: %3$s</string>
+    <string name="friend_share_message">%1$s vás zve do rodinného kalendáře v CoPlanly. Váš kód: %2$s. V CoPlanly otevřete Rodina → Přátelé rodiny → Mám kód od rodičů. Aplikace: %3$s</string>
     <string name="friend_redeem_row_title">Mám kód od rodičů</string>
     <string name="friend_redeem_row_supporting">Pokud vás pozvali jako přítele rodiny</string>
     <string name="friend_redeem_open_calendar">Otevřít kalendář rodiny</string>

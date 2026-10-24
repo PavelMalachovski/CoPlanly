@@ -19,6 +19,7 @@ class PushRoutingTest {
         PushPayload.PAIRING_ACCEPTED,
         PushPayload.PAIRING_REMOVED,
         PushPayload.PROFESSIONAL_ACCESS_REQUESTED,
+        PushPayload.CALENDAR_FRIEND_ACCEPTED,
         PushPayload.COPARENT_ACCOUNT_DELETED
     )
 
@@ -50,6 +51,7 @@ class PushRoutingTest {
             PushDestination.PROFESSIONALS,
             PushRouting.destinationOf(PushPayload.PROFESSIONAL_ACCESS_REQUESTED)
         )
+        assertEquals(PushDestination.FRIENDS, PushRouting.destinationOf(PushPayload.CALENDAR_FRIEND_ACCEPTED))
     }
 
     @Test

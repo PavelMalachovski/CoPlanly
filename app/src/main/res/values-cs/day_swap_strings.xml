@@ -59,4 +59,28 @@
         <item quantity="many">%2$s vám nabízí %1$d dne</item>
         <item quantity="other">%2$s vám nabízí %1$d dní</item>
     </plurals>
+    <plurals name="day_swap_inbox_asked_of_you_days">
+        <item quantity="one">%2$s vás žádá o %1$d den</item>
+        <item quantity="few">%2$s vás žádá o %1$d dny</item>
+        <item quantity="many">%2$s vás žádá o %1$d dne</item>
+        <item quantity="other">%2$s vás žádá o %1$d dní</item>
+    </plurals>
+    <plurals name="day_swap_inbox_asked_by_you_days">
+        <item quantity="one">Požádali jste o %1$d den: %2$s</item>
+        <item quantity="few">Požádali jste o %1$d dny: %2$s</item>
+        <item quantity="many">Požádali jste o %1$d dne: %2$s</item>
+        <item quantity="other">Požádali jste o %1$d dní: %2$s</item>
+    </plurals>
+    <plurals name="day_swap_inbox_swap_with_you_days">
+        <item quantity="one">%2$s navrhuje výměnu %1$d dne</item>
+        <item quantity="few">%2$s navrhuje výměnu %1$d dnů</item>
+        <item quantity="many">%2$s navrhuje výměnu %1$d dne</item>
+        <item quantity="other">%2$s navrhuje výměnu %1$d dnů</item>
+    </plurals>
+    <plurals name="day_swap_inbox_swap_by_you_days">
+        <item quantity="one">Navrhli jste výměnu %1$d dne: %2$s</item>
+        <item quantity="few">Navrhli jste výměnu %1$d dnů: %2$s</item>
+        <item quantity="many">Navrhli jste výměnu %1$d dne: %2$s</item>
+        <item quantity="other">Navrhli jste výměnu %1$d dnů: %2$s</item>
+    </plurals>
 </resources>

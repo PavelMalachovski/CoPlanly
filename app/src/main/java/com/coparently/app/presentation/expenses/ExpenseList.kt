@@ -81,6 +81,7 @@ private val TILE_SIZE = 40.dp
  * into that person's name, which is the whole reason the row can print a ratio at all.
  */
 private const val MOM_SLOT = "mom"
+private const val DAD_SLOT = "dad"
 
 /**
  * List of expenses for the period. Each row swipes left to delete ([SwipeToDeleteRow]).
@@ -90,6 +91,8 @@ private const val MOM_SLOT = "mom"
  * @param parentNames Resolves a slot to that parent's name
  * @param onDelete Invoked with the swiped expense; null hides the affordance
  * @param onExpenseClick Invoked when a row is tapped (opens the editor); null makes rows inert
+ * @param onQuestion Invoked when a row this user may not change is tapped: questions the
+ *   co-parent's expense (second audit); null leaves such rows inert
  * @param canModify Whether this user may edit or delete a given row. A co-parent's expense
  *   renders with no swipe and no tap-to-edit — only its creator changes an expense (owner
  *   decision, Aug 2026 walkthrough), and `firestore.rules` enforces the same server-side, so an
@@ -111,6 +114,7 @@ fun ExpenseList(
     parentNames: ParentNames,
     onDelete: ((Expense) -> Unit)? = null,
     onExpenseClick: ((Expense) -> Unit)? = null,
+    onQuestion: ((Expense) -> Unit)? = null,
     canModify: (Expense) -> Boolean = { true },
     header: (LazyListScope.() -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
@@ -150,15 +154,23 @@ fun ExpenseList(
 
         items(expenses, key = { it.id }) { expense ->
             val modifiable = canModify(expense)
+            val place = places[expense.id] ?: RecordPlace.ON_SCREEN
+            // The creator's row opens its editor; the co-parent's, in the family on screen, asks
+            // whether to question it.
+            val tap = if (modifiable) {
+                onExpenseClick?.let { { it(expense) } }
+            } else {
+                onQuestion?.takeIf { place == RecordPlace.ON_SCREEN }?.let { { it(expense) } }
+            }
             val row: @Composable () -> Unit = {
                 ExpenseItem(
                     expense = expense,
                     payerRole = roleByUid[expense.paidBy],
                     parentNames = parentNames,
                     splitKnown = splitKnown,
-                    onClick = onExpenseClick?.takeIf { modifiable }?.let { { it(expense) } },
+                    onClick = tap,
                     onReceiptClick = { photo -> viewedReceipt = photo },
-                    place = places[expense.id] ?: RecordPlace.ON_SCREEN
+                    place = place
                 )
             }
             if (onDelete == null || !modifiable) {
@@ -362,10 +374,12 @@ private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: Par
         // parent — the payer — so "split 70/30" beside it reads as *their* share, and the first
         // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
         // the difference between a label and a wrong claim about money.
+        // Each name with its own share (second audit: "split Alice 60/40" left the 40 to guess).
         ratio != null -> stringResource(
-            R.string.expenses_split_ratio,
+            R.string.expenses_split_shares_named,
             parentNames.labelFor(MOM_SLOT),
             ratio.momPercent,
+            parentNames.labelFor(DAD_SLOT),
             ratio.dadPercent
         )
         expense.isTwoWaySplit() ->

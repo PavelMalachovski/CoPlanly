@@ -227,8 +227,26 @@ const RULES = [
   },
   {
     sections: ['3.28'],
-    why: 'stickers between the parents: the role question, the Home card, sending, the app\'s on-time stickers',
+    why: 'stickers between the parents: the role question, the Family tab card, sending, no app stickers',
     paths: ['K/domain/stickers/**', 'K/data/stickers/**', 'K/presentation/stickers/**'],
+  },
+  {
+    sections: ['3.29'],
+    why: 'a new user\'s first week: the Family tab, Home leading with today, Expenses as a detail screen, the requests pop-up, the legend',
+    paths: ['K/presentation/family/**', 'K/presentation/home/HomeScreen.kt', 'K/presentation/home/HomeAskQueue.kt',
+      'K/presentation/home/MonthMoney.kt', 'K/presentation/navigation/NavGraph.kt',
+      'K/presentation/navigation/BottomNavDestination.kt', 'K/presentation/calendar/components/CustodyLegend.kt',
+      'K/presentation/chat/MessagesList.kt', 'K/presentation/settings/SettingsScreen.kt',
+      'K/presentation/expenses/ExpenseScreen.kt'],
+  },
+  {
+    sections: ['3.30'],
+    why: 'the second audit: one Home ask per visit, the dated schedule caption, the opening hour, who paid, questioning an expense, the friend push',
+    paths: ['K/presentation/home/AwaitingDialogs.kt', 'K/presentation/home/HomeAskQueue.kt',
+      'K/presentation/custody/CustodySetupScreen.kt', 'K/presentation/custody/CustodySetupViewModel.kt',
+      'K/presentation/calendar/OpeningHour.kt', 'K/presentation/calendar/DayWeekView.kt',
+      'K/presentation/expenses/AddExpenseScreen.kt', 'K/presentation/expenses/ExpenseScreen.kt',
+      'K/presentation/changerequests/FoldedMonth.kt', 'K/data/remote/firebase/PushRouting.kt'],
   },
   {
     sections: ['3.6', '4.2'],

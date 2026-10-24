@@ -13,4 +13,6 @@
     <string name="event_acceptance_when">%1$s · %2$s–%3$s</string>
     <string name="event_acceptance_when_start">%1$s · %2$s</string>
     <string name="event_acceptance_when_span">%1$s – %2$s</string>
+    <string name="request_card_show_month">Показати місяць</string>
+    <string name="request_card_hide_month">Сховати місяць</string>
 </resources>

@@ -57,6 +57,7 @@ object ActivityCardText {
         ActivityKind.EXPENSE_ADDED -> R.string.activity_expense_added
         ActivityKind.EXPENSE_UPDATED -> R.string.activity_expense_updated
         ActivityKind.EXPENSE_DELETED -> R.string.activity_expense_deleted
+        ActivityKind.EXPENSE_QUESTIONED -> R.string.activity_expense_questioned
         ActivityKind.DAY_SWAP_OFFERED -> R.string.activity_day_swap_offered
         ActivityKind.DAY_SWAP_ACCEPTED -> R.string.activity_day_swap_accepted
         ActivityKind.DAY_SWAP_DECLINED -> R.string.activity_day_swap_declined

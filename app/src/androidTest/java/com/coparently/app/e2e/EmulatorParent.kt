@@ -63,7 +63,6 @@ import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.stickers.ParentRoles
-import com.coparently.app.data.stickers.StickerAwarder
 import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
@@ -383,7 +382,6 @@ class EmulatorParent private constructor(
     val parentRoles = ParentRoles(firestore, authService)
 
     /** The app's own stickers, given when this parent answers a request in time. */
-    val stickerAwarder = StickerAwarder(requestDeadlineRepository, stickerStore, RequestTime())
 
     /** What each full sync does with this phone's open clocks (phase 3a). */
     val requestClockKeeper = RequestClockKeeper(

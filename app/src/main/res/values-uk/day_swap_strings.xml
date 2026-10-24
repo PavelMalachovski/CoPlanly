@@ -42,10 +42,10 @@
         <item quantity="other">%1$d дня переходять: %2$s → %3$s</item>
     </plurals>
     <plurals name="day_swap_skipped_days">
-        <item quantity="one">Для %1$d вибраного дня опіку не задано — він не увійде в обмін.</item>
-        <item quantity="few">Для %1$d вибраних днів опіку не задано — вони не увійдуть в обмін.</item>
-        <item quantity="many">Для %1$d вибраних днів опіку не задано — вони не увійдуть в обмін.</item>
-        <item quantity="other">Для %1$d вибраних днів опіку не задано — вони не увійдуть в обмін.</item>
+        <item quantity="one">Для %1$d вибраного дня не вказано, з ким діти — він не увійде в обмін.</item>
+        <item quantity="few">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
+        <item quantity="many">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
+        <item quantity="other">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
     </plurals>
     <plurals name="day_swap_inbox_offered_by_you_days">
         <item quantity="one">Ви запропонували %1$d день: %2$s</item>
@@ -58,5 +58,29 @@
         <item quantity="few">%2$s пропонує вам %1$d дні</item>
         <item quantity="many">%2$s пропонує вам %1$d днів</item>
         <item quantity="other">%2$s пропонує вам %1$d дня</item>
+    </plurals>
+    <plurals name="day_swap_inbox_asked_of_you_days">
+        <item quantity="one">%2$s просить у вас %1$d день</item>
+        <item quantity="few">%2$s просить у вас %1$d дні</item>
+        <item quantity="many">%2$s просить у вас %1$d днів</item>
+        <item quantity="other">%2$s просить у вас %1$d дня</item>
+    </plurals>
+    <plurals name="day_swap_inbox_asked_by_you_days">
+        <item quantity="one">Ви попросили %1$d день: %2$s</item>
+        <item quantity="few">Ви попросили %1$d дні: %2$s</item>
+        <item quantity="many">Ви попросили %1$d днів: %2$s</item>
+        <item quantity="other">Ви попросили %1$d дня: %2$s</item>
+    </plurals>
+    <plurals name="day_swap_inbox_swap_with_you_days">
+        <item quantity="one">%2$s пропонує помінятися %1$d днем</item>
+        <item quantity="few">%2$s пропонує помінятися %1$d днями</item>
+        <item quantity="many">%2$s пропонує помінятися %1$d днями</item>
+        <item quantity="other">%2$s пропонує помінятися %1$d днями</item>
+    </plurals>
+    <plurals name="day_swap_inbox_swap_by_you_days">
+        <item quantity="one">Ви запропонували помінятися %1$d днем: %2$s</item>
+        <item quantity="few">Ви запропонували помінятися %1$d днями: %2$s</item>
+        <item quantity="many">Ви запропонували помінятися %1$d днями: %2$s</item>
+        <item quantity="other">Ви запропонували помінятися %1$d днями: %2$s</item>
     </plurals>
 </resources>

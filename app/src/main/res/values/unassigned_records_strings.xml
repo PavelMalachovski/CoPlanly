@@ -3,7 +3,7 @@
      records that name no family while they co-parent, and the parent's answer for each. -->
 <resources>
     <string name="unassigned_records_title">Records without a family</string>
-    <!-- Settings → Family row, under the title. %1$d = how many records wait for an answer. -->
+    <!-- Family tab row, under the title. %1$d = how many records wait for an answer. -->
     <plurals name="unassigned_records_count">
         <item quantity="one">%1$d record belongs to no family yet</item>
         <item quantity="other">%1$d records belong to no family yet</item>

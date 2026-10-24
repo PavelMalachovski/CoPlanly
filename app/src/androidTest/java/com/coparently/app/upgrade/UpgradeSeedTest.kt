@@ -74,7 +74,7 @@ class UpgradeSeedTest {
         val preferences = UpgradeFixture.preferences(context)
         preferences.putRefreshToken(UpgradeRows.REFRESH_TOKEN)
         preferences.putDefaultCurrency(UpgradeRows.DEFAULT_CURRENCY)
-        preferences.putBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, true)
+        preferences.putBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, false)
         // The answer to the consent screen: an upgrade that loses it asks the question again.
         preferences.putString(PreferenceKeys.TELEMETRY_CONSENT, TelemetryConsent.DENIED.stored)
     }

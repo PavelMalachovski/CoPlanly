@@ -39,7 +39,7 @@
     <string name="friend_compare_column_coparent">Другий із батьків</string>
     <string name="friend_compare_column_friend">Друг родини</string>
     <string name="friend_compare_calendar">Календар</string>
-    <string name="friend_compare_custody">Графік опіки</string>
+    <string name="friend_compare_custody">Графік проживання</string>
     <string name="friend_compare_expenses">Витрати</string>
     <string name="friend_compare_chat">Чат</string>
     <string name="friend_compare_children">Інформація про дітей</string>
@@ -54,11 +54,11 @@
     <string name="friend_invite_will_see_lead">Побачить</string>
     <string name="friend_invite_will_see_body">події родини в календарі, крім приватних. Лише перегляд — змінити нічого не можна.</string>
     <string name="friend_invite_wont_see_lead">Не побачить</string>
-    <string name="friend_invite_wont_see_body">графік опіки, витрати, чат та інформацію про дітей.</string>
-    <string name="friend_invite_where_to_enter">Його вводять у своєму CoPlanly: «Налаштування» → «Друзі родини» → «У мене є код від батьків».</string>
+    <string name="friend_invite_wont_see_body">графік проживання, витрати, чат та інформацію про дітей.</string>
+    <string name="friend_invite_where_to_enter">Його вводять у своєму CoPlanly: «Сімʼя» → «Друзі родини» → «У мене є код від батьків».</string>
     <string name="friend_invite_share">Поділитися кодом</string>
     <string name="friend_invite_done">Готово</string>
-    <string name="friend_share_message">%1$s запрошує вас до календаря родини в CoPlanly. Ваш код: %2$s. У CoPlanly відкрийте «Налаштування» → «Друзі родини» → «У мене є код від батьків». Застосунок: %3$s</string>
+    <string name="friend_share_message">%1$s запрошує вас до календаря родини в CoPlanly. Ваш код: %2$s. У CoPlanly відкрийте «Сімʼя» → «Друзі родини» → «У мене є код від батьків». Застосунок: %3$s</string>
     <string name="friend_redeem_row_title">У мене є код від батьків</string>
     <string name="friend_redeem_row_supporting">Якщо вас запросили як друга родини</string>
     <string name="friend_redeem_open_calendar">Відкрити календар родини</string>

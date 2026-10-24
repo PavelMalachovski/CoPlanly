@@ -152,6 +152,7 @@ fun ExpenseSummaryHeader(
                 BalanceRow(
                     balance = balance,
                     format = format,
+                    coParentName = parentNames.parents.coParent?.name?.takeIf { it.isNotBlank() },
                     onSettleUp = { net -> onSettleUp(SettleUpAsk(net, currency)) },
                     modifier = Modifier.padding(top = Spacing.M)
                 )
@@ -412,13 +413,12 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
 }
 
 /**
- * "Your co-parent owes you $29.85" plus the Settle up action, on its own tinted strip.
+ * "Bob owes you $29.85" plus the Settle up action, on its own tinted strip.
  *
- * This doc said "Dad owes you" until parent labels stopped being role words. The line
- * itself never named anyone: `expenses_balance_owed_to_you` says "your co-parent", which
- * is already agreement-free in all five locales. Naming the person here would need the
- * co-parent's *slot*, and this row is derived from a net figure that has no slot on it —
- * so it is deliberately left as the generic phrase rather than resolved to a name.
+ * The net figure carries no slot, but in a family of two the other side of it is the co-parent on
+ * screen, so the line names them (new-user review, October 2026: "your co-parent" read as a form
+ * letter). With no name known it falls back to "your co-parent". The named lines are worded so the
+ * name stays in the nominative in every locale ("Bob: вы должны …"), never declined.
  *
  * The strip and the filled chip are the August 2026 refresh: this line answers the question the
  * screen exists for, and it used to sit below a divider as plain text next to an outlined
@@ -432,6 +432,7 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
 private fun BalanceRow(
     balance: ExpenseBalance,
     format: NumberFormat,
+    coParentName: String?,
     onSettleUp: (net: Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -441,7 +442,10 @@ private fun BalanceRow(
 
     val label = when {
         settled -> stringResource(R.string.expenses_balance_settled)
+        net > 0 && coParentName != null ->
+            stringResource(R.string.expenses_balance_owed_to_you_named, coParentName, amount)
         net > 0 -> stringResource(R.string.expenses_balance_owed_to_you, amount)
+        coParentName != null -> stringResource(R.string.expenses_balance_you_owe_named, coParentName, amount)
         else -> stringResource(R.string.expenses_balance_you_owe, amount)
     }
     // Settled is a neutral fact, being owed is good news, owing is a nudge — but never an

@@ -1220,7 +1220,8 @@ async function acceptCalendarFriendInvitationImpl(db, acceptingUserId, accepting
   //
   // A type, the friend's profile name and the family — never a sentence (SEC-3, CLAUDE.md item
   // 15). This used to send an English `title`/`body` carrying the friend's verified e-mail
-  // address; no build has wording for the type yet, so phones drop it until one does.
+  // address. Builds from October 2026 word it and open the Family friends screen, where either
+  // parent can end the access; older ones drop it.
   const actorName = await profileName(accepterRef);
   await Promise.all(familyParents.map((parentUid) =>
     db.collection('notification_queue').add({
@@ -4571,7 +4572,7 @@ exports.scrubRevisionAudiences = scrubRevisionAudiences;
  * whole thread is the other parent's record of what was said to them — in a custody dispute it
  * is often the evidence. Erasing it the moment one side leaves took the second parent's record
  * without a word. Thirty days, announced by a push and a banner in the thread, lets them export
- * it (Settings → Family → Export the record) first; Art. 17(3)(e) and 6(1)(f) are what carry the
+ * it (the Family tab → Export the record) first; Art. 17(3)(e) and 6(1)(f) are what carry the
  * retention. After that the thread goes whole, as it always did ([sweepRetainedConversationsImpl]).
  * Thirty days rather than longer because the only thing it has to allow is one export.
  */

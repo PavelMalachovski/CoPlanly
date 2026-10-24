@@ -48,7 +48,7 @@
     <string name="request_section_history">Історія</string>
     <string name="request_history_new_time">Новий час: %1$s</string>
     <string name="request_history_day_swap">Обмін днями: %1$s</string>
-    <string name="request_history_custody">Новий графік опіки</string>
+    <string name="request_history_custody">Новий графік проживання</string>
     <string name="request_history_split">Поділ витрат</string>
     <!-- Noun phrases and "ви", not "X відповів(ла)": a name cannot agree with a gendered verb. -->
     <string name="request_history_yours_answered">Ваш запит · відповідь: %1$s</string>

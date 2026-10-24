@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.coparently.app.R
 import com.coparently.app.presentation.calendar.CalendarViewMode
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
@@ -196,6 +197,19 @@ private fun MonthTitle(
  */
 @Composable
 private fun FiltersButton(onClick: () -> Unit, active: Boolean) {
+    // From 1.3x the label goes and the glyph stays (second audit: at 130 % in Russian the labelled
+    // chip squeezed the month to "Октя…"). The glyph is the same one the chip leads with, named
+    // for TalkBack, and coloured as the chip is when a filter is on.
+    if (stacksAtLargeFont()) {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Default.FilterList,
+                contentDescription = stringResource(R.string.calendar_filters_button),
+                tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
     FilterChip(
         selected = active,
         onClick = onClick,

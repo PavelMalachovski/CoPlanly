@@ -13,7 +13,7 @@
     <string name="unassigned_records_group_children_pets">Діти й тварини</string>
     <string name="unassigned_records_group_events">Події</string>
     <string name="unassigned_records_group_expenses">Витрати</string>
-    <string name="unassigned_records_group_custody">Графік опіки</string>
+    <string name="unassigned_records_group_custody">Графік проживання</string>
     <string name="unassigned_records_kind_child">Дитина</string>
     <string name="unassigned_records_kind_pet">Тварина</string>
     <string name="unassigned_records_custody_starts">Початок: %1$s</string>

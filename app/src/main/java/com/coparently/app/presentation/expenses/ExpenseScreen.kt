@@ -15,9 +15,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -140,7 +141,7 @@ private fun Modifier.scrollsAsPage(
  *
  * @param onAddExpense Opens the add-expense form
  * @param onEditExpense Opens an expense for editing
- * @param onOpenSettings Opens settings
+ * @param onNavigateUp Back to where Expenses was opened from, or null for no up arrow
  * @param onSettleUp Opens the chat once a settle-up card has been sent ([SettleUpDialog])
  * @param viewModel Expense state
  */
@@ -154,7 +155,7 @@ private fun Modifier.scrollsAsPage(
 fun ExpenseScreen(
     onAddExpense: () -> Unit,
     onEditExpense: (String) -> Unit = {},
-    onOpenSettings: (() -> Unit)? = null,
+    onNavigateUp: (() -> Unit)? = null,
     onSettleUp: () -> Unit = {},
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
@@ -188,6 +189,10 @@ fun ExpenseScreen(
     // The balance a parent tapped Settle up on, while its dialog asks before anything is sent.
     var pendingSettleUp by remember { mutableStateOf<PendingSettleUp?>(null) }
     val scope = rememberCoroutineScope()
+    // The co-parent's expense this parent tapped, while its dialog asks whether to question it.
+    var questioned by remember { mutableStateOf<Expense?>(null) }
+    val questionSent = stringResource(R.string.expense_question_sent)
+    val questionFailed = stringResource(R.string.expense_question_failed)
     val deletedMessage = stringResource(R.string.expenses_deleted)
     val undoLabel = stringResource(R.string.expenses_deleted_undo)
 
@@ -230,18 +235,22 @@ fun ExpenseScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.expenses_title)) },
+                // A detail screen since the Family tab replaced the Expenses tab (new-user review,
+                // October 2026): opened from the tab's money card, Home's tile or a push.
+                navigationIcon = {
+                    onNavigateUp?.let { navigateUp ->
+                        IconButton(onClick = navigateUp) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.expenses_back)
+                            )
+                        }
+                    }
+                },
                 actions = {
                     // Only with two families or more (M-8). A ledger is the screen where being in
                     // the wrong family costs most: an expense is recorded against the one shown.
                     FamilySwitcherChip()
-                    onOpenSettings?.let { openSettings ->
-                        IconButton(onClick = openSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.nav_settings)
-                            )
-                        }
-                    }
                 }
             )
         },
@@ -439,6 +448,7 @@ fun ExpenseScreen(
                                     parentNames = parentNames,
                                     onDelete = deleteWithUndo,
                                     onExpenseClick = { onEditExpense(it.id) },
+                                    onQuestion = { questioned = it },
                                     // Only the creator edits or deletes an expense. A row whose creator
                                     // was never recorded (pre-schema-23, or written signed-out) stays
                                     // editable by both — all this device can honestly say about it.
@@ -560,6 +570,20 @@ fun ExpenseScreen(
         }
     }
 
+    questioned?.let { expense ->
+        QuestionExpenseDialog(
+            expense = expense,
+            coParentName = parentNames.coParentLabel(),
+            onDismiss = { questioned = null },
+            onConfirm = {
+                questioned = null
+                viewModel.questionExpense(expense) { sent ->
+                    scope.launch { snackbarHostState.showSnackbar(if (sent) questionSent else questionFailed) }
+                }
+            }
+        )
+    }
+
     pendingSettleUp?.let { pending ->
         SettleUpDialog(
             pending = pending,
@@ -571,6 +595,30 @@ fun ExpenseScreen(
             }
         )
     }
+}
+
+/**
+ * Asks before questioning the co-parent's [expense] (second audit). Questioning changes nothing in
+ * the ledger: it posts a card to the chat, which stays in the record, and the reason is said there.
+ */
+@Composable
+private fun QuestionExpenseDialog(
+    expense: Expense,
+    coParentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.expense_question_title)) },
+        text = { Text(stringResource(R.string.expense_question_body, coParentName, expense.title)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.expense_question_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.expense_question_cancel)) }
+        }
+    )
 }
 
 /**

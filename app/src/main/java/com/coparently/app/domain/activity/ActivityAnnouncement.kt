@@ -132,6 +132,13 @@ enum class ActivityKind {
     EXPENSE_ADDED,
     EXPENSE_UPDATED,
     EXPENSE_DELETED,
+
+    /**
+     * The reader questions an expense the co-parent recorded (second audit). The payload is
+     * [EXPENSE_ADDED]'s. A tap leads nowhere: the expense is the co-parent's to change or delete,
+     * and the reason is said in the thread beside the card.
+     */
+    EXPENSE_QUESTIONED,
     DAY_SWAP_OFFERED,
     DAY_SWAP_ACCEPTED,
     DAY_SWAP_DECLINED,

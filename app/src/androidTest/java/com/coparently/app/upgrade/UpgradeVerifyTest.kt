@@ -202,7 +202,11 @@ class UpgradeVerifyTest {
         val preferences = UpgradeFixture.preferences(context)
         assertEquals("The Google refresh token was lost", UpgradeRows.REFRESH_TOKEN, preferences.getRefreshToken())
         assertEquals(UpgradeRows.DEFAULT_CURRENCY, preferences.getDefaultCurrency())
-        assertTrue(preferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, false))
+        // Seeded off, against a default that is on: a lost preference reads back on.
+        assertFalse(
+            "The pause-before-sending choice was lost",
+            preferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, true)
+        )
         assertEquals(
             "The telemetry answer was lost: the consent screen would ask again",
             TelemetryConsent.DENIED,

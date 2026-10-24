@@ -76,6 +76,8 @@
     <string name="push_channel_family_description">Verknüpfung mit dem anderen Elternteil, Kinderdaten, geteilte Einträge und Zugang für Fachpersonen</string>
     <string name="push_professional_access_requested_title">Zugang für Fachperson angefragt</string>
     <string name="push_professional_access_requested_body">%1$s hat eine Einladung angenommen, den Familienkalender und den Elternplan zu lesen. Der Zugang beginnt erst mit der Zustimmung beider Eltern.</string>
+    <string name="push_calendar_friend_accepted_title">Ein Familienfreund ist dabei</string>
+    <string name="push_calendar_friend_accepted_body">%1$s kann jetzt den Familienkalender lesen. Jeder von euch kann das unter „Freunde der Familie“ beenden.</string>
     <!-- A co-parent deleted their account; the thread is kept for 30 days (%1$s = their name, %2$s = the day it goes). -->
     <string name="push_coparent_account_deleted_title">Konto des anderen Elternteils gelöscht</string>
     <string name="push_coparent_account_deleted_body">%1$s hat das Konto gelöscht. Eure Unterhaltung wird am %2$s gelöscht – exportiere sie vorher.</string>
@@ -87,6 +89,6 @@
     <string name="push_answer_by">Antworte bis %1$s.</string>
     <!-- The proposer gave the parent who did not answer in time a last chance
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
-    <string name="push_request_last_chance_title">Letzte Chance zu antworten</string>
+    <string name="push_request_last_chance_title">Mehr Zeit zum Antworten</string>
     <string name="push_request_last_chance_body">%1$s wartet auf deine Antwort bis %2$s.</string>
 </resources>

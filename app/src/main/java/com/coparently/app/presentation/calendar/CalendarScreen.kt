@@ -71,6 +71,7 @@ import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
+import com.coparently.app.presentation.calendar.components.CustodyLegend
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.DaySwapStrip
 import com.coparently.app.presentation.calendar.components.DaySwapStripActions
@@ -808,6 +809,19 @@ fun CalendarScreen(
                             vertical = dims.paddingSmall / 2
                         )
                     )
+
+                    // Whose colour is whose and what the marks mean, in every view (new-user review,
+                    // October 2026). Only with a schedule: without one the grid has no wash to explain.
+                    if (custodyModel != null) {
+                        CustodyLegend(
+                            parentNames = parentNames,
+                            showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
+                            modifier = Modifier.padding(
+                                horizontal = dims.paddingMedium,
+                                vertical = dims.paddingSmall / 2
+                            )
+                        )
+                    }
 
                     // While a swap selection is open, the grid needs a way out and a way to commit —
                     // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:

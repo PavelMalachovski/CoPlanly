@@ -51,7 +51,6 @@
     <string name="settings_navigate">Otevřít</string>
 
     <!-- Group headers for the four settings sections. -->
-    <string name="settings_group_family">RODINA</string>
     <string name="settings_group_sync">SYNCHRONIZACE</string>
     <string name="settings_group_app">APLIKACE</string>
     <string name="settings_group_account">ÚČET</string>

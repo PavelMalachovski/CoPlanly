@@ -4,7 +4,7 @@
     <string name="request_notice_reminder_title">Čeká se na vaši odpověď</string>
     <string name="request_notice_reminder_body">%1$s čeká na vaši odpověď do %2$s.</string>
     <string name="request_notice_deadline_title">%1$s: bez odpovědi do termínu</string>
-    <string name="request_notice_deadline_body">V kalendáři se nic nezměnilo. Můžete dát poslední šanci.</string>
+    <string name="request_notice_deadline_body">V kalendáři se nic nezměnilo. Můžete dát více času.</string>
     <string name="request_notice_no_answer_title">%1$s: bez odpovědi</string>
     <string name="request_notice_no_answer_body">Žádost je uzavřena jako „Bez odpovědi“. V kalendáři se nic nezměnilo.</string>
     <string name="answer_by_title">Odpovědět do</string>
@@ -19,8 +19,8 @@
         <item quantity="many">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
         <item quantity="other">Do %1$s. %2$s dostane nejvýše %3$d připomenutí, v noci žádné.</item>
     </plurals>
-    <string name="answer_by_outcome">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát poslední šanci na 24 hodin. Bez odpovědi se v kalendáři nic nezmění.</string>
-    <string name="answer_by_outcome_short">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát kratší poslední šanci. Bez odpovědi se v kalendáři nic nezmění.</string>
+    <string name="answer_by_outcome">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát dalších 24 hodin. Bez odpovědi se v kalendáři nic nezmění.</string>
+    <string name="answer_by_outcome_short">Pokud do té doby nikdo neodpoví, dostanete zprávu a můžete dát ještě trochu času. Bez odpovědi se v kalendáři nic nezmění.</string>
     <string name="answer_by_fixed">Odpovědět do %1$s</string>
     <string name="answer_by_too_soon">Na termín je příliš brzy – žádost odejde jako běžná.</string>
     <string name="answer_by_picker_ok">OK</string>
@@ -34,16 +34,16 @@
     <string name="request_clock_not_opened">%1$s: zatím neotevřeno</string>
     <string name="request_clock_reminders">Připomenutí: %1$d z %2$d</string>
     <string name="request_clock_reminders_next">Připomenutí: %1$d z %2$d · další %3$s</string>
-    <string name="request_clock_last_chance_until">Poslední šance do %1$s · %2$s</string>
+    <string name="request_clock_last_chance_until">Více času do %1$s · %2$s</string>
     <string name="request_clock_deadline_passed">Termín uplynul %1$s</string>
     <string name="request_clock_calendar_unchanged">V kalendáři se nic nezměnilo.</string>
-    <string name="request_clock_give_last_chance">Dát poslední šanci — 24 hodin</string>
-    <string name="request_clock_give_last_chance_until">Dát poslední šanci — do %1$s</string>
+    <string name="request_clock_give_last_chance">Dát dalších 24 hodin</string>
+    <string name="request_clock_give_last_chance_until">Dát více času — do %1$s</string>
     <string name="request_clock_last_chance_once">Jen jednou. %1$s bude moci odpovědět do %2$s.</string>
-    <string name="request_clock_responder_unanswered">Do termínu jste neodpověděli. %1$s vám může dát poslední šanci do %2$s.</string>
-    <string name="request_last_chance_banner_title">Poslední šance · zbývá %1$s</string>
+    <string name="request_clock_responder_unanswered">Do termínu jste neodpověděli. %1$s vám může dát více času, do %2$s.</string>
+    <string name="request_last_chance_banner_title">Více času · zbývá %1$s</string>
     <string name="request_last_chance_banner_text">Odpovězte do %1$s. Bez odpovědi se žádost uzavře jako „Bez odpovědi“.</string>
-    <string name="request_last_chance_failed">Poslední šanci se nepodařilo odeslat. Zkuste to znovu.</string>
+    <string name="request_last_chance_failed">Prodloužení se nepodařilo odeslat. Zkuste to znovu.</string>
     <plurals name="request_left_days">
         <item quantity="one">%1$d den</item>
         <item quantity="few">%1$d dny</item>
@@ -64,7 +64,7 @@
     </plurals>
     <!-- The meta line of a "No answer" row in History (spec §6.6), parts joined with " · ". -->
     <string name="request_history_meta_deadline">Termín %1$s</string>
-    <string name="request_history_meta_last_chance">poslední šance do %1$s</string>
+    <string name="request_history_meta_last_chance">více času do %1$s</string>
     <string name="request_history_meta_opened">otevřeno %1$s</string>
     <string name="request_history_meta_unchanged">kalendář beze změny</string>
     <plurals name="request_history_meta_reminders">

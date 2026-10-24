@@ -20,7 +20,7 @@
     <string name="calendar_dialog_ok">OK</string>
     <string name="calendar_dialog_cancel">Abbrechen</string>
 
-    <string name="calendar_change_requests">Änderungsanfragen</string>
+    <string name="calendar_change_requests">Anfragen</string>
 
     <string name="calendar_filter_event_types">Terminarten</string>
     <string name="calendar_filter_hidden_types_hint">Ausgeblendete Arten werden im Kalender nicht angezeigt</string>
@@ -64,8 +64,8 @@
 
     <!-- Inline change-request banner, view-mode menu and the day agenda card. -->
     <plurals name="calendar_change_requests_banner">
-        <item quantity="one">%1$d Änderungsanfrage</item>
-        <item quantity="other">%1$d Änderungsanfragen</item>
+        <item quantity="one">%1$d wartet auf deine Antwort</item>
+        <item quantity="other">%1$d warten auf deine Antwort</item>
     </plurals>
     <string name="calendar_change_requests_review">Prüfen</string>
     <string name="calendar_change_view_mode">Ansicht wechseln oder zu einem Datum springen</string>
@@ -81,6 +81,8 @@
     <!-- UX-8. -->
     <string name="calendar_agenda_custody_day">Tag von %1$s</string>
     <string name="calendar_filter_members">Anzeigen für</string>
+    <string name="calendar_legend_handover">Übergabe</string>
+    <string name="calendar_legend_contact">Umgangszeit</string>
 
     <!-- MON-6b: a contact window on the grid. -->
     <string name="calendar_contact_window_desc">Umgang mit %1$s, %2$s–%3$s</string>
