@@ -78,6 +78,14 @@ class RequestCapTest {
     }
 
     @Test
+    fun `a proposal that starts later is capped at its start, not at a day it would never repaint`() {
+        // From 1 December, Bob every day. Accepted now it decides from 1 December on, so before
+        // then nothing moves however the pattern would repeat backwards.
+        val fromDecember = CustodyModel.custom("proposed", date(12, 1), 1, emptySet())
+        assertEquals(at("2026-12-01T00:00"), RequestCap.forProposal(agreed, fromDecember, TODAY, ZONE))
+    }
+
+    @Test
     fun `a proposal's cap is the first day anything changes, today or later`() {
         // No agreed schedule to change, and a copy of it: nothing would change.
         assertNull(RequestCap.forProposal(null, agreed, TODAY, ZONE))
@@ -87,9 +95,13 @@ class RequestCapTest {
         val oneCycleOn = CustodyModel.weekOnWeekOff("proposed", date(10, 19))
         assertNull(RequestCap.forProposal(agreed, oneCycleOn, TODAY, ZONE))
 
-        // The weeks the other way round differ on every day, today included: its 00:00, behind now.
+        // The weeks the other way round, from 19 October: accepted today, the days before keep the
+        // agreed pattern (CustodyHistory), so the first day that changes is the 19th.
         val swapped = CustodyModel.weekOnWeekOff("proposed", date(10, 19), momFirst = false)
-        assertEquals(at("2026-10-10T00:00"), RequestCap.forProposal(agreed, swapped, TODAY, ZONE))
+        assertEquals(at("2026-10-19T00:00"), RequestCap.forProposal(agreed, swapped, TODAY, ZONE))
+        // Anchored in the past, it differs on every day from today: its 00:00, behind now.
+        val swappedSince = CustodyModel.weekOnWeekOff("proposed", date(10, 5), momFirst = false)
+        assertEquals(at("2026-10-10T00:00"), RequestCap.forProposal(agreed, swappedSince, TODAY, ZONE))
 
         // One day moves before today (8 October) and one after (14 October); the later one caps, and the
         // earlier one does not, however soon its fortnightly repeat (22 October) comes.

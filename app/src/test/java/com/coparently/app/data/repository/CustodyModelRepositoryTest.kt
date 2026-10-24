@@ -17,6 +17,7 @@ import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyDecision
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
+import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.DayOverride
@@ -25,6 +26,7 @@ import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
+import com.coparently.app.domain.custody.isHistory
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.User
@@ -1597,6 +1599,30 @@ class CustodyModelRepositoryTest {
                 requestDeadlines.start(match { it.familyId == DOCUMENT_ID && it.responderUid == PARTNER_UID })
             }
             coVerify(exactly = 1) { fcmService.queueNotificationForUser(PARTNER_UID, any()) }
+        }
+
+    @Test
+    fun `accepting a different pattern keeps the days before it as history`() =
+        runTest(dispatcher) {
+            switchableBetweenTwoFamilies()
+            // From today, every day of the cycle but one given to the other parent.
+            val proposal = proposalBy(PARTNER_UID, PROPOSED_AT).let {
+                it.copy(model = it.model.copy(momDayIndices = setOf(0), startDate = LocalDate.now()))
+            }
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+                remoteCustody().copy(proposal = proposal)
+            val written = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(written)) } returns Unit
+
+            assertTrue(repository.acceptProposal().isSuccess)
+
+            val history = written.captured.model.seasonalLayers.filter { it.isHistory }
+            assertTrue(history.isNotEmpty())
+            // From the old anchor, or three years back once that is further (CustodyHistory.MAX_YEARS_BACK).
+            val earliest = maxOf(START_DATE, LocalDate.now().minusYears(CustodyHistory.MAX_YEARS_BACK))
+            assertEquals(earliest, history.minOf { it.fromDate })
+            assertEquals(LocalDate.now().minusDays(1), history.maxOf { it.toDate })
+            assertTrue(written.captured.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-") })
         }
 
     @Test

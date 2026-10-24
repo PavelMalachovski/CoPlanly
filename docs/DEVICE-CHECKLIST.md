@@ -470,6 +470,13 @@ the swatch beside "Custom" follows the slider. Since October 2026 the colours ar
 custody wash is about 20 % in the light theme and 30 % in the dark one, and every event dot sits
 in a ring of the day's own grey.
 
+Since 24 October 2026 **My colour** is a grid of eighteen named colours, five to a row, then
+**Custom**: TalkBack names each swatch and says which is selected; the chosen one carries a ring
+and a check. Pick **Banana** — in the light theme the calendar draws it ochre, as the swatch shows
+— and **Flamingo** with the co-parent on **Tomato**: the two are under 30° apart, so one of you is
+drawn in another colour on both phones. On the co-parent's previous build a grid colour reads as
+"not chosen" (the slot default). Onboarding still offers the four originals.
+
 **(screenshots)** The `purpleorange` images already show the month grid (wash, dots, handover
 triangle, contact-window corner), Home's today card, week timeline and handover hero, the event
 preview, the Expenses split bar and the family switcher. A pink or blue in any of them is the
@@ -798,6 +805,14 @@ base pattern; schema 38 (the Regenerate workflow must have exported `38.json` fo
       schedule are kept verbatim through a swap write *and* a pattern write, a `p2|…` citation
       survives, and the previous build reads this build's writes in the `upgrade` job. What is left
       here is the grid on each phone and the proposal banner.
+- [ ] **2P, a change keeps the past (owner decision, 24 October 2026):** B proposes a different
+      base pattern with a start date a week ago; A accepts. On both phones the days before today keep
+      their old colours and today on follows the new pattern; with a start date next week, the days
+      until then keep the old one. The seasonal editor lists no "Earlier schedule" entry. With B on
+      the previous build, B's phone keeps the past too (it draws the history as a layer, listed as
+      "Earlier schedule until …"); with A on the previous build accepting, the past repaints — an
+      accepted loss. **[CI]** `CustodyHistoryTest`, `CustodyProposalTransitionTest` and the feed's
+      "history layer" case cover the rule; what is left is the grid on each phone.
 - [ ] **Calendar feed (MON-17), if deployed:** an iPhone subscribed to the feed shows the layer's
       custody bars on its dates after the next refresh. **[CI]** the `web` job parses the feed —
       layer, swap and contact windows included — as a calendar app would; what is left is the app.

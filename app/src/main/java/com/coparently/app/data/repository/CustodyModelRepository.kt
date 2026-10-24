@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -486,7 +487,9 @@ constructor(
      * to round-trip. The proposer is told in their own family's thread; see [decideProposal].
      */
     suspend fun acceptProposal(): Result<Unit> = decideProposal { current, uid, now, nowMillis ->
-        CustodyProposalTransition.accept(current, uid, now, nowMillis)
+        // The accepter's own date: the day the past stops and the proposal begins, at the latest.
+        val acceptedOn = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+        CustodyProposalTransition.accept(current, uid, now, nowMillis, acceptedOn)
     }
 
     /**

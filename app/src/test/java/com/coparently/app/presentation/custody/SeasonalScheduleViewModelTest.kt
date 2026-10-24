@@ -6,6 +6,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
+import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
@@ -63,6 +64,14 @@ class SeasonalScheduleViewModelTest {
     private val base = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
     private val summer =
         SeasonalLayer.allWith("summer", "Summer", LocalDate.of(2027, 7, 1)..LocalDate.of(2027, 8, 31), "mom")
+
+    /** A stretch of an earlier schedule kept by `CustodyHistory`: never listed, never dropped. */
+    private val history = SeasonalLayer.allWith(
+        "${CustodyHistory.ID_PREFIX}20260801-0",
+        CustodyHistory.layerName(LocalDate.of(2026, 7, 31)),
+        LocalDate.of(2026, 1, 1)..LocalDate.of(2026, 7, 31),
+        "dad"
+    ).copy(priority = CustodyHistory.PRIORITY)
 
     private fun draft(name: String, from: String, to: String) =
         SeasonalLayerDraft(name = name, from = LocalDate.parse(from), to = LocalDate.parse(to))
@@ -204,6 +213,37 @@ class SeasonalScheduleViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.layersState.value.planReference)
+    }
+
+    @Test
+    fun `history layers are not listed`() = runTest(dispatcher) {
+        val vm = viewModel(model = base.copy(seasonalLayers = listOf(summer, history)))
+        backgroundScope.launch { vm.layersState.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(listOf("summer"), vm.layersState.value.layers.map { it.id })
+    }
+
+    @Test
+    fun `saving a layer keeps the history layers`() = runTest(dispatcher) {
+        val vm = viewModel(model = base.copy(seasonalLayers = listOf(summer, history)))
+        val sent = slot<List<SeasonalLayer>>()
+        coEvery { repository.submitSeasonalLayers(capture(sent), any(), any()) } returns PatternSubmission.PROPOSED
+
+        vm.saveLayer(draft("Christmas", "2026-12-24", "2026-12-26"), editingId = null)
+        advanceUntilIdle()
+
+        assertTrue(sent.captured.contains(history))
+    }
+
+    @Test
+    fun `deleting a layer keeps the history layers`() = runTest(dispatcher) {
+        val vm = viewModel(model = base.copy(seasonalLayers = listOf(summer, history)))
+
+        vm.deleteLayer("summer")
+        advanceUntilIdle()
+
+        coVerify { repository.submitSeasonalLayers(listOf(history), null, any()) }
     }
 
     @Test

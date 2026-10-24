@@ -2,6 +2,7 @@ package com.coparently.app.domain.changerequests
 
 import com.coparently.app.domain.custody.ChildCustody
 import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.model.CustodyModel
 import java.time.LocalDate
@@ -52,9 +53,10 @@ object RequestCap {
         millisOf(start, zone).takeIf { it > nowMillis }
 
     /**
-     * The cap of a custody proposal: 00:00 of the first day, from [today] on, on which [proposed]
-     * differs from [agreed] in anything the calendar shows (ruling 10). That is the day's custody
-     * ([CustodyModel.getCustodyFor], seasonal layers included), its contact windows, or, for every
+     * The cap of a custody proposal: 00:00 of the first day, from [today] on, on which [proposal],
+     * as accepting it today would leave the calendar, differs from [agreed] in anything the
+     * calendar shows (ruling 10). That is the day's custody ([CustodyModel.getCustodyFor], seasonal
+     * layers included), its contact windows, or, for every
      * child either model gives a schedule of their own, where that child is and which afternoons
      * they spend with the other parent (`ChildCustody`).
      *
@@ -73,8 +75,11 @@ object RequestCap {
      * [PROPOSAL_SCAN_DAYS], and when either schedule has no cycle to reduce a date into (a
      * document synced unvalidated from the other phone), which cannot be compared.
      */
-    fun forProposal(agreed: CustodyModel?, proposed: CustodyModel, today: LocalDate, zone: ZoneId): Long? {
-        if (agreed == null || agreed.patternDays < 1 || proposed.patternDays < 1) return null
+    fun forProposal(agreed: CustodyModel?, proposal: CustodyModel, today: LocalDate, zone: ZoneId): Long? {
+        if (agreed == null || agreed.patternDays < 1 || proposal.patternDays < 1) return null
+        // What accepting today would make of it: the days before it takes effect keep the agreed
+        // pattern (`CustodyHistory`), so they are not changes, however the pattern repeats backwards.
+        val proposed = CustodyHistory.freeze(agreed, proposal, today)
         val children = (agreed.childOverrides + proposed.childOverrides).map { it.childId }.distinct()
         val before = children.map { childView(agreed, it) }
         val after = children.map { childView(proposed, it) }

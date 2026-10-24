@@ -106,17 +106,21 @@ data class CustodyPatternDiff(
                 )
             }
 
+            // The days as accepting on [from] would leave them: before the proposal takes effect
+            // they keep the agreed pattern (`CustodyHistory`), so they are not moved days. The
+            // layers comparison below stays on the proposal itself — kept history is not a change.
+            val accepted = CustodyHistory.freeze(agreed, proposed, from)
             val window = windowFor(agreed.patternDays, proposed.patternDays, maxWindowDays)
             val moved = (0 until window).mapNotNull { offset ->
                 val date = from.plusDays(offset.toLong())
                 val before = agreed.getCustodyFor(date)
-                val after = proposed.getCustodyFor(date)
+                val after = accepted.getCustodyFor(date)
                 if (before == after) null else MovedDay(date, before, after)
             }
 
             val windowsChanged = (0 until window).any { offset ->
                 val date = from.plusDays(offset.toLong())
-                !CustodyModel.sameContactWindows(agreed.contactWindowsOn(date), proposed.contactWindowsOn(date))
+                !CustodyModel.sameContactWindows(agreed.contactWindowsOn(date), accepted.contactWindowsOn(date))
             }
 
             val layersChanged = agreed.seasonalLayersWire() != proposed.seasonalLayersWire()

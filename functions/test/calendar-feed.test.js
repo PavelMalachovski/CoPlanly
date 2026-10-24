@@ -293,6 +293,25 @@ describe('calendar feed: the custody port', () => {
     assert.strictEqual(feed.custodyOn(tie, day('2026-12-25')), 'dad');
   });
 
+  // `CustodyHistory` on the Kotlin side: an accepted change keeps the past as the lowest-priority
+  // layer, so the feed serves the days already lived as they were drawn.
+  const HISTORY_ALL_DAD = 'L1;hist-20260301;-1000;2026-03-01;2026-09-06;2026-03-01;1;;;' +
+      'Earlier%20schedule%20until%202026-09-06';
+
+  it('serves a history layer below a real layer and above the base pattern', () => {
+    const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
+      seasonalLayers: [HISTORY_ALL_DAD, JULY_MUM_AUGUST_DAD],
+    }));
+    // 2026-06-01 is base index 0 (Mum's), but the history before 7 September gives it to Dad.
+    assert.strictEqual(feed.custodyOn(model, day('2026-06-01')), 'dad');
+    // A real layer on a past date still decides it: July is Mum's.
+    assert.strictEqual(feed.custodyOn(model, day('2026-07-06')), 'mom');
+    // From the day the change took effect, the base pattern answers: index 0, Mum's.
+    assert.strictEqual(feed.custodyOn(model, day('2026-09-07')), 'mom');
+    // Before the history, the base pattern again: 2026-02-23 is index 0 too.
+    assert.strictEqual(feed.custodyOn(model, day('2026-02-23')), 'mom');
+  });
+
   it('keeps an accepted swap above every layer', () => {
     const model = feed.parseCustodyModel(Object.assign({}, WEEK_ON_WEEK_OFF, {
       seasonalLayers: [JULY_MUM_AUGUST_DAD],

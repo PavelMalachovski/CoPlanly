@@ -502,7 +502,7 @@ private fun ParentColorSwatches(
     onSelect: (ParentColorChoice) -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
-        ParentColorChoice.entries.forEach { choice ->
+        ParentColorChoice.ORIGINAL.forEach { choice ->
             val label = stringResource(choice.labelRes)
             Box(
                 modifier = Modifier

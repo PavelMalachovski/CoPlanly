@@ -206,8 +206,16 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     brighter partner of the light-theme hue. `ParentColors.choiceFill` is the same for a picker's
     swatch. **Bright, and any colour at all, since October 2026** (owner decision: "the colours
     look dull; make them bright, and let me pick my own"). A colour is a `ParentColor` — one of
-    four presets (`ParentColorChoice`, Material accents now: Pink 500/A200, Blue A400/A200,
-    Purple A700/A200, Deep Orange 700/A200) or a hue picked on the wheel (`ParentColor.custom`).
+    eighteen presets (`ParentColorChoice`: the four originals, Material accents — Pink 500/A200,
+    Blue A400/A200, Purple A700/A200, Deep Orange 700/A200 — and, since 24 October 2026, fourteen
+    named grid colours, owner decision "more ready colours, as a grid like Google Calendar's") or a
+    hue picked on the wheel (`ParentColor.custom`). **A grid colour is stored as `sw1|<name>`**
+    (`ParentColorCode.SWATCH_PREFIX`), for the reason a custom one is not a hex; its tones keep the
+    reference colour's hue and saturation and are placed by the same luminance targets, so a pastel
+    draws darker in the light theme. **The originals are declared first, and the grid's order is
+    `ParentColorChoice.GRID`, not the enum's**: the collision fallback walks `entries`, and a family
+    where both chose pink must keep seeing blue for the second parent. No grey, white or black: grey
+    is the weekend, white vanishes in the light theme and black in the dark.
     Four things not to undo. **A custom colour is stored as `hue1|<degrees>`** in the same
     `users/{uid}.colorCode` (`ParentColorCode`), never as a bare hex: every profile an older build
     saved holds `#FF4081` for "not chosen", and a hex reader would turn those parents pink. An older
@@ -224,7 +232,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     colour** (`ParentColor.closeTo`), **and a pick beats a default**: a parent who never chose is
     drawn in the first preset clear of one who did, and when both chose, slot 2 yields to slot 1,
     as for two identical presets — two codes in, so both phones draw the same. The picker is
-    `presentation/settings/ParentColorDialog.kt`; onboarding keeps the four presets.
+    `presentation/settings/ParentColorDialog.kt` (the grid, five to a row, then "Custom"); onboarding
+    keeps the four originals (`ParentColorChoice.ORIGINAL`).
     **The co-parent's colour arrives live.** `PairingRepositoryImpl.observePairingState` listens to
     the co-parent's own `users/{uid}` (`data/repository/PartnerProfileFlow.kt`) for as long as the
     link names them; it used to read it once, so their rename or new colour waited for the app to
@@ -1962,6 +1971,23 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Kotlin, change the fixture both suites share. **Holiday fairness (MON-20) only counts**:
     `HolidayFairnessCalculator` reads the same resolver, so swaps and layers count as drawn and a
     contact window is never a night; its "Propose a change" opens the layer editor.
+    **An accepted schedule change keeps the past as history layers** (owner decision, 24 October
+    2026: "change the colour only into the future"). `domain/custody/CustodyHistory.kt` freezes the
+    outgoing base pattern over the days before the proposal takes effect — the later of its start
+    date and the accepter's own date (`effectiveFrom`) — as ordinary layers with three marks: an id
+    starting `hist-` (`isHistory`), priority −1000 (a real past layer still decides its dates; the
+    new base pattern does not), and an English stored name ("Earlier schedule until …") that only an
+    older build's list shows. Five things not to undo. **Only `CustodyProposalTransition.accept`
+    makes them** — an unpaired save rewrites the past on purpose (it corrects a setup mistake), and
+    an accepter on an older build makes none (an accepted loss, owner decision). **Layers, not a new
+    key**, so an older build, the calendar feed and the export draw the kept past unchanged; don't
+    move them to a key of their own. **They reach back to the outgoing anchor and at most three
+    years, in layers of at most `MAX_LAYER_DAYS`**, never a longer one an older build cannot read;
+    inside `MAX_LAYERS` the oldest history goes first, never a real layer; and a change that starts
+    sooner cuts short the history of one still waiting to start. **They are hidden, and carried**:
+    the seasonal editor lists real layers only, and every edit works on the full list. And **the
+    calendar's proposal preview starts at `effectiveFrom`**, so it never previews a repainted past.
+    A child's own schedule (item 33) has no history yet.
 
 31. **A shared file is indexed in Firestore, stored in Storage under its family's path, and never
     reached by a download URL** (MON-23, September 2026). Two surfaces: the **vault**,

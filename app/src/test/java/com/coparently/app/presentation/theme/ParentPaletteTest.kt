@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.theme
 
 import org.junit.Test
+import kotlin.math.roundToInt
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -86,10 +87,11 @@ class ParentPaletteTest {
     }
 
     @Test
-    fun `no two presets are close enough to collide`() {
+    fun `no two of the original presets are close enough to collide`() {
         // Pink and orange are the nearest pair (about 35 degrees apart); a family choosing them
-        // must see both.
-        val presets = ParentColorChoice.entries.map { it.color }
+        // must see both. The grid's eighteen do collide in places (tomato and flamingo), and the
+        // collision rule then draws the second parent apart, by the owner's choice.
+        val presets = ParentColorChoice.ORIGINAL.map { it.color }
         presets.forEach { a ->
             presets.filter { it != a }.forEach { b -> assertFalse(a.closeTo(b), "${a.preset} and ${b.preset}") }
         }
@@ -177,7 +179,15 @@ class ParentPaletteTest {
         // parent who chose would read as having chosen nothing.
         assertEquals(
             listOf("#E91E63", "#1976D2", "#7B1FA2", "#D84315"),
-            ParentColorChoice.entries.map { it.storedCode }
+            ParentColorChoice.entries.take(4).map { it.storedCode }
+        )
+        // The grid's colours are identifiers too (`sw1|<name>`), pinned whole so a rename fails here.
+        assertEquals(
+            listOf(
+                "sw1|tomato", "sw1|flamingo", "sw1|tangerine", "sw1|banana", "sw1|sage", "sw1|basil", "sw1|peacock",
+                "sw1|blueberry", "sw1|lavender", "sw1|grape", "sw1|cocoa", "sw1|cherry", "sw1|olive", "sw1|indigo"
+            ),
+            ParentColorChoice.entries.drop(4).map { it.storedCode }
         )
     }
 
@@ -203,5 +213,45 @@ class ParentPaletteTest {
 
     private companion object {
         const val LEGACY_DEFAULT = "#FF4081"
+    }
+
+    @Test
+    fun `every grid colour round-trips through its stored code`() {
+        ParentColorChoice.entries.forEach { choice ->
+            assertEquals(choice, ParentColorChoice.fromStored(choice.storedCode))
+            assertEquals(choice.color, ParentColor.fromStored(choice.storedCode))
+        }
+        val codes = ParentColorChoice.entries.map { it.storedCode.uppercase() }.toSet()
+        assertEquals(ParentColorChoice.entries.size, codes.size)
+    }
+
+    @Test
+    fun `the grid holds eighteen colours, every entry once`() {
+        assertEquals(18, ParentColorChoice.GRID.size)
+        assertEquals(ParentColorChoice.entries.toSet(), ParentColorChoice.GRID.toSet())
+    }
+
+    @Test
+    fun `new colours are stored under the swatch prefix and the four originals keep their hex`() {
+        assertEquals("sw1|tomato", ParentColorChoice.TOMATO.storedCode)
+        assertEquals(
+            listOf("#E91E63", "#1976D2", "#7B1FA2", "#D84315"),
+            ParentColorChoice.ORIGINAL.map { it.storedCode }
+        )
+        assertEquals(ParentColorChoice.ORIGINAL, ParentColorChoice.entries.take(4))
+    }
+
+    @Test
+    fun `no grid colour sits in the calendar friend's teal band`() {
+        ParentColorChoice.entries.forEach {
+            val hue = it.color.hue.roundToInt()
+            assertEquals(hue, CustomHueRange.allowed(hue), it.name)
+        }
+    }
+
+    @Test
+    fun `a grid colour is not mistaken for a custom hue or for nobody's choice`() {
+        assertNull(ParentColorCode.customHueOf(ParentColorChoice.BANANA.storedCode))
+        assertEquals(ParentColorChoice.BANANA.color, ParentPalette.of("sw1|banana", null).slot1)
     }
 }

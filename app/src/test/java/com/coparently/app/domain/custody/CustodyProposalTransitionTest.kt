@@ -80,9 +80,10 @@ class CustodyProposalTransitionTest {
             .propose(current, wanted, true, DAD, NOW).getOrThrow()
 
         val next = CustodyProposalTransition
-            .accept(pending, byUid = MOM, atIso = LATER, atMillis = LATER_MILLIS).getOrThrow()
+            .accept(pending, byUid = MOM, atIso = LATER, atMillis = LATER_MILLIS, acceptedOn = ACCEPTED_ON).getOrThrow()
 
-        assertEquals(wanted, next.model)
+        // The proposal is the agreed pattern now; the days before it took effect keep the old one.
+        assertEquals(wanted, next.model.copy(seasonalLayers = next.model.seasonalLayers.filterNot { it.isHistory }))
         assertEquals(MOM, next.lastModifiedBy)
         assertEquals(LATER_MILLIS, next.lastModifiedAtMillis)
         assertNull(next.proposal)
@@ -103,7 +104,7 @@ class CustodyProposalTransitionTest {
         // Proposing moves nothing: the agreed document keeps what it had.
         assertNull(pending.contactWindowsWire)
 
-        val accepted = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS).getOrThrow()
+        val accepted = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS, ACCEPTED_ON).getOrThrow()
         assertEquals(listOf(window), accepted.model.contactWindows)
         assertEquals(listOf("2|15:00|19:00|dad"), accepted.contactWindowsWire)
 
@@ -123,11 +124,28 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
+    fun `accepting keeps the days before the start date with the old pattern`() {
+        // Proposed on the 9th to start on the 10th, accepted on the 9th: everything before the
+        // 10th stays as the agreed pattern drew it (owner decision, 24 October 2026).
+        val later = wanted.copy(momDayIndices = setOf(0), startDate = LocalDate.of(2026, 8, 10))
+        val pending = CustodyProposalTransition.propose(current, later, true, DAD, NOW).getOrThrow()
+
+        val next = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS, ACCEPTED_ON).getOrThrow()
+
+        val before = LocalDate.of(2026, 8, 5)
+        assertEquals(agreed.getCustodyFor(before), next.model.getCustodyFor(before))
+        assertTrue(agreed.getCustodyFor(before) != later.getCustodyFor(before))
+        val from = LocalDate.of(2026, 8, 10)
+        assertEquals(later.getCustodyFor(from), next.model.getCustodyFor(from))
+        assertTrue(next.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-20260803;") })
+    }
+
+    @Test
     fun `accepting does not re-date the arrangement itself`() {
         val pending = CustodyProposalTransition
             .propose(current, wanted, true, DAD, NOW).getOrThrow()
 
-        val next = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS).getOrThrow()
+        val next = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS, ACCEPTED_ON).getOrThrow()
 
         assertEquals("2026-08-01T09:00:00", next.createdAt)
     }
@@ -195,7 +213,7 @@ class CustodyProposalTransitionTest {
         val pending = CustodyProposalTransition
             .propose(current, wanted, true, DAD, NOW).getOrThrow()
 
-        assertTrue(CustodyProposalTransition.accept(pending, DAD, LATER, LATER_MILLIS).isFailure)
+        assertTrue(CustodyProposalTransition.accept(pending, DAD, LATER, LATER_MILLIS, ACCEPTED_ON).isFailure)
         assertTrue(CustodyProposalTransition.decline(pending, DAD, LATER, null).isFailure)
     }
 
@@ -238,7 +256,7 @@ class CustodyProposalTransitionTest {
         val cited = CustodyProposalTransition
             .propose(current, wanted, true, DAD, NOW, planCitation = CITATION).getOrThrow()
 
-        assertNull(CustodyProposalTransition.accept(cited, MOM, LATER, LATER_MILLIS).getOrThrow().proposal)
+        assertNull(CustodyProposalTransition.accept(cited, MOM, LATER, LATER_MILLIS, ACCEPTED_ON).getOrThrow().proposal)
         assertNull(CustodyProposalTransition.decline(cited, MOM, LATER, null).getOrThrow().proposal)
         assertNull(CustodyProposalTransition.withdraw(cited, DAD).getOrThrow().proposal)
     }
@@ -255,7 +273,7 @@ class CustodyProposalTransitionTest {
 
     @Test
     fun `deciding when nothing is pending is a failure, not a no-op`() {
-        assertTrue(CustodyProposalTransition.accept(current, MOM, NOW, NOW_MILLIS).isFailure)
+        assertTrue(CustodyProposalTransition.accept(current, MOM, NOW, NOW_MILLIS, ACCEPTED_ON).isFailure)
         assertTrue(CustodyProposalTransition.decline(current, MOM, NOW, null).isFailure)
         assertTrue(CustodyProposalTransition.withdraw(current, MOM).isFailure)
     }
@@ -281,5 +299,8 @@ class CustodyProposalTransitionTest {
         val LATER_MILLIS = CustodyTimestamp.fromWire(LATER)
         val NOW_MILLIS = CustodyTimestamp.fromWire(NOW)
         const val HALF_HOUR_MILLIS = 1_800_000L
+
+        /** The accepter's own date when [LATER] happens. */
+        val ACCEPTED_ON: LocalDate = LocalDate.of(2026, 8, 9)
     }
 }

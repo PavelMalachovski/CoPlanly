@@ -230,7 +230,13 @@ class ChildScheduleOverrideTest {
         // The agreed document's own list is untouched by a proposal write.
         assertNull(proposed.childOverridesWire)
 
-        val accepted = CustodyProposalTransition.accept(proposed, "bob", "2026-09-08T10:00:00", 2L).getOrThrow()
+        val accepted = CustodyProposalTransition.accept(
+            proposed,
+            "bob",
+            "2026-09-08T10:00:00",
+            2L,
+            date("2026-09-08")
+        ).getOrThrow()
         assertEquals(listOf(BABY), accepted.childOverridesWire)
         assertEquals("mom", accepted.model.childOverrideFor("baby-1")?.custodyFor(date("2026-09-14")))
     }

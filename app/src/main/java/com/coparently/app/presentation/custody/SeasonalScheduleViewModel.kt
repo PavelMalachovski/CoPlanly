@@ -16,6 +16,7 @@ import com.coparently.app.domain.custody.HolidayFairnessCalculator
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
+import com.coparently.app.domain.custody.isHistory
 import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.holidays.SchoolVacationSuggestions
 import com.coparently.app.domain.holidays.VacationSuggestion
@@ -156,7 +157,9 @@ class SeasonalScheduleViewModel @Inject constructor(
         val proposer = remote?.proposal?.proposedBy
         local.copy(
             hasBasePattern = model != null,
-            layers = model?.seasonalLayers.orEmpty(),
+            // History layers (`CustodyHistory`) keep the past of an earlier schedule; nobody made
+            // them, so nobody edits them. Every edit below works on the full list and keeps them.
+            layers = model?.seasonalLayers.orEmpty().filterNot { it.isHistory },
             coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(remote, uid),
             ownProposalPending = proposer != null && proposer == uid,
             suggestions = SchoolVacationSuggestions.upcoming(location.provider, today)
