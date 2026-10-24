@@ -129,6 +129,10 @@ class MainNavigationSmokeTest {
         composeTestRule.assertIconOnlyControlsAreAccessible("Family")
         openExpensesFromFamily()
         composeTestRule.assertIconOnlyControlsAreAccessible("Expenses")
+        // Expenses is a detail screen with no bottom bar: back to the tab before the next one.
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.pumpUntil("the Family tab again after Back") { exists(bottomBar) }
+        composeTestRule.settle()
         openSettingsFromHome()
         composeTestRule.assertIconOnlyControlsAreAccessible("Settings")
     }
