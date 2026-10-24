@@ -55,8 +55,9 @@ import com.coparently.app.presentation.theme.Spacing
 import kotlin.math.roundToInt
 
 /**
- * Picks the colour this parent is drawn in: one of the four presets, or any hue on the wheel
- * (October 2026, the owner's "a colour of my own").
+ * Picks the colour this parent is drawn in: one of the eighteen grid colours
+ * ([ParentColorChoice.GRID]), or any hue on the wheel (October 2026, the owner's "a colour of my
+ * own" and "more ready colours, as a grid").
  *
  * Seeded from what this parent actually chose, falling back to the colour their slot has been
  * drawn in all along — never from the co-parent's answer. The same rule the family-kind dialog

@@ -17,6 +17,7 @@ import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyDecision
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
+import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.CustodyTimestamp
 import com.coparently.app.domain.custody.DayOverride
@@ -1617,7 +1618,9 @@ class CustodyModelRepositoryTest {
 
             val history = written.captured.model.seasonalLayers.filter { it.isHistory }
             assertTrue(history.isNotEmpty())
-            assertEquals(START_DATE, history.minOf { it.fromDate })
+            // From the old anchor, or three years back once that is further (CustodyHistory.MAX_YEARS_BACK).
+            val earliest = maxOf(START_DATE, LocalDate.now().minusYears(CustodyHistory.MAX_YEARS_BACK))
+            assertEquals(earliest, history.minOf { it.fromDate })
             assertEquals(LocalDate.now().minusDays(1), history.maxOf { it.toDate })
             assertTrue(written.captured.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-") })
         }

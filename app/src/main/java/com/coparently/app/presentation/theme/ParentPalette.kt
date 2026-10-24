@@ -352,8 +352,10 @@ class ParentColor private constructor(
 
         /**
          * Hues closer than this read as one colour to a parent glancing at a month. Below the
-         * nearest pair of presets — pink and orange, about 35 degrees apart — so no family that
-         * chose two presets is affected.
+         * nearest pair of the four original presets — pink and orange, about 35 degrees apart — so
+         * no family that chose two of those is affected. Some grid colours are closer (tomato and
+         * flamingo); a family choosing such a pair sees the second parent in another colour, by the
+         * owner's choice ("not confused" over "exactly what I picked", October 2026).
          */
         const val MIN_HUE_DISTANCE = 30f
 
