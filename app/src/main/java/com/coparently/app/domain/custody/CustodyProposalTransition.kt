@@ -1,6 +1,7 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
+import java.time.LocalDate
 
 /**
  * The four things that can happen to a custody proposal, as pure functions over [SharedCustody] —
@@ -92,23 +93,32 @@ object CustodyProposalTransition {
      * Two stamps, from one moment: [atMillis] dates the *document*, which is what orders two
      * phones' writes, while [atIso] records when the decision was made for the proposer to read
      * back. They are different questions and only the first has to survive a change of zone.
+     *
+     * **The past keeps its schedule** (owner decision, 24 October 2026): the proposal decides from
+     * [CustodyHistory.effectiveFrom] on, and the days before keep the outgoing pattern as history
+     * layers ([CustodyHistory.freeze]). This is the one place they are made — an accept is a
+     * pattern write, which the rules let change `seasonalLayers`.
+     *
+     * @param acceptedOn The accepter's own date at [atMillis].
      */
     fun accept(
         current: SharedCustody,
         byUid: String,
         atIso: String,
-        atMillis: Long
+        atMillis: Long,
+        acceptedOn: LocalDate
     ): Result<SharedCustody> =
         current.pendingForDecisionBy(byUid).map { pending ->
+            val model = CustodyHistory.freeze(current.model, pending.model, acceptedOn)
             current.copy(
-                model = pending.model,
+                model = model,
                 repeatYearly = pending.repeatYearly,
                 lastModifiedBy = byUid,
                 lastModifiedAtMillis = atMillis,
                 // The accepted pattern's windows become the agreed ones, written explicitly —
                 // this is a pattern write, the one kind that may replace the stored list.
                 contactWindowsWire = ContactWindowCodec.encodeAll(pending.model.contactWindows),
-                seasonalLayersWire = pending.model.seasonalLayersWire(),
+                seasonalLayersWire = model.seasonalLayersWire(),
                 childOverridesWire = pending.model.childOverridesWire(),
                 proposal = null,
                 lastDecision = CustodyDecision(

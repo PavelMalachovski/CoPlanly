@@ -25,6 +25,7 @@ import com.coparently.app.domain.custody.DayOverrideTransition
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.custody.SharedCustodyRead
+import com.coparently.app.domain.custody.isHistory
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.User
@@ -39,6 +40,10 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkStatic
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -63,10 +68,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Unit tests for [CustodyModelRepository]'s Firestore path, in both directions.
@@ -1597,6 +1598,28 @@ class CustodyModelRepositoryTest {
                 requestDeadlines.start(match { it.familyId == DOCUMENT_ID && it.responderUid == PARTNER_UID })
             }
             coVerify(exactly = 1) { fcmService.queueNotificationForUser(PARTNER_UID, any()) }
+        }
+
+    @Test
+    fun `accepting a different pattern keeps the days before it as history`() =
+        runTest(dispatcher) {
+            switchableBetweenTwoFamilies()
+            // From today, every day of the cycle but one given to the other parent.
+            val proposal = proposalBy(PARTNER_UID, PROPOSED_AT).let {
+                it.copy(model = it.model.copy(momDayIndices = setOf(0), startDate = LocalDate.now()))
+            }
+            coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
+                remoteCustody().copy(proposal = proposal)
+            val written = slot<SharedCustody>()
+            coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(written)) } returns Unit
+
+            assertTrue(repository.acceptProposal().isSuccess)
+
+            val history = written.captured.model.seasonalLayers.filter { it.isHistory }
+            assertTrue(history.isNotEmpty())
+            assertEquals(START_DATE, history.minOf { it.fromDate })
+            assertEquals(LocalDate.now().minusDays(1), history.maxOf { it.toDate })
+            assertTrue(written.captured.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-") })
         }
 
     @Test
