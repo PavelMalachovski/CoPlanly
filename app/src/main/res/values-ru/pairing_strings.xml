@@ -51,7 +51,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Связаны с %1$s</string>
-    <string name="pairing_partner_email_unknown">Эл. почта неизвестна</string>
     <string name="pairing_unpair_confirm_title">Разорвать связь со вторым родителем?</string>
     <string name="pairing_unpair_confirm_message">Вы перестанете делиться календарём и расходами со вторым родителем (%1$s), и никто из вас больше не сможет писать в чат. Данные на этом телефоне сохранятся.</string>
     <string name="pairing_unpair_confirm_action">Разорвать</string>

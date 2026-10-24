@@ -51,7 +51,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Verknüpft seit %1$s</string>
-    <string name="pairing_partner_email_unknown">E-Mail nicht verfügbar</string>
     <string name="pairing_unpair_confirm_title">Verknüpfung mit dem anderen Elternteil aufheben?</string>
     <string name="pairing_unpair_confirm_message">Du teilst dann Kalender und Ausgaben nicht mehr mit %1$s, und ihr könnt euch im Chat keine Nachrichten mehr schicken. Daten, die bereits auf diesem Telefon sind, bleiben erhalten.</string>
     <string name="pairing_unpair_confirm_action">Aufheben</string>

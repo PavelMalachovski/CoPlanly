@@ -47,9 +47,10 @@ class PreferencesRepositoryImpl @Inject constructor(
     )
 
     // Read once, here, for the reason the consent above is: a message sent in the first frame
-    // after launch must already see the choice.
+    // after launch must already see the choice. On unless the parent switched it off (new-user
+    // review, October 2026): a stored answer wins, so nobody who chose "off" is switched back.
     private val _pauseBeforeSendingFlow = MutableStateFlow(
-        encryptedPreferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, false)
+        encryptedPreferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, true)
     )
 
     init {

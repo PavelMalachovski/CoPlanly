@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -80,7 +80,7 @@ fun FamilySwitcherChip(
         PillChip(
             label = familyLabel(state.selected),
             modifier = Modifier.widthIn(max = CHIP_MAX_WIDTH),
-            icon = Icons.Default.SwapHoriz,
+            icon = Icons.Default.Groups,
             // The label is a person's name, which on its own says nothing about what a tap does.
             iconDescription = stringResource(R.string.settings_family_switch),
             onClick = { showDialog = true }

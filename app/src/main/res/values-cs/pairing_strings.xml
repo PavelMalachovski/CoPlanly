@@ -51,7 +51,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Propojeno od %1$s</string>
-    <string name="pairing_partner_email_unknown">E-mail není k dispozici</string>
     <string name="pairing_unpair_confirm_title">Odpojit druhého rodiče?</string>
     <string name="pairing_unpair_confirm_message">%1$s a vy přestanete sdílet kalendář a výdaje a nebudete si už moci psát v chatu. Data, která už máte v telefonu, zůstanou zachována.</string>
     <string name="pairing_unpair_confirm_action">Odpojit</string>

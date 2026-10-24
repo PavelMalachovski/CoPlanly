@@ -56,7 +56,6 @@
     <!-- Email invite -->
     <!-- Paired state -->
     <string name="pairing_paired_since">Paired since %1$s</string>
-    <string name="pairing_partner_email_unknown">Email unavailable</string>
     <string name="pairing_unpair_confirm_title">Unlink your co-parent?</string>
     <string name="pairing_unpair_confirm_message">You will stop sharing the calendar and expenses with %1$s, and neither of you will be able to send messages in the chat. Data already on this phone is kept.</string>
     <string name="pairing_unpair_confirm_action">Unlink</string>
