@@ -1183,6 +1183,42 @@ class CoPlanlyDatabaseMigrationTest {
         }
     }
 
+    /**
+     * 45-to-46 adds the remembered families (schema 46): an empty `known_families` table, keyed on
+     * the family, whose name and slots are nullable because a sync may know one before the other.
+     * Nothing is backfilled — the next sync fills it from the server. Needs `46.json`, which the
+     * Regenerate workflow exports (`.github/regenerate-request`).
+     */
+    @Test
+    fun migration45To46_addsAnEmptyKnownFamiliesTable() {
+        val db = helper.createDatabase(TEST_DB, VERSION_45)
+        db.close()
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            VERSION_46,
+            true,
+            DatabaseMigrations.MIGRATION_45_46
+        )
+
+        migrated.query("SELECT COUNT(*) FROM known_families").use {
+            assertTrue(it.moveToFirst())
+            assertEquals("nothing is backfilled", 0, it.getInt(0))
+        }
+        migrated.execSQL(
+            """
+            INSERT INTO known_families (familyId, coParentUid, coParentName, mySlot, coParentSlot,
+                                        updatedAtMillis)
+            VALUES ('alice__bob', 'bob', 'Bob', 'mom', 'dad', 1787000000000),
+                   ('alice__carol', 'carol', NULL, NULL, NULL, 1787000000000)
+            """.trimIndent()
+        )
+        migrated.query("SELECT coParentName FROM known_families WHERE familyId = 'alice__carol'").use {
+            assertTrue(it.moveToFirst())
+            assertTrue("a family whose name is not known yet is still remembered", it.isNull(0))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "coplanly-migration-test.db"
         const val VERSION_11 = 11
@@ -1210,6 +1246,7 @@ class CoPlanlyDatabaseMigrationTest {
         const val VERSION_43 = 43
         const val VERSION_44 = 44
         const val VERSION_45 = 45
+        const val VERSION_46 = 46
 
         /** 2026-08-01T12:00:00 at UTC+05:30, i.e. 06:30:00Z. */
         const val NOON_AT_PLUS_FIVE_THIRTY_MILLIS = 1_785_565_800_000L
