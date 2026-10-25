@@ -50,18 +50,19 @@ class FamilyViewTest {
     }
 
     @Test
-    fun `a record naming no family and one of an ended family stay visible`() {
+    fun `a record naming no family stays visible and one of an ended family is hidden`() {
+        // Owner decision, 25 October 2026: full isolation. An ended family's records leave every
+        // live family's screens and are read under Family → Earlier families.
         val view = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("igor", "carol")))
         assertTrue(view.shows(null))
         assertTrue(view.shows(""))
-        assertTrue(view.shows(endedFamily))
+        assertFalse(view.shows(endedFamily))
     }
 
     @Test
     fun `with one family or none nothing is hidden`() {
         val one = FamilyView.of(zuzana, row(onScreen = "igor", partners = listOf("igor")))
         assertTrue(one.shows(igorFamily))
-        assertTrue(one.shows(endedFamily))
         val none = FamilyView.of(zuzana, row(onScreen = null, partners = emptyList()))
         assertTrue(none.shows(igorFamily))
         assertEquals(FamilyView.EVERYTHING, FamilyView.of(zuzana, null))
@@ -104,12 +105,21 @@ class FamilyViewTest {
     }
 
     @Test
-    fun `an ended family's record is history, shown but counted in no live family`() {
+    fun `an ended family's record is history, hidden from a live family and counted in none`() {
         val view = FamilyView.of(zuzana, row(onScreen = "carol", partners = listOf("carol")))
         assertEquals(RecordPlace.EARLIER_FAMILY, view.placeOf(endedFamily))
-        assertTrue(view.shows(endedFamily))
+        assertFalse(view.shows(endedFamily))
         assertFalse(view.counts(endedFamily))
         assertTrue(view.counts(carolFamily))
+    }
+
+    @Test
+    fun `a parent in no family still sees an ended family's records, marked`() {
+        // Nothing is on screen to isolate it from, and an unpair must not empty the app.
+        val none = FamilyView.of(zuzana, row(onScreen = null, partners = emptyList()))
+        assertEquals(RecordPlace.EARLIER_FAMILY, none.placeOf(endedFamily))
+        assertTrue(none.shows(endedFamily))
+        assertFalse(none.counts(endedFamily))
     }
 
     @Test

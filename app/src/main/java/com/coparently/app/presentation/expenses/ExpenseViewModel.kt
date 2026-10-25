@@ -406,10 +406,11 @@ class ExpenseViewModel @Inject constructor(
      * lets it show the month it is actually leaving rather than the one arriving.
      *
      * **The figures count the family's own expenses only** (owner decision, October 2026). An
-     * expense that is "only mine" (this parent's own, naming no family) or from an earlier family
-     * stays in the list, marked, and is added into no balance, total, settle-up or chart: the two
-     * parents of this family settle this family's money, and an earlier family's slot would now
-     * name the wrong person.
+     * expense that is "only mine" (this parent's own, naming no family) stays in the list, marked,
+     * and is added into no balance, total, settle-up or chart: the two parents of this family
+     * settle this family's money. One from an earlier family is not listed while the parent is in
+     * a live family (owner decision, 25 October 2026) — its slot would now name the wrong person,
+     * and it is read under Family → Earlier families.
      */
     val monthOfExpenses: StateFlow<MonthOfExpenses> = combine(
         expensesInView,
@@ -419,6 +420,7 @@ class ExpenseViewModel @Inject constructor(
         memberFilter
     ) { (all, view), month, userId, roles, members ->
         val ofMonth = all.filter { YearMonth.from(it.date) == month }
+            .filter { view.shows(it.familyId, it.createdByFirebaseUid) }
             // An untagged expense appears only in the unfiltered month. Reading "names nobody"
             // as "names everybody" would put the family's whole grocery bill under every child's
             // chip, and every chip would then show the same list — see `FamilyMemberRef.names`.

@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.documents
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
@@ -58,13 +59,16 @@ sealed interface DocumentsList {
  *
  * @property myUid The signed-in uid; only its own documents offer Delete (the rule refuses others).
  * @property uploading True while a file is going up — the add actions wait for it.
+ * @property readOnly An ended family's vault, opened from Family → Earlier families: both parents
+ *   still read it after the unpair (owner decision, 25 October 2026), and neither adds or deletes.
  * @property error What went wrong last, for a snackbar; cleared once shown.
  */
 data class DocumentsUiState(
     val list: DocumentsList = DocumentsList.Loading,
     val myUid: String = "",
     val uploading: Boolean = false,
-    val error: UiText? = null
+    val error: UiText? = null,
+    val readOnly: Boolean = false
 )
 
 /**
@@ -82,8 +86,12 @@ class FamilyDocumentsViewModel @Inject constructor(
     private val repository: FamilyDocumentRepository,
     private val selectedFamilySource: SelectedFamilySource,
     private val authService: FirebaseAuthService,
-    parentsSource: ParentsSource
+    parentsSource: ParentsSource,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    /** The ended family Family → Earlier families opened this vault for, or null for the family on screen. */
+    private val earlierFamily: String? = savedStateHandle.get<String>(ARG_FAMILY)?.takeIf { it.isNotBlank() }
 
     /** The two parents, to name who added each document. */
     val parents: StateFlow<Parents> = parentsSource.observe()
@@ -104,10 +112,14 @@ class FamilyDocumentsViewModel @Inject constructor(
 
     init {
         val myUid = authService.getCurrentUser()?.uid.orEmpty()
-        _state.update { it.copy(myUid = myUid) }
-        val families = if (myUid.isBlank()) flowOf(null) else selectedFamilySource.observe(myUid)
+        _state.update { it.copy(myUid = myUid, readOnly = earlierFamily != null) }
+        val families = when {
+            myUid.isBlank() -> flowOf(null)
+            earlierFamily != null -> flowOf(earlierFamily)
+            else -> selectedFamilySource.observe(myUid).map { it?.familyId }
+        }
         viewModelScope.launch {
-            families.map { it?.familyId }.distinctUntilChanged().collectLatest { family ->
+            families.distinctUntilChanged().collectLatest { family ->
                 familyId = family
                 if (family == null) {
                     _state.update { it.copy(list = DocumentsList.NoFamily) }
@@ -125,6 +137,7 @@ class FamilyDocumentsViewModel @Inject constructor(
 
     /** Uploads the file at [contentUri] as [title] under [category], for the family on screen. */
     fun add(title: String, category: DocumentCategory, contentUri: String) {
+        if (earlierFamily != null) return
         val family = familyId ?: return
         if (_state.value.uploading) return
         _state.update { it.copy(uploading = true) }
@@ -141,6 +154,7 @@ class FamilyDocumentsViewModel @Inject constructor(
 
     /** Tombstones [document]; the listener then drops it from both parents' lists. */
     fun delete(document: FamilyDocument) {
+        if (earlierFamily != null) return
         viewModelScope.launch {
             repository.delete(document).onFailure {
                 _state.update { it.copy(error = UiText.Res(R.string.documents_error_delete)) }
@@ -169,7 +183,11 @@ class FamilyDocumentsViewModel @Inject constructor(
         _state.update { it.copy(error = null) }
     }
 
-    private companion object {
-        const val STOP_TIMEOUT_MS = 5_000L
+    /** The navigation argument naming an ended family's vault. */
+    companion object {
+        /** `Screen.Documents`' optional argument: an ended family's id. */
+        const val ARG_FAMILY = "family"
+
+        private const val STOP_TIMEOUT_MS = 5_000L
     }
 }

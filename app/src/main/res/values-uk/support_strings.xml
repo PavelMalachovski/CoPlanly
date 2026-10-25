@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Money → Child support (25 October 2026). -->
+<resources>
+    <string name="support_title">Аліменти</string>
+    <string name="support_row_supporting">Сума на місяць і оплата за місяцями</string>
+    <string name="support_no_family_title">Спершу зв’яжіться з другим із батьків</string>
+    <string name="support_no_family_description">Аліменти погоджують між двома батьками однієї родини.</string>
+    <string name="support_unavailable">Не вдалося завантажити аліменти. Перевірте підключення.</string>
+    <string name="support_none_title">Аліменти не погоджено</string>
+    <string name="support_none_description">Запропонуйте суму, день місяця і хто платить. Це почне діяти, коли другий із батьків прийме пропозицію.</string>
+    <string name="support_amount_line">%1$s на місяць</string>
+    <string name="support_terms_line">%1$d-го числа · платить %2$s · з: %3$s</string>
+    <string name="support_proposal_body">%1$s на місяць, %2$d-го числа, платить %3$s.</string>
+    <string name="support_waiting_title">Чекаємо на відповідь: %1$s</string>
+    <string name="support_asks_title">Пропозиція аліментів від: %1$s</string>
+    <string name="support_accept">Прийняти</string>
+    <string name="support_decline">Відхилити</string>
+    <string name="support_withdraw">Відкликати</string>
+    <string name="support_propose">Запропонувати</string>
+    <string name="support_propose_change">Запропонувати зміну</string>
+    <string name="support_months">Місяці</string>
+    <string name="support_month_due">Строк: %1$s</string>
+    <string name="support_reminder_row">Нагадувати</string>
+    <string name="support_reminder_row_supporting">На цьому телефоні, до дня оплати, поки місяць не оплачено</string>
+    <string name="support_reminder_on_the_day">У день оплати</string>
+    <string name="support_dialog_title">Запропонувати аліменти</string>
+    <string name="support_dialog_amount">Сума на місяць</string>
+    <string name="support_dialog_currency">Валюта</string>
+    <string name="support_dialog_day">День місяця</string>
+    <string name="support_dialog_day_hint">Від 1 до 28, щоб він був у кожному місяці</string>
+    <string name="support_dialog_payer">Хто платить</string>
+    <string name="support_dialog_note">Діє з цього місяця, коли другий із батьків прийме пропозицію.</string>
+    <string name="support_dialog_send">Надіслати на погодження</string>
+    <string name="support_dialog_cancel">Скасувати</string>
+    <string name="support_reminder_title">Строк аліментів: %1$s</string>
+    <string name="support_reminder_body">%1$s для: %2$s. Після переказу позначте оплату в застосунку.</string>
+    <plurals name="support_reminder_days_before">
+        <item quantity="one">За %1$d день</item>
+        <item quantity="few">За %1$d дні</item>
+        <item quantity="many">За %1$d днів</item>
+        <item quantity="other">За %1$d дня</item>
+    </plurals>
+</resources>

@@ -13,7 +13,7 @@ import javax.inject.Singleton
  * are grants, and a client that could write either would name itself into a stranger's family or
  * take the co-parent's slot. `firestore.rules` refuses a client create and delete outright and
  * allows exactly one update — the caller's own `caresFor` entry — which is why this class has one
- * write method and nothing else.
+ * write method; its one read is the family's `slots` ([getSlots]), which members may `get`.
  *
  * See docs/DESIGN-multi-family.md, M-3.
  */
@@ -49,5 +49,22 @@ class FirestoreFamilyDataSource @Inject constructor(
         familiesCollection.document(familyId)
             .update(FieldPath.of("caresFor", uid), stored)
             .await()
+    }
+
+    /**
+     * The family's `slots` map (`{uid: "mom" | "dad"}`), as Cloud Functions wrote it at pairing —
+     * the slot each parent holds **in this family** (per-family slots, 25 October 2026).
+     *
+     * Null when the document does not exist (the family ended, or predates the backfill) or
+     * carries no slot map; throws on a refused or failed read, as [setCaresFor] does.
+     */
+    suspend fun getSlots(familyId: String): Map<String, String>? {
+        val snapshot = familiesCollection.document(familyId).get().await()
+        if (!snapshot.exists()) return null
+        val slots = snapshot.get("slots") as? Map<*, *> ?: return null
+        return slots.entries
+            .mapNotNull { (uid, slot) -> (uid as? String)?.let { key -> (slot as? String)?.let { key to it } } }
+            .toMap()
+            .takeIf { it.isNotEmpty() }
     }
 }

@@ -12,6 +12,8 @@ import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
+import com.coparently.app.data.local.dao.KnownFamilyDao
+import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFingerprint
@@ -78,6 +80,7 @@ class ExportViewModelTest {
     private val receipts = mockk<ExportReceipts>()
     private val userRepository = mockk<UserRepository>()
     private val departedThreads = mockk<DepartedThreadSource>()
+    private val knownFamilies = mockk<KnownFamilyDao>()
     private val fallbacks = NameFallbacks(you = "You", coParent = "Co-parent", unknown = "Parent")
 
     /** Every ViewModel a test made, so tear-down can stop what it left running. */
@@ -123,6 +126,7 @@ class ExportViewModelTest {
     private fun viewModel(
         partnerOnScreen: PartnerSummary? = partner,
         thread: String? = null,
+        family: String? = null,
         serverPartner: PartnerSummary? = partnerOnScreen,
         parents: ParentsSource = testParentsSource(me, partner = serverPartner, onScreen = partnerOnScreen)
     ) = ExportViewModel(
@@ -133,7 +137,13 @@ class ExportViewModelTest {
         parents,
         userRepository,
         departedThreads,
-        SavedStateHandle(listOfNotNull(thread?.let { ExportViewModel.ARG_THREAD to it }).toMap())
+        knownFamilies,
+        SavedStateHandle(
+            listOfNotNull(
+                thread?.let { ExportViewModel.ARG_THREAD to it },
+                family?.let { ExportViewModel.ARG_FAMILY to it }
+            ).toMap()
+        )
     ).also { viewModels += it }
 
     /**
@@ -478,6 +488,27 @@ class ExportViewModelTest {
         coVerify { source.gather(myUid = "u1", conversationId = "u1__u9", from = any(), to = any(), zone = any()) }
         // Bob, the co-parent on screen, belongs to another family and is not named in this one.
         assertEquals(listOf("Alice", "Co-parent"), record.captured.parents)
+    }
+
+    @Test
+    fun `an ended family's record is of that family, named as this phone kept its co-parent`() = runTest {
+        // Family → Earlier families (owner decision, 25 October 2026): Zuzana's profile is no
+        // longer readable after the unpair, so her name is the one kept while the family was live.
+        val record = slot<CommunicationRecord>()
+        coEvery { knownFamilies.get("u1__u7") } returns
+            KnownFamilyEntity("u1__u7", "u7", coParentName = "Zuzana", coParentSlot = "dad", updatedAtMillis = 1L)
+        coEvery { writer.save(any(), capture(record), any()) } returns ExportedFile(mockk<Uri>(), "text/csv")
+        val vm = viewModel(family = "u1__u7")
+
+        vm.files.test {
+            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            awaitItem()
+        }
+
+        coVerify { source.gather(myUid = "u1", conversationId = "u1__u7", from = any(), to = any(), zone = any()) }
+        coVerify { receipts.reserve("u1__u7", any(), any(), ExportFormat.CSV) }
+        // Bob, the co-parent on screen, belongs to the live family and is not named in this one.
+        assertEquals(listOf("Alice", "Zuzana"), record.captured.parents)
     }
 
     @Test

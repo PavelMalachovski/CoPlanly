@@ -249,6 +249,14 @@ const RULES = [
       'K/presentation/changerequests/FoldedMonth.kt', 'K/data/remote/firebase/PushRouting.kt'],
   },
   {
+    sections: ['3.31'],
+    why: 'the tester round of 25 October: earlier families, the vault after an unpair, stickers in the chat, payments, child support, per-family slots',
+    paths: ['K/data/family/**', 'K/presentation/family/EarlierFamilies*.kt', 'K/data/payment/**',
+      'K/domain/payments/**', 'K/presentation/payments/**', 'K/data/support/**', 'K/domain/support/**',
+      'K/presentation/support/**', 'K/presentation/expenses/ExpenseSummaryHeader.kt',
+      'K/presentation/chat/SettleUpPayment.kt', 'K/presentation/common/ParentsSource.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

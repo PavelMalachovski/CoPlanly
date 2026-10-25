@@ -55,6 +55,34 @@ class ActivityCardTextTest {
     }
 
     @Test
+    fun `a sticker card says the sticker's own phrase, and an unknown kind says it is a sticker`() {
+        assertEquals(
+            CardSubjectText.Res(R.string.sticker_great_parent_parent),
+            ActivityCardText.subjectOf(card(ActivityEntityType.STICKER, "great_parent"))
+        )
+        assertEquals(
+            CardSubjectText.Res(R.string.activity_subject_sticker),
+            ActivityCardText.subjectOf(card(ActivityEntityType.STICKER, "a_kind_from_a_newer_build"))
+        )
+    }
+
+    @Test
+    fun `payment and child support cards take their money, the rest one subject`() {
+        val withMoney = ActivityKind.entries.filter { ActivityCardText.takesMoney(it) }.toSet()
+        assertEquals(
+            setOf(
+                ActivityKind.SETTLE_UP_PAID,
+                ActivityKind.SETTLE_UP_CONFIRMED,
+                ActivityKind.SUPPORT_PROPOSED,
+                ActivityKind.SUPPORT_ACCEPTED,
+                ActivityKind.SUPPORT_PAID,
+                ActivityKind.SUPPORT_CONFIRMED
+            ),
+            withMoney
+        )
+    }
+
+    @Test
     fun `every kind resolves to a real resource`() {
         ActivityKind.entries.forEach { kind ->
             assertEquals(true, ActivityCardText.resourceFor(kind) != 0, "$kind has no string")

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Money → Child support (25 October 2026). -->
+<resources>
+    <string name="support_title">Kindesunterhalt</string>
+    <string name="support_row_supporting">Der monatliche Betrag und jeder bezahlte Monat</string>
+    <string name="support_no_family_title">Verbinde dich zuerst mit dem anderen Elternteil</string>
+    <string name="support_no_family_description">Unterhalt wird zwischen den beiden Eltern einer Familie vereinbart.</string>
+    <string name="support_unavailable">Der Unterhalt konnte nicht geladen werden. Prüfe die Verbindung.</string>
+    <string name="support_none_title">Kein Unterhalt vereinbart</string>
+    <string name="support_none_description">Schlag einen Betrag, einen Tag im Monat und vor, wer zahlt. Er gilt, sobald der andere Elternteil zustimmt.</string>
+    <string name="support_amount_line">%1$s im Monat</string>
+    <string name="support_terms_line">Am %1$d. · %2$s zahlt · ab %3$s</string>
+    <string name="support_proposal_body">%1$s im Monat, am %2$d., %3$s zahlt.</string>
+    <string name="support_waiting_title">Wartet auf %1$s</string>
+    <string name="support_asks_title">%1$s schlägt Unterhalt vor</string>
+    <string name="support_accept">Annehmen</string>
+    <string name="support_decline">Ablehnen</string>
+    <string name="support_withdraw">Zurückziehen</string>
+    <string name="support_propose">Vorschlagen</string>
+    <string name="support_propose_change">Änderung vorschlagen</string>
+    <string name="support_months">Monate</string>
+    <string name="support_month_due">Fällig am %1$s</string>
+    <string name="support_reminder_row">Erinnern</string>
+    <string name="support_reminder_row_supporting">Auf diesem Telefon, vor dem Tag, solange der Monat offen ist</string>
+    <string name="support_reminder_on_the_day">Am Tag selbst</string>
+    <string name="support_dialog_title">Unterhalt vorschlagen</string>
+    <string name="support_dialog_amount">Monatlicher Betrag</string>
+    <string name="support_dialog_currency">Währung</string>
+    <string name="support_dialog_day">Tag im Monat</string>
+    <string name="support_dialog_day_hint">Von 1 bis 28, damit jeder Monat ihn hat</string>
+    <string name="support_dialog_payer">Wer zahlt</string>
+    <string name="support_dialog_note">Er gilt ab diesem Monat, sobald der andere Elternteil zustimmt.</string>
+    <string name="support_dialog_send">Zur Zustimmung senden</string>
+    <string name="support_dialog_cancel">Abbrechen</string>
+    <string name="support_reminder_title">Unterhalt ist am %1$s fällig</string>
+    <string name="support_reminder_body">%1$s an %2$s. Markiere ihn in der App als bezahlt, sobald er überwiesen ist.</string>
+    <plurals name="support_reminder_days_before">
+        <item quantity="one">%1$d Tag vorher</item>
+        <item quantity="other">%1$d Tage vorher</item>
+    </plurals>
+</resources>

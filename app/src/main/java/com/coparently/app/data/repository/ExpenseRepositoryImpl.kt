@@ -19,6 +19,7 @@ import com.coparently.app.domain.expenses.shareOf
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.repository.ExpenseRepository
@@ -36,13 +37,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("LongParameterList") // one more source: each family's own slots (25 October 2026)
 class ExpenseRepositoryImpl @Inject constructor(
     private val expenseDao: ExpenseDao,
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreExpenseDataSource: FirestoreExpenseDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
-    private val fcmService: FcmService
+    private val fcmService: FcmService,
+    private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : ExpenseRepository {
 
     private val gson = Gson()
@@ -55,14 +58,15 @@ class ExpenseRepositoryImpl @Inject constructor(
      * pair, and two families' shoes in one list was the tester report this fixes.
      */
     override fun getAllExpenses(): Flow<List<Expense>> {
-        return expenseDao.getAllExpenses().map { entities ->
-            entities.map { it.toDomain() }
-        }.inFamilyOnScreen(
+        return getAllExpensesInEveryFamily().inFamilyOnScreen(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
         ) { it.familyId }
     }
+
+    override fun getAllExpensesInEveryFamily(): Flow<List<Expense>> =
+        expenseDao.getAllExpenses().map { entities -> entities.map { it.toDomain() } }
 
     override fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>> {
         return expenseDao.getExpensesForPeriod(start, end).map { entities ->
@@ -370,7 +374,10 @@ class ExpenseRepositoryImpl @Inject constructor(
     private suspend fun pushNewExpense(expense: Expense, coParent: String) {
         val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
         val me = userDao.getUserById(myUid)
-        val mySlot = me?.role?.takeIf { it == ContactWindow.SLOT_ONE || it == ContactWindow.SLOT_TWO }
+        // This parent's slot in the expense's family, which may differ from the profile's
+        // (per-family slots, 25 October 2026).
+        val inFamily = familySlots.get(FamilyKey.of(myUid, coParent))?.of(myUid)
+        val mySlot = (inFamily ?: me?.role)?.takeIf { it == ContactWindow.SLOT_ONE || it == ContactWindow.SLOT_TWO }
         val roleByUid = buildMap {
             if (mySlot != null) {
                 put(myUid, mySlot)

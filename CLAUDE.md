@@ -625,13 +625,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
   was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
   14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
-  regenerated — `app/schemas/` holds 2–14, then 33, 34 and 36–44. Those eight have **never passed anywhere**; they were written against
+  regenerated — `app/schemas/` holds 2–14, then 33, 34 and 36–46. Those eight have **never passed anywhere**; they were written against
   schemas that were already gone. They carry `@Ignore` naming the versions they want, so the
   job is green on what can run and the intent survives for whoever restores a schema. Do not
   read that as ordinary quarantine: an `@Ignore` normally hides a defect, and this one records
   missing data that no fix to the code can supply. The migrations a test can prove are those
   six plus 33→34 (MON-5's parenting plan), 34→35 (MON-13's region), 35→36 (MON-6b's contact
-  windows) and every step from 36→37 to 43→44, which `36.json`–`44.json` make possible — this line once credited a 33→34 test to MON-5 before one existed; it was written in
+  windows) and every step from 36→37 to 45→46, which `36.json`–`46.json` make possible — this line once credited a 33→34 test to MON-5 before one existed; it was written in
   September 2026 from `33.json` and `34.json`. The last two each run 34→36 through both
   migrations, because **`35.json` does not exist**: the build exports only the current version, and v35 and v36 landed on the
   same branch before the Regenerate workflow ran, so 35 was never current there. A schema
@@ -1225,7 +1225,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 
 ```
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
-data/      — Room (v45 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
@@ -1408,7 +1408,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the conversation as `{uid: epochMillis}` maps — one write per event — and the ticks and
     unread badge are derived from them by `ChatReadState`, never stored per message.
     Message times are stored the same way: `Message.sentAtMillis`, epoch millis (Room
-    schema v13, since superseded — the database is at v45), not a naive `LocalDateTime`, so two
+    schema v13, since superseded — the database is at v46), not a naive `LocalDateTime`, so two
     parents in different time zones agree
     on what a mark means and on when a message was sent. The Firestore field keeps its name
     (`timestamp`) and the read path still accepts a legacy ISO string, so a co-parent on an
@@ -1595,9 +1595,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `slotMovedAt` (server-only; the rules let its owner only delete it), and the inviter's phone,
     which called nothing, re-stamps on its next sync (`ParentSlotMigrator.adoptSlotMovedAtPairing`:
     from the opposite slot, never from a marker it may not have, once — the custody complement is
-    not idempotent) and then removes the mark. Only two parents who both co-parent elsewhere in the
-    same slot are refused (`slot-conflict`), by the preview and the accept alike; `enter-their-code`
-    is no longer sent, and the client keeps its wording for an older server. A paired account's "Add
+    not idempotent) and then removes the mark. **Since 25 October 2026 the slot belongs to the
+    family** (owner decision; tester report: "we cannot add a family when we both already have one").
+    Two parents who both co-parent elsewhere in the same slot are no longer refused: the new family
+    takes the inviter's slot for the inviter and the other for the accepter in `families/{id}.slots`
+    alone, neither profile's `role` moves (`slotsForPairing`'s `accepterProfileRole`), and the accept
+    returns the family's slot as `familyRole`. The app reads a family's slots from `known_families`
+    (`FamilySlotsSource`, filled by `KnownFamilies` on every sync), falling back to the profile's
+    `role`: `ParentsSource` (both parents' slots and `signedInSlot()`), an event's acceptance, an
+    expense's push and the school import. `slot-conflict` and `enter-their-code` are no longer sent;
+    the client keeps their wording for an older server. **An older build** of either parent in such a
+    family reads `role` and draws it with swapped slots — that family could not exist before, so no
+    existing family changes; testers update both phones. A paired account's "Add
     another co-parent" (`anotherCoParentSection`) opens on sharing its own code and also offers the
     field for somebody else's code. Don't drop the accepter's protection before the clients read
     `families/{id}.slots` — the field is safe only because the server keeps it. `OnScreenFamiliesTest`
@@ -2044,9 +2053,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `FamilyKey.of`, the two uids — so the emulator runs every case
     (`firestore-tests/rules/storage-shared-files.test.js`); the cross-service `firestore.get()`
     it cannot run is not used. The cost is written in the rule: a path names its pair for ever,
-    so an ex-partner who kept one can still fetch that file after an unpair, although the
-    vault's index narrows (`family_documents` is in `SHARED_AUDIENCE_COLLECTIONS`). Don't widen
-    a block to "signed in"; don't add `list`.
+    so a parent can still fetch that file after an unpair — which is now the point: **an unpair no
+    longer narrows the vault** (owner decision, 25 October 2026; `family_documents` left
+    `SHARED_AUDIENCE_COLLECTIONS` for `ERASED_AUDIENCE_COLLECTIONS`, which only account deletion
+    uses). Both parents keep reading an ended family's documents, read-only, from Family → Earlier
+    families (`Screen.Documents.forEarlierFamily`), and a create needs a **live** family
+    (`isLiveFamilyMember`). Documents an earlier unpair narrowed are not restored. Don't widen a
+    block to "signed in"; don't add `list`.
     **No download URL, ever.** A token URL bypasses Storage rules for whoever holds it.
     `SharedFileStorage` has no `downloadUrl` call; a reader downloads as themselves, and
     `vaultKeysOnly` refuses a `downloadUrl` field.
@@ -2521,8 +2534,16 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `inFamilyOnScreen` filters what `EventRepositoryImpl`, `ExpenseRepositoryImpl`,
     `ChildInfoRepositoryImpl.getAllChildInfo` and `PetRepositoryImpl.getAllPets` emit, following
     the signed-in Room row, so a switch re-filters without a reload. It hides **only the records of
-    the parent's other live families**: a record naming no family, or an ended one, stays visible
-    (the "mine alone" of item 18), and with one family nothing is hidden. Visible is not the same
+    the parent's other live families and, while the parent is in a live family, of an ended one**
+    (owner decision, 25 October 2026: "full isolation" — after unpairing from Zuzana and linking
+    with Lana, Zuzana's expenses still showed). A record naming no family stays visible (the "mine
+    alone" of item 18), and with one family nothing else is hidden; a parent in no live family still
+    sees an ended family's records, marked, so an unpair never empties the app. An ended family's
+    records are read under **Family → Earlier families** (`EarlierFamiliesScreen`,
+    `EarlierFamilies.of`), read-only: its events, expenses with their totals, children, pets,
+    journal notes, its documents (item 31) and its export (`Screen.Export.forEarlierFamily`, named
+    from `known_families`). The archive and the export read `…InEveryFamily()`, never the filtered
+    lists. Visible is not the same
     as counted: `FamilyView.placeOf` says where a shown record belongs, and item 46 says what each
     place means for totals, colours and marks. A co-parent's record that names no family belongs
     to the family with its author (`creatorOf`). A background job that
@@ -2596,9 +2617,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 
     `FamilyView.placeOf` answers the same question for the screens, as a `RecordPlace`:
     - `ON_SCREEN` is drawn and counted as usual.
-    - `ONLY_ME` and `EARLIER_FAMILY` are drawn with `RecordPlaceMark` ("Only me", "From an
-      earlier family"). An earlier family's event is drawn in a neutral colour, without a person
-      row. Neither is counted in a live family's totals or balance (`FamilyView.counts`).
+    - `ONLY_ME` is drawn with `RecordPlaceMark` ("Only me"). `EARLIER_FAMILY` is not drawn while the
+      parent is in a live family (item 43); with none, it is drawn marked "From an earlier family",
+      in a neutral colour, without a person row. Neither is counted in a live family's totals or
+      balance (`FamilyView.counts`).
     - `OTHER_FAMILY` is never drawn.
 
     `MainActivity` provides `LocalFamilyView` from `FamilyViewViewModel`.
@@ -2677,7 +2699,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 47. **Stickers are between the receiver and the sender, and only a sticker's sentence says "dad"
     or "mom"** (October 2026, Zuzana's notes 6 and 8, owner answers of 23 October;
     `docs/DESIGN-stickers-and-subscription.md` §1). `stickers/{id}` is read by `to` and `from`
-    alone, never by a guest, a friend or a professional, and is not in the chat or the export.
+    alone, never by a guest, a friend or a professional. **A sent sticker is also a card in the
+    pair's thread** (owner decision, 25 October 2026: `STICKER_SENT`, worded by the sender's neutral
+    phrase on both phones), which pushes nobody (`SILENT_CARD_KINDS`) and which the export leaves out.
     A parent sends one of seven fixed kinds (`StickerKind`, no free text) with a `sticker_received`
     push. **The app gives none of its own** (second audit, 24 October 2026, owner decision): it gave
     `on_time` and `regular` for answering before a request's deadline, and answer times read as a
@@ -2700,6 +2724,41 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       drawn at the bottom of `FamilyScreen`; Home keeps only the role question.
     - **They end with the family.** `unpairCoParent` deletes the ended family's stickers and
       account deletion every one naming the parent; a phone shows the family on screen's (item 46).
+
+48. **A payment between the parents is said by the payer and confirmed by the payee, each once**
+    (owner decision, 25 October 2026: "when I settle up and send the money, it should say it is
+    settled"). `payments/{familyId}__{kind}__{yyyy-MM}__{currency}` (`PaymentId`, `PaymentDocument`,
+    `PaymentStore`): `kind` is `expenses` (a settle-up) or `support` (child support, item 49). Four
+    things not to undo. **Each step is written by the parent it is about, with the server's clock**:
+    the rule requires `payerUid == paidBy == request.auth.uid` and `paidAt == request.time` on create,
+    and the payee's one update writes only `confirmedAt` and `confirmedBy`; nobody says the other
+    paid or received. **The id spells the document's own fields** and the rule rebuilds it, so a
+    payment cannot be filed under another family or month, and there is one per month and currency.
+    **No Room table** — the state is the server's, as for the requests' clocks. **A recorded
+    payment changes no expense and no balance figure**: the Expenses header says "Paid, waiting for
+    confirmation" or "Settled" (`PaymentStrip`), and the chat cards (`SETTLE_UP_PAID`,
+    `SETTLE_UP_CONFIRMED`) carry "I paid" and "Money arrived" (`SettleUpPaymentHost`). Kept after an
+    unpair as the family's history; deleted with either account.
+49. **Child support is agreed like the expense split: a proposal the other parent accepts as it
+    stands** (owner decisions, 25 October 2026). `support_agreements/{familyId}`
+    (`SupportAgreementStore`, `SupportAgreementDocument`): `agreement` `{amount, currency,
+    dayOfMonth 1–28, payerUid, fromMonth}` and at most one `proposal` with `proposedBy` and
+    `proposedAtMillis`. The rules let a parent write only their own proposal, never over the
+    co-parent's waiting one; the other parent accepts by copying it into `agreement` field for
+    field, and either parent clears it (a decline or a withdrawal). Even the first agreement is a
+    proposal: money is never set for somebody else. **Separate from expenses, never in their
+    balance.** Each month is a `payments` document of kind `support`, paid and confirmed as in item
+    48. The cards (`SUPPORT_*`) push as chat messages and open Family → Money → Child support
+    (`SupportScreen`, `LocalOpenSupport`). **The reminder is on the payer's phone only**
+    (`SupportReminders` in `EncryptedPreferences`, `SupportReminderWorker` every six hours,
+    `SupportReminderRule`): from 0, 1, 3 or 7 days before the due day, once a month, never once
+    paid, never in the quiet hours, and silent when the server cannot be read. Unpair and account
+    deletion delete the agreement.
+50. **`known_families` remembers each family while it is live** (schema 46): the co-parent's name
+    and the two slots, written by `KnownFamilies` on every sync from the co-parent's profile and
+    `families/{id}.slots`. It is what names an ended family once its co-parent's profile is
+    unreadable, and what answers a family's slots offline (item 19). A cache of server answers,
+    never uploaded; a failed read never blanks what was known; `clearAllTables` wipes it.
 
 ## Legal and GDPR (September 2026) — keep consistent
 

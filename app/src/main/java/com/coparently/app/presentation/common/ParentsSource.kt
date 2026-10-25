@@ -2,16 +2,21 @@ package com.coparently.app.presentation.common
 
 import android.util.Log
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.family.FamilySlots
+import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.theme.ParentPalette
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import javax.inject.Inject
@@ -114,7 +119,8 @@ data class Parents(
 @Singleton
 class ParentsSource @Inject constructor(
     private val userRepository: UserRepository,
-    private val pairingRepository: PairingRepository
+    private val pairingRepository: PairingRepository,
+    private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) {
 
     /**
@@ -164,6 +170,7 @@ class ParentsSource @Inject constructor(
      * screen — adds one listener of its own, on their document ([coParentOnScreen]); the family
      * the server's link names adds none.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val shared: Flow<Parents> by lazy {
         val signedIn = userRepository.observeSignedInUser()
         combine(
@@ -173,14 +180,24 @@ class ParentsSource @Inject constructor(
                 projectedPartnerUid = signedIn.map { it?.projectedCoParentUid() },
                 profileOf = pairingRepository::observeCoParentProfile
             )
-        ) { me, coParent ->
-            Parents(
-                me = me?.asNamedParent(),
-                coParent = (coParent as? CoParentOnScreen.Linked)?.profile?.asNamedParent(),
-                isPaired = coParent is CoParentOnScreen.Linked,
-                loaded = true
-            )
-        }
+        ) { me, coParent -> me to coParent }
+            // The slots of the family on screen, which may differ from either profile's `role`
+            // (per-family slots, 25 October 2026): a parent can be slot 1 with one co-parent and
+            // slot 2 with another. A family whose slots this phone has not read yet answers with
+            // the profiles, as before.
+            .flatMapLatest { (me, coParent) ->
+                val linked = coParent as? CoParentOnScreen.Linked
+                val family = FamilyKey.orNull(me?.id, linked?.uid)
+                val slots = if (family == null) flowOf(null) else familySlots.observe(family)
+                slots.map { known ->
+                    Parents(
+                        me = me?.asNamedParent()?.inFamily(known),
+                        coParent = linked?.profile?.asNamedParent()?.inFamily(known),
+                        isPaired = linked != null,
+                        loaded = true
+                    )
+                }
+            }
             // The pairing state re-emits whenever an invite list changes and Room re-emits the
             // whole row when an unrelated column moves; neither renames anybody.
             .distinctUntilChanged()
@@ -198,6 +215,9 @@ class ParentsSource @Inject constructor(
      */
     fun observe(): Flow<Parents> = shared
 
+    /** This parent with the slot [slots] give them in the family on screen, when they give one. */
+    private fun NamedParent.inFamily(slots: FamilySlots?): NamedParent = copy(slot = slots?.of(uid) ?: slot)
+
     /**
      * This device's own slot, or null when nobody is signed in, or when this account has no
      * Room profile row — which, like [Parents.me], can be forever, not just until the next
@@ -212,7 +232,10 @@ class ParentsSource @Inject constructor(
      */
     suspend fun signedInSlot(): String? {
         val uid = userRepository.getCurrentUserId() ?: return null
-        return userRepository.getUserById(uid)?.role
+        val row = userRepository.getUserById(uid) ?: return null
+        // The slot in the family on screen when this phone has read it, else the profile's.
+        val family = FamilyKey.orNull(uid, row.partnerId)
+        return family?.let { familySlots.get(it)?.of(uid) } ?: row.role
     }
 
     /**

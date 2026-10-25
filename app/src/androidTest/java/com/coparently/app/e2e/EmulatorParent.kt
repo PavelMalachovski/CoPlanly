@@ -10,6 +10,7 @@ import com.coparently.app.data.documents.FamilyDocumentIndex
 import com.coparently.app.data.documents.FamilyDocumentIndexCache
 import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.ExportReceipts
+import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
@@ -17,6 +18,7 @@ import com.coparently.app.data.files.SharedFileStorage
 import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
@@ -64,6 +66,7 @@ import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
+import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
@@ -376,12 +379,19 @@ class EmulatorParent private constructor(
     )
 
     /** Stickers between the parents (October 2026), over this phone's Firestore and push writer. */
-    val stickerStore = StickerStore(firestore, authService, userRepository, fcmService)
+    val stickerStore = StickerStore(firestore, authService, userRepository, fcmService, announcer)
 
     /** How this parent's stickers address them: `users/{uid}.parentRole`. */
     val parentRoles = ParentRoles(firestore, authService)
 
-    /** The app's own stickers, given when this parent answers a request in time. */
+    /** Payments between the parents: "I paid" and "Money arrived" (25 October 2026). */
+    val paymentStore = PaymentStore(firestore, authService, userRepository, announcer)
+
+    /** The family's child support agreement (25 October 2026). */
+    val supportStore = SupportAgreementStore(firestore, authService, userRepository, announcer)
+
+    /** What this phone remembers of each family: the co-parent's name and the slots (schema 46). */
+    val knownFamilies = KnownFamilies(database.knownFamilyDao(), userDataSource, FirestoreFamilyDataSource(firestore))
 
     /** What each full sync does with this phone's open clocks (phase 3a). */
     val requestClockKeeper = RequestClockKeeper(
@@ -465,7 +475,8 @@ class EmulatorParent private constructor(
         custodyModelRepository = custodyRepository,
         eventVersionRecorder = eventVersionRecorder,
         reminderScheduler = NoReminders,
-        requestClockKeeper = requestClockKeeper
+        requestClockKeeper = requestClockKeeper,
+        knownFamilies = knownFamilies
     )
 
     val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)

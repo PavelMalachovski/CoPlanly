@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.ExpenseBalance
+import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
@@ -101,6 +102,8 @@ private const val STACK_FONT_SCALE = 1.3f
  * @param onSettleUp Invoked with the balance to settle when the user taps Settle up
  * @param modifier Modifier for the card
  * @param monthNavigation Month switcher to render at the top of the card, or null for none
+ * @param payment Where the month's payment stands in this currency, and what this parent can do
+ *   about it ("I paid", "Money arrived"), or null where nothing is known yet
  */
 @Composable
 @Suppress("LongParameterList") // one card, one parameter per thing it displays
@@ -110,7 +113,8 @@ fun ExpenseSummaryHeader(
     parentNames: ParentNames,
     onSettleUp: (SettleUpAsk) -> Unit,
     modifier: Modifier = Modifier,
-    monthNavigation: MonthNavigation? = null
+    monthNavigation: MonthNavigation? = null,
+    payment: PaymentStrip? = null
 ) {
     val format = remember(currency) { currencyFormat(currency) }
 
@@ -154,7 +158,8 @@ fun ExpenseSummaryHeader(
                     format = format,
                     coParentName = parentNames.parents.coParent?.name?.takeIf { it.isNotBlank() },
                     onSettleUp = { net -> onSettleUp(SettleUpAsk(net, currency)) },
-                    modifier = Modifier.padding(top = Spacing.M)
+                    modifier = Modifier.padding(top = Spacing.M),
+                    payment = payment
                 )
             }
         }
@@ -429,16 +434,24 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
  * could be changed before it was sent).
  */
 @Composable
+@Suppress("LongParameterList") // the month's figures, who they are with, and the two actions
 private fun BalanceRow(
     balance: ExpenseBalance,
     format: NumberFormat,
     coParentName: String?,
     onSettleUp: (net: Double) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    payment: PaymentStrip? = null
 ) {
     val net = balance.netForCurrentUser
     val amount = format.format(abs(net))
     val settled = abs(net) < SETTLED_EPSILON
+    // A payment recorded for the month says where the money stands, whatever the balance still
+    // reads: the expenses do not change when one parent pays the other (25 October 2026).
+    if (payment != null && payment.state != PaymentState.NONE) {
+        PaymentBalanceStrip(payment, format, coParentName, modifier)
+        return
+    }
 
     val label = when {
         settled -> stringResource(R.string.expenses_balance_settled)
@@ -459,7 +472,49 @@ private fun BalanceRow(
         label = label,
         accent = accent,
         onSettleUp = if (settled) null else { { onSettleUp(net) } },
-        modifier = modifier
+        modifier = modifier,
+        // The parent who owes may say they paid, once they have.
+        onIPaid = payment?.onMarkPaid?.takeIf { !settled && net < 0 }
+    )
+}
+
+/**
+ * Where a month's payment stands, for [ExpenseSummaryHeader]: its [state] for this parent, the
+ * amount recorded, and the one step this parent can take — say they paid, or that it arrived.
+ */
+data class PaymentStrip(
+    val state: PaymentState,
+    val amount: java.math.BigDecimal? = null,
+    val onMarkPaid: (() -> Unit)? = null,
+    val onConfirm: (() -> Unit)? = null
+)
+
+/** The balance strip once a payment is recorded: waiting for its confirmation, or settled. */
+@Composable
+private fun PaymentBalanceStrip(
+    payment: PaymentStrip,
+    format: NumberFormat,
+    coParentName: String?,
+    modifier: Modifier
+) {
+    val amount = payment.amount?.let { format.format(it) }.orEmpty()
+    val label = when (payment.state) {
+        PaymentState.CONFIRMED -> stringResource(R.string.payment_settled, amount)
+        PaymentState.PAID_BY_ME -> coParentName?.let { stringResource(R.string.payment_waiting_named, amount, it) }
+            ?: stringResource(R.string.payment_waiting, amount)
+        else -> coParentName?.let { stringResource(R.string.payment_paid_to_you_named, it, amount) }
+            ?: stringResource(R.string.payment_paid_to_you, amount)
+    }
+    BalanceStrip(
+        label = label,
+        accent = if (payment.state == PaymentState.CONFIRMED) {
+            MaterialTheme.colorScheme.outline
+        } else {
+            MaterialTheme.colorScheme.tertiary
+        },
+        onSettleUp = null,
+        modifier = modifier,
+        onMoneyArrived = payment.onConfirm.takeIf { payment.state == PaymentState.PAID_TO_ME }
     )
 }
 
@@ -470,11 +525,14 @@ private fun BalanceRow(
  * @param onSettleUp What Settle up does, or null for a settled month, which offers none.
  */
 @Composable
+@Suppress("LongParameterList", "LongMethod") // a sentence and up to two steps, in two layouts
 private fun BalanceStrip(
     label: String,
     accent: Color,
     onSettleUp: (() -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onIPaid: (() -> Unit)? = null,
+    onMoneyArrived: (() -> Unit)? = null
 ) {
     val strip = modifier
         .fillMaxWidth()
@@ -506,14 +564,31 @@ private fun BalanceStrip(
             onClick = onClick
         )
     }
-    if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
+    // "I paid" and "Money arrived" (25 October 2026) sit under the sentence, as a second action
+    // beside Settle up would squeeze the sentence to a word per line.
+    val payStep: Pair<Int, () -> Unit>? = onMoneyArrived?.let { R.string.payment_money_arrived to it }
+        ?: onIPaid?.let { R.string.payment_i_paid to it }
+    if (LocalDensity.current.fontScale >= STACK_FONT_SCALE || payStep != null) {
         Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.S),
                 content = sentence
             )
-            if (onSettleUp != null) settleUp(Modifier.align(Alignment.End), onSettleUp)
+            Row(
+                modifier = Modifier.align(Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+            ) {
+                payStep?.let { (label, onClick) ->
+                    PillChip(
+                        label = stringResource(label),
+                        container = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        onClick = onClick
+                    )
+                }
+                if (onSettleUp != null) settleUp(Modifier, onSettleUp)
+            }
         }
     } else {
         Row(

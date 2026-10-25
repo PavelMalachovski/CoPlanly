@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Payments between the parents: "I paid" and "Money arrived" (25 October 2026). -->
+<resources>
+    <string name="payment_i_paid">Mám zaplaceno</string>
+    <string name="payment_money_arrived">Peníze přišly</string>
+    <string name="payment_settled">Vyrovnáno: přijato %1$s</string>
+    <string name="payment_waiting">Zaplatili jste %1$s. Čeká se na potvrzení druhého rodiče</string>
+    <string name="payment_waiting_named">Zaplatili jste %1$s. Čeká se na potvrzení: %2$s</string>
+    <string name="payment_paid_to_you">Druhý rodič uvádí, že vám zaplatil %1$s</string>
+    <string name="payment_paid_to_you_named">%1$s: zaplaceno vám %2$s</string>
+    <string name="payment_error_not_saved">Nepodařilo se to uložit. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="payment_card_waiting">Čeká na potvrzení</string>
+    <string name="payment_card_received">Přijato</string>
+</resources>

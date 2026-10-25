@@ -391,7 +391,7 @@ describe('notifyOfChatMessage', () => {
   // chance has run. Skipped before any read: there is nothing to look up for a card that never
   // pushes.
   it('pushes nothing for a last-chance or a no-answer card', async () => {
-    for (const kind of ['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED']) {
+    for (const kind of ['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED', 'STICKER_SENT']) {
       const db = fakeDb({participants: ['alice', 'bob']});
       const message = {
         conversationId: 'alice__bob', senderId: 'alice', senderName: 'Alice',

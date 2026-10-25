@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -59,6 +60,9 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.domain.payments.Payment
+import com.coparently.app.domain.payments.PaymentKind
+import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
@@ -69,6 +73,7 @@ import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.ScrollAwareFab
 import com.coparently.app.presentation.common.TwoPanes
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.clearance
 import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberFabScrollVisibility
@@ -76,12 +81,15 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 
 /**
  * The band kept clear under the Add button while it is shown.
@@ -157,9 +165,14 @@ fun ExpenseScreen(
     onEditExpense: (String) -> Unit = {},
     onNavigateUp: (() -> Unit)? = null,
     onSettleUp: () -> Unit = {},
-    viewModel: ExpenseViewModel = hiltViewModel()
+    viewModel: ExpenseViewModel = hiltViewModel(),
+    paymentsViewModel: PaymentsViewModel = hiltViewModel()
 ) {
     val expensesState by viewModel.expenses.collectAsState()
+    // "I paid" and "Money arrived" for each month and currency (25 October 2026).
+    val payments by paymentsViewModel.payments.collectAsState()
+    val paymentBusy by paymentsViewModel.busy.collectAsState()
+    val paymentError by paymentsViewModel.error.collectAsState()
     val expenses = expensesState.valueOrNull.orEmpty()
     // One value, not three. The month and its figures travel together so the outgoing half of a
     // month slide renders the month it is leaving — see `MonthOfExpenses`.
@@ -179,6 +192,7 @@ fun ExpenseScreen(
     var showAnalytics by rememberSaveable { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     val pendingRatioProposal by viewModel.pendingRatioProposal.collectAsState()
     val myPendingRatioProposal by viewModel.myPendingRatioProposal.collectAsState()
     // Plain `remember`: putting the banner off is for this visit to the screen. A dismissal that
@@ -201,6 +215,12 @@ fun ExpenseScreen(
     // Add Expense form and nothing here reads — so the tap looked like it had simply done
     // nothing while the co-parent went on waiting.
     val answerFailedMessage = stringResource(R.string.expenses_split_answer_failed)
+    LaunchedEffect(paymentError) {
+        paymentError?.let { error ->
+            snackbarHostState.showSnackbar(error.asString(context))
+            paymentsViewModel.errorShown()
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.ratioAnswerFailed.collect {
             snackbarHostState.showSnackbar(answerFailedMessage)
@@ -390,6 +410,12 @@ fun ExpenseScreen(
                                     )
                                 }
                                 balancesByCurrency.forEachIndexed { index, currencyBalance ->
+                                    val recorded = paymentsViewModel.paymentFor(
+                                        payments,
+                                        PaymentKind.EXPENSES,
+                                        shownMonth.month,
+                                        currencyBalance.currency
+                                    )
                                     ExpenseSummaryHeader(
                                         balance = currencyBalance.balance,
                                         currency = currencyBalance.currency,
@@ -407,7 +433,27 @@ fun ExpenseScreen(
                                                 }
                                             )
                                             .padding(horizontal = Spacing.L, vertical = Spacing.XS),
-                                        monthNavigation = monthNavigation.takeIf { index == 0 }
+                                        monthNavigation = monthNavigation.takeIf { index == 0 },
+                                        payment = paymentStripFor(
+                                            recorded = recorded,
+                                            myUid = paymentsViewModel.myUid,
+                                            owed = currencyBalance.balance.netForCurrentUser,
+                                            enabled = !paymentBusy,
+                                            onMarkPaid = {
+                                                shownMonth.familyId?.let { family ->
+                                                    paymentsViewModel.markPaid(
+                                                        family,
+                                                        PaymentKind.EXPENSES,
+                                                        shownMonth.month,
+                                                        currencyBalance.currency,
+                                                        BigDecimal.valueOf(
+                                                            abs(currencyBalance.balance.netForCurrentUser)
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onConfirm = { recorded?.let(paymentsViewModel::confirm) }
+                                        )
                                     )
                                 }
                             }
@@ -768,3 +814,26 @@ private fun namedShares(ratio: SplitRatio, parentNames: ParentNames): String = s
 /** The co-parent's name, or the "your co-parent" fallback while it is not known. */
 private fun coParentName(parentNames: ParentNames): String =
     parentNames.parents.coParent?.uid?.let(parentNames::labelForUid) ?: parentNames.coParentFallback
+
+/**
+ * What the month's header says about its payment in one currency, and which step this parent may
+ * take: say they paid, while they owe and nothing is recorded; say the money arrived, while the
+ * co-parent says they paid. Neither while a write is on its way.
+ */
+@Suppress("LongParameterList") // what was recorded, for whom, and the two steps it may offer
+internal fun paymentStripFor(
+    recorded: Payment?,
+    myUid: String?,
+    owed: Double,
+    enabled: Boolean,
+    onMarkPaid: () -> Unit,
+    onConfirm: () -> Unit
+): PaymentStrip {
+    val state = PaymentState.of(recorded, myUid)
+    return PaymentStrip(
+        state = state,
+        amount = recorded?.amount,
+        onMarkPaid = onMarkPaid.takeIf { enabled && state == PaymentState.NONE && owed < 0 },
+        onConfirm = onConfirm.takeIf { enabled && state == PaymentState.PAID_TO_ME }
+    )
+}

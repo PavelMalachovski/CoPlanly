@@ -495,7 +495,8 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
       partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
       pairedAt,
-      role: slots.accepterRole,
+      // The family's slot, unless the accepter keeps their first family's on their profile.
+      role: slots.accepterProfileRole || slots.accepterRole,
     }, pendingRevocationCleared(accepterSnap.data(), invite.fromUserId)));
     tx.update(inviteRef, {
       status: 'accepted',
@@ -523,7 +524,10 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  return {partnerId: invite.fromUserId, role: slots.accepterRole};
+  // `role` is what the accepter's profile now says, which an older build applies; a slot that
+  // differs in the new family is named apart, for the build that reads it from the family.
+  return Object.assign({partnerId: invite.fromUserId, role: slots.accepterProfileRole || slots.accepterRole},
+      slots.accepterProfileRole ? {familyRole: slots.accepterRole} : {});
 }
 
 exports.acceptPairingInvitationImpl = acceptPairingInvitationImpl;
@@ -2202,10 +2206,14 @@ exports.sweepDeletedDocuments = regional.runWith({timeoutSeconds: 540}).pubsub
     });
 
 /**
- * Collections whose visibility is a per-document `sharedWith` audience.
+ * Collections whose per-document `sharedWith` audience an unpair narrows.
  *
- * These (`events`, `child_info`, `pets`, `family_documents`) each keep a per-document
- * `sharedWith` list that only ever widens on the client, so unpair has to narrow it here.
+ * These (`events`, `child_info`, `pets`) each keep a per-document `sharedWith` list that only
+ * ever widens on the client, so unpair has to narrow it here. **`family_documents` is not one of
+ * them since 25 October 2026** (owner decision): a vault document is the family's papers — a
+ * court order, a birth certificate — and both parents keep reading it after an unpair, from
+ * Family → Earlier families, as they keep the chat. Account deletion still takes the departing
+ * parent out of it ([ERASED_AUDIENCE_COLLECTIONS]).
  * `expenses` and `budgets` carry no audience: the rules admit a co-parent only while the record's
  * family is live (`isLiveFamilyMember` — the id names them *and* `families/{id}` exists), so the
  * `families/{id}` delete in [unpairCoParentImpl]'s transaction is what revokes them. (This used to
@@ -2215,9 +2223,17 @@ exports.sweepDeletedDocuments = regional.runWith({timeoutSeconds: 540}).pubsub
  * co-parent link should also erase the chat history is a product decision, not a leak to close
  * here.
  */
-const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets', 'family_documents'];
+const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets'];
 
 exports.SHARED_AUDIENCE_COLLECTIONS = SHARED_AUDIENCE_COLLECTIONS;
+
+/**
+ * Collections whose `sharedWith` audience account deletion narrows: everything an unpair
+ * narrows, and the vault, which an unpair leaves to both parents but an erased account leaves.
+ */
+const ERASED_AUDIENCE_COLLECTIONS = [...SHARED_AUDIENCE_COLLECTIONS, 'family_documents'];
+
+exports.ERASED_AUDIENCE_COLLECTIONS = ERASED_AUDIENCE_COLLECTIONS;
 
 /** Firestore caps a batched write at 500 operations; stay clear of the edge. */
 const REVOCATION_BATCH_LIMIT = 400;
@@ -2541,6 +2557,10 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
     // split neither of them remembers agreeing would start pricing their expenses again.
     tx.delete(db.collection('family_settings').doc(custodyModelKey(callerUid, partnerId)));
 
+    // And its child support agreement (25 October 2026), for the same reason. The payments the
+    // two made stay: they are the family's history, read from Family -> Earlier families.
+    tx.delete(db.collection('support_agreements').doc(custodyModelKey(callerUid, partnerId)));
+
     // And the relationship itself. This one is not tidiness: `families/{id}.members` is what
     // grants access to everything the pair shares, so leaving it behind leaves the ex-partner
     // reading this household after the unpair — the sweep below narrows documents, but a live
@@ -2792,40 +2812,44 @@ exports.assignSlots = assignSlots;
  * The two slots a pairing writes, and whether the inviter's moved — without moving an accepter who
  * already co-parents with somebody else.
  *
- * A slot is still stored once per person (`users/{uid}.role`), and every client reads it from
- * there for every family that person is in — `families/{id}.slots` is written but not yet read.
- * [assignSlots] keeps the inviter's slot and gives the accepter the other one, which would move an
- * accepter who already holds a slot with their first co-parent: the two parents of that family
- * would then share a colour, and the accepter's phone would re-stamp every record and invert its
- * custody pattern. So such an accepter **keeps** their slot:
+ * A slot belongs to the family (25 October 2026, owner decision): `families/{id}.slots` is the
+ * truth, and `users/{uid}.role` is the mirror an older build reads — this parent's slot in their
+ * first family, never moved by a later one. [assignSlots] keeps the inviter's slot and gives the
+ * accepter the other one, which would move an accepter who already holds a slot with their first
+ * co-parent: the two parents of that family would then share a colour, and the accepter's phone
+ * would re-stamp every record and invert its custody pattern. So such an accepter's **profile**
+ * keeps their slot:
  *
  * - an inviter with no other family takes the other one (October 2026, tester report: a parent
  *   with a family could share her code but not enter a new co-parent's). Their slot is read by
  *   nobody else, so moving it is the ordinary first pairing seen from the other side; the move is
  *   marked on their profile (`slotMovedAt`) so their phone re-stamps what it holds;
- * - an inviter who co-parents elsewhere in the same slot cannot be moved either, and the pairing is
- *   refused (`slot-conflict`): no slot fits both families while it is one per person.
+ * - an inviter who co-parents elsewhere in the same slot keeps theirs too. The new family takes
+ *   the inviter's slot for the inviter and the other for the accepter, in `families/{id}.slots`
+ *   only: the accepter's profile keeps the slot of their first family ([accepterProfileRole]),
+ *   and the app reads the slot of each family from the family. This used to be refused
+ *   (`slot-conflict`), which left two parents who both had a family unable to link at all.
  *
  * @param {?Object} inviter The inviter's user document.
  * @param {?Object} accepter The accepter's user document.
- * @return {{inviterRole: string, accepterRole: string, inviterMoved: boolean}} The slots to write,
- *     and whether the inviter's differs from the one they held.
- * @throws {functions.https.HttpsError} `failed-precondition` with reason `slot-conflict` when both
- *     already co-parent in the same slot.
+ * @return {{inviterRole: string, accepterRole: string, inviterMoved: boolean,
+ *     accepterProfileRole: ?string}} The family's slots, whether the inviter's profile slot moved,
+ *     and the slot the accepter's profile keeps when it is not the family's (null otherwise).
  */
 function slotsForPairing(inviter, accepter) {
   const slots = assignSlots((inviter || {}).role);
   const held = (accepter || {}).role;
   const holdsSlot = held === 'mom' || held === 'dad';
   if (!holdsSlot || partnersOf(accepter).length === 0 || held === slots.accepterRole) {
-    return Object.assign({}, slots, {inviterMoved: false});
+    return Object.assign({}, slots, {inviterMoved: false, accepterProfileRole: null});
   }
   if (partnersOf(inviter).length === 0) {
-    return {inviterRole: held === 'mom' ? 'dad' : 'mom', accepterRole: held, inviterMoved: true};
+    return {
+      inviterRole: held === 'mom' ? 'dad' : 'mom', accepterRole: held, inviterMoved: true,
+      accepterProfileRole: null,
+    };
   }
-  throw new functions.https.HttpsError(
-      'failed-precondition', 'Both parents already co-parent in the same slot',
-      {reason: 'slot-conflict'});
+  return Object.assign({}, slots, {inviterMoved: false, accepterProfileRole: held});
 }
 exports.slotsForPairing = slotsForPairing;
 
@@ -4190,13 +4214,16 @@ function sentAtMillisOf(timestamp) {
  * - `REQUEST_UNANSWERED`: the request ended with no answer. Nothing more is sent to the parent
  *   who did not answer once their last chance has run (the spec's "nagging" rule); the end is
  *   the proposer's news, not theirs.
+ * - `STICKER_SENT`: a sticker's card in the thread (25 October 2026). The sticker has its own
+ *   push, `sticker_received`, queued by the sender's phone; a chat push as well would tell the
+ *   receiver twice.
  *
  * The names must stay the ones the app writes (`ActivityKind` in `ActivityAnnouncement.kt`): a
  * name that drifts here is a card that is pushed again, with nothing failing.
  *
  * @const {!Set<string>}
  */
-const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED']);
+const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED', 'STICKER_SENT']);
 
 /**
  * Queues a push notification for the other participant when a chat message is created,
@@ -4479,7 +4506,7 @@ exports.deleteQueryInBatches = deleteQueryInBatches;
 async function scrubFromAudiences(db, uid) {
   let narrowed = 0;
 
-  for (const collection of SHARED_AUDIENCE_COLLECTIONS) {
+  for (const collection of ERASED_AUDIENCE_COLLECTIONS) {
     const snap = await db.collection(collection)
         .where('sharedWith', 'array-contains', uid)
         .get();
@@ -4943,6 +4970,13 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // Holds both parents' uids, so it is personal data of a deleted account either way.
   removed.family_settings = await deleteQueryInBatches(
       db, db.collection('family_settings').where('participants', 'array-contains', uid));
+
+  // Child support agreements and payments (25 October 2026): each names both parents in
+  // `participants`, so they are personal data of a deleted account either way.
+  removed.support_agreements = await deleteQueryInBatches(
+      db, db.collection('support_agreements').where('participants', 'array-contains', uid));
+  removed.payments = await deleteQueryInBatches(
+      db, db.collection('payments').where('participants', 'array-contains', uid));
 
   // The clocks of this account's requests (phase 3a): each names both parents in `participants`,
   // whichever of them proposed. They are personal data of a deleted account either way, and of no

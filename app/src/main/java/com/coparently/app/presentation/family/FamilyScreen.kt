@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payments
@@ -81,6 +82,7 @@ private const val SLOT_TWO = "dad"
  * Where the Family tab's rows lead. One callback per destination, all screens that already exist.
  *
  * @property expenses The month's expenses, from the money card
+ * @property support Child support: the agreement and each month paid
  * @property custody The custody schedule editor
  * @property parentingPlan The parenting plan
  * @property export The communication record export
@@ -97,10 +99,12 @@ private const val SLOT_TWO = "dad"
  * @property unassignedRecords Records that name no family yet
  * @property journal The private journal
  * @property stickers Stickers received and sent
+ * @property earlierFamilies Families this parent was in, read-only
  * @property settings The app's settings
  */
 data class FamilyDestinations(
     val expenses: () -> Unit,
+    val support: () -> Unit,
     val custody: () -> Unit,
     val parentingPlan: () -> Unit,
     val export: () -> Unit,
@@ -117,6 +121,7 @@ data class FamilyDestinations(
     val unassignedRecords: () -> Unit,
     val journal: () -> Unit,
     val stickers: () -> Unit,
+    val earlierFamilies: () -> Unit,
     val settings: () -> Unit
 )
 
@@ -139,8 +144,10 @@ data class FamilyDestinations(
 fun FamilyScreen(
     destinations: FamilyDestinations,
     viewModel: FamilyViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel()
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    earlierFamiliesViewModel: EarlierFamiliesViewModel = hiltViewModel()
 ) {
+    val earlierFamilies by earlierFamiliesViewModel.families.collectAsState()
     val money by viewModel.money.collectAsState()
     val hasChildren by viewModel.hasChildren.collectAsState()
     val schedule by viewModel.schedule.collectAsState()
@@ -220,6 +227,14 @@ fun FamilyScreen(
                         familySplit.ratio.dadPercent
                     )
                 ) { showSplitPicker = true }
+                // Child support (25 October 2026): its own screen, never part of the balance.
+                Divider()
+                NavRow(
+                    Icons.Default.Payments,
+                    R.string.support_title,
+                    R.string.support_row_supporting,
+                    destinations.support
+                )
             }
 
             AgreementsGroup(schedule, destinations)
@@ -321,6 +336,7 @@ fun FamilyScreen(
                 )
                 Divider()
                 StickersRow(onOpen = destinations.stickers)
+                EarlierFamiliesRow(shown = !earlierFamilies.isNullOrEmpty(), onOpen = destinations.earlierFamilies)
             }
             // A sticker that has not been seen yet, and "Send a sticker": here rather than on Home
             // (owner decision, October 2026).
@@ -437,6 +453,17 @@ private fun Group(@StringRes label: Int, content: @Composable SectionGroupScope.
 }
 
 /** A row that opens a screen, with its title and description as resources. */
+/**
+ * Family → Earlier families, with the divider before it — only while a family has ended: its
+ * records left every live screen and are read there (owner decision, 25 October 2026).
+ */
+@Composable
+private fun SectionGroupScope.EarlierFamiliesRow(shown: Boolean, onOpen: () -> Unit) {
+    if (!shown) return
+    Divider()
+    NavRow(Icons.Default.History, R.string.earlier_families_title, R.string.earlier_families_row_supporting, onOpen)
+}
+
 @Composable
 private fun SectionGroupScope.NavRow(
     icon: ImageVector,

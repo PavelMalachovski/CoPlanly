@@ -130,6 +130,32 @@ class TwoParentAttachmentsTest : TwoParentTest() {
         assertTrue(EmulatorEnvironment.documentExists("family_documents/${filed.id}"))
     }
 
+    @Test
+    fun aVaultDocumentStaysReadableByBothParentsAfterAnUnpair() = runBlocking<Unit> {
+        // Owner decision, 25 October 2026: a court order or a birth certificate is the family's,
+        // and both parents keep reading it from Family -> Earlier families once the link ends.
+        val familyId = FamilyKey.of(alice.uid, bob.uid)
+        val bytes = pdfBytes("Birth certificate")
+        val filed = alice.documentRepository
+            .add(familyId, "Birth certificate", DocumentCategory.COURT_ORDER, uriOf("birth.pdf", bytes))
+            .getOrThrow()
+        awaitListing(bob, familyId) { docs -> docs.any { it.id == filed.id } }
+
+        EmulatorEnvironment.step("vault: Alice unpairs; Bob still reads and opens what she filed")
+        alice.pairingRepository.unpair().getOrThrow()
+        val kept = awaitListing(bob, familyId) { docs -> docs.any { it.id == filed.id } }
+            .single { it.id == filed.id }
+        assertArrayEquals(bytes, bob.documentRepository.localCopy(kept).getOrThrow().readBytes())
+
+        EmulatorEnvironment.step("vault: nothing new is filed into the ended family")
+        assertTrue(
+            "a document was filed into a family that ended",
+            bob.documentRepository
+                .add(familyId, "After", DocumentCategory.COURT_ORDER, uriOf("after.pdf", pdfBytes("After")))
+                .isFailure
+        )
+    }
+
     /** The status [parent]'s own thread holds for [message]. */
     private suspend fun statusOf(parent: EmulatorParent, message: Message): MessageSendStatus =
         parent.messageRepository.observeMessages(message.conversationId).first()

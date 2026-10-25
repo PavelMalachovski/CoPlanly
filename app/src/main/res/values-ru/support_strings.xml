@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Money → Child support (25 October 2026). -->
+<resources>
+    <string name="support_title">Алименты</string>
+    <string name="support_row_supporting">Сумма в месяц и оплата по месяцам</string>
+    <string name="support_no_family_title">Сначала свяжитесь со вторым родителем</string>
+    <string name="support_no_family_description">Алименты согласуются между двумя родителями одной семьи.</string>
+    <string name="support_unavailable">Не удалось загрузить алименты. Проверьте подключение.</string>
+    <string name="support_none_title">Алименты не согласованы</string>
+    <string name="support_none_description">Предложите сумму, день месяца и кто платит. Это начнёт действовать, когда второй родитель примет предложение.</string>
+    <string name="support_amount_line">%1$s в месяц</string>
+    <string name="support_terms_line">%1$d-го числа · платит %2$s · с: %3$s</string>
+    <string name="support_proposal_body">%1$s в месяц, %2$d-го числа, платит %3$s.</string>
+    <string name="support_waiting_title">Ждём ответа: %1$s</string>
+    <string name="support_asks_title">Предложение алиментов от: %1$s</string>
+    <string name="support_accept">Принять</string>
+    <string name="support_decline">Отклонить</string>
+    <string name="support_withdraw">Отозвать</string>
+    <string name="support_propose">Предложить</string>
+    <string name="support_propose_change">Предложить изменение</string>
+    <string name="support_months">Месяцы</string>
+    <string name="support_month_due">Срок: %1$s</string>
+    <string name="support_reminder_row">Напоминать</string>
+    <string name="support_reminder_row_supporting">На этом телефоне, до дня оплаты, пока месяц не оплачен</string>
+    <string name="support_reminder_on_the_day">В день оплаты</string>
+    <string name="support_dialog_title">Предложить алименты</string>
+    <string name="support_dialog_amount">Сумма в месяц</string>
+    <string name="support_dialog_currency">Валюта</string>
+    <string name="support_dialog_day">День месяца</string>
+    <string name="support_dialog_day_hint">С 1 по 28, чтобы он был в каждом месяце</string>
+    <string name="support_dialog_payer">Кто платит</string>
+    <string name="support_dialog_note">Действует с этого месяца, когда второй родитель примет предложение.</string>
+    <string name="support_dialog_send">Отправить на согласование</string>
+    <string name="support_dialog_cancel">Отмена</string>
+    <string name="support_reminder_title">Срок алиментов: %1$s</string>
+    <string name="support_reminder_body">%1$s для: %2$s. После перевода отметьте оплату в приложении.</string>
+    <plurals name="support_reminder_days_before">
+        <item quantity="one">За %1$d день</item>
+        <item quantity="few">За %1$d дня</item>
+        <item quantity="many">За %1$d дней</item>
+        <item quantity="other">За %1$d дня</item>
+    </plurals>
+</resources>

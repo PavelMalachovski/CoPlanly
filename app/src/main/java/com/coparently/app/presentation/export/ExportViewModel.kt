@@ -11,6 +11,7 @@ import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
+import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.export.CommunicationRecord
@@ -86,8 +87,15 @@ data class FinishedExport(val file: ExportedFile, val recordId: String?)
  * @property departed The kept thread when that co-parent has deleted their account — the pairing is
  *   gone, so the name comes from the thread's marks rather than from a profile that no longer
  *   exists (GDPR review, September 2026).
+ * @property earlier The family, when the export is of one that has ended (Family → Earlier
+ *   families): its co-parent's profile is no longer readable, so the name is the one this phone
+ *   kept (`known_families`).
  */
-internal data class ExportCounterpart(val uid: String?, val departed: DepartedThread? = null) {
+internal data class ExportCounterpart(
+    val uid: String?,
+    val departed: DepartedThread? = null,
+    val earlier: EarlierFamilyName? = null
+) {
 
     /** The rule [ExportViewModel] applies, pure so it can be pinned. */
     companion object {
@@ -111,6 +119,15 @@ internal data class ExportCounterpart(val uid: String?, val departed: DepartedTh
         }
     }
 }
+
+/**
+ * An ended family the export is of, and what this phone kept of its co-parent.
+ *
+ * @property familyId The family.
+ * @property name The co-parent's name when the family was live, or null when never kept.
+ * @property coParentSlot Their slot in that family, or null.
+ */
+internal data class EarlierFamilyName(val familyId: String, val name: String?, val coParentSlot: String?)
 
 /**
  * Produces a communication record for a date range, as CSV or PDF (MON-3), and registers the
@@ -144,12 +161,17 @@ class ExportViewModel @Inject constructor(
     private val parentsSource: ParentsSource,
     private val userRepository: UserRepository,
     private val departedThreads: DepartedThreadSource,
+    private val knownFamilies: KnownFamilyDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     /** The kept thread the chat banner opened this screen for, or null from Settings. */
     private val requestedThread: String? =
         savedStateHandle.get<String>(ARG_THREAD)?.takeIf { it.isNotBlank() }
+
+    /** The ended family Family → Earlier families opened this screen for, or null. */
+    private val requestedFamily: String? =
+        savedStateHandle.get<String>(ARG_FAMILY)?.takeIf { it.isNotBlank() }
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
@@ -251,6 +273,14 @@ class ExportViewModel @Inject constructor(
      * named one, or nobody is paired — so an ordinary export costs no extra server read.
      */
     private suspend fun counterpart(myUid: String): ExportCounterpart {
+        requestedFamily?.let { family ->
+            val other = FamilyKey.membersOf(family)?.toList()?.singleOrNull { it != myUid }
+            if (other != null) {
+                val kept = knownFamilies.get(family)
+                val earlier = EarlierFamilyName(family, kept?.coParentName, kept?.coParentSlot)
+                return ExportCounterpart(other, earlier = earlier)
+            }
+        }
         val partnerUid = parentsSource.coParentUid()
         val kept = if (requestedThread != null || partnerUid == null) {
             departedThreads.current(myUid)
@@ -270,6 +300,7 @@ class ExportViewModel @Inject constructor(
         val to = request.to
         val partnerUid = counterpart.uid
         val departed = counterpart.departed
+        val earlier = counterpart.earlier
         // The pairing half can arrive a moment after the profile half; a record that named the
         // co-parent "Parent" because it was built in that moment would be a worse document. A
         // departed co-parent has no pairing half to wait for: their name is the thread's.
@@ -277,7 +308,7 @@ class ExportViewModel @Inject constructor(
         // Waited for by uid, not merely for somebody: the names follow the family on screen, and
         // a moment after a switch they can still be the previous family's — a record of Pavel's
         // thread must not be signed with Barbora's name (tester report #11).
-        val observed = if (departed != null) {
+        val observed = if (departed != null || earlier != null) {
             parentsSource.observe().first()
         } else {
             withTimeoutOrNull(NAMES_WAIT_MS) {
@@ -288,7 +319,7 @@ class ExportViewModel @Inject constructor(
         // another family — the one a departed co-parent's thread is not, or the one on screen a
         // moment ago — and must not be named in this one's record.
         val parents = observed.copy(
-            coParent = observed.coParent?.takeIf { departed == null && it.uid == partnerUid }
+            coParent = observed.coParent?.takeIf { departed == null && earlier == null && it.uid == partnerUid }
         )
         val gathered = source.gather(
             myUid = myUid,
@@ -301,28 +332,49 @@ class ExportViewModel @Inject constructor(
             plan = if (request.includePlan) sections.plan(myUid, partnerUid) else null,
             journal = if (request.includeJournal) sections.journal(myUid, from, to) else null
         )
-        return CommunicationRecordBuilder.build(
-            sources,
-            RecordScope(
-                from = from,
-                to = to,
-                zone = zone,
-                generatedAtMillis = System.currentTimeMillis(),
-                families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
-                parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +
-                    listOfNotNull(departed?.let { departedName(it, fallbacks) }),
-                nameForUid = { uid ->
-                    if (departed != null && uid == departed.departedUid) {
-                        departedName(departed, fallbacks)
-                    } else {
-                        nameForUid(uid, parents, fallbacks)
-                    }
-                },
-                nameForSlot = { slot -> nameForSlot(slot, parents, fallbacks) },
-                // A record of no family belongs here only when this parent or this family's
-                // co-parent wrote it, never another family's co-parent (isolation audit).
-                exporterUid = myUid
-            )
+        return CommunicationRecordBuilder.build(sources, scopeOf(myUid, counterpart, request, parents, fallbacks))
+    }
+
+    /**
+     * Who the record names, and how, for [counterpart]: the family on screen, a kept thread or an
+     * ended family.
+     */
+    private fun scopeOf(
+        myUid: String,
+        counterpart: ExportCounterpart,
+        request: ExportUiState,
+        parents: Parents,
+        fallbacks: NameFallbacks
+    ): RecordScope {
+        val partnerUid = counterpart.uid
+        val departed = counterpart.departed
+        val earlier = counterpart.earlier
+        return RecordScope(
+            from = request.from,
+            to = request.to,
+            zone = zone,
+            generatedAtMillis = System.currentTimeMillis(),
+            families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
+            parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +
+                listOfNotNull(departed?.let { departedName(it, fallbacks) }) +
+                listOfNotNull(earlier?.let { earlierName(it, fallbacks) }),
+            nameForUid = { uid ->
+                when {
+                    departed != null && uid == departed.departedUid -> departedName(departed, fallbacks)
+                    earlier != null && uid == partnerUid -> earlierName(earlier, fallbacks)
+                    else -> nameForUid(uid, parents, fallbacks)
+                }
+            },
+            nameForSlot = { slot ->
+                if (earlier != null && slot == earlier.coParentSlot) {
+                    earlierName(earlier, fallbacks)
+                } else {
+                    nameForSlot(slot, parents, fallbacks)
+                }
+            },
+            // A record of no family belongs here only when this parent or this family's
+            // co-parent wrote it, never another family's co-parent (isolation audit).
+            exporterUid = myUid
         )
     }
 
@@ -333,6 +385,10 @@ class ExportViewModel @Inject constructor(
     private fun departedName(departed: DepartedThread, fallbacks: NameFallbacks): String =
         departed.departedName.trim().ifBlank { fallbacks.coParent }
 
+    /** An ended family's co-parent as this phone kept their name, or the co-parent fallback. */
+    private fun earlierName(earlier: EarlierFamilyName, fallbacks: NameFallbacks): String =
+        earlier.name?.trim()?.ifBlank { null } ?: fallbacks.coParent
+
     private fun nameForSlot(slot: String, parents: Parents, fallbacks: NameFallbacks): String =
         parentLabel(slot, parents.me, parents.coParent, fallbacks.you, fallbacks.coParent, fallbacks.unknown)
 
@@ -340,6 +396,9 @@ class ExportViewModel @Inject constructor(
     companion object {
         /** `Screen.Export`'s optional argument: the conversation id of a kept thread. */
         const val ARG_THREAD = "thread"
+
+        /** `Screen.Export`'s other optional argument: an ended family's id (Family → Earlier families). */
+        const val ARG_FAMILY = "family"
 
         private const val TAG = "ExportViewModel"
 

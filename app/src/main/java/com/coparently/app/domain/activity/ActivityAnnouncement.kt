@@ -110,7 +110,25 @@ enum class ActivityEntityType {
      * An expense split proposal (October 2026): `entityId` is the family's id — its
      * `family_settings` document — and `title` is blank, since a split has no name of its own.
      */
-    SPLIT_PROPOSAL
+    SPLIT_PROPOSAL,
+
+    /**
+     * A sticker one parent sent the other (owner decision, 25 October 2026): `entityId` is the
+     * `stickers/{id}` document, `title` the kind's wire value. A tap leads nowhere.
+     */
+    STICKER,
+
+    /**
+     * A payment between the two parents (25 October 2026): `entityId` is the `payments/{id}`
+     * document, `title` the month (`2026-10`), `amount` and `currency` what was paid.
+     */
+    PAYMENT,
+
+    /**
+     * The family's alimony agreement (25 October 2026): `entityId` is the family's id — its
+     * `support_agreements` document.
+     */
+    SUPPORT_AGREEMENT
 }
 
 /**
@@ -217,10 +235,56 @@ enum class ActivityKind {
      * payload is [CUSTODY_PROPOSED]'s. Only a withdrawal the parent made: one the clock makes at "No
      * answer" posts [REQUEST_UNANSWERED]. Pushed like any message; no push type of its own.
      */
-    CUSTODY_WITHDRAWN;
+    CUSTODY_WITHDRAWN,
+
+    /**
+     * A sticker was sent (owner decision, 25 October 2026: stickers show in the chat). `STICKER`,
+     * the sticker's id, and its kind's wire value as `title`; the reader's phone words it
+     * (`StickerText`). Never pushed — the sticker has its own push, `sticker_received` — and never
+     * in the export, which is the parents' communication record, not their courtesies.
+     */
+    STICKER_SENT,
+
+    /**
+     * The payer says they paid the month's settle-up (25 October 2026). `PAYMENT`, the payment's
+     * id, the month as `title`, and the `amount` and `currency` paid (two decimals, like
+     * [SETTLE_UP_OWED]). Sent by the payer.
+     */
+    SETTLE_UP_PAID,
+
+    /** The parent paid says the money arrived. The payload is [SETTLE_UP_PAID]'s; sent by them. */
+    SETTLE_UP_CONFIRMED,
+
+    /**
+     * An alimony agreement or change was proposed (25 October 2026). `SUPPORT_AGREEMENT`, the
+     * family's id, the day of the month as `title` (`"5"`), and the monthly `amount` and `currency`.
+     * The sender is the proposer; [readerPays] does not apply — the agreement names its payer.
+     */
+    SUPPORT_PROPOSED,
+
+    /** The co-parent accepted the alimony proposal. The payload is [SUPPORT_PROPOSED]'s. */
+    SUPPORT_ACCEPTED,
+
+    /** The co-parent declined the alimony proposal. The payload is [SUPPORT_PROPOSED]'s. */
+    SUPPORT_DECLINED,
+
+    /** The proposer took the alimony proposal back. The payload is [SUPPORT_PROPOSED]'s. */
+    SUPPORT_WITHDRAWN,
+
+    /** The payer says this month's alimony is paid. The payload is [SETTLE_UP_PAID]'s. */
+    SUPPORT_PAID,
+
+    /** The parent paid says this month's alimony arrived. The payload is [SETTLE_UP_PAID]'s. */
+    SUPPORT_CONFIRMED;
 
     /** Whether this is one of the two settle-up cards. */
     val isSettleUp: Boolean get() = this == SETTLE_UP_OWED || this == SETTLE_UP_OWING
+
+    /** Whether this card says a payment was made or arrived: a settle-up's or a month of alimony's. */
+    val isPayment: Boolean get() = this in PAYMENT_KINDS
+
+    /** Whether this card is about alimony: the agreement, or a month of it paid. */
+    val isSupport: Boolean get() = this in SUPPORT_KINDS
 
     /**
      * On a settle-up card, whether the parent reading it is the one who pays; false for every other
@@ -232,5 +296,17 @@ enum class ActivityKind {
         SETTLE_UP_OWED -> !readerIsSender
         SETTLE_UP_OWING -> readerIsSender
         else -> false
+    }
+
+    private companion object {
+        val PAYMENT_KINDS = setOf(SETTLE_UP_PAID, SETTLE_UP_CONFIRMED, SUPPORT_PAID, SUPPORT_CONFIRMED)
+        val SUPPORT_KINDS = setOf(
+            SUPPORT_PROPOSED,
+            SUPPORT_ACCEPTED,
+            SUPPORT_DECLINED,
+            SUPPORT_WITHDRAWN,
+            SUPPORT_PAID,
+            SUPPORT_CONFIRMED
+        )
     }
 }

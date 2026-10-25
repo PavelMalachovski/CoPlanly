@@ -84,7 +84,18 @@ class ChatCardTargetTest {
         // A withdrawal opens where the request's other cards open: the inbox's History for a swap,
         // nothing for a custody proposal.
         ActivityKind.DAY_SWAP_WITHDRAWN to Expectation(ActivityEntityType.DAY_SWAP, ChatCardTarget.Inbox),
-        ActivityKind.CUSTODY_WITHDRAWN to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null)
+        ActivityKind.CUSTODY_WITHDRAWN to Expectation(ActivityEntityType.CUSTODY_PROPOSAL, null),
+        // A sticker is the whole message; a settle-up payment has no screen of its own; everything
+        // about child support opens its screen (25 October 2026).
+        ActivityKind.STICKER_SENT to Expectation(ActivityEntityType.STICKER, null),
+        ActivityKind.SETTLE_UP_PAID to Expectation(ActivityEntityType.PAYMENT, null),
+        ActivityKind.SETTLE_UP_CONFIRMED to Expectation(ActivityEntityType.PAYMENT, null),
+        ActivityKind.SUPPORT_PROPOSED to Expectation(ActivityEntityType.SUPPORT_AGREEMENT, ChatCardTarget.Support),
+        ActivityKind.SUPPORT_ACCEPTED to Expectation(ActivityEntityType.SUPPORT_AGREEMENT, ChatCardTarget.Support),
+        ActivityKind.SUPPORT_DECLINED to Expectation(ActivityEntityType.SUPPORT_AGREEMENT, ChatCardTarget.Support),
+        ActivityKind.SUPPORT_WITHDRAWN to Expectation(ActivityEntityType.SUPPORT_AGREEMENT, ChatCardTarget.Support),
+        ActivityKind.SUPPORT_PAID to Expectation(ActivityEntityType.PAYMENT, ChatCardTarget.Support),
+        ActivityKind.SUPPORT_CONFIRMED to Expectation(ActivityEntityType.PAYMENT, ChatCardTarget.Support)
     )
 
     // ---- the defect -----------------------------------------------------------

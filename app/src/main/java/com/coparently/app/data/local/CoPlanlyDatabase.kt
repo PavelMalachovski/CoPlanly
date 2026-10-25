@@ -13,6 +13,7 @@ import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.FamilyDocumentCacheDao
 import com.coparently.app.data.local.dao.JournalDao
+import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.dao.ParentingPlanDao
 import com.coparently.app.data.local.dao.PetDao
@@ -28,6 +29,7 @@ import com.coparently.app.data.local.entity.EventVersionOutboxEntity
 import com.coparently.app.data.local.entity.ExpenseEntity
 import com.coparently.app.data.local.entity.FamilyDocumentCacheEntity
 import com.coparently.app.data.local.entity.JournalEntryEntity
+import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.data.local.entity.MessageEntity
 import com.coparently.app.data.local.entity.ParentingPlanEntryEntity
 import com.coparently.app.data.local.entity.PetEntity
@@ -55,9 +57,10 @@ import com.coparently.app.data.local.entity.UserEntity
         ParentingPlanEntryEntity::class,
         EventVersionOutboxEntity::class,
         JournalEntryEntity::class,
-        FamilyDocumentCacheEntity::class
+        FamilyDocumentCacheEntity::class,
+        KnownFamilyEntity::class
     ],
-    version = 45,
+    version = 46,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -131,4 +134,9 @@ abstract class CoPlanlyDatabase : RoomDatabase() {
      * Provides FamilyDocumentCacheDao — the last server answer for the vault index (MON-23).
      */
     abstract fun familyDocumentCacheDao(): FamilyDocumentCacheDao
+
+    /**
+     * Gets the KnownFamilyDao (schema 46).
+     */
+    abstract fun knownFamilyDao(): KnownFamilyDao
 }

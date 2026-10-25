@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Money → Child support (25 October 2026). -->
+<resources>
+    <string name="support_title">Výživné</string>
+    <string name="support_row_supporting">Měsíční částka a placení po měsících</string>
+    <string name="support_no_family_title">Nejdřív se propojte s druhým rodičem</string>
+    <string name="support_no_family_description">Výživné se dohoduje mezi oběma rodiči jedné rodiny.</string>
+    <string name="support_unavailable">Výživné se nepodařilo načíst. Zkontrolujte připojení.</string>
+    <string name="support_none_title">Výživné není dohodnuté</string>
+    <string name="support_none_description">Navrhněte částku, den v měsíci a kdo platí. Platí, jakmile to druhý rodič přijme.</string>
+    <string name="support_amount_line">%1$s měsíčně</string>
+    <string name="support_terms_line">%1$d. den v měsíci · platí %2$s · od: %3$s</string>
+    <string name="support_proposal_body">%1$s měsíčně, %2$d. den v měsíci, platí %3$s.</string>
+    <string name="support_waiting_title">Čeká se na odpověď: %1$s</string>
+    <string name="support_asks_title">Návrh výživného od: %1$s</string>
+    <string name="support_accept">Přijmout</string>
+    <string name="support_decline">Odmítnout</string>
+    <string name="support_withdraw">Stáhnout</string>
+    <string name="support_propose">Navrhnout</string>
+    <string name="support_propose_change">Navrhnout změnu</string>
+    <string name="support_months">Měsíce</string>
+    <string name="support_month_due">Splatné %1$s</string>
+    <string name="support_reminder_row">Připomenout</string>
+    <string name="support_reminder_row_supporting">V tomto telefonu, před dnem splatnosti, dokud měsíc není zaplacený</string>
+    <string name="support_reminder_on_the_day">V den splatnosti</string>
+    <string name="support_dialog_title">Navrhnout výživné</string>
+    <string name="support_dialog_amount">Měsíční částka</string>
+    <string name="support_dialog_currency">Měna</string>
+    <string name="support_dialog_day">Den v měsíci</string>
+    <string name="support_dialog_day_hint">Od 1 do 28, aby ho měl každý měsíc</string>
+    <string name="support_dialog_payer">Kdo platí</string>
+    <string name="support_dialog_note">Platí od tohoto měsíce, jakmile to druhý rodič přijme.</string>
+    <string name="support_dialog_send">Odeslat ke schválení</string>
+    <string name="support_dialog_cancel">Zrušit</string>
+    <string name="support_reminder_title">Výživné je splatné %1$s</string>
+    <string name="support_reminder_body">%1$s pro: %2$s. Po odeslání to v aplikaci označte jako zaplacené.</string>
+    <plurals name="support_reminder_days_before">
+        <item quantity="one">%1$d den předem</item>
+        <item quantity="few">%1$d dny předem</item>
+        <item quantity="many">%1$d dne předem</item>
+        <item quantity="other">%1$d dní předem</item>
+    </plurals>
+</resources>

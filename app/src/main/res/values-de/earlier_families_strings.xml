@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Earlier families: an ended family's records, read-only (25 October 2026). -->
+<resources>
+    <string name="earlier_families_title">Frühere Familien</string>
+    <string name="earlier_families_row_supporting">Einträge beendeter Familien, nur zum Lesen</string>
+    <string name="earlier_families_with">Mit %1$s</string>
+    <string name="earlier_families_unnamed">Frühere Familie</string>
+    <string name="earlier_families_last_day">Letzter Eintrag: %1$s</string>
+    <string name="earlier_families_notice">Wenn du die Verbindung zu einem Elternteil trennst, kommen die Einträge dieser Familie hierher. In deinen anderen Familien erscheinen sie nicht.</string>
+    <string name="earlier_families_empty_title">Keine früheren Familien</string>
+    <string name="earlier_families_empty_description">Wenn du die Verbindung zu einem Elternteil trennst, kommen die Einträge dieser Familie hierher, getrennt von deinen anderen Familien.</string>
+    <string name="earlier_family_notice">Diese Familie ist beendet. Ihre Einträge bleiben hier, nur zum Lesen, und erscheinen nicht in deinen anderen Familien.</string>
+    <string name="earlier_family_documents">Dokumente</string>
+    <string name="earlier_family_documents_supporting">Ihr könnt sie beide weiter öffnen</string>
+    <string name="earlier_family_export">Aufzeichnung exportieren</string>
+    <string name="earlier_family_export_supporting">Eine Aufzeichnung dieser Familie für einen Zeitraum</string>
+    <string name="earlier_family_events">Termine</string>
+    <string name="earlier_family_expenses">Ausgaben</string>
+    <string name="earlier_family_total">Gesamt: %1$s</string>
+    <string name="earlier_family_children">Kinder</string>
+    <string name="earlier_family_pets">Haustiere</string>
+    <string name="earlier_family_journal">Mein Tagebuch</string>
+    <string name="earlier_family_nothing">Sonst ist von dieser Familie nichts auf diesem Telefon gespeichert.</string>
+    <string name="earlier_family_more">Und %1$d weitere</string>
+</resources>

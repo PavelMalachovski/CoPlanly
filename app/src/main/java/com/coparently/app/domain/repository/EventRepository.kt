@@ -15,6 +15,13 @@ interface EventRepository {
     fun getAllEvents(): Flow<List<Event>>
 
     /**
+     * Every event this phone holds, in every family, live or ended. Only for what must reach a
+     * family that is not on screen: the export (whose [com.coparently.app.domain.export.RecordScope]
+     * picks the family) and Family → Earlier families. Defaults to [getAllEvents] for a fake.
+     */
+    fun getAllEventsInEveryFamily(): Flow<List<Event>> = getAllEvents()
+
+    /**
      * Gets events for a specific date range.
      */
     fun getEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Event>>

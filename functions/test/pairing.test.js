@@ -575,8 +575,10 @@ describe('pairing with more than one co-parent', () => {
     assert.deepStrictEqual(db._docs.users.zuzana.partnerIds, ['pavel', 'david']);
   });
 
-  it('refuses two already-paired parents who hold the same slot', async () => {
-    // Neither direction works while a slot is one per person: whoever accepts would move.
+  it('links two already-paired parents who hold the same slot, the slot kept per family', async () => {
+    // 25 October 2026, owner decision: the slot is per family. The new family takes the inviter's
+    // slot for the inviter and the other for the accepter, in `families/{id}.slots`; neither
+    // profile's `role` moves, so neither first family is re-stamped.
     const db = fakeDb({
       invitations: {
         inv2: {id: 'inv2', status: 'pending', fromUserId: 'eva', toEmail: ''},
@@ -587,12 +589,14 @@ describe('pairing with more than one co-parent', () => {
       },
     });
 
-    await assert.rejects(
-        () => myFunctions.acceptPairingInvitationImpl(
-            db, 'zuzana', 'zuzana@example.com', {code: null, invitationId: 'inv2'}),
-        (err) => err.details && err.details.reason === 'slot-conflict');
+    const result = await myFunctions.acceptPairingInvitationImpl(
+        db, 'zuzana', 'zuzana@example.com', {code: null, invitationId: 'inv2'});
+
+    assert.deepStrictEqual(result, {partnerId: 'eva', role: 'mom', familyRole: 'dad'});
     assert.strictEqual(db._docs.users.zuzana.role, 'mom');
     assert.strictEqual(db._docs.users.eva.role, 'mom');
+    assert.ok(!('slotMovedAt' in db._docs.users.eva));
+    assert.deepStrictEqual(db._docs.families.eva__zuzana.slots, {eva: 'mom', zuzana: 'dad'});
   });
 
   it('still moves the slot of an accepter who has no other family', async () => {
@@ -741,15 +745,15 @@ describe('previewPairingInvitation', () => {
     assert.deepStrictEqual(result, {inviterName: 'Alice'});
   });
 
-  it('refuses before anybody confirms when both already hold the same slot elsewhere', async () => {
+  it('names the inviter when both already hold the same slot elsewhere', async () => {
+    // Nothing is refused for it since slots are per family (25 October 2026).
     const db = seeded({}, {
       alice: {id: 'alice', name: 'Alice', role: 'mom', partnerIds: ['dan'], partnerId: 'dan'},
       bob: {id: 'bob', name: 'Bob', role: 'mom', partnerIds: ['carol'], partnerId: 'carol'},
     });
-    await assert.rejects(
-        () => myFunctions.previewPairingInvitationImpl(
-            db, 'bob', '', {code: null, invitationId: 'inv1'}),
-        (err) => err.details && err.details.reason === 'slot-conflict');
+    const result = await myFunctions.previewPairingInvitationImpl(
+        db, 'bob', '', {code: null, invitationId: 'inv1'});
+    assert.deepStrictEqual(result, {inviterName: 'Alice'});
   });
 
   it('leaves a caller with no profile yet to the accept', async () => {

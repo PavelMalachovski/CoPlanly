@@ -529,6 +529,11 @@ fun NavGraph(
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
+                        },
+                        navArgument(Screen.Export.ARG_FAMILY) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
                         }
                     ),
                     enterTransition = { slideInFromRight() },
@@ -568,12 +573,63 @@ fun NavGraph(
                 // parents, opened from Settings → Family like the other family records.
                 pane(
                     route = Screen.Documents.route,
+                    arguments = listOf(
+                        navArgument(Screen.Documents.ARG_FAMILY) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    ),
                     enterTransition = { slideInFromRight() },
                     exitTransition = { slideOutToLeft() },
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) {
                     FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
+                }
+
+                // Family → Money → Child support (owner decision, 25 October 2026).
+                pane(
+                    route = Screen.Support.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.support.SupportScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
+                // Family → Earlier families (owner decision, 25 October 2026): an ended family's
+                // records, out of every live family's screens and read here.
+                pane(
+                    route = Screen.EarlierFamilies.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.family.EarlierFamiliesScreen(
+                        onNavigateUp = { navController.popBackStack() },
+                        onOpen = { navController.navigate(Screen.EarlierFamily.createRoute(it)) }
+                    )
+                }
+                pane(
+                    route = Screen.EarlierFamily.route,
+                    arguments = listOf(navArgument(Screen.EarlierFamily.ARG_FAMILY_ID) { type = NavType.StringType }),
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) { entry ->
+                    val familyId = entry.arguments?.getString(Screen.EarlierFamily.ARG_FAMILY_ID).orEmpty()
+                    com.coparently.app.presentation.family.EarlierFamilyScreen(
+                        familyId = familyId,
+                        onNavigateUp = { navController.popBackStack() },
+                        onOpenDocuments = { navController.navigate(Screen.Documents.forEarlierFamily(familyId)) },
+                        onExport = { navController.navigate(Screen.Export.forEarlierFamily(familyId)) }
+                    )
                 }
 
                 // The private journal (MON-22), after the vault: this parent's own notes, kept on this
@@ -1028,7 +1084,8 @@ fun NavGraph(
                         // existing unpair confirmation. Unpairing is the block.
                         onBlock = {
                             navController.navigate(Screen.Pairing.routeForUnpair())
-                        }
+                        },
+                        onOpenSupport = { navController.navigate(Screen.Support.route) }
                     )
                 }
 
@@ -1084,7 +1141,8 @@ fun NavGraph(
                         // existing unpair confirmation. Unpairing is the block.
                         onBlock = {
                             navController.navigate(Screen.Pairing.routeForUnpair())
-                        }
+                        },
+                        onOpenSupport = { navController.navigate(Screen.Support.route) }
                     )
                 }
 
@@ -1100,6 +1158,7 @@ fun NavGraph(
                     com.coparently.app.presentation.family.FamilyScreen(
                         destinations = com.coparently.app.presentation.family.FamilyDestinations(
                             expenses = { navController.navigate(Screen.Expenses.route) },
+                            support = { navController.navigate(Screen.Support.route) },
                             custody = { navController.navigate(Screen.CustodySetup.routeFor()) },
                             parentingPlan = { navController.navigate(Screen.ParentingPlan.route) },
                             export = { navController.navigate(Screen.Export.createRoute()) },
@@ -1107,7 +1166,7 @@ fun NavGraph(
                             childInfo = { navController.navigate(Screen.ChildInfo.route) },
                             pets = { navController.navigate(Screen.Pets.route) },
                             contacts = { navController.navigate(Screen.Contacts.route) },
-                            documents = { navController.navigate(Screen.Documents.route) },
+                            documents = { navController.navigate(Screen.Documents.createRoute()) },
                             pairing = { navController.navigate(Screen.Pairing.routeWithCode(null)) },
                             myProfile = { navController.navigate(Screen.MyProfile.route) },
                             coParentProfile = { navController.navigate(Screen.CoParentProfile.route) },
@@ -1116,6 +1175,7 @@ fun NavGraph(
                             unassignedRecords = { navController.navigate(Screen.UnassignedRecords.route) },
                             journal = { navController.navigate(Screen.Journal.route) },
                             stickers = { navController.navigate(Screen.Stickers.route) },
+                            earlierFamilies = { navController.navigate(Screen.EarlierFamilies.route) },
                             settings = { navController.navigate(Screen.Settings.route) }
                         )
                     )
@@ -1467,6 +1527,11 @@ private fun PushDestinationEffect(
                     navController.navigate(Screen.Professionals.route) { launchSingleTop = true }
                 PushDestination.FRIENDS ->
                     navController.navigate(Screen.Friends.route) { launchSingleTop = true }
+                PushDestination.SUPPORT -> {
+                    // Child support over the Family tab, like Expenses.
+                    navController.navigateToTab(BottomNavDestination.FAMILY)
+                    navController.navigate(Screen.Support.route) { launchSingleTop = true }
+                }
             }
             open.onConsumed()
         }
@@ -1590,14 +1655,40 @@ sealed class Screen(val route: String) {
      * deleted their account, when the export is opened from that thread's banner; Settings opens
      * it with none.
      */
-    data object Export : Screen("export?thread={thread}") {
+    data object Export : Screen("export?thread={thread}&family={family}") {
         const val ARG_THREAD = ExportViewModel.ARG_THREAD
+        const val ARG_FAMILY = ExportViewModel.ARG_FAMILY
 
         /** The route, for the kept thread [conversationId] or, when null, the family on screen. */
         fun createRoute(conversationId: String? = null): String =
             if (conversationId.isNullOrBlank()) "export" else "export?thread=${Uri.encode(conversationId)}"
+
+        /** The route for an ended family's record (Family → Earlier families). */
+        fun forEarlierFamily(familyId: String): String = "export?family=${Uri.encode(familyId)}"
     }
-    data object Documents : Screen("family_documents")
+    data object Documents : Screen("family_documents?family={family}") {
+        const val ARG_FAMILY = com.coparently.app.presentation.documents.FamilyDocumentsViewModel.ARG_FAMILY
+
+        /** The vault of the family on screen. */
+        fun createRoute(): String = "family_documents"
+
+        /** An ended family's vault, read-only (Family → Earlier families). */
+        fun forEarlierFamily(familyId: String): String = "family_documents?family=${Uri.encode(familyId)}"
+    }
+
+    /** Family → Money → Child support (25 October 2026). */
+    data object Support : Screen("support")
+
+    /** Family → Earlier families: the families this parent was in, each read-only. */
+    data object EarlierFamilies : Screen("earlier_families")
+
+    /** One ended family's records, read-only. */
+    data object EarlierFamily : Screen("earlier_family/{familyId}") {
+        const val ARG_FAMILY_ID = "familyId"
+
+        /** The route for [familyId]. */
+        fun createRoute(familyId: String): String = "earlier_family/${Uri.encode(familyId)}"
+    }
 
     /** A month in figures, with an optional AI-written summary of them. */
     data object MonthReview : Screen("month_review")

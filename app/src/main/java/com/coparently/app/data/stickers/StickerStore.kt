@@ -4,6 +4,10 @@ import android.util.Log
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.stickers.Sticker
@@ -21,8 +25,10 @@ import javax.inject.Singleton
 
 /**
  * Stickers between parents (October 2026, owner decisions): `stickers/{id}`, read by its receiver
- * and its sender only, never by a guest, a friend or a professional, never in the chat or the
- * export, and deleted with the family (unpair) or with either account.
+ * and its sender only, never by a guest, a friend or a professional, and deleted with the family
+ * (unpair) or with either account. A sent sticker also posts a card in the pair's thread (owner
+ * decision, 25 October 2026: "the stickers are not visible in the chat"), which pushes nobody —
+ * `sticker_received` is the push — and which the export leaves out.
  *
  * Firestore only, no Room table: a sticker is a small thing a parent looks at on Home, and a copy
  * on the phone would have to be cleared at unpair as the server clears its own.
@@ -32,7 +38,8 @@ class StickerStore @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuthService,
     private val userRepository: UserRepository,
-    private val fcmService: FcmService
+    private val fcmService: FcmService,
+    private val activityAnnouncer: ActivityAnnouncer
 ) {
 
     /** The signed-in parent's uid, or null. */
@@ -70,19 +77,27 @@ class StickerStore @Inject constructor(
         val me = signedInUid()
         val to = FamilyKey.membersOf(familyId)?.toList()?.firstOrNull { it != me }
         if (me == null || to == null || kind.fromApp) return false
-        val stored = write(
-            firestore.collection(COLLECTION).document().id,
-            StickerDocument.parentSticker(me, to, familyId, kind, FieldValue.serverTimestamp())
-        )
+        val id = firestore.collection(COLLECTION).document().id
+        val stored = write(id, StickerDocument.parentSticker(me, to, familyId, kind, FieldValue.serverTimestamp()))
         if (stored) {
             val name = userRepository.getCurrentUser()?.name.orEmpty().take(ACTOR_MAX)
             fcmService.queueNotificationForUser(
                 to,
                 mapOf(PushPayload.TYPE to PushPayload.STICKER_RECEIVED, PushPayload.ACTOR to name)
             ).onFailure { Log.w(TAG, "The sticker's push could not be queued", it) }
+            // In the thread of the family it was sent in, whichever family is on screen by now.
+            activityAnnouncer.announce(cardFor(id, kind), senderName = name, partnerUid = to)
         }
         return stored
     }
+
+    /** The chat card a sent sticker posts: its id, and its kind's wire value as the title. */
+    internal fun cardFor(id: String, kind: StickerKind) = ActivityAnnouncement(
+        kind = ActivityKind.STICKER_SENT,
+        entityType = ActivityEntityType.STICKER,
+        entityId = id,
+        title = kind.wire
+    )
 
     /** Records that the signed-in parent saw [sticker]; the server's clock, once. */
     suspend fun markSeen(sticker: Sticker) {

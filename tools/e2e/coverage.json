@@ -186,6 +186,17 @@
       "e2e": [
         "TwoParentStickersTest"
       ]
+    },
+    "payments": {
+      "e2e": [
+        "TwoParentPaymentsTest"
+      ]
+    },
+    "support_agreements": {
+      "e2e": [
+        "TwoParentPaymentsTest#childSupportIsProposedAcceptedAndPaidMonthByMonth",
+        "TwoParentPaymentsTest#aStrangerReadsNeitherPaymentsNorChildSupport"
+      ]
     }
   },
   "storage": {

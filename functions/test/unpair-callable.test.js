@@ -490,6 +490,20 @@ describe('unpairCoParentImpl', () => {
           'the shared custody document should be gone');
     });
 
+    it('deletes the child support agreement and keeps the payments as history', async () => {
+      // 25 October 2026: an agreement left behind would reattach if the two re-paired; the
+      // payments they made are the family's history, read from Family -> Earlier families.
+      const seed = seedWithCustodyModel();
+      seed.support_agreements = {[CUSTODY_KEY]: {participants: ['alice', 'bob']}};
+      seed.payments = {[`${CUSTODY_KEY}__support__2026-10__CZK`]: {participants: ['alice', 'bob']}};
+      const db = fakeDb(seed);
+
+      await unpairCoParentImpl(db, 'alice');
+
+      assert.ok(!(CUSTODY_KEY in (db._docs.support_agreements || {})));
+      assert.ok(`${CUSTODY_KEY}__support__2026-10__CZK` in db._docs.payments);
+    });
+
     it('deletes the family, because the family is the access', async () => {
       // Not tidiness. `families/{id}.members` is what the security rules read to decide who
       // may see the records a pair shares, so a family left behind is an ex-partner still

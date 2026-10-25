@@ -142,6 +142,22 @@ describe('revokeSharedAudience', () => {
     assert.ok(!swept.includes('budgets'), 'budgets must not be swept');
   });
 
+  it('leaves the vault to both parents: an unpair narrows no family document', async () => {
+    // Owner decision, 25 October 2026: a court order or a birth certificate stays readable by
+    // both parents after an unpair, from Family -> Earlier families.
+    const db = fakeDb({
+      events: [], child_info: [], pets: [],
+      family_documents: [{id: 'd1', createdByFirebaseUid: 'a', familyId: 'a__b', sharedWith: ['a', 'b']}],
+    });
+
+    const revoked = await revokeSharedAudience(db, 'a', 'b');
+
+    assert.strictEqual(revoked, 0);
+    assert.ok(!db._queries.map((q) => q.collection).includes('family_documents'));
+    assert.ok(require('../index').ERASED_AUDIENCE_COLLECTIONS.includes('family_documents'),
+        'account deletion still takes the departing parent out of the vault');
+  });
+
   // Derived from `SHARED_AUDIENCE_COLLECTIONS` rather than written out, because the literal
   // version of this case went stale the moment `pets` joined that list: it kept asserting the
   // two-collection counts and failed on `6 !== 4` while the sweep itself was correct. A count

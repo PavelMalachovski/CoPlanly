@@ -25,6 +25,7 @@ import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import com.google.gson.Gson
@@ -53,7 +54,8 @@ class EventRepositoryImpl @Inject constructor(
     private val firestoreEventDataSource: FirestoreEventDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
     private val eventVersionRecorder: EventVersionRecorder,
-    private val fcmService: FcmService
+    private val fcmService: FcmService,
+    private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : EventRepository {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -65,14 +67,15 @@ class EventRepositoryImpl @Inject constructor(
      * every list read below.
      */
     override fun getAllEvents(): Flow<List<Event>> {
-        return eventDao.getAllEvents().map { entities ->
-            entities.map { it.toDomain() }
-        }.inFamilyOnScreen(
+        return getAllEventsInEveryFamily().inFamilyOnScreen(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
         ) { it.familyId }
     }
+
+    override fun getAllEventsInEveryFamily(): Flow<List<Event>> =
+        eventDao.getAllEvents().map { entities -> entities.map { it.toDomain() } }
 
     /**
      * Every event in the range, recurring ones expanded into their occurrences — minus the ones
@@ -467,9 +470,13 @@ class EventRepositoryImpl @Inject constructor(
     private suspend fun withAcceptance(event: Event, currentUid: String?): Event {
         if (currentUid == null || event.acceptance != EventAcceptance.NOT_REQUIRED) return event
         val me = userDao.getUserById(currentUid)
+        // The creator's slot in the event's own family, which may differ from the profile's
+        // (per-family slots, 25 October 2026).
+        val family = event.familyId?.takeIf { it.isNotBlank() } ?: FamilyKey.orNull(currentUid, me?.partnerId)
+        val slot = family?.let { familySlots.get(it)?.of(currentUid) } ?: me?.role
         val required = EventAcceptanceTransition.required(
             event = event,
-            creatorSlot = me?.role,
+            creatorSlot = slot,
             partnerUid = me?.partnerId
         )
         return if (required) event.copy(acceptance = EventAcceptance.PENDING) else event

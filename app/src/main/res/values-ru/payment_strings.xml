@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Payments between the parents: "I paid" and "Money arrived" (25 October 2026). -->
+<resources>
+    <string name="payment_i_paid">Оплата отправлена</string>
+    <string name="payment_money_arrived">Деньги пришли</string>
+    <string name="payment_settled">Рассчитано: получено %1$s</string>
+    <string name="payment_waiting">Вы оплатили %1$s. Ждём подтверждения второго родителя</string>
+    <string name="payment_waiting_named">Вы оплатили %1$s. Ждём подтверждения: %2$s</string>
+    <string name="payment_paid_to_you">Второй родитель отметил перевод вам: %1$s</string>
+    <string name="payment_paid_to_you_named">%1$s: вам переведено %2$s</string>
+    <string name="payment_error_not_saved">Не удалось сохранить. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="payment_card_waiting">Ждёт подтверждения</string>
+    <string name="payment_card_received">Получено</string>
+</resources>

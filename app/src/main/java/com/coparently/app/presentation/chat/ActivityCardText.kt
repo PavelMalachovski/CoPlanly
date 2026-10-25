@@ -5,6 +5,8 @@ import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.presentation.stickers.StickerText
 
 /**
  * What an announcement's sentence is about — the `%1$s` of its string — before the reading device
@@ -79,7 +81,26 @@ object ActivityCardText {
         ActivityKind.SPLIT_WITHDRAWN -> R.string.activity_split_withdrawn
         ActivityKind.DAY_SWAP_WITHDRAWN -> R.string.activity_day_swap_withdrawn
         ActivityKind.CUSTODY_WITHDRAWN -> R.string.activity_custody_withdrawn
+        ActivityKind.STICKER_SENT -> R.string.activity_sticker_sent
+        // The payment and alimony cards take two arguments and are worded by [moneyResource];
+        // these are their sentences, so the mapping stays total.
+        ActivityKind.SETTLE_UP_PAID -> R.string.activity_settle_up_paid
+        ActivityKind.SETTLE_UP_CONFIRMED -> R.string.activity_settle_up_confirmed
+        ActivityKind.SUPPORT_PROPOSED -> R.string.activity_support_proposed
+        ActivityKind.SUPPORT_ACCEPTED -> R.string.activity_support_accepted
+        ActivityKind.SUPPORT_DECLINED -> R.string.activity_support_declined
+        ActivityKind.SUPPORT_WITHDRAWN -> R.string.activity_support_withdrawn
+        ActivityKind.SUPPORT_PAID -> R.string.activity_support_paid
+        ActivityKind.SUPPORT_CONFIRMED -> R.string.activity_support_confirmed
     }
+
+    /**
+     * Whether [kind]'s sentence takes the card's money as two arguments rather than one subject: a
+     * payment (`%1$s` the month, `%2$s` the amount) or an alimony agreement (`%1$s` the amount,
+     * `%2$s` the day of the month).
+     */
+    fun takesMoney(kind: ActivityKind): Boolean =
+        kind.isPayment || kind == ActivityKind.SUPPORT_PROPOSED || kind == ActivityKind.SUPPORT_ACCEPTED
 
     /**
      * A settle-up card's sentence on this phone: who owes is a matter of who reads it, so the
@@ -113,6 +134,13 @@ object ActivityCardText {
         ActivityEntityType.DAY_SWAP -> CardSubjectText.IsoDate(card.title)
         ActivityEntityType.CUSTODY_PROPOSAL -> CardSubjectText.Res(R.string.activity_subject_custody_schedule)
         ActivityEntityType.SPLIT_PROPOSAL -> CardSubjectText.Res(R.string.activity_subject_expense_split)
+        // The sender's neutral phrase on both phones: the card is the thread's record of what was
+        // sent, and the Family tab words it for its receiver.
+        ActivityEntityType.STICKER -> CardSubjectText.Res(
+            StickerKind.fromWire(card.title)?.let { StickerText.phrase(it) } ?: R.string.activity_subject_sticker
+        )
+        ActivityEntityType.PAYMENT,
+        ActivityEntityType.SUPPORT_AGREEMENT,
         ActivityEntityType.EVENT,
         ActivityEntityType.CHANGE_REQUEST,
         ActivityEntityType.EXPENSE -> CardSubjectText.Raw(card.title)
