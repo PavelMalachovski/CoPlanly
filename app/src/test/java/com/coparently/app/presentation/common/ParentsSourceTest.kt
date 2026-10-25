@@ -2,6 +2,8 @@ package com.coparently.app.presentation.common
 
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
+import com.coparently.app.domain.family.FamilySlots
+import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
@@ -72,6 +74,32 @@ class ParentsSourceTest {
             assertEquals(true, parents.isPaired)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `the family's own slots win over both profiles, here and on the cheap path`() = runTest {
+        // Per-family slots (25 October 2026): Olya is slot 1 with her first co-parent and slot 2
+        // with Pavel, and only `families/{id}.slots` says so; her profile keeps her first slot.
+        val slots = object : FamilySlotsSource {
+            val known = FamilySlots(mapOf("u1" to "dad", "u2" to "mom"))
+            override fun observe(familyId: String) = flowOf(known.takeIf { familyId == "u1__u2" })
+            override suspend fun get(familyId: String) = known.takeIf { familyId == "u1__u2" }
+        }
+        val users = mockk<UserRepository> {
+            every { observeCurrentUserId() } returns MutableStateFlow<String?>("u1")
+            every { getAllUsers() } returns MutableStateFlow(listOf(me.copy(partnerId = "u2")))
+            coEvery { getCurrentUserId() } returns "u1"
+            coEvery { getUserById("u1") } returns me.copy(partnerId = "u2")
+        }
+        val source = ParentsSource(users, pairingRepository(), slots)
+
+        source.observe().test {
+            val parents = awaitItem()
+            assertEquals("dad", parents.me?.slot)
+            assertEquals("mom", parents.coParent?.slot)
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals("dad", source.signedInSlot())
     }
 
     @Test

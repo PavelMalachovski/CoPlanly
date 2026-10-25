@@ -65,6 +65,7 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing

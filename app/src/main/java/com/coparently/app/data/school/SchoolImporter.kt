@@ -7,6 +7,7 @@ import com.coparently.app.data.school.bakalari.BakalariException
 import com.coparently.app.data.school.bakalari.withStatus
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -54,11 +55,14 @@ class SchoolImporter internal constructor(
      * @property wording Resolves the titles in the parent's language.
      * @property children The child records, read by id in every family, for the family of a
      *   connection that names none ([familyOf]).
+     * @property familySlots The importer's slot in the connection's family, which may differ from
+     *   the profile's (per-family slots, 25 October 2026).
      */
     class Collaborators @Inject constructor(
         val writer: SchoolEventWriter,
         val wording: SchoolImportWordingSource,
-        val children: ChildInfoRepository
+        val children: ChildInfoRepository,
+        val familySlots: FamilySlotsSource = FamilySlotsSource.None
     )
 
     /** The production importer, on the system clock. */
@@ -126,7 +130,7 @@ class SchoolImporter internal constructor(
                 childId = connection.childId,
                 familyId = family.familyId,
                 ownerUid = uid,
-                ownerSlot = user.role
+                ownerSlot = collaborators.familySlots.get(family.familyId)?.of(uid) ?: user.role
             ),
             today = today,
             now = LocalDateTime.now(clock),

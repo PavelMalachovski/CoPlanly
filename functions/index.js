@@ -495,7 +495,8 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
       partnerIds: FieldValue.arrayUnion(invite.fromUserId),
       partnerId: partnersOf(accepterSnap.data())[0] || invite.fromUserId,
       pairedAt,
-      role: slots.accepterRole,
+      // The family's slot, unless the accepter keeps their first family's on their profile.
+      role: slots.accepterProfileRole || slots.accepterRole,
     }, pendingRevocationCleared(accepterSnap.data(), invite.fromUserId)));
     tx.update(inviteRef, {
       status: 'accepted',
@@ -523,7 +524,10 @@ async function acceptPairingInvitationImpl(db, acceptingUserId, acceptingEmail, 
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  return {partnerId: invite.fromUserId, role: slots.accepterRole};
+  // `role` is what the accepter's profile now says, which an older build applies; a slot that
+  // differs in the new family is named apart, for the build that reads it from the family.
+  return Object.assign({partnerId: invite.fromUserId, role: slots.accepterProfileRole || slots.accepterRole},
+      slots.accepterProfileRole ? {familyRole: slots.accepterRole} : {});
 }
 
 exports.acceptPairingInvitationImpl = acceptPairingInvitationImpl;
@@ -2808,40 +2812,44 @@ exports.assignSlots = assignSlots;
  * The two slots a pairing writes, and whether the inviter's moved — without moving an accepter who
  * already co-parents with somebody else.
  *
- * A slot is still stored once per person (`users/{uid}.role`), and every client reads it from
- * there for every family that person is in — `families/{id}.slots` is written but not yet read.
- * [assignSlots] keeps the inviter's slot and gives the accepter the other one, which would move an
- * accepter who already holds a slot with their first co-parent: the two parents of that family
- * would then share a colour, and the accepter's phone would re-stamp every record and invert its
- * custody pattern. So such an accepter **keeps** their slot:
+ * A slot belongs to the family (25 October 2026, owner decision): `families/{id}.slots` is the
+ * truth, and `users/{uid}.role` is the mirror an older build reads — this parent's slot in their
+ * first family, never moved by a later one. [assignSlots] keeps the inviter's slot and gives the
+ * accepter the other one, which would move an accepter who already holds a slot with their first
+ * co-parent: the two parents of that family would then share a colour, and the accepter's phone
+ * would re-stamp every record and invert its custody pattern. So such an accepter's **profile**
+ * keeps their slot:
  *
  * - an inviter with no other family takes the other one (October 2026, tester report: a parent
  *   with a family could share her code but not enter a new co-parent's). Their slot is read by
  *   nobody else, so moving it is the ordinary first pairing seen from the other side; the move is
  *   marked on their profile (`slotMovedAt`) so their phone re-stamps what it holds;
- * - an inviter who co-parents elsewhere in the same slot cannot be moved either, and the pairing is
- *   refused (`slot-conflict`): no slot fits both families while it is one per person.
+ * - an inviter who co-parents elsewhere in the same slot keeps theirs too. The new family takes
+ *   the inviter's slot for the inviter and the other for the accepter, in `families/{id}.slots`
+ *   only: the accepter's profile keeps the slot of their first family ([accepterProfileRole]),
+ *   and the app reads the slot of each family from the family. This used to be refused
+ *   (`slot-conflict`), which left two parents who both had a family unable to link at all.
  *
  * @param {?Object} inviter The inviter's user document.
  * @param {?Object} accepter The accepter's user document.
- * @return {{inviterRole: string, accepterRole: string, inviterMoved: boolean}} The slots to write,
- *     and whether the inviter's differs from the one they held.
- * @throws {functions.https.HttpsError} `failed-precondition` with reason `slot-conflict` when both
- *     already co-parent in the same slot.
+ * @return {{inviterRole: string, accepterRole: string, inviterMoved: boolean,
+ *     accepterProfileRole: ?string}} The family's slots, whether the inviter's profile slot moved,
+ *     and the slot the accepter's profile keeps when it is not the family's (null otherwise).
  */
 function slotsForPairing(inviter, accepter) {
   const slots = assignSlots((inviter || {}).role);
   const held = (accepter || {}).role;
   const holdsSlot = held === 'mom' || held === 'dad';
   if (!holdsSlot || partnersOf(accepter).length === 0 || held === slots.accepterRole) {
-    return Object.assign({}, slots, {inviterMoved: false});
+    return Object.assign({}, slots, {inviterMoved: false, accepterProfileRole: null});
   }
   if (partnersOf(inviter).length === 0) {
-    return {inviterRole: held === 'mom' ? 'dad' : 'mom', accepterRole: held, inviterMoved: true};
+    return {
+      inviterRole: held === 'mom' ? 'dad' : 'mom', accepterRole: held, inviterMoved: true,
+      accepterProfileRole: null,
+    };
   }
-  throw new functions.https.HttpsError(
-      'failed-precondition', 'Both parents already co-parent in the same slot',
-      {reason: 'slot-conflict'});
+  return Object.assign({}, slots, {inviterMoved: false, accepterProfileRole: held});
 }
 exports.slotsForPairing = slotsForPairing;
 

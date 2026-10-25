@@ -43,13 +43,17 @@ object SupportAgreementDocument {
         )
     }
 
-    private fun terms(map: Map<*, *>): SupportTerms? = SupportTerms(
-        amount = (map["amount"] as? String)?.toBigDecimalOrNull() ?: return null,
-        currency = map["currency"] as? String ?: return null,
-        dayOfMonth = (map["dayOfMonth"] as? Number)?.toInt() ?: return null,
-        payerUid = map["payerUid"] as? String ?: return null,
-        fromMonth = (map["fromMonth"] as? String)
+    @Suppress("ReturnCount") // one early answer per field the terms cannot do without
+    private fun terms(map: Map<*, *>): SupportTerms? {
+        val fromMonth = (map["fromMonth"] as? String)
             ?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
             ?: return null
-    )
+        return SupportTerms(
+            amount = (map["amount"] as? String)?.toBigDecimalOrNull() ?: return null,
+            currency = map["currency"] as? String ?: return null,
+            dayOfMonth = (map["dayOfMonth"] as? Number)?.toInt() ?: return null,
+            payerUid = map["payerUid"] as? String ?: return null,
+            fromMonth = fromMonth
+        )
+    }
 }
