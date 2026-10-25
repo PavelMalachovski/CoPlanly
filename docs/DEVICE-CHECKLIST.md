@@ -1474,6 +1474,38 @@ push in the `e2e` job (`TwoParentAccessTest`). What is left is what the phone dr
   `calendar/DayWeekView.kt`, `expenses/AddExpenseScreen.kt`, `expenses/ExpenseScreen.kt`,
   `data/repository/ExpenseRepositoryImpl.kt` (`questionExpense`), `data/remote/firebase/PushRouting.kt`.
 
+### 3.31 The tester round of 25 October: earlier families, payments, child support, slots · 2P, 3P for slots
+
+The owner's tester round (CLAUDE.md items 19, 31, 43, 47–50). Pinned by `FamilyViewTest`,
+`EarlierFamiliesTest`, `ExportViewModelTest`, `PaymentTest`, `PaymentDocumentTest`,
+`SupportTermsTest`, `SupportAgreementDocumentTest`, `ParentsSourceTest`, `KnownFamilySlotsTest`,
+the rules suites (`payments`, `support-agreements`, `family-documents`), the functions' pairing,
+unpair and account-deletion tests, and the `e2e` job (`TwoParentPaymentsTest`, the vault and
+sticker cases). What is left is what the phones draw and a real pairing of four people.
+
+- [ ] **An ended family leaves the screens** (2P, then a third parent). Alice unpairs from Bob and
+      links with Carol: Bob's family's events, expenses, children and pets are on none of the
+      Carol family's screens. Family → **Earlier families** lists "With Bob"; opening it shows them,
+      read-only, with Documents and Export.
+- [ ] **The vault after the unpair.** A document Alice filed while linked with Bob still opens on
+      Bob's phone under Earlier families; neither can add one there.
+- [ ] **A sticker in the chat.** Alice sends Bob a sticker: a card "Sticker: …" appears in both
+      threads, and Bob's phone rings once, not twice.
+- [ ] **Settle up, paid and confirmed.** Bob owes October: **I paid** under the card (or on the
+      header), then on Alice's phone **Money arrived**; both headers then read "Settled".
+- [ ] **Child support.** Alice proposes 5 000 Kč on the 5th, Bob pays; Bob accepts. The months list
+      October; Bob taps **I paid**, Alice **Money arrived**. Bob's reminder 3 days before posts one
+      notification on the money channel, none at night, none once paid.
+- [ ] **Two parents who both have a family link** (4 accounts). Alice (with Bob) and Dan (with
+      Erin), both in the first slot, link: no refusal. In the new family their colours differ and
+      each draws the other's days in the other's colour, while Alice's family with Bob and Dan's with
+      Erin look as before.
+- **If it fails:** `data/family/FamilyView.kt`, `presentation/family/EarlierFamilies*.kt`,
+  `functions/index.js` (`SHARED_AUDIENCE_COLLECTIONS`, `slotsForPairing`, `SILENT_CARD_KINDS`),
+  `data/payment/PaymentStore.kt`, `presentation/expenses/ExpenseSummaryHeader.kt`,
+  `presentation/chat/SettleUpPayment.kt`, `presentation/support/`, `data/support/`,
+  `data/family/KnownFamilies.kt`, `presentation/common/ParentsSource.kt`.
+
 ---
 
 ## 4. Release-build checks

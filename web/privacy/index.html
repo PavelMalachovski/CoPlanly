@@ -203,13 +203,25 @@ to show them a QR payment code for the amount (Czech QR Platba, Slovak PAY by sq
 European EPC code). The code is made on their phone and goes to no one else; we send nothing to
 any bank. You can change or remove the IBAN whenever you settle up, and it is deleted with your
 account.</li>
+<li><strong>Payments between the two of you</strong> — when one of you says they paid a month&#39;s settle-up or a
+month&#39;s child support, and when the other says the money arrived: the family, the month, the
+currency, the amount, who paid and who was paid, and the two times. Each of you can record only
+your own step, and neither can be changed afterwards. We never see or move the money itself; this
+is what you tell each other. Both steps also appear as notes in your conversation. Kept after
+the two of you unlink, as your family&#39;s history, and deleted when either of you deletes their
+account.</li>
+<li><strong>Child support (optional)</strong> — the monthly amount, its currency, the day of the month, who pays
+and from which month, and a proposal to change it (who proposed it and when). It applies only
+once the other parent accepts it as proposed. A reminder before the day, if the paying parent
+turns it on, is a notification on their own phone; we send nothing for it. Deleted when the two
+of you unlink or either of you deletes their account.</li>
 <li><strong>Stickers</strong> — a small badge such as &quot;You are a great parent&quot;. Your co-parent can send you one
 of a fixed set of phrases (there is no free text). Earlier test builds also gave one for
 answering a request before its deadline; this version gives none, and the ones already given
 stay on your shelf. We store who sent it, to whom, in which family, the phrase, when it was sent
-and when the receiver first saw it. Only the receiver and the sender see a sticker; it is not
-part of the chat or of an export, and the receiver gets a notification for a sticker from their
-co-parent.</li>
+and when the receiver first saw it. Only the receiver and the sender see a sticker. It also
+appears as a note in your conversation with your co-parent, but never in an export, and the
+receiver gets one notification for it.</li>
 <li><strong>Expenses</strong> — amounts, currencies, categories, and optional receipt photos. (Earlier test
 builds also let you set a monthly budget per category. This version no longer creates, shows
 or syncs budgets; any an earlier build saved stay in your account until you delete it.)</li>
@@ -224,7 +236,10 @@ you can edit or delete it afterwards.</li>
 letter, a scan of an identity document), with the name and category you give them. <strong>A
 document is always shared with your co-parent</strong>: there are no private documents. Only the
 parent who added a document can rename or delete it; a deleted document disappears from both
-of your lists at once, and its file is removed from our servers 90 days later.</li>
+of your lists at once, and its file is removed from our servers 90 days later. <strong>If the two of
+you unlink, you both keep reading the family&#39;s documents</strong>, read-only, under &quot;Earlier families&quot;;
+nothing new can be added to them. They are removed when the parent who added them deletes their
+account.</li>
 </ul>
 <p>For every shared file we also keep its size, its type and a <strong>SHA-256 fingerprint</strong> of its
 contents, so that the app can check a downloaded file is the one that was shared, and so that an
@@ -438,22 +453,31 @@ addressed to you, which we have weighed against theirs (Art. 6(1)(f)). The model
 decision about anyone (Art. 22): it drafts words that you read, change and choose to send or not.</p>
 <h2>What happens on your device and goes nowhere</h2>
 <ul>
-<li><strong>Receipt scanning.</strong> When you photograph a receipt, the text is recognised <strong>entirely on
+<li><p><strong>Your earlier families.</strong> While you are linked, your phone remembers your co-parent&#39;s name and
+which of the two parent places each of you holds in that family, so that after the two of you
+unlink it can still name that family under &quot;Earlier families&quot;. This stays on your phone and is
+deleted when you sign in with another account or delete yours.</p>
+</li>
+<li><p><strong>Receipt scanning.</strong> When you photograph a receipt, the text is recognised <strong>entirely on
 your device</strong>. The photograph and the recognised text are not sent to any text-recognition
-or AI service — writing help, if you turn it on, never receives a receipt.</li>
-<li><strong>Voice typing in chat.</strong> If you use the microphone in the chat composer, your phone&#39;s own
+or AI service — writing help, if you turn it on, never receives a receipt.</p>
+</li>
+<li><p><strong>Voice typing in chat.</strong> If you use the microphone in the chat composer, your phone&#39;s own
 speech recognition turns what you say into text <strong>on the device</strong>. The app offers the
 microphone only on phones that can do this on the device, and never uses an online speech
 service instead. The audio is not recorded, stored or sent to us or anyone else; only the text,
 once you choose to send it, becomes an ordinary chat message. The app asks for microphone
-access the first time you tap the microphone, and you can withdraw it in your phone&#39;s settings.</li>
-<li><strong>Private events.</strong> An event you mark private never leaves your device. It is not uploaded,
-not synced, and not visible to your co-parent.</li>
-<li><strong>Your private journal.</strong> Notes you write in the journal are stored only on your phone, in its
+access the first time you tap the microphone, and you can withdraw it in your phone&#39;s settings.</p>
+</li>
+<li><p><strong>Private events.</strong> An event you mark private never leaves your device. It is not uploaded,
+not synced, and not visible to your co-parent.</p>
+</li>
+<li><p><strong>Your private journal.</strong> Notes you write in the journal are stored only on your phone, in its
 encrypted database. They are never uploaded or synced, and your co-parent cannot see them. The
 only way they leave the phone is if you tick &quot;My private journal&quot; when you export the record
 and then share that file yourself. Deleting your account or signing in with another account on
-the phone erases them.</li>
+the phone erases them.</p>
+</li>
 </ul>
 <h2>Who else sees your data</h2>
 <p>We do not sell personal data, and we do not use it for advertising.</p>
@@ -544,6 +568,18 @@ daily on our servers, not by hand.</p>
 <tr>
 <td>A sticker</td>
 <td>Until the two of you unlink, or either of you deletes their account</td>
+</tr>
+<tr>
+<td>A payment one of you recorded, and its confirmation</td>
+<td>Until either parent deletes their account — it stays after the two of you unlink, as part of what you recorded</td>
+</tr>
+<tr>
+<td>A child support agreement and its proposal</td>
+<td>Until the two of you unlink, or either of you deletes their account</td>
+</tr>
+<tr>
+<td>A family document, after the two of you unlink</td>
+<td>Until the parent who added it deletes it or their account — both of you keep reading it</td>
 </tr>
 <tr>
 <td>A request&#39;s deadline and what was recorded about it (received, opened, reminders, last chance, no answer)</td>

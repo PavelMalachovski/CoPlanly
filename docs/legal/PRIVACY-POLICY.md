@@ -109,13 +109,25 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   European EPC code). The code is made on their phone and goes to no one else; we send nothing to
   any bank. You can change or remove the IBAN whenever you settle up, and it is deleted with your
   account.
+- **Payments between the two of you** — when one of you says they paid a month's settle-up or a
+  month's child support, and when the other says the money arrived: the family, the month, the
+  currency, the amount, who paid and who was paid, and the two times. Each of you can record only
+  your own step, and neither can be changed afterwards. We never see or move the money itself; this
+  is what you tell each other. Both steps also appear as notes in your conversation. Kept after
+  the two of you unlink, as your family's history, and deleted when either of you deletes their
+  account.
+- **Child support (optional)** — the monthly amount, its currency, the day of the month, who pays
+  and from which month, and a proposal to change it (who proposed it and when). It applies only
+  once the other parent accepts it as proposed. A reminder before the day, if the paying parent
+  turns it on, is a notification on their own phone; we send nothing for it. Deleted when the two
+  of you unlink or either of you deletes their account.
 - **Stickers** — a small badge such as "You are a great parent". Your co-parent can send you one
   of a fixed set of phrases (there is no free text). Earlier test builds also gave one for
   answering a request before its deadline; this version gives none, and the ones already given
   stay on your shelf. We store who sent it, to whom, in which family, the phrase, when it was sent
-  and when the receiver first saw it. Only the receiver and the sender see a sticker; it is not
-  part of the chat or of an export, and the receiver gets a notification for a sticker from their
-  co-parent.
+  and when the receiver first saw it. Only the receiver and the sender see a sticker. It also
+  appears as a note in your conversation with your co-parent, but never in an export, and the
+  receiver gets one notification for it.
 - **Expenses** — amounts, currencies, categories, and optional receipt photos. (Earlier test
   builds also let you set a monthly budget per category. This version no longer creates, shows
   or syncs budgets; any an earlier build saved stay in your account until you delete it.)
@@ -130,7 +142,10 @@ decide what each of you may read. **Legal basis:** performance of our contract w
   letter, a scan of an identity document), with the name and category you give them. **A
   document is always shared with your co-parent**: there are no private documents. Only the
   parent who added a document can rename or delete it; a deleted document disappears from both
-  of your lists at once, and its file is removed from our servers 90 days later.
+  of your lists at once, and its file is removed from our servers 90 days later. **If the two of
+  you unlink, you both keep reading the family's documents**, read-only, under "Earlier families";
+  nothing new can be added to them. They are removed when the parent who added them deletes their
+  account.
 
 For every shared file we also keep its size, its type and a **SHA-256 fingerprint** of its
 contents, so that the app can check a downloaded file is the one that was shared, and so that an
@@ -370,6 +385,11 @@ decision about anyone (Art. 22): it drafts words that you read, change and choos
 
 ## What happens on your device and goes nowhere
 
+- **Your earlier families.** While you are linked, your phone remembers your co-parent's name and
+  which of the two parent places each of you holds in that family, so that after the two of you
+  unlink it can still name that family under "Earlier families". This stays on your phone and is
+  deleted when you sign in with another account or delete yours.
+
 - **Receipt scanning.** When you photograph a receipt, the text is recognised **entirely on
   your device**. The photograph and the recognised text are not sent to any text-recognition
   or AI service — writing help, if you turn it on, never receives a receipt.
@@ -432,6 +452,9 @@ daily on our servers, not by hand.
 | --- | --- |
 | Your account and everything you entered | Until you delete it, or delete the record |
 | A sticker | Until the two of you unlink, or either of you deletes their account |
+| A payment one of you recorded, and its confirmation | Until either parent deletes their account — it stays after the two of you unlink, as part of what you recorded |
+| A child support agreement and its proposal | Until the two of you unlink, or either of you deletes their account |
+| A family document, after the two of you unlink | Until the parent who added it deletes it or their account — both of you keep reading it |
 | A request's deadline and what was recorded about it (received, opened, reminders, last chance, no answer) | Until either parent deletes their account — it stays after the request is answered, and after the two of you unlink, as part of what you recorded |
 | A single event, expense, child record, pet or family document you delete | Marked deleted at once, so your co-parent's phone learns of it; removed for good **90 days** later, with its file or photographs |
 | A photograph you remove or replace | Deleted from our servers when you save the change |

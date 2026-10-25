@@ -67,9 +67,21 @@ only what is specific to it.
 | Data subjects | Parents |
 | Data | Receiver and sender uid (`app` for the app's own), the family id, the phrase's kind (no free text), the server's time of sending, and when the receiver first saw it |
 | Legal basis | Art. 6(1)(b) — part of the service the parents use; nothing is inferred from it and nothing is counted against either parent |
-| Recipients | The receiver and the sender only — never a guest, family friend or professional; not in the chat, not in an export. A parent's sticker pushes `sticker_received` (the sender's name only) to the receiver; the app's own push nobody |
+| Recipients | The receiver and the sender only — never a guest, family friend or professional; never in an export. Since 25 October 2026 a sent sticker also posts a card in the pair's own thread, which pushes nobody. A parent's sticker pushes `sticker_received` (the sender's name only) to the receiver; the app's own push nobody |
 | Retention | Until the family ends (unpair deletes the family's stickers) or either parent deletes their account (every sticker naming them, for both) |
 | Where | `stickers/{id}`; `users/{uid}.parentRole` (P1) |
+
+### P2b. Payments and child support between the parents (25 October 2026)
+
+| | |
+| --- | --- |
+| Purpose | Recording that a month's settle-up or child support was paid, and that it arrived; agreeing a monthly child support amount |
+| Data subjects | Parents |
+| Data | Payments: family id, kind (settle-up or child support), month, currency, amount, payer and payee uids, the server's times of "paid" and "arrived". Child support: the agreed amount, currency, day of the month, payer and first month, and at most one proposal with its proposer and time. Each step also posts a chat note. On the payer's phone only: whether a reminder is on and how many days before the day (sealed preferences), and the month last reminded |
+| Legal basis | Art. 6(1)(b) — part of the service the parents use; the controller moves no money and contacts no bank |
+| Recipients | The two parents of the family only |
+| Retention | Payments: until either parent deletes their account (kept after unpair as the family's history). Child support agreement: until unpair or either account's deletion. The reminder setting: until sign-out on that phone |
+| Where | `payments/{id}`, `support_agreements/{familyId}`; the reminder in the phone's `EncryptedPreferences` |
 
 ### P3. Event revision history
 
@@ -114,7 +126,7 @@ only what is specific to it.
 | Data | Files, their name, category, size, type, SHA-256 |
 | Legal basis | Art. 6(1)(b) |
 | Recipients | Both parents of the family |
-| Retention | Life of the document; a deleted document's file is swept after 90 days; deleted with the uploader's account |
+| Retention | Life of the document; a deleted document's file is swept after 90 days; deleted with the uploader's account. Since 25 October 2026 an unpair no longer removes the co-parent from a document's audience: both parents keep reading the ended family's documents, read-only |
 | Where | `family_documents`; Storage `family_documents/{familyId}/…` |
 
 ### P7. Exports and verification receipts
