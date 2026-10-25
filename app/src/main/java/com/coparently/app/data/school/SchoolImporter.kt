@@ -130,7 +130,7 @@ class SchoolImporter internal constructor(
                 childId = connection.childId,
                 familyId = family.familyId,
                 ownerUid = uid,
-                ownerSlot = collaborators.familySlots.get(family.familyId)?.of(uid) ?: user.role
+                ownerSlot = family.familyId?.let { collaborators.familySlots.get(it)?.of(uid) } ?: user.role
             ),
             today = today,
             now = LocalDateTime.now(clock),
