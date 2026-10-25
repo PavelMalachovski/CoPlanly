@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Earlier families: an ended family's records, read-only (25 October 2026). -->
+<resources>
+    <string name="earlier_families_title">Прежние семьи</string>
+    <string name="earlier_families_row_supporting">Записи завершённых семей, только для чтения</string>
+    <string name="earlier_families_with">С: %1$s</string>
+    <string name="earlier_families_unnamed">Прежняя семья</string>
+    <string name="earlier_families_last_day">Последняя запись: %1$s</string>
+    <string name="earlier_families_notice">Когда вы отвязываетесь от второго родителя, записи этой семьи переходят сюда. В других ваших семьях их нет.</string>
+    <string name="earlier_families_empty_title">Прежних семей нет</string>
+    <string name="earlier_families_empty_description">Когда вы отвязываетесь от второго родителя, записи этой семьи переходят сюда, отдельно от других ваших семей.</string>
+    <string name="earlier_family_notice">Эта семья завершена. Её записи хранятся здесь, только для чтения, и не показываются в других ваших семьях.</string>
+    <string name="earlier_family_documents">Документы</string>
+    <string name="earlier_family_documents_supporting">Вы оба по-прежнему можете их открыть</string>
+    <string name="earlier_family_export">Экспортировать записи</string>
+    <string name="earlier_family_export_supporting">Записи этой семьи за период</string>
+    <string name="earlier_family_events">События</string>
+    <string name="earlier_family_expenses">Расходы</string>
+    <string name="earlier_family_total">Всего: %1$s</string>
+    <string name="earlier_family_children">Дети</string>
+    <string name="earlier_family_pets">Питомцы</string>
+    <string name="earlier_family_journal">Мой дневник</string>
+    <string name="earlier_family_nothing">Больше ничего из этой семьи на телефоне не хранится.</string>
+    <string name="earlier_family_more">И ещё %1$d</string>
+</resources>

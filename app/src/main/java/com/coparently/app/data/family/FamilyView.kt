@@ -30,9 +30,11 @@ enum class RecordPlace {
     ONLY_ME,
 
     /**
-     * A record of a family that has ended: this parent's history. Shown marked "From an earlier
-     * family", never shared with a later co-parent and never counted in a live family's totals
-     * (owner decision October 2026).
+     * A record of a family that has ended: this parent's history. Never shared with a later
+     * co-parent and never counted in a live family's totals. While the parent is in a live family
+     * it is not drawn at all — it is read under Family → Earlier families (owner decision, 25
+     * October 2026: "full isolation"); while they are in none it is drawn marked "From an earlier
+     * family", because there is nothing to isolate it from.
      */
     EARLIER_FAMILY,
 
@@ -56,8 +58,9 @@ enum class RecordPlace {
  * - this parent's **own** record of no family is "only mine" ([RecordPlace.ONLY_ME]) — its audience
  *   names nobody until it has a family, and the screen says so rather than drawing it as the
  *   family's;
- * - a record of a family that has **ended** stays visible as history
- *   ([RecordPlace.EARLIER_FAMILY]), so an unpair never makes a parent's past disappear;
+ * - a record of a family that has **ended** ([RecordPlace.EARLIER_FAMILY]) is hidden while the
+ *   parent is in a live family, and read under Family → Earlier families instead; with no live
+ *   family it stays visible, marked, so an unpair never empties the app;
  * - a record of another live family is hidden.
  *
  * With one family, or none, nothing is hidden. [counts] says what a family's totals and balance
@@ -85,7 +88,11 @@ data class FamilyView(val me: String? = null, val onScreen: String?, val others:
 
     /** Whether a record of [familyId], written by [createdBy], belongs on this screen. */
     fun shows(familyId: String?, createdBy: String? = null): Boolean =
-        placeOf(familyId, createdBy) != RecordPlace.OTHER_FAMILY
+        when (placeOf(familyId, createdBy)) {
+            RecordPlace.OTHER_FAMILY -> false
+            RecordPlace.EARLIER_FAMILY -> liveFamilies() == 0
+            else -> true
+        }
 
     /** Whether a record of [familyId], written by [createdBy], counts in this family's totals. */
     fun counts(familyId: String?, createdBy: String? = null): Boolean =

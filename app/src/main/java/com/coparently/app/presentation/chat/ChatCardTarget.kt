@@ -36,6 +36,9 @@ sealed interface ChatCardTarget {
      */
     data class Event(val eventId: String) : ChatCardTarget
 
+    /** The family's Alimony screen: an alimony card, a proposal or a month paid (25 October 2026). */
+    data object Support : ChatCardTarget
+
     companion object {
 
         /**
@@ -60,6 +63,10 @@ sealed interface ChatCardTarget {
                 ActivityEntityType.CHANGE_REQUEST -> ChangeRequest(card.entityId)
                 ActivityEntityType.DAY_SWAP, ActivityEntityType.SPLIT_PROPOSAL -> Inbox
                 ActivityEntityType.EXPENSE, ActivityEntityType.CUSTODY_PROPOSAL -> null
+                // A sticker is the whole message; a settle-up payment has no screen of its own.
+                ActivityEntityType.STICKER -> null
+                ActivityEntityType.PAYMENT -> if (card.kind.isSupport) Support else null
+                ActivityEntityType.SUPPORT_AGREEMENT -> Support
             }
         }
     }

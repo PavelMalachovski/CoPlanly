@@ -168,7 +168,9 @@ class ExpenseViewModelFamilyTest {
     @Test
     fun `the figures count the family's own expenses, and mark the rest`() = runTest(dispatcher) {
         // Owner decision, October 2026: an expense that is "only mine" (no family while Zuzana has
-        // two) or from an earlier family stays in the list, marked, and is added into nothing.
+        // two) stays in the list, marked, and is added into nothing. One from an earlier family
+        // leaves the list altogether (owner decision, 25 October 2026), even when a repository
+        // hands it over.
         val today = java.time.LocalDate.now()
         every { expenseRepository.getAllExpenses() } returns flowOf(
             listOf(
@@ -183,11 +185,11 @@ class ExpenseViewModelFamilyTest {
         advanceUntilIdle()
 
         val month = viewModel.monthOfExpenses.value
-        assertEquals(setOf("swimming", "only-mine", "earlier"), month.expenses.map { it.id }.toSet())
+        assertEquals(setOf("swimming", "only-mine"), month.expenses.map { it.id }.toSet())
         assertEquals(listOf("swimming"), month.counted.map { it.id })
         assertEquals(1_200.0, month.balances.single().balance.total)
         assertEquals(
-            mapOf("only-mine" to RecordPlace.ONLY_ME, "earlier" to RecordPlace.EARLIER_FAMILY),
+            mapOf("only-mine" to RecordPlace.ONLY_ME),
             month.places
         )
         assertEquals(CAROL_FAMILY, month.familyId)

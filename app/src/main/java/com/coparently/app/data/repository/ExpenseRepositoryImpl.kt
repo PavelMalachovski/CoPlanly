@@ -55,14 +55,15 @@ class ExpenseRepositoryImpl @Inject constructor(
      * pair, and two families' shoes in one list was the tester report this fixes.
      */
     override fun getAllExpenses(): Flow<List<Expense>> {
-        return expenseDao.getAllExpenses().map { entities ->
-            entities.map { it.toDomain() }
-        }.inFamilyOnScreen(
+        return getAllExpensesInEveryFamily().inFamilyOnScreen(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
         ) { it.familyId }
     }
+
+    override fun getAllExpensesInEveryFamily(): Flow<List<Expense>> =
+        expenseDao.getAllExpenses().map { entities -> entities.map { it.toDomain() } }
 
     override fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>> {
         return expenseDao.getExpensesForPeriod(start, end).map { entities ->

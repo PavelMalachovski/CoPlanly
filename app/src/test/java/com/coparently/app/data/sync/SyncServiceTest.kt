@@ -183,7 +183,9 @@ class SyncServiceTest {
             // The revision outbox (MON-4); its own suite covers it.
             mockk(relaxed = true),
             reminderScheduler,
-            requestClockKeeper
+            requestClockKeeper,
+            // Known families (schema 46): best-effort reads its own suite covers.
+            mockk(relaxed = true)
         )
     }
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Earlier families: an ended family's records, read-only (25 October 2026). -->
+<resources>
+    <string name="earlier_families_title">Earlier families</string>
+    <string name="earlier_families_row_supporting">Read-only records of families that have ended</string>
+    <string name="earlier_families_with">With %1$s</string>
+    <string name="earlier_families_unnamed">Earlier family</string>
+    <string name="earlier_families_last_day">Last record: %1$s</string>
+    <string name="earlier_families_notice">When you unlink from a co-parent, that family\'s records move here. They are kept out of your other families.</string>
+    <string name="earlier_families_empty_title">No earlier families</string>
+    <string name="earlier_families_empty_description">When you unlink from a co-parent, that family\'s records move here, out of your other families.</string>
+    <string name="earlier_family_notice">This family has ended. Its records are kept here, read-only, and are not shown in your other families.</string>
+    <string name="earlier_family_documents">Documents</string>
+    <string name="earlier_family_documents_supporting">You can both still open them</string>
+    <string name="earlier_family_export">Export the record</string>
+    <string name="earlier_family_export_supporting">A record of this family for a period</string>
+    <string name="earlier_family_events">Events</string>
+    <string name="earlier_family_expenses">Expenses</string>
+    <string name="earlier_family_total">Total: %1$s</string>
+    <string name="earlier_family_children">Children</string>
+    <string name="earlier_family_pets">Pets</string>
+    <string name="earlier_family_journal">My journal</string>
+    <string name="earlier_family_nothing">Nothing else from this family is kept on this phone.</string>
+    <string name="earlier_family_more">And %1$d more</string>
+</resources>

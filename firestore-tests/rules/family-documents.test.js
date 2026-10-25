@@ -64,6 +64,8 @@ describe('family_documents', () => {
       'users/alice-uid': {name: 'Alice', partnerId: BOB, partnerIds: [BOB, CAROL]},
       'users/bob-uid': {name: 'Bob', partnerId: ALICE, partnerIds: [ALICE]},
       'users/carol-uid': {name: 'Carol', partnerId: ALICE, partnerIds: [ALICE]},
+      [`families/${FAMILY}`]: {members: [ALICE, BOB]},
+      [`families/${ALICE}__${CAROL}`]: {members: [ALICE, CAROL]},
     });
   });
 
@@ -92,6 +94,26 @@ describe('family_documents', () => {
     it('refuses an unfiltered list query', async () => {
       await seed(env, {'family_documents/doc-1': vaultDoc({})});
       await assertFails(as(BOB).collection('family_documents').get());
+    });
+  });
+
+  describe('after an unpair', () => {
+    // Owner decision, 25 October 2026: the vault is the family's papers, and both parents keep
+    // reading it from Family -> Earlier families; nobody files anything new into an ended family.
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().doc(`families/${FAMILY}`).delete();
+      });
+    });
+
+    it('lets both parents still read a document of the ended family', async () => {
+      await seed(env, {'family_documents/doc-1': vaultDoc({})});
+      await assertSucceeds(as(ALICE).doc('family_documents/doc-1').get());
+      await assertSucceeds(as(BOB).doc('family_documents/doc-1').get());
+    });
+
+    it('refuses filing a new document into the ended family', async () => {
+      await assertFails(as(ALICE).doc('family_documents/doc-1').set(vaultDoc({})));
     });
   });
 

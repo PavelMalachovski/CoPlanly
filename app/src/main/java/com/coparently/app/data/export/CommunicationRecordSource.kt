@@ -9,6 +9,7 @@ import com.coparently.app.data.repository.toMessageOrNull
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.export.CommunicationRecordBuilder
 import com.coparently.app.domain.export.CurrentEventInput
@@ -17,6 +18,7 @@ import com.coparently.app.domain.export.EventRevisionInput
 import com.coparently.app.domain.export.MessageInput
 import com.coparently.app.domain.export.RecordSources
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
@@ -83,11 +85,14 @@ class CommunicationRecordSource @Inject constructor(
         val threadMessages = conversationId?.let { thread(it, from, to, zone) }
         return RecordSources(
             revisions = remoteRevisions.orEmpty().map { it.toInput() } + pending,
-            currentEvents = eventRepository.getAllEvents().first()
+            // Every family's, not the family on screen's: the builder's `RecordScope` keeps the
+            // family being exported, which may be an ended one (Family → Earlier families).
+            currentEvents = eventRepository.getAllEventsInEveryFamily().first()
                 .filterNot { it.isPrivate }
                 .map { it.toCurrentInput() },
             messages = threadMessages?.first.orEmpty(),
-            expenses = expenseRepository.getExpensesForPeriod(from, to).first(),
+            expenses = expenseRepository.getAllExpensesInEveryFamily().first()
+                .filter { !it.date.isBefore(from) && !it.date.isAfter(to) },
             serverReached = remoteRevisions != null && threadMessages?.second != false
         )
     }
@@ -106,6 +111,7 @@ class CommunicationRecordSource @Inject constructor(
         val end = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val remote = fromServer("messages") { messages.fetchBetween(conversationId, start, end) }
             ?.mapNotNull { it.toMessageOrNull() }
+            ?.filterNot { it.isSticker() }
             ?.map {
                 MessageInput(
                     it.id,
@@ -120,7 +126,7 @@ class CommunicationRecordSource @Inject constructor(
         val remoteIds = remote.orEmpty().map { it.messageId }.toSet()
         val local = messageDao.getMessagesOnce(conversationId)
             .map { it.toDomain() }
-            .filter { it.id !in remoteIds }
+            .filter { it.id !in remoteIds && !it.isSticker() }
             .map {
                 MessageInput(
                     messageId = it.id,
@@ -134,6 +140,12 @@ class CommunicationRecordSource @Inject constructor(
             }
         return (remote.orEmpty() + local) to (remote != null)
     }
+
+    /**
+     * A sticker's card (25 October 2026): the parents' courtesies, not their communication
+     * record, so the export leaves it out — on the record's face nothing claims otherwise.
+     */
+    private fun Message.isSticker(): Boolean = activity?.kind == ActivityKind.STICKER_SENT
 
     /** [read] from the server, or null when it could not be reached or refused. */
     private suspend fun <T> fromServer(what: String, read: suspend () -> T): T? = try {

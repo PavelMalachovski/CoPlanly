@@ -2,6 +2,8 @@ package com.coparently.app.e2e
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
@@ -25,9 +27,9 @@ import org.junit.runner.RunWith
  * - **A parent's sticker reaches the co-parent** with its `sticker_received` push, read back from
  *   `notification_queue` addressed to them, and the sender sees when it was seen.
  * - **The role is the parent's own answer**, stored and read back on their phone.
+ * - **The sticker is a card in the pair's thread too** (owner decision, 25 October 2026), naming
+ *   the sticker and its kind, on the receiver's phone.
  * - **A stranger can neither send one into the family nor read one.**
- * - **An answer before the deadline gives the app's on-time sticker, once a week**: a second answer
- *   the same week gives nothing new, and the app's sticker pushes nobody.
  *
  * What it cannot: the card and the sheet as drawn, and FCM's delivery of the push.
  */
@@ -53,6 +55,16 @@ class TwoParentStickersTest : TwoParentTest() {
 
         val push = EmulatorEnvironment.awaitQueuedPush(bob.uid, PushPayload.STICKER_RECEIVED)
         assertEquals(familyId, push[PushPayload.FAMILY_ID])
+
+        EmulatorEnvironment.step("stickers: the sticker is a card in Bob's thread with Alice")
+        val card = withTimeout(WAIT_MS) {
+            bob.messageRepository.observeMessages(ConversationKey.of(alice.uid, bob.uid))
+                .first { messages -> messages.any { it.activity?.kind == ActivityKind.STICKER_SENT } }
+                .first { it.activity?.kind == ActivityKind.STICKER_SENT }
+        }
+        assertEquals(sticker.id, card.activity?.entityId)
+        assertEquals(StickerKind.GREAT_PARENT.wire, card.activity?.title)
+        assertEquals(alice.uid, card.senderId)
 
         EmulatorEnvironment.step("stickers: Bob sees it, and Alice is told it was seen")
         bob.stickerStore.markSeen(sticker)

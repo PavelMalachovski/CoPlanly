@@ -40,4 +40,16 @@
     <!-- The %1$s of the two request cards above when the request is an expense split proposal.
          Lower case: it follows a colon. -->
     <string name="activity_subject_expense_split">expense split</string>
+
+    <!-- Stickers in the chat, payments and child support (25 October 2026). -->
+    <string name="activity_sticker_sent">Sticker: %1$s</string>
+    <string name="activity_subject_sticker">a new kind of sticker</string>
+    <string name="activity_settle_up_paid">Settle up for %1$s paid: %2$s</string>
+    <string name="activity_settle_up_confirmed">Settle up for %1$s received: %2$s</string>
+    <string name="activity_support_proposed">Child support proposed: %1$s a month, on day %2$s</string>
+    <string name="activity_support_accepted">Child support agreed: %1$s a month, on day %2$s</string>
+    <string name="activity_support_declined">Child support proposal turned down</string>
+    <string name="activity_support_withdrawn">Child support proposal withdrawn</string>
+    <string name="activity_support_paid">Child support for %1$s paid: %2$s</string>
+    <string name="activity_support_confirmed">Child support for %1$s received: %2$s</string>
 </resources>

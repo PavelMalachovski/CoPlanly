@@ -89,7 +89,7 @@ fun FamilyDocumentsScreen(
         }
     }
 
-    val canAdd = state.list !is DocumentsList.NoFamily && !state.uploading
+    val canAdd = state.list !is DocumentsList.NoFamily && !state.uploading && !state.readOnly
     val pickers = rememberDocumentPickers(onPicked = { pendingUri = it.toString() })
 
     Scaffold(
@@ -108,7 +108,7 @@ fun FamilyDocumentsScreen(
             )
         },
         bottomBar = {
-            if (state.list !is DocumentsList.NoFamily) {
+            if (state.list !is DocumentsList.NoFamily && !state.readOnly) {
                 AddActions(enabled = canAdd, onPickFile = pickers.pickFile, onTakePhoto = pickers.takePhoto)
             }
         }
@@ -130,7 +130,8 @@ fun FamilyDocumentsScreen(
                 nameFor = names::labelForUid,
                 onOpen = viewModel::open,
                 onDelete = { deleting = it },
-                modifier = bodyModifier
+                modifier = bodyModifier,
+                readOnly = state.readOnly
             )
         }
     }

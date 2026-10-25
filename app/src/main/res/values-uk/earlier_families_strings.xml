@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Earlier families: an ended family's records, read-only (25 October 2026). -->
+<resources>
+    <string name="earlier_families_title">Попередні родини</string>
+    <string name="earlier_families_row_supporting">Записи завершених родин, лише для читання</string>
+    <string name="earlier_families_with">З: %1$s</string>
+    <string name="earlier_families_unnamed">Попередня родина</string>
+    <string name="earlier_families_last_day">Останній запис: %1$s</string>
+    <string name="earlier_families_notice">Коли ви відв’язуєтеся від другого батька чи матері, записи цієї родини переходять сюди. В інших ваших родинах їх немає.</string>
+    <string name="earlier_families_empty_title">Попередніх родин немає</string>
+    <string name="earlier_families_empty_description">Коли ви відв’язуєтеся від другого батька чи матері, записи цієї родини переходять сюди, окремо від інших ваших родин.</string>
+    <string name="earlier_family_notice">Цю родину завершено. Її записи зберігаються тут, лише для читання, і не показуються в інших ваших родинах.</string>
+    <string name="earlier_family_documents">Документи</string>
+    <string name="earlier_family_documents_supporting">Ви обоє й далі можете їх відкрити</string>
+    <string name="earlier_family_export">Експортувати записи</string>
+    <string name="earlier_family_export_supporting">Записи цієї родини за період</string>
+    <string name="earlier_family_events">Події</string>
+    <string name="earlier_family_expenses">Витрати</string>
+    <string name="earlier_family_total">Усього: %1$s</string>
+    <string name="earlier_family_children">Діти</string>
+    <string name="earlier_family_pets">Тварини</string>
+    <string name="earlier_family_journal">Мій щоденник</string>
+    <string name="earlier_family_nothing">Більше нічого з цієї родини на телефоні не зберігається.</string>
+    <string name="earlier_family_more">І ще %1$d</string>
+</resources>

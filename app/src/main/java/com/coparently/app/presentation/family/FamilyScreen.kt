@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payments
@@ -97,6 +98,7 @@ private const val SLOT_TWO = "dad"
  * @property unassignedRecords Records that name no family yet
  * @property journal The private journal
  * @property stickers Stickers received and sent
+ * @property earlierFamilies Families this parent was in, read-only
  * @property settings The app's settings
  */
 data class FamilyDestinations(
@@ -117,6 +119,7 @@ data class FamilyDestinations(
     val unassignedRecords: () -> Unit,
     val journal: () -> Unit,
     val stickers: () -> Unit,
+    val earlierFamilies: () -> Unit,
     val settings: () -> Unit
 )
 
@@ -139,8 +142,10 @@ data class FamilyDestinations(
 fun FamilyScreen(
     destinations: FamilyDestinations,
     viewModel: FamilyViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel()
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    earlierFamiliesViewModel: EarlierFamiliesViewModel = hiltViewModel()
 ) {
+    val earlierFamilies by earlierFamiliesViewModel.families.collectAsState()
     val money by viewModel.money.collectAsState()
     val hasChildren by viewModel.hasChildren.collectAsState()
     val schedule by viewModel.schedule.collectAsState()
@@ -321,6 +326,17 @@ fun FamilyScreen(
                 )
                 Divider()
                 StickersRow(onOpen = destinations.stickers)
+                // Only while a family has ended: its records left every live screen and are read
+                // there (owner decision, 25 October 2026).
+                if (!earlierFamilies.isNullOrEmpty()) {
+                    Divider()
+                    NavRow(
+                        Icons.Default.History,
+                        R.string.earlier_families_title,
+                        R.string.earlier_families_row_supporting,
+                        destinations.earlierFamilies
+                    )
+                }
             }
             // A sticker that has not been seen yet, and "Send a sticker": here rather than on Home
             // (owner decision, October 2026).

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Earlier families: an ended family's records, read-only (25 October 2026). -->
+<resources>
+    <string name="earlier_families_title">Dřívější rodiny</string>
+    <string name="earlier_families_row_supporting">Záznamy ukončených rodin, jen ke čtení</string>
+    <string name="earlier_families_with">S: %1$s</string>
+    <string name="earlier_families_unnamed">Dřívější rodina</string>
+    <string name="earlier_families_last_day">Poslední záznam: %1$s</string>
+    <string name="earlier_families_notice">Když se odpojíte od druhého rodiče, záznamy té rodiny se přesunou sem. Do vašich ostatních rodin se nedostanou.</string>
+    <string name="earlier_families_empty_title">Žádné dřívější rodiny</string>
+    <string name="earlier_families_empty_description">Když se odpojíte od druhého rodiče, záznamy té rodiny se přesunou sem, mimo vaše ostatní rodiny.</string>
+    <string name="earlier_family_notice">Tato rodina skončila. Její záznamy jsou uložené tady, jen ke čtení, a ve vašich ostatních rodinách se nezobrazují.</string>
+    <string name="earlier_family_documents">Dokumenty</string>
+    <string name="earlier_family_documents_supporting">Oba je můžete dál otevřít</string>
+    <string name="earlier_family_export">Exportovat záznam</string>
+    <string name="earlier_family_export_supporting">Záznam této rodiny za zvolené období</string>
+    <string name="earlier_family_events">Události</string>
+    <string name="earlier_family_expenses">Výdaje</string>
+    <string name="earlier_family_total">Celkem: %1$s</string>
+    <string name="earlier_family_children">Děti</string>
+    <string name="earlier_family_pets">Zvířata</string>
+    <string name="earlier_family_journal">Můj deník</string>
+    <string name="earlier_family_nothing">Nic dalšího z této rodiny v telefonu uložené není.</string>
+    <string name="earlier_family_more">A dalších %1$d</string>
+</resources>

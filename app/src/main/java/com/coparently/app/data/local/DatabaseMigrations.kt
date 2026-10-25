@@ -1025,6 +1025,27 @@ object DatabaseMigrations {
     }
 
     /**
+     * v45 -> v46: `known_families`, what this phone learnt about each family while it was live —
+     * the co-parent's name, for Family → Earlier families once their profile is unreadable, and the
+     * two parents' slots in it (per-family slots, 25 October 2026). A new table, so nothing to
+     * convert: a family that ended before it existed simply has no row.
+     */
+    val MIGRATION_45_46 = object : Migration(45, 46) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS known_families (" +
+                    "familyId TEXT NOT NULL, " +
+                    "coParentUid TEXT NOT NULL, " +
+                    "coParentName TEXT, " +
+                    "mySlot TEXT, " +
+                    "coParentSlot TEXT, " +
+                    "updatedAtMillis INTEGER NOT NULL, " +
+                    "PRIMARY KEY(familyId))"
+            )
+        }
+    }
+
+    /**
      * Writes each row's [wallClockToEpochMillis] reading of `updatedAt` into `updatedAtMillis`.
      *
      * Reads every value out first and writes afterwards — nothing iterates a cursor while
@@ -1090,6 +1111,7 @@ object DatabaseMigrations {
         MIGRATION_41_42,
         MIGRATION_42_43,
         MIGRATION_43_44,
-        MIGRATION_44_45
+        MIGRATION_44_45,
+        MIGRATION_45_46
     )
 }

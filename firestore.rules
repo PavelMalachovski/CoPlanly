@@ -1474,7 +1474,9 @@ service cloud.firestore {
                       !('deletedBy' in request.resource.data) &&
                       request.resource.data.id == docId &&
                       request.resource.data.createdByFirebaseUid == request.auth.uid &&
-                      isFamilyMember(request.resource.data.familyId) &&
+                      // A live family only: an ended family's vault stays readable by both
+                      // parents (unpair no longer narrows it) and takes nothing new.
+                      isLiveFamilyMember(request.resource.data.familyId) &&
                       request.auth.uid in request.resource.data.sharedWith &&
                       isMyAudience(request.resource.data.sharedWith) &&
                       request.resource.data.sharedWith.toSet()

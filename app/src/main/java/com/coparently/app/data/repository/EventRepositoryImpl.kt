@@ -65,14 +65,15 @@ class EventRepositoryImpl @Inject constructor(
      * every list read below.
      */
     override fun getAllEvents(): Flow<List<Event>> {
-        return eventDao.getAllEvents().map { entities ->
-            entities.map { it.toDomain() }
-        }.inFamilyOnScreen(
+        return getAllEventsInEveryFamily().inFamilyOnScreen(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
         ) { it.familyId }
     }
+
+    override fun getAllEventsInEveryFamily(): Flow<List<Event>> =
+        eventDao.getAllEvents().map { entities -> entities.map { it.toDomain() } }
 
     /**
      * Every event in the range, recurring ones expanded into their occurrences — minus the ones

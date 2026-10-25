@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.documents
 
+import androidx.lifecycle.SavedStateHandle
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
@@ -33,6 +34,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The vault screen (MON-23): which family it files into, what it says when it cannot show a list,
@@ -64,7 +66,31 @@ class FamilyDocumentsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = FamilyDocumentsViewModel(repository, selectedFamilySource, authService, parentsSource)
+    private fun viewModel(earlierFamily: String? = null) = FamilyDocumentsViewModel(
+        repository,
+        selectedFamilySource,
+        authService,
+        parentsSource,
+        SavedStateHandle(listOfNotNull(earlierFamily?.let { FamilyDocumentsViewModel.ARG_FAMILY to it }).toMap())
+    )
+
+    @Test
+    fun `an ended family's vault is listed read-only, and nothing is added or deleted there`() = runTest(dispatcher) {
+        // Owner decision, 25 October 2026: both parents keep reading the documents after an unpair.
+        val ended = "alice__zuzana"
+        val endedDocuments = MutableStateFlow<VaultListing?>(VaultListing(listOf(DOCUMENT)))
+        every { repository.observe(ended) } returns endedDocuments
+        val vm = viewModel(earlierFamily = ended)
+        advanceUntilIdle()
+
+        assertEquals(DocumentsList.Loaded(listOf(DOCUMENT)), vm.state.value.list)
+        assertTrue(vm.state.value.readOnly)
+        vm.add("Court order", DocumentCategory.OTHER, "content://x")
+        vm.delete(DOCUMENT)
+        advanceUntilIdle()
+        coVerify(exactly = 0) { repository.add(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { repository.delete(any()) }
+    }
 
     @Test
     fun `lists the documents of the family on screen`() = runTest(dispatcher) {

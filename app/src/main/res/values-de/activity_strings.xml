@@ -31,4 +31,16 @@
     <string name="activity_split_declined">Vorschlag zur Kostenaufteilung abgelehnt</string>
     <string name="activity_split_withdrawn">Vorschlag zur Kostenaufteilung zurückgezogen</string>
     <string name="activity_subject_expense_split">Kostenaufteilung</string>
+
+    <!-- Stickers in the chat, payments and child support (25 October 2026). -->
+    <string name="activity_sticker_sent">Sticker: %1$s</string>
+    <string name="activity_subject_sticker">eine neue Art Sticker</string>
+    <string name="activity_settle_up_paid">Ausgleich für %1$s bezahlt: %2$s</string>
+    <string name="activity_settle_up_confirmed">Ausgleich für %1$s erhalten: %2$s</string>
+    <string name="activity_support_proposed">Unterhalt vorgeschlagen: %1$s im Monat, am %2$s.</string>
+    <string name="activity_support_accepted">Unterhalt vereinbart: %1$s im Monat, am %2$s.</string>
+    <string name="activity_support_declined">Unterhaltsvorschlag abgelehnt</string>
+    <string name="activity_support_withdrawn">Unterhaltsvorschlag zurückgezogen</string>
+    <string name="activity_support_paid">Unterhalt für %1$s bezahlt: %2$s</string>
+    <string name="activity_support_confirmed">Unterhalt für %1$s erhalten: %2$s</string>
 </resources>

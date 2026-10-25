@@ -1,6 +1,7 @@
 package com.coparently.app.data.sync
 
 import android.util.Log
+import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.EventDao
@@ -80,7 +81,8 @@ class SyncService @Inject constructor(
     private val custodyModelRepository: CustodyModelRepository,
     private val eventVersionRecorder: EventVersionRecorder,
     private val reminderScheduler: ReminderScheduler,
-    private val requestClockKeeper: RequestClockKeeper
+    private val requestClockKeeper: RequestClockKeeper,
+    private val knownFamilies: KnownFamilies
 ) {
     // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
     // `UserRepositoryImpl` register: `Vaccination.date` is a `LocalDate`, and a document read
@@ -893,6 +895,10 @@ class SyncService @Inject constructor(
             // moves a device off a family the parent has been removed from — an unpair
             // performed on the other phone reaches this one only as a shorter `partnerIds`.
             selectedFamilySource.reconcile()
+
+            // Remember each live family's co-parent and slots while both are still readable —
+            // Family → Earlier families names an ended family from this (schema 46).
+            knownFamilies.refresh(userId, remotePartnerUids(remoteUserData))
 
             // The parent slot as the server actually states it, next to what this device held.
             // Without this the two are indistinguishable in the field: a slot that never got

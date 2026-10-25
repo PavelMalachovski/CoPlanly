@@ -471,10 +471,12 @@ fun MessageItem(
     val activity = message.activity
     val target = ChatCardTarget.of(message)
     val openEvent = LocalChatEventCard.current
+    val openSupport = LocalOpenSupport.current
     val onCardTap: (() -> Unit)? = when (target) {
         is ChatCardTarget.ChangeRequest -> onEventLinkClick?.let { open -> { open(target.eventId) } }
         is ChatCardTarget.Event -> openEvent?.let { open -> { open(target.eventId) } }
         ChatCardTarget.Inbox -> onOpenInbox
+        ChatCardTarget.Support -> openSupport
         null -> null
     }
 
@@ -487,6 +489,8 @@ fun MessageItem(
             // A settle-up card says "you owe" or "you are owed" by who reads it, with the month and
             // the amount in the reader's language.
             if (card.kind.isSettleUp) return@let settleUpCardText(card, isCurrentUser)
+            // A payment or an alimony agreement: the month or the day, and the amount.
+            if (ActivityCardText.takesMoney(card.kind)) return@let moneyCardText(card)
             // What the sentence is about is `ActivityCardText.subjectOf`'s decision. A day swap's
             // is the day itself, as ISO text on the wire (older builds print it as it is); this
             // build says it the way the reader's language does (D-18). A custody proposal has no

@@ -28,6 +28,7 @@ object ActivityFallbackText {
     /** The base-locale sentence for [announcement]. */
     fun of(announcement: ActivityAnnouncement): String {
         settleUp(announcement)?.let { return it }
+        money(announcement)?.let { return it }
         val prefix = when (announcement.kind) {
             ActivityKind.EVENT_CREATED -> "New event"
             ActivityKind.EVENT_UPDATED -> "Event changed"
@@ -56,6 +57,17 @@ object ActivityFallbackText {
             ActivityKind.SPLIT_WITHDRAWN -> "Withdrew the expense split proposal"
             ActivityKind.DAY_SWAP_WITHDRAWN -> "Day swap withdrawn"
             ActivityKind.CUSTODY_WITHDRAWN -> "Custody proposal withdrawn"
+            // The sticker's kind is an identifier, not a sentence: no title is appended.
+            ActivityKind.STICKER_SENT -> return "Sent a sticker"
+            ActivityKind.SUPPORT_DECLINED -> return "Declined the child support proposal"
+            ActivityKind.SUPPORT_WITHDRAWN -> return "Withdrew the child support proposal"
+            // Worded with their amounts by [money]; reached only when one is missing.
+            ActivityKind.SETTLE_UP_PAID -> "Paid the settle-up"
+            ActivityKind.SETTLE_UP_CONFIRMED -> "The settle-up arrived"
+            ActivityKind.SUPPORT_PROPOSED -> return "Proposed child support"
+            ActivityKind.SUPPORT_ACCEPTED -> return "Agreed child support"
+            ActivityKind.SUPPORT_PAID -> "Paid child support"
+            ActivityKind.SUPPORT_CONFIRMED -> "Child support arrived"
         }
         return if (announcement.title.isBlank()) prefix else "$prefix: ${announcement.title}"
     }
@@ -99,6 +111,25 @@ object ActivityFallbackText {
         return when (announcement.kind) {
             ActivityKind.SETTLE_UP_OWED -> "Settle up for ${announcement.title}: you owe me $money"
             ActivityKind.SETTLE_UP_OWING -> "Settle up for ${announcement.title}: I owe you $money"
+            else -> null
+        }
+    }
+
+    /**
+     * A payment or a child support agreement in the sender's first person, with its amount, as the
+     * export and an older build show it. Null for any other card, and when the amount is missing.
+     */
+    private fun money(announcement: ActivityAnnouncement): String? {
+        val amount = announcement.amount?.takeIf { it.isNotBlank() } ?: return null
+        val money = "$amount ${announcement.currency.orEmpty()}".trim()
+        val month = announcement.title
+        return when (announcement.kind) {
+            ActivityKind.SETTLE_UP_PAID -> "Paid the settle-up for $month: $money"
+            ActivityKind.SETTLE_UP_CONFIRMED -> "The settle-up for $month arrived: $money"
+            ActivityKind.SUPPORT_PAID -> "Paid child support for $month: $money"
+            ActivityKind.SUPPORT_CONFIRMED -> "Child support for $month arrived: $money"
+            ActivityKind.SUPPORT_PROPOSED -> "Proposed child support: $money a month, on day ${announcement.title}"
+            ActivityKind.SUPPORT_ACCEPTED -> "Agreed child support: $money a month, on day ${announcement.title}"
             else -> null
         }
     }

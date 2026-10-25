@@ -31,4 +31,16 @@
     <string name="activity_split_declined">Пропозицію щодо поділу витрат відхилено</string>
     <string name="activity_split_withdrawn">Пропозицію щодо поділу витрат відкликано</string>
     <string name="activity_subject_expense_split">поділ витрат</string>
+
+    <!-- Stickers in the chat, payments and child support (25 October 2026). -->
+    <string name="activity_sticker_sent">Стікер: %1$s</string>
+    <string name="activity_subject_sticker">новий вид стікера</string>
+    <string name="activity_settle_up_paid">Розрахунок за %1$s оплачено: %2$s</string>
+    <string name="activity_settle_up_confirmed">Розрахунок за %1$s отримано: %2$s</string>
+    <string name="activity_support_proposed">Запропоновано аліменти: %1$s на місяць, %2$s-го числа</string>
+    <string name="activity_support_accepted">Аліменти погоджено: %1$s на місяць, %2$s-го числа</string>
+    <string name="activity_support_declined">Пропозицію щодо аліментів відхилено</string>
+    <string name="activity_support_withdrawn">Пропозицію щодо аліментів відкликано</string>
+    <string name="activity_support_paid">Аліменти за %1$s оплачено: %2$s</string>
+    <string name="activity_support_confirmed">Аліменти за %1$s отримано: %2$s</string>
 </resources>

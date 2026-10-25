@@ -15,6 +15,12 @@ interface ExpenseRepository {
     fun getAllExpenses(): Flow<List<Expense>>
 
     /**
+     * Every expense this phone holds, in every family, live or ended. Only for the export and
+     * Family → Earlier families. Defaults to [getAllExpenses] for a fake.
+     */
+    fun getAllExpensesInEveryFamily(): Flow<List<Expense>> = getAllExpenses()
+
+    /**
      * Gets expenses for a specific date range as a Flow.
      */
     fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>>

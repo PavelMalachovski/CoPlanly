@@ -65,6 +65,8 @@ internal fun DocumentCategory.labelRes(): Int = when (this) {
  * category that has anything in it.
  *
  * @param nameFor The name of the parent with this uid (never a role — the hard rule on labels).
+ * @param readOnly An ended family's vault (Family → Earlier families): readable by both parents,
+ *   changed by neither.
  */
 // One parameter per thing a row shows or does; the grouping is the body's whole job.
 @Suppress("LongParameterList")
@@ -76,7 +78,8 @@ internal fun DocumentsBody(
     nameFor: (String) -> String,
     onOpen: (FamilyDocument) -> Unit,
     onDelete: (FamilyDocument) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    readOnly: Boolean = false
 ) {
     val documents = (list as? DocumentsList.Loaded)?.documents.orEmpty()
     if (list is DocumentsList.Loaded && documents.isEmpty() && !uploading) {
@@ -112,7 +115,7 @@ internal fun DocumentsBody(
                             DocumentRow(
                                 document = document,
                                 addedBy = nameFor(document.createdByFirebaseUid),
-                                canDelete = document.createdByFirebaseUid == myUid,
+                                canDelete = !readOnly && document.createdByFirebaseUid == myUid,
                                 onOpen = { onOpen(document) },
                                 onDelete = { onDelete(document) }
                             )

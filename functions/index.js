@@ -2202,10 +2202,14 @@ exports.sweepDeletedDocuments = regional.runWith({timeoutSeconds: 540}).pubsub
     });
 
 /**
- * Collections whose visibility is a per-document `sharedWith` audience.
+ * Collections whose per-document `sharedWith` audience an unpair narrows.
  *
- * These (`events`, `child_info`, `pets`, `family_documents`) each keep a per-document
- * `sharedWith` list that only ever widens on the client, so unpair has to narrow it here.
+ * These (`events`, `child_info`, `pets`) each keep a per-document `sharedWith` list that only
+ * ever widens on the client, so unpair has to narrow it here. **`family_documents` is not one of
+ * them since 25 October 2026** (owner decision): a vault document is the family's papers — a
+ * court order, a birth certificate — and both parents keep reading it after an unpair, from
+ * Family → Earlier families, as they keep the chat. Account deletion still takes the departing
+ * parent out of it ([ERASED_AUDIENCE_COLLECTIONS]).
  * `expenses` and `budgets` carry no audience: the rules admit a co-parent only while the record's
  * family is live (`isLiveFamilyMember` — the id names them *and* `families/{id}` exists), so the
  * `families/{id}` delete in [unpairCoParentImpl]'s transaction is what revokes them. (This used to
@@ -2215,9 +2219,17 @@ exports.sweepDeletedDocuments = regional.runWith({timeoutSeconds: 540}).pubsub
  * co-parent link should also erase the chat history is a product decision, not a leak to close
  * here.
  */
-const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets', 'family_documents'];
+const SHARED_AUDIENCE_COLLECTIONS = ['events', 'child_info', 'pets'];
 
 exports.SHARED_AUDIENCE_COLLECTIONS = SHARED_AUDIENCE_COLLECTIONS;
+
+/**
+ * Collections whose `sharedWith` audience account deletion narrows: everything an unpair
+ * narrows, and the vault, which an unpair leaves to both parents but an erased account leaves.
+ */
+const ERASED_AUDIENCE_COLLECTIONS = [...SHARED_AUDIENCE_COLLECTIONS, 'family_documents'];
+
+exports.ERASED_AUDIENCE_COLLECTIONS = ERASED_AUDIENCE_COLLECTIONS;
 
 /** Firestore caps a batched write at 500 operations; stay clear of the edge. */
 const REVOCATION_BATCH_LIMIT = 400;
@@ -4190,13 +4202,16 @@ function sentAtMillisOf(timestamp) {
  * - `REQUEST_UNANSWERED`: the request ended with no answer. Nothing more is sent to the parent
  *   who did not answer once their last chance has run (the spec's "nagging" rule); the end is
  *   the proposer's news, not theirs.
+ * - `STICKER_SENT`: a sticker's card in the thread (25 October 2026). The sticker has its own
+ *   push, `sticker_received`, queued by the sender's phone; a chat push as well would tell the
+ *   receiver twice.
  *
  * The names must stay the ones the app writes (`ActivityKind` in `ActivityAnnouncement.kt`): a
  * name that drifts here is a card that is pushed again, with nothing failing.
  *
  * @const {!Set<string>}
  */
-const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED']);
+const SILENT_CARD_KINDS = new Set(['REQUEST_LAST_CHANCE', 'REQUEST_UNANSWERED', 'STICKER_SENT']);
 
 /**
  * Queues a push notification for the other participant when a chat message is created,
@@ -4479,7 +4494,7 @@ exports.deleteQueryInBatches = deleteQueryInBatches;
 async function scrubFromAudiences(db, uid) {
   let narrowed = 0;
 
-  for (const collection of SHARED_AUDIENCE_COLLECTIONS) {
+  for (const collection of ERASED_AUDIENCE_COLLECTIONS) {
     const snap = await db.collection(collection)
         .where('sharedWith', 'array-contains', uid)
         .get();

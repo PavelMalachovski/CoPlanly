@@ -31,4 +31,16 @@
     <string name="activity_split_declined">Návrh rozdělení výdajů odmítnut</string>
     <string name="activity_split_withdrawn">Návrh rozdělení výdajů stažen</string>
     <string name="activity_subject_expense_split">rozdělení výdajů</string>
+
+    <!-- Stickers in the chat, payments and child support (25 October 2026). -->
+    <string name="activity_sticker_sent">Samolepka: %1$s</string>
+    <string name="activity_subject_sticker">nový druh samolepky</string>
+    <string name="activity_settle_up_paid">Vyrovnání za %1$s zaplaceno: %2$s</string>
+    <string name="activity_settle_up_confirmed">Vyrovnání za %1$s přijato: %2$s</string>
+    <string name="activity_support_proposed">Navrženo výživné: %1$s měsíčně, %2$s. den v měsíci</string>
+    <string name="activity_support_accepted">Výživné dohodnuto: %1$s měsíčně, %2$s. den v měsíci</string>
+    <string name="activity_support_declined">Návrh výživného odmítnut</string>
+    <string name="activity_support_withdrawn">Návrh výživného stažen</string>
+    <string name="activity_support_paid">Výživné za %1$s zaplaceno: %2$s</string>
+    <string name="activity_support_confirmed">Výživné za %1$s přijato: %2$s</string>
 </resources>
