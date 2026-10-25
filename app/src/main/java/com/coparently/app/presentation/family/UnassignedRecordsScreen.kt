@@ -269,6 +269,16 @@ private fun ChooseFamilyDialog(
                         onSelect = { choice = family.familyId }
                     )
                 }
+                // A household that has ended: the record leaves every live family for Family →
+                // Earlier families, and nobody else sees it (tester report, 25 October 2026).
+                state.earlierChoicesFor(record).forEach { family ->
+                    ChoiceRow(
+                        label = earlierChoiceLabel(family),
+                        selected = choice == family.familyId,
+                        onSelect = { choice = family.familyId },
+                        hint = stringResource(R.string.unassigned_records_earlier_hint)
+                    )
+                }
                 ChoiceRow(
                     label = stringResource(R.string.unassigned_records_keep_mine),
                     selected = choice == KEEP_ONLY_MINE,
@@ -329,6 +339,13 @@ private fun familyChoiceLabel(family: FamilyOption): String =
         ?.let { stringResource(R.string.unassigned_records_family_with, it) }
         ?: stringResource(R.string.unassigned_records_family_unnamed)
 
+/** An ended family, named by its co-parent as this phone kept them, or unnamed. */
+@Composable
+private fun earlierChoiceLabel(family: FamilyOption): String =
+    family.partnerName.takeIf { it.isNotBlank() }
+        ?.let { stringResource(R.string.unassigned_records_earlier_with, it) }
+        ?: stringResource(R.string.unassigned_records_earlier_unnamed)
+
 /** The record's name: a title or a name, or a schedule's pattern. */
 @Composable
 private fun recordTitle(record: UnassignedRecord): String =
@@ -357,7 +374,9 @@ private fun amountText(record: UnassignedRecord): String? {
 private fun noticeText(context: Context, notice: UnassignedNotice, state: UnassignedRecordsUiState): String =
     when (notice) {
         UnassignedNotice.Kept -> context.getString(R.string.unassigned_records_notice_kept)
-        is UnassignedNotice.Assigned -> {
+        is UnassignedNotice.Assigned -> if (notice.outcome == AssignOutcome.ASSIGNED && notice.putAway) {
+            context.getString(R.string.unassigned_records_notice_put_away)
+        } else {
             val name = state.family(notice.familyId)?.partnerName.orEmpty()
             when (notice.outcome) {
                 AssignOutcome.ASSIGNED -> named(

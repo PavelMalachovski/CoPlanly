@@ -145,6 +145,13 @@ interface PetDao {
     fun observeOwnWithoutFamily(myUid: String): Flow<List<PetEntity>>
 
     /**
+     * Every family a pets row names, as they change: with `known_families`, the evidence of the
+     * families an earlier record belongs to ("Records without a family" offers the ended ones).
+     */
+    @Query("SELECT DISTINCT familyId FROM pets WHERE familyId IS NOT NULL AND familyId != ''")
+    fun observeFamilyIds(): Flow<List<String>>
+
+    /**
      * Gives [myUid]'s own pet [id] the family the parent chose for it, and queues it for upload —
      * `PetRepositoryImpl.pullOnce`, which every full sync runs, sends it with that family's
      * audience. Only while it still names no family, and never a pending tombstone.

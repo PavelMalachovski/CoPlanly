@@ -2632,7 +2632,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     (`UnassignedRecordsPrompt`). The screen (`presentation/family/UnassignedRecordsScreen`) gives
     each record one of the parent's live families or "Keep it only mine", which is remembered per
     account and stops the question. Four things about it:
-    - **An ended family is never offered.**
+    - **An ended family is offered only to put an event, a child or a pet away** (tester report,
+      25 October 2026: children of an ended family stayed in the new family's filter strip). Such a
+      record is stamped with the ended family and goes to nobody, so it leaves every live family
+      for Family → Earlier families. Only a family this phone has evidence of is offered: one a
+      record or a `known_families` row names. An expense or a schedule never goes to one.
     - **An event, a child or a pet is stamped and queued**, and the sync uploads it with that
       family's audience.
     - **An expense is added again** through `ExpenseRepository.addExpense`. The co-parent is told
