@@ -4,6 +4,7 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.model.Event
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -125,6 +126,18 @@ data class FamilyView(
         }
     }
 }
+
+/**
+ * The family an event is placed by on screen: its own, or none for a private event.
+ *
+ * A private event belongs to nobody but its author (CLAUDE.md item 3): it never syncs, no
+ * co-parent reads it, and a Google Calendar import is one. Its stamp says only which family was
+ * on screen when it was written, so placing it by that stamp hid a parent's whole imported
+ * calendar the day that family ended (tester report, 25 October 2026). Placed by no family, it is
+ * "only mine" and is shown in every family.
+ */
+val Event.placementFamilyId: String?
+    get() = if (isPrivate) null else familyId
 
 /**
  * This list kept to the family on screen ([FamilyView]), re-filtered when the switcher moves.

@@ -2,6 +2,7 @@ package com.coparently.app.presentation.family
 
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
@@ -63,7 +64,7 @@ object EarlierFamilies {
             if (view.placeOf(familyId, author) != RecordPlace.EARLIER_FAMILY) return null
             return familyId?.takeIf { it.isNotBlank() } ?: author?.let { FamilyKey.orNull(me, it) }
         }
-        val events = records.events.groupBy { familyOf(it.familyId, it.createdByFirebaseUid) }
+        val events = records.events.groupBy { familyOf(it.placementFamilyId, it.createdByFirebaseUid) }
         val expenses = records.expenses.groupBy { familyOf(it.familyId, it.createdByFirebaseUid) }
         val children = records.children.groupBy { familyOf(it.familyId, it.createdByFirebaseUid) }
         val pets = records.pets.groupBy { familyOf(it.familyId, it.createdByFirebaseUid) }

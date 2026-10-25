@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
@@ -934,7 +935,7 @@ private fun EventChip(
 
     // Where the event stands for the family on screen: an earlier family's event is drawn
     // neutral, because its slot colour would now name the wrong person (design refresh item 12).
-    val place = placeOf(event.familyId, event.createdByFirebaseUid)
+    val place = placeOf(event.placementFamilyId, event.createdByFirebaseUid)
     val colourOwner = if (place == RecordPlace.EARLIER_FAMILY) "" else event.parentOwner
 
     // The owner's colour at the block alpha `ParentColorsTest` holds the title to AA on, over

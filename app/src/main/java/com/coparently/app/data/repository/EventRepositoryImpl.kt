@@ -2,6 +2,7 @@ package com.coparently.app.data.repository
 
 import android.util.Log
 import com.coparently.app.data.family.inFamilyOnScreen
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
@@ -71,7 +72,7 @@ class EventRepositoryImpl @Inject constructor(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
-        ) { it.familyId }
+        ) { it.placementFamilyId }
     }
 
     override fun getAllEventsInEveryFamily(): Flow<List<Event>> =
@@ -108,7 +109,7 @@ class EventRepositoryImpl @Inject constructor(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
-        ) { it.familyId }
+        ) { it.placementFamilyId }
     }
 
     /** One day's events, filtered by the same rule as the range query. */
@@ -119,7 +120,7 @@ class EventRepositoryImpl @Inject constructor(
             firebaseAuthService,
             userDao,
             creatorOf = { it.createdByFirebaseUid }
-        ) { it.familyId }
+        ) { it.placementFamilyId }
     }
 
     override suspend fun getEventById(id: String): Event? {
