@@ -45,12 +45,15 @@ enum class UnassignedGroup(val kinds: Set<UnassignedKind>) {
  * @property families The parent's live families, each co-parent named where their profile could be
  *   read.
  * @property onScreenFamilyId The family the switcher shows.
+ * @property earlierFamilies The parent's ended families, where an event, a child or a pet of an
+ *   earlier household can be put away.
  */
 data class UnassignedRecordsUiState(
     val loading: Boolean = true,
     val records: List<UnassignedRecord> = emptyList(),
     val families: List<FamilyOption> = emptyList(),
-    val onScreenFamilyId: String? = null
+    val onScreenFamilyId: String? = null,
+    val earlierFamilies: List<FamilyOption> = emptyList()
 ) {
     /** The non-empty groups, in [UnassignedGroup] order. */
     val groups: List<Pair<UnassignedGroup, List<UnassignedRecord>>>
@@ -69,8 +72,15 @@ data class UnassignedRecordsUiState(
             families
         }
 
+    /** The ended families [record] may be put away in: none for an expense or a schedule. */
+    fun earlierChoicesFor(record: UnassignedRecord): List<FamilyOption> =
+        if (record.kind.archivable) earlierFamilies else emptyList()
+
     /** The live family [familyId], named, or null. */
     fun family(familyId: String?): FamilyOption? = families.firstOrNull { it.familyId == familyId }
+
+    /** Whether [familyId] is one of the ended families. */
+    fun isEarlier(familyId: String?): Boolean = earlierFamilies.any { it.familyId == familyId }
 }
 
 /**
@@ -81,8 +91,15 @@ data class UnassignedSummary(val count: Int = 0, val askOnHome: Boolean = false)
 
 /** What an answer did, said once in a snackbar. */
 sealed interface UnassignedNotice {
-    /** An assignment to [familyId] landed as [outcome]. */
-    data class Assigned(val outcome: AssignOutcome, val familyId: String) : UnassignedNotice
+    /**
+     * An assignment to [familyId] landed as [outcome]; [putAway] when [familyId] was an ended
+     * family, which the list may no longer name once its last record has gone.
+     */
+    data class Assigned(
+        val outcome: AssignOutcome,
+        val familyId: String,
+        val putAway: Boolean = false
+    ) : UnassignedNotice
 
     /** The record was kept only the parent's. */
     data object Kept : UnassignedNotice
@@ -125,7 +142,8 @@ class UnassignedRecordsViewModel @Inject constructor(
                 records = snapshot.records,
                 // Named only while there is something to choose a family for.
                 families = if (snapshot.records.isEmpty()) snapshot.families else withNames(snapshot.families),
-                onScreenFamilyId = snapshot.onScreenFamilyId
+                onScreenFamilyId = snapshot.onScreenFamilyId,
+                earlierFamilies = withNames(snapshot.earlierFamilies)
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UnassignedRecordsUiState())
@@ -144,6 +162,7 @@ class UnassignedRecordsViewModel @Inject constructor(
     fun assign(record: UnassignedRecord, familyId: String) {
         if (_busy.value) return
         _busy.value = true
+        val putAway = state.value.isEarlier(familyId)
         viewModelScope.launch {
             try {
                 val uid = userRepository.getCurrentUserId() ?: return@launch
@@ -156,7 +175,7 @@ class UnassignedRecordsViewModel @Inject constructor(
                     Log.w(TAG, "Assigning a record without a family failed", e)
                     AssignOutcome.NOT_SENT
                 }
-                _notice.value = UnassignedNotice.Assigned(outcome, familyId)
+                _notice.value = UnassignedNotice.Assigned(outcome, familyId, putAway)
             } finally {
                 _busy.value = false
             }
@@ -185,8 +204,12 @@ class UnassignedRecordsViewModel @Inject constructor(
         _notice.value = null
     }
 
+    /**
+     * [families] with each co-parent named: a name a family already carries (an ended family's,
+     * as this phone kept it) stays, and the rest are read once per instance.
+     */
     private suspend fun withNames(families: List<FamilyOption>): List<FamilyOption> {
-        val unnamed = families.filter { it.partnerUid !in names }
+        val unnamed = families.filter { it.partnerName.isBlank() && it.partnerUid !in names }
         if (unnamed.isNotEmpty()) {
             // A blank answer is not cached: a failed read looks like a profile with no name, and the
             // next emission is the retry.
@@ -194,7 +217,7 @@ class UnassignedRecordsViewModel @Inject constructor(
                 .filter { it.partnerName.isNotBlank() }
                 .forEach { names[it.partnerUid] = it.partnerName }
         }
-        return families.map { it.copy(partnerName = names[it.partnerUid].orEmpty()) }
+        return families.map { it.copy(partnerName = it.partnerName.ifBlank { names[it.partnerUid].orEmpty() }) }
     }
 
     private companion object {

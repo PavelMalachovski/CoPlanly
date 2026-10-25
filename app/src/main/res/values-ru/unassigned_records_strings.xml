@@ -43,4 +43,8 @@
     </plurals>
     <string name="unassigned_records_prompt_choose">Выбрать</string>
     <string name="unassigned_records_prompt_later">Позже</string>
+    <string name="unassigned_records_earlier_with">Прежняя семья, где второй родитель — %1$s</string>
+    <string name="unassigned_records_earlier_unnamed">Прежняя семья</string>
+    <string name="unassigned_records_earlier_hint">Переедет в «Семья → Прежние семьи». Никто другой это не увидит.</string>
+    <string name="unassigned_records_notice_put_away">Перенесено в «Семья → Прежние семьи»</string>
 </resources>

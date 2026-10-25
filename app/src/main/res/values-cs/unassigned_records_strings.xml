@@ -43,4 +43,8 @@
     </plurals>
     <string name="unassigned_records_prompt_choose">Vybrat</string>
     <string name="unassigned_records_prompt_later">Později</string>
+    <string name="unassigned_records_earlier_with">Dřívější rodina (druhý rodič: %1$s)</string>
+    <string name="unassigned_records_earlier_unnamed">Dřívější rodina</string>
+    <string name="unassigned_records_earlier_hint">Přesune se do Rodina → Dřívější rodiny. Nikdo jiný ho neuvidí.</string>
+    <string name="unassigned_records_notice_put_away">Přesunuto do Rodina → Dřívější rodiny</string>
 </resources>

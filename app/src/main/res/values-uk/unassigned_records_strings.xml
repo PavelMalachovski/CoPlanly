@@ -43,4 +43,8 @@
     </plurals>
     <string name="unassigned_records_prompt_choose">Вибрати</string>
     <string name="unassigned_records_prompt_later">Пізніше</string>
+    <string name="unassigned_records_earlier_with">Попередня родина, де другий із батьків — %1$s</string>
+    <string name="unassigned_records_earlier_unnamed">Попередня родина</string>
+    <string name="unassigned_records_earlier_hint">Переїде до «Сімʼя → Попередні родини». Ніхто інший цього не побачить.</string>
+    <string name="unassigned_records_notice_put_away">Перенесено до «Сімʼя → Попередні родини»</string>
 </resources>

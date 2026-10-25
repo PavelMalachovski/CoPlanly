@@ -4,12 +4,14 @@ import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.ExpenseDao
+import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.ExpenseEntity
+import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.local.preferences.EncryptedPreferences
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
@@ -39,7 +42,16 @@ enum class UnassignedKind(val key: String) {
     PET("pet"),
     EVENT("event"),
     EXPENSE("expense"),
-    CUSTODY("custody")
+    CUSTODY("custody");
+
+    /**
+     * Whether a record of this kind may be put away in an **ended** family. An event, a child and
+     * a pet only take the stamp, and a stamped record of an ended family goes to nobody
+     * (`FamilyAudience.recordPartnerFor`). An expense is written back as a new expense of the
+     * family, which an ended family no longer takes, and a schedule is submitted to the family on
+     * screen.
+     */
+    val archivable: Boolean get() = this == CHILD || this == PET || this == EVENT
 }
 
 /**
@@ -84,12 +96,16 @@ data class UnassignedRecord(
  *   to, because the schedule is submitted through the family on screen.
  * @property askOnHome Whether Home asks about [records] now: two families or more, something to
  *   ask about, and not yet asked for this set of co-parents.
+ * @property earlierFamilies The parent's ended families, each named as this phone kept it
+ *   (`known_families`), or unnamed: where an event, a child or a pet of an earlier household can be
+ *   put away, out of every live family (tester report, 25 October 2026).
  */
 data class UnassignedSnapshot(
     val records: List<UnassignedRecord> = emptyList(),
     val families: List<FamilyOption> = emptyList(),
     val onScreenFamilyId: String? = null,
-    val askOnHome: Boolean = false
+    val askOnHome: Boolean = false,
+    val earlierFamilies: List<FamilyOption> = emptyList()
 )
 
 /** How an assignment landed. */
@@ -126,6 +142,9 @@ enum class AssignOutcome {
  *   custody schedule is submitted to the family on screen through
  *   [CustodyModelRepository.submitPattern] — a family with a schedule gets a proposal, never an
  *   overwrite (CLAUDE.md items 30 and 41).
+ * - **Put it away in an earlier family.** An event, a child or a pet of a household that has
+ *   ended is stamped with that family: it leaves every live family's screens for Family → Earlier
+ *   families, and goes to nobody, because a stamped record of an ended family has no audience.
  * - **Keep it only mine.** Nothing is written to the record; it is remembered per account and not
  *   asked about again, and it keeps its mark.
  *
@@ -144,6 +163,7 @@ class UnassignedRecords @Inject constructor(
     private val childInfoDao: ChildInfoDao,
     private val petDao: PetDao,
     private val custodyModelDao: CustodyModelDao,
+    private val knownFamilyDao: KnownFamilyDao,
     private val expenseRepository: ExpenseRepository,
     private val custodyModelRepository: CustodyModelRepository,
     private val syncRequester: SyncRequester,
@@ -181,7 +201,19 @@ class UnassignedRecords @Inject constructor(
                 schedules = schedules.filter { it.isActive && it.familyId == null }.map { it.asRecord() }
             )
         }
-        return combine(families, rows, answers) { live, own, _ -> snapshotOf(uid, live, own) }
+        val evidence = combine(
+            eventDao.observeFamilyIds(),
+            childInfoDao.observeFamilyIds(),
+            petDao.observeFamilyIds(),
+            knownFamilyDao.observeAll()
+        ) { events, children, pets, known ->
+            FamilyEvidence((events + children + pets).toSet(), known)
+        }
+        val earlier = combine(families, evidence) { live, seen -> endedFamiliesOf(uid, live, seen) }
+            .distinctUntilChanged()
+        return combine(families, rows, earlier, answers) { live, own, ended, _ ->
+            snapshotOf(uid, live, own).let { if (it.records.isEmpty()) it else it.copy(earlierFamilies = ended) }
+        }
     }
 
     /**
@@ -192,13 +224,42 @@ class UnassignedRecords @Inject constructor(
      */
     suspend fun assign(uid: String, record: UnassignedRecord, familyId: String): AssignOutcome {
         val live = familiesOf(uid, userDao.getUserById(uid))
-        if (live.options.none { it.familyId == familyId }) return AssignOutcome.NOT_SENT
+        if (live.options.none { it.familyId == familyId }) return putAway(uid, record, familyId, live)
         return when (record.kind) {
             UnassignedKind.EVENT -> stamped(eventDao.assignFamily(record.id, familyId, uid))
             UnassignedKind.CHILD -> stamped(childInfoDao.assignFamily(record.id, familyId, uid))
             UnassignedKind.PET -> stamped(petDao.assignFamily(record.id, familyId, uid))
             UnassignedKind.EXPENSE -> assignExpense(uid, record.id, familyId)
             UnassignedKind.CUSTODY -> assignSchedule(uid, record, familyId, live.onScreen)
+        }
+    }
+
+    /**
+     * Puts [record] away in [familyId], one of [uid]'s **ended** families, or refuses: only an
+     * event, a child or a pet, and only a family this phone holds evidence of — a record or a kept
+     * row naming it — that is not live. The stamp is the whole write; the sync re-uploads the
+     * record to nobody but its author.
+     */
+    private suspend fun putAway(
+        uid: String,
+        record: UnassignedRecord,
+        familyId: String,
+        live: LiveFamilies
+    ): AssignOutcome {
+        if (!record.kind.archivable) return AssignOutcome.NOT_SENT
+        val seen = FamilyEvidence(
+            ids = (
+                eventDao.observeFamilyIds().first() + childInfoDao.observeFamilyIds().first() +
+                    petDao.observeFamilyIds().first()
+                ).toSet(),
+            known = knownFamilyDao.observeAll().first()
+        )
+        if (endedFamiliesOf(uid, live, seen).none { it.familyId == familyId }) return AssignOutcome.NOT_SENT
+        return when (record.kind) {
+            UnassignedKind.EVENT -> stamped(eventDao.assignFamily(record.id, familyId, uid))
+            UnassignedKind.CHILD -> stamped(childInfoDao.assignFamily(record.id, familyId, uid))
+            UnassignedKind.PET -> stamped(petDao.assignFamily(record.id, familyId, uid))
+            UnassignedKind.EXPENSE, UnassignedKind.CUSTODY -> AssignOutcome.NOT_SENT
         }
     }
 
@@ -300,6 +361,27 @@ class UnassignedRecords @Inject constructor(
 
 /** The parent's live families and the one on screen. */
 private data class LiveFamilies(val options: List<FamilyOption>, val onScreen: String?)
+
+/** The families this phone has seen named: by a record, or by a row it kept while they were live. */
+private data class FamilyEvidence(val ids: Set<String>, val known: List<KnownFamilyEntity>)
+
+/**
+ * [uid]'s ended families: named by [seen], naming [uid], and not live. Each is named as
+ * `known_families` kept it, or left unnamed for a family that ended before that table.
+ */
+private fun endedFamiliesOf(uid: String, live: LiveFamilies, seen: FamilyEvidence): List<FamilyOption> {
+    val names = seen.known.associate { it.familyId to it.coParentName?.trim().orEmpty() }
+    val liveIds = live.options.map { it.familyId }.toSet()
+    return (seen.ids + names.keys)
+        .filter { it !in liveIds }
+        .mapNotNull { familyId ->
+            val members = FamilyKey.membersOf(familyId)?.toList() ?: return@mapNotNull null
+            if (uid !in members) return@mapNotNull null
+            val other = members.singleOrNull { it != uid } ?: return@mapNotNull null
+            FamilyOption(familyId, other, names[familyId].orEmpty())
+        }
+        .sortedBy { it.familyId }
+}
 
 /** This parent's rows of no family, before the family count and the answers are applied. */
 private data class OwnRows(val records: List<UnassignedRecord>, val schedules: List<UnassignedRecord>)

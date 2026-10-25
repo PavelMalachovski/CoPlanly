@@ -4,12 +4,14 @@ import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.ExpenseDao
+import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.ExpenseEntity
+import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.local.preferences.EncryptedPreferences
@@ -54,6 +56,7 @@ class UnassignedRecordsTest {
     private val childInfoDao = mockk<ChildInfoDao>(relaxed = true)
     private val petDao = mockk<PetDao>(relaxed = true)
     private val custodyModelDao = mockk<CustodyModelDao>(relaxed = true)
+    private val knownFamilyDao = mockk<KnownFamilyDao>(relaxed = true)
     private val expenseRepository = mockk<ExpenseRepository>(relaxed = true)
     private val custodyModelRepository = mockk<CustodyModelRepository>()
     private val syncRequester = mockk<SyncRequester>(relaxed = true)
@@ -73,6 +76,10 @@ class UnassignedRecordsTest {
         every { childInfoDao.observeOwnWithoutFamily(ALICE) } returns flowOf(emptyList())
         every { petDao.observeOwnWithoutFamily(ALICE) } returns flowOf(emptyList())
         every { custodyModelDao.observeActiveModels() } returns flowOf(emptyList())
+        every { eventDao.observeFamilyIds() } returns flowOf(emptyList())
+        every { childInfoDao.observeFamilyIds() } returns flowOf(emptyList())
+        every { petDao.observeFamilyIds() } returns flowOf(emptyList())
+        every { knownFamilyDao.observeAll() } returns flowOf(emptyList())
         familiesAre(listOf(BOB, CAROL), onScreen = BOB)
         records = UnassignedRecords(
             userDao,
@@ -81,6 +88,7 @@ class UnassignedRecordsTest {
             childInfoDao,
             petDao,
             custodyModelDao,
+            knownFamilyDao,
             expenseRepository,
             custodyModelRepository,
             syncRequester,
@@ -322,7 +330,62 @@ class UnassignedRecordsTest {
         assertEquals(null, stored[KEPT_KEY])
     }
 
+    // ---- an earlier household ------------------------------------------------------------
+
+    @Test
+    fun `an ended family a record or a kept row names is offered, named as it was kept`() = runTest {
+        familiesAre(listOf(BOB), onScreen = BOB)
+        every { childInfoDao.observeOwnWithoutFamily(ALICE) } returns flowOf(listOf(child("emma")))
+        every { eventDao.observeFamilyIds() } returns flowOf(listOf(ZUZANA_FAMILY, BOB_FAMILY))
+        every { knownFamilyDao.observeAll() } returns flowOf(listOf(known(ZUZANA_FAMILY, ZUZANA, "Zuzana")))
+        every { petDao.observeFamilyIds() } returns flowOf(listOf("dan-uid__erin-uid"))
+
+        val snapshot = records.observe(ALICE).first()
+
+        assertEquals(listOf(FamilyOption(ZUZANA_FAMILY, ZUZANA, "Zuzana")), snapshot.earlierFamilies)
+        assertEquals(listOf(FamilyOption(BOB_FAMILY, BOB)), snapshot.families)
+    }
+
+    @Test
+    fun `a child, a pet and an event are put away in an ended family`() = runTest {
+        familiesAre(listOf(BOB), onScreen = BOB)
+        every { childInfoDao.observeFamilyIds() } returns flowOf(listOf(ZUZANA_FAMILY))
+        coEvery { childInfoDao.assignFamily("emma", ZUZANA_FAMILY, ALICE) } returns 1
+        coEvery { petDao.assignFamily("max", ZUZANA_FAMILY, ALICE) } returns 1
+        coEvery { eventDao.assignFamily("dentist", ZUZANA_FAMILY, ALICE) } returns 1
+
+        val outcomes = listOf(
+            records.assign(ALICE, record(UnassignedKind.CHILD, "emma"), ZUZANA_FAMILY),
+            records.assign(ALICE, record(UnassignedKind.PET, "max"), ZUZANA_FAMILY),
+            records.assign(ALICE, record(UnassignedKind.EVENT, "dentist"), ZUZANA_FAMILY)
+        )
+
+        assertEquals(List(3) { AssignOutcome.ASSIGNED }, outcomes)
+    }
+
+    @Test
+    fun `an expense and a schedule are never put away in an ended family`() = runTest {
+        familiesAre(listOf(BOB), onScreen = BOB)
+        every { knownFamilyDao.observeAll() } returns flowOf(listOf(known(ZUZANA_FAMILY, ZUZANA, "Zuzana")))
+
+        val expense = records.assign(ALICE, record(UnassignedKind.EXPENSE, "shoes"), ZUZANA_FAMILY)
+        val schedule = records.assign(ALICE, record(UnassignedKind.CUSTODY, "m1"), ZUZANA_FAMILY)
+
+        assertEquals(AssignOutcome.NOT_SENT, expense)
+        assertEquals(AssignOutcome.NOT_SENT, schedule)
+        coVerify(exactly = 0) { expenseRepository.addExpense(any()) }
+    }
+
     // ---- fixtures ------------------------------------------------------------------------
+
+    private fun known(familyId: String, coParent: String, name: String) = KnownFamilyEntity(
+        familyId = familyId,
+        coParentUid = coParent,
+        coParentName = name,
+        mySlot = null,
+        coParentSlot = null,
+        updatedAtMillis = 0L
+    )
 
     private fun familiesAre(partners: List<String>, onScreen: String?) {
         val row = UserEntity(
@@ -432,6 +495,8 @@ class UnassignedRecordsTest {
         // Spelled out rather than built with `FamilyKey.of`: the id names stored documents.
         const val BOB_FAMILY = "alice-uid__bob-uid"
         const val CAROL_FAMILY = "alice-uid__carol-uid"
+        const val ZUZANA = "zuzana-uid"
+        const val ZUZANA_FAMILY = "alice-uid__zuzana-uid"
 
         const val KEPT_KEY = "${PreferenceKeys.UNASSIGNED_KEPT_PREFIX}$ALICE"
         const val ASKED_KEY = "${PreferenceKeys.UNASSIGNED_ASKED_PREFIX}$ALICE"

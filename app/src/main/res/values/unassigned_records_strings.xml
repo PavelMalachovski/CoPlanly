@@ -46,4 +46,8 @@
     </plurals>
     <string name="unassigned_records_prompt_choose">Choose</string>
     <string name="unassigned_records_prompt_later">Later</string>
+    <string name="unassigned_records_earlier_with">Earlier family with %1$s</string>
+    <string name="unassigned_records_earlier_unnamed">An earlier family</string>
+    <string name="unassigned_records_earlier_hint">Moves it to Family → Earlier families. Nobody else sees it.</string>
+    <string name="unassigned_records_notice_put_away">Moved to Family → Earlier families</string>
 </resources>
