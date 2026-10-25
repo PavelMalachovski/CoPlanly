@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestOutcome
@@ -951,7 +952,10 @@ internal fun TimelineRow(
                     .background(
                         // An earlier family's event is drawn neutral: its slot colour would now
                         // name the wrong person.
-                        if (placeOf(event.familyId, event.createdByFirebaseUid) == RecordPlace.EARLIER_FAMILY) {
+                        if (
+                            placeOf(event.placementFamilyId, event.createdByFirebaseUid) ==
+                            RecordPlace.EARLIER_FAMILY
+                        ) {
                             MaterialTheme.colorScheme.tertiary
                         } else {
                             ParentColors.fill(event.parentOwner)

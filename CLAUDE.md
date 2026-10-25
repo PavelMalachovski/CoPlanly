@@ -2623,6 +2623,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       balance (`FamilyView.counts`).
     - `OTHER_FAMILY` is never drawn.
 
+    **A private event is placed by no family** (`Event.placementFamilyId`; tester report, 25
+    October 2026). It belongs to nobody but its author, and every Google Calendar import is one, so
+    its stamp says only which family was on screen when it was written. Placed by that stamp, a
+    parent's whole imported calendar vanished the day that family ended. It is "only mine" and
+    shown in every family; the stamp itself stays as it was.
+
     `MainActivity` provides `LocalFamilyView` from `FamilyViewViewModel`.
 
     **This parent is asked once where their records of no family belong** (owner decision).

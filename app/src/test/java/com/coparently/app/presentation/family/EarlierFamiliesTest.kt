@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.family
 
 import com.coparently.app.data.family.FamilyView
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
@@ -66,6 +67,17 @@ class EarlierFamiliesTest {
 
         assertEquals(listOf(zuzanaFamily), families.map { it.familyId })
         assertTrue(families.single().expenses.isEmpty())
+    }
+
+    @Test
+    fun `a private event, a Google import, stays out of the earlier family and is shown in the live one`() {
+        val imported = event("google-1", zuzanaFamily, ME, day = 4).copy(isPrivate = true)
+        val records = EveryFamilyRecords(events = listOf(imported, event("e1", zuzanaFamily, ME, day = 3)))
+
+        val families = EarlierFamilies.of(withLana, records, emptyList())
+
+        assertEquals(listOf("e1"), families.single().events.map { it.id })
+        assertTrue(withLana.shows(imported.placementFamilyId, imported.createdByFirebaseUid))
     }
 
     private fun event(id: String, familyId: String?, createdBy: String, day: Int) = Event(

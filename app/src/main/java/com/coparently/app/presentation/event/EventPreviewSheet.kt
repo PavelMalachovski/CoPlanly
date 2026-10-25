@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
@@ -142,7 +143,7 @@ internal fun EventPreviewContent(
 ) {
     // An earlier family's event is drawn neutral and names no parent by slot: its slot would now
     // name the wrong person (design refresh item 12). The mark under the title says why.
-    val place = placeOf(event.familyId, event.createdByFirebaseUid)
+    val place = placeOf(event.placementFamilyId, event.createdByFirebaseUid)
     val earlierFamily = place == RecordPlace.EARLIER_FAMILY
     val parentColor = when {
         earlierFamily -> MaterialTheme.colorScheme.tertiary

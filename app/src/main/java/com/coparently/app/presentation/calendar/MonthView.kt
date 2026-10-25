@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.model.Event
@@ -836,7 +837,8 @@ private fun DayCell(
                                     color = eventDotColor(
                                         // An earlier family's event is drawn neutral: its slot
                                         // colour would now name the wrong person.
-                                        parentOwner = if (placeOf(event.familyId, event.createdByFirebaseUid) ==
+                                        parentOwner = if (
+                                            placeOf(event.placementFamilyId, event.createdByFirebaseUid) ==
                                             RecordPlace.EARLIER_FAMILY
                                         ) {
                                             ""
