@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Family → Money → Child support (25 October 2026). -->
+<resources>
+    <string name="support_title">Child support</string>
+    <string name="support_row_supporting">The monthly amount, and each month paid</string>
+    <string name="support_no_family_title">Link a co-parent first</string>
+    <string name="support_no_family_description">Child support is agreed between the two parents of a family.</string>
+    <string name="support_unavailable">Child support could not be read. Check your connection.</string>
+    <string name="support_none_title">No child support agreed</string>
+    <string name="support_none_description">Propose an amount, a day of the month and who pays. It applies once your co-parent accepts.</string>
+    <string name="support_amount_line">%1$s a month</string>
+    <string name="support_terms_line">On day %1$d · %2$s pays · from %3$s</string>
+    <string name="support_proposal_body">%1$s a month, on day %2$d, %3$s pays.</string>
+    <string name="support_waiting_title">Waiting for %1$s</string>
+    <string name="support_asks_title">%1$s proposes child support</string>
+    <string name="support_accept">Accept</string>
+    <string name="support_decline">Decline</string>
+    <string name="support_withdraw">Withdraw</string>
+    <string name="support_propose">Propose</string>
+    <string name="support_propose_change">Propose a change</string>
+    <string name="support_months">Months</string>
+    <string name="support_month_due">Due %1$s</string>
+    <string name="support_reminder_row">Remind me</string>
+    <string name="support_reminder_row_supporting">On this phone, before the day, while the month is unpaid</string>
+    <string name="support_reminder_on_the_day">On the day</string>
+    <string name="support_dialog_title">Propose child support</string>
+    <string name="support_dialog_amount">Monthly amount</string>
+    <string name="support_dialog_currency">Currency</string>
+    <string name="support_dialog_day">Day of the month</string>
+    <string name="support_dialog_day_hint">From 1 to 28, so every month has it</string>
+    <string name="support_dialog_payer">Who pays</string>
+    <string name="support_dialog_note">It applies from this month once your co-parent accepts it.</string>
+    <string name="support_dialog_send">Send for approval</string>
+    <string name="support_dialog_cancel">Cancel</string>
+    <string name="support_reminder_title">Child support is due on %1$s</string>
+    <string name="support_reminder_body">%1$s to %2$s. Mark it paid in the app once it is sent.</string>
+    <plurals name="support_reminder_days_before">
+        <item quantity="one">%1$d day before</item>
+        <item quantity="other">%1$d days before</item>
+    </plurals>
+</resources>

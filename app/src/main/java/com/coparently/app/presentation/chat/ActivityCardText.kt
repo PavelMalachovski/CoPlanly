@@ -2,11 +2,11 @@ package com.coparently.app.presentation.chat
 
 import androidx.annotation.StringRes
 import com.coparently.app.R
-import com.coparently.app.domain.stickers.StickerKind
-import com.coparently.app.presentation.stickers.StickerText
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.presentation.stickers.StickerText
 
 /**
  * What an announcement's sentence is about — the `%1$s` of its string — before the reading device

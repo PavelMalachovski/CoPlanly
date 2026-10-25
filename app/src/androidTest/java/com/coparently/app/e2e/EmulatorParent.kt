@@ -18,6 +18,7 @@ import com.coparently.app.data.files.SharedFileStorage
 import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
@@ -65,6 +66,7 @@ import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
+import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
@@ -381,6 +383,12 @@ class EmulatorParent private constructor(
 
     /** How this parent's stickers address them: `users/{uid}.parentRole`. */
     val parentRoles = ParentRoles(firestore, authService)
+
+    /** Payments between the parents: "I paid" and "Money arrived" (25 October 2026). */
+    val paymentStore = PaymentStore(firestore, authService, userRepository, announcer)
+
+    /** The family's child support agreement (25 October 2026). */
+    val supportStore = SupportAgreementStore(firestore, authService, userRepository, announcer)
 
     /** What this phone remembers of each family: the co-parent's name and the slots (schema 46). */
     val knownFamilies = KnownFamilies(database.knownFamilyDao(), userDataSource, FirestoreFamilyDataSource(firestore))

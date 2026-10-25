@@ -53,7 +53,9 @@ class KnownFamilies @Inject constructor(
             read()
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception
+        ) {
             Log.w(TAG, "Could not read a family's $what (${e.javaClass.simpleName}); kept the last one")
         }
     }

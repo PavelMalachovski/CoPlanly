@@ -31,7 +31,11 @@ data class EarlierFamily(
     val pets: List<Pet> = emptyList(),
     val journal: List<JournalEntry> = emptyList(),
     val lastDay: LocalDate? = null
-)
+) {
+    /** Whether this phone holds none of its records — only its documents and its export remain. */
+    val holdsNoRecords: Boolean
+        get() = listOf(events, expenses, children, pets, journal).all { it.isEmpty() }
+}
 
 /** Every record this phone holds, in every family, for [EarlierFamilies.of]. */
 data class EveryFamilyRecords(
@@ -65,8 +69,8 @@ object EarlierFamilies {
         val pets = records.pets.groupBy { familyOf(it.familyId, it.createdByFirebaseUid) }
         val journal = records.journal.groupBy { familyOf(it.familyId, it.createdByFirebaseUid) }
         val keptNames = known.associateBy { it.familyId }
-        val ended = (events.keys + expenses.keys + children.keys + pets.keys + journal.keys +
-            known.map { it.familyId }.filter { view.placeOf(it) == RecordPlace.EARLIER_FAMILY })
+        val keptEnded = known.map { it.familyId }.filter { view.placeOf(it) == RecordPlace.EARLIER_FAMILY }
+        val ended = (events.keys + expenses.keys + children.keys + pets.keys + journal.keys + keptEnded)
             .filterNotNull()
             .toSet()
         return ended.mapNotNull { family ->

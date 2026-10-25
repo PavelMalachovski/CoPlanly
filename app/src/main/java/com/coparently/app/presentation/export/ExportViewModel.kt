@@ -7,11 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
-import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.data.export.OptionalRecordSections
+import com.coparently.app.data.local.dao.KnownFamilyDao
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.export.CommunicationRecord
@@ -277,7 +277,8 @@ class ExportViewModel @Inject constructor(
             val other = FamilyKey.membersOf(family)?.toList()?.singleOrNull { it != myUid }
             if (other != null) {
                 val kept = knownFamilies.get(family)
-                return ExportCounterpart(other, earlier = EarlierFamilyName(family, kept?.coParentName, kept?.coParentSlot))
+                val earlier = EarlierFamilyName(family, kept?.coParentName, kept?.coParentSlot)
+                return ExportCounterpart(other, earlier = earlier)
             }
         }
         val partnerUid = parentsSource.coParentUid()
@@ -331,35 +332,49 @@ class ExportViewModel @Inject constructor(
             plan = if (request.includePlan) sections.plan(myUid, partnerUid) else null,
             journal = if (request.includeJournal) sections.journal(myUid, from, to) else null
         )
-        return CommunicationRecordBuilder.build(
-            sources,
-            RecordScope(
-                from = from,
-                to = to,
-                zone = zone,
-                generatedAtMillis = System.currentTimeMillis(),
-                families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
-                parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +
-                    listOfNotNull(departed?.let { departedName(it, fallbacks) }) +
-                    listOfNotNull(earlier?.let { earlierName(it, fallbacks) }),
-                nameForUid = { uid ->
-                    when {
-                        departed != null && uid == departed.departedUid -> departedName(departed, fallbacks)
-                        earlier != null && uid == partnerUid -> earlierName(earlier, fallbacks)
-                        else -> nameForUid(uid, parents, fallbacks)
-                    }
-                },
-                nameForSlot = { slot ->
-                    if (earlier != null && slot == earlier.coParentSlot) {
-                        earlierName(earlier, fallbacks)
-                    } else {
-                        nameForSlot(slot, parents, fallbacks)
-                    }
-                },
-                // A record of no family belongs here only when this parent or this family's
-                // co-parent wrote it, never another family's co-parent (isolation audit).
-                exporterUid = myUid
-            )
+        return CommunicationRecordBuilder.build(sources, scopeOf(myUid, counterpart, request, parents, fallbacks))
+    }
+
+    /**
+     * Who the record names, and how, for [counterpart]: the family on screen, a kept thread or an
+     * ended family.
+     */
+    private fun scopeOf(
+        myUid: String,
+        counterpart: ExportCounterpart,
+        request: ExportUiState,
+        parents: Parents,
+        fallbacks: NameFallbacks
+    ): RecordScope {
+        val partnerUid = counterpart.uid
+        val departed = counterpart.departed
+        val earlier = counterpart.earlier
+        return RecordScope(
+            from = request.from,
+            to = request.to,
+            zone = zone,
+            generatedAtMillis = System.currentTimeMillis(),
+            families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
+            parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +
+                listOfNotNull(departed?.let { departedName(it, fallbacks) }) +
+                listOfNotNull(earlier?.let { earlierName(it, fallbacks) }),
+            nameForUid = { uid ->
+                when {
+                    departed != null && uid == departed.departedUid -> departedName(departed, fallbacks)
+                    earlier != null && uid == partnerUid -> earlierName(earlier, fallbacks)
+                    else -> nameForUid(uid, parents, fallbacks)
+                }
+            },
+            nameForSlot = { slot ->
+                if (earlier != null && slot == earlier.coParentSlot) {
+                    earlierName(earlier, fallbacks)
+                } else {
+                    nameForSlot(slot, parents, fallbacks)
+                }
+            },
+            // A record of no family belongs here only when this parent or this family's
+            // co-parent wrote it, never another family's co-parent (isolation audit).
+            exporterUid = myUid
         )
     }
 

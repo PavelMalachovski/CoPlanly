@@ -301,7 +301,12 @@ enum class ActivityKind {
     private companion object {
         val PAYMENT_KINDS = setOf(SETTLE_UP_PAID, SETTLE_UP_CONFIRMED, SUPPORT_PAID, SUPPORT_CONFIRMED)
         val SUPPORT_KINDS = setOf(
-            SUPPORT_PROPOSED, SUPPORT_ACCEPTED, SUPPORT_DECLINED, SUPPORT_WITHDRAWN, SUPPORT_PAID, SUPPORT_CONFIRMED
+            SUPPORT_PROPOSED,
+            SUPPORT_ACCEPTED,
+            SUPPORT_DECLINED,
+            SUPPORT_WITHDRAWN,
+            SUPPORT_PAID,
+            SUPPORT_CONFIRMED
         )
     }
 }

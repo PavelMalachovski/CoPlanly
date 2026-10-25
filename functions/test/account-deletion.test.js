@@ -443,6 +443,24 @@ describe('deleteAccountDataImpl', () => {
     assert.strictEqual(removed.stickers, 1);
   });
 
+  // 25 October 2026: child support and payments name both parents, so they go with either account;
+  // those between two other people stay.
+  it('deletes the child support agreements and payments naming the departing parent', async () => {
+    const seed = family();
+    const fam = `${ALICE}__${BOB}`;
+    seed.support_agreements = [{id: fam, participants: [ALICE, BOB].sort()}];
+    seed.payments = [
+      {id: `${fam}__expenses__2026-10__CZK`, participants: [ALICE, BOB].sort(), familyId: fam},
+      {id: `${BOB}__carol__support__2026-10__CZK`, participants: [BOB, 'carol'], familyId: `${BOB}__carol`},
+    ];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.support_agreements.map((d) => d.id), []);
+    assert.deepStrictEqual(db._store.payments.map((d) => d.id), [`${BOB}__carol__support__2026-10__CZK`]);
+  });
+
   // Queued pushes *addressed to* the deleted account go — they would otherwise be delivered
   // to whatever device still holds its token. The one unpair queues *for the co-parent* is a
   // different thing and must survive: it is how Bob learns the link ended, and it is the last

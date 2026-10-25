@@ -27,8 +27,7 @@ object ActivityFallbackText {
 
     /** The base-locale sentence for [announcement]. */
     fun of(announcement: ActivityAnnouncement): String {
-        settleUp(announcement)?.let { return it }
-        money(announcement)?.let { return it }
+        (settleUp(announcement) ?: money(announcement) ?: untitled(announcement))?.let { return it }
         val prefix = when (announcement.kind) {
             ActivityKind.EVENT_CREATED -> "New event"
             ActivityKind.EVENT_UPDATED -> "Event changed"
@@ -57,15 +56,15 @@ object ActivityFallbackText {
             ActivityKind.SPLIT_WITHDRAWN -> "Withdrew the expense split proposal"
             ActivityKind.DAY_SWAP_WITHDRAWN -> "Day swap withdrawn"
             ActivityKind.CUSTODY_WITHDRAWN -> "Custody proposal withdrawn"
-            // The sticker's kind is an identifier, not a sentence: no title is appended.
-            ActivityKind.STICKER_SENT -> return "Sent a sticker"
-            ActivityKind.SUPPORT_DECLINED -> return "Declined the child support proposal"
-            ActivityKind.SUPPORT_WITHDRAWN -> return "Withdrew the child support proposal"
+            // Worded by [untitled], which never reaches here for these.
+            ActivityKind.STICKER_SENT,
+            ActivityKind.SUPPORT_DECLINED,
+            ActivityKind.SUPPORT_WITHDRAWN,
+            ActivityKind.SUPPORT_PROPOSED,
+            ActivityKind.SUPPORT_ACCEPTED -> ""
             // Worded with their amounts by [money]; reached only when one is missing.
             ActivityKind.SETTLE_UP_PAID -> "Paid the settle-up"
             ActivityKind.SETTLE_UP_CONFIRMED -> "The settle-up arrived"
-            ActivityKind.SUPPORT_PROPOSED -> return "Proposed child support"
-            ActivityKind.SUPPORT_ACCEPTED -> return "Agreed child support"
             ActivityKind.SUPPORT_PAID -> "Paid child support"
             ActivityKind.SUPPORT_CONFIRMED -> "Child support arrived"
         }
@@ -113,6 +112,19 @@ object ActivityFallbackText {
             ActivityKind.SETTLE_UP_OWING -> "Settle up for ${announcement.title}: I owe you $money"
             else -> null
         }
+    }
+
+    /**
+     * The cards whose `title` is not a subject to append: a sticker's is its kind's identifier, a
+     * child support card's the day of the month. Null for every other card.
+     */
+    private fun untitled(announcement: ActivityAnnouncement): String? = when (announcement.kind) {
+        ActivityKind.STICKER_SENT -> "Sent a sticker"
+        ActivityKind.SUPPORT_DECLINED -> "Declined the child support proposal"
+        ActivityKind.SUPPORT_WITHDRAWN -> "Withdrew the child support proposal"
+        ActivityKind.SUPPORT_PROPOSED -> "Proposed child support"
+        ActivityKind.SUPPORT_ACCEPTED -> "Agreed child support"
+        else -> null
     }
 
     /**

@@ -102,6 +102,7 @@ import kotlinx.coroutines.delay
  *   (play-final audit F-10), or null to leave it out; never offered over a kept thread, whose
  *   pairing has already ended
  * @param viewModel Chat state
+ * @param onOpenSupport Opens the family's child support screen from one of its cards, or null
  * @param searchViewModel Search inside this thread (MON-15) — local, this conversation only
  * @param dictationViewModel Voice dictation into the composer — on the phone only, and drawn only
  *   where the phone can recognise speech on the device (see `OnDeviceSpeechDictation`)
@@ -123,6 +124,7 @@ fun ChatScreen(
     onEditEvent: ((eventId: String) -> Unit)? = null,
     onOpenExport: ((conversationId: String) -> Unit)? = null,
     onBlock: (() -> Unit)? = null,
+    onOpenSupport: (() -> Unit)? = null,
     viewModel: ChatViewModel = hiltViewModel(),
     searchViewModel: ChatSearchViewModel = hiltViewModel(),
     dictationViewModel: DictationViewModel = hiltViewModel()
@@ -278,7 +280,7 @@ fun ChatScreen(
                     // Long-press "Report message" on the co-parent's bubbles (F-10), and what to pay
                     // under a settle-up card.
                     ChatReportHost {
-                        SettleUpPaymentHost(parentNames) {
+                        SettleUpPaymentHost(parentNames, onOpenSupport) {
                             // A card about an event opens that event — its preview, or the inbox while
                             // it waits on this parent — never the change-request inbox on a request
                             // that does not exist.

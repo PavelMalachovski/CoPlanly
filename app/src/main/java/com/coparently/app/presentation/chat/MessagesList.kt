@@ -618,7 +618,8 @@ fun MessageItem(
         }
 
         // What to pay, under a settle-up card on the payer's phone: the code, the IBAN, a share.
-        if (activity?.kind?.isSettleUp == true) {
+        // And under a payment card, the payee's "Money arrived" (25 October 2026).
+        if (activity?.kind?.isSettleUp == true || activity?.kind?.isPayment == true) {
             LocalSettleUpPayment.current?.invoke(message, isCurrentUser)
         }
 

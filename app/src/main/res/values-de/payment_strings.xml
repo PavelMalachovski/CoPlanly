@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Payments between the parents: "I paid" and "Money arrived" (25 October 2026). -->
+<resources>
+    <string name="payment_i_paid">Ich habe bezahlt</string>
+    <string name="payment_money_arrived">Geld ist angekommen</string>
+    <string name="payment_settled">Ausgeglichen: %1$s erhalten</string>
+    <string name="payment_waiting">Du hast %1$s bezahlt. Die Bestätigung des anderen Elternteils steht aus</string>
+    <string name="payment_waiting_named">Du hast %1$s bezahlt. Die Bestätigung von %2$s steht aus</string>
+    <string name="payment_paid_to_you">Der andere Elternteil sagt, er hat dir %1$s bezahlt</string>
+    <string name="payment_paid_to_you_named">%1$s sagt, du hast %2$s bekommen</string>
+    <string name="payment_error_not_saved">Das konnte nicht gespeichert werden. Prüfe die Verbindung und versuche es erneut.</string>
+    <string name="payment_card_waiting">Wartet auf Bestätigung</string>
+    <string name="payment_card_received">Erhalten</string>
+</resources>

@@ -2553,6 +2553,10 @@ async function unpairCoParentImpl(db, callerUid, requestedPartnerId, options) {
     // split neither of them remembers agreeing would start pricing their expenses again.
     tx.delete(db.collection('family_settings').doc(custodyModelKey(callerUid, partnerId)));
 
+    // And its child support agreement (25 October 2026), for the same reason. The payments the
+    // two made stay: they are the family's history, read from Family -> Earlier families.
+    tx.delete(db.collection('support_agreements').doc(custodyModelKey(callerUid, partnerId)));
+
     // And the relationship itself. This one is not tidiness: `families/{id}.members` is what
     // grants access to everything the pair shares, so leaving it behind leaves the ex-partner
     // reading this household after the unpair — the sweep below narrows documents, but a live
@@ -4958,6 +4962,13 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // Holds both parents' uids, so it is personal data of a deleted account either way.
   removed.family_settings = await deleteQueryInBatches(
       db, db.collection('family_settings').where('participants', 'array-contains', uid));
+
+  // Child support agreements and payments (25 October 2026): each names both parents in
+  // `participants`, so they are personal data of a deleted account either way.
+  removed.support_agreements = await deleteQueryInBatches(
+      db, db.collection('support_agreements').where('participants', 'array-contains', uid));
+  removed.payments = await deleteQueryInBatches(
+      db, db.collection('payments').where('participants', 'array-contains', uid));
 
   // The clocks of this account's requests (phase 3a): each names both parents in `participants`,
   // whichever of them proposed. They are personal data of a deleted account either way, and of no

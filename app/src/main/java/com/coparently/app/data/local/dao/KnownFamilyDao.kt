@@ -55,8 +55,18 @@ interface KnownFamilyDao {
     ) {
         val row = get(familyId)
         upsert(
-            row?.copy(coParentUid = coParentUid, mySlot = mySlot, coParentSlot = coParentSlot, updatedAtMillis = atMillis)
-                ?: KnownFamilyEntity(familyId, coParentUid, mySlot = mySlot, coParentSlot = coParentSlot, updatedAtMillis = atMillis)
+            row?.copy(
+                coParentUid = coParentUid,
+                mySlot = mySlot,
+                coParentSlot = coParentSlot,
+                updatedAtMillis = atMillis
+            ) ?: KnownFamilyEntity(
+                familyId,
+                coParentUid,
+                mySlot = mySlot,
+                coParentSlot = coParentSlot,
+                updatedAtMillis = atMillis
+            )
         )
     }
 }

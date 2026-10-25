@@ -588,6 +588,19 @@ fun NavGraph(
                     FamilyDocumentsScreen(onNavigateUp = { navController.popBackStack() })
                 }
 
+                // Family → Money → Child support (owner decision, 25 October 2026).
+                pane(
+                    route = Screen.Support.route,
+                    enterTransition = { slideInFromRight() },
+                    exitTransition = { slideOutToLeft() },
+                    popEnterTransition = { slideInFromLeft() },
+                    popExitTransition = { slideOutToRight() }
+                ) {
+                    com.coparently.app.presentation.support.SupportScreen(
+                        onNavigateUp = { navController.popBackStack() }
+                    )
+                }
+
                 // Family → Earlier families (owner decision, 25 October 2026): an ended family's
                 // records, out of every live family's screens and read here.
                 pane(
@@ -1071,7 +1084,8 @@ fun NavGraph(
                         // existing unpair confirmation. Unpairing is the block.
                         onBlock = {
                             navController.navigate(Screen.Pairing.routeForUnpair())
-                        }
+                        },
+                        onOpenSupport = { navController.navigate(Screen.Support.route) }
                     )
                 }
 
@@ -1127,7 +1141,8 @@ fun NavGraph(
                         // existing unpair confirmation. Unpairing is the block.
                         onBlock = {
                             navController.navigate(Screen.Pairing.routeForUnpair())
-                        }
+                        },
+                        onOpenSupport = { navController.navigate(Screen.Support.route) }
                     )
                 }
 
@@ -1143,6 +1158,7 @@ fun NavGraph(
                     com.coparently.app.presentation.family.FamilyScreen(
                         destinations = com.coparently.app.presentation.family.FamilyDestinations(
                             expenses = { navController.navigate(Screen.Expenses.route) },
+                            support = { navController.navigate(Screen.Support.route) },
                             custody = { navController.navigate(Screen.CustodySetup.routeFor()) },
                             parentingPlan = { navController.navigate(Screen.ParentingPlan.route) },
                             export = { navController.navigate(Screen.Export.createRoute()) },
@@ -1511,6 +1527,11 @@ private fun PushDestinationEffect(
                     navController.navigate(Screen.Professionals.route) { launchSingleTop = true }
                 PushDestination.FRIENDS ->
                     navController.navigate(Screen.Friends.route) { launchSingleTop = true }
+                PushDestination.SUPPORT -> {
+                    // Child support over the Family tab, like Expenses.
+                    navController.navigateToTab(BottomNavDestination.FAMILY)
+                    navController.navigate(Screen.Support.route) { launchSingleTop = true }
+                }
             }
             open.onConsumed()
         }
@@ -1654,6 +1675,9 @@ sealed class Screen(val route: String) {
         /** An ended family's vault, read-only (Family → Earlier families). */
         fun forEarlierFamily(familyId: String): String = "family_documents?family=${Uri.encode(familyId)}"
     }
+
+    /** Family → Money → Child support (25 October 2026). */
+    data object Support : Screen("support")
 
     /** Family → Earlier families: the families this parent was in, each read-only. */
     data object EarlierFamilies : Screen("earlier_families")

@@ -33,10 +33,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.InlineBanner
-import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.expenses.currencyFormat
@@ -97,8 +97,11 @@ fun EarlierFamiliesScreen(
                         SectionRow(
                             title = familyTitle(family),
                             icon = Icons.Default.History,
-                            supporting = family.lastDay?.let {
-                                stringResource(R.string.earlier_families_last_day, it.format(localizedDate(DATE_SKELETON)))
+                            supporting = family.lastDay?.let { day ->
+                                stringResource(
+                                    R.string.earlier_families_last_day,
+                                    day.format(localizedDate(DATE_SKELETON))
+                                )
                             },
                             onClick = { onOpen(family.familyId) },
                             trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) }
@@ -159,9 +162,7 @@ fun EarlierFamilyScreen(
                 }
             }
             if (family == null) return@LazyColumn
-            if (family.events.isEmpty() && family.expenses.isEmpty() && family.children.isEmpty() &&
-                family.pets.isEmpty() && family.journal.isEmpty()
-            ) {
+            if (family.holdsNoRecords) {
                 item(key = "nothing") { Text(stringResource(R.string.earlier_family_nothing)) }
             }
             records(family)

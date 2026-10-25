@@ -36,7 +36,13 @@ enum class PushDestination(val key: String) {
     PROFESSIONALS("professionals"),
 
     /** The family friends screen, where either parent sees who reads the calendar and ends it. */
-    FRIENDS("friends");
+    FRIENDS("friends"),
+
+    /**
+     * The family's child support screen: a local reminder's tap (25 October 2026). No push type
+     * leads here — the agreement's news arrives as chat cards.
+     */
+    SUPPORT("support");
 
     /** The intent extra, and reading it back. */
     companion object {

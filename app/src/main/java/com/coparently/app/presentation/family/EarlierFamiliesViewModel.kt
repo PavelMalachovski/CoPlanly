@@ -31,6 +31,7 @@ import javax.inject.Inject
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
+@Suppress("LongParameterList") // one source per kind of record an ended family left
 class EarlierFamiliesViewModel @Inject constructor(
     eventRepository: EventRepository,
     expenseRepository: ExpenseRepository,

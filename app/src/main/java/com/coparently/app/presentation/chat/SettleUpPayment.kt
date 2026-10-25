@@ -42,13 +42,20 @@ import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.payment.PaymentAccounts
 import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.payment.Iban
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.payment.PaymentRequest
+import com.coparently.app.domain.payments.Payment
+import com.coparently.app.domain.payments.PaymentKind
+import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.expenses.currencyFormat
+import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Spacing
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -65,6 +72,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -110,17 +118,78 @@ class SettleUpPaymentViewModel @Inject constructor(
     }
 }
 
-/** Provides [LocalSettleUpPayment] for [content]. */
+/**
+ * Provides [LocalSettleUpPayment] for [content], and [LocalOpenSupport]: where a child support
+ * card leads (25 October 2026).
+ */
 @Composable
 fun SettleUpPaymentHost(
     parentNames: ParentNames,
+    onOpenSupport: (() -> Unit)? = null,
     viewModel: SettleUpPaymentViewModel = hiltViewModel(),
+    paymentsViewModel: PaymentsViewModel = hiltViewModel(),
     content: @Composable () -> Unit
 ) {
     val payee by viewModel.payee.collectAsState()
+    val payments by paymentsViewModel.payments.collectAsState()
+    val busy by paymentsViewModel.busy.collectAsState()
+    val steps = PaymentSteps(payments, paymentsViewModel.myUid, enabled = !busy, paymentsViewModel)
     CompositionLocalProvider(
-        LocalSettleUpPayment provides { message, mine -> SettleUpPaymentBlock(message, mine, payee, parentNames) },
+        LocalOpenSupport provides onOpenSupport,
+        LocalSettleUpPayment provides { message, mine ->
+            if (message.activity?.kind?.isPayment == true) {
+                PaymentCardStep(message, steps)
+            } else {
+                SettleUpPaymentBlock(message, mine, payee, parentNames, steps)
+            }
+        },
         content = content
+    )
+}
+
+/**
+ * What the chat knows of the family's payments, for the step under a card: "I paid" under a
+ * settle-up the reader pays, "Money arrived" under a payment made to the reader (25 October 2026).
+ */
+private class PaymentSteps(
+    val payments: List<Payment>,
+    val myUid: String?,
+    val enabled: Boolean,
+    val viewModel: PaymentsViewModel
+) {
+    /** The payment a card names: by its id for a payment card, by month and currency otherwise. */
+    fun forCard(card: ActivityAnnouncement): Payment? = when {
+        card.entityType == ActivityEntityType.PAYMENT ->
+            payments.firstOrNull { it.id == card.entityId }
+        else -> runCatching { YearMonth.parse(card.title) }.getOrNull()?.let { month ->
+            card.currency?.let { viewModel.paymentFor(payments, PaymentKind.EXPENSES, month, it) }
+        }
+    }
+}
+
+/** Under a "paid" card on the payee's phone: "Money arrived", or that it was received. */
+@Composable
+private fun PaymentCardStep(message: Message, steps: PaymentSteps) {
+    val card = message.activity ?: return
+    if (card.kind != ActivityKind.SETTLE_UP_PAID && card.kind != ActivityKind.SUPPORT_PAID) return
+    val payment = steps.forCard(card) ?: return
+    when (PaymentState.of(payment, steps.myUid)) {
+        PaymentState.PAID_TO_ME -> TextButton(onClick = { steps.viewModel.confirm(payment) }, enabled = steps.enabled) {
+            Text(stringResource(R.string.payment_money_arrived))
+        }
+        PaymentState.PAID_BY_ME -> PaymentNote(R.string.payment_card_waiting)
+        PaymentState.CONFIRMED -> PaymentNote(R.string.payment_card_received)
+        PaymentState.NONE -> Unit
+    }
+}
+
+@Composable
+private fun PaymentNote(text: Int) {
+    Text(
+        text = stringResource(text),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = Spacing.XS)
     )
 }
 
@@ -151,11 +220,25 @@ private fun amountText(card: ActivityAnnouncement): String {
  * nothing.
  */
 @Composable
-private fun SettleUpPaymentBlock(message: Message, mine: Boolean, payee: PayeeAccount?, parentNames: ParentNames) {
+private fun SettleUpPaymentBlock(
+    message: Message,
+    mine: Boolean,
+    payee: PayeeAccount?,
+    parentNames: ParentNames,
+    steps: PaymentSteps
+) {
     val card = message.activity?.takeIf { it.kind.readerPays(mine) } ?: return
     val amount = card.amount?.toBigDecimalOrNull()
     val currency = card.currency
     if (payee == null || amount == null || currency == null) return
+    // Once the payer said they paid, the code is not offered again (25 October 2026).
+    val recorded = steps.forCard(card)
+    if (recorded != null) {
+        PaymentNote(
+            if (recorded.confirmed) R.string.payment_card_received else R.string.payment_card_waiting
+        )
+        return
+    }
     val name = parentNames.labelForUid(payee.uid)
     Column(
         modifier = Modifier
@@ -180,6 +263,24 @@ private fun SettleUpPaymentBlock(message: Message, mine: Boolean, payee: PayeeAc
         }
         Text(Iban.grouped(iban), style = MaterialTheme.typography.bodyMedium)
         PaymentActions(iban, qr)
+        // Said by the payer once the money is on its way; the co-parent then confirms it arrived.
+        val month = runCatching { YearMonth.parse(card.title) }.getOrNull()
+        if (month != null) {
+            TextButton(
+                onClick = {
+                    steps.viewModel.markPaid(
+                        FamilyKey.of(payee.uid, steps.myUid.orEmpty()),
+                        PaymentKind.EXPENSES,
+                        month,
+                        currency,
+                        amount
+                    )
+                },
+                enabled = steps.enabled && !steps.myUid.isNullOrBlank()
+            ) {
+                Text(stringResource(R.string.payment_i_paid))
+            }
+        }
     }
 }
 
