@@ -69,8 +69,15 @@ enum class RecordPlace {
  * @property me The signed-in parent, or null when there is nobody to place records for.
  * @property onScreen The family the switcher shows, or null when the account is in none.
  * @property others The parent's other live families.
+ * @property partnersKnown False when the stored co-parent list could not be read: nothing then says
+ *   which families have ended, so none is hidden as one.
  */
-data class FamilyView(val me: String? = null, val onScreen: String?, val others: Set<String>) {
+data class FamilyView(
+    val me: String? = null,
+    val onScreen: String?,
+    val others: Set<String>,
+    val partnersKnown: Boolean = true
+) {
 
     /** Where a record of [familyId], written by [createdBy], stands on this screen. */
     fun placeOf(familyId: String?, createdBy: String? = null): RecordPlace {
@@ -90,7 +97,7 @@ data class FamilyView(val me: String? = null, val onScreen: String?, val others:
     fun shows(familyId: String?, createdBy: String? = null): Boolean =
         when (placeOf(familyId, createdBy)) {
             RecordPlace.OTHER_FAMILY -> false
-            RecordPlace.EARLIER_FAMILY -> liveFamilies() == 0
+            RecordPlace.EARLIER_FAMILY -> liveFamilies() == 0 || !partnersKnown
             else -> true
         }
 
@@ -111,10 +118,10 @@ data class FamilyView(val me: String? = null, val onScreen: String?, val others:
         fun of(uid: String, row: UserEntity?): FamilyView {
             if (row == null) return EVERYTHING
             val onScreen = FamilyKey.orNull(uid, row.partnerId)
-            val partners = runCatching { gson.fromJson(row.partnerIdsJson, Array<String>::class.java) }
-                .getOrNull()?.toList().orEmpty()
+            val parsed = runCatching { gson.fromJson(row.partnerIdsJson, Array<String>::class.java) }
+            val partners = parsed.getOrNull()?.toList().orEmpty()
             val others = partners.mapNotNull { FamilyKey.orNull(uid, it) }.toSet() - setOfNotNull(onScreen)
-            return FamilyView(me = uid, onScreen = onScreen, others = others)
+            return FamilyView(me = uid, onScreen = onScreen, others = others, partnersKnown = parsed.isSuccess)
         }
     }
 }
