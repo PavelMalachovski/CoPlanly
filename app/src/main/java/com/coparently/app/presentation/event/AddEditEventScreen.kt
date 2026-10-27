@@ -13,34 +13,35 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,7 +52,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -109,6 +109,8 @@ import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.eventTypeLabel
 import com.coparently.app.presentation.common.rememberAnswerByOffer
@@ -293,23 +295,9 @@ fun AddEditEventScreen(
     var customEventTypes by remember { mutableStateOf<List<String>>(emptyList()) }
     var startDate by rememberSaveable { mutableStateOf(initialDate ?: LocalDate.now()) }
     var startTime by rememberSaveable(initialHour, initialDate) {
-        mutableStateOf(
-            if (initialHour != null) {
-                LocalTime.of(initialHour, 0)
-            } else {
-                LocalTime.now()
-            }
-        )
+        mutableStateOf(initialHour?.let { LocalTime.of(it, 0) } ?: defaultStartTime(LocalTime.now()))
     }
-    var endTime by rememberSaveable(initialHour) {
-        mutableStateOf(
-            if (initialHour != null) {
-                LocalTime.of(initialHour, 0).plusHours(1)
-            } else {
-                LocalTime.now().plusHours(1)
-            }
-        )
-    }
+    var endTime by rememberSaveable(initialHour) { mutableStateOf(defaultEndTime(startTime)) }
 
     // The end date is kept as the days it lies after the start date (a weekend away, an overnight
     // stay), so moving the start date moves the end with it. An edited event keeps its span and,
@@ -323,6 +311,11 @@ fun AddEditEventScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
+    // A description is one tap away rather than a box on every new event (UX audit H5); an event
+    // that has one shows it.
+    var descriptionOpen by rememberSaveable { mutableStateOf(false) }
+    var showRepeatDialog by remember { mutableStateOf(false) }
+    var showReminderDialog by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
@@ -509,8 +502,8 @@ fun AddEditEventScreen(
                 parentOwner = currentUser?.slot
                 eventType = "general"
                 startDate = initialDate ?: LocalDate.now()
-                startTime = LocalTime.now()
-                endTime = LocalTime.now().plusHours(1)
+                startTime = defaultStartTime(LocalTime.now())
+                endTime = defaultEndTime(startTime)
                 endDaySpan = 0
                 keepNoEnd = false
                 allDay = false
@@ -850,65 +843,77 @@ fun AddEditEventScreen(
             )
 
             // Description Section
-            OutlinedTextField(
-                value = description,
-                onValueChange = {
-                    description = it
-                    validateDescription()
-                },
-                label = { Text(stringResource(R.string.event_form_field_description_label)) },
-                placeholder = { Text(stringResource(R.string.event_form_field_description_placeholder)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = stringResource(R.string.event_form_cd_description_icon)
-                    )
-                },
-                isError = descriptionError != null,
-                supportingText = when {
-                    descriptionError != null -> {
-                        {
-                            Text(
-                                text = descriptionError ?: "",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                    // The co-parent reads this when they answer the event (phase 2, spec §5.2),
-                    // so the parent writing it is told before they write for themselves alone.
-                    descriptionReachesCoParent(
-                        isNewEvent = eventId == null,
-                        isPaired = isPaired,
-                        isPrivate = isPrivate,
-                        isImportant = isImportant,
-                        parentOwner = parentOwner,
-                        mySlot = currentUser?.slot
-                    ) -> {
-                        {
-                            Text(
-                                stringResource(
-                                    R.string.event_form_description_coparent_hint,
-                                    parentNames.labelFor(parentOwner)
+            if (description.isNotEmpty() || descriptionOpen) {
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = {
+                        description = it
+                        validateDescription()
+                    },
+                    label = { Text(stringResource(R.string.event_form_field_description_label)) },
+                    placeholder = { Text(stringResource(R.string.event_form_field_description_placeholder)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = stringResource(R.string.event_form_cd_description_icon)
+                        )
+                    },
+                    isError = descriptionError != null,
+                    supportingText = when {
+                        descriptionError != null -> {
+                            {
+                                Text(
+                                    text = descriptionError ?: "",
+                                    color = MaterialTheme.colorScheme.error
                                 )
-                            )
+                            }
                         }
-                    }
-                    else -> null
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(dims.buttonHeight * 2.14f), // ~120dp for compact
-                maxLines = 4,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus() // Clear focus when Done is pressed
-                    }
+                        // The co-parent reads this when they answer the event (phase 2, spec §5.2),
+                        // so the parent writing it is told before they write for themselves alone.
+                        descriptionReachesCoParent(
+                            isNewEvent = eventId == null,
+                            isPaired = isPaired,
+                            isPrivate = isPrivate,
+                            isImportant = isImportant,
+                            parentOwner = parentOwner,
+                            mySlot = currentUser?.slot
+                        ) -> {
+                            {
+                                Text(
+                                    stringResource(
+                                        R.string.event_form_description_coparent_hint,
+                                        parentNames.labelFor(parentOwner)
+                                    )
+                                )
+                            }
+                        }
+                        else -> null
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(dims.buttonHeight * 2.14f), // ~120dp for compact
+                    maxLines = 4,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus() // Clear focus when Done is pressed
+                        }
+                    )
                 )
-            )
+            } else {
+                TextButton(onClick = { descriptionOpen = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(IconSizes.Small)
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.S))
+                    Text(stringResource(R.string.event_form_add_description))
+                }
+            }
 
             // Parent Owner Selection with animated cards, only as the escape for an account whose
             // own slot has not resolved: everyone else has their owner chosen for them from the
@@ -1091,57 +1096,62 @@ fun AddEditEventScreen(
                 }
             }
 
-            // Date & Time Section
-            Text(
-                text = stringResource(R.string.event_form_date_time),
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            // All day: the times leave the form, and the event covers whole days, from the start
-            // date's midnight to the end date's last minute (`formStartDateTime`, `formEndDateTime`).
+            // Date & Time Section: one group — all day, when it starts, when it ends — where four
+            // cards used to take a screen of their own (UX audit H5). Each date and time is its
+            // own tap target; the end date follows the start date (`endDaySpan`).
             val allDayLabel = stringResource(R.string.event_all_day)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = allDayLabel,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
+            val endDate = startDate.plusDays(endDaySpan.toLong())
+            val dateLine = localizedDate("MMMEd")
+            val fullDate = localizedDate("yMMMMEEEEd")
+            SectionGroup {
+                SectionRow(
+                    title = allDayLabel,
+                    icon = Icons.Default.Schedule,
+                    trailing = {
+                        Switch(
+                            checked = allDay,
+                            // Named for TalkBack, like the Important switch below.
+                            modifier = Modifier.semantics { contentDescription = allDayLabel },
+                            onCheckedChange = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                allDay = it
+                            }
+                        )
+                    }
                 )
-                Switch(
-                    checked = allDay,
-                    // Named for TalkBack, like the Important switch below.
-                    modifier = Modifier.semantics { contentDescription = allDayLabel },
-                    onCheckedChange = {
+                Divider()
+                EventDateTimeRow(
+                    label = stringResource(R.string.event_form_starts),
+                    date = startDate.format(dateLine),
+                    time = startTime.format(shortTime()).takeUnless { allDay },
+                    dateDescription = stringResource(R.string.event_form_cd_select_date, startDate.format(fullDate)),
+                    timeDescription = stringResource(
+                        R.string.event_form_cd_select_start_time,
+                        startTime.format(shortTime())
+                    ),
+                    onDate = { showDatePicker = true },
+                    onTime = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        allDay = it
+                        showStartTimePicker = true
+                    }
+                )
+                Divider()
+                EventDateTimeRow(
+                    label = stringResource(R.string.event_form_ends),
+                    date = endDate.format(dateLine),
+                    time = endTime.format(shortTime()).takeUnless { allDay },
+                    dateDescription = stringResource(R.string.event_form_cd_select_end_date, endDate.format(fullDate)),
+                    timeDescription = stringResource(
+                        R.string.event_form_cd_select_end_time,
+                        endTime.format(shortTime())
+                    ),
+                    onDate = { showEndDatePicker = true },
+                    onTime = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showEndTimePicker = true
                     }
                 )
             }
-
-            EventDateCard(
-                label = stringResource(R.string.event_form_start_date),
-                date = startDate,
-                description = stringResource(
-                    R.string.event_form_cd_select_date,
-                    startDate.format(localizedDate("yMMMMEEEEd"))
-                ),
-                onClick = { showDatePicker = true }
-            )
-            // The start date until the parent picks another: a weekend away, a holiday at the
-            // grandparents', a night at a friend's. Moving the start date moves it along.
-            val endDate = startDate.plusDays(endDaySpan.toLong())
-            EventDateCard(
-                label = stringResource(R.string.event_form_end_date),
-                date = endDate,
-                description = stringResource(
-                    R.string.event_form_cd_select_end_date,
-                    endDate.format(localizedDate("yMMMMEEEEd"))
-                ),
-                onClick = { showEndDatePicker = true }
-            )
 
             // Time validation error display
             if (showTimeValidationError) {
@@ -1173,212 +1183,81 @@ fun AddEditEventScreen(
                 }
             }
 
-            // Time Pickers, for an event with times: an all-day one has none to pick
-            if (!allDay) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.M)
-                ) {
-                    // Start Time
-                    OutlinedCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = context.getString(
-                                    R.string.event_form_cd_select_start_time,
-                                    startTime.format(shortTime())
-                                )
-                            },
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showStartTimePicker = true
-                        }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(dims.paddingMedium),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Schedule,
-                                contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(IconSizes.Standard)
-                            )
-                            Spacer(modifier = Modifier.height(dims.paddingSmall))
-                            Text(
-                                text = stringResource(R.string.event_form_start_time),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = startTime.format(shortTime()),
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        }
-                    }
-
-                    // End Time
-                    OutlinedCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = context.getString(
-                                    R.string.event_form_cd_select_end_time,
-                                    endTime.format(shortTime())
-                                )
-                            },
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            showEndTimePicker = true
-                        }
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(dims.paddingMedium),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Schedule,
-                                contentDescription = stringResource(R.string.event_form_cd_time_picker_icon),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(IconSizes.Standard)
-                            )
-                            Spacer(modifier = Modifier.height(dims.paddingSmall))
-                            Text(
-                                text = stringResource(R.string.event_form_end_time),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = endTime.format(shortTime()),
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Repeat Section
-            Text(
-                text = stringResource(R.string.event_form_repeat),
-                style = MaterialTheme.typography.titleMedium
+            // Repeat and reminder: rows that say their value and open a short list (UX audit H5),
+            // where eleven chips used to sit in the form.
+            val repeatOptions = listOf(
+                null to stringResource(R.string.event_repeat_none),
+                "daily" to stringResource(R.string.event_repeat_daily),
+                "weekly" to stringResource(R.string.event_repeat_weekly),
+                "biweekly" to stringResource(R.string.event_repeat_biweekly),
+                "monthly" to stringResource(R.string.event_repeat_monthly)
             )
-
-            androidx.compose.foundation.layout.FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-            ) {
-                listOf(
-                    null to stringResource(R.string.event_repeat_none),
-                    "daily" to stringResource(R.string.event_repeat_daily),
-                    "weekly" to stringResource(R.string.event_repeat_weekly),
-                    "biweekly" to stringResource(R.string.event_repeat_biweekly),
-                    "monthly" to stringResource(R.string.event_repeat_monthly)
-                ).forEach { (value, label) ->
-                    FilterChip(
-                        selected = recurrencePattern == value,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            recurrencePattern = value
-                            if (value == null) recurrenceEndDate = null
-                        },
-                        label = { Text(label) },
-                        leadingIcon = {
-                            if (recurrencePattern == value) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(IconSizes.Small)
-                                )
-                            }
-                        }
-                    )
-                }
-            }
-
-            // Recurrence end date (optional, only for recurring events)
-            if (recurrencePattern != null) {
-                OutlinedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 48.dp),
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showRecurrenceEndPicker = true
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(dims.paddingMedium),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.event_form_repeat_until),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = recurrenceEndDate?.format(localizedDate("yMMMMEEEEd"))
-                                    ?: stringResource(R.string.event_form_repeat_forever),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                        if (recurrenceEndDate != null) {
-                            TextButton(onClick = { recurrenceEndDate = null }) {
-                                Text(stringResource(R.string.event_form_clear))
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Reminder Section
-            Text(
-                text = stringResource(R.string.event_form_reminder),
-                style = MaterialTheme.typography.titleMedium
-            )
-
+            val reminderOptions = REMINDER_OPTIONS.map { (value, labelRes) -> value to stringResource(labelRes) }
             // Picking a reminder is the moment notifications become relevant —
             // request POST_NOTIFICATIONS here (not on app start)
             val reminderPermissionRequester =
                 com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
-            androidx.compose.foundation.layout.FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-            ) {
-                REMINDER_OPTIONS.forEach { (value, labelRes) ->
-                    FilterChip(
-                        selected = reminderMinutes == value,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            if (value == null) {
-                                reminderMinutes = null
-                            } else {
-                                reminderPermissionRequester.request { reminderMinutes = value }
-                            }
-                        },
-                        label = { Text(stringResource(labelRes)) },
-                        leadingIcon = {
-                            if (reminderMinutes == value) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.event_form_cd_selected_icon),
-                                    modifier = Modifier.size(IconSizes.Small)
-                                )
+            SectionGroup {
+                SectionRow(
+                    title = stringResource(R.string.event_form_repeat),
+                    icon = Icons.Default.Repeat,
+                    onClick = { showRepeatDialog = true },
+                    trailing = { OptionValue(repeatOptions.firstOrNull { it.first == recurrencePattern }?.second) }
+                )
+                // Recurrence end date (optional, only for recurring events)
+                if (recurrencePattern != null) {
+                    Divider()
+                    SectionRow(
+                        title = stringResource(R.string.event_form_repeat_until),
+                        supporting = recurrenceEndDate?.format(fullDate)
+                            ?: stringResource(R.string.event_form_repeat_forever),
+                        icon = Icons.Default.Event,
+                        onClick = { showRecurrenceEndPicker = true },
+                        trailing = recurrenceEndDate?.let {
+                            {
+                                TextButton(onClick = { recurrenceEndDate = null }) {
+                                    Text(stringResource(R.string.event_form_clear))
+                                }
                             }
                         }
                     )
                 }
+                Divider()
+                SectionRow(
+                    title = stringResource(R.string.event_form_reminder),
+                    icon = Icons.Default.Notifications,
+                    onClick = { showReminderDialog = true },
+                    trailing = { OptionValue(reminderOptions.firstOrNull { it.first == reminderMinutes }?.second) }
+                )
+            }
+            if (showRepeatDialog) {
+                EventOptionDialog(
+                    title = stringResource(R.string.event_form_repeat),
+                    options = repeatOptions,
+                    selected = recurrencePattern,
+                    onSelect = { value ->
+                        recurrencePattern = value
+                        if (value == null) recurrenceEndDate = null
+                        showRepeatDialog = false
+                    },
+                    onDismiss = { showRepeatDialog = false }
+                )
+            }
+            if (showReminderDialog) {
+                EventOptionDialog(
+                    title = stringResource(R.string.event_form_reminder),
+                    options = reminderOptions,
+                    selected = reminderMinutes,
+                    onSelect = { value ->
+                        showReminderDialog = false
+                        if (value == null) {
+                            reminderMinutes = null
+                        } else {
+                            reminderPermissionRequester.request { reminderMinutes = value }
+                        }
+                    },
+                    onDismiss = { showReminderDialog = false }
+                )
             }
 
             // Important Section. Deliberately a statement and not an obligation: the switch
@@ -1802,69 +1681,6 @@ fun AddEditEventScreen(
 }
 
 /**
- * One of the form's two dates, the start and the end: its label, the day with its month in full, and
- * a tap that opens the date picker. One anatomy for both, so the end date reads as the start's twin.
- *
- * @param description What TalkBack reads: the action and the day it would change.
- */
-@Composable
-private fun EventDateCard(label: String, date: LocalDate, description: String, onClick: () -> Unit) {
-    val haptic = LocalHapticFeedback.current
-    val dims = dimensions()
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 48.dp) // Ensure minimum touch target
-            .semantics {
-                role = Role.Button
-                contentDescription = description
-            },
-        onClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onClick()
-        }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dims.paddingMedium),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(dims.paddingSmall * 1.5f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarMonth,
-                    contentDescription = stringResource(R.string.event_form_cd_calendar_icon),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Column {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        // The month in full: Czech abbreviates it to "zář" inside a
-                        // date, where a form field has room for "25. září 2026".
-                        text = date.format(localizedDate("yMMMMEEEEd")),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = stringResource(R.string.event_form_cd_navigate_date_picker),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-/**
  * When a new event that waits for the co-parent's answer should be answered by (phase 3a, spec
  * §6.1). The event's start is the cap: the moment the request would change the calendar.
  */
@@ -1883,6 +1699,21 @@ private fun EventDeadline(
         coParentName = coParentName
     )
 }
+
+/**
+ * Where a new event starts when nothing chose its hour: the next full hour (UX audit H5). It used to
+ * be the current minute — 8:49 PM to 9:49 PM — which nearly every parent then had to change. The
+ * last hour of the day stays in it rather than wrapping to a midnight already behind.
+ */
+internal fun defaultStartTime(now: LocalTime): LocalTime =
+    if (now.hour == LAST_HOUR) LocalTime.of(LAST_HOUR, 0) else now.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+
+/** An hour after [start], or the day's last minute when that hour would wrap past midnight. */
+internal fun defaultEndTime(start: LocalTime): LocalTime =
+    if (start.hour == LAST_HOUR) AllDayEvent.LAST_MINUTE else start.plusHours(1)
+
+/** The day's last hour, 11 PM. */
+private const val LAST_HOUR = 23
 
 /**
  * The start the event form saves and validates: [startTime] on [startDate], or the start of
