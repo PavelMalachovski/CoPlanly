@@ -2254,6 +2254,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       containing `@`; nothing else about the inviter is returned. The preview is signed-in only and
       rate-limited per account (20 per ten minutes per instance, ten instances), because a code is
       a bearer credential and the preview must not become a cheaper way to sweep codes.
+    - **Every redeem counts its misses** (security audit, October 2026; `functions/redeem-guard.js`).
+      The four accept callables and the preview share one per-account count of unknown codes in
+      `redeem_attempts/{uid}` (closed to clients, deleted with the account) and refuse an account
+      past ten in an hour with `resource-exhausted`, `too-many-attempts`. Only a `not-found` counts:
+      a real code refused for another reason was a hit. A new redeem callable goes through it too.
     - **A preview that says nothing still asks.** `PairingError.Unknown` — a backend without the
       callable (a `NOT_FOUND` with no reason, which `PairingFunctions.previewInvitation` tells apart
       from a missing invitation) or its rate limit — opens the old nameless dialog and lets the
@@ -2946,7 +2951,9 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   *first* in onboarding that branch is the second parent's ordinary path, not a corner. The rule
   the entry gave still holds: never route the first agreement through `propose`.
 
-- **`storage.rules` has never been deployed past its July 2026 state, and that is why attaching a
+- **The owner reports `storage.rules` deployed as of 27 October 2026** (security audit); a pet or
+  medical photo upload that still fails is a new defect, not this entry. Kept for the history:
+  **`storage.rules` had not been deployed past its July 2026 state, and that is why attaching a
   photo to a pet fails** — and why the MON-23 vault and chat attachments (item 31) and every
   record photo since L-4 (Legal item 8) cannot upload anything live yet. The file in this repo
   covers `receipts/`, `event_images/`, `medical_photos/` and `pet_photos/` under family-keyed

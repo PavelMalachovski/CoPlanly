@@ -631,6 +631,19 @@ describe('deleteAccountDataImpl', () => {
     assert.deepStrictEqual(db._store.ai_usage.map((d) => d.id), [BOB]);
   });
 
+  it('deletes the count of wrong invitation codes and only the departing parent\'s', async () => {
+    const seed = family();
+    seed.redeem_attempts = [
+      {id: ALICE, windowStartMillis: 1, failures: 3},
+      {id: BOB, windowStartMillis: 1, failures: 1},
+    ];
+    const db = fakeDb(seed);
+
+    await myFunctions.deleteAccountDataImpl(db, ALICE);
+
+    assert.deepStrictEqual(db._store.redeem_attempts.map((d) => d.id), [BOB]);
+  });
+
   it('leaves every record of a family the departing parent was never in', async () => {
     // Zuzana co-parents with Igor (family A) and with Carol (family B); Carol is also a guest of
     // Igor's child. Carol deletes her account. Family A loses nothing — not a schedule, a plan, a

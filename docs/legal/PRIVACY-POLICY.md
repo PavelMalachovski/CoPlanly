@@ -271,7 +271,9 @@ stays there.
 
 - **A push notification token**, so we can notify you about changes your co-parent makes. A
   notification names who made the change and what it is about (an event's title, say); one about
-  a new shared expense also carries its amount and your share of it.
+  a new shared expense also carries its amount and your share of it, and one about a new chat
+  message carries the first 120 characters of that message, which Google's Firebase Cloud
+  Messaging delivers to the phone.
 - **Crash reports** (Firebase Crashlytics) and **usage analytics** (Firebase Analytics) in
   release builds. These carry no message content, no event titles and no records about your
   child. They record which screens are opened and which actions succeed or fail, with your
@@ -280,6 +282,11 @@ stays there.
   Both are **off until you agree** on the screen shown before sign-in, and you can change your
   answer at any time in Settings → App. **Legal basis:** your consent (Art. 6(1)(a)). Analytics
   data is kept for 2 months and crash reports for 90 days.
+- **The invitation codes' limit.** When you enter an invitation code that does not exist, our
+  server counts it against your account, so nobody can try codes until one fits somebody's
+  family. It keeps a time and a number, under your account, and after ten wrong codes in an hour
+  it refuses codes for the rest of that hour. **Legal basis:** our legitimate interest in keeping
+  families' data safe (Art. 6(1)(f)).
 - **The verification page's rate limit.** When somebody checks an export on the verification
   page, our server uses their IP address to limit how many checks one connection can make. The
   address is held in the server's memory for at most ten minutes and is never written to our
@@ -469,6 +476,7 @@ daily on our servers, not by hand.
 | Server logs (which account called which function, and errors — never names, messages or files) | **30 days** |
 | What writing help sends and writes | **Not stored by us**; see "Writing help (AI)" for Google's side |
 | The daily count of writing-help requests (a date and a number) | Until you delete your account |
+| How many wrong invitation codes your account entered in the last hour (a time and a number) | Replaced by the next hour's count; deleted with your account |
 | Emails you send us about your privacy rights, or to report a message | **3 years** after we close the request |
 
 An export's receipt outlives your account on purpose: a file you or your co-parent already handed
@@ -507,7 +515,8 @@ within which a claim arising from the family's affairs can generally still be br
 - deletes every read-only calendar link into your families, whichever of you created it;
 - unlinks the two of you, so their access ends immediately;
 - deletes the fingerprints of your Google Calendar authorisations, if you connected one, and
-  any notifications still queued for you, and the daily count of your writing-help requests;
+  any notifications still queued for you, the daily count of your writing-help requests and
+  the count of wrong invitation codes you entered;
 - removes your account and your family from the receipts of exports you or your co-parent made.
   The fingerprint, period, format, size and registration time stay, so that an export already
   handed to a lawyer or a court can still be verified — but nothing left in a receipt identifies

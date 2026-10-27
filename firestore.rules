@@ -2185,6 +2185,25 @@ service cloud.firestore {
              request.auth.token.get('email', null) != null;
     }
 
+    // The longest an invitation code may live: eight days, in millis. See the create rule.
+    function invitationMaxMillis() {
+      return 8 * 24 * 60 * 60 * 1000;
+    }
+
+    // What an invitation says about its sender is the sender's own (security audit, October
+    // 2026). `fromUserEmail` is what the recipient's incoming-invite card shows beside the name
+    // and accepts on, so a free-text one let a stranger who knew the victim's address send an
+    // invitation "from" the ex's email; it must be the caller's own sign-in address, or blank.
+    // `fromUserName` stays the sender's choice — `users/{uid}.name` is too — and is only bounded
+    // (256: the app falls back to the address when there is no name).
+    function invitationSenderTruthful(data) {
+      return (!data.keys().hasAny(['fromUserEmail']) ||
+              data.fromUserEmail == '' ||
+              data.fromUserEmail == request.auth.token.get('email', '')) &&
+             (!data.keys().hasAny(['fromUserName']) ||
+              (data.fromUserName is string && data.fromUserName.size() <= 256));
+    }
+
     match /invitations/{invitationId} {
       allow read: if isAuthenticated() && (
         resource.data.fromUserId == request.auth.uid ||
@@ -2203,6 +2222,11 @@ service cloud.firestore {
                       // six-character code that never expires is one a brute force eventually finds.
                       request.resource.data.expiresAt is number &&
                       request.resource.data.expiresAt > request.time.toMillis() &&
+                      // And not far in the future (security audit, October 2026): the app's
+                      // longest code lives seven days, and a code that lives a year is a year of
+                      // guesses. Eight days leaves a day for a phone whose clock runs ahead.
+                      request.resource.data.expiresAt <= request.time.toMillis() + invitationMaxMillis() &&
+                      invitationSenderTruthful(request.resource.data) &&
                       validInvitationKind(request.resource.data);
 
       // The inviter may withdraw their own invite (status -> cancelled); the
