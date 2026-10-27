@@ -229,11 +229,14 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                     }
                 )
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(LEGEND_SWATCH)
-                        .border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
-                )
+                // The ring the grid draws round a marked day, in a day-cell swatch like the rest.
+                Box(modifier = Modifier.size(LEGEND_SWATCH), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(LEGEND_SWATCH.height)
+                            .border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
+                    )
+                }
             }
         }
     }

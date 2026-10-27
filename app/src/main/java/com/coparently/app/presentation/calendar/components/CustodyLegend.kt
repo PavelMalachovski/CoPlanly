@@ -2,13 +2,13 @@ package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.presentation.common.ParentNames
@@ -27,8 +28,11 @@ import com.coparently.app.presentation.theme.Spacing
 /** The two parent slots, in the order a legend names them. */
 internal val LEGEND_PARENT_SLOTS = listOf("mom", "dad")
 
-/** A legend swatch: big enough to read the colour, small enough to sit beside a label. */
-internal val LEGEND_SWATCH = 12.dp
+/**
+ * A legend swatch: a small day cell, so the mark in it reads as the grid's own (UX audit M9). At a
+ * 12 dp circle the handover diagonal was a pink dot, the same as one parent's.
+ */
+internal val LEGEND_SWATCH = DpSize(20.dp, 14.dp)
 
 /**
  * What the calendar's colours and marks mean, in one row over the grid (new-user review, October
@@ -106,13 +110,13 @@ internal fun CustodyLegend(
     }
 }
 
-/** A round swatch of [slot]'s day wash, over the surface it is drawn on in the grid. */
+/** A day cell washed in [slot]'s colour, over the surface it is drawn on in the grid. */
 @Composable
 internal fun ParentSwatch(slot: String) {
     Box(
         modifier = Modifier
             .size(LEGEND_SWATCH)
-            .clip(CircleShape)
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(MaterialTheme.colorScheme.surface)
             .background(ParentColors.container(slot, alpha = ParentColors.custodyTintAlpha))
     )
@@ -125,7 +129,11 @@ internal fun LegendEntry(label: String, swatch: @Composable () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.XS),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.clearAndSetSemantics { }) { swatch() }
+        Box(
+            modifier = Modifier
+                .clearAndSetSemantics { }
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.extraSmall)
+        ) { swatch() }
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,

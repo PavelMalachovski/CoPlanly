@@ -178,6 +178,19 @@ class DayCellFillsTest {
     }
 
     @Test
+    fun `the week's hour grid leaves the custody wash to the band and keeps the rest`() {
+        // UX audit H2: a column of one parent's tint drowned the week's narrow event blocks.
+        assertEquals(
+            DayCellFill(DayCellBase.WEEKEND, DayCellOverlay.NONE),
+            DayCellFills.weekHourCell(isWeekend = true, isToday = false, custody = "mom", custodyWash = false)
+        )
+        assertEquals(
+            DayCellFill(DayCellBase.SURFACE, DayCellOverlay.TODAY),
+            DayCellFills.weekHourCell(isWeekend = false, isToday = true, custody = "dad", custodyWash = false)
+        )
+    }
+
+    @Test
     fun `today tints a weekend hour cell over the grey base`() {
         assertEquals(
             DayCellFill(DayCellBase.WEEKEND, DayCellOverlay.TODAY),
