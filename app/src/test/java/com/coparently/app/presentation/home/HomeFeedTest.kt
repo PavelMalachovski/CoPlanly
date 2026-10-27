@@ -4,6 +4,7 @@ import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.model.ChangeRequest
+import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import org.junit.Test
 import java.time.LocalDate
@@ -181,5 +182,20 @@ class HomeFeedTest {
         )
 
         assertEquals(emptyList(), HomeFeed.items(emptyList(), emptyList(), listOf(unanswered), partner, maxItems = 5))
+    }
+
+    @Test
+    fun `a change request in the feed carries where it stands`() {
+        // UX audit M2: an answered request kept its "Review" button on Home.
+        val pending = request("r1", from = partner, to = me, createdAt = t0)
+        val accepted = request("r2", from = partner, to = me, createdAt = t0.plusHours(1))
+            .copy(status = ChangeRequestStatus.ACCEPTED)
+
+        val items = HomeFeed.items(emptyList(), listOf(pending, accepted), emptyList(), partner, maxItems = 5)
+
+        assertEquals(
+            mapOf("cr_r1" to ChangeRequestStatus.PENDING, "cr_r2" to ChangeRequestStatus.ACCEPTED),
+            items.associate { it.id to it.requestStatus }
+        )
     }
 }

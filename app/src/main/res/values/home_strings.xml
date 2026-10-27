@@ -56,6 +56,9 @@
     <string name="home_activity_pickup_confirmed">Confirmed pickup for %1$s</string>
     <string name="home_activity_change_requested">Asked to change %1$s</string>
     <string name="home_activity_review">Review</string>
+    <string name="home_activity_you_accepted">You accepted</string>
+    <string name="home_activity_you_declined">You declined</string>
+    <string name="home_activity_withdrawn">Withdrawn</string>
 
     <!-- Parent identity labels. -->
     <string name="home_dialog_swap_title">Day swap</string>

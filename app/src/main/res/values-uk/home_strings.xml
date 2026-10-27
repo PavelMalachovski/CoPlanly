@@ -48,6 +48,9 @@
     <string name="home_activity_pickup_confirmed">Підтверджено, що забрали: %1$s</string>
     <string name="home_activity_change_requested">Запит на зміну: %1$s</string>
     <string name="home_activity_review">Переглянути</string>
+    <string name="home_activity_you_accepted">Ви прийняли</string>
+    <string name="home_activity_you_declined">Ви відхилили</string>
+    <string name="home_activity_withdrawn">Відкликано</string>
 
     <string name="home_dialog_swap_title">Обмін днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "р.", and a sentence ending in

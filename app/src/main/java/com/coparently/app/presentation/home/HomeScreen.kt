@@ -85,6 +85,7 @@ import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.home.WeekEntry
+import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.swapDatesText
@@ -1073,13 +1074,20 @@ private fun ActivityGroup(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (item.isChangeRequest) {
-                    PillChip(
+                // "Review" only while the request still waits on this parent; once answered or
+                // withdrawn the row says how it ended instead (UX audit M2: it kept "Review" after
+                // the History already said "Accepted").
+                when (item.requestStatus) {
+                    ChangeRequestStatus.PENDING -> PillChip(
                         label = stringResource(R.string.home_activity_review),
                         container = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         onClick = onOpenChangeRequests
                     )
+                    ChangeRequestStatus.ACCEPTED -> OutcomeChip(R.string.home_activity_you_accepted)
+                    ChangeRequestStatus.DECLINED -> OutcomeChip(R.string.home_activity_you_declined)
+                    ChangeRequestStatus.CANCELLED -> OutcomeChip(R.string.home_activity_withdrawn)
+                    null -> Unit
                 }
             }
             Divider()
@@ -1090,6 +1098,12 @@ private fun ActivityGroup(
             trailing = { HomeChevron() }
         )
     }
+}
+
+/** How a change request in the feed ended, in a neutral chip: a fact, not an action. */
+@Composable
+private fun OutcomeChip(label: Int) {
+    PillChip(label = stringResource(label), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /**
