@@ -4,7 +4,6 @@
     <!-- List screen -->
     <string name="pets_screen_title">Haustiere</string>
     <string name="pets_back">Zurück</string>
-    <string name="pets_sync">Synchronisieren</string>
     <string name="pets_add">Haustier hinzufügen</string>
     <string name="pets_group_label">Haustiere</string>
     <string name="pets_empty_state">Noch keine Haustiere</string>
@@ -62,5 +61,4 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="pets_load_failed">Die Haustiere konnten nicht geladen werden. Bitte versuche es erneut.</string>
     <string name="pets_delete_failed">Das Haustier konnte nicht gelöscht werden. Bitte versuche es erneut.</string>
-    <string name="pets_sync_failed">Die Haustiere konnten nicht synchronisiert werden. Bitte versuche es erneut.</string>
 </resources>

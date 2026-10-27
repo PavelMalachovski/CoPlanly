@@ -24,12 +24,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -101,7 +105,7 @@ fun ProfessionalsScreen(
             if (myGrants.isNotEmpty()) {
                 MyAccessSection(myGrants, viewerUid, onOpenCalendar, onOpenPlan)
             }
-            RedeemSection(redeem, viewModel::updateCode, viewModel::redeemCode)
+            RedeemSection(redeem, myGrants.isNotEmpty(), viewModel::updateCode, viewModel::redeemCode)
         }
     }
 
@@ -221,13 +225,29 @@ private fun MyAccessSection(
     }
 }
 
-/** "I have a professional code": one field and one button, reaching the professional callable only. */
+/**
+ * "I have a professional code": one field and one button, reaching the professional callable only.
+ *
+ * Behind a link until it is asked for (UX audit L3): a parent, who is nearly everybody reading this
+ * screen, never redeems one, and an open field under their family's grants read as a step they had
+ * missed. It stands open for a professional who already reads a family, and while a code is typed or
+ * its answer is shown.
+ *
+ * @param isProfessional Whether this account already reads a family as a professional.
+ */
 @Composable
 private fun RedeemSection(
     state: ProfessionalRedeemState,
+    isProfessional: Boolean,
     onCodeChange: (String) -> Unit,
     onRedeem: () -> Unit
 ) {
+    var asked by rememberSaveable { mutableStateOf(false) }
+    val open = asked || isProfessional || state.code.isNotEmpty() || state.errorRes != null || state.accepted
+    if (!open) {
+        TextButton(onClick = { asked = true }) { Text(stringResource(R.string.professional_redeem_title)) }
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         GroupLabel(stringResource(R.string.professional_redeem_title))
         OutlinedTextField(

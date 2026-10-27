@@ -4,7 +4,6 @@
     <!-- List screen -->
     <string name="pets_screen_title">Mazlíčci</string>
     <string name="pets_back">Zpět</string>
-    <string name="pets_sync">Synchronizovat</string>
     <string name="pets_add">Přidat mazlíčka</string>
     <string name="pets_group_label">Mazlíčci</string>
     <string name="pets_empty_state">Zatím žádní mazlíčci</string>
@@ -62,5 +61,4 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="pets_load_failed">Mazlíčky se nepodařilo načíst. Zkuste to prosím znovu.</string>
     <string name="pets_delete_failed">Mazlíčka se nepodařilo smazat. Zkuste to prosím znovu.</string>
-    <string name="pets_sync_failed">Mazlíčky se nepodařilo synchronizovat. Zkuste to prosím znovu.</string>
 </resources>
