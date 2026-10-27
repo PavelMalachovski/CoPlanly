@@ -111,7 +111,8 @@ class ChatAttachmentOutbox @Inject constructor(
         ) { fraction -> _progress.update { it + (messageId to fraction) } }
     }
 
-    private companion object {
+    internal companion object {
+        /** Also cleared by `DeviceTraces`. */
         const val OUTBOX_DIRECTORY = "chat_outbox"
     }
 }

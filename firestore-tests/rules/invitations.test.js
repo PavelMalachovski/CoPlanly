@@ -35,7 +35,8 @@ function inviteDoc(overrides) {
     toEmail: BOB_EMAIL,
     status: 'pending',
     createdAt: 1754000000000,
-    expiresAt: 4102444800000,
+    // A day ahead, as the app writes it: the rules refuse an expiry more than eight days out.
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
     acceptedBy: null,
   }, overrides);
 }
@@ -100,6 +101,45 @@ describe('Part 1d: invitations', () => {
     it('denies an expiry already in the past', async () => {
       const db = asUser(env, ALICE, ALICE_EMAIL);
       await assertFails(db.doc('invitations/invite-1').set(inviteDoc({expiresAt: 1754600000000})));
+    });
+
+    it('denies an expiry more than eight days out, which would keep a code guessable for a year', async () => {
+      const db = asUser(env, ALICE, ALICE_EMAIL);
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({expiresAt: 4102444800000})));
+      await assertFails(db.doc('invitations/invite-1').set(
+          inviteDoc({expiresAt: Date.now() + 9 * 24 * 60 * 60 * 1000})));
+    });
+
+    it('allows the seven days the app gives a guest, friend or e-mail invitation', async () => {
+      const db = asUser(env, ALICE, ALICE_EMAIL);
+      await assertSucceeds(db.doc('invitations/invite-1').set(
+          inviteDoc({expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000})));
+    });
+
+    it('denies an invitation claiming another sender address', async () => {
+      // A stranger who knows Bob's address sends him an invitation "from" Carol's e-mail,
+      // which his incoming-invite card would show beside an Accept button.
+      const db = asUser(env, ALICE, ALICE_EMAIL);
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({fromUserEmail: CAROL_EMAIL})));
+    });
+
+    it('denies a sender address when the account has none', async () => {
+      const db = env.authenticatedContext(ALICE, {}).firestore();
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({fromUserEmail: CAROL_EMAIL, toEmail: ''})));
+    });
+
+    it('allows a blank sender address, and the sender\'s own unverified one', async () => {
+      const unverified = env.authenticatedContext(ALICE, {email: ALICE_EMAIL}).firestore();
+      await assertSucceeds(unverified.doc('invitations/invite-1').set(inviteDoc({toEmail: ''})));
+      const noEmail = env.authenticatedContext(ALICE, {}).firestore();
+      await assertSucceeds(noEmail.doc('invitations/invite-2').set(
+          inviteDoc({id: 'invite-2', fromUserEmail: '', toEmail: ''})));
+    });
+
+    it('denies a sender name longer than any profile name or address', async () => {
+      const db = asUser(env, ALICE, ALICE_EMAIL);
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({fromUserName: 'x'.repeat(257)})));
+      await assertFails(db.doc('invitations/invite-1').set(inviteDoc({fromUserName: 42})));
     });
 
     it('denies a document missing a required key', async () => {

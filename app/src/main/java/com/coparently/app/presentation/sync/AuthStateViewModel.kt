@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.school.SchoolConnectionStore
+import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.onboarding.OnboardingState
@@ -42,7 +43,8 @@ class AuthStateViewModel @Inject constructor(
     private val fcmService: FcmService,
     private val schoolConnections: SchoolConnectionStore,
     private val reminderScheduler: ReminderScheduler,
-    private val requestClockScheduler: RequestClockScheduler
+    private val requestClockScheduler: RequestClockScheduler,
+    private val deviceTraces: DeviceTraces
 ) : ViewModel() {
 
     private val _isAuthenticated = MutableStateFlow<Boolean?>(null)
@@ -150,6 +152,9 @@ class AuthStateViewModel @Inject constructor(
             // The request clocks' steps (phase 3a) too: a reminder or an end left armed would act
             // for this account after it signed out. The next sync re-arms them when it signs in.
             requestClockScheduler.cancelAll()
+            // The plaintext copies of the account's files (a child's medical photos, vault
+            // documents, the last export) and its notifications: Room is kept, these are not.
+            deviceTraces.clearAfterSignOut()
             firebaseAuthService.signOutCompletely()
             refreshAuthState()
         }

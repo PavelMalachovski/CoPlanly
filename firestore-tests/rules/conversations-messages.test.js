@@ -262,6 +262,31 @@ describe('Part 1d: messages', () => {
     })));
   });
 
+  it('accepts a message timed now, or written offline days ago and sent now', async () => {
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertSucceeds(db.doc('messages/msg-1').set(messageDoc({timestamp: Date.now()})));
+    await assertSucceeds(db.doc('messages/msg-2').set(
+        messageDoc({id: 'msg-2', timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000})));
+  });
+
+  it('refuses a message backdated by more than thirty days, or dated ahead', async () => {
+    // The export prints the sender's time in date order: a message posted today "a month ago"
+    // would sit in the record beside what the other parent wrote then.
+    const db = env.authenticatedContext(ALICE).firestore();
+    await assertFails(db.doc('messages/msg-1').set(
+        messageDoc({timestamp: Date.now() - 31 * 24 * 60 * 60 * 1000})));
+    await assertFails(db.doc('messages/msg-1').set(
+        messageDoc({timestamp: Date.now() + 60 * 60 * 1000})));
+  });
+
+  it('still accepts a retried send of a message that already landed', async () => {
+    // The outbox re-sends with `set()` when it never heard back; an identical write is no change.
+    const db = env.authenticatedContext(ALICE).firestore();
+    const doc = messageDoc({timestamp: Date.now()});
+    await assertSucceeds(db.doc('messages/msg-1').set(doc));
+    await assertSucceeds(db.doc('messages/msg-1').set(doc));
+  });
+
   it('denies sending once the pairing behind the thread has ended', async () => {
     // Unpair keeps the thread for its history; it must not keep the writing. An ex-partner
     // who could still post had exactly the channel the notification_queue rule closed,

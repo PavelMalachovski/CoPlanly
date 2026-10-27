@@ -168,7 +168,7 @@ only what is specific to it.
 | | |
 | --- | --- |
 | Purpose | Tell a parent something changed |
-| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026) — never message text. The sentence is written on the receiving phone |
+| Data | Push type, addressee uid, family id, record id, the sender's name and the record's title; for a new shared expense also its amount, currency and the reader's share (21 October 2026); for a chat message, the **first 120 characters of its text** (`notifyOfChatMessage`, `CHAT_MESSAGE_PREVIEW_LENGTH`), which Firebase Cloud Messaging carries to the reader's phone. Every other sentence is written on the receiving phone |
 | Legal basis | Art. 6(1)(b) |
 | Retention | Queue entries swept after **30 days** |
 | Where | `notification_queue`; FCM |
@@ -217,6 +217,16 @@ only what is specific to it.
 | Legal basis | Art. 6(1)(f) — security of the service (Recital 49) |
 | Retention | 30 days (Cloud Logging `_Default`) |
 
+### P13a. The limit on wrong invitation codes
+
+| | |
+| --- | --- |
+| Purpose | Stopping anybody from trying invitation codes until one opens a family's data |
+| Data | `redeem_attempts/{uid}`: when the current hour-long window began and how many unknown codes the account entered in it |
+| Legal basis | Art. 6(1)(f) — security of the service (Recital 49) |
+| Retention | Replaced when the next window opens; deleted with the account |
+| Where | `functions/redeem-guard.js`, run by the four redeem callables and the pairing preview; closed to every client |
+
 ### P15. AI writing help (optional, MON-12)
 
 | | |
@@ -251,11 +261,13 @@ Google's data processing terms apply as a fallback.
 
 - **Access control on the server**: `firestore.rules` and `storage.rules`, tested offline on every
   change (`firestore-tests/`); every shared record gated on its family and live pairing; closed
-  collections for receipts, feeds, OAuth fingerprints and the AI-assist quota.
+  collections for receipts, feeds, OAuth fingerprints, the AI-assist quota and the count of wrong
+  invitation codes, which stops a sweep of codes at ten an hour per account.
 - **Encryption**: TLS in transit; Google's encryption at rest; on the device, SQLCipher with a
   Keystore-wrapped key, sealed preferences, backup and device transfer disabled.
 - **Minimisation by design**: private events and the journal never leave the device; on-device OCR;
-  pushes without content; telemetry off until consent; AI writing help off until consent, capped at
+  pushes carry a type and names rather than sentences (a chat push alone carries the start of the
+  message); telemetry off until consent; AI writing help off until consent, capped at
   20 messages or a fixed list of numbers, and never stored or logged.
 - **Integrity**: immutable messages and revisions; server timestamps; SHA-256 on every shared file
   and export.

@@ -80,6 +80,9 @@ const MAX_INSTANCES = 10;
  */
 const GENERATED_BY = 'one of the family\'s parents';
 
+/** The wording for a receipt registered without a live family — see [reserveImpl]. */
+const GENERATED_BY_ACCOUNT = 'a CoPlanly account';
+
 /**
  * Encodes bytes as Crockford base 32, most significant bit first, without padding.
  *
@@ -245,6 +248,13 @@ async function reserveImpl(db, uid, data, deps) {
   if (!FORMATS.includes(input.format)) {
     throw new ReceiptError('invalid-argument', 'bad-format', 'format must be pdf or csv');
   }
+  // Whether the page may say "made by one of the family's parents" (security audit, October
+  // 2026). The id string alone proves only that it contains the caller's uid — any account can
+  // write `me__anyone`, or send no family at all — so the claim needs the family document, which
+  // exists while the pair is linked. A receipt without one is still a receipt; it is worded as
+  // registered by a CoPlanly account.
+  const familyBound = familyId !== '' &&
+    (await db.collection('families').doc(familyId).get()).exists;
   // Collisions at 80 bits are not a practical concern; `create` refuses one anyway, and a retry
   // with a fresh id is cheaper than reasoning about it.
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -254,6 +264,7 @@ async function reserveImpl(db, uid, data, deps) {
         state: 'reserved',
         generatorUid: uid,
         familyId,
+        familyBound,
         fromDate: input.fromDate,
         toDate: input.toDate,
         format: input.format,
@@ -315,6 +326,14 @@ async function registerImpl(db, uid, data, deps) {
     if (now.toMillis() - receipt.reservedAt.toMillis() > RESERVATION_TTL_MS) {
       throw new ReceiptError('failed-precondition', 'reservation-expired', 'The reservation has expired');
     }
+    // One receipt per file (security audit, October 2026). Every genuine export prints its own
+    // record ID, so two exports never share bytes; a second registration of a hash is somebody
+    // holding a copy of the file and filing it under an ID of their own, which made a lookup by
+    // the file answer with their later time and period instead of the original's.
+    const sameFile = await tx.get(db.collection(RECEIPTS).where('sha256', '==', input.sha256).limit(1));
+    if (sameFile.docs.some((d) => d.id !== recordId)) {
+      throw new ReceiptError('already-exists', 'hash-registered', 'This file is already registered');
+    }
     tx.update(ref, {state: 'registered', sha256: input.sha256, byteLength, recordedAt: now});
     return {recordId, recordedAtMillis: now.toMillis()};
   });
@@ -337,7 +356,9 @@ function publicView(recordId, receipt) {
     toDate: receipt.toDate,
     format: receipt.format,
     byteLength: receipt.byteLength,
-    generatedBy: GENERATED_BY,
+    // A receipt written before `familyBound` existed made the family claim already; keep it.
+    familyBound: receipt.familyBound !== false,
+    generatedBy: receipt.familyBound === false ? GENERATED_BY_ACCOUNT : GENERATED_BY,
   };
 }
 
@@ -359,12 +380,16 @@ async function verifyImpl(db, data) {
     if (!isSha256Hex(sha256)) {
       throw new ReceiptError('invalid-argument', 'bad-sha256', 'sha256 must be 64 hex characters');
     }
+    // Registration refuses a second receipt for a hash, but receipts filed before it did may
+    // still share one: answer with the earliest, which is the original.
     const snap = await db.collection(RECEIPTS)
         .where('sha256', '==', sha256)
-        .limit(1)
+        .limit(10)
         .get();
-    const doc = snap.docs.find((d) => d.data().state === 'registered');
-    return doc ? publicView(doc.id, doc.data()) : {found: false};
+    const earliest = snap.docs
+        .filter((d) => d.data().state === 'registered' && d.data().recordedAt)
+        .sort((a, b) => a.data().recordedAt.toMillis() - b.data().recordedAt.toMillis())[0];
+    return earliest ? publicView(earliest.id, earliest.data()) : {found: false};
   }
   const recordId = normalizeRecordId(input.recordId);
   if (!recordId) {
@@ -554,6 +579,7 @@ module.exports = {
   RATE_WINDOW_MS,
   MAX_INSTANCES,
   GENERATED_BY,
+  GENERATED_BY_ACCOUNT,
   ReceiptError,
   crockford,
   newRecordId,

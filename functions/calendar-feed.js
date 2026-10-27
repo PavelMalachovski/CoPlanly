@@ -543,6 +543,9 @@ function familyTag(familyId) {
   return feedTokenHash(`family:${familyId}`).slice(0, 16);
 }
 
+/** The event ids [eventLines] serves: what the app writes, and nothing a line break could hide in. */
+const EVENT_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 /**
  * The VEVENT lines for one stored event, or `[]` when it must not or cannot be served.
  *
@@ -563,7 +566,13 @@ function eventLines(doc, ctx) {
   if (doc.familyId !== ctx.familyId || !ctx.members.includes(doc.createdByFirebaseUid)) return [];
   const audience = Array.isArray(doc.sharedWith) ? doc.sharedWith : [];
   if (doc.createdByFirebaseUid !== ctx.ownerUid && !audience.includes(ctx.ownerUid)) return [];
-  if (typeof doc.id !== 'string' || !doc.id) return [];
+  // Waiting for an answer, or declined: the app shows neither (`CalendarVisibility`), so a
+  // subscribed calendar must not either (security audit, October 2026).
+  if (doc.acceptance === 'PENDING' || doc.acceptance === 'DECLINED') return [];
+  // `id` goes into a UID line unescaped, and nothing in the rules shapes it: a co-parent who wrote
+  // a CRLF there could add lines — a link, an alarm, a whole event — to the other parent's
+  // calendar. Every id the app writes is a UUID or `school-<hex>`; anything else is not served.
+  if (typeof doc.id !== 'string' || !EVENT_ID.test(doc.id)) return [];
 
   const start = icsLocalDateTime(doc.startDateTime);
   if (!start) return [];

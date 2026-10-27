@@ -89,6 +89,31 @@ function writeKey(doc) {
 }
 
 /**
+ * The fields a dispute about an event is about, compared when two writes share a write key.
+ *
+ * The write key alone was the whole comparison (security audit, October 2026), and nothing pins
+ * `updatedAt`: an edit that changed the time but wrote the old `updatedAt` looked "unchanged" and
+ * left no revision at all, and a phone revision carrying the right key over invented content made
+ * the server stand down. So a write is the same write only when these match too. Deliberately
+ * not the audience, the family, the slot or the answer: backfills, a slot re-stamp and the
+ * server's own sweeps rewrite those without a parent's edit, and a revision for each would bury
+ * the record in noise.
+ */
+const CONTENT_FIELDS = ['title', 'description', 'location', 'startDateTime', 'endDateTime'];
+
+/**
+ * The content of an event document as one comparable string — see [CONTENT_FIELDS].
+ *
+ * @param {?Object} doc An event document, or a revision's embedded `event`.
+ * @return {string} The fields, each as a string ('' when absent).
+ */
+function contentKey(doc) {
+  const d = doc && typeof doc === 'object' ? doc : {};
+  return JSON.stringify(CONTENT_FIELDS.map((field) =>
+    d[field] === undefined || d[field] === null ? '' : String(d[field])));
+}
+
+/**
  * Who the saved document says made this write, and which field says so.
  *
  * @param {!Object} after The event document after the write.
@@ -145,7 +170,7 @@ function decide(before, after) {
   if (key === null) {
     return {skip: 'undated'};
   }
-  if (before && writeKey(before) === key) {
+  if (before && writeKey(before) === key && contentKey(before) === contentKey(after)) {
     return {skip: 'unchanged'};
   }
   // A document that was absent or a tombstone and is now live was (re-)created — an Undo is a
@@ -169,7 +194,7 @@ function decide(before, after) {
     // Readable by nobody: the revision rule admits only members of its own audience.
     return {skip: 'noAudience'};
   }
-  return {kind, key, editor, audience};
+  return {kind, key, content: contentKey(after), editor, audience};
 }
 
 /**
@@ -189,18 +214,23 @@ function serverRevisionId(eventId, updateTime, key) {
 }
 
 /**
- * Whether a phone has already recorded a revision of the write [key] names.
+ * Whether a phone has already recorded a revision of the write [key] and [content] name.
+ *
+ * Both must match: a phone revision of the same key over other content is not this write, so the
+ * server records what the document actually holds (see [CONTENT_FIELDS]).
  *
  * @param {FirebaseFirestore.Firestore} db Firestore instance.
  * @param {string} eventId The event.
  * @param {string} key The write key.
+ * @param {string} content The written document's [contentKey].
  * @return {Promise<boolean>} True when a client revision of this write exists.
  */
-async function clientRevisionExists(db, eventId, key) {
+async function clientRevisionExists(db, eventId, key, content) {
   const snap = await db.collection(VERSIONS).where('eventId', '==', eventId).get();
   return snap.docs.some((doc) => {
     const data = doc.data() || {};
-    return data.recordedBy !== RECORDED_BY_SERVER && writeKey(data.event) === key;
+    return data.recordedBy !== RECORDED_BY_SERVER && writeKey(data.event) === key &&
+      contentKey(data.event) === content;
   });
 }
 
@@ -221,14 +251,14 @@ async function recordServerRevisionImpl(db, write, deps) {
     return {recorded: false, reason: decision.skip};
   }
   const {eventId} = write;
-  if (await clientRevisionExists(db, eventId, decision.key)) {
+  if (await clientRevisionExists(db, eventId, decision.key, decision.content)) {
     return {recorded: false, reason: 'clientRecorded'};
   }
   const graceMs = deps.graceMs === undefined ? CLIENT_GRACE_MS : deps.graceMs;
   if (graceMs > 0) {
     const sleep = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     await sleep(graceMs);
-    if (await clientRevisionExists(db, eventId, decision.key)) {
+    if (await clientRevisionExists(db, eventId, decision.key, decision.content)) {
       return {recorded: false, reason: 'clientRecorded'};
     }
   }
@@ -263,6 +293,8 @@ module.exports = {
   RECORDED_BY_SERVER,
   SERVER_ID_PREFIX,
   CLIENT_GRACE_MS,
+  CONTENT_FIELDS,
+  contentKey,
   writeKey,
   decide,
   serverRevisionId,

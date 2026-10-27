@@ -348,7 +348,9 @@ stays there.</p>
 <ul>
 <li><strong>A push notification token</strong>, so we can notify you about changes your co-parent makes. A
 notification names who made the change and what it is about (an event&#39;s title, say); one about
-a new shared expense also carries its amount and your share of it.</li>
+a new shared expense also carries its amount and your share of it, and one about a new chat
+message carries the first 120 characters of that message, which Google&#39;s Firebase Cloud
+Messaging delivers to the phone.</li>
 <li><strong>Crash reports</strong> (Firebase Crashlytics) and <strong>usage analytics</strong> (Firebase Analytics) in
 release builds. These carry no message content, no event titles and no records about your
 child. They record which screens are opened and which actions succeed or fail, with your
@@ -357,6 +359,11 @@ name, email or account. That makes them pseudonymous, not anonymous, which is wh
 Both are <strong>off until you agree</strong> on the screen shown before sign-in, and you can change your
 answer at any time in Settings → App. <strong>Legal basis:</strong> your consent (Art. 6(1)(a)). Analytics
 data is kept for 2 months and crash reports for 90 days.</li>
+<li><strong>The invitation codes&#39; limit.</strong> When you enter an invitation code that does not exist, our
+server counts it against your account, so nobody can try codes until one fits somebody&#39;s
+family. It keeps a time and a number, under your account, and after ten wrong codes in an hour
+it refuses codes for the rest of that hour. <strong>Legal basis:</strong> our legitimate interest in keeping
+families&#39; data safe (Art. 6(1)(f)).</li>
 <li><strong>The verification page&#39;s rate limit.</strong> When somebody checks an export on the verification
 page, our server uses their IP address to limit how many checks one connection can make. The
 address is held in the server&#39;s memory for at most ten minutes and is never written to our
@@ -638,6 +645,10 @@ daily on our servers, not by hand.</p>
 <td>Until you delete your account</td>
 </tr>
 <tr>
+<td>How many wrong invitation codes your account entered in the last hour (a time and a number)</td>
+<td>Replaced by the next hour&#39;s count; deleted with your account</td>
+</tr>
+<tr>
 <td>Emails you send us about your privacy rights, or to report a message</td>
 <td><strong>3 years</strong> after we close the request</td>
 </tr>
@@ -676,7 +687,8 @@ once linked;</li>
 <li>deletes every read-only calendar link into your families, whichever of you created it;</li>
 <li>unlinks the two of you, so their access ends immediately;</li>
 <li>deletes the fingerprints of your Google Calendar authorisations, if you connected one, and
-any notifications still queued for you, and the daily count of your writing-help requests;</li>
+any notifications still queued for you, the daily count of your writing-help requests and
+the count of wrong invitation codes you entered;</li>
 <li>removes your account and your family from the receipts of exports you or your co-parent made.
 The fingerprint, period, format, size and registration time stay, so that an export already
 handed to a lawyer or a court can still be verified — but nothing left in a receipt identifies

@@ -46,6 +46,11 @@ concurrency:
   # a pull request skipped, and two quick merges must each get their full matrix.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The token's default for a job that names no permissions of its own: read the repository and
+# nothing else (security audit, October 2026). A job that needs more says so beside it.
+permissions:
+  contents: read
+
 jobs:
   # Decides which jobs a pull request needs, from the paths it changes. The rules live in
   # `tools/ci-changes.js`, which `invariants` tests (`tools/test/ci-changes.test.js`), so they can be

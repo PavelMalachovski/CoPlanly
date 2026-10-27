@@ -471,6 +471,33 @@ describe('calendar feed: RFC 5545 text', () => {
     assert.ok(body.includes('SUMMARY:School play\\; bring snacks\\, please'));
   });
 
+  it('never serves an event waiting for an answer, or declined, which the app hides', () => {
+    const body = build([
+      event({id: 'pending', acceptance: 'PENDING'}),
+      event({id: 'declined', acceptance: 'DECLINED', acceptedBy: BOB}),
+      event({id: 'accepted', acceptance: 'ACCEPTED', acceptedBy: BOB}),
+      event({id: 'plain', acceptance: 'NOT_REQUIRED'}),
+    ]);
+    assert.ok(!body.includes('UID:pending@'));
+    assert.ok(!body.includes('UID:declined@'));
+    assert.ok(body.includes('UID:accepted@'));
+    assert.ok(body.includes('UID:plain@'));
+  });
+
+  it('never lets an event id add lines to the calendar', () => {
+    // `id` is written unescaped into the UID line, and nothing in the rules shapes it.
+    const body = build([
+      event({id: 'x\r\nATTACH:https://evil.example/\r\nX-A:b'}),
+      event({id: 'with space'}),
+      event({id: '6f1c2b0e-8a4d-4e7b-9c1f-2a3b4c5d6e7f'}),
+      event({id: 'school-' + 'a'.repeat(32)}),
+    ]);
+    assert.ok(!body.includes('evil.example'));
+    assert.ok(!body.includes('UID:with space@'));
+    assert.ok(body.includes('UID:6f1c2b0e-8a4d-4e7b-9c1f-2a3b4c5d6e7f@coplanly.app'));
+    assert.ok(body.includes(`UID:school-${'a'.repeat(32)}@coplanly.app`));
+  });
+
   it('leaves out events wholly outside the window', () => {
     const body = build([
       event({id: 'old', startDateTime: '2025-01-01T10:00:00', endDateTime: '2025-01-01T11:00:00'}),

@@ -111,6 +111,7 @@ jobs:
       - name: Commit whatever changed
         env:
           SCREENSHOTS_OUTCOME: ${{ steps.screenshots.outcome }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -135,9 +136,11 @@ jobs:
           # The branch may have moved while this job ran (a push after the request). The files this
           # commit touches are generated, so rebasing onto the newer head is safe; without it the
           # push was refused and the job's whole run was lost.
-          git fetch origin ${{ github.ref_name }}
-          git rebase origin/${{ github.ref_name }}
-          git push origin HEAD:${{ github.ref_name }}
+          # The branch name reaches the shell through env and quotes, never `${{ }}`: git allows
+          # `$`, `(` and `;` in a name, and this step holds a token that can push.
+          git fetch origin "$BRANCH"
+          git rebase "origin/$BRANCH"
+          git push origin "HEAD:$BRANCH"
 
       - name: Upload the reports either way
         if: always()
