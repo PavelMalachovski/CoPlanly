@@ -113,7 +113,8 @@ class ExportFileWriter @Inject constructor(
         typeface = if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
     }
 
-    private companion object {
+    internal companion object {
+        /** Also cleared by `DeviceTraces`. */
         const val EXPORT_DIRECTORY = "exports"
     }
 }

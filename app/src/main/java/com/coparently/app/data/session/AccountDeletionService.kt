@@ -40,7 +40,8 @@ class AccountDeletionService @Inject constructor(
     private val encryptedPreferences: EncryptedPreferences,
     private val fcmService: FcmService,
     private val reminderScheduler: ReminderScheduler,
-    private val requestClockScheduler: RequestClockScheduler
+    private val requestClockScheduler: RequestClockScheduler,
+    private val deviceTraces: DeviceTraces
 ) {
 
     /**
@@ -85,6 +86,9 @@ class AccountDeletionService @Inject constructor(
         // Kept by `clear()` on purpose (see `PreferenceKeys.SCHOOL_CONNECTION_PREFIX`); a deleted
         // account's school tokens have no business staying on the phone.
         encryptedPreferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
+        // The plaintext copies of the account's files — a child's medical photos, vault
+        // documents, the last export — and its notifications, all outside the encrypted database.
+        deviceTraces.clearAccount()
     }
 
     private companion object {

@@ -19,10 +19,11 @@ are the ones deployed, and that only testers' data exists so far.
 **Verdict.** No finding lets a stranger read a family's records directly. The rules hold against
 every direct read and query the reviews tried, and nothing anywhere mints a download URL. Two
 findings were how a stranger could *become* a member of a family, and both are fixed in this
-change (§1). What remains is mostly the integrity of the court record, plaintext copies on the
-phone, the lock screen, and actions only the owner can take in a console (§2–§4).
+change (§1). The second pass (§3) fixed the court-record and on-phone findings. What remains is
+low-severity hardening (§4), what a push may say (§5), and actions only the owner can take in a
+console (§2).
 
-## 1. Fixed in this change
+## 1. Fixed in the first pass (High)
 
 | # | Severity | What | Fix |
 |---|---|---|---|
@@ -33,9 +34,10 @@ phone, the lock screen, and actions only the owner can take in a console (§2–
 | F-5 | Low | `regenerate.yml` put `${{ github.ref_name }}` straight into a shell that holds a push token. Git allows `$ ( ) ;` in branch names. | The name goes through `env` and quotes. `ci.yml` now defaults the token to `contents: read`. |
 | F-6 | Medium (docs) | The privacy policy and the ROPA said pushes carry no message text. A chat push in fact carries the **first 120 characters** of the message through Firebase Cloud Messaging (`CHAT_MESSAGE_PREVIEW_LENGTH`). | Both documents now say so; `web/privacy/` is regenerated. Whether to keep the preview at all is decision D-2 below. |
 
-Verified here: `functions` mocha (578 passing) and eslint; the whole `firestore-tests` suite on
+Verified in the first pass: `functions` mocha (578 passing) and eslint; the whole `firestore-tests` suite on
 the emulators (975 passing); `check-invariants.js`; `check-e2e-coverage.js`; `tools/test`.
-**After merge, deploy:** `firebase deploy --only firestore:rules,functions`.
+**After merge, deploy:** `firebase deploy --only firestore:rules,functions,hosting` (hosting for
+`web/verify/` and `web/privacy/`).
 
 ## 2. Actions only the owner can take
 
@@ -58,51 +60,45 @@ the emulators (975 passing); `check-invariants.js`; `check-e2e-coverage.js`; `to
    `DESIGN-stickers-and-subscription.md`. Decision D-1.
 6. **Rename the `.firebaserc` alias `coparently-staging`**: it points at the production project.
 
-## 3. Open findings (not fixed here)
+## 3. Fixed in the second pass (Medium)
 
-Severity is the reviewers', checked against the code. "Device" means it needs a phone or someone
-with the unlocked phone or its files. None of these lets a stranger read a family's records.
+| What | Fix |
+|---|---|
+| **A revision could be suppressed or left out.** The server compared only the write key (`saved\|<updatedAt>`), and nothing pins `updatedAt`. An edit that kept the old stamp read as "unchanged". A phone revision carrying that key over invented content made the server stand down. | `recordServerEventRevision` also compares title, description, location, start and end (`CONTENT_FIELDS`). The editor is deliberately not compared: the app does not stamp `lastModifiedBy` reliably, so the server would record revisions under the wrong name. |
+| **Messages could be backdated.** Nothing bounded `timestamp` at create. | A numeric `timestamp` must lie between 30 days ago and 5 minutes ahead. 30 days because the outbox keeps the time an offline message was written. The server's own receipt time is the document's `createTime`: Firestore keeps it, no client can set it, and an operator can read it. Nothing is stamped on the message, because a retried `set()` of a landed message would then be refused. |
+| **A creator could forge the co-parent's answer.** `acceptance` and `acceptedBy` were open to the creator. | `answerWrittenByItsParent`: an answer that changes must name its writer, and the writer must not be the creator. The creator may still re-save the stored answer, or set the event back to PENDING to ask again. Cost: a creator's second phone that still holds an older answer than the server has will have its upload refused until it syncs. |
+| **A receipt said "one of the family's parents" for any account, and a copy could shadow the original.** | Reservation records `familyBound` (a `families/{id}` document existed). Otherwise the page reads "a CoPlanly account (not linked to a family when it was registered)" in English and Czech. A hash registers under one ID only, and a lookup by file answers with the earliest receipt. A family is deliberately not required: a parent exporting after an unpair is the case that matters most. |
+| **A parenting plan stayed writable after unpair.** | Create and update need `isLiveFamilyMember`. Reading is unchanged. |
+| **A change request could be hard-deleted.** | `allow delete: if false`. No client deletes one; a withdrawal is the `CANCELLED` status. |
+| **Calendar feed:** an unescaped `UID:${doc.id}`; PENDING and DECLINED events served; no instance cap. | The feed serves only ids matching `^[A-Za-z0-9_-]{1,128}$` (what the app writes), skips PENDING and DECLINED, and is capped at 20 instances. |
+| **Decrypted child files outlived the account on the phone.** Medical, pet, receipt and event photos, vault documents, chat attachments, captures, the last export and payment codes were all plaintext outside SQLCipher. | `data/session/DeviceTraces`. Sign-out removes the plaintext copies and cancels the notifications on screen. It keeps `files/chat_outbox`, which unsent messages in Room still need. An account switch or deletion removes the outbox too. `DeviceTracesTest` (Robolectric). |
+| The IBAN was copied without the sensitive flag. | It goes through `copySensitive`, as the invite code does. |
 
-### Court-record integrity (Medium)
+Verified here: `functions` mocha (587 passing) and eslint; `firestore-tests` (985 passing);
+`web-tests` against the emulators (41 passing). **The Kotlin changes are verified by CI only**,
+because this session has no Android SDK.
 
-The export and `web/verify/` sell the record as evidence. These let one parent bend it:
+## 4. Open findings
 
-- **A revision can be suppressed or faked.** `event-revisions.js` skips the server revision when
-  any phone revision has the same `writeKey` (`saved|<updatedAt>`). It compares neither content nor
-  editor, and the `event_versions` rule checks only `event.id`. So an edit written with the old
-  `updatedAt`, or paired with a phone revision of different content, leaves no true trace.
-  Fix: key the comparison on a content hash and require the matching revision's `editorUid` to be
-  the saved document's editor.
-- **Messages can be backdated at create.** The `messages` create rule does not bound `timestamp`.
-  Fix: `timestamp <= request.time + 5 min`, plus a server `receivedAt` the export prints.
-- **A creator can forge the co-parent's acceptance.** On the events update rule, `acceptance`,
-  `acceptedBy` and `acceptedAt` are unconstrained. Fix: an answer must be written by its
-  `acceptedBy`, who is not the creator.
-- **A receipt says "made by one of the family's parents" for any account.** `reserveExportRecordId`
-  accepts a blank or non-live family. A second registration of the same SHA-256 under another ID
-  can also shadow the first (`verifyImpl` takes `limit(1)` with no order). Fix: require a live
-  family, or word it as "registered by a CoPlanly account"; refuse a duplicate hash.
-- **A parenting plan stays writable after unpair** (`isFamilyMember`, not `isLiveFamilyMember`).
-- **A change request can be hard-deleted** by either party (`allow delete`), which erases it from
-  History on both phones.
+Severity is the reviewers', checked against the code. "Device" means it needs a phone, or somebody
+holding the unlocked phone or its files. None of these lets a stranger read a family's records.
 
-### On the phone (Medium, device)
+### On the phone (device)
 
-- **Decrypted child files sit in plaintext and survive sign-out, account switch and deletion.**
-  This covers medical, pet, receipt and event photos, vault documents and chat attachments
-  (`cache/shared_files/view`), camera captures, receipts, the last export and payment QR codes.
-  None of it is in SQLCipher, and none of `AuthStateViewModel.signOut`, `AccountSwitchGuard` or
-  `AccountDeletionService` deletes it. Fix: delete those folders on all three paths, and delete a
-  capture or receipt once it is uploaded.
-- **The lock screen shows chat text and children's names.** `PushNotifier` and `ReminderWorker`
-  set no `VISIBILITY_PRIVATE` or `setPublicVersion`. Fix: a public version ("New message",
-  "CoPlanly") for chat, child-info and reminder notifications. Decision D-2.
+- **What the lock screen shows is the system's choice, so the fix is what a push says.** The
+  review called this Medium, and its proposed fix (`VISIBILITY_PRIVATE` plus a public version)
+  changes nothing: `VISIBILITY_PRIVATE` is already Android's default. With Android's "hide
+  sensitive content" switched on, the lock screen already reads "Contents hidden". With the
+  default "show all content", the full text shows, as for every app. To keep chat text and
+  children's names off the lock screen by default, the push must not carry them. That is D-2.
 - Recents thumbnails are hidden only on API 33+ (`setRecentsScreenshotEnabled`). On API 26–32 the
   app switcher shows the last screen. `FLAG_SECURE` is deliberately off.
-- Notifications are not cancelled on sign-out. The IBAN copy skips `copySensitive`. The widget can
-  show the previous account's day for up to an hour after sign-out.
+- A camera capture or receipt photo stays in the cache until sign-out rather than until upload.
+  The widget can show the previous account's day for up to an hour after sign-out.
+- A message the outbox held for more than 30 days is now refused by the timestamp bound and stays
+  unsent.
 
-### Rules and functions (Medium / Low)
+### Rules and functions
 
 - **`child_info` guests can be written by a client.** On create, guest keys are subtracted from
   the audience before it is bounded. So any account can put a child record into other users' sync
@@ -112,9 +108,10 @@ The export and `web/verify/` sell the record as evidence. These let one parent b
   every save from a phone whose copy still holds a guest the daily sweep removed. That record
   would then never sync again. Fix it with a client change first (upload the server's `guests`
   map, not Room's), then the rule.
-- **Calendar feed:** `UID:${doc.id}` is not escaped, so a co-parent can inject iCalendar lines
-  through an event's `id` field. The feed also serves PENDING and DECLINED events, which the app
-  hides. It has no `maxInstances`, and its limiter is keyed on whatever token the caller sends.
+- The calendar feed's limiter is keyed on whatever token the caller sends (the 20-instance cap
+  bounds it now).
+- A co-parent's phone revision of a save with the true content but their own `editorUid` still
+  stands in for the server's. The content is right; the editor named may be wrong.
 - `aiAssist` puts the co-parent's profile name (up to 60 characters) into the system prompt, and
   reads the thread before the quota check. Off in release until MON-11.
 - `deleteAccount` needs only a valid ID token (no recent sign-in). It can leave `families/{id}` if
@@ -130,14 +127,16 @@ The export and `web/verify/` sell the record as evidence. These let one parent b
 - Hosting sets no CSP, `frame-ancestors` or `nosniff` except on `/pair/`.
 - Third-party actions are pinned by tag, not SHA.
 
-## 4. Decisions for the owner
+## 5. Decisions for the owner
 
 - **D-1.** Strip the tester's name and circumstances and the real addresses from `docs/`, and
   rewrite history if it matters. The repository is public.
-- **D-2.** Keep the chat text in the push, or send none and let the phone show "New message from
-  Bob"? Either way, hide it on the lock screen.
+- **D-2.** Keep the first 120 characters of a chat message in the push (they pass through
+  Firebase Cloud Messaging and show on a lock screen that shows all content), or send none and let
+  the phone write "New message from Bob"? The same question applies to a child's name in
+  `child_info_updated` and an event's title in a reminder.
 
-## 5. Checked and sound
+## 6. Checked and sound
 
 - **Firestore rules:**
   - Default deny.
