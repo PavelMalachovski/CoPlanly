@@ -34,6 +34,7 @@ import javax.inject.Singleton
  * user's data even on a run that failed and has to be retried.
  */
 @Singleton
+@Suppress("LongParameterList") // one collaborator per piece of the account this phone holds
 class AccountDeletionService @Inject constructor(
     private val functions: FirebaseFunctions,
     private val database: CoPlanlyDatabase,
