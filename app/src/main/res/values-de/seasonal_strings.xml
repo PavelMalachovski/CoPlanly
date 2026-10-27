@@ -2,7 +2,7 @@
 <!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
 <resources>
     <string name="seasonal_title">Saisonale Pläne</string>
-    <string name="seasonal_hint">Ein saisonaler Plan ersetzt das obige Muster für einen Zeitraum, etwa die Sommerferien oder Weihnachten. Jede Änderung wird einzeln gesendet; „Speichern“ unten speichert nur das Muster oben.</string>
+    <string name="seasonal_hint">Ein saisonaler Plan ersetzt den Hauptplan für einen Zeitraum, etwa die Sommerferien oder Weihnachten. Jeder wird einzeln gesendet.</string>
     <string name="seasonal_needs_base_pattern">Speichere zuerst einen Plan. Ein saisonaler Plan wird darübergelegt.</string>
     <string name="seasonal_add">Saisonalen Plan hinzufügen</string>
     <string name="seasonal_pending_theirs">%1$s hat eine Planänderung vorgeschlagen. Beantworte sie, bevor du eine weitere sendest.</string>

@@ -2,7 +2,7 @@
 <!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
 <resources>
     <string name="seasonal_title">Sezónní rozvrhy</string>
-    <string name="seasonal_hint">Sezónní rozvrh nahrazuje výše uvedený vzor v určitém období, například o letních prázdninách nebo o Vánocích. Každá změna se odesílá samostatně; tlačítko Uložit dole ukládá jen vzor výše.</string>
+    <string name="seasonal_hint">Sezónní rozvrh nahrazuje hlavní rozvrh v určitém období, například o letních prázdninách nebo o Vánocích. Každý se odesílá samostatně.</string>
     <string name="seasonal_needs_base_pattern">Nejdřív uložte rozvrh. Sezónní rozvrh se použije místo něj ve zvoleném období.</string>
     <string name="seasonal_add">Přidat sezónní rozvrh</string>
     <string name="seasonal_pending_theirs">%1$s navrhuje změnu rozvrhu. Odpovězte na ni, než pošlete další.</string>

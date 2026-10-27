@@ -81,6 +81,23 @@
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Časy styku</string>
+    <string name="custody_overview_pattern">Hlavní rozvrh</string>
+    <string name="custody_overview_pattern_summary">%1$s · od %2$s</string>
+    <string name="custody_overview_none">Žádné</string>
+    <string name="custody_overview_children_same">Všechny podle rodinného rozvrhu</string>
+    <string name="custody_overview_sent_separately">Každá část se posílá zvlášť. Dokud %1$s nesouhlasí, kalendář se nezmění.</string>
+    <plurals name="custody_overview_windows">
+        <item quantity="one">%1$d okno</item>
+        <item quantity="few">%1$d okna</item>
+        <item quantity="many">%1$d okna</item>
+        <item quantity="other">%1$d oken</item>
+    </plurals>
+    <plurals name="custody_overview_children_own">
+        <item quantity="one">%1$d dítě má vlastní rozvrh</item>
+        <item quantity="few">%1$d děti mají vlastní rozvrh</item>
+        <item quantity="many">%1$d dítěte má vlastní rozvrh</item>
+        <item quantity="other">%1$d dětí má vlastní rozvrh</item>
+    </plurals>
     <string name="custody_windows_hint">Část dne s rodičem, který ten den nemá, například každou středu 15:00–19:00. Den sám zůstává tomu, kdo ho má; čas styku se zobrazí navíc.</string>
     <string name="custody_windows_empty">Žádné časy styku.</string>
     <string name="custody_windows_add">Přidat čas styku</string>

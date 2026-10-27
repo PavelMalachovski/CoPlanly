@@ -49,6 +49,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,10 +65,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.changerequests.AnswerByOffer
 import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.custody.SeasonalLayer
+import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.ParentNames
@@ -137,19 +142,37 @@ fun CustodySetupScreen(
         }
     }
 
+    // One part of the screen at a time, opened from the overview (UX audit H3). A child's own
+    // schedule is edited in the pattern part, and an editor opened from the parenting plan goes
+    // straight to the part its answer is about.
+    val seasonalViewModel: SeasonalScheduleViewModel = hiltViewModel()
+    val layersState by seasonalViewModel.layersState.collectAsState()
+    var section by rememberCustodySection(
+        openPattern = uiState.planReference != null,
+        openSeasonal = layersState.planReference != null
+    )
+    val shown = if (childScope != null) CustodySection.PATTERN else section
+    BackHandler(enabled = childScope == null && section != null) { section = null }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = childScope?.let { stringResource(R.string.custody_child_scope_title, it.name) }
-                            ?: stringResource(R.string.custody_title),
+                        text = custodyTitle(childScope, section),
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = { if (childScope != null) viewModel.editSchedule(null) else onNavigateBack() }
+                        // Out of a child's schedule, then out of a part, then off the screen.
+                        onClick = {
+                            if (childScope != null || section != null) {
+                                section = stepBack(childScope != null, section, viewModel)
+                            } else {
+                                onNavigateBack()
+                            }
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -164,15 +187,19 @@ fun CustodySetupScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            StickyActionBar(
-                // A paired family's save is a proposal (second audit: "Save" read as done).
-                label = stringResource(
-                    if (proposes) R.string.custody_send_for_approval else R.string.custody_save_button
-                ),
-                onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
-                enabled = uiState.isValid,
-                busy = uiState.isLoading
-            )
+            // Only the parts this button sends: the seasonal ones go on their own, and the overview
+            // sends nothing (the old "the Save button below saves only the pattern above").
+            if (shown == CustodySection.PATTERN || shown == CustodySection.WINDOWS) {
+                StickyActionBar(
+                    // A paired family's save is a proposal (second audit: "Save" read as done).
+                    label = stringResource(
+                        if (proposes) R.string.custody_send_for_approval else R.string.custody_save_button
+                    ),
+                    onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
+                    enabled = uiState.isValid,
+                    busy = uiState.isLoading
+                )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -182,8 +209,6 @@ fun CustodySetupScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = dims.paddingMedium)
         ) {
-            // Opened from an agreed parenting-plan answer (MON-21): quote it above the form the
-            // parent fills in. Read-only — nothing below is filled from its words.
             childScope?.let { scope ->
                 ChildScopeHeader(
                     childName = scope.name,
@@ -195,66 +220,172 @@ fun CustodySetupScreen(
                     }
                 )
             }
-            uiState.planReference?.takeIf { childScope == null }?.let { reference ->
-                PlanReferenceCard(
-                    reference = reference,
-                    coParentName = parentNames.coParentLabel(),
-                    modifier = Modifier.padding(vertical = dims.paddingSmall)
-                )
-            }
-
-            // Preview first: the month the schedule starts in, as the calendar will draw it, above the
-            // choices that change it — below them it sat a screen down, out of sight (as onboarding).
-            createTempModel(uiState)?.let { model ->
-                SchedulePreviewMonth(
-                    model = model,
+            CustodySectionBody(
+                shown = shown,
+                state = CustodyBodyState(
+                    uiState = uiState,
                     parentNames = parentNames,
-                    description = custodyPreviewText(uiState, parentNames),
-                    modifier = Modifier.padding(vertical = dims.paddingMedium)
-                )
-            }
+                    layers = layersState.layers,
+                    children = children,
+                    childrenWithOwnSchedule = currentModel?.childOverrides.orEmpty().map { it.childId }.toSet(),
+                    proposes = proposes
+                ),
+                answerBy = AnswerByBlock(
+                    offer = rememberAnswerByOffer(answerByCap),
+                    selected = answerBy,
+                    onSelect = { answerBy = it }
+                ),
+                viewModel = viewModel,
+                seasonalViewModel = seasonalViewModel,
+                onOpen = { section = it }
+            )
 
+            Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
+        }
+    }
+}
+
+/** What [CustodySectionBody] draws from: the form, the names, the layers and the children. */
+internal data class CustodyBodyState(
+    val uiState: CustodySetupUiState,
+    val parentNames: ParentNames,
+    val layers: List<SeasonalLayer>,
+    val children: List<FamilyMember>,
+    val childrenWithOwnSchedule: Set<String>,
+    val proposes: Boolean
+)
+
+/** The deadline the co-parent is asked to answer by, while a save would be a proposal. */
+internal data class AnswerByBlock(
+    val offer: AnswerByOffer,
+    val selected: AnswerByPick,
+    val onSelect: (AnswerByPick) -> Unit
+)
+
+/**
+ * The part of the custody screen on show: the overview, or one part of it (UX audit H3). The month
+ * preview leads the overview and the pattern, where it shows what the choices below it draw.
+ */
+@Composable
+@Suppress("LongParameterList") // the part, what it draws, the deadline, its two view models, the way out
+private fun CustodySectionBody(
+    shown: CustodySection?,
+    state: CustodyBodyState,
+    answerBy: AnswerByBlock,
+    viewModel: CustodySetupViewModel,
+    seasonalViewModel: SeasonalScheduleViewModel,
+    onOpen: (CustodySection) -> Unit
+) {
+    val dims = dimensions()
+    val uiState = state.uiState
+    val parentNames = state.parentNames
+    // Opened from an agreed parenting-plan answer (MON-21): quote it above the form the parent fills
+    // in. Read-only — nothing below is filled from its words.
+    if (shown == CustodySection.PATTERN && uiState.childScope == null) {
+        uiState.planReference?.let { reference ->
+            PlanReferenceCard(
+                reference = reference,
+                coParentName = parentNames.coParentLabel(),
+                modifier = Modifier.padding(vertical = dims.paddingSmall)
+            )
+        }
+    }
+    if (shown == null || shown == CustodySection.PATTERN) {
+        createTempModel(uiState)?.let { model ->
+            SchedulePreviewMonth(
+                model = model,
+                parentNames = parentNames,
+                description = custodyPreviewText(uiState, parentNames),
+                modifier = Modifier.padding(vertical = dims.paddingMedium)
+            )
+        }
+    }
+    when (shown) {
+        null -> CustodyOverview(
+            uiState = uiState,
+            layers = state.layers,
+            childCount = state.children.count { it.ref is FamilyMemberRef.Child },
+            childrenWithOwnSchedule = state.childrenWithOwnSchedule.size,
+            coParentName = parentNames.coParentLabel().takeIf { state.proposes },
+            onOpen = onOpen
+        )
+        CustodySection.PATTERN -> {
             CustodyPatternForm(
                 uiState = uiState,
                 parentNames = parentNames,
                 actions = CustodyPatternActions.of(viewModel)
             )
-
-            // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent
-            // who does not have that day, on top of the whole days chosen above.
+            AnswerByIfProposing(state, answerBy)
+        }
+        // Contact windows (MON-6b) — for every pattern type: an afternoon with the parent who does
+        // not have that day, on top of the whole days of the pattern.
+        CustodySection.WINDOWS -> {
             ContactWindowsSection(
                 uiState = uiState,
                 parentNames = parentNames,
                 onAdd = viewModel::addContactWindows,
                 onRemove = viewModel::removeContactWindow
             )
-
-            if (proposes) {
-                AnswerByField(
-                    offer = rememberAnswerByOffer(answerByCap),
-                    selected = answerBy,
-                    onSelect = { answerBy = it },
-                    coParentName = parentNames.coParentLabel(),
-                    modifier = Modifier.padding(vertical = dims.paddingMedium)
-                )
-            }
-
-            // Seasonal schedules (MON-14) and holiday fairness (MON-20). Sent on their own, not by
-            // the Save button below, which saves only the base pattern above. Both belong to the
-            // family schedule, and so does "Different schedule for a child" (FAM-4), which appears
-            // only at two children: none of the three is shown while the editor is on one child.
-            if (childScope == null) {
-                SeasonalScheduleSection()
-                ChildSchedulesSection(
-                    children = children,
-                    childrenWithOwnSchedule = currentModel?.childOverrides.orEmpty().map { it.childId }.toSet(),
-                    onEdit = { viewModel.editSchedule(it) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(80.dp)) // Space for bottom bar
+            AnswerByIfProposing(state, answerBy)
         }
+        // Seasonal schedules (MON-14) and holiday fairness (MON-20), each change sent on its own.
+        CustodySection.SEASONAL -> SeasonalScheduleSection(seasonalViewModel)
+        CustodySection.CHILDREN -> ChildSchedulesSection(
+            children = state.children,
+            childrenWithOwnSchedule = state.childrenWithOwnSchedule,
+            onEdit = { viewModel.editSchedule(it) }
+        )
     }
+}
+
+/** The deadline block, while a save would be a proposal (phase 3a). */
+@Composable
+private fun AnswerByIfProposing(state: CustodyBodyState, answerBy: AnswerByBlock) {
+    if (!state.proposes) return
+    AnswerByField(
+        offer = answerBy.offer,
+        selected = answerBy.selected,
+        onSelect = answerBy.onSelect,
+        coParentName = state.parentNames.coParentLabel(),
+        modifier = Modifier.padding(vertical = dimensions().paddingMedium)
+    )
+}
+
+/**
+ * Which part of the custody screen is open, saved across a rotation; null is the overview. An editor
+ * opened from the parenting plan goes straight to the part its answer is about.
+ */
+@Composable
+private fun rememberCustodySection(openPattern: Boolean, openSeasonal: Boolean): MutableState<CustodySection?> {
+    val section = rememberSaveable { mutableStateOf<CustodySection?>(null) }
+    LaunchedEffect(openPattern) { if (openPattern) section.value = CustodySection.PATTERN }
+    LaunchedEffect(openSeasonal) { if (openSeasonal) section.value = CustodySection.SEASONAL }
+    return section
+}
+
+/** One step back: out of a child's own schedule first, else out of the open part. */
+private fun stepBack(
+    inChildScope: Boolean,
+    section: CustodySection?,
+    viewModel: CustodySetupViewModel
+): CustodySection? {
+    if (!inChildScope) return null
+    viewModel.editSchedule(null)
+    return section
+}
+
+/** The bar's title: the child's schedule, the open part, or the screen's own. */
+@Composable
+private fun custodyTitle(childScope: ChildScope?, section: CustodySection?): String =
+    childScope?.let { stringResource(R.string.custody_child_scope_title, it.name) }
+        ?: stringResource(section?.titleRes() ?: R.string.custody_title)
+
+/** The top bar's title while [this] part is open. */
+private fun CustodySection.titleRes(): Int = when (this) {
+    CustodySection.PATTERN -> R.string.custody_overview_pattern
+    CustodySection.WINDOWS -> R.string.custody_windows_title
+    CustodySection.SEASONAL -> R.string.seasonal_title
+    CustodySection.CHILDREN -> R.string.custody_child_schedules_title
 }
 
 /**

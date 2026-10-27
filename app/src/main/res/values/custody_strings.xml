@@ -89,6 +89,19 @@
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Contact windows</string>
+    <string name="custody_overview_pattern">Main schedule</string>
+    <string name="custody_overview_pattern_summary">%1$s · from %2$s</string>
+    <string name="custody_overview_none">None</string>
+    <string name="custody_overview_children_same">All follow the family schedule</string>
+    <string name="custody_overview_sent_separately">Each part is sent on its own. Nothing changes in the calendar until %1$s agrees.</string>
+    <plurals name="custody_overview_windows">
+        <item quantity="one">%1$d window</item>
+        <item quantity="other">%1$d windows</item>
+    </plurals>
+    <plurals name="custody_overview_children_own">
+        <item quantity="one">%1$d child has their own schedule</item>
+        <item quantity="other">%1$d children have their own schedule</item>
+    </plurals>
     <string name="custody_windows_hint">Part of a day with the parent who does not have that day, such as every Wednesday 15:00–19:00. The day itself stays with whoever has it; the window is shown on top.</string>
     <string name="custody_windows_empty">No contact windows.</string>
     <string name="custody_windows_add">Add contact window</string>

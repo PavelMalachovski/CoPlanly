@@ -2,7 +2,7 @@
 <!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
 <resources>
     <string name="seasonal_title">Seasonal schedules</string>
-    <string name="seasonal_hint">A seasonal schedule replaces the pattern above for a range of dates, such as the summer or Christmas. Each change is sent on its own; the Save button below saves only the pattern above.</string>
+    <string name="seasonal_hint">A seasonal schedule replaces the main schedule for a range of dates, such as the summer or Christmas. Each one is sent on its own.</string>
     <string name="seasonal_needs_base_pattern">Save a schedule first. A seasonal schedule is laid over it.</string>
     <string name="seasonal_add">Add a seasonal schedule</string>
     <string name="seasonal_pending_theirs">%1$s has proposed a schedule change. Answer it before sending another.</string>
