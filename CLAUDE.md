@@ -931,7 +931,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 410 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 440 images — the count the committed baselines hold).
   The window is a phone's, 393 × 851 dp, so a component taller than that at 2.0× is cut at the
   window's bottom edge (a Settings group in German, the friend comparison); the screen itself scrolls.
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
