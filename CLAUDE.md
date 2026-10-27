@@ -37,7 +37,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
 1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt`: `SectionGroup`
    (one tonal container per run of rows; call its scope's `Divider()` between rows — this line
    used to say they were inserted for you, and they are not), `SectionRow` (icon,
-   title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`, and
+   title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`,
+   `AnswerButtons` (design audit M1, item 22), `ExpandableDetails` (M10) and
    `EmptyState` (UX-9, September 2026: icon on a tonal disc, title, optional description, optional
    primary action; takes the caller's `modifier` so Scaffold padding applies, and scrolls when its
    height is bounded — every empty list renders through it, so don't add a bespoke column or a
@@ -109,15 +110,19 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    authored in dark and its palette *is* `DarkColorScheme`, so every value has a role
    (`#1F1F25` = `surfaceContainer`, `#C2C1FF` = `primary`, …). Using roles is what keeps
    light theme working on the redesigned screens.
-4. **Settings is three labelled groups** — Sync, App, Account, in that order. The Family group
+4. **Settings is five labelled groups** — Sync, App, Chat, Privacy and data, Account, in that
+   order (design audit, 27 October 2026, M6: App had grown to eleven rows; the pause before sending
+   is Chat's, telemetry, health, AI and the data sources are Privacy and data's, and My details sits
+   in Account, not on the Family tab). The Family group
    left for the Family tab (new-user review, October 2026; UX item 1): Settings is the app and the
    account, and the family is the product, so it has a tab. The parent's own colour, country and
    region sit in App, the family switcher's row in Sync. Google Calendar's actions expand from its
    row rather than stacking buttons in a card.
    **The Family tab** (`presentation/family/FamilyScreen.kt`, `FamilyViewModel`) is a hub of
-   labelled groups — Money (this month's spend and balance, which opens Expenses), Agreements,
-   Children and home, People (the unassigned-records row first), Only mine — with the stickers at
-   the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
+   labelled groups — Money (this month's spend and balance, which opens Expenses), Agreements
+   (custody and the parenting plan), Records (the month review, the export and the journal; M5),
+   Children and home, People (the unassigned-records row first, and the co-parent's details named
+   "What {name} has shared"), Only mine — with the stickers at the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
    drawing its own, and its money figures come from `home/MonthMoney`, the one computation Home's
    tile reads too.
 5. **Calendar header is one row**: title (which *is* the Month/Week/Day picker), Today,
@@ -153,9 +158,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    navigating instead: that drops the tab route, hides the bottom bar, and makes Back bounce
    off a list that immediately forwards again.
 8. **No affordance may promise a feature that doesn't exist.** The composer's `+` was
-   captioned "attach" and opened message templates; templates are now a labelled chip, and the
-   attach button came back only when attachments shipped (MON-23, item 31) — a paperclip
-   *beside* `MessageInput`, which opens a real picker and a real upload. Same rule shaped the thread
+   captioned "attach" and opened message templates. Since the design audit of 27 October 2026 (M12)
+   the `+` beside `MessageInput` is `ChatComposerMenu`, whose three entries are named: attach a file
+   (MON-23, item 31: a real picker and a real upload), request a change and the templates. The
+   thread's Settings left the composer for the top bar's overflow (`ChatOverflowMenu`). Same rule shaped the thread
    header (`ChatThreadHeader`): it shows the co-parent's initial, their name and whether
    **your own** messages left the device (derived from `Message.status`), not the mock's
    "Synced just now" — the app tracks no chat sync timestamp, so printing one would be the
@@ -432,6 +438,36 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     - **No score between the parents**: no app stickers (item 47), "more time" rather than a
       "last chance" on screen (the code keeps the name), and no total of nights on the holiday card.
     - **RU/UK say "проживание"/"проживання", never "опека"/"опіка"** (legal guardianship).
+22. **The design audit of 27 October 2026 fixed these; keep them** (H1–L8; the before/after boards
+    live on the audit's Design canvas):
+    - **A day swap's direction is decided from the reader's slot** (`DaySwapInbox.direction`, H1),
+      never from the offerer's: Home's dialog and the inbox card read the one rule, and an unknown
+      slot says "proposes swapping", never a direction it cannot know.
+    - **The reader is "you"** (H4): `ParentNames.isReader`/`labelOrYou` word every line that would
+      otherwise name the reader to themselves — Home's hero and week, the today card and widget, the
+      calendar's swap strip, expenses' rows and shares.
+    - **A parent answers through `AnswerButtons`** (`common/AnswerButtons.kt`, M1): outlined Decline,
+      filled Accept, stacked from font scale 1.3, a text "Later" under them on a dialog. Home's three
+      dialogs, every inbox card and the waiting event card use it.
+    - **The event form fits one screen** (H5): one date-and-time group (All day, Starts, Ends), Repeat
+      and Reminder as rows opening `EventOptionDialog`, the description behind "Add a description".
+      A new event starts at the next full hour.
+    - **The custody screen opens on an overview** (`CustodyOverview`, `CustodySection`, H3): one row
+      per part — pattern, contact time, seasonal, children's — each saying what it holds, and a part
+      opens in place with Back returning to the overview.
+    - **Week view's hour grid draws no custody wash** (`DayCellFills.weekHourCell(custodyWash =
+      false)`, H2): seven washed columns hid the events; Day view keeps the wash, and the header row
+      still says whose day it is. Event titles wrap to the lines their block has room for
+      (`titleLinesFor`).
+    - **Home's activity offers Review only while a request waits** (M2), and says how it ended once
+      answered; the handover hero carries no Review chip (M3).
+    - **Expenses shows one currency's summary at a time** with chips (M7), a row says how it divides
+      only when that differs from the agreement (`dividesAsAgreed`), and the analytics are bars in
+      the primary colour, never a pie (M8).
+    - **A screen's action comes before its explanation** (M10): `ExpandableDetails` folds what the
+      calendar feed and the export used to open on.
+    - **A family friend's calendar lists only days with events** (L2); children and pets carry no
+      Sync button (L1); a professional's code field opens from a link (L3).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
