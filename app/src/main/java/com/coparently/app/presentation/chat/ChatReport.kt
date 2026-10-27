@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -154,15 +155,17 @@ internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content:
 }
 
 /**
- * The thread header's overflow: "Block and stop sharing", which opens the existing unpair
- * confirmation. Blocking *is* unpairing — the rules refuse a message on a thread whose pairing
- * has ended — so there is no second mechanism. Red, and it confirms before anything happens,
- * as every destructive action does (design item 8).
+ * The thread header's overflow: Settings, when the thread is the Chat tab (UX audit M12), and
+ * "Block and stop sharing", which opens the existing unpair confirmation. Blocking *is* unpairing —
+ * the rules refuse a message on a thread whose pairing has ended — so there is no second mechanism.
+ * Red, last, and it confirms before anything happens, as every destructive action does (design
+ * item 8).
  *
- * @param onBlock Opens the unpair confirmation
+ * @param onOpenSettings Opens Settings, or null when the tab's own gear is elsewhere
+ * @param onBlock Opens the unpair confirmation, or null when there is nobody to block
  */
 @Composable
-internal fun ChatOverflowMenu(onBlock: () -> Unit) {
+internal fun ChatOverflowMenu(onOpenSettings: (() -> Unit)?, onBlock: (() -> Unit)?) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
@@ -172,25 +175,45 @@ internal fun ChatOverflowMenu(onBlock: () -> Unit) {
             )
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = stringResource(R.string.chat_block),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Block,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                },
-                onClick = {
-                    open = false
-                    onBlock()
-                }
-            )
+            onOpenSettings?.let { openSettings ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_settings)) },
+                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    onClick = {
+                        open = false
+                        openSettings()
+                    }
+                )
+            }
+            onBlock?.let { block ->
+                BlockMenuItem(
+                    onClick = {
+                        open = false
+                        block()
+                    }
+                )
+            }
         }
     }
+}
+
+/** The overflow's red "Block and stop sharing" entry. */
+@Composable
+private fun BlockMenuItem(onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Text(
+                text = stringResource(R.string.chat_block),
+                color = MaterialTheme.colorScheme.error
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Block,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        onClick = onClick
+    )
 }

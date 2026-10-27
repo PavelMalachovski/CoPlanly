@@ -40,10 +40,9 @@ import com.coparently.app.presentation.theme.Spacing
  * work.
  *
  * The leading `+` this used to carry is gone. It was captioned "attach" but opened message
- * templates — the August 2026 audit's clearest "icon promises one thing, does another". The
- * templates now live in a labelled chip above this row (see `ChatScreen`), and the real attach
- * button landed with attachments themselves (MON-23): `ChatAttachButton`, beside this row in
- * `ChatScreen`, not inside it.
+ * templates — the August 2026 audit's clearest "icon promises one thing, does another". A `+`
+ * came back beside this row, not inside it (UX audit M12): `ChatComposerMenu`, whose entries are
+ * labelled — attach a file, request a change, templates — so it promises nothing it does not do.
  *
  * @param value Current composer text
  * @param onValueChange Called on every edit

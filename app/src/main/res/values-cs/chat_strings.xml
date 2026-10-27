@@ -46,11 +46,12 @@
 
     <!-- Composer action chips and day separators (Aug 2026 design refresh). -->
     <string name="chat_templates">Šablony</string>
+    <string name="chat_composer_actions">Přiložit, požádat o změnu nebo použít šablonu</string>
     <string name="chat_day_today">Dnes</string>
     <string name="chat_day_yesterday">Včera</string>
 
     <!-- Thread header: whether your own messages actually left the device. -->
-    <string name="chat_header_synced">Aktuální</string>
+    <string name="chat_header_synced">Všechny vaše zprávy odeslány</string>
 
     <!-- Accessibility label for the change-request card's clickable bubble. -->
     <string name="chat_open_change_request">Otevřít žádost o změnu</string>
