@@ -172,12 +172,7 @@ fun PairingScreen(
         ActionErrorSnackbar(form.codeErrorRes, snackbarHostState, context, viewModel::clearError)
     }
 
-    // Named after the co-parent once there is one (UX audit L7): "Pair with your co-parent" over a
-    // screen that says "Paired since…" asked for something already done.
-    val title = (state as? PairingState.Paired)?.let { paired ->
-        (partnerOnScreen ?: paired.partner)?.name?.takeIf { it.isNotBlank() }
-            ?: stringResource(R.string.parent_label_coparent)
-    } ?: stringResource(R.string.pairing_screen_title)
+    val title = pairingTitle(state, partnerOnScreen)
 
     Scaffold(
         topBar = { PairingTopBar(title, onNavigateBack) },
@@ -351,6 +346,17 @@ private fun ActionErrorSnackbar(
             onConsumed()
         }
     }
+}
+
+/**
+ * The screen's title: the co-parent's name once there is one (UX audit L7) — "Pair with your
+ * co-parent" over a screen that says "Paired since…" asked for something already done.
+ */
+@Composable
+private fun pairingTitle(state: PairingState, partnerOnScreen: PartnerSummary?): String {
+    val paired = state as? PairingState.Paired ?: return stringResource(R.string.pairing_screen_title)
+    return (partnerOnScreen ?: paired.partner)?.name?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.parent_label_coparent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
