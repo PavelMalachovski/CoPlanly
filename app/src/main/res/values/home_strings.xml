@@ -19,7 +19,6 @@
         <item quantity="one">Handover to %1$s in %2$d day</item>
         <item quantity="other">Handover to %1$s in %2$d days</item>
     </plurals>
-    <string name="home_handover_review">Review</string>
 
     <!-- Stat tiles. Both are deep links, so each carries an action caption. -->
     <plurals name="home_stat_unread_count">

@@ -712,7 +712,8 @@ class HomeViewModel @Inject constructor(
             unreadCount = 0
         )
 
-        const val MAX_ITEMS = 5
+        // Three, then "All requests and answers": five ran Home to a third screen (UX audit M3).
+        const val MAX_ITEMS = 3
         const val STOP_TIMEOUT_MS = 5000L
 
         /**

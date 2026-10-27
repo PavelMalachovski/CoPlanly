@@ -15,7 +15,6 @@
         <item quantity="one">In %2$d Tag Übergabe an\u00A0%1$s</item>
         <item quantity="other">In %2$d Tagen Übergabe an\u00A0%1$s</item>
     </plurals>
-    <string name="home_handover_review">Prüfen</string>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d ungelesen</item>

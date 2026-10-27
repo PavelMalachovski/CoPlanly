@@ -17,7 +17,6 @@
         <item quantity="many">Za %2$d dne přebírá %1$s</item>
         <item quantity="other">Za %2$d dní přebírá %1$s</item>
     </plurals>
-    <string name="home_handover_review">Zkontrolovat</string>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d nepřečtená</item>

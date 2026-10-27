@@ -453,7 +453,6 @@ private fun Dashboard(
                 HandoverHero(
                     info = handover,
                     parentNames = parentNames,
-                    onConfirm = onOpenChangeRequests,
                     childrenToday = state.childrenToday
                 )
             }
@@ -666,15 +665,17 @@ private fun SectionHeader(text: String) {
  * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
  * subclasses under `app/src/test`) can render it on its own.
  *
+ * The card used to end in a "Review" chip that opened the Requests inbox — a word that did not say
+ * what it reviewed, one row above the Requests row that opens the same inbox (UX audit M3). The
+ * date chip stays: it carries the next parent's colour.
+ *
  * @param info Next handover
- * @param onConfirm Opens the change-request inbox, where a handover is actually acted on
  */
 @Composable
 @Suppress("LongMethod") // one card: gradient, headline, chips and action read as a single block
 internal fun HandoverHero(
     info: HandoverInfo,
     parentNames: ParentNames,
-    onConfirm: () -> Unit,
     childrenToday: List<ChildWithParent> = emptyList()
 ) {
     val fromColor = ParentColors.fill(info.fromParent)
@@ -742,17 +743,11 @@ internal fun HandoverHero(
                     lineHeight = 32.sp
                 )
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                PillChip(
-                    label = info.date.format(localizedDate("EEEMMMd")),
-                    container = ParentColors.container(info.toParent, alpha = 0.2f),
-                    contentColor = ParentColors.text(info.toParent)
-                )
-                PillChip(
-                    label = stringResource(R.string.home_handover_review),
-                    onClick = onConfirm
-                )
-            }
+            PillChip(
+                label = info.date.format(localizedDate("EEEMMMd")),
+                container = ParentColors.container(info.toParent, alpha = 0.2f),
+                contentColor = ParentColors.text(info.toParent)
+            )
             ChildrenTodayLines(childrenToday, parentNames)
         }
     }
@@ -791,6 +786,9 @@ internal fun StatTiles(
         StatTile(
             modifier = modifier,
             icon = Icons.Default.Payments,
+            // Named, as the Family tab's money card is: two bare totals said nothing about which
+            // period they were (UX audit M3).
+            label = stringResource(R.string.family_money_this_month),
             value = spend.byCurrency.joinToString("\n") { formatMoney(it.amount, it.currency) },
             caption = balanceCaption(balances),
             onClick = onOpenExpenses
@@ -858,7 +856,8 @@ private fun StatTile(
     value: String,
     caption: String,
     onClick: () -> Unit,
-    badge: Int? = null
+    badge: Int? = null,
+    label: String? = null
 ) {
     Card(
         onClick = onClick,
@@ -893,6 +892,13 @@ private fun StatTile(
             // Neither line is capped: the value is money or a count and the caption says who
             // owes whom, and a cut-off figure is a wrong figure.
             Column(modifier = Modifier.weight(1f)) {
+                label?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMediumEmphasized
@@ -1197,8 +1203,7 @@ private fun HandoverHeroPreview() {
                 fromParent = "mom",
                 toParent = "dad"
             ),
-            parentNames = previewParentNames,
-            onConfirm = {}
+            parentNames = previewParentNames
         )
     }
 }

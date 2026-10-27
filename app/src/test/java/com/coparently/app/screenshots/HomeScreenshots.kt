@@ -40,8 +40,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
                 fromParent = "mom",
                 toParent = "dad"
             ),
-            parentNames = ScreenshotFixtures.parentNames,
-            onConfirm = {}
+            parentNames = ScreenshotFixtures.parentNames
         )
     }
 
@@ -56,7 +55,6 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
                 toParent = "dad"
             ),
             parentNames = ScreenshotFixtures.parentNames,
-            onConfirm = {},
             childrenToday = listOf(ChildWithParent("Ema", "mom"), ChildWithParent("Tomáš", "dad"))
         )
     }
