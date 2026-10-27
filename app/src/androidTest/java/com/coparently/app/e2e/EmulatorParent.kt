@@ -64,6 +64,7 @@ import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.support.SupportAgreementStore
@@ -183,6 +184,9 @@ class EmulatorParent private constructor(
 
     /** The production chat outbox: stages a file, uploads it, then lets the message be written. */
     val attachmentOutbox = ChatAttachmentOutbox(fileContext, stager, sharedFileStorage, sharedFileCache, authService)
+
+    /** This phone's plaintext files and notifications, as account deletion clears them. */
+    val deviceTraces = DeviceTraces(fileContext)
 
     /** Sits in front of [attachmentOutbox] so a test can make this phone's uploads fail. */
     val uploads = SwitchableUploads(attachmentOutbox)

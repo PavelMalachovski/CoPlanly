@@ -215,6 +215,34 @@ describe('event revisions recorded by the server (MON-4)', () => {
     assert.deepStrictEqual(db._creates, []);
   });
 
+  it('records an edit that kept the old updatedAt, which used to read as unchanged', async () => {
+    // Nothing pins `updatedAt`: a writer who moves the time and writes the old stamp back must
+    // still leave a revision (security audit, October 2026).
+    const db = fakeDb();
+    const outcome = await run(db, eventDoc({}),
+        eventDoc({startDateTime: '2026-09-02T18:00:00', lastModifiedBy: BOB}));
+    assert.strictEqual(outcome.recorded, true);
+    assert.strictEqual(outcome.reason, 'updated');
+    const [written] = Object.values(db._versions);
+    assert.strictEqual(written.event.startDateTime, '2026-09-02T18:00:00');
+  });
+
+  it('is not satisfied by a phone revision of the same key over other content', async () => {
+    // A co-parent racing the trigger with a revision that carries the right key but invented
+    // content must not make the server stand down.
+    const db = fakeDb({
+      'client-forged': {eventId: 'event-1', kind: 'updated', editorUid: BOB,
+        event: eventDoc({title: 'Not what was saved'})},
+    });
+    const outcome = await run(db, null, eventDoc({}));
+    assert.strictEqual(outcome.recorded, true);
+  });
+
+  it('reads absent and null content fields alike', () => {
+    assert.strictEqual(revisions.contentKey({title: 'A'}), revisions.contentKey({title: 'A', location: null}));
+    assert.notStrictEqual(revisions.contentKey({title: 'A'}), revisions.contentKey({title: 'B'}));
+  });
+
   it('never records a private event', async () => {
     const db = fakeDb();
     const outcome = await run(db, null, eventDoc({isPrivate: true}));

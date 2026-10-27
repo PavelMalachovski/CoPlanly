@@ -26,12 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,6 +52,7 @@ import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.payments.PaymentState
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.copySensitive
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Spacing
@@ -289,13 +288,14 @@ private fun SettleUpPaymentBlock(
 @Composable
 private fun PaymentActions(iban: String, qr: BitMatrix?) {
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
     val appMessages = LocalAppMessages.current
     val copied = stringResource(R.string.settle_up_iban_copied)
     val chooser = stringResource(R.string.settle_up_share_chooser)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         TextButton(onClick = {
-            clipboard.setText(AnnotatedString(iban))
+            // Marked sensitive, as the invite code is: a bank account is not for the clipboard's
+            // preview or a keyboard's suggestions (security audit, October 2026).
+            copySensitive(context, "IBAN", iban)
             appMessages?.show(copied)
         }) {
             Text(stringResource(R.string.settle_up_copy_iban))

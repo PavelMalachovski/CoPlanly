@@ -18,6 +18,7 @@ const {FieldValue, Timestamp} = require('firebase-admin/firestore');
 const exportReceipts = require('./export-receipts');
 const recordPhotos = require('./record-photos');
 const aiAssist = require('./ai-assist');
+const redeemGuard = require('./redeem-guard');
 
 /**
  * Where every function here runs. The European Union, because the payloads are a family's own —
@@ -558,8 +559,9 @@ exports.acceptPairingInvitation = regional.https.onCall(async (data, context) =>
     );
   }
 
-  return acceptPairingInvitationImpl(
-      admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
+  const db = admin.firestore();
+  return redeemGuard.guardRedeem(db, context.auth.uid, () => acceptPairingInvitationImpl(
+      db, context.auth.uid, verifiedEmailOf(context), {code, invitationId}), functions.https);
 });
 
 /** Previews one account may ask for per window, per function instance. */
@@ -664,8 +666,9 @@ exports.previewPairingInvitation = regional
       if (!pairingPreviewLimiter.allow(context.auth.uid, Date.now())) {
         throw new functions.https.HttpsError('resource-exhausted', 'Too many previews; try again later');
       }
-      return previewPairingInvitationImpl(
-          admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId: null});
+      const db = admin.firestore();
+      return redeemGuard.guardRedeem(db, context.auth.uid, () => previewPairingInvitationImpl(
+          db, context.auth.uid, verifiedEmailOf(context), {code, invitationId: null}), functions.https);
     });
 
 /**
@@ -931,8 +934,9 @@ exports.acceptGuestInvitation = regional.https.onCall(async (data, context) => {
     );
   }
 
-  return acceptGuestInvitationImpl(
-      admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
+  const db = admin.firestore();
+  return redeemGuard.guardRedeem(db, context.auth.uid, () => acceptGuestInvitationImpl(
+      db, context.auth.uid, verifiedEmailOf(context), {code, invitationId}), functions.https);
 });
 
 /**
@@ -1267,8 +1271,9 @@ exports.acceptCalendarFriendInvitation = regional.https.onCall(async (data, cont
         'invalid-argument', 'Provide exactly one of code or invitationId');
   }
 
-  return acceptCalendarFriendInvitationImpl(
-      admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
+  const db = admin.firestore();
+  return redeemGuard.guardRedeem(db, context.auth.uid, () => acceptCalendarFriendInvitationImpl(
+      db, context.auth.uid, verifiedEmailOf(context), {code, invitationId}), functions.https);
 });
 
 /**
@@ -1497,8 +1502,9 @@ exports.acceptProfessionalInvitation = regional.https.onCall(async (data, contex
         'invalid-argument', 'Provide exactly one of code or invitationId');
   }
 
-  return acceptProfessionalInvitationImpl(
-      admin.firestore(), context.auth.uid, verifiedEmailOf(context), {code, invitationId});
+  const db = admin.firestore();
+  return redeemGuard.guardRedeem(db, context.auth.uid, () => acceptProfessionalInvitationImpl(
+      db, context.auth.uid, verifiedEmailOf(context), {code, invitationId}), functions.https);
 });
 
 /** Firestore caps a batched write at 500 operations; stay clear of the edge. */
@@ -4920,6 +4926,9 @@ async function deleteAccountDataImpl(db, uid, bucket, nowMillis) {
   // The AI assist quota (MON-12): a date and a count, keyed by the uid, and nothing else.
   await db.collection(aiAssist.AI_USAGE_COLLECTION).doc(uid).delete();
 
+  // The count of wrong invitation codes (redeem-guard.js): a window and a number, keyed by uid.
+  await db.collection(redeemGuard.REDEEM_ATTEMPTS_COLLECTION).doc(uid).delete();
+
   // Files first: the documents deleted next are the only record of which files exist.
   removed.storage = await deleteAuthoredFiles(db, bucket || null, uid);
 
@@ -5828,6 +5837,9 @@ async function sweepIdleCalendarFeedsImpl(db, nowMillis) {
 
 exports.sweepIdleCalendarFeedsImpl = sweepIdleCalendarFeedsImpl;
 
+/** The instance cap [exports.calendarFeed] is deployed with. */
+const CALENDAR_FEED_MAX_INSTANCES = 20;
+
 /** Per-instance render cache and rate limit for [exports.calendarFeed]. */
 const calendarFeedCache = calendarFeed.ttlCache(calendarFeed.CACHE_TTL_MS);
 const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, calendarFeed.RATE_WINDOW_MS);
@@ -5835,40 +5847,46 @@ const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, ca
 /**
  * `GET /calendarFeed/<token>.ics` — the subscription itself. No sign-in: the token is the
  * authorisation, and it is never logged.
+ *
+ * Capped in instances, as the verification page's functions are (security audit, October 2026):
+ * the feed is unauthenticated and every request costs a read whatever token it carries, so the
+ * per-instance limiter bounds the service only while the number of instances is bounded too.
  */
-exports.calendarFeed = regional.https.onRequest(async (req, res) => {
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.set('Referrer-Policy', 'no-referrer');
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.set('Allow', 'GET, HEAD');
-    res.set('Cache-Control', 'no-store');
-    res.status(405).send('Method not allowed\n');
-    return;
-  }
-  try {
-    const result = await serveCalendarFeedImpl(
-        admin.firestore(), calendarFeed.tokenFromPath(req.path), Date.now(),
-        calendarFeedCache, calendarFeedLimiter);
-    if (result.status === 200) {
-      res.set('Content-Type', 'text/calendar; charset=utf-8');
-      res.set('Content-Disposition', 'inline; filename="coplanly.ics"');
-      res.set('Cache-Control', `private, max-age=${Math.round(calendarFeed.CACHE_TTL_MS / 1000)}`);
-    } else {
-      res.set('Content-Type', 'text/plain; charset=utf-8');
-      res.set('Cache-Control', 'no-store');
-      if (result.status === 429) {
-        res.set('Retry-After', String(Math.round(calendarFeed.RATE_WINDOW_MS / 1000)));
+exports.calendarFeed = regional
+    .runWith({maxInstances: CALENDAR_FEED_MAX_INSTANCES})
+    .https.onRequest(async (req, res) => {
+      res.set('X-Content-Type-Options', 'nosniff');
+      res.set('Referrer-Policy', 'no-referrer');
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        res.set('Allow', 'GET, HEAD');
+        res.set('Cache-Control', 'no-store');
+        res.status(405).send('Method not allowed\n');
+        return;
       }
-    }
-    res.status(result.status).send(req.method === 'HEAD' ? '' : result.body);
-  } catch (err) {
-    // The message only: an error object can carry the request, and the request carries the token.
-    console.error('Calendar feed failed', err && err.message);
-    res.set('Content-Type', 'text/plain; charset=utf-8');
-    res.set('Cache-Control', 'no-store');
-    res.status(500).send('Error\n');
-  }
-});
+      try {
+        const result = await serveCalendarFeedImpl(
+            admin.firestore(), calendarFeed.tokenFromPath(req.path), Date.now(),
+            calendarFeedCache, calendarFeedLimiter);
+        if (result.status === 200) {
+          res.set('Content-Type', 'text/calendar; charset=utf-8');
+          res.set('Content-Disposition', 'inline; filename="coplanly.ics"');
+          res.set('Cache-Control', `private, max-age=${Math.round(calendarFeed.CACHE_TTL_MS / 1000)}`);
+        } else {
+          res.set('Content-Type', 'text/plain; charset=utf-8');
+          res.set('Cache-Control', 'no-store');
+          if (result.status === 429) {
+            res.set('Retry-After', String(Math.round(calendarFeed.RATE_WINDOW_MS / 1000)));
+          }
+        }
+        res.status(result.status).send(req.method === 'HEAD' ? '' : result.body);
+      } catch (err) {
+        // The message only: an error object can carry the request, and the request carries the token.
+        console.error('Calendar feed failed', err && err.message);
+        res.set('Content-Type', 'text/plain; charset=utf-8');
+        res.set('Cache-Control', 'no-store');
+        res.status(500).send('Error\n');
+      }
+    });
 
 /** Creates a feed link. See [createCalendarFeedImpl]. */
 exports.createCalendarFeed = regional.https.onCall(async (data, context) => {

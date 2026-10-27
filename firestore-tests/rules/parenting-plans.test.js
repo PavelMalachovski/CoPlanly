@@ -49,9 +49,23 @@ describe('parenting plans: each parent writes their own half and nobody else\'s'
 
   beforeEach(async () => {
     await env.clearFirestore();
+    // A live pair has its family document; unpair deletes it.
+    await seed(env, {[`families/${KEY}`]: {members: [MOM, DAD].sort()}});
   });
 
   const as = (uid) => env.authenticatedContext(uid).firestore();
+
+  it('lets neither parent write once the family has ended, and both still read', async () => {
+    await seed(env, {[PATH]: half(MOM, {residence_home: 'With me in Brno'})});
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`families/${KEY}`).delete();
+    });
+    await assertFails(as(MOM).doc(PATH).set(
+        {answers: {[MOM]: {residence_home: 'Rewritten after the unpair'}}}, {merge: true}));
+    await assertFails(as(DAD).doc(PATH).set(half(DAD, {residence_home: 'With me'}), {merge: true}));
+    await assertSucceeds(as(MOM).doc(PATH).get());
+    await assertSucceeds(as(DAD).doc(PATH).get());
+  });
 
   it('lets either parent read the plan before anybody has written it', async () => {
     // The screen subscribes on open, which for every new pair is a read of a document that does

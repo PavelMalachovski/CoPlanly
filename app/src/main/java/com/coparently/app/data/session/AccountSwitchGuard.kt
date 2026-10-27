@@ -80,6 +80,9 @@ class AccountSwitchGuard @Inject constructor(
                 // The school connections survive `clear()` (a Google Calendar disconnect reaches
                 // it too) and hold the previous account's school tokens, so they go explicitly.
                 encryptedPreferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
+                // And the plaintext copies of its files and its notifications, which sit outside
+                // the encrypted database (security audit, October 2026).
+                DeviceTraces(context).clearAccount()
             }
             if (lastUid != uid) {
                 prefs.edit().putString(KEY_LAST_UID, uid).apply()

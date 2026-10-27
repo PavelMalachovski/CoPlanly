@@ -466,7 +466,8 @@ class TwoParentAccessTest : TwoParentTest() {
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService,
             reminderScheduler = NoReminders,
-            requestClockScheduler = bob.requestScheduler
+            requestClockScheduler = bob.requestScheduler,
+            deviceTraces = bob.deviceTraces
         ).deleteAccount().getOrThrow()
 
         assertFalse("Bob's profile survived", EmulatorEnvironment.documentExists("users/$bobUid"))
@@ -505,7 +506,8 @@ class TwoParentAccessTest : TwoParentTest() {
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService,
             reminderScheduler = NoReminders,
-            requestClockScheduler = bob.requestScheduler
+            requestClockScheduler = bob.requestScheduler,
+            deviceTraces = bob.deviceTraces
         ).deleteAccount().getOrThrow()
         awaitNotPaired(alice)
 

@@ -3,6 +3,7 @@ package com.coparently.app.presentation.sync
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.school.SchoolConnectionStore
+import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.User
@@ -52,6 +53,7 @@ class AuthStateViewModelTest {
     private val schoolConnections = mockk<SchoolConnectionStore>(relaxed = true)
     private val reminderScheduler = mockk<ReminderScheduler>(relaxed = true)
     private val requestClockScheduler = mockk<RequestClockScheduler>(relaxed = true)
+    private val deviceTraces = mockk<DeviceTraces>(relaxed = true)
 
     private val namedAccount = User(id = "u1", email = "olya@example.com", name = "Olya", role = "mom", colorCode = "")
 
@@ -63,7 +65,8 @@ class AuthStateViewModelTest {
         fcmService = fcmService,
         schoolConnections = schoolConnections,
         reminderScheduler = reminderScheduler,
-        requestClockScheduler = requestClockScheduler
+        requestClockScheduler = requestClockScheduler,
+        deviceTraces = deviceTraces
     )
 
     private fun child(createdBy: String?) = ChildInfo(

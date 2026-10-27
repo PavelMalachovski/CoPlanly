@@ -25,7 +25,7 @@ const FROM = '2026-08-01';
 const TO = '2026-08-31';
 
 /** The keys `publicView` in functions/export-receipts.js returns — and nothing else. */
-const PUBLIC_KEYS = ['byteLength', 'format', 'found', 'fromDate', 'generatedBy', 'recordId',
+const PUBLIC_KEYS = ['byteLength', 'familyBound', 'format', 'found', 'fromDate', 'generatedBy', 'recordId',
   'recordedAt', 'recordedAtMillis', 'toDate'].sort();
 
 let server;
@@ -150,13 +150,12 @@ test.describe('against the Functions emulator', () => {
     base = await emu.functionsBase();
     // Names with the characters a careless page would mangle, so "never shows a name" is tested
     // against something that would be recognisable if it leaked.
-    parent = await emu.signUp('Zdeňka Nováková');
-    const coParent = await emu.signUp('Jörg Müller');
-    for (const p of [parent, coParent]) {
-      await emu.writeAs(`users/${p.uid}`,
-          {name: p.name, email: p.email, id: p.uid, firebaseUid: p.uid}, p.token);
-    }
-    const familyId = [parent.uid, coParent.uid].sort().join('__');
+    // Linked through the real callable: "one of the family's parents" needs the family document
+    // pairing creates (security audit, October 2026).
+    const pair = await emu.pairedParents('Zdeňka Nováková', 'Jörg Müller');
+    parent = pair.a;
+    const coParent = pair.b;
+    const familyId = pair.familyId;
     identity = {familyId, strings: [parent.uid, coParent.uid, parent.email, coParent.email,
       parent.name, coParent.name, familyId]};
 
@@ -256,6 +255,22 @@ test.describe('against the Functions emulator', () => {
     expect(rows['Period covered']).toBe(`${FROM} – ${TO}`);
     expect(rows['Your file']).toBeUndefined();
     await expectNoIdentity(page, response);
+  });
+
+  test('a receipt with no family behind it does not claim a parent made it', async ({page}) => {
+    // Any account can reserve under a blank family; the page must not then say "one of the
+    // family's parents" (security audit, October 2026).
+    const solo = await emu.signUp('Solo Account');
+    const {recordId} = await emu.callable('reserveExportRecordId',
+        {familyId: '', fromDate: FROM, toDate: TO, format: 'csv'}, solo.token);
+    const bytes = Buffer.from(`"Record ID","${grouped(recordId)}"\r\n`, 'utf8');
+    await emu.callable('registerExportReceipt',
+        {recordId, sha256: sha256(bytes), byteLength: bytes.length}, solo.token);
+    await openVerify(page, base);
+    await lookUp(page, grouped(recordId));
+    await expect(page.locator('#result h3')).toHaveText('Registered');
+    const rows = await receiptRows(page);
+    expect(rows['Made by']).toBe('a CoPlanly account (not linked to a family when it was registered)');
   });
 
   test('an ID nobody registered is not found — and neither is a mere reservation', async ({page}) => {

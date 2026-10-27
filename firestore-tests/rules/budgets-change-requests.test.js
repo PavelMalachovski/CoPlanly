@@ -299,6 +299,12 @@ describe('Part 1d: change_requests', () => {
     await assertSucceeds(bob.doc('change_requests/cr-1').update({status: 'ACCEPTED'}));
   });
 
+  it('lets neither party delete a request, which would erase it from History on both phones', async () => {
+    await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
+    await assertFails(env.authenticatedContext(ALICE).firestore().doc('change_requests/cr-1').delete());
+    await assertFails(env.authenticatedContext(BOB).firestore().doc('change_requests/cr-1').delete());
+  });
+
   it('denies an unrelated third party', async () => {
     await seed(env, {'change_requests/cr-1': changeRequestDoc({})});
     const db = env.authenticatedContext(CAROL).firestore();
