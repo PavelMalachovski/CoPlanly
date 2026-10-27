@@ -31,4 +31,5 @@
     <string name="calendar_feed_create_failed">Не вдалося створити посилання. Перевірте зʼєднання та спробуйте ще раз.</string>
     <string name="calendar_feed_limit_reached">У вас уже максимальна кількість посилань. Спершу відкличте те, яке більше не потрібне.</string>
     <string name="calendar_feed_load_failed">Не вдалося завантажити ваші посилання.</string>
+    <string name="calendar_feed_details">Що передає посилання</string>
 </resources>

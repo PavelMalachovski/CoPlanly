@@ -54,4 +54,6 @@
     <string name="common_discard">Не сохранять</string>
     <string name="common_discard_changes_title">Не сохранять изменения?</string>
     <string name="common_discard_changes_message">Изменения не сохранены. Если уйти сейчас, они пропадут.</string>
+    <string name="common_expanded">Развёрнуто</string>
+    <string name="common_collapsed">Свёрнуто</string>
 </resources>

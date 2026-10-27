@@ -31,4 +31,5 @@
     <string name="calendar_feed_create_failed">Odkaz se nepodařilo vytvořit. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="calendar_feed_limit_reached">Už máte nejvyšší povolený počet odkazů. Nejdřív zrušte některý, který nepotřebujete.</string>
     <string name="calendar_feed_load_failed">Odkazy se nepodařilo načíst.</string>
+    <string name="calendar_feed_details">Co odkaz sdílí</string>
 </resources>

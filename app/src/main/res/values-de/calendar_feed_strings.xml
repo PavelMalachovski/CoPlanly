@@ -31,4 +31,5 @@
     <string name="calendar_feed_create_failed">Der Link konnte nicht erstellt werden. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="calendar_feed_limit_reached">Du hast bereits die höchste erlaubte Anzahl an Links. Widerrufe zuerst einen, den du nicht mehr brauchst.</string>
     <string name="calendar_feed_load_failed">Deine Links konnten nicht geladen werden.</string>
+    <string name="calendar_feed_details">Was der Link teilt</string>
 </resources>
