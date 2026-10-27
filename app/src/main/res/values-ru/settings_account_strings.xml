@@ -53,6 +53,8 @@
     <!-- Group headers for the four settings sections. -->
     <string name="settings_group_sync">СИНХРОНИЗАЦИЯ</string>
     <string name="settings_group_app">ПРИЛОЖЕНИЕ</string>
+    <string name="settings_group_chat">Чат</string>
+    <string name="settings_group_privacy">Приватность и данные</string>
     <string name="settings_group_account">АККАУНТ</string>
 
     <!-- Co-parent sync status line. %1$s = time of the last successful sync. -->

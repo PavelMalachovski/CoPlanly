@@ -493,6 +493,9 @@ fun NavGraph(
                         onNavigateToDataSources = {
                             navController.navigate(Screen.DataSources.route)
                         },
+                        onNavigateToMyProfile = {
+                            navController.navigate(Screen.MyProfile.route)
+                        },
                         onStartGoogleSignIn = googleSignInCallback,
                         onSignOut = {
                             navController.navigate(Screen.Auth.route) {
@@ -1168,7 +1171,6 @@ fun NavGraph(
                             contacts = { navController.navigate(Screen.Contacts.route) },
                             documents = { navController.navigate(Screen.Documents.createRoute()) },
                             pairing = { navController.navigate(Screen.Pairing.routeWithCode(null)) },
-                            myProfile = { navController.navigate(Screen.MyProfile.route) },
                             coParentProfile = { navController.navigate(Screen.CoParentProfile.route) },
                             friends = { navController.navigate(Screen.Friends.route) },
                             professionals = { navController.navigate(Screen.Professionals.route) },

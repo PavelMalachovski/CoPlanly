@@ -7,6 +7,8 @@
     <string name="family_group_home">Діти й дім</string>
     <string name="family_group_people">Люди</string>
     <string name="family_group_mine">Тільки моє</string>
+    <string name="family_group_records">Записи</string>
+    <string name="family_coparent_shared">Чим ділиться %1$s</string>
     <string name="family_money_this_month">Цей місяць</string>
     <string name="family_children_add">Додайте своїх дітей</string>
     <!-- The co-parent row on the Family tab once linked. %1$s = the co-parent's name. -->
