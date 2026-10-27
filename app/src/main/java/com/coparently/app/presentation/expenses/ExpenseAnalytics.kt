@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +39,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.stacksAtLargeFont
+import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
@@ -51,29 +54,27 @@ private val AMOUNT_COLUMN_WIDTH = 96.dp
 /** Width of the share column, wide enough for "100%". */
 private val SHARE_COLUMN_WIDTH = 52.dp
 
-/** The colour swatch that ties a table row to its arc. */
+/** The colour swatch that names a category the way the expense form and the ledger do. */
 private val SWATCH_SIZE = 12.dp
 
-/** The dot that ties a ledger row to its category's arc — smaller than [SWATCH_SIZE], it is a
+/** The dot that ties a ledger row to its category's table row — smaller than [SWATCH_SIZE], it is a
  *  marker on a text row, not a legend entry. */
 private val LEDGER_DOT_SIZE = 8.dp
 
-/** How much of the column the pie takes. Half the screen, per the owner's walkthrough. */
-private const val PIE_WIDTH_FRACTION = 0.55f
+/** The height of a category's share bar under its row. */
+private val SHARE_BAR_HEIGHT = 6.dp
 
 /**
- * Where the month's money went: a pie by category, and beneath it the same figures as a table
- * sorted with the largest first.
+ * Where the month's money went: a table of the categories, the largest first, each with its share
+ * as a bar.
  *
- * **The table is not a second view of the chart, it is the primary one.** Nine categorical hues
- * cannot be made distinguishable in every pairing — see [CategoryPalette], which measured it —
- * so this screen never asks anyone to tell two slices apart by colour. Every row carries the
- * category's name as text and its figures as numbers; the swatch is a pointer back to the arc,
- * not the encoding. That also makes the table the chart's legend, which is why there is no
- * separate one: two lists of the same nine categories, side by side, would be the "two answers
- * to one question" this design language removes elsewhere.
+ * **No category is told apart by colour.** Nine categorical hues cannot be made distinguishable in
+ * every pairing — see [CategoryPalette], which measured it — so the pie this replaced (UX audit
+ * M8) asked something of the reader that could not be done. Every row carries the category's name
+ * as text, its figures as numbers and its share as a bar in one colour; the swatch is a pointer,
+ * not the encoding.
  *
- * **One currency at a time, never a mixed pie.** [ExpenseViewModel.selectedBreakdown] hands out
+ * **One currency at a time, never a mixed chart.** [ExpenseViewModel.selectedBreakdown] hands out
  * exactly one currency's figures; the chip row above only chooses between them.
  *
  * @param breakdown The currency being shown, or null when the month has nothing in it.
@@ -106,8 +107,8 @@ fun ExpenseAnalytics(
 ) {
     // **This view does not scroll itself.** It used to, and that was the bug: the caller gave it
     // `weight(1f)` of whatever was left under the summary cards and the switcher, so on a month
-    // with two currencies the chart got a couple of hundred dp to scroll a pie, a table and a
-    // ledger inside — the figures below the arc were simply unreachable. Scrolling belongs to
+    // with two currencies the chart got a couple of hundred dp to scroll a chart, a table and a
+    // ledger inside — the figures below it were simply unreachable. Scrolling belongs to
     // the page, so that the cards scroll away and the whole breakdown gets the screen.
     Column(
         modifier = modifier
@@ -124,7 +125,7 @@ fun ExpenseAnalytics(
             )
         }
 
-        // Only when the month actually mixes currencies. A pie of two currencies is the one
+        // Only when the month actually mixes currencies. A chart of two currencies is the one
         // thing this feature must never draw, so the chips are how a parent sees the second
         // one — not a control they have to meet on every ordinary month.
         if (currencies.size > 1) {
@@ -152,16 +153,9 @@ fun ExpenseAnalytics(
             return@Column
         }
 
-        // Half the column, centred — full-width the pie pushed its own table off screen, and a
-        // pie encodes shares in angles, which survive shrinking; the figures live in the rows.
-        CategoryPieChart(
-            slices = breakdown.slices,
-            modifier = Modifier
-                .fillMaxWidth(PIE_WIDTH_FRACTION)
-                .align(Alignment.CenterHorizontally)
-                .padding(vertical = Spacing.S)
-        )
-
+        // No pie (UX audit M8): nine hues asked the reader to match a wedge to a row by colour,
+        // which the palette itself measured cannot be done for every pair. Each row carries its
+        // share as a bar instead, in one colour, so a length is compared with a length.
         BreakdownTable(breakdown = breakdown)
 
         ParentLedger(
@@ -273,6 +267,7 @@ private fun FilterChip(
 private fun BreakdownTable(breakdown: CurrencyBreakdown) {
     val total = remember(breakdown) { currencyFormat(breakdown.currency).format(breakdown.total) }
     val amountWidth = amountColumnWidth(breakdown)
+    val largestShare = breakdown.slices.maxOfOrNull { it.share }?.takeIf { it > 0.0 } ?: 1.0
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Row(
@@ -295,7 +290,12 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
         }
         SectionGroup {
             breakdown.slices.forEachIndexed { index, slice ->
-                BreakdownRow(slice = slice, currency = breakdown.currency, amountWidth = amountWidth)
+                BreakdownRow(
+                    slice = slice,
+                    currency = breakdown.currency,
+                    amountWidth = amountWidth,
+                    barFraction = (slice.share / largestShare).toFloat()
+                )
                 if (index != breakdown.slices.lastIndex) Divider()
             }
         }
@@ -355,19 +355,57 @@ private fun amountColumnWidth(breakdown: CurrencyBreakdown): Dp {
     }
 }
 
-/** One category: its swatch, its name, its amount and its share. */
+/**
+ * One category: its swatch, its name, its amount and its share, and under them the share as a bar
+ * scaled to the largest category's, so the longest bar is the first row.
+ *
+ * @param barFraction This category's share over the largest category's, 0 to 1.
+ */
 @Composable
-private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp) {
+private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp, barFraction: Float) {
     val name = stringResource(slice.category.labelRes)
     val amount = currencyFormat(currency).format(slice.amount)
     val share = formatShare(slice.share)
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.L, vertical = Spacing.M)
             // One description for the whole row: a screen reader reading "swatch, Food, 25.50,
-            // 34%" as four separate nodes is the table read sideways.
+            // 34%" as four separate nodes is the table read sideways. The bar says nothing new.
             .semantics(mergeDescendants = true) { contentDescription = "$name, $amount, $share" },
+        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
+        BreakdownFigures(slice, name, amount, share, amountWidth)
+        ShareBar(barFraction)
+    }
+}
+
+/** A share as a bar in the primary colour on a muted track, starting under the row's name. */
+@Composable
+private fun ShareBar(fraction: Float) {
+    Box(
+        modifier = Modifier
+            .padding(start = SWATCH_SIZE + Spacing.M)
+            .fillMaxWidth()
+            .height(SHARE_BAR_HEIGHT)
+            .clip(CoPlanlyCorners.Pill)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .clip(CoPlanlyCorners.Pill)
+                .background(MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
+/** The row's swatch, name and figures, side by side or, at a large font, the figures under the name. */
+@Composable
+private fun BreakdownFigures(slice: CategorySlice, name: String, amount: String, share: String, amountWidth: Dp) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.M),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -417,7 +455,7 @@ private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp
     }
 }
 
-/** "34%" — rounded, because a pie slice is not a figure anyone reads to a decimal place. */
+/** "34%" — rounded, because a share is not a figure anyone reads to a decimal place. */
 private fun formatShare(share: Double): String {
     val format = NumberFormat.getPercentInstance(Locale.getDefault())
     format.maximumFractionDigits = 0

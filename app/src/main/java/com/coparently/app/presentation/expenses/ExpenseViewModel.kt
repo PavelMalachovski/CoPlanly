@@ -317,7 +317,7 @@ class ExpenseViewModel @Inject constructor(
     /**
      * The same expenses, flattened to a plain list for everything derived from them.
      *
-     * The derivations below — the month's slice, the per-currency balances, the pie chart — are
+     * The derivations below — the month's slice, the per-currency balances, the category breakdown — are
      * all "given these expenses, compute that", and none of them has anything different to say
      * while the list is still loading. Only the screen does, which is why [expenses] carries the
      * distinction and this does not.
