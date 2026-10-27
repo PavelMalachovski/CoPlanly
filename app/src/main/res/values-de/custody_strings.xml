@@ -79,6 +79,19 @@
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Umgangszeiten</string>
+    <string name="custody_overview_pattern">Hauptplan</string>
+    <string name="custody_overview_pattern_summary">%1$s · ab %2$s</string>
+    <string name="custody_overview_none">Keine</string>
+    <string name="custody_overview_children_same">Alle folgen dem Familienplan</string>
+    <string name="custody_overview_sent_separately">Jeder Teil wird einzeln gesendet. Bis %1$s zustimmt, ändert sich im Kalender nichts.</string>
+    <plurals name="custody_overview_windows">
+        <item quantity="one">%1$d Zeitfenster</item>
+        <item quantity="other">%1$d Zeitfenster</item>
+    </plurals>
+    <plurals name="custody_overview_children_own">
+        <item quantity="one">%1$d Kind hat einen eigenen Plan</item>
+        <item quantity="other">%1$d Kinder haben einen eigenen Plan</item>
+    </plurals>
     <string name="custody_windows_hint">Ein Teil eines Tages mit dem Elternteil, der diesen Tag nicht hat, etwa jeden Mittwoch 15:00–19:00. Der Tag selbst bleibt bei dem, der ihn hat; die Umgangszeit wird zusätzlich angezeigt.</string>
     <string name="custody_windows_empty">Keine Umgangszeiten.</string>
     <string name="custody_windows_add">Umgangszeit hinzufügen</string>

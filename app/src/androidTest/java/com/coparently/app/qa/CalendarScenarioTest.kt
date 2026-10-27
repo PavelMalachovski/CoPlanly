@@ -62,7 +62,11 @@ class CalendarScenarioTest : QaOnScreenTest() {
             expectOnIgorsPhone(oneOff)
         }
         report.step("weekly", "Create a weekly event", "\"$weekly\" repeats in next week's Week view and is one row on Igor's phone") {
-            createEvent(weekly) { tap(textButton(R.string.event_repeat_weekly)) }
+            // Repeat is a row that opens its options (UX audit H5).
+            createEvent(weekly) {
+                tap(textButton(R.string.event_form_repeat))
+                tap(textButton(R.string.event_repeat_weekly))
+            }
             openTab(BottomNavDestination.CALENDAR)
             viewMode(R.string.calendar_viewmode_week)
             check(driver.pageForward()) { "Week view does not page forward" }
@@ -71,7 +75,10 @@ class CalendarScenarioTest : QaOnScreenTest() {
             check(row.isRecurring) { "Igor's copy of \"$weekly\" does not repeat" }
         }
         report.step("reminder", "Create an event with a reminder an hour before", "The reminder is stored and scheduled") {
-            createEvent(reminded) { tap(textButton(R.string.event_reminder_1_hour)) }
+            createEvent(reminded) {
+                tap(textButton(R.string.event_form_reminder))
+                tap(textButton(R.string.event_reminder_1_hour))
+            }
             val saved = mine(reminded)
             check(saved.reminderMinutes == REMINDER_MINUTES) { "stored reminder is ${saved.reminderMinutes}, not 60" }
             val work = WorkManager.getInstance(context).getWorkInfosByTag(REMINDER_TAG).get()

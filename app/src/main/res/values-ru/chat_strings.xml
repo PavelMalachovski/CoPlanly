@@ -42,6 +42,7 @@
 
     <!-- Composer action chips and day separators (Aug 2026 design refresh). -->
     <string name="chat_templates">Шаблоны</string>
+    <string name="chat_composer_actions">Прикрепить, запросить изменение или вставить шаблон</string>
     <string name="chat_day_today">Сегодня</string>
     <string name="chat_day_yesterday">Вчера</string>
 

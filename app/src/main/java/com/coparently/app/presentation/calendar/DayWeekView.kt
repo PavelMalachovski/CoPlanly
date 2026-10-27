@@ -86,6 +86,8 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -134,8 +136,22 @@ private val CUSTODY_BAND_HEIGHT = 16.dp
 /** Full-hue bar on an event block's start edge, carrying parent identity. */
 private val EVENT_ACCENT_BAR_WIDTH = 3.dp
 
-/** Block height from which a week-view title is allowed a second line. */
-private val TWO_LINE_MIN_HEIGHT = 44.dp
+/** The height one line of a block's title takes: `labelSmall`'s line height plus a little room. */
+private val TITLE_LINE_HEIGHT = 16.dp
+
+/** The most lines a block's title takes, however tall the block; past it the title ellipsises. */
+private const val MAX_TITLE_LINES = 4
+
+/** The column width under which a block drops its member initial and gives the title the room. */
+private val MEMBER_MARK_MIN_COLUMN = 56.dp
+
+/**
+ * How many lines of title a block [height] tall shows (UX audit H2): every line the block has room
+ * for, up to [MAX_TITLE_LINES], and at least one. A week's hour-long block used to show one line,
+ * "Pare…", in a column seven characters wide.
+ */
+internal fun titleLinesFor(height: Dp): Int =
+    (height / TITLE_LINE_HEIGHT).toInt().coerceIn(1, MAX_TITLE_LINES)
 
 /** Opacity of the hour-grid outline. Enough to read on DarkSurface without becoming a cage. */
 private const val GRIDLINE_ALPHA = 0.55f
@@ -366,8 +382,11 @@ private fun DayWeekPage(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = weekNumber.toString(),
+                            // Labelled (UX audit H2): a bare "43" over the hours read as nothing.
+                            text = stringResource(R.string.calendar_week_number, weekNumber),
                             style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
                             fontWeight = FontWeight.Normal,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
@@ -553,7 +572,9 @@ private fun DayWeekPage(
                                         isWeekend = isWeekend,
                                         isToday = isToday,
                                         custody = custody,
-                                        proposedCustody = getProposedCustody(date)
+                                        proposedCustody = getProposedCustody(date),
+                                        // Day view keeps the wash; the week's band says it.
+                                        custodyWash = currentDates.size == 1
                                     )
                                     val baseColor = when (fill.base) {
                                         DayCellBase.WEEKEND ->
@@ -1060,10 +1081,11 @@ private fun EventChip(
     // route that does not depend on hitting it (docs/AUDIT-2026-10-design.md D-10).
     val handleTouchHeight = minOf(RESIZE_HANDLE_TOUCH_HEIGHT, eventHeightDp / 3)
     val showResizeGrips = onResize != null && resizable
-    val twoLineTitle = dynamicHeightDp >= TWO_LINE_MIN_HEIGHT
-    // Set by the title's own layout when its wrap would cut a word; asked again whenever the
-    // title, the column or the number of lines on offer changes.
-    var titleCutsWord by remember(event.title, columnWidthPx, twoLineTitle) { mutableStateOf(false) }
+    val titleLines = titleLinesFor(dynamicHeightDp)
+    // The member's initial takes a third of a week column; under MEMBER_MARK_MIN_COLUMN the title
+    // gets the room, and the chip's description still names every member.
+    val columnWidth = with(LocalDensity.current) { columnWidthPx.toDp() }
+    val shownMark = memberMark.takeIf { columnWidth >= MEMBER_MARK_MIN_COLUMN }
 
     Box(
         modifier = Modifier
@@ -1311,8 +1333,8 @@ private fun EventChip(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (memberMark != null) {
-                    MemberInitialDisc(initial = memberMark.initial)
+                if (shownMark != null) {
+                    MemberInitialDisc(initial = shownMark.initial)
                 }
                 if (event.isPrivate) {
                     Icon(
@@ -1337,23 +1359,17 @@ private fun EventChip(
                 }
                 Text(
                     text = event.title,
-                    style = MaterialTheme.typography.labelSmall,
+                    // Hyphenated in the reader's language rather than cut ("Pla-/vá-/ní", not
+                    // "Plaván" over "í"), on as many lines as the block is tall (UX audit H2).
+                    // A week column fits about seven characters a line; the one-line fallback this
+                    // replaced left "Pare…" and "E S…" on an ordinary week.
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        hyphens = Hyphens.Auto,
+                        lineBreak = LineBreak.Paragraph
+                    ),
                     color = textColor,
-                    // Wrap onto a second line when the block is tall enough to show one.
-                    // A ~53dp column fits roughly seven characters per line, so a second line
-                    // is the difference between "Dentist" and "Dentist appt" — unless the
-                    // wrap cut a word, which reads worse than an ellipsis ("Plaván" over "í"):
-                    // then the title goes back to one line (breaksInsideWord).
-                    maxLines = if (twoLineTitle && !titleCutsWord) 2 else 1,
-                    softWrap = !titleCutsWord,
+                    maxLines = titleLines,
                     overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { layout ->
-                        if (!titleCutsWord && layout.lineCount > 1 &&
-                            breaksInsideWord(event.title, List(layout.lineCount) { layout.getLineEnd(it) })
-                        ) {
-                            titleCutsWord = true
-                        }
-                    },
                     // Medium rather than SemiBold: at this size the heavier weight is no more
                     // legible on a tinted fill, and it costs about half a character per line —
                     // which in a ~54dp column is the difference between fitting a word and not.

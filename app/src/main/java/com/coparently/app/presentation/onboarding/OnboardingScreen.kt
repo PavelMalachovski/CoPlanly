@@ -2,10 +2,7 @@ package com.coparently.app.presentation.onboarding
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
@@ -52,12 +47,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -80,8 +73,8 @@ import com.coparently.app.presentation.custody.SchedulePreviewMonth
 import com.coparently.app.presentation.custody.createTempModel
 import com.coparently.app.presentation.custody.custodyPreviewText
 import com.coparently.app.presentation.custody.labelRes
+import com.coparently.app.presentation.settings.GridSwatch
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -446,30 +439,29 @@ private fun ParentColorSwatches(
     selected: ParentColorChoice?,
     onSelect: (ParentColorChoice) -> Unit
 ) {
+    // The grid's own swatch (UX audit M11): ringed with a check when chosen, so the choice does not
+    // rest on colour, and named under it, so a parent who cannot tell two hues apart can still pick.
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
         ParentColorChoice.ORIGINAL.forEach { choice ->
             val label = stringResource(choice.labelRes)
-            Box(
-                modifier = Modifier
-                    .size(LayoutConstants.MIN_TOUCH_TARGET)
-                    .clip(CircleShape)
-                    .background(ParentColors.choiceFill(choice))
-                    // Only the chosen swatch gets a ring: a zero-width border still draws a
-                    // hairline, which ringed every swatch as if all four were picked.
-                    .then(
-                        if (selected == choice) {
-                            Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .selectable(
-                        selected = selected == choice,
-                        role = Role.RadioButton,
-                        onClick = { onSelect(choice) }
-                    )
-                    .semantics { contentDescription = label }
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.XS)
+            ) {
+                GridSwatch(
+                    label = label,
+                    swatch = ParentColors.choiceFill(choice),
+                    selected = selected == choice,
+                    onClick = { onSelect(choice) }
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // The swatch already says it to TalkBack.
+                    modifier = Modifier.clearAndSetSemantics { }
+                )
+            }
         }
     }
 }

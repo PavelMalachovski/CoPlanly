@@ -31,6 +31,7 @@
     <string name="month_review_no_expenses">Keine Ausgaben in diesem Monat</string>
     <string name="month_review_total">Gesamt in %1$s</string>
     <string name="month_review_paid_by">%1$s hat %2$s bezahlt</string>
+    <string name="month_review_paid_by_you">Du hast %1$s bezahlt</string>
     <string name="month_review_to_even_out">Zum Ausgleich: %1$s von %2$s an %3$s</string>
     <string name="month_review_even">Ausgeglichen</string>
 

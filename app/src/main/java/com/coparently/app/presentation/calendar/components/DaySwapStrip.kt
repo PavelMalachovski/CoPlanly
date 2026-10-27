@@ -75,13 +75,20 @@ internal fun DaySwapStrip(
     val text = when (state) {
         is DaySwapStripState.OfferedByMe ->
             stringResource(R.string.day_swap_strip_offered_by_you, parentNames.labelFor(state.toParent))
-        is DaySwapStripState.OfferedToMe -> stringResource(
-            R.string.day_swap_strip_offered_to_you,
-            parentNames.labelForUid(state.byUid),
-            parentNames.labelFor(state.toParent)
-        )
-        is DaySwapStripState.Agreed ->
+        is DaySwapStripState.OfferedToMe -> if (parentNames.isReader(state.toParent)) {
+            stringResource(R.string.day_swap_strip_offered_to_reader, parentNames.labelForUid(state.byUid))
+        } else {
+            stringResource(
+                R.string.day_swap_strip_offered_to_you,
+                parentNames.labelForUid(state.byUid),
+                parentNames.labelFor(state.toParent)
+            )
+        }
+        is DaySwapStripState.Agreed -> if (parentNames.isReader(state.withParent)) {
+            stringResource(R.string.day_swap_strip_agreed_you)
+        } else {
             stringResource(R.string.day_swap_strip_agreed, parentNames.labelFor(state.withParent))
+        }
     }
     InlineBanner(
         text = text,
@@ -103,9 +110,10 @@ private fun DaySwapStripButtons(state: DaySwapStripState, actions: DaySwapStripA
     when (state) {
         is DaySwapStripState.OfferedByMe ->
             TextButton(onClick = actions.onWithdraw) { Text(stringResource(R.string.change_request_withdraw)) }
+        // Decline before Accept, as every answer reads (UX audit M1).
         is DaySwapStripState.OfferedToMe -> {
-            Button(onClick = actions.onAccept) { Text(stringResource(R.string.day_swap_accept)) }
             TextButton(onClick = actions.onDecline) { Text(stringResource(R.string.day_swap_decline)) }
+            Button(onClick = actions.onAccept) { Text(stringResource(R.string.day_swap_accept)) }
         }
         is DaySwapStripState.Agreed -> TextButton(onClick = actions.onProposeChange) {
             Text(stringResource(R.string.request_history_propose_change))

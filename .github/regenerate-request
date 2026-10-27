@@ -97,3 +97,5 @@ Sat Oct 24 13:41:42 UTC 2026 calendar colours (PR #147): the "My colour" picker 
 # Family tab: the balance and the co-parent row name the co-parent, 2026-10-24
 requested: 2026-10-24 20:37 UTC — screenshot baselines after the second audit's fixes
 # Requested 2026-10-25: schema 46 (known_families).
+# Requested 2026-10-27: screenshot baselines after the design audit (H1–L8, PR #152).
+# Requested 2026-10-27: baselines again, "you" now resolved in each variant's language (PR #152).

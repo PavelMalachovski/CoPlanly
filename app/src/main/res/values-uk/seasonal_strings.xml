@@ -2,7 +2,7 @@
 <!-- Seasonal custody schedules (MON-14) and holiday fairness (MON-20). -->
 <resources>
     <string name="seasonal_title">Сезонні графіки</string>
-    <string name="seasonal_hint">Сезонний графік замінює шаблон вище на певний період — наприклад, літні канікули чи Різдво. Кожна зміна надсилається окремо; кнопка «Зберегти» внизу зберігає лише шаблон вище.</string>
+    <string name="seasonal_hint">Сезонний графік замінює основний графік на певний період — наприклад, літні канікули чи Різдво. Кожен надсилається окремо.</string>
     <string name="seasonal_needs_base_pattern">Спочатку збережіть графік. Сезонний графік накладається поверх нього.</string>
     <string name="seasonal_add">Додати сезонний графік</string>
     <string name="seasonal_pending_theirs">%1$s пропонує змінити графік. Дайте відповідь, перш ніж надсилати нову пропозицію.</string>

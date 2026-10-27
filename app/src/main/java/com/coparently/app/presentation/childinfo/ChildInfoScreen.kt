@@ -91,17 +91,6 @@ fun ChildInfoScreen(
                             contentDescription = stringResource(R.string.childinfo_back)
                         )
                     }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.syncChildInfo()
-                    }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = stringResource(R.string.childinfo_sync)
-                        )
-                    }
                 }
             )
         },

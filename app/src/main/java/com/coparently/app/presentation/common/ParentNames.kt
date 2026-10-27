@@ -101,6 +101,27 @@ data class ParentNames(
      * [unknownFallback] — an ordinal, say — checks this first.
      */
     fun isKnown(slot: String): Boolean = slot == parents.me?.slot || slot == parents.coParent?.slot
+
+    /**
+     * Whether [slot] is unmistakably the reading parent's own: the signed-in parent's slot, and not
+     * one both parents still share. A screen words such a slot as "you" rather than by the reader's
+     * own name (UX audit H4: Alice was told "Today with Alice" and "Alice paid").
+     */
+    fun isReader(slot: String?): Boolean =
+        slot != null && slot == parents.me?.slot && slot != parents.coParent?.slot
+
+    /** Whether [uid] is the reading parent's own. */
+    fun isReaderUid(uid: String?): Boolean = uid != null && uid == parents.me?.uid
+
+    /**
+     * [labelFor], except that the reader's own slot is "You" — for a label that stands alone, before
+     * a colon or as a column heading, where no verb has to agree with it. A sentence takes its own
+     * string for the reader instead, because "You" changes the verb in every language.
+     */
+    fun labelOrYou(slot: String?): String = if (isReader(slot)) youFallback else labelFor(slot)
+
+    /** [labelForUid], except that the reader is "You"; see [labelOrYou]. */
+    fun labelOrYouForUid(uid: String?): String = if (isReaderUid(uid)) youFallback else labelForUid(uid)
 }
 
 /**

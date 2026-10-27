@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -121,14 +121,12 @@ internal fun AwaitingEventCard(
 private fun AnswersOrWaiting(actions: AwaitingEventButtons?) {
     when (actions) {
         is AwaitingEventActions -> if (LocalCardClock.current?.hidesAnswers != true) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                Button(onClick = actions.onAccept) {
-                    Text(stringResource(R.string.event_acceptance_accept))
-                }
-                TextButton(onClick = actions.onDecline) {
-                    Text(stringResource(R.string.event_acceptance_decline))
-                }
-            }
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.event_acceptance_accept),
+                declineLabel = stringResource(R.string.event_acceptance_decline),
+                onAccept = actions.onAccept,
+                onDecline = actions.onDecline
+            )
         }
         is AwaitingEventWithdrawal -> {
             WaitingLine()

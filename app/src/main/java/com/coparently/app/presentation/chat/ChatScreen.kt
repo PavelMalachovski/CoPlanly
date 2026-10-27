@@ -3,7 +3,6 @@ package com.coparently.app.presentation.chat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -62,7 +57,6 @@ import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
-import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
@@ -329,35 +323,17 @@ fun ChatScreen(
             if (departed != null && !searching) {
                 DepartedThreadComposerNote()
             } else if (!searching) {
-                // Labelled, above the composer — where a compose-time action belongs, and where
-                // it can say what it does.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = Spacing.L, vertical = Spacing.XS),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-                ) {
-                    PillChip(
-                        label = stringResource(R.string.chat_request_change),
-                        icon = Icons.Default.SwapHoriz,
-                        onClick = { showEventPicker = true }
-                    )
-                    PillChip(
-                        label = stringResource(R.string.chat_templates),
-                        icon = Icons.Default.Bolt,
-                        onClick = { showTemplates = true }
-                    )
-                }
-
                 if (!nudge.isEmpty) ToneNudgeHint(nudge)
                 dictation.failure?.let { DictationFailureNotice(it) }
 
-                // The attach button beside the field, not inside `MessageInput`: it is its own flow
-                // (picker, confirmation, outbox) and the composer stays a text field and a send.
+                // The `+` beside the field, not inside `MessageInput`: a file, a change request and
+                // a template each have their own flow, and the composer stays a text field and a
+                // send. Its entries are labelled, which the chips above the field used to be for.
                 Row(verticalAlignment = Alignment.Bottom) {
-                    ChatAttachButton(
+                    ChatComposerMenu(
                         conversationId = conversationId,
+                        onRequestChange = { showEventPicker = true },
+                        onTemplates = { showTemplates = true },
                         modifier = Modifier.padding(start = Spacing.XS, bottom = Spacing.S)
                     )
                     MessageInput(
@@ -524,15 +500,11 @@ private fun ChatTopBar(
                     contentDescription = stringResource(R.string.chat_search)
                 )
             }
-            onOpenSettings?.let { openSettings ->
-                IconButton(onClick = openSettings) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.nav_settings)
-                    )
-                }
+            // Settings sits in the overflow menu here (UX audit M12): the thread's bar carries the
+            // co-parent's name and search, and a third icon crowded both.
+            if (onOpenSettings != null || onBlock != null) {
+                ChatOverflowMenu(onOpenSettings = onOpenSettings, onBlock = onBlock)
             }
-            onBlock?.let { block -> ChatOverflowMenu(onBlock = block) }
         }
     )
 }

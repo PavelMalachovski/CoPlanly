@@ -10,7 +10,6 @@
     <string name="childinfo_cancel">Отмена</string>
     <string name="childinfo_clear">Очистить</string>
     <string name="childinfo_ok">OK</string>
-    <string name="childinfo_sync">Синхронизировать</string>
 
     <!-- Child info: titles and sections -->
     <string name="childinfo_screen_title">Информация о ребёнке</string>
@@ -113,7 +112,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="childinfo_load_failed">Не удалось загрузить данные детей. Попробуйте ещё раз.</string>
     <string name="childinfo_delete_failed">Не удалось удалить данные ребёнка. Попробуйте ещё раз.</string>
-    <string name="childinfo_sync_failed">Не удалось синхронизировать данные детей. Попробуйте ещё раз.</string>
 
     <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
     <string name="childinfo_school_clear_title">Очистить данные о школе?</string>

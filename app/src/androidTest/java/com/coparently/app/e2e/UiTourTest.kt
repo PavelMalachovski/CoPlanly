@@ -358,8 +358,9 @@ class UiTourTest : AliceOnScreenTest() {
             driver.press("school_connect", hasText(string(R.string.school_import_connect)) and hasClickAction())
             driver.linger()
         }
-        fromFamily("my_profile", R.string.settings_my_profile_title)
-        fromFamily("coparent_profile", R.string.settings_coparent_profile_title)
+        fromSettings("my_profile", R.string.settings_my_profile_title)
+        // The row is titled with the co-parent's name; its description is the same in every family.
+        fromFamily("coparent_profile", R.string.settings_coparent_profile_description)
         fromSettings("data_sources", R.string.settings_data_sources_title)
         driver.backToTabs()
     }

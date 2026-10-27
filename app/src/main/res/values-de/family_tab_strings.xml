@@ -7,6 +7,8 @@
     <string name="family_group_home">Kinder und Zuhause</string>
     <string name="family_group_people">Personen</string>
     <string name="family_group_mine">Nur meins</string>
+    <string name="family_group_records">Aufzeichnungen</string>
+    <string name="family_coparent_shared">Was %1$s teilt</string>
     <string name="family_money_this_month">Dieser Monat</string>
     <string name="family_children_add">Füge deine Kinder hinzu</string>
     <!-- The co-parent row on the Family tab once linked. %1$s = the co-parent's name. -->

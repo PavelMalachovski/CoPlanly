@@ -307,10 +307,11 @@ fun DayAgendaCard(
             )
             if (custody != null) {
                 Text(
-                    text = stringResource(
-                        R.string.calendar_agenda_custody_day,
-                        parentNames.labelFor(custody)
-                    ),
+                    text = if (parentNames.isReader(custody)) {
+                        stringResource(R.string.calendar_agenda_custody_day_you)
+                    } else {
+                        stringResource(R.string.calendar_agenda_custody_day, parentNames.labelFor(custody))
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     color = ParentColors.text(custody)
                 )

@@ -189,7 +189,7 @@ private fun ColourOption(label: String, swatch: Color, selected: Boolean, onClic
  * when it is the choice, so the selection does not rest on colour either.
  */
 @Composable
-private fun GridSwatch(label: String, swatch: Color, selected: Boolean, onClick: () -> Unit) {
+internal fun GridSwatch(label: String, swatch: Color, selected: Boolean, onClick: () -> Unit) {
     val ring = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent
     Box(
         modifier = Modifier

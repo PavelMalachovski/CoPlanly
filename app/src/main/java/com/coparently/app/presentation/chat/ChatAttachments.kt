@@ -17,10 +17,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -41,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -100,26 +106,51 @@ fun ChatAttachmentsHost(
 }
 
 /**
- * The composer's attach button — real, because attachments now exist (design item 8 forbade it
- * until they did). It opens the system picker limited to what the rules accept, then asks before
- * sending: a file in the chat stays there for good, like every message.
+ * The composer's `+`: a labelled menu of what a message can carry besides its words — a file, a
+ * change request about an event, a template (UX audit M12). The request and template chips used to
+ * sit above the field for good, a whole row taken from the thread while the keyboard was open, and
+ * the paperclip beside it was a third control for the same corner.
+ *
+ * Attaching is real, because attachments exist (design item 8 forbade it until they did): it opens
+ * the system picker limited to what the rules accept, then asks before sending — a file in the chat
+ * stays there for good, like every message.
+ *
+ * @param conversationId The thread a file is sent into.
+ * @param onRequestChange Opens the event picker that starts a change request.
+ * @param onTemplates Opens the message templates.
  */
 @Composable
-fun ChatAttachButton(
+fun ChatComposerMenu(
     conversationId: String,
+    onRequestChange: () -> Unit,
+    onTemplates: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatAttachmentViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     var picked by rememberSaveable { mutableStateOf<String?>(null) }
+    var open by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         picked = uri?.toString()
     }
-    IconButton(
-        onClick = { picker.launch(SharedFilePolicy.CONTENT_TYPES.toTypedArray()) },
-        modifier = modifier
-    ) {
-        Icon(Icons.Default.AttachFile, contentDescription = stringResource(R.string.chat_attach))
+    Box(modifier = modifier) {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.chat_composer_actions))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            ComposerMenuItem(Icons.Default.AttachFile, stringResource(R.string.chat_attach)) {
+                open = false
+                picker.launch(SharedFilePolicy.CONTENT_TYPES.toTypedArray())
+            }
+            ComposerMenuItem(Icons.Default.SwapHoriz, stringResource(R.string.chat_request_change)) {
+                open = false
+                onRequestChange()
+            }
+            ComposerMenuItem(Icons.Default.Bolt, stringResource(R.string.chat_templates)) {
+                open = false
+                onTemplates()
+            }
+        }
     }
     picked?.let { uri ->
         val name = remember(uri) { displayName(context, uri) }
@@ -265,3 +296,13 @@ private fun UploadState(progress: Float?) {
 
 /** Edge of an image thumbnail; a PDF chip is at most twice as wide. */
 private val THUMBNAIL_SIZE = 180.dp
+
+/** One entry of [ChatComposerMenu]: an icon and what it does. */
+@Composable
+private fun ComposerMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        onClick = onClick
+    )
+}

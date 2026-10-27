@@ -315,24 +315,6 @@ class PetsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Syncs pets with Firestore.
-     */
-    fun syncPets() {
-        viewModelScope.launch {
-            try {
-                petRepository.pullOnce()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (
-                @Suppress("TooGenericExceptionCaught") e: Exception
-            ) {
-                Log.w(TAG, "Syncing pets failed", e)
-                _uiState.value = PetsUiState.Error(UiText.Res(R.string.pets_sync_failed))
-            }
-        }
-    }
-
     private companion object {
         const val TAG = "PetsViewModel"
     }

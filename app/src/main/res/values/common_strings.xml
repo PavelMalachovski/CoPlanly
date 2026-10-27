@@ -57,4 +57,6 @@
     <string name="common_discard">Discard</string>
     <string name="common_discard_changes_title">Discard changes?</string>
     <string name="common_discard_changes_message">What you changed here has not been saved. If you leave now, it is lost.</string>
+    <string name="common_expanded">Expanded</string>
+    <string name="common_collapsed">Collapsed</string>
 </resources>

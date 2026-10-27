@@ -229,11 +229,14 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
                     }
                 )
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(LEGEND_SWATCH)
-                        .border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
-                )
+                // The ring the grid draws round a marked day, in a day-cell swatch like the rest.
+                Box(modifier = Modifier.size(LEGEND_SWATCH), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(LEGEND_SWATCH.height)
+                            .border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
+                    )
+                }
             }
         }
     }
@@ -256,7 +259,11 @@ private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames
             stringResource(
                 R.string.mini_month_marked_day,
                 day,
-                stringResource(R.string.calendar_agenda_custody_day, parentNames.labelFor(slot)),
+                if (parentNames.isReader(slot)) {
+                    stringResource(R.string.calendar_agenda_custody_day_you)
+                } else {
+                    stringResource(R.string.calendar_agenda_custody_day, parentNames.labelFor(slot))
+                },
                 meaning
             )
         } else {

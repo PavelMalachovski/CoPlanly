@@ -158,4 +158,18 @@ class EventFormEndTest {
         assertEquals(1, endDaySpanOf(loaded))
         assertEquals(loaded.endDateTime, savedEndOf(loaded))
     }
+
+    @Test
+    fun `a new event starts at the next full hour, not at the current minute`() {
+        // UX audit H5: the form opened at 8:49 PM to 9:49 PM, which nearly every parent changed.
+        assertEquals(LocalTime.of(21, 0), defaultStartTime(LocalTime.of(20, 49)))
+        assertEquals(LocalTime.of(22, 0), defaultEndTime(defaultStartTime(LocalTime.of(20, 49))))
+        assertEquals(LocalTime.of(9, 0), defaultStartTime(LocalTime.of(8, 0)))
+    }
+
+    @Test
+    fun `the last hour of the day does not wrap past midnight`() {
+        assertEquals(LocalTime.of(23, 0), defaultStartTime(LocalTime.of(23, 40)))
+        assertEquals(AllDayEvent.LAST_MINUTE, defaultEndTime(LocalTime.of(23, 0)))
+    }
 }

@@ -54,6 +54,7 @@ import com.coparently.app.domain.expenses.isTwoWaySplit
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.RecordPlaceMark
@@ -77,13 +78,6 @@ private const val PAYER_TINT_ALPHA = 0.18f
 private val TILE_SIZE = 40.dp
 
 /**
- * Slot 1, whose share the stored ratio counts. Never shown as the word — [ParentNames] turns it
- * into that person's name, which is the whole reason the row can print a ratio at all.
- */
-private const val MOM_SLOT = "mom"
-private const val DAD_SLOT = "dad"
-
-/**
  * List of expenses for the period. Each row swipes left to delete ([SwipeToDeleteRow]).
  *
  * @param expenses Expenses to show, already ordered
@@ -100,6 +94,9 @@ private const val DAD_SLOT = "dad"
  *   is a read.
  * @param state Scroll state of the list, hoisted so the screen can tell when the month's summary
  *   has scrolled away and pin its collapsed form
+ * @param agreed The family's agreed split, or null while it is not known: a row divided exactly so
+ *   says nothing about it (UX audit M7), because the summary above already states the agreement and
+ *   twenty rows each repeating "Alice 60 % · Bob 40 %" hid the one row that differed.
  * @param places Where each expense the family does not count stands, by id
  *   (`MonthOfExpenses.places`); those rows carry a [RecordPlaceMark]. An id absent from it is the
  *   family's own.
@@ -119,6 +116,7 @@ fun ExpenseList(
     header: (LazyListScope.() -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
     places: Map<String, RecordPlace> = emptyMap(),
+    agreed: SplitRatio? = null,
     modifier: Modifier = Modifier
 ) {
     // Receipt being viewed full-screen; transient UI state, deliberately local.
@@ -168,6 +166,7 @@ fun ExpenseList(
                     payerRole = roleByUid[expense.paidBy],
                     parentNames = parentNames,
                     splitKnown = splitKnown,
+                    agreed = agreed,
                     onClick = tap,
                     onReceiptClick = { photo -> viewedReceipt = photo },
                     place = place
@@ -209,6 +208,7 @@ fun ExpenseList(
  * @param splitKnown Whether both parent slots are known. Required rather than defaulted: false is
  *   not silence, it makes the row assert "split 50/50", and a caller that has not worked the
  *   answer out would be publishing a claim about money by omission.
+ * @param agreed The family's agreed split; a row divided exactly so leaves its split unsaid
  * @param onClick Opens the expense editor; null leaves the row inert
  * @param onReceiptClick Opens the full-screen receipt viewer. Only the family's two parents see a
  *   receipt (L-4); for anybody else, and for a legacy download URL, the row has no thumbnail.
@@ -224,6 +224,7 @@ fun ExpenseItem(
     parentNames: ParentNames,
     payerRole: String? = null,
     splitKnown: Boolean,
+    agreed: SplitRatio? = null,
     onClick: (() -> Unit)? = null,
     onReceiptClick: (ViewablePhoto) -> Unit = {},
     place: RecordPlace = RecordPlace.ON_SCREEN
@@ -240,28 +241,22 @@ fun ExpenseItem(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val payerName = payerRole?.let { parentNames.labelFor(it) }
-
-    val subtitle = if (payerName != null) {
-        stringResource(
-            R.string.expenses_row_subtitle,
-            stringResource(expense.category.labelRes),
-            payerName,
-            expense.date.format(dateFormatter)
-        )
-    } else {
-        stringResource(
-            R.string.expenses_row_subtitle_unknown_payer,
-            stringResource(expense.category.labelRes),
-            expense.date.format(dateFormatter)
-        )
-    }
+    val subtitle = rowSubtitle(
+        category = stringResource(expense.category.labelRes),
+        date = expense.date.format(dateFormatter),
+        payerRole = payerRole,
+        parentNames = parentNames
+    )
 
     // The split moved from its own right-hand column into the subtitle: it is a property of
     // the expense, not a second figure competing with the amount. A row the family does not count
     // leaves it out: it is priced in no balance here, and its ratio's first figure would name this
     // family's slot 1 — somebody who may never have been in the family it belongs to.
-    val splitLabel = if (counted) splitLabelOf(expense, splitKnown, parentNames) else null
+    val splitLabel = if (counted && !dividesAsAgreed(expense, splitKnown, agreed)) {
+        splitLabelOf(expense, splitKnown, parentNames)
+    } else {
+        null
+    }
     val meta = when {
         splitLabel == null -> subtitle
         receipt != null -> stringResource(R.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
@@ -355,6 +350,29 @@ fun ExpenseItem(
 }
 
 /**
+ * The row's second line: the category, who paid and the date. The reader's own payment reads
+ * "you paid" rather than their own name (UX audit H4).
+ */
+@Composable
+private fun rowSubtitle(category: String, date: String, payerRole: String?, parentNames: ParentNames): String =
+    when {
+        parentNames.isReader(payerRole) -> stringResource(R.string.expenses_row_subtitle_you, category, date)
+        payerRole != null ->
+            stringResource(R.string.expenses_row_subtitle, category, parentNames.labelFor(payerRole), date)
+        else -> stringResource(R.string.expenses_row_subtitle_unknown_payer, category, date)
+    }
+
+/**
+ * Whether [expense] divides between the two parents exactly as the family agreed, so its row need
+ * not say how it divides. Only while the two parents can be told apart: otherwise the balance
+ * divides evenly whatever was agreed, and the row says so. A row recorded before any agreement
+ * (no stored ratio) divided evenly.
+ */
+internal fun dividesAsAgreed(expense: Expense, splitKnown: Boolean, agreed: SplitRatio?): Boolean =
+    agreed != null && splitKnown && expense.isTwoWaySplit() &&
+        (SplitRatio.fromStored(expense.splitBasisPoints) ?: SplitRatio.EVEN) == agreed
+
+/**
  * How [expense] divides, as its row's meta line says it.
  *
  * The ratio the expense was recorded under, not the family's current agreement: an expense is
@@ -375,13 +393,7 @@ private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: Par
         // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
         // the difference between a label and a wrong claim about money.
         // Each name with its own share (second audit: "split Alice 60/40" left the 40 to guess).
-        ratio != null -> stringResource(
-            R.string.expenses_split_shares_named,
-            parentNames.labelFor(MOM_SLOT),
-            ratio.momPercent,
-            parentNames.labelFor(DAD_SLOT),
-            ratio.dadPercent
-        )
+        ratio != null -> splitSharesText(ratio, parentNames)
         expense.isTwoWaySplit() ->
             stringResource(R.string.expenses_split_even)
         expense.splitBetween.size > 2 ->

@@ -1,5 +1,6 @@
 package com.coparently.app.screenshots
 
+import androidx.compose.runtime.Composable
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
@@ -8,6 +9,7 @@ import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.rememberParentNames
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -39,21 +41,19 @@ object ScreenshotFixtures {
     const val CO_PARENT_UID = "u2"
 
     /**
-     * Both parents named, so labels show names rather than fallbacks. The fallbacks are English
-     * literals on purpose: they are what `rememberParentNames` would have resolved, and with both
-     * names present none of them is ever drawn.
+     * Both parents named, so labels show names rather than fallbacks, resolved the way
+     * `rememberParentNames` resolves them: the reader is "you" in the variant's language wherever
+     * a screen addresses them (design audit H4), so the fallbacks are no longer never drawn.
      */
-    val parentNames = ParentNames(
-        parents = Parents(
-            me = NamedParent(uid = MY_UID, slot = SLOT_ONE, name = "Olya"),
-            coParent = NamedParent(uid = CO_PARENT_UID, slot = SLOT_TWO, name = "Pavel"),
-            isPaired = true,
-            loaded = true
-        ),
-        youFallback = "You",
-        coParentFallback = "Co-parent",
-        unknownFallback = "Parent"
-    )
+    val parentNames: ParentNames
+        @Composable get() = rememberParentNames(
+            Parents(
+                me = NamedParent(uid = MY_UID, slot = SLOT_ONE, name = "Olya"),
+                coParent = NamedParent(uid = CO_PARENT_UID, slot = SLOT_TWO, name = "Pavel"),
+                isPaired = true,
+                loaded = true
+            )
+        )
 
     private const val SLOT_ONE = "mom"
     private const val SLOT_TWO = "dad"

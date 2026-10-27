@@ -196,11 +196,37 @@ class DaySwapInboxTest {
             }
         )
 
-        assertEquals(SwapDirection.GIVES, group("mom", "mom").direction(offererSlot = "dad"))
+        // Read by mom, the parent being asked: dad offered every one of these.
+        fun read(vararg toParents: String) =
+            group(*toParents).direction(offeredByReader = false, readerSlot = "mom", coParentSlot = "dad")
+
+        assertEquals(SwapDirection.GIVES, read("mom", "mom"))
         // The inbox used to say "Bob is offering you a day" over a day Bob asked for.
-        assertEquals(SwapDirection.ASKS, group("dad").direction(offererSlot = "dad"))
-        assertEquals(SwapDirection.BOTH, group("mom", "dad").direction(offererSlot = "dad"))
-        assertEquals(SwapDirection.GIVES, group("dad").direction(offererSlot = null))
+        assertEquals(SwapDirection.ASKS, read("dad"))
+        assertEquals(SwapDirection.BOTH, read("mom", "dad"))
+        // Read by dad, who made the offer: the same answer from his side.
+        assertEquals(
+            SwapDirection.ASKS,
+            group("dad").direction(offeredByReader = true, readerSlot = "dad", coParentSlot = "mom")
+        )
+    }
+
+    @Test
+    fun `an unknown co-parent slot no longer reads as giving`() {
+        // UX audit H1: the card read "offering you" whenever the offerer's slot was missing, while
+        // Home's dialog, reading the day's own slot, said the offerer gets the day.
+        val asks = DaySwapGroup(
+            listOf(DaySwap(today.plusDays(1), DayOverride(toParent = "dad", requestedBy = dad, requestedAt = "t")))
+        )
+        fun asked(reader: String?, coParent: String?, byReader: Boolean = false) =
+            asks.direction(offeredByReader = byReader, readerSlot = reader, coParentSlot = coParent)
+
+        assertEquals(SwapDirection.ASKS, asked(reader = "mom", coParent = null))
+        assertEquals(SwapDirection.ASKS, asked(reader = null, coParent = "dad"))
+        assertEquals(SwapDirection.UNKNOWN, asked(reader = null, coParent = null))
+        assertEquals(SwapDirection.UNKNOWN, asked(reader = null, coParent = "mom", byReader = true))
+        // A pair still sharing one slot cannot be told apart: no guess either way.
+        assertEquals(SwapDirection.UNKNOWN, asked(reader = "mom", coParent = "mom"))
     }
 
     @Test

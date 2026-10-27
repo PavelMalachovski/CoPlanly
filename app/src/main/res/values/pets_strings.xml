@@ -4,7 +4,6 @@
     <!-- List screen -->
     <string name="pets_screen_title">Pets</string>
     <string name="pets_back">Back</string>
-    <string name="pets_sync">Sync</string>
     <string name="pets_add">Add pet</string>
     <string name="pets_group_label">Pets</string>
     <string name="pets_empty_state">No pets yet</string>
@@ -62,5 +61,4 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="pets_load_failed">Could not load your pets. Please try again.</string>
     <string name="pets_delete_failed">Could not delete the pet. Please try again.</string>
-    <string name="pets_sync_failed">Could not sync your pets. Please try again.</string>
 </resources>

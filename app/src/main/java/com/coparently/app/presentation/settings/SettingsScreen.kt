@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
@@ -181,6 +182,7 @@ fun SettingsScreen(
     onNavigateToCalendarFeed: (() -> Unit)? = null,
     onNavigateToSchoolImport: (() -> Unit)? = null,
     onNavigateToDataSources: (() -> Unit)? = null,
+    onNavigateToMyProfile: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = hiltViewModel(),
@@ -598,6 +600,41 @@ fun SettingsScreen(
                         }
                     )
                     Divider()
+                    // POST_NOTIFICATIONS is requested here, contextually, not on app start.
+                    val notificationPermissionRequester =
+                        com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
+                    SectionRow(
+                        icon = Icons.Default.Notifications,
+                        title = stringResource(R.string.settings_push_notifications),
+                        supporting = stringResource(R.string.settings_push_notifications_description),
+                        trailing = {
+                            val pushLabel = stringResource(R.string.settings_push_notifications)
+                            Switch(
+                                modifier = Modifier.semantics { contentDescription = pushLabel },
+                                checked = settingsUiState.notificationsEnabled &&
+                                    com.coparently.app.presentation.common.hasNotificationPermission(context),
+                                onCheckedChange = { enabled ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (enabled) {
+                                        notificationPermissionRequester.request {
+                                            settingsViewModel.toggleNotifications(true)
+                                        }
+                                    } else {
+                                        settingsViewModel.toggleNotifications(false)
+                                    }
+                                },
+                                enabled = !settingsUiState.isLoading
+                            )
+                        }
+                    )
+                }
+            }
+
+            // ── CHAT ───────────────────────────────────────────────────────────
+            // A setting of the chat, grouped as one so it is found where it is about (UX audit M6).
+            Column {
+                GroupLabel(stringResource(R.string.settings_group_chat))
+                SectionGroup {
                     // MON-19. Off by default: a pause and a hint are help a parent asks for, not
                     // one the app imposes on every message.
                     SectionRow(
@@ -619,7 +656,15 @@ fun SettingsScreen(
                             )
                         }
                     )
-                    Divider()
+                }
+            }
+
+            // ── PRIVACY AND DATA ───────────────────────────────────────────────
+            // Everything a consent was asked for, and where the data comes from, apart from the
+            // preferences above (UX audit M6: eleven rows of App mixed the two).
+            Column {
+                GroupLabel(stringResource(R.string.settings_group_privacy))
+                SectionGroup {
                     // The other half of what makes the first-run question a consent: a decision
                     // you cannot revisit is not one (REL-5). A switch rather than a row that
                     // opens the full screen again — the screen exists to *ask*, and re-asking
@@ -654,37 +699,9 @@ fun SettingsScreen(
                     // The AI-assist consent, beside the other consents: given where it is used,
                     // turned off here. Draws nothing (not even a divider) while the build has no AI.
                     AiConsentSettingsEntry(snackbarHostState = snackbarHostState)
-                    // POST_NOTIFICATIONS is requested here, contextually, not on app start.
-                    val notificationPermissionRequester =
-                        com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
-                    SectionRow(
-                        icon = Icons.Default.Notifications,
-                        title = stringResource(R.string.settings_push_notifications),
-                        supporting = stringResource(R.string.settings_push_notifications_description),
-                        trailing = {
-                            val pushLabel = stringResource(R.string.settings_push_notifications)
-                            Switch(
-                                modifier = Modifier.semantics { contentDescription = pushLabel },
-                                checked = settingsUiState.notificationsEnabled &&
-                                    com.coparently.app.presentation.common.hasNotificationPermission(context),
-                                onCheckedChange = { enabled ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    if (enabled) {
-                                        notificationPermissionRequester.request {
-                                            settingsViewModel.toggleNotifications(true)
-                                        }
-                                    } else {
-                                        settingsViewModel.toggleNotifications(false)
-                                    }
-                                },
-                                enabled = !settingsUiState.isLoading
-                            )
-                        }
-                    )
-                    // Last in App: the attribution the OpenHolidays data's licence (ODbL 1.0)
+                    // Last in Privacy and data: the attribution the OpenHolidays data's licence (ODbL 1.0)
                     // asks for, and the answer to "where do these holiday dates come from".
                     onNavigateToDataSources?.let { navigate ->
-                        Divider()
                         SectionRow(
                             icon = Icons.Default.Source,
                             title = stringResource(R.string.settings_data_sources_title),
@@ -711,6 +728,18 @@ fun SettingsScreen(
                         SignedInAsRow(
                             account = signedIn,
                             modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.L)
+                        )
+                        Divider()
+                    }
+                    // This parent's own details, beside the account they belong to (UX audit M5:
+                    // on the Family tab it sat among three other rows about people).
+                    onNavigateToMyProfile?.let { navigate ->
+                        SectionRow(
+                            icon = Icons.Default.Person,
+                            title = stringResource(R.string.settings_my_profile_title),
+                            supporting = stringResource(R.string.settings_my_profile_description),
+                            onClick = navigate,
+                            trailing = { Chevron() }
                         )
                         Divider()
                     }

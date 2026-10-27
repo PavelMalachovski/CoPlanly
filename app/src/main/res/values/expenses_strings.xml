@@ -39,6 +39,7 @@
         <item quantity="other">%1$d\u00A0expenses</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · %2$s paid · %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s · you paid · %2$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">split 50/50</string>
     <string name="expenses_split_n_ways">split 1/%1$d</string>
@@ -83,6 +84,8 @@
     <string name="expenses_split_proposal_title">New expense split proposed</string>
     <string name="expenses_split_proposal_body_named">%1$s proposes a new split for shared expenses from now on: %2$s. Already recorded expenses keep their split.</string>
     <string name="expenses_split_shares_named">%1$s pays %2$d %%, %3$s pays %4$d %%</string>
+    <string name="expenses_split_shares_you_first">You pay %1$d %%, %2$s pays %3$d %%</string>
+    <string name="expenses_split_shares_you_second">%1$s pays %2$d %%, you pay %3$d %%</string>
     <string name="expenses_split_proposal_confirm">Confirm</string>
     <string name="expenses_split_proposal_decline">Decline</string>
     <string name="expenses_split_proposal_later">Later</string>

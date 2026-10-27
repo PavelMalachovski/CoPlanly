@@ -126,7 +126,9 @@ class ChatScenarioTest : QaOnScreenTest() {
                     )
                 )
                 openTab(BottomNavDestination.CHAT)
-                tap(hasContentDescription(string(R.string.chat_attach)) and hasClickAction())
+                // The `+` opens the composer's menu; attaching is its first entry (UX audit M12).
+                tap(hasContentDescription(string(R.string.chat_composer_actions)) and hasClickAction())
+                tap(hasText(string(R.string.chat_attach)) and hasClickAction())
                 waitFor("the send-this-file dialog", hasAnyAncestor(isDialog()) and hasText(string(R.string.chat_attach_send)))
                 tap(dialogButton(R.string.chat_attach_send))
             } finally {

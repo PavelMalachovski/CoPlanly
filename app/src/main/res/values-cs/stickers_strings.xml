@@ -44,6 +44,6 @@
     <string name="parent_role_parent">Rodič (neutrálně)</string>
     <string name="parent_role_save">Uložit</string>
     <string name="parent_role_save_failed">Odpověď se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.</string>
-    <string name="stickers_role_row">Samolepky mi říkají</string>
+    <string name="stickers_role_row">Samolepky mě oslovují jako</string>
     <string name="stickers_role_unanswered">Zatím bez odpovědi</string>
 </resources>

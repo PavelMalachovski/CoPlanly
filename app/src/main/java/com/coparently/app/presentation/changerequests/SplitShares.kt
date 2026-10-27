@@ -17,10 +17,25 @@ import com.coparently.app.presentation.common.ParentNames
  * @param parentNames Names each slot — never "Mom" or "Dad".
  */
 @Composable
-internal fun splitSharesText(ratio: SplitRatio, parentNames: ParentNames): String = stringResource(
-    R.string.expenses_split_shares_named,
-    parentNames.labelFor(ContactWindow.SLOT_ONE),
-    ratio.momPercent,
-    parentNames.labelFor(ContactWindow.SLOT_TWO),
-    ratio.dadPercent
-)
+internal fun splitSharesText(ratio: SplitRatio, parentNames: ParentNames): String = when {
+    // The reader's own share is "you pay" (UX audit H4), in the slot order the split bar draws.
+    parentNames.isReader(ContactWindow.SLOT_ONE) -> stringResource(
+        R.string.expenses_split_shares_you_first,
+        ratio.momPercent,
+        parentNames.labelFor(ContactWindow.SLOT_TWO),
+        ratio.dadPercent
+    )
+    parentNames.isReader(ContactWindow.SLOT_TWO) -> stringResource(
+        R.string.expenses_split_shares_you_second,
+        parentNames.labelFor(ContactWindow.SLOT_ONE),
+        ratio.momPercent,
+        ratio.dadPercent
+    )
+    else -> stringResource(
+        R.string.expenses_split_shares_named,
+        parentNames.labelFor(ContactWindow.SLOT_ONE),
+        ratio.momPercent,
+        parentNames.labelFor(ContactWindow.SLOT_TWO),
+        ratio.dadPercent
+    )
+}

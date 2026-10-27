@@ -3,6 +3,7 @@ package com.coparently.app.presentation.home
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.model.ChangeRequest
+import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import java.time.Duration
 import java.time.LocalDateTime
@@ -24,6 +25,8 @@ enum class ActivityKind {
  * One entry in the "recent changes the co-parent made" feed.
  *
  * @property answer The answer an [ActivityKind.ANSWER] row is about; null for every other kind.
+ * @property requestStatus Where a change request stands, for a [ActivityKind.CHANGE_REQUESTED] row;
+ *   null for every other kind. Only a pending one still asks the reader to review it (UX audit M2).
  */
 data class ActivityItem(
     val id: String,
@@ -32,7 +35,8 @@ data class ActivityItem(
     val timestamp: LocalDateTime,
     val eventId: String,
     val isChangeRequest: Boolean,
-    val answer: HistoryEntry? = null
+    val answer: HistoryEntry? = null,
+    val requestStatus: ChangeRequestStatus? = null
 )
 
 /**
@@ -94,7 +98,8 @@ object HomeFeed {
                     title = request.eventTitle,
                     timestamp = request.createdAt,
                     eventId = request.eventId,
-                    isChangeRequest = true
+                    isChangeRequest = true,
+                    requestStatus = request.status
                 )
             }
 

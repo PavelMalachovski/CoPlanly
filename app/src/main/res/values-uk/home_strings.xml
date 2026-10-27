@@ -8,6 +8,7 @@
     <string name="home_pairing_cta">Зʼєднатися з другим із батьків</string>
 
     <string name="home_handover_current">Сьогодні з дітьми — %1$s</string>
+    <string name="home_handover_current_you">Сьогодні діти з вами</string>
     <string name="home_handover_hero_today">Передача сьогодні, далі — %1$s</string>
     <string name="home_handover_hero_tomorrow">Передача завтра, далі — %1$s</string>
     <plurals name="home_handover_hero_in_days">
@@ -16,7 +17,6 @@
         <item quantity="many">Передача через %2$d днів, далі — %1$s</item>
         <item quantity="other">Передача через %2$d дня, далі — %1$s</item>
     </plurals>
-    <string name="home_handover_review">Переглянути</string>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d непрочитане</item>
@@ -35,6 +35,9 @@
     <string name="home_section_partner_changed">Зміни: %1$s</string>
 
     <string name="home_timeline_meta">%1$s · чий день: %2$s</string>
+    <string name="home_week_days_you">Ваші дні</string>
+    <string name="home_week_days_of">Дні: %1$s</string>
+    <string name="home_timeline_meta_you">%1$s · ваш день</string>
 
     <string name="home_recent_empty_paired">Від другого з батьків поки нічого нового. Щойно щось зміниться, це зʼявиться тут.</string>
 
@@ -47,6 +50,9 @@
     <string name="home_activity_pickup_confirmed">Підтверджено, що забрали: %1$s</string>
     <string name="home_activity_change_requested">Запит на зміну: %1$s</string>
     <string name="home_activity_review">Переглянути</string>
+    <string name="home_activity_you_accepted">Ви прийняли</string>
+    <string name="home_activity_you_declined">Ви відхилили</string>
+    <string name="home_activity_withdrawn">Відкликано</string>
 
     <string name="home_dialog_swap_title">Обмін днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "р.", and a sentence ending in
@@ -67,6 +73,8 @@
     <string name="home_dialog_swap_message_days_apart">%1$s пропонує помінятися цими днями: %2$s.</string>
     <string name="home_dialog_swap_goes_to_day">Якщо ви погодитеся, %1$s отримує цей день.</string>
     <string name="home_dialog_swap_goes_to_days">Якщо ви погодитеся, %1$s отримує ці дні.</string>
+    <string name="home_dialog_swap_goes_to_you_day">Якщо ви погодитеся, цей день буде вашим.</string>
+    <string name="home_dialog_swap_goes_to_you_days">Якщо ви погодитеся, ці дні будуть вашими.</string>
     <string name="home_dialog_swap_goes_each_way">Якщо ви погодитеся, кожен день перейде до іншого з батьків.</string>
 
     <!-- The empty seven-day card's action. -->

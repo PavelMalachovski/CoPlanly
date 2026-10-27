@@ -173,7 +173,7 @@ fun PairingScreen(
     }
 
     Scaffold(
-        topBar = { PairingTopBar(onNavigateBack) },
+        topBar = { PairingTopBar(state, partnerOnScreen, onNavigateBack) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
@@ -346,11 +346,19 @@ private fun ActionErrorSnackbar(
     }
 }
 
+/**
+ * The bar, titled with the co-parent's name once there is one (UX audit L7) — "Pair with your
+ * co-parent" over a screen that says "Paired since…" asked for something already done.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PairingTopBar(onNavigateBack: () -> Unit) {
+private fun PairingTopBar(state: PairingState, partnerOnScreen: PartnerSummary?, onNavigateBack: () -> Unit) {
+    val title = (state as? PairingState.Paired)?.let { paired ->
+        (partnerOnScreen ?: paired.partner)?.name?.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.parent_label_coparent)
+    } ?: stringResource(R.string.pairing_screen_title)
     TopAppBar(
-        title = { Text(stringResource(R.string.pairing_screen_title)) },
+        title = { Text(title) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
                 Icon(

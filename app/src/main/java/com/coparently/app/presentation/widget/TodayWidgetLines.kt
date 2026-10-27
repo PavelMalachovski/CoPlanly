@@ -141,7 +141,11 @@ object TodayWidgetText {
             title = title,
             custody = model.dayParent?.let { slot ->
                 WidgetLine(
-                    context.getString(R.string.home_handover_current, names.labelFor(slot)),
+                    if (names.isReader(slot)) {
+                        context.getString(R.string.home_handover_current_you)
+                    } else {
+                        context.getString(R.string.home_handover_current, names.labelFor(slot))
+                    },
                     palette.of(slot)
                 )
             },

@@ -24,7 +24,9 @@
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">Du hast diesen Tag %1$s angeboten. Die Antwort steht noch aus.</string>
     <string name="day_swap_strip_offered_to_you">%1$s bittet darum, dass dieser Tag bei %2$s ist.</string>
+    <string name="day_swap_strip_offered_to_reader">%1$s bietet dir diesen Tag an.</string>
     <string name="day_swap_strip_agreed">Vereinbarter Tausch: Dieser Tag ist bei %1$s.</string>
+    <string name="day_swap_strip_agreed_you">Vereinbarter Tausch: Dieser Tag ist bei dir.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Diese Tage tauschen</string>
     <string name="day_swap_select_hint">Tippe weitere Tage an, um den Tausch zu erweitern</string>

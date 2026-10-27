@@ -2,7 +2,6 @@ package com.coparently.app.presentation.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -24,6 +23,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.SwapDirection
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.parentingplan.CitationStatus
@@ -33,6 +33,7 @@ import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
 import com.coparently.app.presentation.changerequests.SwapDayAnswers
 import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
@@ -234,19 +235,19 @@ private fun ProposalDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onDismiss()
-                actions.onAcceptProposal()
-            }) { Text(stringResource(R.string.custody_proposal_accept)) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
-                TextButton(onClick = {
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.custody_proposal_accept),
+                declineLabel = stringResource(R.string.custody_proposal_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptProposal()
+                },
+                onDecline = {
                     onDismiss()
                     actions.onDeclineProposal()
-                }) { Text(stringResource(R.string.custody_proposal_decline)) }
-            }
+                },
+                later = stringResource(R.string.home_dialog_later) to onDismiss
+            )
         }
     )
 }
@@ -293,19 +294,19 @@ private fun SplitDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onDismiss()
-                actions.onAcceptSplit()
-            }) { Text(stringResource(R.string.change_request_accept)) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
-                TextButton(onClick = {
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.change_request_accept),
+                declineLabel = stringResource(R.string.change_request_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptSplit()
+                },
+                onDecline = {
                     onDismiss()
                     actions.onDeclineSplit()
-                }) { Text(stringResource(R.string.change_request_decline)) }
-            }
+                },
+                later = stringResource(R.string.home_dialog_later) to onDismiss
+            )
         }
     )
 }
@@ -347,23 +348,19 @@ private fun SwapDialog(
         confirmButton = {
             // Dismissed on tap as well: the answer's round trip through Firestore takes a
             // moment, and the dialog must not sit there inviting a second tap meanwhile.
-            TextButton(onClick = {
-                onDismiss()
-                actions.onAcceptSwap(swapGroup)
-            }) {
-                Text(stringResource(R.string.day_swap_accept))
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
-                TextButton(onClick = {
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.day_swap_accept),
+                declineLabel = stringResource(R.string.day_swap_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptSwap(swapGroup)
+                },
+                onDecline = {
                     onDismiss()
                     actions.onDeclineSwap(swapGroup)
-                }) {
-                    Text(stringResource(R.string.day_swap_decline))
-                }
-            }
+                },
+                later = stringResource(R.string.home_dialog_later) to onDismiss
+            )
         }
     )
 }
@@ -402,21 +399,28 @@ private fun swapDialogMessage(swapGroup: DaySwapGroup, parentNames: ParentNames)
 
 /**
  * Whom the offered days go to if this parent accepts (second audit: "changing who has the child"
- * left out the one thing the answer is about). One name when every day goes the same way; an offer
- * that both gives and takes days says each goes to the other parent.
+ * left out the one thing the answer is about). "Yours" or the co-parent's name when every day goes
+ * the same way; an offer that both gives and takes days, or whose slots cannot be told apart, says
+ * each goes to the other parent. The direction is the inbox card's own
+ * ([DaySwapGroup.direction]), so the two cannot word one offer two ways (UX audit H1).
  */
 @Composable
 private fun swapDirection(swapGroup: DaySwapGroup, parentNames: ParentNames): String {
-    val to = swapGroup.swaps.map { it.override.toParent }.distinct()
-    val oneWay = if (swapGroup.dayCount == 1) {
-        R.string.home_dialog_swap_goes_to_day
-    } else {
-        R.string.home_dialog_swap_goes_to_days
-    }
-    return if (to.size == 1) {
-        stringResource(oneWay, parentNames.labelFor(to.single()))
-    } else {
-        stringResource(R.string.home_dialog_swap_goes_each_way)
+    val one = swapGroup.dayCount == 1
+    val direction = swapGroup.direction(
+        offeredByReader = false,
+        readerSlot = parentNames.parents.me?.slot,
+        coParentSlot = parentNames.parents.coParent?.slot
+    )
+    return when (direction) {
+        SwapDirection.GIVES -> stringResource(
+            if (one) R.string.home_dialog_swap_goes_to_you_day else R.string.home_dialog_swap_goes_to_you_days
+        )
+        SwapDirection.ASKS -> stringResource(
+            if (one) R.string.home_dialog_swap_goes_to_day else R.string.home_dialog_swap_goes_to_days,
+            parentNames.labelForUid(swapGroup.swaps.first().override.requestedBy)
+        )
+        SwapDirection.BOTH, SwapDirection.UNKNOWN -> stringResource(R.string.home_dialog_swap_goes_each_way)
     }
 }
 

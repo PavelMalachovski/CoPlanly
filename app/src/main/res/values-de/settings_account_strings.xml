@@ -53,6 +53,8 @@
     <!-- Group headers for the four settings sections. -->
     <string name="settings_group_sync">SYNC</string>
     <string name="settings_group_app">APP</string>
+    <string name="settings_group_chat">Chat</string>
+    <string name="settings_group_privacy">Datenschutz und Daten</string>
     <string name="settings_group_account">KONTO</string>
 
     <!-- Co-parent sync status line. %1$s = time of the last successful sync. -->

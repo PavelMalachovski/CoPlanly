@@ -10,7 +10,6 @@
     <string name="childinfo_cancel">Zrušit</string>
     <string name="childinfo_clear">Vymazat</string>
     <string name="childinfo_ok">OK</string>
-    <string name="childinfo_sync">Synchronizovat</string>
 
     <!-- Child info: titles and sections -->
     <string name="childinfo_screen_title">Informace o dítěti</string>
@@ -113,7 +112,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="childinfo_load_failed">Údaje o dětech se nepodařilo načíst. Zkuste to prosím znovu.</string>
     <string name="childinfo_delete_failed">Údaje o dítěti se nepodařilo smazat. Zkuste to prosím znovu.</string>
-    <string name="childinfo_sync_failed">Údaje o dětech se nepodařilo synchronizovat. Zkuste to prosím znovu.</string>
 
     <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
     <string name="childinfo_school_clear_title">Vymazat údaje o škole?</string>

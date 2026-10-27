@@ -85,6 +85,7 @@ import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.home.WeekEntry
+import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.presentation.calendar.components.DayAgendaCard
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.swapDatesText
@@ -453,7 +454,6 @@ private fun Dashboard(
                 HandoverHero(
                     info = handover,
                     parentNames = parentNames,
-                    onConfirm = onOpenChangeRequests,
                     childrenToday = state.childrenToday
                 )
             }
@@ -512,11 +512,18 @@ private fun Dashboard(
                 // that carries the occurrence's own start time; the id alone collides.
                 key = { _, entry -> entry.key }
             ) { index, entry ->
+                // Whose days these are, once over each run of them rather than on every row (UX audit
+                // M4): beside each row's own dot — whose event it is — it read as a second colour.
+                val dayParent = entry.dayParent
+                if (dayParent != null && dayParent != state.week.getOrNull(index - 1)?.dayParent) {
+                    WeekDaysLabel(dayParent, parentNames)
+                }
                 TimelineRow(
                     entry = entry,
                     parentNames = parentNames,
                     isLast = index == state.week.lastIndex,
-                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) }
+                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) },
+                    showDayParent = false
                 )
             }
         }
@@ -666,15 +673,17 @@ private fun SectionHeader(text: String) {
  * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
  * subclasses under `app/src/test`) can render it on its own.
  *
+ * The card used to end in a "Review" chip that opened the Requests inbox — a word that did not say
+ * what it reviewed, one row above the Requests row that opens the same inbox (UX audit M3). The
+ * date chip stays: it carries the next parent's colour.
+ *
  * @param info Next handover
- * @param onConfirm Opens the change-request inbox, where a handover is actually acted on
  */
 @Composable
 @Suppress("LongMethod") // one card: gradient, headline, chips and action read as a single block
 internal fun HandoverHero(
     info: HandoverInfo,
     parentNames: ParentNames,
-    onConfirm: () -> Unit,
     childrenToday: List<ChildWithParent> = emptyList()
 ) {
     val fromColor = ParentColors.fill(info.fromParent)
@@ -726,10 +735,11 @@ internal fun HandoverHero(
                         .background(fromColor)
                 )
                 Text(
-                    text = stringResource(
-                        R.string.home_handover_current,
-                        parentNames.labelFor(info.fromParent)
-                    ),
+                    text = if (parentNames.isReader(info.fromParent)) {
+                        stringResource(R.string.home_handover_current_you)
+                    } else {
+                        stringResource(R.string.home_handover_current, parentNames.labelFor(info.fromParent))
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -741,17 +751,11 @@ internal fun HandoverHero(
                     lineHeight = 32.sp
                 )
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                PillChip(
-                    label = info.date.format(localizedDate("EEEMMMd")),
-                    container = ParentColors.container(info.toParent, alpha = 0.2f),
-                    contentColor = ParentColors.text(info.toParent)
-                )
-                PillChip(
-                    label = stringResource(R.string.home_handover_review),
-                    onClick = onConfirm
-                )
-            }
+            PillChip(
+                label = info.date.format(localizedDate("EEEMMMd")),
+                container = ParentColors.container(info.toParent, alpha = 0.2f),
+                contentColor = ParentColors.text(info.toParent)
+            )
             ChildrenTodayLines(childrenToday, parentNames)
         }
     }
@@ -790,6 +794,9 @@ internal fun StatTiles(
         StatTile(
             modifier = modifier,
             icon = Icons.Default.Payments,
+            // Named, as the Family tab's money card is: two bare totals said nothing about which
+            // period they were (UX audit M3).
+            label = stringResource(R.string.family_money_this_month),
             value = spend.byCurrency.joinToString("\n") { formatMoney(it.amount, it.currency) },
             caption = balanceCaption(balances),
             onClick = onOpenExpenses
@@ -857,7 +864,8 @@ private fun StatTile(
     value: String,
     caption: String,
     onClick: () -> Unit,
-    badge: Int? = null
+    badge: Int? = null,
+    label: String? = null
 ) {
     Card(
         onClick = onClick,
@@ -892,6 +900,13 @@ private fun StatTile(
             // Neither line is capped: the value is money or a count and the caption says who
             // owes whom, and a cut-off figure is a wrong figure.
             Column(modifier = Modifier.weight(1f)) {
+                label?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMediumEmphasized
@@ -931,7 +946,8 @@ internal fun TimelineRow(
     entry: WeekEntry,
     parentNames: ParentNames,
     isLast: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showDayParent: Boolean = true
 ) {
     val event = entry.event
     Row(
@@ -1003,7 +1019,14 @@ internal fun TimelineRow(
             }
             Text(
                 text = entry.dayParent
-                    ?.let { stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it)) }
+                    ?.takeIf { showDayParent }
+                    ?.let {
+                        if (parentNames.isReader(it)) {
+                            stringResource(R.string.home_timeline_meta_you, timeLabel)
+                        } else {
+                            stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it))
+                        }
+                    }
                     ?: timeLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1060,13 +1083,20 @@ private fun ActivityGroup(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (item.isChangeRequest) {
-                    PillChip(
+                // "Review" only while the request still waits on this parent; once answered or
+                // withdrawn the row says how it ended instead (UX audit M2: it kept "Review" after
+                // the History already said "Accepted").
+                when (item.requestStatus) {
+                    ChangeRequestStatus.PENDING -> PillChip(
                         label = stringResource(R.string.home_activity_review),
                         container = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         onClick = onOpenChangeRequests
                     )
+                    ChangeRequestStatus.ACCEPTED -> OutcomeChip(R.string.home_activity_you_accepted)
+                    ChangeRequestStatus.DECLINED -> OutcomeChip(R.string.home_activity_you_declined)
+                    ChangeRequestStatus.CANCELLED -> OutcomeChip(R.string.home_activity_withdrawn)
+                    null -> Unit
                 }
             }
             Divider()
@@ -1077,6 +1107,38 @@ private fun ActivityGroup(
             trailing = { HomeChevron() }
         )
     }
+}
+
+/** Whose days the week's next run of rows falls on: "Your days" or "Bob's days", with their colour. */
+@Composable
+private fun WeekDaysLabel(slot: String, parentNames: ParentNames) {
+    Row(
+        modifier = Modifier.padding(top = Spacing.S, bottom = Spacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 16.dp, height = 4.dp)
+                .clip(CircleShape)
+                .background(ParentColors.fill(slot))
+        )
+        Text(
+            text = if (parentNames.isReader(slot)) {
+                stringResource(R.string.home_week_days_you)
+            } else {
+                stringResource(R.string.home_week_days_of, parentNames.labelFor(slot))
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** How a change request in the feed ended, in a neutral chip: a fact, not an action. */
+@Composable
+private fun OutcomeChip(label: Int) {
+    PillChip(label = stringResource(label), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /**
@@ -1190,8 +1252,7 @@ private fun HandoverHeroPreview() {
                 fromParent = "mom",
                 toParent = "dad"
             ),
-            parentNames = previewParentNames,
-            onConfirm = {}
+            parentNames = previewParentNames
         )
     }
 }

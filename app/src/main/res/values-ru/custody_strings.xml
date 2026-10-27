@@ -81,6 +81,23 @@
 
     <!-- MON-6b: contact windows over the whole-day pattern. -->
     <string name="custody_windows_title">Периоды общения</string>
+    <string name="custody_overview_pattern">Основной график</string>
+    <string name="custody_overview_pattern_summary">%1$s · с %2$s</string>
+    <string name="custody_overview_none">Нет</string>
+    <string name="custody_overview_children_same">Все по общему графику</string>
+    <string name="custody_overview_sent_separately">Каждая часть отправляется отдельно. Пока %1$s не согласится, календарь не изменится.</string>
+    <plurals name="custody_overview_windows">
+        <item quantity="one">%1$d окно</item>
+        <item quantity="few">%1$d окна</item>
+        <item quantity="many">%1$d окон</item>
+        <item quantity="other">%1$d окна</item>
+    </plurals>
+    <plurals name="custody_overview_children_own">
+        <item quantity="one">У %1$d ребёнка свой график</item>
+        <item quantity="few">У %1$d детей свой график</item>
+        <item quantity="many">У %1$d детей свой график</item>
+        <item quantity="other">У %1$d детей свой график</item>
+    </plurals>
     <string name="custody_windows_hint">Часть дня с родителем, у которого этого дня нет, например каждую среду 15:00–19:00. Сам день остаётся за тем, у кого он есть; период общения показывается поверх.</string>
     <string name="custody_windows_empty">Периодов общения нет.</string>
     <string name="custody_windows_add">Добавить период общения</string>

@@ -44,6 +44,6 @@
     <string name="parent_role_parent">Elternteil (neutral)</string>
     <string name="parent_role_save">Speichern</string>
     <string name="parent_role_save_failed">Deine Antwort konnte nicht gespeichert werden. Prüfe die Verbindung und versuche es erneut.</string>
-    <string name="stickers_role_row">Sticker nennen mich</string>
+    <string name="stickers_role_row">Sticker sprechen mich an als</string>
     <string name="stickers_role_unanswered">Noch nicht beantwortet</string>
 </resources>

@@ -33,6 +33,7 @@
     <string name="month_review_no_expenses">Tento měsíc žádné výdaje</string>
     <string name="month_review_total">Celkem v %1$s</string>
     <string name="month_review_paid_by">%1$s: zaplaceno %2$s</string>
+    <string name="month_review_paid_by_you">Zaplatili jste %1$s</string>
     <string name="month_review_to_even_out">K vyrovnání: %1$s od %2$s pro %3$s</string>
     <string name="month_review_even">Vyrovnáno</string>
 

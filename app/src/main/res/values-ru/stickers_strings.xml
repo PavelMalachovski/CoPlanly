@@ -44,6 +44,6 @@
     <string name="parent_role_parent">Родитель (нейтрально)</string>
     <string name="parent_role_save">Сохранить</string>
     <string name="parent_role_save_failed">Не удалось сохранить ответ. Проверьте подключение и попробуйте ещё раз.</string>
-    <string name="stickers_role_row">Стикеры называют меня</string>
+    <string name="stickers_role_row">Как ко мне обращаются стикеры</string>
     <string name="stickers_role_unanswered">Ещё не ответили</string>
 </resources>

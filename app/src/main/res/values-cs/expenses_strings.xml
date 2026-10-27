@@ -36,6 +36,7 @@
         <item quantity="other">%1$d\u00A0výdajů</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · platba: %2$s · %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s · platili jste vy · %2$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">rozděleno 50/50</string>
     <string name="expenses_split_n_ways">rozděleno 1/%1$d</string>
@@ -76,6 +77,8 @@
     <string name="expenses_split_proposal_title">Navrženo nové rozdělení výdajů</string>
     <string name="expenses_split_proposal_body_named">%1$s navrhuje od této chvíle nové rozdělení sdílených výdajů: %2$s. Již zadané výdaje si ponechají své rozdělení.</string>
     <string name="expenses_split_shares_named">%1$s platí %2$d %%, %3$s platí %4$d %%</string>
+    <string name="expenses_split_shares_you_first">Vy platíte %1$d %%, %2$s platí %3$d %%</string>
+    <string name="expenses_split_shares_you_second">%1$s platí %2$d %%, vy platíte %3$d %%</string>
     <string name="expenses_split_proposal_confirm">Potvrdit</string>
     <string name="expenses_split_proposal_decline">Odmítnout</string>
     <string name="expenses_split_proposal_later">Později</string>

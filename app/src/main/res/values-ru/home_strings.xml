@@ -8,6 +8,7 @@
     <string name="home_pairing_cta">Подключить второго родителя</string>
 
     <string name="home_handover_current">Сегодня с детьми — %1$s</string>
+    <string name="home_handover_current_you">Сегодня дети с вами</string>
     <string name="home_handover_hero_today">Передача сегодня, дальше — %1$s</string>
     <string name="home_handover_hero_tomorrow">Передача завтра, дальше — %1$s</string>
     <plurals name="home_handover_hero_in_days">
@@ -16,7 +17,6 @@
         <item quantity="many">Передача через %2$d дней, дальше — %1$s</item>
         <item quantity="other">Передача через %2$d дня, дальше — %1$s</item>
     </plurals>
-    <string name="home_handover_review">Посмотреть</string>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d новое</item>
@@ -35,6 +35,9 @@
     <string name="home_section_partner_changed">Изменения: %1$s</string>
 
     <string name="home_timeline_meta">%1$s · чей день: %2$s</string>
+    <string name="home_week_days_you">Ваши дни</string>
+    <string name="home_week_days_of">Дни: %1$s</string>
+    <string name="home_timeline_meta_you">%1$s · ваш день</string>
 
     <string name="home_recent_empty_paired">От второго родителя пока ничего нового. Его изменения появятся здесь.</string>
 
@@ -47,6 +50,9 @@
     <string name="home_activity_pickup_confirmed">Подтверждено, что ребёнка забрали: %1$s</string>
     <string name="home_activity_change_requested">Запрошено изменение: %1$s</string>
     <string name="home_activity_review">Посмотреть</string>
+    <string name="home_activity_you_accepted">Вы приняли</string>
+    <string name="home_activity_you_declined">Вы отклонили</string>
+    <string name="home_activity_withdrawn">Отозван</string>
 
     <string name="home_dialog_swap_title">Обмен днями</string>
     <!-- No full stop after the date: FormatStyle.FULL ends it with "г.", and a sentence ending in
@@ -67,6 +73,8 @@
     <string name="home_dialog_swap_message_days_apart">%1$s предлагает поменяться этими днями: %2$s.</string>
     <string name="home_dialog_swap_goes_to_day">Если вы согласитесь, %1$s получает этот день.</string>
     <string name="home_dialog_swap_goes_to_days">Если вы согласитесь, %1$s получает эти дни.</string>
+    <string name="home_dialog_swap_goes_to_you_day">Если вы согласитесь, этот день будет вашим.</string>
+    <string name="home_dialog_swap_goes_to_you_days">Если вы согласитесь, эти дни будут вашими.</string>
     <string name="home_dialog_swap_goes_each_way">Если вы согласитесь, каждый день перейдёт к другому родителю.</string>
 
     <!-- The empty seven-day card's action. -->

@@ -24,7 +24,9 @@
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">Tento den jste nabídli: %1$s. Čeká se na odpověď.</string>
     <string name="day_swap_strip_offered_to_you">%1$s žádá, aby tento den připadl: %2$s.</string>
+    <string name="day_swap_strip_offered_to_reader">%1$s vám nabízí tento den.</string>
     <string name="day_swap_strip_agreed">Dohodnutá výměna: tento den připadá: %1$s.</string>
+    <string name="day_swap_strip_agreed_you">Dohodnutá výměna: tento den připadá vám.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Vyměnit tyto dny</string>
     <string name="day_swap_select_hint">Klepnutím na další dny výměnu rozšíříte</string>

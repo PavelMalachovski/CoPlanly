@@ -10,7 +10,6 @@
     <string name="childinfo_cancel">Cancel</string>
     <string name="childinfo_clear">Clear</string>
     <string name="childinfo_ok">OK</string>
-    <string name="childinfo_sync">Sync</string>
 
     <!-- Child info: titles and sections -->
     <string name="childinfo_screen_title">Child information</string>
@@ -113,7 +112,6 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="childinfo_load_failed">Could not load the children\'s details. Please try again.</string>
     <string name="childinfo_delete_failed">Could not delete the child\'s details. Please try again.</string>
-    <string name="childinfo_sync_failed">Could not sync the children\'s details. Please try again.</string>
 
     <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
     <string name="childinfo_school_clear_title">Clear school details?</string>

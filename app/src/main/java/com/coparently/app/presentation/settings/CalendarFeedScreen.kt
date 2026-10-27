@@ -44,6 +44,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
 import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.ExpandableDetails
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
@@ -155,7 +156,11 @@ private fun FeedBody(
             .padding(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
-        FeedExplanation()
+        Text(
+            text = stringResource(R.string.calendar_feed_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         val canCreate = !state.isBusy && state.familyId != null
         SectionGroup {
             SectionRow(
@@ -164,6 +169,12 @@ private fun FeedBody(
                 onClick = if (canCreate) onCreate else null
             )
         }
+        // Under the action, because it is what a parent must know before sharing a link.
+        Text(
+            text = stringResource(R.string.calendar_feed_warning),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         state.created?.let { created ->
             CreatedLink(
                 onShare = { context.startActivity(shareIntent(context, created)) },
@@ -179,19 +190,18 @@ private fun FeedBody(
             busy = state.isBusy,
             onRevoke = onRevoke
         )
+        FeedExplanation()
     }
 }
 
-/** What the link is, what it carries, what it never carries, and who can read it. */
+/**
+ * What a link carries and what it never carries, folded under the links (UX audit M10): the screen
+ * used to open on four paragraphs before its one action.
+ */
 @Composable
 private fun FeedExplanation() {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        listOf(
-            R.string.calendar_feed_intro,
-            R.string.calendar_feed_included,
-            R.string.calendar_feed_excluded,
-            R.string.calendar_feed_warning
-        ).forEach { res ->
+    ExpandableDetails(label = stringResource(R.string.calendar_feed_details)) {
+        listOf(R.string.calendar_feed_included, R.string.calendar_feed_excluded).forEach { res ->
             Text(
                 text = stringResource(res),
                 style = MaterialTheme.typography.bodyMedium,

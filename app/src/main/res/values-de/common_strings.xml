@@ -54,4 +54,6 @@
     <string name="common_discard">Verwerfen</string>
     <string name="common_discard_changes_title">Änderungen verwerfen?</string>
     <string name="common_discard_changes_message">Deine Änderungen hier sind noch nicht gespeichert. Wenn du jetzt gehst, gehen sie verloren.</string>
+    <string name="common_expanded">Ausgeklappt</string>
+    <string name="common_collapsed">Eingeklappt</string>
 </resources>

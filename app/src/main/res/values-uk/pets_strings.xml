@@ -4,7 +4,6 @@
     <!-- List screen -->
     <string name="pets_screen_title">Улюбленці</string>
     <string name="pets_back">Назад</string>
-    <string name="pets_sync">Синхронізувати</string>
     <string name="pets_add">Додати улюбленця</string>
     <string name="pets_group_label">Улюбленці</string>
     <string name="pets_empty_state">Улюбленців ще немає</string>
@@ -62,5 +61,4 @@
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
     <string name="pets_load_failed">Не вдалося завантажити домашніх улюбленців. Спробуйте ще раз.</string>
     <string name="pets_delete_failed">Не вдалося видалити улюбленця. Спробуйте ще раз.</string>
-    <string name="pets_sync_failed">Не вдалося синхронізувати улюбленців. Спробуйте ще раз.</string>
 </resources>

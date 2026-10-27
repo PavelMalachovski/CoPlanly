@@ -476,20 +476,6 @@ class ChildInfoViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Syncs child information with Firestore.
-     */
-    fun syncChildInfo() {
-        viewModelScope.launch {
-            try {
-                childInfoRepository.pullOnce()
-            } catch (e: Exception) {
-                Log.w(TAG, "Syncing child info failed", e)
-                _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_sync_failed))
-            }
-        }
-    }
-
     private companion object {
         const val TAG = "ChildInfoViewModel"
     }

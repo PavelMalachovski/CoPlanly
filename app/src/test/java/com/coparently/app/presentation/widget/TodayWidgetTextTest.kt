@@ -67,7 +67,8 @@ class TodayWidgetTextTest {
         val lines = TodayWidgetText.lines(context, day, parents, maxEvents = 4)
 
         assertTrue(lines.title, lines.title.startsWith("Today · "))
-        assertEquals(WidgetLine("Today with Alex", ParentColorChoice.PURPLE.color), lines.custody)
+        // The phone's owner is "you", as on Home's hero (UX audit H4).
+        assertEquals(WidgetLine("Today with you", ParentColorChoice.PURPLE.color), lines.custody)
         assertEquals(
             listOf(WidgetLine("15:00–19:00 · contact with Sam", ParentColorChoice.ORANGE.color)),
             lines.windows

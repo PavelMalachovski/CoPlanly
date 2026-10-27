@@ -35,6 +35,7 @@
         <item quantity="other">%1$d Ausgaben</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · %2$s bezahlt · %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s · du hast bezahlt · %2$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">50/50 geteilt</string>
     <string name="expenses_split_n_ways">1/%1$d geteilt</string>
@@ -75,6 +76,8 @@
     <string name="expenses_split_proposal_title">Neue Kostenaufteilung vorgeschlagen</string>
     <string name="expenses_split_proposal_body_named">%1$s schlägt ab jetzt eine neue Aufteilung gemeinsamer Ausgaben vor: %2$s. Bereits erfasste Ausgaben behalten ihre Aufteilung.</string>
     <string name="expenses_split_shares_named">%1$s zahlt %2$d %%, %3$s zahlt %4$d %%</string>
+    <string name="expenses_split_shares_you_first">Du zahlst %1$d %%, %2$s zahlt %3$d %%</string>
+    <string name="expenses_split_shares_you_second">%1$s zahlt %2$d %%, du zahlst %3$d %%</string>
     <string name="expenses_split_proposal_confirm">Bestätigen</string>
     <string name="expenses_split_proposal_decline">Ablehnen</string>
     <string name="expenses_split_proposal_later">Später</string>

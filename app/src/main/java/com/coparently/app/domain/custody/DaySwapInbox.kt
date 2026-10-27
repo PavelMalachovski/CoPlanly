@@ -140,18 +140,32 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
         swaps.any { it.override.isPending && it.override.requestedBy == uid }
 
     /**
-     * Which way the offer moves its days, from the slot of the parent who made it (second audit:
+     * Which way the offer moves its days, from the side of the parent who made it (second audit:
      * the inbox said "Bob is offering you a day" over a day Bob was asking for). Since 21 October
      * an offer may give some days and take others.
      *
-     * @param offererSlot The offering parent's slot, or null when it is not known — then the offer
-     *   reads as it always did, as giving.
+     * Decided from the reader's own slot first, because that is the one slot this phone always
+     * holds (its own Room row); the co-parent's is used only when the reader's is not known. Home's
+     * swap dialog and the inbox card both ask here, so they cannot word one offer two ways again
+     * (UX audit H1: the dialog said "Bob gets the day" while the card said "Bob is offering you 1
+     * day", because the card read an unknown offerer slot as "giving").
+     *
+     * @param offeredByReader Whether the parent reading is the one who made the offer.
+     * @param readerSlot The reading parent's slot, or null when it is not known.
+     * @param coParentSlot The other parent's slot, or null when it is not known.
+     * @return [SwapDirection.UNKNOWN] when neither slot is known, or when both parents still read
+     *   the same slot — never a guess.
      */
-    fun direction(offererSlot: String?): SwapDirection {
-        val toOfferer = swaps.count { it.override.toParent == offererSlot }
-        return when {
-            offererSlot == null || toOfferer == 0 -> SwapDirection.GIVES
-            toOfferer == swaps.size -> SwapDirection.ASKS
+    fun direction(offeredByReader: Boolean, readerSlot: String?, coParentSlot: String?): SwapDirection {
+        if (readerSlot != null && readerSlot == coParentSlot) return SwapDirection.UNKNOWN
+        val toOfferer = when {
+            readerSlot != null -> swaps.count { (it.override.toParent == readerSlot) == offeredByReader }
+            !offeredByReader && coParentSlot != null -> swaps.count { it.override.toParent == coParentSlot }
+            else -> return SwapDirection.UNKNOWN
+        }
+        return when (toOfferer) {
+            0 -> SwapDirection.GIVES
+            swaps.size -> SwapDirection.ASKS
             else -> SwapDirection.BOTH
         }
     }
@@ -166,5 +180,8 @@ enum class SwapDirection {
     ASKS,
 
     /** Some days go each way. */
-    BOTH
+    BOTH,
+
+    /** Neither parent's slot can be told apart yet, so the offer is described without a direction. */
+    UNKNOWN
 }

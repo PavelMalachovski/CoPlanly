@@ -44,6 +44,6 @@
     <string name="parent_role_parent">Parent (neutral)</string>
     <string name="parent_role_save">Save</string>
     <string name="parent_role_save_failed">Your answer could not be saved. Check the connection and try again.</string>
-    <string name="stickers_role_row">Stickers call me</string>
+    <string name="stickers_role_row">Stickers speak to me as</string>
     <string name="stickers_role_unanswered">Not answered yet</string>
 </resources>

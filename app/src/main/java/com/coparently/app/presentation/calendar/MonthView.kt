@@ -314,7 +314,8 @@ private val SWAP_SELECTION_BORDER = 2.dp
 private val VACATION_LINE_HEIGHT = 2.dp
 
 /** Side of the corner triangle that marks a day with a contact window (MON-6b). */
-private val CONTACT_WINDOW_MARKER_SIZE = 10.dp
+// 14 dp, up from 10: at 10 it was easy to miss in a ~48 dp cell (UX audit M9).
+private val CONTACT_WINDOW_MARKER_SIZE = 14.dp
 
 /** A contact window's times in a day cell's description. */
 

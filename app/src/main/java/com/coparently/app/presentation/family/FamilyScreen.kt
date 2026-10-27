@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Settings
@@ -92,7 +91,6 @@ private const val SLOT_TWO = "dad"
  * @property contacts The family's contacts
  * @property documents The shared documents vault
  * @property pairing The co-parent link
- * @property myProfile This parent's own details
  * @property coParentProfile What the co-parent has shared
  * @property friends Family friends who read the calendar
  * @property professionals Mediators, lawyers and therapists
@@ -114,7 +112,6 @@ data class FamilyDestinations(
     val contacts: () -> Unit,
     val documents: () -> Unit,
     val pairing: () -> Unit,
-    val myProfile: () -> Unit,
     val coParentProfile: () -> Unit,
     val friends: () -> Unit,
     val professionals: () -> Unit,
@@ -281,6 +278,8 @@ fun FamilyScreen(
                 }
             }
 
+            RecordsGroup(destinations)
+
             Group(R.string.family_group_people) {
                 // Records that name none of the families; draws itself and its divider only while
                 // some wait.
@@ -293,22 +292,18 @@ fun FamilyScreen(
                         ?: stringResource(R.string.settings_pairing_description),
                     destinations.pairing
                 )
-                Divider()
-                NavRow(
-                    Icons.Default.Person,
-                    R.string.settings_my_profile_title,
-                    R.string.settings_my_profile_description,
-                    destinations.myProfile
-                )
                 // Only once linked: before that the screen could say nothing but "not linked",
-                // which the row above already says (second audit).
+                // which the row above already says (second audit). Named for the co-parent, under
+                // their row (UX audit M5: "Co-parent", "Co-parent details" and "My details" read as
+                // three rows about the same person). This parent's own details are in Settings.
                 if (linkedCoParent != null) {
                     Divider()
-                    NavRow(
-                        Icons.Default.PersonOutline,
-                        R.string.settings_coparent_profile_title,
-                        R.string.settings_coparent_profile_description,
-                        destinations.coParentProfile
+                    SectionRow(
+                        icon = Icons.Default.PersonOutline,
+                        title = stringResource(R.string.family_coparent_shared, linkedCoParent),
+                        supporting = stringResource(R.string.settings_coparent_profile_description),
+                        onClick = destinations.coParentProfile,
+                        trailing = { Chevron() }
                     )
                 }
                 Divider()
@@ -328,13 +323,6 @@ fun FamilyScreen(
             }
 
             Group(R.string.family_group_mine) {
-                NavRow(
-                    Icons.Default.Lock,
-                    R.string.journal_title,
-                    R.string.journal_settings_description,
-                    destinations.journal
-                )
-                Divider()
                 StickersRow(onOpen = destinations.stickers)
                 EarlierFamiliesRow(shown = !earlierFamilies.isNullOrEmpty(), onOpen = destinations.earlierFamilies)
             }
@@ -367,6 +355,23 @@ private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDes
             R.string.parenting_plan_settings_description,
             destinations.parentingPlan
         )
+    }
+}
+
+/**
+ * What the family's records add up to (UX audit M5): the month in review, the record a lawyer or a
+ * court is sent, and this parent's private journal, which only that record can carry out of the
+ * phone. They used to sit among the agreements, and the journal in "Only mine" two groups away.
+ */
+@Composable
+private fun RecordsGroup(destinations: FamilyDestinations) {
+    Group(R.string.family_group_records) {
+        NavRow(
+            Icons.Default.Insights,
+            R.string.month_review_title,
+            R.string.month_review_settings_description,
+            destinations.monthReview
+        )
         Divider()
         NavRow(
             Icons.Default.Description,
@@ -376,10 +381,10 @@ private fun AgreementsGroup(schedule: CustodyModelType?, destinations: FamilyDes
         )
         Divider()
         NavRow(
-            Icons.Default.Insights,
-            R.string.month_review_title,
-            R.string.month_review_settings_description,
-            destinations.monthReview
+            Icons.Default.Lock,
+            R.string.journal_title,
+            R.string.journal_settings_description,
+            destinations.journal
         )
     }
 }
@@ -452,7 +457,6 @@ private fun Group(@StringRes label: Int, content: @Composable SectionGroupScope.
     }
 }
 
-/** A row that opens a screen, with its title and description as resources. */
 /**
  * Family → Earlier families, with the divider before it — only while a family has ended: its
  * records left every live screen and are read there (owner decision, 25 October 2026).
@@ -464,6 +468,7 @@ private fun SectionGroupScope.EarlierFamiliesRow(shown: Boolean, onOpen: () -> U
     NavRow(Icons.Default.History, R.string.earlier_families_title, R.string.earlier_families_row_supporting, onOpen)
 }
 
+/** A row that opens a screen, with its title and description as resources. */
 @Composable
 private fun SectionGroupScope.NavRow(
     icon: ImageVector,

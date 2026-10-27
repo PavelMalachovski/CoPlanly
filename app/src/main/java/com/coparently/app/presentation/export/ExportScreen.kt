@@ -57,6 +57,7 @@ import com.coparently.app.domain.export.RecordColumns
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.VerificationLabels
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
+import com.coparently.app.presentation.common.ExpandableDetails
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalDatePickerDialog
 import com.coparently.app.presentation.common.SectionGroup
@@ -156,8 +157,8 @@ private class ExportActions(
 )
 
 /**
- * The range, which optional sections go in, the statement the file makes about itself, and the
- * two formats.
+ * The range, which optional sections go in, the two formats, and, folded under them, the statement
+ * the file makes about itself.
  */
 @Composable
 private fun ExportContent(
@@ -180,8 +181,14 @@ private fun ExportContent(
         )
         RangeGroup(state = state, onPick = actions.onPick)
         IncludeGroup(state = state, actions = actions)
-        Column {
-            GroupLabel(stringResource(R.string.export_what_it_says))
+        // The formats before the statement (UX audit M10): the screen's one action used to sit
+        // under five paragraphs a parent had to scroll past. The file prints them first anyway.
+        SectionGroup {
+            ExportRow(format = ExportFormat.PDF, working = state.working, onClick = actions.onExport)
+            Divider()
+            ExportRow(format = ExportFormat.CSV, working = state.working, onClick = actions.onExport)
+        }
+        ExpandableDetails(label = stringResource(R.string.export_what_it_says)) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = MaterialTheme.shapes.large
@@ -200,11 +207,6 @@ private fun ExportContent(
                     )
                 }
             }
-        }
-        SectionGroup {
-            ExportRow(format = ExportFormat.PDF, working = state.working, onClick = actions.onExport)
-            Divider()
-            ExportRow(format = ExportFormat.CSV, working = state.working, onClick = actions.onExport)
         }
     }
 }

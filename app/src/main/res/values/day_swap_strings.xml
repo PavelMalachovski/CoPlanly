@@ -25,7 +25,9 @@
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">You offered this day to %1$s. Waiting for an answer.</string>
     <string name="day_swap_strip_offered_to_you">%1$s asks for this day to be with %2$s.</string>
+    <string name="day_swap_strip_offered_to_reader">%1$s offers you this day.</string>
     <string name="day_swap_strip_agreed">Agreed swap: this day is with %1$s.</string>
+    <string name="day_swap_strip_agreed_you">Agreed swap: this day is with you.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Swap these days</string>
     <string name="day_swap_select_hint">Tap more days to extend the swap</string>

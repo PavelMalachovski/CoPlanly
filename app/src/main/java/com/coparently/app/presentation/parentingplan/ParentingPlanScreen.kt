@@ -239,7 +239,9 @@ private fun QuestionRow(
 
     SectionRow(
         title = stringResource(prompt),
-        supporting = yourAnswer ?: stringResource(R.string.parenting_plan_not_answered),
+        // The status chip already says "Not started"; the line under the question is only ever
+        // this parent's own answer, never the status again in words (UX audit L5).
+        supporting = yourAnswer,
         onClick = onClick,
         trailing = { StatusChip(status, names.labelForUid(coParentUid)) },
         stackTrailingAtLargeFont = true
