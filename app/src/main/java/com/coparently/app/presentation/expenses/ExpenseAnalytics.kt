@@ -211,16 +211,17 @@ private fun PayerFilter(
     }
 }
 
-/** One chip per currency the month holds. Absent entirely when there is only one. */
+/** One chip per currency the month holds. The caller leaves it out when there is only one. */
 @Composable
-private fun CurrencyChips(
+internal fun CurrencyChips(
     currencies: List<String>,
     selected: String?,
-    onSelectCurrency: (String) -> Unit
+    onSelectCurrency: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val label = stringResource(R.string.expense_analytics_currency_label)
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .semantics { contentDescription = label },

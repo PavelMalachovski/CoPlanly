@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
@@ -177,6 +178,9 @@ fun ExpenseScreen(
     // One value, not three. The month and its figures travel together so the outgoing half of a
     // month slide renders the month it is leaving — see `MonthOfExpenses`.
     val monthOfExpenses by viewModel.monthOfExpenses.collectAsState()
+    val listAgreement by viewModel.listAgreement.collectAsState()
+    // Which currency's summary is shown when the month holds more than one (UX audit M7).
+    var summaryCurrency by rememberSaveable { mutableStateOf<String?>(null) }
     val roleByUid by viewModel.roleByUid.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
@@ -393,11 +397,9 @@ fun ExpenseScreen(
                                 )
                             }
                         } else {
-                            // The month's summary cards. One card per currency present this month — the
-                            // app does no FX conversion, so a mixed-currency month is shown as separate
-                            // honest totals rather than one wrong sum. Only the first card carries the
-                            // month switcher; repeating it per currency would switch the same month N
-                            // times.
+                            // The month's summary card, for one currency at a time — the app does no FX
+                            // conversion, so a mixed-currency month is shown as separate honest totals
+                            // rather than one wrong sum, and chips choose which.
                             val summaryCards: @Composable () -> Unit = {
                                 if (balancesByCurrency.isEmpty()) {
                                     // Every expense this month is "only mine" or from an earlier
@@ -409,7 +411,18 @@ fun ExpenseScreen(
                                             .padding(horizontal = Spacing.L, vertical = Spacing.S)
                                     )
                                 }
-                                balancesByCurrency.forEachIndexed { index, currencyBalance ->
+                                // One summary at a time (UX audit M7): with two currencies the two
+                                // cards took most of the screen before the first expense. Chips pick
+                                // the currency; the totals stay separate, never converted.
+                                if (balancesByCurrency.size > 1) {
+                                    CurrencyChips(
+                                        currencies = balancesByCurrency.map { it.currency },
+                                        selected = shownSummary(balancesByCurrency, summaryCurrency)?.currency,
+                                        onSelectCurrency = { summaryCurrency = it },
+                                        modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.XS)
+                                    )
+                                }
+                                shownSummary(balancesByCurrency, summaryCurrency)?.let { currencyBalance ->
                                     val recorded = paymentsViewModel.paymentFor(
                                         payments,
                                         PaymentKind.EXPENSES,
@@ -425,15 +438,9 @@ fun ExpenseScreen(
                                                 PendingSettleUp(ask, shownMonth.month, shownMonth.familyId)
                                         },
                                         modifier = Modifier
-                                            .then(
-                                                if (index == 0) {
-                                                    Modifier.monthSwipe(monthNavigation)
-                                                } else {
-                                                    Modifier
-                                                }
-                                            )
+                                            .monthSwipe(monthNavigation)
                                             .padding(horizontal = Spacing.L, vertical = Spacing.XS),
-                                        monthNavigation = monthNavigation.takeIf { index == 0 },
+                                        monthNavigation = monthNavigation,
                                         payment = paymentStripFor(
                                             recorded = recorded,
                                             myUid = paymentsViewModel.myUid,
@@ -507,6 +514,7 @@ fun ExpenseScreen(
                                     // "Only me" and "From an earlier family" marks: listed here,
                                     // counted in none of this month's figures.
                                     places = shownMonth.places,
+                                    agreed = listAgreement,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -707,6 +715,13 @@ private fun ViewSwitcher(
 }
 
 /** The selected month formatted as "August 2026", capitalised for the current locale. */
+/**
+ * The currency whose summary is shown: the one the parent picked while the month still holds it,
+ * else the month's first. Null for a month with nothing counted.
+ */
+internal fun shownSummary(balances: List<CurrencyBalance>, picked: String?): CurrencyBalance? =
+    balances.firstOrNull { it.currency == picked } ?: balances.firstOrNull()
+
 @Composable
 private fun rememberMonthLabel(month: YearMonth): String = remember(month) {
     month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))

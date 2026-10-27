@@ -94,6 +94,9 @@ private val TILE_SIZE = 40.dp
  *   is a read.
  * @param state Scroll state of the list, hoisted so the screen can tell when the month's summary
  *   has scrolled away and pin its collapsed form
+ * @param agreed The family's agreed split, or null while it is not known: a row divided exactly so
+ *   says nothing about it (UX audit M7), because the summary above already states the agreement and
+ *   twenty rows each repeating "Alice 60 % · Bob 40 %" hid the one row that differed.
  * @param places Where each expense the family does not count stands, by id
  *   (`MonthOfExpenses.places`); those rows carry a [RecordPlaceMark]. An id absent from it is the
  *   family's own.
@@ -113,6 +116,7 @@ fun ExpenseList(
     header: (LazyListScope.() -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
     places: Map<String, RecordPlace> = emptyMap(),
+    agreed: SplitRatio? = null,
     modifier: Modifier = Modifier
 ) {
     // Receipt being viewed full-screen; transient UI state, deliberately local.
@@ -162,6 +166,7 @@ fun ExpenseList(
                     payerRole = roleByUid[expense.paidBy],
                     parentNames = parentNames,
                     splitKnown = splitKnown,
+                    agreed = agreed,
                     onClick = tap,
                     onReceiptClick = { photo -> viewedReceipt = photo },
                     place = place
@@ -203,6 +208,7 @@ fun ExpenseList(
  * @param splitKnown Whether both parent slots are known. Required rather than defaulted: false is
  *   not silence, it makes the row assert "split 50/50", and a caller that has not worked the
  *   answer out would be publishing a claim about money by omission.
+ * @param agreed The family's agreed split; a row divided exactly so leaves its split unsaid
  * @param onClick Opens the expense editor; null leaves the row inert
  * @param onReceiptClick Opens the full-screen receipt viewer. Only the family's two parents see a
  *   receipt (L-4); for anybody else, and for a legacy download URL, the row has no thumbnail.
@@ -218,6 +224,7 @@ fun ExpenseItem(
     parentNames: ParentNames,
     payerRole: String? = null,
     splitKnown: Boolean,
+    agreed: SplitRatio? = null,
     onClick: (() -> Unit)? = null,
     onReceiptClick: (ViewablePhoto) -> Unit = {},
     place: RecordPlace = RecordPlace.ON_SCREEN
@@ -245,7 +252,11 @@ fun ExpenseItem(
     // the expense, not a second figure competing with the amount. A row the family does not count
     // leaves it out: it is priced in no balance here, and its ratio's first figure would name this
     // family's slot 1 — somebody who may never have been in the family it belongs to.
-    val splitLabel = if (counted) splitLabelOf(expense, splitKnown, parentNames) else null
+    val splitLabel = if (counted && !dividesAsAgreed(expense, splitKnown, agreed)) {
+        splitLabelOf(expense, splitKnown, parentNames)
+    } else {
+        null
+    }
     val meta = when {
         splitLabel == null -> subtitle
         receipt != null -> stringResource(R.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
@@ -350,6 +361,16 @@ private fun rowSubtitle(category: String, date: String, payerRole: String?, pare
             stringResource(R.string.expenses_row_subtitle, category, parentNames.labelFor(payerRole), date)
         else -> stringResource(R.string.expenses_row_subtitle_unknown_payer, category, date)
     }
+
+/**
+ * Whether [expense] divides between the two parents exactly as the family agreed, so its row need
+ * not say how it divides. Only while the two parents can be told apart: otherwise the balance
+ * divides evenly whatever was agreed, and the row says so. A row recorded before any agreement
+ * (no stored ratio) divided evenly.
+ */
+internal fun dividesAsAgreed(expense: Expense, splitKnown: Boolean, agreed: SplitRatio?): Boolean =
+    agreed != null && splitKnown && expense.isTwoWaySplit() &&
+        (SplitRatio.fromStored(expense.splitBasisPoints) ?: SplitRatio.EVEN) == agreed
 
 /**
  * How [expense] divides, as its row's meta line says it.

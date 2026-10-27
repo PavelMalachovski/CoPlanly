@@ -149,6 +149,15 @@ class ExpenseViewModel @Inject constructor(
         )
 
     /**
+     * The agreement the list compares each row with (UX audit M7), or null until this family's
+     * answer is known: a row hides its split only when it divides exactly so, and "even" read
+     * before the real agreement arrives would hide the very rows that differ from it.
+     */
+    val listAgreement: StateFlow<SplitRatio?> = split
+        .map { current -> current.ratio.takeIf { current.answered } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
      * The family a new expense is recorded in, and its co-parent — read **once**, at the start of
      * the save, and used for everything the save decides: the receipt's folder, who the expense is
      * split between, the agreement it is priced at, its `familyId` and the write.
