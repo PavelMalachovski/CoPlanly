@@ -24,7 +24,9 @@
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">Вы предложили этот день: %1$s. Ждём ответа.</string>
     <string name="day_swap_strip_offered_to_you">%1$s просит, чтобы этот день был у: %2$s.</string>
+    <string name="day_swap_strip_offered_to_reader">%1$s предлагает вам этот день.</string>
     <string name="day_swap_strip_agreed">Согласованный обмен: этот день у: %1$s.</string>
+    <string name="day_swap_strip_agreed_you">Согласованный обмен: этот день у вас.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Обменять дни</string>
     <string name="day_swap_select_hint">Нажимайте на другие дни, чтобы расширить обмен</string>

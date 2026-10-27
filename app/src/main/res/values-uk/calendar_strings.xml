@@ -86,6 +86,7 @@
     <string name="calendar_retry">Повторити</string>
     <!-- UX-8. -->
     <string name="calendar_agenda_custody_day">Чий день: %1$s</string>
+    <string name="calendar_agenda_custody_day_you">Ваш день</string>
     <string name="calendar_filter_members">Показати для</string>
     <string name="calendar_legend_handover">Передача</string>
     <string name="calendar_legend_contact">Час спілкування</string>

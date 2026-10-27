@@ -75,13 +75,20 @@ internal fun DaySwapStrip(
     val text = when (state) {
         is DaySwapStripState.OfferedByMe ->
             stringResource(R.string.day_swap_strip_offered_by_you, parentNames.labelFor(state.toParent))
-        is DaySwapStripState.OfferedToMe -> stringResource(
-            R.string.day_swap_strip_offered_to_you,
-            parentNames.labelForUid(state.byUid),
-            parentNames.labelFor(state.toParent)
-        )
-        is DaySwapStripState.Agreed ->
+        is DaySwapStripState.OfferedToMe -> if (parentNames.isReader(state.toParent)) {
+            stringResource(R.string.day_swap_strip_offered_to_reader, parentNames.labelForUid(state.byUid))
+        } else {
+            stringResource(
+                R.string.day_swap_strip_offered_to_you,
+                parentNames.labelForUid(state.byUid),
+                parentNames.labelFor(state.toParent)
+            )
+        }
+        is DaySwapStripState.Agreed -> if (parentNames.isReader(state.withParent)) {
+            stringResource(R.string.day_swap_strip_agreed_you)
+        } else {
             stringResource(R.string.day_swap_strip_agreed, parentNames.labelFor(state.withParent))
+        }
     }
     InlineBanner(
         text = text,

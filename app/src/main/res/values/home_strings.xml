@@ -12,6 +12,7 @@
 
     <!-- Custody handover hero. %1$s = parent taking over, %2$d = whole days until then. -->
     <string name="home_handover_current">Today with %1$s</string>
+    <string name="home_handover_current_you">Today with you</string>
     <string name="home_handover_hero_today">Handover to %1$s today</string>
     <string name="home_handover_hero_tomorrow">Handover to %1$s tomorrow</string>
     <plurals name="home_handover_hero_in_days">
@@ -39,6 +40,7 @@
 
     <!-- Timeline row. %1$s = day and time, %2$s = the parent whose day it is. -->
     <string name="home_timeline_meta">%1$s · %2$s\'s day</string>
+    <string name="home_timeline_meta_you">%1$s · your day</string>
 
     <!-- Recent-changes empty state. Only the paired one survives: the unpaired page now
          renders the invitation alone, so there is no feed there to be empty. -->

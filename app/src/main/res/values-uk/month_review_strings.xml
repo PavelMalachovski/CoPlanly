@@ -33,6 +33,7 @@
     <string name="month_review_no_expenses">Цього місяця витрат немає</string>
     <string name="month_review_total">Усього в %1$s</string>
     <string name="month_review_paid_by">%1$s: сплачено %2$s</string>
+    <string name="month_review_paid_by_you">Ви сплатили %1$s</string>
     <string name="month_review_to_even_out">Для вирівнювання: %1$s від %2$s для %3$s</string>
     <string name="month_review_even">Порівну</string>
 

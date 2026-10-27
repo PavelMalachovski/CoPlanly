@@ -32,6 +32,7 @@
     <string name="month_review_no_expenses">No expenses this month</string>
     <string name="month_review_total">Total in %1$s</string>
     <string name="month_review_paid_by">%1$s paid %2$s</string>
+    <string name="month_review_paid_by_you">You paid %1$s</string>
     <string name="month_review_to_even_out">To even out: %1$s from %2$s to %3$s</string>
     <string name="month_review_even">Even</string>
 

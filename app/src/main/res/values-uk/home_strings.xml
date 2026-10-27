@@ -8,6 +8,7 @@
     <string name="home_pairing_cta">Зʼєднатися з другим із батьків</string>
 
     <string name="home_handover_current">Сьогодні з дітьми — %1$s</string>
+    <string name="home_handover_current_you">Сьогодні діти з вами</string>
     <string name="home_handover_hero_today">Передача сьогодні, далі — %1$s</string>
     <string name="home_handover_hero_tomorrow">Передача завтра, далі — %1$s</string>
     <plurals name="home_handover_hero_in_days">
@@ -35,6 +36,7 @@
     <string name="home_section_partner_changed">Зміни: %1$s</string>
 
     <string name="home_timeline_meta">%1$s · чий день: %2$s</string>
+    <string name="home_timeline_meta_you">%1$s · ваш день</string>
 
     <string name="home_recent_empty_paired">Від другого з батьків поки нічого нового. Щойно щось зміниться, це зʼявиться тут.</string>
 

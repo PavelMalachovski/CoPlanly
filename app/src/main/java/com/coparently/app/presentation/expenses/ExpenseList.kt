@@ -54,6 +54,7 @@ import com.coparently.app.domain.expenses.isTwoWaySplit
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.files.ViewablePhoto
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.RecordPlaceMark
@@ -75,13 +76,6 @@ private const val PAYER_TINT_ALPHA = 0.18f
  * thumbnail is padded out to the 48dp minimum with `minimumInteractiveComponentSize`.
  */
 private val TILE_SIZE = 40.dp
-
-/**
- * Slot 1, whose share the stored ratio counts. Never shown as the word — [ParentNames] turns it
- * into that person's name, which is the whole reason the row can print a ratio at all.
- */
-private const val MOM_SLOT = "mom"
-private const val DAD_SLOT = "dad"
 
 /**
  * List of expenses for the period. Each row swipes left to delete ([SwipeToDeleteRow]).
@@ -240,22 +234,12 @@ fun ExpenseItem(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val payerName = payerRole?.let { parentNames.labelFor(it) }
-
-    val subtitle = if (payerName != null) {
-        stringResource(
-            R.string.expenses_row_subtitle,
-            stringResource(expense.category.labelRes),
-            payerName,
-            expense.date.format(dateFormatter)
-        )
-    } else {
-        stringResource(
-            R.string.expenses_row_subtitle_unknown_payer,
-            stringResource(expense.category.labelRes),
-            expense.date.format(dateFormatter)
-        )
-    }
+    val subtitle = rowSubtitle(
+        category = stringResource(expense.category.labelRes),
+        date = expense.date.format(dateFormatter),
+        payerRole = payerRole,
+        parentNames = parentNames
+    )
 
     // The split moved from its own right-hand column into the subtitle: it is a property of
     // the expense, not a second figure competing with the amount. A row the family does not count
@@ -355,6 +339,19 @@ fun ExpenseItem(
 }
 
 /**
+ * The row's second line: the category, who paid and the date. The reader's own payment reads
+ * "you paid" rather than their own name (UX audit H4).
+ */
+@Composable
+private fun rowSubtitle(category: String, date: String, payerRole: String?, parentNames: ParentNames): String =
+    when {
+        parentNames.isReader(payerRole) -> stringResource(R.string.expenses_row_subtitle_you, category, date)
+        payerRole != null ->
+            stringResource(R.string.expenses_row_subtitle, category, parentNames.labelFor(payerRole), date)
+        else -> stringResource(R.string.expenses_row_subtitle_unknown_payer, category, date)
+    }
+
+/**
  * How [expense] divides, as its row's meta line says it.
  *
  * The ratio the expense was recorded under, not the family's current agreement: an expense is
@@ -375,13 +372,7 @@ private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: Par
         // figure is always slot 1's whoever paid. Naming the half the first number belongs to is
         // the difference between a label and a wrong claim about money.
         // Each name with its own share (second audit: "split Alice 60/40" left the 40 to guess).
-        ratio != null -> stringResource(
-            R.string.expenses_split_shares_named,
-            parentNames.labelFor(MOM_SLOT),
-            ratio.momPercent,
-            parentNames.labelFor(DAD_SLOT),
-            ratio.dadPercent
-        )
+        ratio != null -> splitSharesText(ratio, parentNames)
         expense.isTwoWaySplit() ->
             stringResource(R.string.expenses_split_even)
         expense.splitBetween.size > 2 ->

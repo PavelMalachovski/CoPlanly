@@ -56,13 +56,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
-import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.payments.PaymentState
+import com.coparently.app.presentation.changerequests.splitSharesText
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
@@ -803,13 +803,7 @@ private fun SplitRatioProposalBanner(
  * left both parents guessing which number was theirs (tester report, October 2026).
  */
 @Composable
-private fun namedShares(ratio: SplitRatio, parentNames: ParentNames): String = stringResource(
-    R.string.expenses_split_shares_named,
-    parentNames.labelFor(ContactWindow.SLOT_ONE),
-    ratio.momPercent,
-    parentNames.labelFor(ContactWindow.SLOT_TWO),
-    ratio.dadPercent
-)
+private fun namedShares(ratio: SplitRatio, parentNames: ParentNames): String = splitSharesText(ratio, parentNames)
 
 /** The co-parent's name, or the "your co-parent" fallback while it is not known. */
 private fun coParentName(parentNames: ParentNames): String =

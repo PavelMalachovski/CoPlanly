@@ -346,7 +346,11 @@ private fun MoneySection(money: List<MonthMoney>, names: ParentNames) {
                 if (index > 0) Divider()
                 val format = remember(entry.currency) { currencyFormat(entry.currency) }
                 val paid = entry.paidByUid.entries.sortedBy { it.key }.map { (uid, amount) ->
-                    stringResource(R.string.month_review_paid_by, names.labelForUid(uid), format.format(amount))
+                    if (names.isReaderUid(uid)) {
+                        stringResource(R.string.month_review_paid_by_you, format.format(amount))
+                    } else {
+                        stringResource(R.string.month_review_paid_by, names.labelForUid(uid), format.format(amount))
+                    }
                 }
                 val settlement = entry.settlement?.let {
                     stringResource(

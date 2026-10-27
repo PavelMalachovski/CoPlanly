@@ -143,12 +143,12 @@ fun ExpenseSummaryHeader(
                 PaidByRow(
                     momLine = stringResource(
                         R.string.expenses_paid_by,
-                        parentNames.labelFor("mom"),
+                        parentNames.labelOrYou("mom"),
                         format.format(balance.momPaid)
                     ),
                     dadLine = stringResource(
                         R.string.expenses_paid_by,
-                        parentNames.labelFor("dad"),
+                        parentNames.labelOrYou("dad"),
                         format.format(balance.dadPaid)
                     )
                 )

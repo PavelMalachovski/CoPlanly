@@ -8,6 +8,7 @@
     <string name="home_pairing_cta">Подключить второго родителя</string>
 
     <string name="home_handover_current">Сегодня с детьми — %1$s</string>
+    <string name="home_handover_current_you">Сегодня дети с вами</string>
     <string name="home_handover_hero_today">Передача сегодня, дальше — %1$s</string>
     <string name="home_handover_hero_tomorrow">Передача завтра, дальше — %1$s</string>
     <plurals name="home_handover_hero_in_days">
@@ -35,6 +36,7 @@
     <string name="home_section_partner_changed">Изменения: %1$s</string>
 
     <string name="home_timeline_meta">%1$s · чей день: %2$s</string>
+    <string name="home_timeline_meta_you">%1$s · ваш день</string>
 
     <string name="home_recent_empty_paired">От второго родителя пока ничего нового. Его изменения появятся здесь.</string>
 

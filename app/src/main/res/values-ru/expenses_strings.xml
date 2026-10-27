@@ -34,6 +34,7 @@
         <item quantity="other">%1$d\u00A0расхода</item>
     </plurals>
     <string name="expenses_row_subtitle">%1$s · оплата: %2$s · %3$s</string>
+    <string name="expenses_row_subtitle_you">%1$s · оплатили вы · %2$s</string>
     <string name="expenses_row_subtitle_unknown_payer">%1$s · %2$s</string>
     <string name="expenses_split_even">разделено 50/50</string>
     <string name="expenses_split_n_ways">разделено 1/%1$d</string>
@@ -74,6 +75,8 @@
     <string name="expenses_split_proposal_title">Предложено новое деление расходов</string>
     <string name="expenses_split_proposal_body_named">%1$s предлагает с этого момента новое деление общих расходов: %2$s. Уже внесённые расходы сохранят своё деление.</string>
     <string name="expenses_split_shares_named">%1$s платит %2$d %%, %3$s платит %4$d %%</string>
+    <string name="expenses_split_shares_you_first">Вы платите %1$d %%, %2$s платит %3$d %%</string>
+    <string name="expenses_split_shares_you_second">%1$s платит %2$d %%, вы платите %3$d %%</string>
     <string name="expenses_split_proposal_confirm">Подтвердить</string>
     <string name="expenses_split_proposal_decline">Отклонить</string>
     <string name="expenses_split_proposal_later">Позже</string>

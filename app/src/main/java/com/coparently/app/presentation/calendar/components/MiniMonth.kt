@@ -256,7 +256,11 @@ private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames
             stringResource(
                 R.string.mini_month_marked_day,
                 day,
-                stringResource(R.string.calendar_agenda_custody_day, parentNames.labelFor(slot)),
+                if (parentNames.isReader(slot)) {
+                    stringResource(R.string.calendar_agenda_custody_day_you)
+                } else {
+                    stringResource(R.string.calendar_agenda_custody_day, parentNames.labelFor(slot))
+                },
                 meaning
             )
         } else {

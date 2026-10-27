@@ -726,10 +726,11 @@ internal fun HandoverHero(
                         .background(fromColor)
                 )
                 Text(
-                    text = stringResource(
-                        R.string.home_handover_current,
-                        parentNames.labelFor(info.fromParent)
-                    ),
+                    text = if (parentNames.isReader(info.fromParent)) {
+                        stringResource(R.string.home_handover_current_you)
+                    } else {
+                        stringResource(R.string.home_handover_current, parentNames.labelFor(info.fromParent))
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1003,7 +1004,13 @@ internal fun TimelineRow(
             }
             Text(
                 text = entry.dayParent
-                    ?.let { stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it)) }
+                    ?.let {
+                        if (parentNames.isReader(it)) {
+                            stringResource(R.string.home_timeline_meta_you, timeLabel)
+                        } else {
+                            stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it))
+                        }
+                    }
                     ?: timeLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

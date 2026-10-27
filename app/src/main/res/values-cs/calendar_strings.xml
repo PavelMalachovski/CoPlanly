@@ -99,6 +99,7 @@
     <string name="calendar_retry">Zkusit znovu</string>
     <!-- UX-8. -->
     <string name="calendar_agenda_custody_day">Péče: %1$s</string>
+    <string name="calendar_agenda_custody_day_you">Váš den</string>
     <string name="calendar_filter_members">Zobrazit pro</string>
     <string name="calendar_legend_handover">Předání</string>
     <string name="calendar_legend_contact">Čas na styk</string>

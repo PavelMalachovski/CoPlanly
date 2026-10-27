@@ -8,6 +8,7 @@
     <string name="home_pairing_cta">Jetzt verknüpfen</string>
 
     <string name="home_handover_current">Heute bei %1$s</string>
+    <string name="home_handover_current_you">Heute bei dir</string>
     <string name="home_handover_hero_today">Heute Übergabe an\u00A0%1$s</string>
     <string name="home_handover_hero_tomorrow">Morgen Übergabe an\u00A0%1$s</string>
     <plurals name="home_handover_hero_in_days">
@@ -31,6 +32,7 @@
     <string name="home_section_partner_changed">Änderungen von %1$s</string>
 
     <string name="home_timeline_meta">%1$s · Tag von %2$s</string>
+    <string name="home_timeline_meta_you">%1$s · dein Tag</string>
 
     <string name="home_recent_empty_paired">Noch nichts Neues vom anderen Elternteil. Änderungen erscheinen hier.</string>
 
