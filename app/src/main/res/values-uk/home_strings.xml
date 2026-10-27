@@ -35,6 +35,8 @@
     <string name="home_section_partner_changed">Зміни: %1$s</string>
 
     <string name="home_timeline_meta">%1$s · чий день: %2$s</string>
+    <string name="home_week_days_you">Ваші дні</string>
+    <string name="home_week_days_of">Дні: %1$s</string>
     <string name="home_timeline_meta_you">%1$s · ваш день</string>
 
     <string name="home_recent_empty_paired">Від другого з батьків поки нічого нового. Щойно щось зміниться, це зʼявиться тут.</string>

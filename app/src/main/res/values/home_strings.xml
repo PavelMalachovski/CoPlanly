@@ -39,6 +39,8 @@
 
     <!-- Timeline row. %1$s = day and time, %2$s = the parent whose day it is. -->
     <string name="home_timeline_meta">%1$s · %2$s\'s day</string>
+    <string name="home_week_days_you">Your days</string>
+    <string name="home_week_days_of">%1$s’s days</string>
     <string name="home_timeline_meta_you">%1$s · your day</string>
 
     <!-- Recent-changes empty state. Only the paired one survives: the unpaired page now

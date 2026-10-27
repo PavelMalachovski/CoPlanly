@@ -35,6 +35,8 @@
     <string name="home_section_partner_changed">Změny (%1$s)</string>
 
     <string name="home_timeline_meta">%1$s · den rodiče %2$s</string>
+    <string name="home_week_days_you">Vaše dny</string>
+    <string name="home_week_days_of">Dny rodiče %1$s</string>
     <string name="home_timeline_meta_you">%1$s · váš den</string>
 
     <string name="home_recent_empty_paired">Zatím nic nového od druhého rodiče. Jeho změny se zobrazí zde.</string>

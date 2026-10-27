@@ -512,11 +512,18 @@ private fun Dashboard(
                 // that carries the occurrence's own start time; the id alone collides.
                 key = { _, entry -> entry.key }
             ) { index, entry ->
+                // Whose days these are, once over each run of them rather than on every row (UX audit
+                // M4): beside each row's own dot — whose event it is — it read as a second colour.
+                val dayParent = entry.dayParent
+                if (dayParent != null && dayParent != state.week.getOrNull(index - 1)?.dayParent) {
+                    WeekDaysLabel(dayParent, parentNames)
+                }
                 TimelineRow(
                     entry = entry,
                     parentNames = parentNames,
                     isLast = index == state.week.lastIndex,
-                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) }
+                    onClick = { onOpenEvent(entry.event.id, entry.event.startDateTime) },
+                    showDayParent = false
                 )
             }
         }
@@ -939,7 +946,8 @@ internal fun TimelineRow(
     entry: WeekEntry,
     parentNames: ParentNames,
     isLast: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showDayParent: Boolean = true
 ) {
     val event = entry.event
     Row(
@@ -1011,6 +1019,7 @@ internal fun TimelineRow(
             }
             Text(
                 text = entry.dayParent
+                    ?.takeIf { showDayParent }
                     ?.let {
                         if (parentNames.isReader(it)) {
                             stringResource(R.string.home_timeline_meta_you, timeLabel)
@@ -1096,6 +1105,32 @@ private fun ActivityGroup(
             title = stringResource(R.string.home_requests_all),
             onClick = onOpenRequestHistory,
             trailing = { HomeChevron() }
+        )
+    }
+}
+
+/** Whose days the week's next run of rows falls on: "Your days" or "Bob's days", with their colour. */
+@Composable
+private fun WeekDaysLabel(slot: String, parentNames: ParentNames) {
+    Row(
+        modifier = Modifier.padding(top = Spacing.S, bottom = Spacing.XS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 16.dp, height = 4.dp)
+                .clip(CircleShape)
+                .background(ParentColors.fill(slot))
+        )
+        Text(
+            text = if (parentNames.isReader(slot)) {
+                stringResource(R.string.home_week_days_you)
+            } else {
+                stringResource(R.string.home_week_days_of, parentNames.labelFor(slot))
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

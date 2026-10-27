@@ -31,6 +31,8 @@
     <string name="home_section_partner_changed">Änderungen von %1$s</string>
 
     <string name="home_timeline_meta">%1$s · Tag von %2$s</string>
+    <string name="home_week_days_you">Deine Tage</string>
+    <string name="home_week_days_of">Tage von %1$s</string>
     <string name="home_timeline_meta_you">%1$s · dein Tag</string>
 
     <string name="home_recent_empty_paired">Noch nichts Neues vom anderen Elternteil. Änderungen erscheinen hier.</string>
