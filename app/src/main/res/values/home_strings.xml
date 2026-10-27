@@ -73,6 +73,8 @@
          offer said "changing who has the child" and not to whom). %1$s is that parent's name. -->
     <string name="home_dialog_swap_goes_to_day">If you accept, %1$s gets the day.</string>
     <string name="home_dialog_swap_goes_to_days">If you accept, %1$s gets the days.</string>
+    <string name="home_dialog_swap_goes_to_you_day">If you accept, the day is yours.</string>
+    <string name="home_dialog_swap_goes_to_you_days">If you accept, the days are yours.</string>
     <string name="home_dialog_swap_goes_each_way">If you accept, each day goes to the other parent.</string>
 
     <!-- The empty seven-day card's action. -->

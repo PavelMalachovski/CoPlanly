@@ -24,6 +24,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.SwapDirection
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.parentingplan.CitationStatus
@@ -402,21 +403,28 @@ private fun swapDialogMessage(swapGroup: DaySwapGroup, parentNames: ParentNames)
 
 /**
  * Whom the offered days go to if this parent accepts (second audit: "changing who has the child"
- * left out the one thing the answer is about). One name when every day goes the same way; an offer
- * that both gives and takes days says each goes to the other parent.
+ * left out the one thing the answer is about). "Yours" or the co-parent's name when every day goes
+ * the same way; an offer that both gives and takes days, or whose slots cannot be told apart, says
+ * each goes to the other parent. The direction is the inbox card's own
+ * ([DaySwapGroup.direction]), so the two cannot word one offer two ways (UX audit H1).
  */
 @Composable
 private fun swapDirection(swapGroup: DaySwapGroup, parentNames: ParentNames): String {
-    val to = swapGroup.swaps.map { it.override.toParent }.distinct()
-    val oneWay = if (swapGroup.dayCount == 1) {
-        R.string.home_dialog_swap_goes_to_day
-    } else {
-        R.string.home_dialog_swap_goes_to_days
-    }
-    return if (to.size == 1) {
-        stringResource(oneWay, parentNames.labelFor(to.single()))
-    } else {
-        stringResource(R.string.home_dialog_swap_goes_each_way)
+    val one = swapGroup.dayCount == 1
+    val direction = swapGroup.direction(
+        offeredByReader = false,
+        readerSlot = parentNames.parents.me?.slot,
+        coParentSlot = parentNames.parents.coParent?.slot
+    )
+    return when (direction) {
+        SwapDirection.GIVES -> stringResource(
+            if (one) R.string.home_dialog_swap_goes_to_you_day else R.string.home_dialog_swap_goes_to_you_days
+        )
+        SwapDirection.ASKS -> stringResource(
+            if (one) R.string.home_dialog_swap_goes_to_day else R.string.home_dialog_swap_goes_to_days,
+            parentNames.labelForUid(swapGroup.swaps.first().override.requestedBy)
+        )
+        SwapDirection.BOTH, SwapDirection.UNKNOWN -> stringResource(R.string.home_dialog_swap_goes_each_way)
     }
 }
 

@@ -58,6 +58,8 @@
     <string name="home_dialog_swap_message_days_apart">%1$s schlägt einen Tausch an diesen Tagen vor: %2$s.</string>
     <string name="home_dialog_swap_goes_to_day">Wenn du zustimmst, bekommt %1$s den Tag.</string>
     <string name="home_dialog_swap_goes_to_days">Wenn du zustimmst, bekommt %1$s die Tage.</string>
+    <string name="home_dialog_swap_goes_to_you_day">Wenn du zustimmst, gehört der Tag dir.</string>
+    <string name="home_dialog_swap_goes_to_you_days">Wenn du zustimmst, gehören die Tage dir.</string>
     <string name="home_dialog_swap_goes_each_way">Wenn du zustimmst, geht jeder Tag an den anderen Elternteil.</string>
 
     <!-- The empty seven-day card's action. -->

@@ -534,12 +534,18 @@ private fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNam
     val offerer = first.override.requestedBy
     // Which way the days go, from the offer itself (second audit: "Bob is offering you a day" over
     // a day Bob was asking for).
-    val direction = group.direction(parentNames.parents.roleByUid[offerer])
+    val direction = group.direction(
+        offeredByReader = offeredByMe,
+        readerSlot = parentNames.parents.me?.slot,
+        coParentSlot = parentNames.parents.coParent?.slot
+    )
     val (mine, theirs) = when (direction) {
         SwapDirection.GIVES ->
             R.plurals.day_swap_inbox_offered_by_you_days to R.plurals.day_swap_inbox_offered_to_you_days
         SwapDirection.ASKS -> R.plurals.day_swap_inbox_asked_by_you_days to R.plurals.day_swap_inbox_asked_of_you_days
-        SwapDirection.BOTH -> R.plurals.day_swap_inbox_swap_by_you_days to R.plurals.day_swap_inbox_swap_with_you_days
+        // "Proposes swapping" claims no direction, which is all an unknown slot allows.
+        SwapDirection.BOTH, SwapDirection.UNKNOWN ->
+            R.plurals.day_swap_inbox_swap_by_you_days to R.plurals.day_swap_inbox_swap_with_you_days
     }
     val resource = if (offeredByMe) mine else theirs
     // The other parent: whom the offerer's days go to, or who offered them.

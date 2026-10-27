@@ -67,6 +67,8 @@
     <string name="home_dialog_swap_message_days_apart">%1$s предлагает поменяться этими днями: %2$s.</string>
     <string name="home_dialog_swap_goes_to_day">Если вы согласитесь, %1$s получает этот день.</string>
     <string name="home_dialog_swap_goes_to_days">Если вы согласитесь, %1$s получает эти дни.</string>
+    <string name="home_dialog_swap_goes_to_you_day">Если вы согласитесь, этот день будет вашим.</string>
+    <string name="home_dialog_swap_goes_to_you_days">Если вы согласитесь, эти дни будут вашими.</string>
     <string name="home_dialog_swap_goes_each_way">Если вы согласитесь, каждый день перейдёт к другому родителю.</string>
 
     <!-- The empty seven-day card's action. -->
