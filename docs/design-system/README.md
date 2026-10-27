@@ -68,7 +68,7 @@ CoPlanly is a shared calendar for separated parents: two homes, one schedule, th
 - The app follows the system's contrast setting (medium and high schemes move only foregrounds).
 
 ### Layout
-- Phone first: four tabs — Home, Calendar, Chat, Expenses — in a bottom bar, a navigation rail from 600px. Settings is not a tab; it opens from a gear in each tab's top bar.
+- Phone first: four tabs — Home, Calendar, Chat, Family — in a bottom bar, a navigation rail from 600px. Expenses opens from the Family tab's money card and Home's month tile. Settings is not a tab; it opens from a gear in each tab's top bar (in Chat, from the thread's overflow menu).
 - Detail screens are one readable column, at most 640px wide, centred. From 840px the tabs go to two panes (at most 1200px).
 - Destructive actions sit at the bottom of their screen.
 
@@ -78,4 +78,4 @@ CoPlanly is a shared calendar for separated parents: two homes, one schedule, th
 - The mark: see the Logos group. The app icon is the white calendar glyph on `primary`.
 
 ## Components
-Use these anatomies rather than drawing your own: `SectionGroup`/`SectionRow`/`GroupLabel` for lists and settings, `PillChip` for status, `InlineBanner` (INFO/ATTENTION) for what a screen tells or asks, `EmptyState`/`ErrorState` for empty and failed lists, `StickyActionBar` for a form's Save, `AddItemButton` to add a row, `ConfirmationDialog` for a question, `ConnectivityBanner` for offline, `InviteCodeText` for a pairing code, `MiniMonth` for a small calendar, `ChangeRequestCard` and `DaySwapCard` for the Requests inbox, `ChatBubble` and `ChatDaySeparator` for a thread. The previews here are web renditions; the Android Compose code in `presentation/common/` is the source of truth.
+Use these anatomies rather than drawing your own: `SectionGroup`/`SectionRow`/`GroupLabel` for lists and settings, `PillChip` for status, `InlineBanner` (INFO/ATTENTION) for what a screen tells or asks, `AnswerButtons` for every answer to a request (outlined Decline, filled Accept, a dialog's Later under them), `EmptyState`/`ErrorState` for empty and failed lists, `StickyActionBar` for a form's Save, `AddItemButton` to add a row, `ConfirmationDialog` for a question, `ConnectivityBanner` for offline, `InviteCodeText` for a pairing code, `MiniMonth` for a small calendar, `ChangeRequestCard` and `DaySwapCard` for the Requests inbox, `ChatBubble` and `ChatDaySeparator` for a thread. The previews here are web renditions; the Android Compose code in `presentation/common/` is the source of truth.
