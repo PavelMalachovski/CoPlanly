@@ -120,8 +120,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
    row rather than stacking buttons in a card.
    **The Family tab** (`presentation/family/FamilyScreen.kt`, `FamilyViewModel`) is a hub of
    labelled groups — Money (this month's spend and balance, which opens Expenses), Agreements
-   (custody and the parenting plan), Records (the month review, the export and the journal; M5),
-   Children and home, People (the unassigned-records row first, and the co-parent's details named
+   (custody and the parenting plan), Children and home, Records (the month review, the export and
+   the journal; M5), People (the unassigned-records row first, and the co-parent's details named
    "What {name} has shared"), Only mine — with the stickers at the bottom. It reuses Settings' dialogs (`FamilyKindDialog`, `SplitRatioDialog`) rather than
    drawing its own, and its money figures come from `home/MonthMoney`, the one computation Home's
    tile reads too.
