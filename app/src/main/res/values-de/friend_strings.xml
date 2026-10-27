@@ -63,4 +63,5 @@
     <string name="friend_redeem_row_supporting">Wenn du als Freund der Familie eingeladen wurdest</string>
     <string name="friend_redeem_open_calendar">Familienkalender öffnen</string>
     <string name="friend_calendar_row_supporting">%1$s und %2$s · Zugriff bis %3$s</string>
+    <string name="friend_calendar_no_events_window">Keine Termine in diesen vier Wochen</string>
 </resources>

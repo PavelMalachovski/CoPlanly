@@ -63,4 +63,5 @@
     <string name="friend_redeem_row_supporting">Pokud vás pozvali jako přítele rodiny</string>
     <string name="friend_redeem_open_calendar">Otevřít kalendář rodiny</string>
     <string name="friend_calendar_row_supporting">%1$s a %2$s · přístup do %3$s</string>
+    <string name="friend_calendar_no_events_window">V těchto čtyřech týdnech nejsou žádné události</string>
 </resources>

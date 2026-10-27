@@ -63,4 +63,5 @@
     <string name="friend_redeem_row_supporting">Если вас пригласили как друга семьи</string>
     <string name="friend_redeem_open_calendar">Открыть календарь семьи</string>
     <string name="friend_calendar_row_supporting">%1$s и %2$s · доступ до %3$s</string>
+    <string name="friend_calendar_no_events_window">За эти четыре недели событий нет</string>
 </resources>

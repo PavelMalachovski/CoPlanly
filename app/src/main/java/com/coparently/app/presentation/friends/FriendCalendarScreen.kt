@@ -164,7 +164,20 @@ private fun FriendAgenda(
                 WindowPager(onPrevious, onNext)
             }
         }
-        items(state.days, key = { it.date.toString() }) { day ->
+        // Only the days that hold something (UX audit L2): a friend reads no custody, so an empty
+        // day said nothing but its date, and four weeks of them buried the three that mattered.
+        val busyDays = state.days.filter { it.events.isNotEmpty() }
+        if (busyDays.isEmpty()) {
+            item(key = "empty") {
+                SectionGroup {
+                    SectionRow(
+                        title = stringResource(R.string.friend_calendar_no_events_window),
+                        titleColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        items(busyDays, key = { it.date.toString() }) { day ->
             FriendAgendaDay(day, state.grant, onOpenEvent)
         }
     }
