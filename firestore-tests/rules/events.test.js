@@ -272,6 +272,38 @@ describe('Part 1d: events', () => {
         }));
       });
 
+      it('denies the creator recording the co-parent\'s answer for them', async () => {
+        await seed(env, {'events/event-1': eventDoc({acceptance: 'PENDING'})});
+        const alice = env.authenticatedContext(ALICE).firestore();
+        await assertFails(alice.doc('events/event-1').update({acceptance: 'ACCEPTED', acceptedBy: BOB}));
+        await assertFails(alice.doc('events/event-1').update({acceptance: 'ACCEPTED', acceptedBy: ALICE}));
+      });
+
+      it('denies the creator turning a decline back into an acceptance', async () => {
+        await seed(env, {'events/event-1': eventDoc({acceptance: 'DECLINED', acceptedBy: BOB})});
+        const alice = env.authenticatedContext(ALICE).firestore();
+        await assertFails(alice.doc('events/event-1').update({acceptance: 'ACCEPTED'}));
+      });
+
+      it('denies creating an event that already carries the co-parent\'s answer', async () => {
+        const alice = env.authenticatedContext(ALICE).firestore();
+        await assertFails(alice.doc('events/event-2').set(
+            eventDoc({acceptance: 'ACCEPTED', acceptedBy: BOB})));
+      });
+
+      it('denies the recipient answering in somebody else\'s name', async () => {
+        await seed(env, {'events/event-1': eventDoc({acceptance: 'PENDING'})});
+        const bob = env.authenticatedContext(BOB).firestore();
+        await assertFails(bob.doc('events/event-1').update({acceptance: 'ACCEPTED', acceptedBy: CAROL}));
+      });
+
+      it('lets the creator re-save the stored answer, and ask again', async () => {
+        await seed(env, {'events/event-1': eventDoc({acceptance: 'ACCEPTED', acceptedBy: BOB})});
+        const alice = env.authenticatedContext(ALICE).firestore();
+        await assertSucceeds(alice.doc('events/event-1').update({title: 'Dentist, moved'}));
+        await assertSucceeds(alice.doc('events/event-1').update({acceptance: 'PENDING', acceptedBy: ''}));
+      });
+
       it('denies a read_only recipient, same as any other field', async () => {
         await seed(env, {
           'events/event-1': eventDoc({acceptance: 'PENDING', permissions: 'read_only'}),

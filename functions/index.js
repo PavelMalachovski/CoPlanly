@@ -5837,6 +5837,9 @@ async function sweepIdleCalendarFeedsImpl(db, nowMillis) {
 
 exports.sweepIdleCalendarFeedsImpl = sweepIdleCalendarFeedsImpl;
 
+/** The instance cap [exports.calendarFeed] is deployed with. */
+const CALENDAR_FEED_MAX_INSTANCES = 20;
+
 /** Per-instance render cache and rate limit for [exports.calendarFeed]. */
 const calendarFeedCache = calendarFeed.ttlCache(calendarFeed.CACHE_TTL_MS);
 const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, calendarFeed.RATE_WINDOW_MS);
@@ -5844,40 +5847,46 @@ const calendarFeedLimiter = calendarFeed.rateLimiter(calendarFeed.RATE_LIMIT, ca
 /**
  * `GET /calendarFeed/<token>.ics` — the subscription itself. No sign-in: the token is the
  * authorisation, and it is never logged.
+ *
+ * Capped in instances, as the verification page's functions are (security audit, October 2026):
+ * the feed is unauthenticated and every request costs a read whatever token it carries, so the
+ * per-instance limiter bounds the service only while the number of instances is bounded too.
  */
-exports.calendarFeed = regional.https.onRequest(async (req, res) => {
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.set('Referrer-Policy', 'no-referrer');
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.set('Allow', 'GET, HEAD');
-    res.set('Cache-Control', 'no-store');
-    res.status(405).send('Method not allowed\n');
-    return;
-  }
-  try {
-    const result = await serveCalendarFeedImpl(
-        admin.firestore(), calendarFeed.tokenFromPath(req.path), Date.now(),
-        calendarFeedCache, calendarFeedLimiter);
-    if (result.status === 200) {
-      res.set('Content-Type', 'text/calendar; charset=utf-8');
-      res.set('Content-Disposition', 'inline; filename="coplanly.ics"');
-      res.set('Cache-Control', `private, max-age=${Math.round(calendarFeed.CACHE_TTL_MS / 1000)}`);
-    } else {
-      res.set('Content-Type', 'text/plain; charset=utf-8');
-      res.set('Cache-Control', 'no-store');
-      if (result.status === 429) {
-        res.set('Retry-After', String(Math.round(calendarFeed.RATE_WINDOW_MS / 1000)));
+exports.calendarFeed = regional
+    .runWith({maxInstances: CALENDAR_FEED_MAX_INSTANCES})
+    .https.onRequest(async (req, res) => {
+      res.set('X-Content-Type-Options', 'nosniff');
+      res.set('Referrer-Policy', 'no-referrer');
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        res.set('Allow', 'GET, HEAD');
+        res.set('Cache-Control', 'no-store');
+        res.status(405).send('Method not allowed\n');
+        return;
       }
-    }
-    res.status(result.status).send(req.method === 'HEAD' ? '' : result.body);
-  } catch (err) {
-    // The message only: an error object can carry the request, and the request carries the token.
-    console.error('Calendar feed failed', err && err.message);
-    res.set('Content-Type', 'text/plain; charset=utf-8');
-    res.set('Cache-Control', 'no-store');
-    res.status(500).send('Error\n');
-  }
-});
+      try {
+        const result = await serveCalendarFeedImpl(
+            admin.firestore(), calendarFeed.tokenFromPath(req.path), Date.now(),
+            calendarFeedCache, calendarFeedLimiter);
+        if (result.status === 200) {
+          res.set('Content-Type', 'text/calendar; charset=utf-8');
+          res.set('Content-Disposition', 'inline; filename="coplanly.ics"');
+          res.set('Cache-Control', `private, max-age=${Math.round(calendarFeed.CACHE_TTL_MS / 1000)}`);
+        } else {
+          res.set('Content-Type', 'text/plain; charset=utf-8');
+          res.set('Cache-Control', 'no-store');
+          if (result.status === 429) {
+            res.set('Retry-After', String(Math.round(calendarFeed.RATE_WINDOW_MS / 1000)));
+          }
+        }
+        res.status(result.status).send(req.method === 'HEAD' ? '' : result.body);
+      } catch (err) {
+        // The message only: an error object can carry the request, and the request carries the token.
+        console.error('Calendar feed failed', err && err.message);
+        res.set('Content-Type', 'text/plain; charset=utf-8');
+        res.set('Cache-Control', 'no-store');
+        res.status(500).send('Error\n');
+      }
+    });
 
 /** Creates a feed link. See [createCalendarFeedImpl]. */
 exports.createCalendarFeed = regional.https.onCall(async (data, context) => {

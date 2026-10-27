@@ -240,6 +240,7 @@ const TEXT = {
     yourSize: 'Your file',
     madeBy: 'Made by',
     madeByValue: 'one of the family\'s parents',
+    madeByAccount: 'a CoPlanly account (not linked to a family when it was registered)',
     bytes: ' bytes',
   },
   cs: {
@@ -289,6 +290,7 @@ const TEXT = {
     yourSize: 'Váš soubor',
     madeBy: 'Vytvořil',
     madeByValue: 'jeden z rodičů rodiny',
+    madeByAccount: 'účet CoPlanly (při registraci nepropojený s rodinou)',
     bytes: ' bajtů',
   },
 };
@@ -384,7 +386,7 @@ function receiptRows(result, fileSize) {
     [t('size'), `${result.byteLength}${t('bytes')}`],
   ];
   if (fileSize !== undefined) rows.push([t('yourSize'), `${fileSize}${t('bytes')}`]);
-  rows.push([t('madeBy'), t('madeByValue')]);
+  rows.push([t('madeBy'), t(result.familyBound === false ? 'madeByAccount' : 'madeByValue')]);
   return rows;
 }
 

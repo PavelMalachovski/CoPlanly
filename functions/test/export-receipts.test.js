@@ -237,6 +237,32 @@ describe('export receipts (MON-16)', () => {
       assert.strictEqual(db._store.export_receipts[recordId].sha256, SHA);
     });
 
+    it('refuses a copy of a registered file filed under another id', async () => {
+      // Bob holds Alice's export and registers its hash under an id of his own, which made a
+      // lookup by the file answer with his later time and his period.
+      const db = fakeDb();
+      const deps = clock(1000);
+      const original = await registered(db, deps);
+      deps.advance(60000);
+      const {recordId} = await receipts.reserveImpl(db, BOB, Object.assign({}, RANGE, {fromDate: '2026-01-01'}), deps);
+      await assert.rejects(
+          receipts.registerImpl(db, BOB, {recordId, sha256: SHA, byteLength: 4096}, deps),
+          (err) => err.reason === 'hash-registered');
+      const answer = await receipts.verifyImpl(db, {sha256: SHA});
+      assert.strictEqual(answer.recordId, original);
+      assert.strictEqual(answer.recordedAtMillis, 1000);
+    });
+
+    it('answers a lookup by file with the earliest of receipts filed before that refusal', async () => {
+      const db = fakeDb();
+      const deps = clock(5000);
+      const later = await registered(db, deps);
+      db._store.export_receipts['EARLIER0000000000'] = Object.assign({}, db._store.export_receipts[later],
+          {recordedAt: Timestamp.fromMillis(10)});
+      const answer = await receipts.verifyImpl(db, {sha256: SHA});
+      assert.strictEqual(answer.recordId, 'EARLIER0000000000');
+    });
+
     it('answers a retry of the same hash with the original time, not a new one', async () => {
       const db = fakeDb();
       const deps = clock(1000);
@@ -311,17 +337,43 @@ describe('export receipts (MON-16)', () => {
 
     it('answers with the receipt and nothing that identifies anybody', async () => {
       const db = fakeDb();
+      db._store.families = {[FAMILY]: {members: [ALICE, BOB].sort()}};
       await registered(db, clock(1));
       const answer = await receipts.verifyImpl(db, {sha256: SHA});
       assert.deepStrictEqual(Object.keys(answer).sort(), [
-        'byteLength', 'format', 'found', 'fromDate', 'generatedBy', 'recordId', 'recordedAt',
-        'recordedAtMillis', 'toDate',
+        'byteLength', 'familyBound', 'format', 'found', 'fromDate', 'generatedBy', 'recordId',
+        'recordedAt', 'recordedAtMillis', 'toDate',
       ]);
+      assert.strictEqual(answer.familyBound, true);
       assert.strictEqual(answer.generatedBy, receipts.GENERATED_BY);
       const text = JSON.stringify(answer);
       for (const secret of [ALICE, BOB, FAMILY, 'Alice']) {
         assert.ok(!text.includes(secret), `${secret} leaked`);
       }
+    });
+
+    it('says "a CoPlanly account" when no live family stood behind the reservation', async () => {
+      // Any account can reserve under a blank family or `me__anyone`; only a family document
+      // makes "one of the family's parents" true.
+      const db = fakeDb();
+      const deps = clock(1);
+      for (const familyId of ['', [ALICE, 'nobody-uid'].sort().join('__')]) {
+        const {recordId} = await receipts.reserveImpl(db, ALICE, Object.assign({}, RANGE, {familyId}), deps);
+        const sha = familyId ? OTHER_SHA : SHA;
+        await receipts.registerImpl(db, ALICE, {recordId, sha256: sha, byteLength: 10}, deps);
+        const answer = await receipts.verifyImpl(db, {recordId});
+        assert.strictEqual(answer.familyBound, false);
+        assert.strictEqual(answer.generatedBy, receipts.GENERATED_BY_ACCOUNT);
+      }
+    });
+
+    it('keeps the family wording for a receipt stored before the flag existed', async () => {
+      const db = fakeDb();
+      db._store.export_receipts = {OLD0000000000000: {state: 'registered', sha256: SHA, byteLength: 1,
+        recordedAt: Timestamp.fromMillis(1), fromDate: '2026-01-01', toDate: '2026-01-31', format: 'pdf'}};
+      const answer = await receipts.verifyImpl(db, {sha256: SHA});
+      assert.strictEqual(answer.familyBound, true);
+      assert.strictEqual(answer.generatedBy, receipts.GENERATED_BY);
     });
 
     it('does not find a file one byte away (a different hash)', async () => {

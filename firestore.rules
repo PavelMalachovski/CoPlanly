@@ -968,6 +968,22 @@ service cloud.firestore {
     // ---- Events --------------------------------------------------------
     // Owners and shared partners have access. Date fields are ISO strings, so
     // no timestamp-type or ordering checks here (that is enforced app-side).
+    // True when a write that records an answer to an event (`acceptance` ACCEPTED or DECLINED)
+    // is that answer's own parent's (security audit, October 2026). The fields were open to the
+    // creator, so Alice could write `{acceptance: 'ACCEPTED', acceptedBy: BOB}` on her own event —
+    // or turn Bob's DECLINED back — and the record would carry an agreement Bob never gave. Now an
+    // answer that *changes* must name the caller in `acceptedBy`, and the caller must not be the
+    // creator, which is `EventAcceptanceTransition`'s own rule. Re-sending the stored answer
+    // unchanged (the creator's next save after Bob answered) and moving back to PENDING or
+    // NOT_REQUIRED (an edit that asks again) stay open. On create, `before` is `{}`.
+    function answerWrittenByItsParent(before, after) {
+      return (after.get('acceptance', 'NOT_REQUIRED') == before.get('acceptance', 'NOT_REQUIRED') &&
+              after.get('acceptedBy', '') == before.get('acceptedBy', '')) ||
+             !(after.get('acceptance', 'NOT_REQUIRED') in ['ACCEPTED', 'DECLINED']) ||
+             (after.get('acceptedBy', '') == request.auth.uid &&
+              request.auth.uid != after.get('createdByFirebaseUid', ''));
+    }
+
     // True when a non-creator's edit of an event leaves its `familyId` alone, or fills a blank one
     // with the family of exactly the creator and the caller (see the events update rule).
     function partnerKeepsFamily(before, after) {
@@ -1019,7 +1035,8 @@ service cloud.firestore {
                       // …and, once it names a family, to that family's two parents: a parent in
                       // two families may not show one family's event to the other's co-parent
                       // (item 38's bound, which children and pets already had).
-                      audienceWithinItsFamily(request.resource.data, noGuests());
+                      audienceWithinItsFamily(request.resource.data, noGuests()) &&
+                      answerWrittenByItsParent({}, request.resource.data);
 
       // Creator, or a partner with read_write permission, may update. The creator
       // field is immutable. lastModifiedBy is intentionally NOT required to equal
@@ -1059,7 +1076,8 @@ service cloud.firestore {
          // and its next save writes that back. Only the family both of them are in qualifies.
          partnerKeepsFamily(resource.data, request.resource.data) &&
          request.resource.data.get('isPrivate', false) == resource.data.get('isPrivate', false))
-      ) && request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid;
+      ) && request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid &&
+        answerWrittenByItsParent(resource.data, request.resource.data);
 
       allow delete: if isAuthenticated() &&
                       resource.data.createdByFirebaseUid == request.auth.uid;
@@ -1617,10 +1635,16 @@ service cloud.firestore {
     // ---- Change requests ----------------------------------------------
     // Event change requests: only the requester or the addressee may access.
     match /change_requests/{requestId} {
-      allow read, delete: if isAuthenticated() && (
+      allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.requestedBy ||
         request.auth.uid == resource.data.requestedTo
       );
+
+      // Never deleted from a client (security audit, October 2026). A request is the record of
+      // what one parent asked and the other answered, and History is derived from it (item 40);
+      // a delete either party could make erased it from both phones. No client deletes one —
+      // a withdrawal is the `CANCELLED` status — and account deletion runs as admin.
+      allow delete: if false;
 
       // An update is a *decision*, never a rewrite. The two parties, the event and the proposed
       // times are pinned, so the addressee cannot "accept" a request while changing what it
@@ -2495,11 +2519,14 @@ service cloud.firestore {
       // create and reading through it there is an evaluation error, not null — the hazard this
       // file has already been bitten by more than once. On create the maps must contain nothing
       // but this parent's key; on update the *diff* of each map must touch nothing but it.
-      allow create: if isFamilyMember(planId) &&
+      // Writing needs the family still **live** (security audit, October 2026): unpair leaves the
+      // plan in place for both parents to read and export, and with `isFamilyMember` alone an
+      // ex-partner went on rewriting their half of a document either of them may hand a court.
+      allow create: if isLiveFamilyMember(planId) &&
                       planFieldsOnly(request.resource.data) &&
                       planHalfIsMine(request.resource.data);
 
-      allow update: if isFamilyMember(planId) &&
+      allow update: if isLiveFamilyMember(planId) &&
                       planFieldsOnly(request.resource.data) &&
                       planDiffIsMine(request.resource.data, resource.data);
 
@@ -2786,8 +2813,19 @@ service cloud.firestore {
       // `attachments` is bounded because since MON-23 it carries file references
       // (`ChatAttachmentCodec`) as well as the one event id a change-request card names; ten is
       // far above what any client writes and keeps a message document a message.
+      // `timestamp` is the sender's own clock, and the export prints it (security audit, October
+      // 2026): unbounded, a parent could post today a message dated a month ago and have it sit
+      // in the record in date order. A number must lie between thirty days ago — a message the
+      // outbox held while the phone was offline keeps the time it was written — and five minutes
+      // ahead. The server's own receipt time is the document's `createTime`, which Firestore keeps
+      // and no client can set; nothing is stamped on the message, because a retried `set()` of a
+      // landed message would then be an update this rule refuses. An older build's ISO string is
+      // left as it was.
       allow create: if isAuthenticated() &&
                       request.resource.data.senderId == request.auth.uid &&
+                      (!(request.resource.data.get('timestamp', '') is number) ||
+                       (request.resource.data.timestamp <= request.time.toMillis() + 5 * 60 * 1000 &&
+                        request.resource.data.timestamp >= request.time.toMillis() - 30 * 24 * 60 * 60 * 1000)) &&
                       request.resource.data.get('attachments', []).size() <= 10 &&
                       request.auth.uid in
                         get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
