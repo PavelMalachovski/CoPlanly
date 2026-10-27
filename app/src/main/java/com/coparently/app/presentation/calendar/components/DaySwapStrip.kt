@@ -110,9 +110,10 @@ private fun DaySwapStripButtons(state: DaySwapStripState, actions: DaySwapStripA
     when (state) {
         is DaySwapStripState.OfferedByMe ->
             TextButton(onClick = actions.onWithdraw) { Text(stringResource(R.string.change_request_withdraw)) }
+        // Decline before Accept, as every answer reads (UX audit M1).
         is DaySwapStripState.OfferedToMe -> {
-            Button(onClick = actions.onAccept) { Text(stringResource(R.string.day_swap_accept)) }
             TextButton(onClick = actions.onDecline) { Text(stringResource(R.string.day_swap_decline)) }
+            Button(onClick = actions.onAccept) { Text(stringResource(R.string.day_swap_accept)) }
         }
         is DaySwapStripState.Agreed -> TextButton(onClick = actions.onProposeChange) {
             Text(stringResource(R.string.request_history_propose_change))

@@ -17,7 +17,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,6 +62,7 @@ import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.isConsecutive
+import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalAppMessages
@@ -568,14 +568,12 @@ private fun DaySwapButtons(group: DaySwapGroup, currentUserId: String, answers: 
     val hidesAnswers = LocalCardClock.current?.hidesAnswers == true
     when {
         group.awaitsAnswerFrom(currentUserId) -> if (!hidesAnswers) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                Button(onClick = { answers.answerSwap(group, true) }) {
-                    Text(stringResource(R.string.day_swap_accept))
-                }
-                TextButton(onClick = { answers.answerSwap(group, false) }) {
-                    Text(stringResource(R.string.day_swap_decline))
-                }
-            }
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.day_swap_accept),
+                declineLabel = stringResource(R.string.day_swap_decline),
+                onAccept = { answers.answerSwap(group, true) },
+                onDecline = { answers.answerSwap(group, false) }
+            )
         }
         group.withdrawableBy(currentUserId) -> TextButton(onClick = { answers.withdrawSwap(group) }) {
             Text(stringResource(R.string.change_request_withdraw))
@@ -683,16 +681,12 @@ private fun ProposalToAnswer(
     // Past the deadline Accept waits for a last chance, but Decline stays: until the proposer's
     // phone withdraws it, the proposal blocks every schedule change this parent could make.
     val declineOnly = LocalCardClock.current?.declineOnly == true
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        if (!declineOnly) {
-            Button(onClick = onAccept) {
-                Text(stringResource(R.string.custody_proposal_accept))
-            }
-        }
-        TextButton(onClick = onDecline) {
-            Text(stringResource(R.string.custody_proposal_decline))
-        }
-    }
+    AnswerButtons(
+        acceptLabel = stringResource(R.string.custody_proposal_accept),
+        declineLabel = stringResource(R.string.custody_proposal_decline),
+        onAccept = onAccept.takeUnless { declineOnly },
+        onDecline = onDecline
+    )
 }
 
 /**
@@ -766,16 +760,12 @@ private fun SplitProposalButtons(mine: Boolean, answers: InboxAnswers) {
     }
     // Past the deadline Accept waits for a last chance, but Decline stays (CardClock.declineOnly).
     val declineOnly = LocalCardClock.current?.declineOnly == true
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        if (!declineOnly) {
-            Button(onClick = { answers.answerSplit(true) }) {
-                Text(stringResource(R.string.change_request_accept))
-            }
-        }
-        TextButton(onClick = { answers.answerSplit(false) }) {
-            Text(stringResource(R.string.change_request_decline))
-        }
-    }
+    AnswerButtons(
+        acceptLabel = stringResource(R.string.change_request_accept),
+        declineLabel = stringResource(R.string.change_request_decline),
+        onAccept = { answers.answerSplit(true) }.takeUnless { declineOnly },
+        onDecline = { answers.answerSplit(false) }
+    )
 }
 
 /**
@@ -928,17 +918,12 @@ fun ChangeRequestCard(
             if (request.status == ChangeRequestStatus.PENDING) {
                 // Past the deadline the answering parent's next move waits on a last chance.
                 if (isIncoming && clock?.hidesAnswers != true) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-                    ) {
-                        Button(onClick = onAccept, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.change_request_accept))
-                        }
-                        OutlinedButton(onClick = onDecline, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.change_request_decline))
-                        }
-                    }
+                    AnswerButtons(
+                        acceptLabel = stringResource(R.string.change_request_accept),
+                        declineLabel = stringResource(R.string.change_request_decline),
+                        onAccept = onAccept,
+                        onDecline = onDecline
+                    )
                 } else if (!isIncoming) {
                     OutlinedButton(
                         onClick = onCancel,

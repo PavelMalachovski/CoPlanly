@@ -2,7 +2,6 @@ package com.coparently.app.presentation.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -34,6 +33,7 @@ import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
 import com.coparently.app.presentation.changerequests.SwapDayAnswers
 import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
@@ -235,19 +235,19 @@ private fun ProposalDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onDismiss()
-                actions.onAcceptProposal()
-            }) { Text(stringResource(R.string.custody_proposal_accept)) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
-                TextButton(onClick = {
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.custody_proposal_accept),
+                declineLabel = stringResource(R.string.custody_proposal_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptProposal()
+                },
+                onDecline = {
                     onDismiss()
                     actions.onDeclineProposal()
-                }) { Text(stringResource(R.string.custody_proposal_decline)) }
-            }
+                },
+                later = stringResource(R.string.home_dialog_later) to onDismiss
+            )
         }
     )
 }
@@ -294,19 +294,19 @@ private fun SplitDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onDismiss()
-                actions.onAcceptSplit()
-            }) { Text(stringResource(R.string.change_request_accept)) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
-                TextButton(onClick = {
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.change_request_accept),
+                declineLabel = stringResource(R.string.change_request_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptSplit()
+                },
+                onDecline = {
                     onDismiss()
                     actions.onDeclineSplit()
-                }) { Text(stringResource(R.string.change_request_decline)) }
-            }
+                },
+                later = stringResource(R.string.home_dialog_later) to onDismiss
+            )
         }
     )
 }
@@ -348,23 +348,19 @@ private fun SwapDialog(
         confirmButton = {
             // Dismissed on tap as well: the answer's round trip through Firestore takes a
             // moment, and the dialog must not sit there inviting a second tap meanwhile.
-            TextButton(onClick = {
-                onDismiss()
-                actions.onAcceptSwap(swapGroup)
-            }) {
-                Text(stringResource(R.string.day_swap_accept))
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
-                TextButton(onClick = {
+            AnswerButtons(
+                acceptLabel = stringResource(R.string.day_swap_accept),
+                declineLabel = stringResource(R.string.day_swap_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptSwap(swapGroup)
+                },
+                onDecline = {
                     onDismiss()
                     actions.onDeclineSwap(swapGroup)
-                }) {
-                    Text(stringResource(R.string.day_swap_decline))
-                }
-            }
+                },
+                later = stringResource(R.string.home_dialog_later) to onDismiss
+            )
         }
     )
 }
