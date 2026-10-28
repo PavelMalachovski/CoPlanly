@@ -108,3 +108,48 @@ riskiest shot (hook → reveal → match, 0–7.5 s) is built and checked frame 
 
 Exact timings within a beat, easings, the chalk texture, each shot's camera path and the choice of sound
 for each event.
+
+## As built (first cut, 28 October 2026)
+
+The story above held; these are the details the build settled, and the places it departs from the table.
+
+| Time | Shot | Copy |
+| --- | --- | --- |
+| 0.0–2.5 | Leo in the air over a chalk hopscotch that is November drawn square by square on the asphalt, seen low with the weeks running into the distance. He lands at 0.6 s astride Mon 9, the handover day: one foot in Bob's blue, one in Alice's pink. Chalk dust. | Home. And home. |
+| 2.5–4.4 | He hops on, one day per beat (10, 11, 12, 13), while the camera cranes up, turns and pulls back: the hopscotch is a whole month. | One calendar. |
+| 4.4–5.0 | His landing on Fri 13 sends a wave through the chalk: each square lifts away and the app's own cell is under it, at the same place and size. The screen and the bezel assemble around the grid. | — |
+| 5.0–6.9 | Leo climbs the weeks' colours (7, 1) to the ⇄ button. | See whose day it is. |
+| 6.9–10.3 | His landings are the taps: on ⇄ (the choosing screen opens from the button), on Tue 3, Thu 12 and Fri 13 (each day's mark appears as he lands), and, once the copy has left the top of the frame, on Next. | Plans change? Swap days. |
+| 10.3–11.3 | The «Swap with Bob» sheet rises behind him. | — |
+| 11.3–13.1 | The sheet goes. A notification in the app's words: «Day swap agreed · Your co-parent agreed to swap 3 days». The three days glow in their new colours and Leo cheers on Tue 3. | Both agree. |
+| 13.1–14.4 | He drops onto the Home tab; Home fades through. | Today, at a glance. |
+| 14.4–17.0 | He jumps onto the Requests row; the inbox slides in. | Every request in one place. |
+| 17.0–19.4 | He pushes off the inbox (Back), lands on Chat, jumps onto a bubble. | Chat about the kids. |
+| 19.4–22.4 | Down onto Family. | Costs and kids' details, shared. |
+| 22.4–25.0 | The camera tilts back: the phone lies on the asphalt, and Leo hops off it along a short chalk path. | Co-parenting can be easy. |
+| 25.0–27.4 | He lands astride a big split square, arms up. | Good for your kids. |
+| 27.5–30.0 | The camera looks straight down; the square becomes the app's icon and Leo hops onto it. CoPlanly, the tagline, «Get it on Google Play». | — |
+
+Departures from the story, and why:
+
+- **November throughout, not October.** The new swap screens the tour photographed are November's, so the
+  chalk month is November too and there is no month change to explain.
+- **Leo is not on the tab bar at 5 s.** He climbs to ⇄ instead, so the swap starts where he already is; he
+  reaches the tab bar at Home, and from then on the tabs are his stepping stones.
+- **No finger anywhere.** Every tap is one of Leo's landings, which keeps the carrier doing the action.
+- **No «Send» tap.** The sheet's Send button is below the photographed part of the sheet; the notification
+  says what Send led to.
+- **One screen is derived, not photographed: the month after the swap.** The tour has no screenshot of an
+  accepted swap, so `cal-nov-after.png` is the tour's November with exactly three cells re-coloured the way
+  `DayCellFills` draws an accepted swap (one solid fill in the receiving parent's colour, no mark), every
+  other pixel the screenshot's. The script that makes it is kept with the ad's source.
+- **The chat is the tour's thread as it is**, with its two system cards at the bottom; Leo stands on a
+  bubble whose only covered text is its time.
+- **The score is procedural** (D major, D–A–Bm–G, kalimba, bass, soft drums, a bell tune), with a
+  150 ms gap before the logo's chord, instead of the skill's stock bed.
+- **A tab change keeps the navigation bar on screen** and fades only the content through, as the app's
+  NavHost does; the bar's selected tab cross-fades.
+
+Self-check of the first cut (`watch.py`, a layout check against Instagram's margins): one continuous
+shot, no hold of a second or more, no judder or duplicate frames, −13.6 LUFS integrated, true peak
+−2.0 dBTP, all copy inside the safe area.
