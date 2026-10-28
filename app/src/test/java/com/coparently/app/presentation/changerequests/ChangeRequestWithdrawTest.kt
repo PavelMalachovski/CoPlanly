@@ -19,6 +19,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.PairingRepository
@@ -384,7 +386,7 @@ class ChangeRequestWithdrawTest {
 
         // The family switches afterwards: what is withdrawn is still what the row showed.
         agreements = FamilyAgreements(support = supportBy("u1").copy(familyId = "u1__u3"))
-        vm.withdrawSupport()
+        vm.withdrawSupport("u1__u2")
         advanceUntilIdle()
 
         coVerify(exactly = 1) { agreementWithdrawals.withdrawSupport(shown) }
@@ -395,14 +397,53 @@ class ChangeRequestWithdrawTest {
         agreements = FamilyAgreements(support = supportBy("u2"))
         val vm = inboxDrawn()
 
-        vm.withdrawSupport()
+        vm.withdrawSupport("u1__u2")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { agreementWithdrawals.withdrawSupport(any()) }
+    }
+
+    private fun grant(consents: Map<String, Long>) = ProfessionalGrant(
+        id = "u1__u2__pro",
+        familyId = "u1__u2",
+        familyParents = listOf("u1", "u2"),
+        proUid = "pro",
+        role = ProfessionalRole.MEDIATOR,
+        name = "Dana",
+        invitedBy = "u1",
+        grantedAtMillis = 1L,
+        expiresAtMillis = Long.MAX_VALUE,
+        consents = consents
+    )
+
+    @Test
+    fun withdrawSupportRefusesAnotherFamily() = runTest(dispatcher) {
+        agreements = FamilyAgreements(support = supportBy("u1"))
+        val vm = inboxDrawn()
+
+        // The row was drawn for another family than the one the inbox now shows.
+        vm.withdrawSupport("u1__u3")
         advanceUntilIdle()
 
         coVerify(exactly = 0) { agreementWithdrawals.withdrawSupport(any()) }
     }
 
     @Test
+    fun withdrawProfessionalRefusesAGrantNoLongerWaiting() = runTest(dispatcher) {
+        // Pavel consented meanwhile: the grant is active, and Withdraw must not end it.
+        agreements = FamilyAgreements(professionals = listOf(grant(mapOf("u1" to 1L, "u2" to 2L))))
+        val vm = inboxDrawn()
+
+        vm.withdrawProfessional("u1__u2__pro")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { agreementWithdrawals.withdrawProfessional(any()) }
+        assertEquals(UiText.Res(R.string.request_agreement_withdraw_stale), vm.errorMessage.value)
+    }
+
+    @Test
     fun withdrawProfessionalRevokes() = runTest(dispatcher) {
+        agreements = FamilyAgreements(professionals = listOf(grant(mapOf("u1" to 1L))))
         val vm = inboxDrawn()
 
         vm.withdrawProfessional("u1__u2__pro")
@@ -417,7 +458,7 @@ class ChangeRequestWithdrawTest {
         agreements = FamilyAgreements(support = supportBy("u1"))
         val vm = inboxDrawn()
 
-        vm.withdrawSupport()
+        vm.withdrawSupport("u1__u2")
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.request_agreement_withdraw_failed), vm.errorMessage.value)

@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +63,7 @@ import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.common.AnswerButtons
+import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.LocalAppMessages
@@ -128,8 +130,28 @@ fun ChangeRequestsScreen(
         linkedEventId?.let { eventId -> ready?.let { ChangeRequestHighlight.forEvent(it.changeRequests, eventId) } }
     }
     val changingSwap = remember { mutableStateOf<HistoryEntry?>(null) }
+    // Withdrawing a professional's waiting access deletes the grant, so it is asked first, as the
+    // Professionals screen asks before ending one. Only the id is kept across a rotation; a grant
+    // that left the inbox meanwhile closes the question.
+    val confirmingGrantId = rememberSaveable { mutableStateOf<String?>(null) }
     val answers = remember(viewModel, onOpenEvent, onOpenAgreement) {
         InboxAnswers.of(viewModel, InboxOpeners(onOpenEvent, onOpenAgreement)) { changingSwap.value = it }
+            .copy(withdrawProfessional = { confirmingGrantId.value = it })
+    }
+    val withdrawing = confirmingGrantId.value
+        ?.let { id -> ready?.agreements?.professionals?.firstOrNull { it.id == id } }
+    if (withdrawing != null) {
+        ConfirmationDialog(
+            title = stringResource(R.string.change_request_withdraw),
+            message = stringResource(R.string.professional_revoke_confirm, withdrawing.name),
+            confirmText = stringResource(R.string.professional_dialog_revoke),
+            onConfirm = {
+                viewModel.withdrawProfessional(withdrawing.id)
+                confirmingGrantId.value = null
+            },
+            onDismiss = { confirmingGrantId.value = null },
+            isDestructive = true
+        )
     }
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -358,7 +380,7 @@ internal data class InboxAnswers(
     val withdrawProposal: () -> Unit,
     val answerSplit: (accept: Boolean) -> Unit,
     val withdrawSplit: () -> Unit,
-    val withdrawSupport: () -> Unit,
+    val withdrawSupport: (familyId: String) -> Unit,
     val withdrawProfessional: (grantId: String) -> Unit,
     val openAgreement: (AgreementScreen) -> Unit,
     val markSeen: (clockId: String) -> Unit,
@@ -472,7 +494,7 @@ private fun AgreementItemRow(item: InboxItem, cards: InboxCards, answers: InboxA
             mine = item.mine,
             parentNames = cards.parentNames,
             onOpen = { answers.openAgreement(AgreementScreen.SUPPORT) },
-            onWithdraw = answers.withdrawSupport
+            onWithdraw = { answers.withdrawSupport(cards.scope.familyId) }
         )
         is InboxItem.Professional -> ProfessionalRequestRow(
             grant = item.grant,

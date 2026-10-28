@@ -65,8 +65,8 @@
         <item quantity="other">%1$s і ще %2$d дня</item>
     </plurals>
     <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
-    <string name="request_support_theirs">%1$s пропонує %2$s на місяць, %3$d-го числа, з %4$s</string>
-    <string name="request_support_mine">Ви запропонували %1$s на місяць, %2$d-го числа, з %3$s</string>
+    <string name="request_support_theirs">%1$s пропонує %2$s на місяць, %3$d-го числа, з: %4$s</string>
+    <string name="request_support_mine">Ви запропонували %1$s на місяць, %2$d-го числа, з: %3$s</string>
     <string name="request_professional_title">Доступ фахівця</string>
     <string name="request_professional_theirs">%1$s %2$s — потрібна ваша згода</string>
     <string name="request_professional_mine">%1$s %2$s — чекаємо на згоду: %3$s</string>
@@ -77,4 +77,5 @@
         <item quantity="many">%1$s відповів(-ла) на %2$d питань — порівняйте й погодьте</item>
         <item quantity="other">%1$s відповів(-ла) на %2$d питання — порівняйте й погодьте</item>
     </plurals>
+    <string name="request_agreement_withdraw_stale">Це вже не чекає на другого з батьків. Щоб закрити доступ, відкрийте «Фахівці».</string>
 </resources>

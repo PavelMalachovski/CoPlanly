@@ -72,4 +72,5 @@
         <item quantity="one">%1$s hat %2$d Frage beantwortet — vergleichen und zustimmen</item>
         <item quantity="other">%1$s hat %2$d Fragen beantwortet — vergleichen und zustimmen</item>
     </plurals>
+    <string name="request_agreement_withdraw_stale">Das wartet nicht mehr auf den anderen Elternteil. Den Zugang beenden Sie unter Fachleute.</string>
 </resources>

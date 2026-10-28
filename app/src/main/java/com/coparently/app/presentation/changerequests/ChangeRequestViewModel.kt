@@ -598,18 +598,37 @@ class ChangeRequestViewModel @Inject constructor(
     fun withdrawSplit() = answerSplit("Withdrawing", familySettingsRepository::withdrawProposal)
 
     /**
-     * Withdraws this parent's own child support proposal as the inbox drew it (board SW-7) — the
-     * agreement of the family on screen when the inbox was placed, never one read after a switch.
-     * The co-parent's proposal is not this parent's to withdraw, and nothing happens.
+     * Withdraws this parent's own child support proposal in [familyId], the family whose row was
+     * tapped (board SW-7). Refused when the inbox now shows another family — a switch landed between
+     * the draw and the tap — and when the proposal is the co-parent's, which is not this parent's to
+     * withdraw.
      */
-    fun withdrawSupport() {
+    fun withdrawSupport(familyId: String) {
         val ready = requests.value as? RequestsState.Ready ?: return
-        val agreement = ready.agreements.support?.takeIf { it.proposal?.proposedBy == ready.scope.myUid } ?: return
+        val agreement = ready.agreements.support
+            ?.takeIf { it.familyId == familyId && it.proposal?.proposedBy == ready.scope.myUid }
+            ?: return
         withdrawAgreement("child support") { agreementWithdrawals.withdrawSupport(agreement) }
     }
 
-    /** Ends the professional grant [grantId] this parent consented to and the co-parent has not. */
+    /**
+     * Ends the professional grant [grantId] while it still waits on the co-parent's consent alone.
+     * One that has become active meanwhile, expired or left the inbox is not ended from here — the
+     * row was a withdrawal of a waiting invitation, and ending an access is the Professionals
+     * screen's, behind its own confirmation — and the parent is told.
+     */
     fun withdrawProfessional(grantId: String) {
+        val ready = requests.value as? RequestsState.Ready ?: return
+        val me = ready.scope.myUid
+        val stillWaiting = ready.agreements.professionals.any {
+            it.id == grantId && me in it.consents &&
+                ProfessionalGrantPolicy.statusFor(it, me, System.currentTimeMillis()) ==
+                ProfessionalGrantStatus.WAITING_FOR_CO_PARENT
+        }
+        if (!stillWaiting) {
+            _errorMessage.value = UiText.Res(R.string.request_agreement_withdraw_stale)
+            return
+        }
         withdrawAgreement("a professional grant") { agreementWithdrawals.withdrawProfessional(grantId) }
     }
 

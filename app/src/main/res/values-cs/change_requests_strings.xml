@@ -64,8 +64,8 @@
         <item quantity="other">%1$s a %2$d dalších dní</item>
     </plurals>
     <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
-    <string name="request_support_theirs">%1$s navrhuje %2$s měsíčně, %3$d. den v měsíci, od %4$s</string>
-    <string name="request_support_mine">Navrhli jste %1$s měsíčně, %2$d. den v měsíci, od %3$s</string>
+    <string name="request_support_theirs">%1$s navrhuje %2$s měsíčně, %3$d. den v měsíci, od: %4$s</string>
+    <string name="request_support_mine">Navrhli jste %1$s měsíčně, %2$d. den v měsíci, od: %3$s</string>
     <string name="request_professional_title">Přístup odborníka</string>
     <string name="request_professional_theirs">%1$s %2$s — je potřeba váš souhlas</string>
     <string name="request_professional_mine">%1$s %2$s — čeká se na souhlas: %3$s</string>
@@ -76,4 +76,5 @@
         <item quantity="many">%1$s odpověděl(a) na %2$d otázky — porovnejte a dohodněte se</item>
         <item quantity="other">%1$s odpověděl(a) na %2$d otázek — porovnejte a dohodněte se</item>
     </plurals>
+    <string name="request_agreement_withdraw_stale">Tohle už nečeká na druhého rodiče. Přístup ukončíte v sekci Odborníci.</string>
 </resources>

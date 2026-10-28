@@ -2495,7 +2495,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       no push. Each is a compact row (`AgreementRows.kt`) that opens its own screen — Child support,
       Professionals, the plan — where it is answered. The sender's own support proposal and a
       professional they consented to sit under *Waiting for {co-parent}* with **Withdraw request**
-      (`AgreementWithdrawals`: the support store's `clearProposal`, the grant's `revoke`).
+      (`AgreementWithdrawals`: the support store's `clearProposal`, the grant's `revoke`). Each acts
+      on the family its row was drawn for and is refused after a switch; a professional's Withdraw
+      asks first (it deletes the grant) and runs only while the grant still waits on the co-parent
+      alone, never on one that became active. It posts no chat card, as ending a grant on the
+      Professionals screen posts none; the co-parent sees the row go.
 41. **The phone keeps a custody schedule per family** (October 2026, schema 45). Each
     `custody_models` row names its family in `familyId`, which is the id of the family's
     `custody_models` document. `CustodyModelRepository` answers every question from Room for the

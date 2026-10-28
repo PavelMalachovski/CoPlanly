@@ -80,4 +80,5 @@
         <item quantity="one">%1$s answered %2$d question — compare and agree</item>
         <item quantity="other">%1$s answered %2$d questions — compare and agree</item>
     </plurals>
+    <string name="request_agreement_withdraw_stale">This no longer waits for your co-parent. To end the access, open Professionals.</string>
 </resources>
