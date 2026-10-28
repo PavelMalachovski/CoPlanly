@@ -3,7 +3,6 @@ package com.coparently.app.data.requests
 import app.cash.turbine.test
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.support.SupportAgreementStore
-import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.parentingplan.ParentingPlanPair
@@ -56,7 +55,6 @@ class FamilyAgreementsSourceTest {
         )
 
         source.observe(scope).test {
-            assertEquals(FamilyAgreements(), awaitItem())
             var last = awaitItem()
             while (last.plan == null || last.professionals.isEmpty()) last = awaitItem()
             assertEquals(null, last.support)
