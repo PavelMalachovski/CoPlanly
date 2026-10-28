@@ -16,32 +16,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
-import com.coparently.app.domain.custody.SwapDirection
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.calendar.MiniMonthModel
-import com.coparently.app.presentation.calendar.components.isConsecutive
 import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
 import com.coparently.app.presentation.changerequests.SwapDayAnswers
 import com.coparently.app.presentation.changerequests.SwapMonths
+import com.coparently.app.presentation.changerequests.SwapNoteQuote
+import com.coparently.app.presentation.changerequests.SwapOfferSides
+import com.coparently.app.presentation.changerequests.sidesAsked
 import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.changerequests.swapAcceptLabel
+import com.coparently.app.presentation.changerequests.swapOfferHeading
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.presentation.theme.bodyMediumEmphasized
-import com.coparently.app.utils.unbreakableDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.presentation.theme.bodyLargeEmphasized
 
 /**
  * The co-parent's pending custody proposal, as Home's dialog asks about it.
@@ -326,6 +325,12 @@ private fun SwapDialog(
     val myUid = parentNames.parents.me?.uid
     // Shown is opened (spec §4.5): once per offer, however often the dialog recomposes.
     LaunchedEffect(swapGroup.revision) { actions.onSwapSeen(swapGroup) }
+    // The days still waiting on this parent (a part-answered offer shows and decides only those),
+    // and the per-day mode in place of the main buttons (board SW-6).
+    val shown = myUid?.let { swapGroup.waitingOn(it) } ?: swapGroup
+    var byDay by rememberSaveable(swapGroup.revision) { mutableStateOf(false) }
+    val offerer = parentNames.labelForUid(swapGroup.swaps.first().override.requestedBy)
+    val sides = shown.sidesAsked(parentNames)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.home_dialog_swap_title)) },
@@ -334,94 +339,46 @@ private fun SwapDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
-                Text(swapDialogMessage(swapGroup, parentNames))
-                Text(swapDirection(swapGroup, parentNames), style = MaterialTheme.typography.bodyMediumEmphasized)
+                Text(swapOfferHeading(sides, offerer), style = MaterialTheme.typography.bodyLargeEmphasized)
+                sides?.let { SwapOfferSides(it, offerer, parentNames) }
                 SwapMonths(months, parentNames)
-                myUid?.let { uid ->
-                    SwapDayAnswers(swapGroup, uid, parentNames) { picked ->
-                        onDismiss()
-                        actions.onAnswerSwapDays(swapGroup, picked)
-                    }
+                SwapNoteQuote(swapGroup.swaps.first().override.note, offerer)
+                if (byDay && myUid != null) {
+                    SwapDayAnswers(
+                        group = swapGroup,
+                        uid = myUid,
+                        parentNames = parentNames,
+                        onAnswer = { picked ->
+                            onDismiss()
+                            actions.onAnswerSwapDays(swapGroup, picked)
+                        },
+                        onBack = { byDay = false }
+                    )
+                } else if (shown.dayCount >= 2) {
+                    TextButton(onClick = { byDay = true }) { Text(stringResource(R.string.day_swap_answer_by_day)) }
                 }
             }
         },
         confirmButton = {
             // Dismissed on tap as well: the answer's round trip through Firestore takes a
             // moment, and the dialog must not sit there inviting a second tap meanwhile.
-            AnswerButtons(
-                acceptLabel = stringResource(R.string.day_swap_accept),
-                declineLabel = stringResource(R.string.day_swap_decline),
-                onAccept = {
-                    onDismiss()
-                    actions.onAcceptSwap(swapGroup)
-                },
-                onDecline = {
-                    onDismiss()
-                    actions.onDeclineSwap(swapGroup)
-                },
-                later = stringResource(R.string.home_dialog_later) to onDismiss
-            )
+            if (!byDay) {
+                AnswerButtons(
+                    acceptLabel = stringResource(swapAcceptLabel(shown.dayCount)),
+                    declineLabel = stringResource(R.string.day_swap_decline),
+                    onAccept = {
+                        onDismiss()
+                        actions.onAcceptSwap(swapGroup)
+                    },
+                    onDecline = {
+                        onDismiss()
+                        actions.onDeclineSwap(swapGroup)
+                    },
+                    later = stringResource(R.string.home_dialog_later) to onDismiss
+                )
+            }
         }
     )
-}
-
-/**
- * Who offers which days: one day, a run from its first to its last day, or days picked apart one by
- * one (21 October 2026), which "from Monday to Friday" would misdescribe.
- */
-@Composable
-private fun swapDialogMessage(swapGroup: DaySwapGroup, parentNames: ParentNames): String {
-    val first = swapGroup.swaps.first()
-    val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-    val shortDate = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    val from = parentNames.labelForUid(first.override.requestedBy)
-    return when {
-        swapGroup.dayCount == 1 -> stringResource(
-            R.string.home_dialog_swap_message,
-            from,
-            unbreakableDate(swapGroup.firstDate.format(dateFormat))
-        )
-        !isConsecutive(swapGroup.swaps.map { it.date }) -> stringResource(
-            R.string.home_dialog_swap_message_days_apart,
-            from,
-            swapGroup.swaps.joinToString(", ") { unbreakableDate(it.date.format(shortDate)) }
-        )
-        else -> LocalContext.current.resources.getQuantityString(
-            R.plurals.home_dialog_swap_message_days,
-            swapGroup.dayCount,
-            swapGroup.dayCount,
-            from,
-            unbreakableDate(swapGroup.firstDate.format(dateFormat)),
-            unbreakableDate(swapGroup.lastDate.format(dateFormat))
-        )
-    }
-}
-
-/**
- * Whom the offered days go to if this parent accepts (second audit: "changing who has the child"
- * left out the one thing the answer is about). "Yours" or the co-parent's name when every day goes
- * the same way; an offer that both gives and takes days, or whose slots cannot be told apart, says
- * each goes to the other parent. The direction is the inbox card's own
- * ([DaySwapGroup.direction]), so the two cannot word one offer two ways (UX audit H1).
- */
-@Composable
-private fun swapDirection(swapGroup: DaySwapGroup, parentNames: ParentNames): String {
-    val one = swapGroup.dayCount == 1
-    val direction = swapGroup.direction(
-        offeredByReader = false,
-        readerSlot = parentNames.parents.me?.slot,
-        coParentSlot = parentNames.parents.coParent?.slot
-    )
-    return when (direction) {
-        SwapDirection.GIVES -> stringResource(
-            if (one) R.string.home_dialog_swap_goes_to_you_day else R.string.home_dialog_swap_goes_to_you_days
-        )
-        SwapDirection.ASKS -> stringResource(
-            if (one) R.string.home_dialog_swap_goes_to_day else R.string.home_dialog_swap_goes_to_days,
-            parentNames.labelForUid(swapGroup.swaps.first().override.requestedBy)
-        )
-        SwapDirection.BOTH, SwapDirection.UNKNOWN -> stringResource(R.string.home_dialog_swap_goes_each_way)
-    }
 }
 
 /**

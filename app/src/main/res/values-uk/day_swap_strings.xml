@@ -16,7 +16,7 @@
     <string name="day_swap_inbox_waiting">Чекає на відповідь</string>
     <string name="day_swap_accept">Прийняти</string>
     <string name="day_swap_decline">Відхилити</string>
-    <string name="day_swap_by_day_heading">Або дайте відповідь на кожен день</string>
+    <string name="day_swap_by_day_heading">Дайте відповідь на кожен день</string>
     <string name="day_swap_day_to">%1$s → %2$s</string>
     <string name="day_swap_send_answers">Надіслати ці відповіді</string>
     <string name="day_swap_day_answered">%1$s: %2$s</string>
@@ -109,4 +109,25 @@
     <!-- After a swap is sent (day swap design, board SW-4). -->
     <string name="day_swap_sent">Надіслано: %1$s. До відповіді дні залишаються як є.</string>
     <string name="day_swap_strip_asked_for">Ви попросили цей день: %1$s. Чекаємо на відповідь.</string>
+    <!-- Answering a swap (day swap design, board SW-6): the push's own words, the two sides, and the two modes. -->
+    <string name="day_swap_heading_both">%1$s пропонує обмін днями</string>
+    <string name="day_swap_side_you">Вам</string>
+    <string name="day_swap_note_from">%1$s пише:</string>
+    <string name="day_swap_accept_swap">Прийняти обмін</string>
+    <string name="day_swap_answer_by_day">Відповісти по днях</string>
+    <string name="day_swap_yes">Так</string>
+    <string name="day_swap_no">Ні</string>
+    <string name="day_swap_by_day_back">Назад</string>
+    <plurals name="day_swap_heading_gives">
+        <item quantity="one">%1$s пропонує вам %2$d день</item>
+        <item quantity="few">%1$s пропонує вам %2$d дні</item>
+        <item quantity="many">%1$s пропонує вам %2$d днів</item>
+        <item quantity="other">%1$s пропонує вам %2$d дня</item>
+    </plurals>
+    <plurals name="day_swap_heading_asks">
+        <item quantity="one">%1$s просить %2$d ваш день</item>
+        <item quantity="few">%1$s просить %2$d ваші дні</item>
+        <item quantity="many">%1$s просить %2$d ваших днів</item>
+        <item quantity="other">%1$s просить %2$d вашого дня</item>
+    </plurals>
 </resources>

@@ -16,8 +16,8 @@
     <string name="day_swap_inbox_waiting">Wartet auf eine Antwort</string>
     <string name="day_swap_accept">Annehmen</string>
     <string name="day_swap_decline">Ablehnen</string>
-    <string name="day_swap_by_day_heading">Oder jeden Tag einzeln beantworten</string>
-    <string name="day_swap_day_to">%1$s, an %2$s</string>
+    <string name="day_swap_by_day_heading">Jeden Tag einzeln beantworten</string>
+    <string name="day_swap_day_to">%1$s → %2$s</string>
     <string name="day_swap_send_answers">Diese Antworten senden</string>
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">Du hast diesen Tag %1$s angeboten. Die Antwort steht noch aus.</string>
@@ -91,4 +91,21 @@
     <!-- After a swap is sent (day swap design, board SW-4). -->
     <string name="day_swap_sent">An\u00A0%1$s gesendet. Bis zur Antwort bleiben die Tage, wie sie sind.</string>
     <string name="day_swap_strip_asked_for">Du hast %1$s um diesen Tag gebeten. Wartet auf Antwort.</string>
+    <!-- Answering a swap (day swap design, board SW-6): the push's own words, the two sides, and the two modes. -->
+    <string name="day_swap_heading_both">%1$s schlägt einen Tagetausch vor</string>
+    <string name="day_swap_side_you">Dir</string>
+    <string name="day_swap_note_from">%1$s schreibt:</string>
+    <string name="day_swap_accept_swap">Tausch annehmen</string>
+    <string name="day_swap_answer_by_day">Tag für Tag antworten</string>
+    <string name="day_swap_yes">Ja</string>
+    <string name="day_swap_no">Nein</string>
+    <string name="day_swap_by_day_back">Zurück</string>
+    <plurals name="day_swap_heading_gives">
+        <item quantity="one">%1$s bietet dir %2$d Tag an</item>
+        <item quantity="other">%1$s bietet dir %2$d Tage an</item>
+    </plurals>
+    <plurals name="day_swap_heading_asks">
+        <item quantity="one">%1$s bittet um %2$d deiner Tage</item>
+        <item quantity="other">%1$s bittet um %2$d deiner Tage</item>
+    </plurals>
 </resources>

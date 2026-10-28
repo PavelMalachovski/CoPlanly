@@ -16,8 +16,8 @@
     <string name="day_swap_inbox_waiting">Čeká na odpověď</string>
     <string name="day_swap_accept">Přijmout</string>
     <string name="day_swap_decline">Odmítnout</string>
-    <string name="day_swap_by_day_heading">Nebo odpovězte na každý den zvlášť</string>
-    <string name="day_swap_day_to">%1$s, pro: %2$s</string>
+    <string name="day_swap_by_day_heading">Odpovězte na každý den zvlášť</string>
+    <string name="day_swap_day_to">%1$s → %2$s</string>
     <string name="day_swap_send_answers">Odeslat tyto odpovědi</string>
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">Tento den jste nabídli: %1$s. Čeká se na odpověď.</string>
@@ -109,4 +109,25 @@
     <!-- After a swap is sent (day swap design, board SW-4). -->
     <string name="day_swap_sent">Odesláno: %1$s. Do odpovědi zůstávají dny, jak jsou.</string>
     <string name="day_swap_strip_asked_for">Požádali jste o tento den: %1$s. Čeká se na odpověď.</string>
+    <!-- Answering a swap (day swap design, board SW-6): the push's own words, the two sides, and the two modes. -->
+    <string name="day_swap_heading_both">%1$s navrhuje výměnu dnů</string>
+    <string name="day_swap_side_you">Vám</string>
+    <string name="day_swap_note_from">%1$s píše:</string>
+    <string name="day_swap_accept_swap">Přijmout výměnu</string>
+    <string name="day_swap_answer_by_day">Odpovědět po dnech</string>
+    <string name="day_swap_yes">Ano</string>
+    <string name="day_swap_no">Ne</string>
+    <string name="day_swap_by_day_back">Zpět</string>
+    <plurals name="day_swap_heading_gives">
+        <item quantity="one">%1$s vám nabízí %2$d den</item>
+        <item quantity="few">%1$s vám nabízí %2$d dny</item>
+        <item quantity="many">%1$s vám nabízí %2$d dne</item>
+        <item quantity="other">%1$s vám nabízí %2$d dní</item>
+    </plurals>
+    <plurals name="day_swap_heading_asks">
+        <item quantity="one">%1$s žádá o %2$d váš den</item>
+        <item quantity="few">%1$s žádá o %2$d vaše dny</item>
+        <item quantity="many">%1$s žádá o %2$d vašeho dne</item>
+        <item quantity="other">%1$s žádá o %2$d vašich dní</item>
+    </plurals>
 </resources>

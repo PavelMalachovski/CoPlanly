@@ -135,6 +135,13 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
     fun awaitsAnswerFrom(uid: String): Boolean =
         swaps.any { DaySwapInbox.awaitsAnswerFrom(it, uid) }
 
+    /**
+     * The days still waiting on [uid], or null when none does (owner decision, 28 October 2026):
+     * after a part-answer by day, the card and its main buttons show and decide only these.
+     */
+    fun waitingOn(uid: String): DaySwapGroup? =
+        swaps.filter { DaySwapInbox.awaitsAnswerFrom(it, uid) }.takeIf { it.isNotEmpty() }?.let(::DaySwapGroup)
+
     /** Whether [uid] made this offer and may still take it back: any of its days is theirs and unanswered. */
     fun withdrawableBy(uid: String): Boolean =
         swaps.any { it.override.isPending && it.override.requestedBy == uid }

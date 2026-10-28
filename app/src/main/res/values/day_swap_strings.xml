@@ -17,8 +17,8 @@
     <string name="day_swap_inbox_waiting">Waiting for an answer</string>
     <string name="day_swap_accept">Accept</string>
     <string name="day_swap_decline">Decline</string>
-    <string name="day_swap_by_day_heading">Or answer each day</string>
-    <string name="day_swap_day_to">%1$s, to %2$s</string>
+    <string name="day_swap_by_day_heading">Answer each day</string>
+    <string name="day_swap_day_to">%1$s → %2$s</string>
     <string name="day_swap_send_answers">Send these answers</string>
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">You offered this day to %1$s. Waiting for an answer.</string>
@@ -92,4 +92,21 @@
     <!-- After a swap is sent (day swap design, board SW-4). -->
     <string name="day_swap_sent">Sent to %1$s. The days stay as they are until they answer.</string>
     <string name="day_swap_strip_asked_for">You asked %1$s for this day. Waiting for an answer.</string>
+    <!-- Answering a swap (day swap design, board SW-6): the push's own words, the two sides, and the two modes. -->
+    <string name="day_swap_heading_both">%1$s proposes a day swap</string>
+    <string name="day_swap_side_you">You</string>
+    <string name="day_swap_note_from">%1$s wrote:</string>
+    <string name="day_swap_accept_swap">Accept swap</string>
+    <string name="day_swap_answer_by_day">Answer day by day</string>
+    <string name="day_swap_yes">Yes</string>
+    <string name="day_swap_no">No</string>
+    <string name="day_swap_by_day_back">Back</string>
+    <plurals name="day_swap_heading_gives">
+        <item quantity="one">%1$s offers you %2$d day</item>
+        <item quantity="other">%1$s offers you %2$d days</item>
+    </plurals>
+    <plurals name="day_swap_heading_asks">
+        <item quantity="one">%1$s asks for %2$d of your days</item>
+        <item quantity="other">%1$s asks for %2$d of your days</item>
+    </plurals>
 </resources>
