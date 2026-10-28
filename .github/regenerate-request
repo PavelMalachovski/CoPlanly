@@ -100,3 +100,4 @@ requested: 2026-10-24 20:37 UTC — screenshot baselines after the second audit'
 # Requested 2026-10-27: screenshot baselines after the design audit (H1–L8, PR #152).
 # Requested 2026-10-27: baselines again, "you" now resolved in each variant's language (PR #152).
 day swap flow baselines 2026-10-28T10:53:07Z
+day swap flow baselines, after the workflow fix 2026-10-28T10:55:08Z
