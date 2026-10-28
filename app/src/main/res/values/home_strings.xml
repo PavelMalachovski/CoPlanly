@@ -19,6 +19,13 @@
         <item quantity="one">Handover to %1$s in %2$d day</item>
         <item quantity="other">Handover to %1$s in %2$d days</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Handover to you today</string>
+    <string name="home_handover_hero_tomorrow_you">Handover to you tomorrow</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">Handover to you in %1$d day</item>
+        <item quantity="other">Handover to you in %1$d days</item>
+    </plurals>
 
     <!-- Stat tiles. Both are deep links, so each carries an action caption. -->
     <plurals name="home_stat_unread_count">

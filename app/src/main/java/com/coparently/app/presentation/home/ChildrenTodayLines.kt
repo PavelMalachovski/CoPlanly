@@ -28,11 +28,17 @@ internal fun ChildrenTodayLines(children: List<ChildWithParent>, parentNames: Pa
     Column(verticalArrangement = Arrangement.spacedBy(LINE_SPACING)) {
         children.forEach { child ->
             Text(
-                text = stringResource(
-                    R.string.home_child_with_parent_today,
-                    child.childName,
-                    parentNames.labelFor(child.slot)
-                ),
+                // "Emma is with you today" when the child is with the reader (owner request, 28
+                // October 2026), the other parent's name otherwise.
+                text = if (parentNames.isReader(child.slot)) {
+                    stringResource(R.string.home_child_with_parent_today_you, child.childName)
+                } else {
+                    stringResource(
+                        R.string.home_child_with_parent_today,
+                        child.childName,
+                        parentNames.labelFor(child.slot)
+                    )
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )

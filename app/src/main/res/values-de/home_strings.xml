@@ -15,6 +15,13 @@
         <item quantity="one">In %2$d Tag Übergabe an\u00A0%1$s</item>
         <item quantity="other">In %2$d Tagen Übergabe an\u00A0%1$s</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Heute Übergabe an dich</string>
+    <string name="home_handover_hero_tomorrow_you">Morgen Übergabe an dich</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">In %1$d Tag Übergabe an dich</item>
+        <item quantity="other">In %1$d Tagen Übergabe an dich</item>
+    </plurals>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d ungelesen</item>

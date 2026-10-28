@@ -688,22 +688,7 @@ internal fun HandoverHero(
 ) {
     val fromColor = ParentColors.fill(info.fromParent)
     val toColor = ParentColors.fill(info.toParent)
-    val headline = when (info.daysUntil) {
-        0L -> stringResource(
-            R.string.home_handover_hero_today,
-            parentNames.labelFor(info.toParent)
-        )
-        1L -> stringResource(
-            R.string.home_handover_hero_tomorrow,
-            parentNames.labelFor(info.toParent)
-        )
-        else -> pluralStringResource(
-            R.plurals.home_handover_hero_in_days,
-            info.daysUntil.toInt(),
-            parentNames.labelFor(info.toParent),
-            info.daysUntil.toInt()
-        )
-    }
+    val headline = handoverHeadline(info, parentNames)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -757,6 +742,29 @@ internal fun HandoverHero(
                 contentColor = ParentColors.text(info.toParent)
             )
             ChildrenTodayLines(childrenToday, parentNames)
+        }
+    }
+}
+
+/**
+ * The hero's headline: when the next handover is and to whom — "you" when it is to the reader
+ * (owner request, 28 October 2026: "on Home, call me you, it is more personal").
+ */
+@Composable
+private fun handoverHeadline(info: HandoverInfo, parentNames: ParentNames): String {
+    val days = info.daysUntil.toInt()
+    return if (parentNames.isReader(info.toParent)) {
+        when (info.daysUntil) {
+            0L -> stringResource(R.string.home_handover_hero_today_you)
+            1L -> stringResource(R.string.home_handover_hero_tomorrow_you)
+            else -> pluralStringResource(R.plurals.home_handover_hero_in_days_you, days, days)
+        }
+    } else {
+        val to = parentNames.labelFor(info.toParent)
+        when (info.daysUntil) {
+            0L -> stringResource(R.string.home_handover_hero_today, to)
+            1L -> stringResource(R.string.home_handover_hero_tomorrow, to)
+            else -> pluralStringResource(R.plurals.home_handover_hero_in_days, days, to, days)
         }
     }
 }

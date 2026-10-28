@@ -17,6 +17,15 @@
         <item quantity="many">Передача через %2$d дней, дальше — %1$s</item>
         <item quantity="other">Передача через %2$d дня, дальше — %1$s</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Передача сегодня, дальше — у вас</string>
+    <string name="home_handover_hero_tomorrow_you">Передача завтра, дальше — у вас</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">Передача через %1$d день, дальше — у вас</item>
+        <item quantity="few">Передача через %1$d дня, дальше — у вас</item>
+        <item quantity="many">Передача через %1$d дней, дальше — у вас</item>
+        <item quantity="other">Передача через %1$d дня, дальше — у вас</item>
+    </plurals>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d новое</item>
