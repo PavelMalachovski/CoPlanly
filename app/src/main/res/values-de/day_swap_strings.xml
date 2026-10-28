@@ -88,4 +88,7 @@
     <string name="day_swap_note_to">Nachricht an\u00A0%1$s (optional)</string>
     <string name="day_swap_change_days">Tage ändern</string>
     <string name="day_swap_send_to">An\u00A0%1$s senden</string>
+    <!-- After a swap is sent (day swap design, board SW-4). -->
+    <string name="day_swap_sent">An\u00A0%1$s gesendet. Bis zur Antwort bleiben die Tage, wie sie sind.</string>
+    <string name="day_swap_strip_asked_for">Du hast %1$s um diesen Tag gebeten. Wartet auf Antwort.</string>
 </resources>

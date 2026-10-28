@@ -106,4 +106,7 @@
     <string name="day_swap_note_to">Повідомлення: %1$s (необов’язково)</string>
     <string name="day_swap_change_days">Змінити дні</string>
     <string name="day_swap_send_to">Надіслати: %1$s</string>
+    <!-- After a swap is sent (day swap design, board SW-4). -->
+    <string name="day_swap_sent">Надіслано: %1$s. До відповіді дні залишаються як є.</string>
+    <string name="day_swap_strip_asked_for">Ви попросили цей день: %1$s. Чекаємо на відповідь.</string>
 </resources>

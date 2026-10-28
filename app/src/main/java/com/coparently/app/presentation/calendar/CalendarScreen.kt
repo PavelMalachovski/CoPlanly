@@ -1127,6 +1127,29 @@ fun CalendarScreen(
         }
     }
 
+    // An offer that reached the server is said to have gone (board SW-4), with a way to take back
+    // exactly what was sent: the days of its group as the grid holds them when Withdraw is tapped.
+    val swapSent by calendarViewModel.swapSent.collectAsState()
+    val swapSentMessage = stringResource(R.string.day_swap_sent, parentNames.coParentLabel())
+    val swapWithdrawLabel = stringResource(R.string.change_request_withdraw)
+    LaunchedEffect(swapSent) {
+        swapSent?.let { sent ->
+            calendarViewModel.clearSwapSent()
+            val result = snackbarHostState.showSnackbar(
+                message = swapSentMessage,
+                actionLabel = swapWithdrawLabel,
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                val sentDays = dayOverrides.mapNotNull { (iso, offer) ->
+                    if (offer.groupId != sent.groupId || !offer.isPending) return@mapNotNull null
+                    runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, offer) }
+                }.sortedBy { it.date }
+                if (sentDays.isNotEmpty()) changeRequestViewModel.withdrawSwapGroup(DaySwapGroup(sentDays))
+            }
+        }
+    }
+
     // Event type filter sheet
     if (showTypeFilters) {
         EventTypeFilterSheet(

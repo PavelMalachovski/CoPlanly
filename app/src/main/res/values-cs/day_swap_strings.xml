@@ -106,4 +106,7 @@
     <string name="day_swap_note_to">Zpráva pro: %1$s (nepovinné)</string>
     <string name="day_swap_change_days">Změnit dny</string>
     <string name="day_swap_send_to">Odeslat: %1$s</string>
+    <!-- After a swap is sent (day swap design, board SW-4). -->
+    <string name="day_swap_sent">Odesláno: %1$s. Do odpovědi zůstávají dny, jak jsou.</string>
+    <string name="day_swap_strip_asked_for">Požádali jste o tento den: %1$s. Čeká se na odpověď.</string>
 </resources>
