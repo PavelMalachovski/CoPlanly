@@ -4,7 +4,10 @@ import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.data.support.SupportAgreementStore
+import com.coparently.app.data.support.SupportRead
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -18,7 +21,15 @@ import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
+import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.support.SupportAgreement
+import com.coparently.app.domain.support.SupportProposal
+import com.coparently.app.domain.support.SupportTerms
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,7 +45,9 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -58,6 +71,9 @@ class OtherFamiliesSignalsTest {
     private val custodySource = mockk<FirestoreCustodyDataSource>()
     private val clocks = mockk<RequestClocks>()
     private val settingsSource = mockk<FirestoreFamilySettingsDataSource>()
+    private val supportStore = mockk<SupportAgreementStore>()
+    private val professionals = mockk<ProfessionalRepository>()
+    private val plans = mockk<FirestoreParentingPlanDataSource>()
 
     private fun source() = OtherFamiliesSignals(
         userRepository,
@@ -66,7 +82,8 @@ class OtherFamiliesSignalsTest {
         requests,
         custodySource,
         clocks,
-        settingsSource
+        settingsSource,
+        AgreementSignalSources(supportStore, professionals, plans)
     )
 
     private fun given(
@@ -83,6 +100,9 @@ class OtherFamiliesSignalsTest {
         every { clocks.observeFamily(any(), any()) } returns flowOf(ClocksAt())
         every { custodySource.observeCustody(any()) } returns flowOf(null)
         every { settingsSource.observeSettings(any()) } returns flowOf(null)
+        every { supportStore.observe(any()) } returns flowOf(SupportRead.None)
+        every { professionals.observeFamilyGrants(any()) } returns flowOf(emptyList())
+        every { plans.observePlan(any()) } returns flowOf(emptyMap())
     }
 
     // ---- the pure rules ---------------------------------------------------------------
@@ -152,6 +172,9 @@ class OtherFamiliesSignalsTest {
         verify(exactly = 0) { requests.observePendingIdsFrom(any(), any()) }
         verify(exactly = 0) { custodySource.observeCustody(any()) }
         verify(exactly = 0) { settingsSource.observeSettings(any()) }
+        verify(exactly = 0) { supportStore.observe(any()) }
+        verify(exactly = 0) { professionals.observeFamilyGrants(any()) }
+        verify(exactly = 0) { plans.observePlan(any()) }
     }
 
     @Test
@@ -448,6 +471,75 @@ class OtherFamiliesSignalsTest {
             },
             dayOverrides = swaps
         )
+    }
+
+    // ---- child support, a professional's access and the plan (board SW-7) ---------------
+
+    private fun supportBy(uid: String) = SupportRead.Known(
+        SupportAgreement(
+            familyId = CAROL_FAMILY.familyId,
+            participants = listOf(ALICE, CAROL),
+            proposal = SupportProposal(
+                SupportTerms(BigDecimal("3000"), "CZK", 15, CAROL, YearMonth.of(2026, 11)),
+                proposedBy = uid,
+                proposedAtMillis = 1L
+            )
+        )
+    )
+
+    private fun grant(familyId: String, consents: Map<String, Long>, expiresAt: Long = Long.MAX_VALUE) =
+        ProfessionalGrant(
+            id = "${familyId}__pro",
+            familyId = familyId,
+            familyParents = listOf(ALICE, CAROL),
+            proUid = "pro",
+            role = ProfessionalRole.THERAPIST,
+            name = "Dana",
+            invitedBy = consents.keys.first(),
+            grantedAtMillis = 1L,
+            expiresAtMillis = expiresAt,
+            consents = consents
+        )
+
+    @Test
+    fun hasPendingSupport() {
+        assertTrue(OtherFamiliesSignals.hasPendingSupport(supportBy(CAROL), ALICE))
+        assertFalse(OtherFamiliesSignals.hasPendingSupport(supportBy(ALICE), ALICE))
+        assertFalse(OtherFamiliesSignals.hasPendingSupport(SupportRead.None, ALICE))
+        assertFalse(OtherFamiliesSignals.hasPendingSupport(SupportRead.Unavailable, ALICE))
+    }
+
+    @Test
+    fun hasProfessionalWaiting() {
+        val family = CAROL_FAMILY.familyId
+        fun waits(vararg grants: ProfessionalGrant) =
+            OtherFamiliesSignals.hasProfessionalWaiting(grants.toList(), ALICE, family, nowMillis = 1_000L)
+        assertTrue(waits(grant(family, mapOf(CAROL to 1L))))
+        assertFalse(waits(grant(family, mapOf(CAROL to 1L), expiresAt = 500L)))
+        assertFalse(waits(grant(BOB_FAMILY.familyId, mapOf(CAROL to 1L))))
+        assertFalse(waits(grant(family, mapOf(ALICE to 1L))))
+    }
+
+    @Test
+    fun hasPlanWaiting() {
+        val question = ParentingPlanCatalogue.questions.first().id
+        val halves = mapOf(CAROL to ParentingPlanEntry(answers = mapOf(question to "Alternating weeks")))
+        assertTrue(OtherFamiliesSignals.hasPlanWaiting(halves, ALICE, CAROL))
+        assertFalse(OtherFamiliesSignals.hasPlanWaiting(emptyMap(), ALICE, CAROL))
+        assertFalse(OtherFamiliesSignals.hasPlanWaiting(mapOf(ALICE to ParentingPlanEntry()), ALICE, CAROL))
+    }
+
+    @Test
+    fun supportProposalLightsTheDot() = runTest {
+        given()
+        every { supportStore.observe(CAROL_FAMILY.familyId) } returns flowOf(supportBy(CAROL))
+
+        val emissions = source().observeSignals().toList()
+
+        assertEquals(mapOf(CAROL_FAMILY.familyId to setOf(FamilySignal.SUPPORT)), emissions.last())
+        verify(exactly = 0) { supportStore.observe(BOB_FAMILY.familyId) }
+        verify { professionals.observeFamilyGrants(CAROL_FAMILY.familyId) }
+        verify { plans.observePlan(CAROL_FAMILY.familyId) }
     }
 
     private companion object {

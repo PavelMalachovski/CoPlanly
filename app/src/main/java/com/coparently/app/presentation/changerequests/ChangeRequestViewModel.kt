@@ -7,6 +7,7 @@ import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.SwapOfferer
+import com.coparently.app.data.requests.AgreementWithdrawals
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -22,6 +23,8 @@ import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.parentingplan.CitationStatus
+import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
+import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -94,7 +97,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val planReferenceSource: PlanReferenceSource,
     private val requestClockActions: RequestClockActions,
     private val requestsSource: RequestsSource,
-    private val familySettingsRepository: FamilySettingsRepository
+    private val familySettingsRepository: FamilySettingsRepository,
+    private val agreementWithdrawals: AgreementWithdrawals
 ) : ViewModel() {
 
     /**
@@ -594,6 +598,50 @@ class ChangeRequestViewModel @Inject constructor(
 
     /** Takes this parent's own proposed split back; the agreed split never moved. */
     fun withdrawSplit() = answerSplit("Withdrawing", familySettingsRepository::withdrawProposal)
+
+    /**
+     * Withdraws this parent's own child support proposal in [familyId], the family whose row was
+     * tapped (board SW-7). Refused when the inbox now shows another family — a switch landed between
+     * the draw and the tap — and when the proposal is the co-parent's, which is not this parent's to
+     * withdraw.
+     */
+    fun withdrawSupport(familyId: String) {
+        val ready = requests.value as? RequestsState.Ready ?: return
+        val agreement = ready.agreements.support
+            ?.takeIf { it.familyId == familyId && it.proposal?.proposedBy == ready.scope.myUid }
+            ?: return
+        withdrawAgreement("child support") { agreementWithdrawals.withdrawSupport(agreement) }
+    }
+
+    /**
+     * Ends the professional grant [grantId] while it still waits on the co-parent's consent alone.
+     * One that has become active meanwhile, expired or left the inbox is not ended from here — the
+     * row was a withdrawal of a waiting invitation, and ending an access is the Professionals
+     * screen's, behind its own confirmation — and the parent is told.
+     */
+    fun withdrawProfessional(grantId: String) {
+        val ready = requests.value as? RequestsState.Ready ?: return
+        val me = ready.scope.myUid
+        val stillWaiting = ready.agreements.professionals.any {
+            it.id == grantId && me in it.consents &&
+                ProfessionalGrantPolicy.statusFor(it, me, System.currentTimeMillis()) ==
+                ProfessionalGrantStatus.WAITING_FOR_CO_PARENT
+        }
+        if (!stillWaiting) {
+            _errorMessage.value = UiText.Res(R.string.request_agreement_withdraw_stale)
+            return
+        }
+        withdrawAgreement("a professional grant") { agreementWithdrawals.withdrawProfessional(grantId) }
+    }
+
+    private fun withdrawAgreement(what: String, write: suspend () -> Boolean) {
+        viewModelScope.launch {
+            if (!write()) {
+                Log.w(TAG, "Withdrawing $what failed")
+                _errorMessage.value = UiText.Res(R.string.request_agreement_withdraw_failed)
+            }
+        }
+    }
 
     /**
      * Writes an answer to the split proposal of the family the inbox drew.

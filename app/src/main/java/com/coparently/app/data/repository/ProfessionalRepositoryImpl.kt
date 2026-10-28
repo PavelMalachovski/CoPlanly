@@ -104,8 +104,9 @@ class ProfessionalRepositoryImpl @Inject constructor(
         return pairingFunctions.acceptProfessionalInvitation(code = normalized)
     }
 
-    override fun observeFamilyGrants(): Flow<List<ProfessionalGrant>> {
+    override fun observeFamilyGrants(familyId: String?): Flow<List<ProfessionalGrant>> {
         val myUid = currentUid() ?: return flowOf(emptyList())
+        if (familyId != null) return observeGrants("familyParents", myUid, arrayContains = true, familyId = familyId)
         // Every grant naming this parent, the one list query the rule admits a parent, kept to the
         // family on screen as the family friends are: a parent in two families sees each family's
         // professionals under that family, and consents to or revokes only what that family's
@@ -177,14 +178,16 @@ class ProfessionalRepositoryImpl @Inject constructor(
     private fun observeGrants(
         field: String,
         uid: String,
-        arrayContains: Boolean
+        arrayContains: Boolean,
+        familyId: String? = null
     ): Flow<List<ProfessionalGrant>> = callbackFlow {
         val collection = firestore.collection(GRANTS)
-        val query = if (arrayContains) {
+        val byPerson = if (arrayContains) {
             collection.whereArrayContains(field, uid)
         } else {
             collection.whereEqualTo(field, uid)
         }
+        val query = familyId?.let { byPerson.whereEqualTo(FIELD_FAMILY_ID, it) } ?: byPerson
         val registration = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 Log.w(TAG, "Professional grants listener failed", error)

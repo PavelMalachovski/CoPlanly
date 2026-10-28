@@ -267,6 +267,13 @@ const RULES = [
       'K/domain/custody/SwapSides.kt', 'K/presentation/home/ChildrenTodayLines.kt'],
   },
   {
+    sections: ['3.33'],
+    why: 'child support, professional access and the parenting plan in Requests, and the switcher\'s dot for them',
+    paths: ['K/domain/changerequests/FamilyAgreements.kt', 'K/data/requests/FamilyAgreementsSource.kt',
+      'K/data/requests/AgreementWithdrawals.kt', 'K/presentation/changerequests/AgreementRows.kt',
+      'K/data/family/AgreementSignalSources.kt', 'K/data/family/OtherFamiliesSignals.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',

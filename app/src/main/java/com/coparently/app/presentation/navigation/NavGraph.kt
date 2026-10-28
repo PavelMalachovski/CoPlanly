@@ -47,6 +47,7 @@ import com.coparently.app.domain.telemetry.TelemetryConsent
 import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.auth.AuthScreen
 import com.coparently.app.presentation.calendar.CalendarScreen
+import com.coparently.app.presentation.changerequests.AgreementScreen
 import com.coparently.app.presentation.chat.ChatViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoScreen
 import com.coparently.app.presentation.common.ConnectivityBanner
@@ -449,7 +450,8 @@ fun NavGraph(
                         linkedEventId = linkedEventId,
                         openSection = com.coparently.app.presentation.changerequests.InboxSection.fromRoute(
                             backStackEntry.arguments?.getString(Screen.ChangeRequests.ARG_SECTION)
-                        )
+                        ),
+                        onOpenAgreement = { screen -> navController.navigate(screen.route) }
                     )
                 }
 
@@ -1984,4 +1986,12 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabExit(forward: B
         isTabSwitch() -> fadeThroughOut()
         forward -> slideOutToLeft()
         else -> slideOutToRight()
+    }
+
+/** The route of the screen a Requests row of child support, a professional or the plan opens. */
+private val AgreementScreen.route: String
+    get() = when (this) {
+        AgreementScreen.SUPPORT -> Screen.Support.route
+        AgreementScreen.PROFESSIONALS -> Screen.Professionals.route
+        AgreementScreen.PARENTING_PLAN -> Screen.ParentingPlan.route
     }

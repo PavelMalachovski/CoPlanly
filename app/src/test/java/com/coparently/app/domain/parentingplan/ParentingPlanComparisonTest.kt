@@ -180,4 +180,56 @@ class ParentingPlanComparisonTest {
             ParentingPlanCatalogue.sections.map { it.id }.toSet().size
         )
     }
+
+    // What waits on the reader (Requests, PR 2): the co-parent's answer this parent has neither
+    // answered nor ticked as it reads now, or one whose tick names an older wording.
+
+    private val q = ParentingPlanCatalogue.questions[0].id
+    private val q2 = ParentingPlanCatalogue.questions[1].id
+
+    private fun theirs(vararg answers: Pair<String, String>) = ParentingPlanEntry(answers = mapOf(*answers))
+
+    @Test
+    fun onlyTheirsWaits() {
+        assertEquals(
+            listOf(q),
+            ParentingPlanComparison.questionsAwaitingYou(ParentingPlanEntry(), theirs(q to "Alternating weeks"))
+        )
+    }
+
+    @Test
+    fun onlyTheirsTickedAsItReadsDoesNotWait() {
+        val yours = ParentingPlanEntry(agreedTo = mapOf(q to "Alternating weeks"))
+        assertEquals(
+            emptyList(),
+            ParentingPlanComparison.questionsAwaitingYou(yours, theirs(q to "Alternating weeks"))
+        )
+    }
+
+    @Test
+    fun staleTickWaitsAgain() {
+        val yours = ParentingPlanEntry(answers = mapOf(q to "Weekends"), agreedTo = mapOf(q to "old"))
+        assertEquals(listOf(q), ParentingPlanComparison.questionsAwaitingYou(yours, theirs(q to "new")))
+        val ticked = yours.withAgreement(q, "new", now)
+        assertEquals(emptyList(), ParentingPlanComparison.questionsAwaitingYou(ticked, theirs(q to "new")))
+    }
+
+    @Test
+    fun openNeverTickedDoesNotWait() {
+        val yours = ParentingPlanEntry(answers = mapOf(q to "Weekends"))
+        assertEquals(emptyList(), ParentingPlanComparison.questionsAwaitingYou(yours, theirs(q to "Weekdays")))
+    }
+
+    @Test
+    fun noCoParentWaitsNothing() {
+        assertEquals(emptyList(), ParentingPlanComparison.questionsAwaitingYou(ParentingPlanEntry(), null))
+    }
+
+    @Test
+    fun waitingQuestionsComeInCatalogueOrder() {
+        assertEquals(
+            listOf(q, q2),
+            ParentingPlanComparison.questionsAwaitingYou(ParentingPlanEntry(), theirs(q2 to "B", q to "A"))
+        )
+    }
 }

@@ -10,28 +10,43 @@ import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.support.SupportProposal
 import java.time.LocalDate
 
 /**
  * What waits on one parent: a custody proposal, an expense split proposal, events created for their
  * days, day-swap offers and change requests — each still unanswered, in the order the inbox lists
- * them.
+ * them — and the three agreements placed by [RequestInbox.withAgreements] (board SW-7).
  *
  * @property split The family's pending expense split proposal (October 2026), when it waits here.
+ * @property support The family's pending child support proposal, when it waits here.
+ * @property professionals The family's professional grants waiting for a consent, here.
+ * @property planQuestions The parenting plan questions waiting on this parent's word; one row,
+ *   however many, and only ever on the reader's side.
  */
 data class Waiting(
     val proposal: CustodyProposal? = null,
     val split: SplitRatioProposal? = null,
     val events: List<Event> = emptyList(),
     val swaps: List<DaySwapGroup> = emptyList(),
-    val changeRequests: List<ChangeRequest> = emptyList()
+    val changeRequests: List<ChangeRequest> = emptyList(),
+    val support: SupportProposal? = null,
+    val professionals: List<ProfessionalGrant> = emptyList(),
+    val planQuestions: List<String> = emptyList()
 ) {
-    /** Everything waiting, both proposals included: the number Home's Requests row shows. */
-    val count: Int get() = countWithoutProposal + listOfNotNull(proposal, split).size
+    /**
+     * Everything waiting, both proposals and the three agreements included — the plan as one row:
+     * the number Home's Requests row shows.
+     */
+    val count: Int
+        get() = countWithoutProposal + listOfNotNull(proposal, split, support).size +
+            professionals.size + (if (planQuestions.isEmpty()) 0 else 1)
 
     /**
-     * Everything but the two proposals: the custody one draws its own calendar banner, and a split
-     * is about money, not the calendar. The number the calendar's banner shows.
+     * Everything but the two proposals and the three agreements: the custody one draws its own
+     * calendar banner, and a split, child support, a professional's access and the plan are not
+     * about the calendar. The number the calendar's banner shows.
      */
     val countWithoutProposal: Int get() = events.size + swaps.size + changeRequests.size
 

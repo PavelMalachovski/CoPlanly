@@ -3,9 +3,12 @@ package com.coparently.app.presentation.changerequests
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.requests.AgreementWithdrawals
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwap
@@ -16,10 +19,15 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.support.SupportAgreement
+import com.coparently.app.domain.support.SupportProposal
+import com.coparently.app.domain.support.SupportTerms
 import com.coparently.app.domain.usecase.DeleteEventUseCase
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.common.ParentsSource
@@ -45,8 +53,10 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -74,6 +84,17 @@ class ChangeRequestWithdrawTest {
         every { observeDayOverrides() } returns flowOf(emptyMap())
         every { observeShared() } returns flowOf(null)
         every { observeSharedOf(any()) } returns flowOf(null)
+    }
+
+    private val agreementWithdrawals = mockk<AgreementWithdrawals> {
+        coEvery { withdrawSupport(any()) } returns true
+        coEvery { withdrawProfessional(any()) } returns true
+    }
+
+    /** Each test's child support, professional grants and plan; none unless a test sets them. */
+    private var agreements = FamilyAgreements()
+    private val agreementsSource = mockk<FamilyAgreementsSource> {
+        every { observe(any()) } answers { flowOf(agreements) }
     }
     private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
         every { observeSettingsOf(any()) } returns flowOf(null)
@@ -135,9 +156,11 @@ class ChangeRequestWithdrawTest {
             requestClocks = mockk<RequestClocks> {
                 every { observeFamily(any(), any()) } returns MutableStateFlow(ClocksAt())
             },
-            familySettingsRepository = familySettingsRepository
+            familySettingsRepository = familySettingsRepository,
+            familyAgreementsSource = agreementsSource
         ),
-        familySettingsRepository = familySettingsRepository
+        familySettingsRepository = familySettingsRepository,
+        agreementWithdrawals = agreementWithdrawals
     )
 
     /** A view model whose inbox has drawn the family Olya shares with Pavel. */
@@ -343,6 +366,102 @@ class ChangeRequestWithdrawTest {
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.change_request_error_withdraw_failed), vm.errorMessage.value)
+    }
+
+    private fun supportBy(uid: String) = SupportAgreement(
+        familyId = "u1__u2",
+        participants = listOf("u1", "u2"),
+        proposal = SupportProposal(
+            SupportTerms(BigDecimal("3000"), "CZK", 15, "u2", YearMonth.of(2026, 11)),
+            proposedBy = uid,
+            proposedAtMillis = 1L
+        )
+    )
+
+    @Test
+    fun withdrawSupportUsesShownAgreement() = runTest(dispatcher) {
+        val shown = supportBy("u1")
+        agreements = FamilyAgreements(support = shown)
+        val vm = inboxDrawn()
+
+        // The family switches afterwards: what is withdrawn is still what the row showed.
+        agreements = FamilyAgreements(support = supportBy("u1").copy(familyId = "u1__u3"))
+        vm.withdrawSupport("u1__u2")
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { agreementWithdrawals.withdrawSupport(shown) }
+    }
+
+    @Test
+    fun withdrawSupportIgnoresTheirs() = runTest(dispatcher) {
+        agreements = FamilyAgreements(support = supportBy("u2"))
+        val vm = inboxDrawn()
+
+        vm.withdrawSupport("u1__u2")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { agreementWithdrawals.withdrawSupport(any()) }
+    }
+
+    private fun grant(consents: Map<String, Long>) = ProfessionalGrant(
+        id = "u1__u2__pro",
+        familyId = "u1__u2",
+        familyParents = listOf("u1", "u2"),
+        proUid = "pro",
+        role = ProfessionalRole.MEDIATOR,
+        name = "Dana",
+        invitedBy = "u1",
+        grantedAtMillis = 1L,
+        expiresAtMillis = Long.MAX_VALUE,
+        consents = consents
+    )
+
+    @Test
+    fun withdrawSupportRefusesAnotherFamily() = runTest(dispatcher) {
+        agreements = FamilyAgreements(support = supportBy("u1"))
+        val vm = inboxDrawn()
+
+        // The row was drawn for another family than the one the inbox now shows.
+        vm.withdrawSupport("u1__u3")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { agreementWithdrawals.withdrawSupport(any()) }
+    }
+
+    @Test
+    fun withdrawProfessionalRefusesAGrantNoLongerWaiting() = runTest(dispatcher) {
+        // Pavel consented meanwhile: the grant is active, and Withdraw must not end it.
+        agreements = FamilyAgreements(professionals = listOf(grant(mapOf("u1" to 1L, "u2" to 2L))))
+        val vm = inboxDrawn()
+
+        vm.withdrawProfessional("u1__u2__pro")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { agreementWithdrawals.withdrawProfessional(any()) }
+        assertEquals(UiText.Res(R.string.request_agreement_withdraw_stale), vm.errorMessage.value)
+    }
+
+    @Test
+    fun withdrawProfessionalRevokes() = runTest(dispatcher) {
+        agreements = FamilyAgreements(professionals = listOf(grant(mapOf("u1" to 1L))))
+        val vm = inboxDrawn()
+
+        vm.withdrawProfessional("u1__u2__pro")
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { agreementWithdrawals.withdrawProfessional("u1__u2__pro") }
+    }
+
+    @Test
+    fun failedWithdrawShowsError() = runTest(dispatcher) {
+        coEvery { agreementWithdrawals.withdrawSupport(any()) } returns false
+        agreements = FamilyAgreements(support = supportBy("u1"))
+        val vm = inboxDrawn()
+
+        vm.withdrawSupport("u1__u2")
+        advanceUntilIdle()
+
+        assertEquals(UiText.Res(R.string.request_agreement_withdraw_failed), vm.errorMessage.value)
     }
 }
 

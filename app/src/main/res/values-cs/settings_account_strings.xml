@@ -112,4 +112,11 @@
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Pauza před odesláním</string>
     <string name="settings_pause_before_sending_description">Každou zprávu v chatu podrží %1$d sekund s možností ji vrátit a při psaní upozorní na velká písmena, !!! a ostrá slova. Kontroluje se jen v tomto telefonu.</string>
+    <!-- The family switcher's dot for child support, a professional's access and the plan (board SW-7) -->
+    <string name="family_switcher_support_other">V jiné rodině čeká návrh výživného</string>
+    <string name="family_switcher_support_row">Čeká návrh výživného</string>
+    <string name="family_switcher_professional_other">V jiné rodině čeká přístup odborníka na váš souhlas</string>
+    <string name="family_switcher_professional_row">Přístup odborníka čeká na váš souhlas</string>
+    <string name="family_switcher_plan_other">V jiné rodině čekají odpovědi v rodičovském plánu</string>
+    <string name="family_switcher_plan_row">Čekají odpovědi v rodičovském plánu</string>
 </resources>

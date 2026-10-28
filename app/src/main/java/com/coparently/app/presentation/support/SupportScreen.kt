@@ -206,13 +206,13 @@ private fun SupportBody(
             } else {
                 SectionGroup {
                     SectionRow(
-                        title = stringResource(R.string.support_amount_line, money(terms)),
+                        title = stringResource(R.string.support_amount_line, supportAmount(terms)),
                         icon = Icons.Default.Payments,
                         supporting = stringResource(
                             R.string.support_terms_line,
                             terms.dayOfMonth,
                             names.labelForUid(terms.payerUid),
-                            monthName(terms.fromMonth)
+                            supportMonth(terms.fromMonth)
                         )
                     )
                 }
@@ -223,7 +223,7 @@ private fun SupportBody(
                 val mine = proposal.proposedBy == myUid
                 val text = stringResource(
                     R.string.support_proposal_body,
-                    money(proposal.terms),
+                    supportAmount(proposal.terms),
                     proposal.terms.dayOfMonth,
                     names.labelForUid(proposal.terms.payerUid)
                 )
@@ -289,7 +289,7 @@ private fun LazyListScope.months(
                     val payment = state.paymentFor(month)
                     val paymentState = PaymentState.of(payment, myUid)
                     SectionRow(
-                        title = monthName(month),
+                        title = supportMonth(month),
                         icon = if (paymentState == PaymentState.CONFIRMED) {
                             Icons.Default.CheckCircle
                         } else {
@@ -457,10 +457,10 @@ private fun ProposeSupportDialog(
 }
 
 /** [terms]' monthly amount in the reader's conventions. */
-private fun money(terms: SupportTerms): String = currencyFormat(terms.currency).format(terms.amount)
+internal fun supportAmount(terms: SupportTerms): String = currencyFormat(terms.currency).format(terms.amount)
 
 /** [month] as the reader's language names it: "October 2026". */
-private fun monthName(month: YearMonth): String =
+internal fun supportMonth(month: YearMonth): String =
     month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
         .replaceFirstChar { it.titlecase(Locale.getDefault()) }
 

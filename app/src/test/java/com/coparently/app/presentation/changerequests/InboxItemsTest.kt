@@ -8,6 +8,7 @@ import com.coparently.app.domain.changerequests.RequestInbox
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.changerequests.TimedRequest
+import com.coparently.app.domain.changerequests.Waiting
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwap
@@ -21,9 +22,15 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.domain.support.SupportProposal
+import com.coparently.app.domain.support.SupportTerms
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -402,7 +409,8 @@ class InboxItemsTest {
         is InboxItem.AwaitingEvent -> timed
         is InboxItem.Swap -> timed
         is InboxItem.Request -> timed
-        is InboxItem.Header, is InboxItem.History -> null
+        is InboxItem.Header, is InboxItem.History,
+        is InboxItem.Support, is InboxItem.Professional, is InboxItem.Plan -> null
     }
 
     private companion object {
@@ -422,5 +430,60 @@ class InboxItemsTest {
 
         /** Past the deadline, with the proposer's last-chance button still offered. */
         const val PAST_DEADLINE = NOW + 2 * HOUR
+    }
+
+    private val supportTerms = SupportTerms(BigDecimal("3000"), "CZK", 15, "u2", YearMonth.of(2026, 11))
+
+    private fun grantAwaiting(consentBy: String) = ProfessionalGrant(
+        id = "u1__u2__pro",
+        familyId = "u1__u2",
+        familyParents = listOf("u1", "u2"),
+        proUid = "pro",
+        role = ProfessionalRole.MEDIATOR,
+        name = "Dana",
+        invitedBy = consentBy,
+        grantedAtMillis = 1L,
+        expiresAtMillis = Long.MAX_VALUE,
+        consents = mapOf(consentBy to 1L)
+    )
+
+    @Test
+    fun agreementRowsCloseTheirSection() {
+        val split = SplitRatioProposal(SplitRatio(3_500), proposedBy = "u2", proposedAtMillis = 1L)
+        val inbox = RequestInbox(
+            waitingOnMe = Waiting(
+                split = split,
+                changeRequests = listOf(request("r1", from = "u2", to = "u1")),
+                support = SupportProposal(supportTerms, "u2", 1L),
+                professionals = listOf(grantAwaiting("u2")),
+                planQuestions = listOf("care_weekday", "holidays_school")
+            )
+        )
+
+        val items = InboxItems.of(inbox, scope)
+
+        assertEquals(
+            listOf("h_waiting", "s_theirs", "cr_r1", "sup_theirs", "pro_u1__u2__pro", "plan"),
+            items.map { it.key }
+        )
+        assertEquals(2, assertIs<InboxItem.Plan>(items.last()).questionCount)
+        assertFalse(assertIs<InboxItem.Support>(items[3]).mine)
+        assertFalse(assertIs<InboxItem.Professional>(items[4]).mine)
+    }
+
+    @Test
+    fun minePlacesWithdrawRowsUnderThem() {
+        val inbox = RequestInbox(
+            waitingOnThem = Waiting(
+                support = SupportProposal(supportTerms, "u1", 1L),
+                professionals = listOf(grantAwaiting("u1"))
+            )
+        )
+
+        val items = InboxItems.of(inbox, scope)
+
+        assertEquals(listOf("h_sent", "sup_mine", "pro_u1__u2__pro"), items.map { it.key })
+        assertTrue(assertIs<InboxItem.Support>(items[1]).mine)
+        assertTrue(assertIs<InboxItem.Professional>(items[2]).mine)
     }
 }

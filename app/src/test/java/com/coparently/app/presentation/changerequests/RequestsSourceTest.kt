@@ -4,14 +4,17 @@ import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.domain.changerequests.ClockState
 import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
+import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.events.EventAcceptance
@@ -31,6 +34,9 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.support.SupportAgreement
+import com.coparently.app.domain.support.SupportProposal
+import com.coparently.app.domain.support.SupportTerms
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -40,8 +46,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -68,6 +76,9 @@ class RequestsSourceTest {
 
     /** The split listener, each family's `family_settings` document by family id; a family not named has none. */
     private val settingsRepository = mockk<FamilySettingsRepository>()
+
+    /** Each family's child support, professional grants and plan, by family id. */
+    private val agreementsSource = mockk<FamilyAgreementsSource>()
     private val bob = PartnerSummary(id = "u2", name = "Bob", email = "bob@example.com", pairedSinceMillis = 1L)
 
     private fun request(id: String, status: ChangeRequestStatus = ChangeRequestStatus.PENDING) = ChangeRequest(
@@ -138,8 +149,12 @@ class RequestsSourceTest {
         roomSwaps: Map<String, DayOverride> = emptyMap(),
         documents: Map<String, SharedCustody> = emptyMap(),
         clocks: Map<String, List<RequestDeadline>> = emptyMap(),
-        settings: Map<String, FamilySettings> = emptyMap()
+        settings: Map<String, FamilySettings> = emptyMap(),
+        agreements: Map<String, FamilyAgreements> = emptyMap()
     ): RequestsSource {
+        every { agreementsSource.observe(any()) } answers {
+            flowOf(agreements[firstArg<RequestScope>().familyId] ?: FamilyAgreements())
+        }
         every { clockRepository.observeFamily("u1", any()) } answers { flowOf(clocks[secondArg()].orEmpty()) }
         every { settingsRepository.observeSettingsOf(any()) } answers { flowOf(settings[firstArg()]) }
         val row = User(
@@ -172,7 +187,8 @@ class RequestsSourceTest {
                 // Delivery is the keeper's, and `RequestClocksTest` covers the hand-over.
                 mockk<RequestClockKeeper>(relaxed = true)
             ),
-            familySettingsRepository = settingsRepository
+            familySettingsRepository = settingsRepository,
+            familyAgreementsSource = agreementsSource
         )
     }
 
@@ -204,6 +220,45 @@ class RequestsSourceTest {
             val state = awaitItem()
             if (state is RequestsState.Ready && until(state)) return state
         }
+    }
+
+    private val bobsSupport = SupportAgreement(
+        familyId = "u1__u2",
+        participants = listOf("u1", "u2"),
+        proposal = SupportProposal(
+            SupportTerms(BigDecimal("3000"), "CZK", 15, "u2", YearMonth.of(2026, 11)),
+            proposedBy = "u2",
+            proposedAtMillis = 1L
+        )
+    )
+
+    @Test
+    fun coParentsSupportProposalReachesTheInbox() = runTest {
+        val ready = assertIs<RequestsState.Ready>(
+            source(
+                PairingState.Paired(bob),
+                shown = "u2",
+                coParents = listOf("u2"),
+                agreements = mapOf("u1__u2" to FamilyAgreements(support = bobsSupport))
+            ).observe().first()
+        )
+        assertEquals(bobsSupport.proposal, ready.inbox.waitingOnMe.support)
+        assertEquals(bobsSupport, ready.agreements.support)
+    }
+
+    @Test
+    fun agreementsFollowTheScope() = runTest {
+        val ready = assertIs<RequestsState.Ready>(
+            source(
+                PairingState.Paired(bob),
+                shown = "u3",
+                coParents = listOf("u2", "u3"),
+                agreements = mapOf("u1__u2" to FamilyAgreements(support = bobsSupport))
+            ).observe().first()
+        )
+        assertNull(ready.inbox.waitingOnMe.support)
+        verify { agreementsSource.observe(match { it.familyId == "u1__u3" }) }
+        verify(exactly = 0) { agreementsSource.observe(match { it.familyId == "u1__u2" }) }
     }
 
     @Test

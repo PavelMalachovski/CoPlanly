@@ -1543,6 +1543,33 @@ words, English and German). What is left is the gesture on glass and a real push
 
 ---
 
+### 3.33 Requests gather child support, professional access and the plan · 2P, 3P for the dot
+
+Board SW-7 (CLAUDE.md item 40). Pinned by `RequestInboxAgreementsTest`, `ParentingPlanComparisonTest`,
+`InboxItemsTest`, `RequestsSourceTest`, `FamilyAgreementsSourceTest`, `ChangeRequestWithdrawTest`,
+`OtherFamiliesSignalsTest` and the rules suite's per-family grant query. What is left is the two
+phones and the deployed index.
+
+- [ ] **Child support** (2P). Bob proposes child support: on Alice's phone Home's **Requests** count
+      goes up by one and the calendar banner does not; the inbox lists "Child support — Bob proposes …"
+      under *Waiting for your answer*, and a tap opens Child support. Bob's own inbox lists his
+      proposal under *Waiting for Alice* with **Withdraw request**; withdrawing removes it on both.
+- [ ] **Professional access** (2P). Bob invites a mediator, who redeems the code: Alice's inbox lists
+      "Professional access — Mediator {name} — your consent is needed", opening Professionals; Bob's
+      lists it under *Waiting for Alice* with **Withdraw request**, which ends the grant.
+- [ ] **The parenting plan** (2P). Bob answers two questions Alice has not: one row "Bob answered 2
+      questions — compare and agree", opening the plan; it goes once she answers or ticks both. Bob
+      edits an answer she had ticked: the row comes back.
+- [ ] **The dot** (3P, after `firebase deploy --only firestore:indexes`). With Alice in two families,
+      each of the three arriving in the family not on screen lights the switcher's dot, and its dialog
+      row names it.
+- **If it fails:** `domain/changerequests/FamilyAgreements.kt`, `data/requests/FamilyAgreementsSource.kt`,
+  `data/requests/AgreementWithdrawals.kt`, `presentation/changerequests/AgreementRows.kt`,
+  `presentation/changerequests/InboxItems.kt`, `data/family/OtherFamiliesSignals.kt`,
+  `data/repository/ProfessionalRepositoryImpl.kt` (`observeFamilyGrants(familyId)`), `firestore.indexes.json`.
+
+---
+
 ## 4. Release-build checks
 
 ### 4.1 REL-7: R8 and Gson on a device · 2P, fallback 1P
