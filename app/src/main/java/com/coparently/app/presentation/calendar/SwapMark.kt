@@ -15,7 +15,7 @@ import java.time.LocalDate
  * @property pending True for a day already offered and waiting for an answer, drawn lighter and
  *   dashed on both phones; false for a day being chosen on this one.
  */
-internal data class SwapMark(val toSlot: String, val pending: Boolean)
+data class SwapMark(val toSlot: String, val pending: Boolean)
 
 /**
  * The marks the month grid draws: each chosen day with a known holder goes to the other parent
