@@ -18,6 +18,11 @@ row that opens its own screen. On the sender's side the row carries Withdraw.
 
 **Spec:** `docs/superpowers/specs/2026-10-28-day-swap-ux-and-requests-design.md`, section "PR 2 — Requests gather everything (board SW-7)".
 
+**Status:** executed in PavelMalachovski/CoPlanly#156. Three departures from the text below, all listed in the PR:
+- The per-family grant query is `observeFamilyGrants(familyId)`, not a new `observeGrantsOf`, because the interface sits at detekt's limit.
+- `AgreementScreen` lives in `InboxItems.kt`.
+- A professional's Withdraw asks first, and runs only while the grant still waits on the co-parent alone.
+
 ## Global Constraints
 
 - Every new user-facing string goes into all five locales (`values`, `-cs`, `-de`, `-ru`, `-uk`) in the same commit. English is in sentence case. RU/UK never say "опека"/"опіка".
