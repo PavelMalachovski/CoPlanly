@@ -53,11 +53,13 @@ internal fun DrawScope.drawSwapMark(hatch: Color, edge: Color, dashed: Boolean) 
 }
 
 /**
- * "→ Lana" or "→ you" at the foot of a month cell (`SwapMark`): filled in the receiver's deep tone
+ * "→ L" or "→ you" at the foot of a month cell (`SwapMark`): filled in the receiver's deep tone
  * while the day is being chosen, outlined in it on the cell's surface while the swap waits — the
- * same two forms on both phones. One line, ellipsised: it names a person, never an amount.
+ * same two forms on both phones. The co-parent is their initial, as a member's mark is (FAM-5): a
+ * cell is about 47 dp wide, and the rendered grid cut a whole name to "→ P…". The cell's description
+ * names them in full, and the bar and the sheet beside it do too.
  *
- * @param name The receiver's name; only its first word is drawn, for room.
+ * @param name The receiver's name; only its initial is drawn.
  * @param toReader Whether the receiver is the reader, who reads "→ you".
  * @param edge The receiver's deep tone ([ParentColors.chipFill]).
  */
@@ -72,7 +74,7 @@ internal fun SwapMarkPill(
     val text = if (toReader) {
         stringResource(R.string.day_swap_mark_to_you)
     } else {
-        stringResource(R.string.day_swap_mark_to, name.substringBefore(' '))
+        stringResource(R.string.day_swap_mark_to, name.trim().take(1).uppercase())
     }
     val surface = MaterialTheme.colorScheme.surface
     Text(
@@ -92,7 +94,7 @@ internal fun SwapMarkPill(
                     Modifier.background(edge, CoPlanlyCorners.Pill)
                 }
             )
-            .padding(horizontal = Spacing.XS)
+            .padding(horizontal = Spacing.XXS)
     )
 }
 

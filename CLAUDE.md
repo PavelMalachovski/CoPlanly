@@ -482,7 +482,8 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       rotation.
     - **A chosen or waiting day is marked by whom it would go to** (`SwapMark`, `drawSwapMark`,
       `SwapMarkPill`): stripes in the receiver's wash over the holder's, an edge in their deep tone,
-      dashed while waiting, and "→ Lana"/"→ you" in words. They replaced the grey arrows; in-month
+      dashed while waiting, and "→ L"/"→ you" in words (the co-parent's initial: a cell is too narrow
+      for a name, and its description says it in full). They replaced the grey arrows; in-month
       cells only. `ParentColorsTest` holds the day number on the hatch to AA.
     - **The sheet shows both sides and the result** (`DaySwapSheet` over `DaySwapSheetContent`):
       "You give Lana", "You take", the mini months, "Send to Lana"; after sending, a snackbar says it

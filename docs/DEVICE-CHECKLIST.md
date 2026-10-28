@@ -1520,7 +1520,7 @@ words, English and German). What is left is the gesture on glass and a real push
       stay chosen; a tap on a greyed day of the next month at the end of the grid pages there and
       chooses it, and never opens Day view. Rotate the phone: the days stay chosen.
 - [ ] **Which way, before sending.** Each chosen day shows stripes in the colour of whom it goes to
-      and "→ {name}" or "→ you"; the bar lists one line per way; **Next** opens "Swap with {name}"
+      and "→ {initial}" or "→ you"; the bar lists one line per way; **Next** opens "Swap with {name}"
       with "You give {name}", "You take" and the month as it would look. **Change days** goes back
       with the days kept.
 - [ ] **After sending** (2P). "Sent to {name}…" with **Withdraw**; the days on both phones carry the
