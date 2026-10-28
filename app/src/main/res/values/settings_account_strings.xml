@@ -121,4 +121,11 @@
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Pause before sending</string>
     <string name="settings_pause_before_sending_description">Hold each chat message for %1$d seconds with an Undo, and point out capitals, !!! and sharp words while you type. Checked on this phone only.</string>
+    <!-- The family switcher's dot for child support, a professional's access and the plan (board SW-7) -->
+    <string name="family_switcher_support_other">A child support proposal is waiting in another family</string>
+    <string name="family_switcher_support_row">A child support proposal is waiting</string>
+    <string name="family_switcher_professional_other">A professional’s access waits for your consent in another family</string>
+    <string name="family_switcher_professional_row">A professional’s access waits for your consent</string>
+    <string name="family_switcher_plan_other">Parenting plan answers are waiting in another family</string>
+    <string name="family_switcher_plan_row">Parenting plan answers are waiting</string>
 </resources>

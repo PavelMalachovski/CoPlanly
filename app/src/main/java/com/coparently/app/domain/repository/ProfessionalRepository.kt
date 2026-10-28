@@ -44,8 +44,13 @@ interface ProfessionalRepository {
      * the family switcher; another family's grants are that family's to show (M-8).
      * Expired ones stay listed until the nightly sweep removes them, so a parent sees that access
      * ended rather than a row silently vanishing.
+     *
+     * @param familyId Another family instead, whichever is on screen — the family switcher's dot
+     *   for that family (board SW-7): one query keyed by it (`familyParents array-contains me` and
+     *   `familyId ==`), never one across this parent's families. Null, the default, is the family
+     *   on screen.
      */
-    fun observeFamilyGrants(): Flow<List<ProfessionalGrant>>
+    fun observeFamilyGrants(familyId: String? = null): Flow<List<ProfessionalGrant>>
 
     /** Adds this parent's own consent to [grantId]. The rule refuses any other key. */
     suspend fun consent(grantId: String): Result<Unit>

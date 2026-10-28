@@ -227,6 +227,9 @@ private val FamilySignal.otherFamilyText: Int
         FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_other
         FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_other
         FamilySignal.SPLIT -> R.string.family_switcher_split_other
+        FamilySignal.SUPPORT -> R.string.family_switcher_support_other
+        FamilySignal.PROFESSIONAL -> R.string.family_switcher_professional_other
+        FamilySignal.PLAN -> R.string.family_switcher_plan_other
     }
 
 /** A dialog row's phrase for one kind; the row already names the family. */
@@ -237,4 +240,7 @@ private val FamilySignal.rowText: Int
         FamilySignal.CHANGE_REQUEST -> R.string.family_switcher_request_row
         FamilySignal.SCHEDULE -> R.string.family_switcher_schedule_row
         FamilySignal.SPLIT -> R.string.family_switcher_split_row
+        FamilySignal.SUPPORT -> R.string.family_switcher_support_row
+        FamilySignal.PROFESSIONAL -> R.string.family_switcher_professional_row
+        FamilySignal.PLAN -> R.string.family_switcher_plan_row
     }

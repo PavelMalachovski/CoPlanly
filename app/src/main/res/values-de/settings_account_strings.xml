@@ -112,4 +112,11 @@
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Pause vor dem Senden</string>
     <string name="settings_pause_before_sending_description">Hält jede Chatnachricht %1$d Sekunden mit „Rückgängig“ zurück und weist beim Schreiben auf Großbuchstaben, !!! und scharfe Wörter hin. Geprüft wird nur auf diesem Telefon.</string>
+    <!-- The family switcher's dot for child support, a professional's access and the plan (board SW-7) -->
+    <string name="family_switcher_support_other">In einer anderen Familie wartet ein Unterhaltsvorschlag</string>
+    <string name="family_switcher_support_row">Ein Unterhaltsvorschlag wartet</string>
+    <string name="family_switcher_professional_other">In einer anderen Familie wartet der Zugang für Fachleute auf Ihre Zustimmung</string>
+    <string name="family_switcher_professional_row">Der Zugang für Fachleute wartet auf Ihre Zustimmung</string>
+    <string name="family_switcher_plan_other">In einer anderen Familie warten Antworten im Elternplan</string>
+    <string name="family_switcher_plan_row">Antworten im Elternplan warten</string>
 </resources>

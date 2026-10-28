@@ -8,6 +8,7 @@ import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.repository.longOrNull
 import com.coparently.app.data.repository.markMap
 import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.data.support.SupportRead
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
@@ -18,6 +19,11 @@ import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.parentingplan.ParentingPlanComparison
+import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
+import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -55,7 +61,16 @@ enum class FamilySignal {
     SCHEDULE,
 
     /** The co-parent proposed a new expense split, awaiting this parent (October 2026). */
-    SPLIT
+    SPLIT,
+
+    /** The co-parent proposed child support, awaiting this parent (board SW-7). */
+    SUPPORT,
+
+    /** A professional's access waits for this parent's consent (board SW-7). */
+    PROFESSIONAL,
+
+    /** The co-parent's parenting plan answers wait on this parent's word (board SW-7). */
+    PLAN
 }
 
 /**
@@ -76,6 +91,11 @@ enum class FamilySignal {
  *   day swap from the co-parent ([hasPendingSchedule]).
  * - **Split** — the pair's `family_settings` document, likewise one per family and read by id: a
  *   pending expense split proposal from the co-parent ([hasPendingSplit]).
+ * - **Agreements** (board SW-7) — the pair's `support_agreements` and `parenting_plans` documents,
+ *   each read by id, and the family's `professional_grants` naming this parent, one query keyed by
+ *   the family: child support proposed by the co-parent ([hasPendingSupport]), a grant waiting
+ *   for this parent's consent ([hasProfessionalWaiting]) and plan answers waiting on them
+ *   ([hasPlanWaiting]).
  *
  * Four properties are the point of the class:
  *
@@ -105,7 +125,8 @@ constructor(
     private val changeRequestDataSource: FirestoreChangeRequestDataSource,
     private val custodyDataSource: FirestoreCustodyDataSource,
     private val requestClocks: RequestClocks,
-    private val familySettingsDataSource: FirestoreFamilySettingsDataSource
+    private val familySettingsDataSource: FirestoreFamilySettingsDataSource,
+    private val agreementSources: AgreementSignalSources
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -168,14 +189,39 @@ constructor(
             clocksOf(myUid, family)
         ) { settings, clocks -> hasPendingSplit(settings, myUid, clocks) }
             .bounded(FamilySignal.SPLIT)
-        return combine(chat, requests, schedule, split) { c, r, s, m ->
+        return combine(chat, requests, schedule, split, agreements(myUid, family)) { c, r, s, m, a ->
             buildSet {
                 if (c) add(FamilySignal.CHAT)
                 if (r) add(FamilySignal.CHANGE_REQUEST)
                 if (s) add(FamilySignal.SCHEDULE)
                 if (m) add(FamilySignal.SPLIT)
+                addAll(a)
             }
         }.distinctUntilChanged()
+    }
+
+    /** One family's three agreement listeners (board SW-7), as the kinds they raise. */
+    private fun agreements(myUid: String, family: FamilyOption): Flow<Set<FamilySignal>> {
+        val support = agreementSources.supportStore.observe(family.familyId)
+            .map { hasPendingSupport(it, myUid) }
+            .bounded(FamilySignal.SUPPORT)
+        val professional = agreementSources.professionalRepository.observeFamilyGrants(family.familyId)
+            .map { hasProfessionalWaiting(it, myUid, family.familyId, System.currentTimeMillis()) }
+            .bounded(FamilySignal.PROFESSIONAL)
+        val plan = if (family.partnerUid.isBlank()) {
+            flowOf(false)
+        } else {
+            agreementSources.planDataSource.observePlan(family.familyId)
+                .map { hasPlanWaiting(it, myUid, family.partnerUid) }
+                .bounded(FamilySignal.PLAN)
+        }
+        return combine(support, professional, plan) { s, p, q ->
+            buildSet {
+                if (s) add(FamilySignal.SUPPORT)
+                if (p) add(FamilySignal.PROFESSIONAL)
+                if (q) add(FamilySignal.PLAN)
+            }
+        }
     }
 
     /**
@@ -318,6 +364,34 @@ constructor(
             val proposal = settings?.proposal?.takeIf { it.proposedBy != myUid } ?: return false
             return stillWaits(clocks, myUid, proposal.proposedBy) { RequestDeadlineId.forSplit(proposal, it) }
         }
+
+        /** Whether the family's child support holds a proposal the *other* parent made. */
+        fun hasPendingSupport(read: SupportRead, myUid: String): Boolean =
+            (read as? SupportRead.Known)?.agreement?.proposal?.let { it.proposedBy != myUid } == true
+
+        /**
+         * Whether one of [familyId]'s professional grants waits for [myUid]'s consent at [nowMillis]
+         * ([ProfessionalGrantStatus.WAITING_FOR_YOU]); a grant of another family asks nothing.
+         */
+        fun hasProfessionalWaiting(
+            grants: List<ProfessionalGrant>,
+            myUid: String,
+            familyId: String,
+            nowMillis: Long
+        ): Boolean = grants.any {
+            it.familyId == familyId &&
+                ProfessionalGrantPolicy.statusFor(it, myUid, nowMillis) == ProfessionalGrantStatus.WAITING_FOR_YOU
+        }
+
+        /**
+         * Whether the plan's halves, by author, hold a question waiting on [myUid]
+         * ([ParentingPlanComparison.questionsAwaitingYou]). Without [coParentUid]'s half, nothing.
+         */
+        fun hasPlanWaiting(halves: Map<String, ParentingPlanEntry>, myUid: String, coParentUid: String): Boolean =
+            ParentingPlanComparison.questionsAwaitingYou(
+                halves[myUid] ?: ParentingPlanEntry(),
+                halves[coParentUid]
+            ).isNotEmpty()
 
         /**
          * Whether a request [author] made to [myUid] still waits on them: no clock governs it, or

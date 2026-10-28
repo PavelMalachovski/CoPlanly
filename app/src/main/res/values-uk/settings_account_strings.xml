@@ -112,4 +112,11 @@
     <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
     <string name="settings_pause_before_sending_title">Пауза перед надсиланням</string>
     <string name="settings_pause_before_sending_description">Затримує кожне повідомлення в чаті на %1$d с із можливістю скасувати й під час набору підказує про великі літери, !!! та різкі слова. Перевірка — лише на цьому телефоні.</string>
+    <!-- The family switcher's dot for child support, a professional's access and the plan (board SW-7) -->
+    <string name="family_switcher_support_other">В іншій родині чекає пропозиція щодо аліментів</string>
+    <string name="family_switcher_support_row">Чекає пропозиція щодо аліментів</string>
+    <string name="family_switcher_professional_other">В іншій родині доступ фахівця чекає на вашу згоду</string>
+    <string name="family_switcher_professional_row">Доступ фахівця чекає на вашу згоду</string>
+    <string name="family_switcher_plan_other">В іншій родині чекають відповіді в батьківському плані</string>
+    <string name="family_switcher_plan_row">Чекають відповіді в батьківському плані</string>
 </resources>

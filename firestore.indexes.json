@@ -15,6 +15,20 @@
       ]
     },
     {
+      "collectionGroup": "professional_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyParents",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "notification_queue",
       "queryScope": "COLLECTION",
       "fields": [

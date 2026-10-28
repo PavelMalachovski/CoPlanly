@@ -143,6 +143,14 @@ describe('professional_grants', () => {
     await assertFails(as(env, STRANGER).collection('professional_grants').get());
   });
 
+  it('serves the switcher\'s query for one family, and refuses a stranger running it', async () => {
+    await seed(env, {[GRANT]: grant({})});
+    await assertSucceeds(as(env, MOM).collection('professional_grants')
+        .where('familyParents', 'array-contains', MOM).where('familyId', '==', FAMILY).get());
+    await assertFails(as(env, STRANGER).collection('professional_grants')
+        .where('familyParents', 'array-contains', MOM).where('familyId', '==', FAMILY).get());
+  });
+
   it('lets the other parent add their own consent', async () => {
     await seed(env, {[GRANT]: grant({consents: {[MOM]: 1}})});
     await assertSucceeds(as(env, DAD).doc(GRANT).update({[`consents.${DAD}`]: Date.now()}));
