@@ -142,6 +142,13 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
     fun waitingOn(uid: String): DaySwapGroup? =
         swaps.filter { DaySwapInbox.awaitsAnswerFrom(it, uid) }.takeIf { it.isNotEmpty() }?.let(::DaySwapGroup)
 
+    /**
+     * Each day still waiting for an answer and the slot it would go to: what the offer's mini months
+     * mark. A day already answered no longer moves, so it is not drawn as if it would.
+     */
+    val pendingDays: Map<LocalDate, String>
+        get() = swaps.filter { it.override.isPending }.associate { it.date to it.override.toParent }
+
     /** Whether [uid] made this offer and may still take it back: any of its days is theirs and unanswered. */
     fun withdrawableBy(uid: String): Boolean =
         swaps.any { it.override.isPending && it.override.requestedBy == uid }

@@ -63,12 +63,14 @@ internal fun SwapDayAnswers(
         waiting.forEach { swap ->
             val iso = swap.date.toString()
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
+                val day = swapDateList(listOf(swap.date), locale)
                 Text(
-                    text = stringResource(
-                        R.string.day_swap_day_to,
-                        swapDateList(listOf(swap.date), locale),
-                        parentNames.labelOrYou(swap.override.toParent)
-                    ),
+                    // "→ you" in the dative the grid's pill uses, not the capitalised "You" label.
+                    text = if (parentNames.isReader(swap.override.toParent)) {
+                        stringResource(R.string.day_swap_day_to_you, day)
+                    } else {
+                        stringResource(R.string.day_swap_day_to, day, parentNames.labelFor(swap.override.toParent))
+                    },
                     style = MaterialTheme.typography.bodyMedium
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {

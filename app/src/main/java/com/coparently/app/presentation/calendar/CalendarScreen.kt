@@ -288,7 +288,9 @@ fun CalendarScreen(
             }
         }
     }
-    var swapSheetOpen by remember { mutableStateOf(false) }
+    // Saveable with the selection it reviews, so a rotation keeps the sheet rather than leaving its
+    // day marked on the grid with nothing open (final review #5).
+    var swapSheetOpen by rememberSaveable { mutableStateOf(false) }
     fun endSwapSelection() {
         selectingSwap = false
         swapSelection = emptySet()
@@ -398,7 +400,17 @@ fun CalendarScreen(
             .toMap() - unansweredSwapDates
     }
     // Whom each chosen or waiting day would go to, drawn on the grid (`SwapMark`).
-    val swapMarksShown = swapMarks(swapSelection, getCustody, pendingSwapTo)
+    // A child's own band (FAM-4) is not the schedule a swap moves, and its cells take no swap tap:
+    // choosing ends when the grid stops following the family (final review #2).
+    LaunchedEffect(grid.followsFamily) {
+        if (!grid.followsFamily && selectingSwap) endSwapSelection()
+    }
+    // A chosen day is marked only while it is being chosen or reviewed (final review #5).
+    val swapMarksShown = swapMarks(
+        selection = if (selectingSwap || swapSheetOpen) swapSelection else emptySet(),
+        holderOf = getCustody,
+        pendingTo = pendingSwapTo
+    )
 
     // The dates an accepted swap decides. `getCustody` already answers whose day each one is;
     // this set only tells the grid the answer came from a swap, so the cell (and the one after
@@ -843,12 +855,12 @@ fun CalendarScreen(
                         CustodyLegend(
                             parentNames = parentNames,
                             showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
-                            showPendingSwap = viewMode == CalendarViewMode.MONTH &&
+                            showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
                                 pendingSwapTo.keys.any { YearMonth.from(it) == displayedMonth },
                             // The visible way into a swap (SW-1): the long press alone was found
                             // by nobody. Month only, where the grid can show the chosen days.
                             trailing = offerSwapDay?.takeIf {
-                                viewMode == CalendarViewMode.MONTH && !selectingSwap
+                                viewMode == CalendarViewMode.MONTH && !selectingSwap && grid.followsFamily
                             }?.let { { SwapDaysButton(onClick = { selectingSwap = true }) } },
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
@@ -1132,22 +1144,23 @@ fun CalendarScreen(
     val swapSent by calendarViewModel.swapSent.collectAsState()
     val swapSentMessage = stringResource(R.string.day_swap_sent, parentNames.coParentLabel())
     val swapWithdrawLabel = stringResource(R.string.change_request_withdraw)
-    LaunchedEffect(swapSent) {
-        swapSent?.let { sent ->
-            calendarViewModel.clearSwapSent()
-            val result = snackbarHostState.showSnackbar(
-                message = swapSentMessage,
-                actionLabel = swapWithdrawLabel,
-                duration = SnackbarDuration.Long
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                val sentDays = dayOverrides.mapNotNull { (iso, offer) ->
-                    if (offer.groupId != sent.groupId || !offer.isPending) return@mapNotNull null
-                    runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, offer) }
-                }.sortedBy { it.date }
-                if (sentDays.isNotEmpty()) changeRequestViewModel.withdrawSwapGroup(DaySwapGroup(sentDays))
-            }
+    // Keyed on the group and cleared only once the snackbar is done: clearing first changed the
+    // key mid-effect, which cancelled the snackbar before anyone could tap Withdraw (final review #1).
+    LaunchedEffect(swapSent?.groupId) {
+        val sent = swapSent ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = swapSentMessage,
+            actionLabel = swapWithdrawLabel,
+            duration = SnackbarDuration.Long
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            val sentDays = dayOverrides.mapNotNull { (iso, offer) ->
+                if (offer.groupId != sent.groupId || !offer.isPending) return@mapNotNull null
+                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, offer) }
+            }.sortedBy { it.date }
+            if (sentDays.isNotEmpty()) changeRequestViewModel.withdrawSwapGroup(DaySwapGroup(sentDays))
         }
+        calendarViewModel.clearSwapSent()
     }
 
     // Event type filter sheet

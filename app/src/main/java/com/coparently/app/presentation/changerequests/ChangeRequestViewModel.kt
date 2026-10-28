@@ -174,8 +174,8 @@ class ChangeRequestViewModel @Inject constructor(
                     legacy = { null }
                 )
                 (ready.inbox.waitingOnMe.swaps + ready.inbox.waitingOnThem.swaps).associate { group ->
-                    val days = group.swaps.associate { it.date to it.override.toParent }
-                    group.key to swapMiniMonths(days, ready.events, agreed)
+                    // Only the days still waiting: an answered one no longer moves (final review #3).
+                    group.key to swapMiniMonths(group.pendingDays, ready.events, agreed)
                 }
             }
         }

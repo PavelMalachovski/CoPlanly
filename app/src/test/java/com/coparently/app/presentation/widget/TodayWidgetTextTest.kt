@@ -127,6 +127,18 @@ class TodayWidgetTextTest {
     }
 
     @Test
+    fun `a handover to the reader says you, as Home does`() {
+        val lines = TodayWidgetText.lines(
+            context,
+            day.copy(handover = HandoverInfo(today.plusDays(1), 1, "dad", "mom")),
+            parents,
+            maxEvents = 4
+        )
+
+        assertEquals("Handover to you tomorrow", lines.handover?.text)
+    }
+
+    @Test
     fun `with no names known a parent is a fallback label, never a slot`() {
         val lines = TodayWidgetText.lines(context, day, parents = null, maxEvents = 4)
 

@@ -109,4 +109,5 @@
         <item quantity="one">%1$s asks for %2$d of your days</item>
         <item quantity="other">%1$s asks for %2$d of your days</item>
     </plurals>
+    <string name="day_swap_day_to_you">%1$s → you</string>
 </resources>

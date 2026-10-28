@@ -130,4 +130,5 @@
         <item quantity="many">%1$s просить %2$d ваших днів</item>
         <item quantity="other">%1$s просить %2$d вашого дня</item>
     </plurals>
+    <string name="day_swap_day_to_you">%1$s → вам</string>
 </resources>

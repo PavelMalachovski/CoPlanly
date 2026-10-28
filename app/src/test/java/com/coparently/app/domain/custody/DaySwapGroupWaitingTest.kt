@@ -37,4 +37,10 @@ class DaySwapGroupWaitingTest {
     fun `an offer the reader made never waits on them`() {
         assertNull(DaySwapGroup(listOf(day(nov6, by = "pavel"))).waitingOn("pavel"))
     }
+
+    @Test
+    fun `the mini months mark only the days still waiting`() {
+        val group = DaySwapGroup(listOf(day(nov6, DayOverrideStatus.DECLINED), day(nov7), day(nov8)))
+        assertEquals(mapOf(nov7 to "dad", nov8 to "dad"), group.pendingDays)
+    }
 }
