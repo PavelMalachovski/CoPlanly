@@ -16,11 +16,16 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.utils.localizedDate
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
 /**
@@ -83,6 +88,7 @@ class UiTourTest : AliceOnScreenTest() {
         section("home") { homeSection() }
         section("widget") { widgetSection() }
         section("calendar") { calendarSection() }
+        section("day_swap") { daySwapSection() }
         section("event_form") { eventFormSection() }
         section("chat") { chatSection() }
         section("expenses") { expensesSection() }
@@ -222,6 +228,48 @@ class UiTourTest : AliceOnScreenTest() {
         driver.press("the mode", textButton(label))
         driver.linger()
     }
+
+    /**
+     * A day swap as Alice starts one (day swap design, boards SW-1 to SW-3): the "⇄" beside the
+     * legend opens the choosing mode, a tap chooses a day — paging with the header's arrow when the
+     * day is in the next month — and Next opens the sheet that says what each parent gives. The
+     * seed's schedule is week on, week off from this Monday, Alice first, so [SWAP_DAYS] are one of
+     * Bob's days and two of Alice's, and Bob's own offer (nine days from today) is never among
+     * them. The sheet is closed unsent, and the choosing mode with it.
+     */
+    private fun daySwapSection() {
+        val monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val nextMonth = hasContentDescription(string(R.string.day_swap_next_month)) and hasClickAction()
+        camera.shot("calendar_swap_choosing") {
+            driver.backToTabs()
+            openTab(BottomNavDestination.CALENDAR)
+            driver.press("Swap days", hasContentDescription(string(R.string.day_swap_start)) and hasClickAction())
+            driver.await("the choosing header", hasText(string(R.string.day_swap_choose_title)))
+            var month = YearMonth.now()
+            SWAP_DAYS.map { monday.plusDays(it) }.sorted().forEach { day ->
+                while (month < YearMonth.from(day)) {
+                    driver.press("the next month", nextMonth)
+                    month = month.plusMonths(1)
+                }
+                driver.press("the day $day", monthCell(day))
+            }
+            driver.await("the swap bar", textButton(R.string.day_swap_next))
+            driver.linger()
+        }
+        camera.shot("calendar_swap_sheet") {
+            driver.press("Next", textButton(R.string.day_swap_next))
+            driver.await("the swap sheet", textButton(R.string.day_swap_change_days))
+            driver.linger()
+        }
+        if (driver.present(textButton(R.string.day_swap_change_days))) driver.back()
+        val closeChoosing = hasContentDescription(string(R.string.day_swap_close_selection)) and hasClickAction()
+        driver.pressIfPresent(closeChoosing)
+        driver.backToTabs()
+    }
+
+    /** A month cell, by the date its description opens with (`MonthView`'s own `MMMMEEEEd`). */
+    private fun monthCell(day: LocalDate): SemanticsMatcher =
+        hasContentDescription(day.format(localizedDate("MMMMEEEEd")), substring = true) and hasClickAction()
 
     private fun eventFormSection() {
         camera.shot("event_add_empty") {
@@ -527,6 +575,13 @@ class UiTourTest : AliceOnScreenTest() {
 
         /** How long Dave admits Alice as a family friend: the invite's longest choice. */
         private const val FRIEND_ACCESS_MS = 90L * 24 * 60 * 60 * 1000
+
+        /**
+         * The days Alice chooses to swap, as days after this week's Monday: Bob's Tuesday next week,
+         * and her own Thursday and Friday the week after. Bob's offer falls nine days after today,
+         * between Monday + 9 and Monday + 15, so it is never one of them.
+         */
+        private val SWAP_DAYS = listOf(8L, 17L, 18L)
 
         /** Puts the app back on the device's language once the tour is over. */
         @JvmStatic
