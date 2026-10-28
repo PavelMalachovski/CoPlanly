@@ -3,9 +3,11 @@ package com.coparently.app.presentation.changerequests
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
@@ -93,6 +95,12 @@ class ChangeRequestViewModelTest {
 
     /** The family's split document; none unless a test says so. */
     private val splitSettings = MutableStateFlow<FamilySettings?>(null)
+
+    /** Each test's child support, professional grants and plan; none unless a test sets them. */
+    private var agreements = FamilyAgreements()
+    private val agreementsSource = mockk<FamilyAgreementsSource> {
+        every { observe(any()) } answers { flowOf(agreements) }
+    }
     private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
         every { observeSettingsOf(any()) } returns splitSettings
         coEvery { acceptProposal(any()) } returns Result.success(Unit)
@@ -168,7 +176,8 @@ class ChangeRequestViewModelTest {
             userRepository = userRepository,
             pairingRepository = pairingRepository,
             requestClocks = mockk<RequestClocks> { every { observeFamily(any(), any()) } returns clocks },
-            familySettingsRepository = familySettingsRepository
+            familySettingsRepository = familySettingsRepository,
+            familyAgreementsSource = agreementsSource
         ),
         familySettingsRepository = familySettingsRepository
     )

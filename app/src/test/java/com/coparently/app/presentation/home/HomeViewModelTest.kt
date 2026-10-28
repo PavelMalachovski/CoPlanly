@@ -5,7 +5,9 @@ import com.coparently.app.data.family.familyRow
 import com.coparently.app.data.family.testFamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.SharedCustody
@@ -137,7 +139,9 @@ class HomeViewModelTest {
                 // No request has a clock here: every request is placed as it always was.
                 mockk<RequestClocks> { every { observeFamily(any(), any()) } returns emptyFlow() },
                 // Nor a split document: no split waits on anybody.
-                mockk<FamilySettingsRepository> { every { observeSettingsOf(any()) } returns flowOf(null) }
+                mockk<FamilySettingsRepository> { every { observeSettingsOf(any()) } returns flowOf(null) },
+                // Nor child support, a professional or a plan answer.
+                mockk<FamilyAgreementsSource> { every { observe(any()) } returns flowOf(FamilyAgreements()) }
             ),
             custodyModelRepository = custodyModelRepository,
             monthSpendDependencies = monthSpendDependencies,

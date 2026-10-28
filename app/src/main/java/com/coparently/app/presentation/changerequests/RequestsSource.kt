@@ -4,10 +4,13 @@ import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.changerequests.RequestInbox
 import com.coparently.app.domain.changerequests.RequestScope
+import com.coparently.app.domain.changerequests.withAgreements
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.family.FamilyAudience
@@ -54,6 +57,8 @@ sealed interface RequestsState {
      *   3a); none until the clocks listener first answers.
      * @property settings The family's own expense split document — the agreed split and any
      *   proposal of a new one — or null while it has none or has not arrived.
+     * @property agreements The family's child support, professional grants and parenting plan,
+     *   already placed in [inbox] (board SW-7); what a row's Withdraw acts on.
      */
     data class Ready(
         val scope: RequestScope,
@@ -62,7 +67,8 @@ sealed interface RequestsState {
         val events: List<Event>,
         val custody: SharedCustody? = null,
         val clocks: ClocksAt = ClocksAt(),
-        val settings: FamilySettings? = null
+        val settings: FamilySettings? = null,
+        val agreements: FamilyAgreements = FamilyAgreements()
     ) : RequestsState
 }
 
@@ -93,6 +99,10 @@ sealed interface RequestsState {
  * asked for by its id ([FamilySettingsRepository.observeSettingsOf]), so it can never be another
  * family's. Until that listener first answers, the inbox is placed as if the family had no split
  * document, as it is for the clocks.
+ *
+ * **Child support, a professional's access and the parenting plan** (board SW-7) wait beside the
+ * requests, read for that family alone through [FamilyAgreementsSource], which never holds the
+ * inbox back.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 // the five sources the requests are derived from, and the two that say whose and which family's they are
@@ -104,7 +114,8 @@ class RequestsSource @Inject constructor(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository,
     private val requestClocks: RequestClocks,
-    private val familySettingsRepository: FamilySettingsRepository
+    private val familySettingsRepository: FamilySettingsRepository,
+    private val familyAgreementsSource: FamilyAgreementsSource
 ) {
 
     /** The family on screen's requests, re-derived on every change to any of them. */
@@ -129,8 +140,13 @@ class RequestsSource @Inject constructor(
         requestClocks.observeFamily(scope.myUid, scope.familyId).onStart { emit(ClocksAt()) },
         familySettingsRepository.observeSettingsOf(scope.familyId).onStart { emit(null) }
     ) { requests, events, custody, clocks, settings ->
-        val familyRequests = requests.filter(scope::covers)
-        val familyEvents = events.filter(scope::covers)
+        FamilyRecords(requests, events, custody, clocks, settings)
+    }.combine(familyAgreementsSource.observe(scope)) { records, agreements ->
+        val custody = records.custody
+        val clocks = records.clocks
+        val settings = records.settings
+        val familyRequests = records.requests.filter(scope::covers)
+        val familyEvents = records.events.filter(scope::covers)
         val swaps = custody?.dayOverrides.orEmpty()
         RequestsState.Ready(
             scope = scope,
@@ -144,14 +160,24 @@ class RequestsSource @Inject constructor(
                 LocalDate.now(),
                 clocks,
                 settings = settings
-            ),
+            ).withAgreements(scope, agreements, System.currentTimeMillis()),
             changeRequests = familyRequests,
             events = familyEvents,
             custody = custody,
             clocks = clocks,
-            settings = settings
+            settings = settings,
+            agreements = agreements
         )
     }
+
+    /** The five sources [readyFor] reads first, held together until the agreements join them. */
+    private data class FamilyRecords(
+        val requests: List<ChangeRequest>,
+        val events: List<Event>,
+        val custody: SharedCustody?,
+        val clocks: ClocksAt,
+        val settings: FamilySettings?
+    )
 
     /** What the three inputs say about the family on screen. */
     private sealed interface ScopeAnswer {

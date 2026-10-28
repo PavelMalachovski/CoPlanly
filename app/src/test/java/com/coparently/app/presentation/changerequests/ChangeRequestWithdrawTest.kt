@@ -3,9 +3,11 @@ package com.coparently.app.presentation.changerequests
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.FamilyAgreements
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwap
@@ -75,6 +77,12 @@ class ChangeRequestWithdrawTest {
         every { observeShared() } returns flowOf(null)
         every { observeSharedOf(any()) } returns flowOf(null)
     }
+
+    /** Each test's child support, professional grants and plan; none unless a test sets them. */
+    private var agreements = FamilyAgreements()
+    private val agreementsSource = mockk<FamilyAgreementsSource> {
+        every { observe(any()) } answers { flowOf(agreements) }
+    }
     private val familySettingsRepository = mockk<FamilySettingsRepository>(relaxed = true) {
         every { observeSettingsOf(any()) } returns flowOf(null)
     }
@@ -135,7 +143,8 @@ class ChangeRequestWithdrawTest {
             requestClocks = mockk<RequestClocks> {
                 every { observeFamily(any(), any()) } returns MutableStateFlow(ClocksAt())
             },
-            familySettingsRepository = familySettingsRepository
+            familySettingsRepository = familySettingsRepository,
+            familyAgreementsSource = agreementsSource
         ),
         familySettingsRepository = familySettingsRepository
     )
