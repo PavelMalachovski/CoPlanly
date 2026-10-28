@@ -70,6 +70,19 @@ object PushPayload {
     const val DAY_COUNT = "dayCount"
 
     /**
+     * A day-swap offer's days that would go to the addressee: comma-separated ISO dates (day swap
+     * design, 28 October 2026). Written by the offering phone on [DAY_SWAP_OFFERED] and
+     * [DAY_SWAP_GROUP_OFFERED] only when the offer gives at least one day; the receiving phone
+     * words them ("Lana offers you 2 days: Fri, Nov 6, Sat, Nov 7"). A field, not a type, so an
+     * older build ignores it and words the sentence it always did; `firestore.rules` bounds it at
+     * 160 characters, fourteen dates.
+     */
+    const val DATES_TO_YOU = "datesToYou"
+
+    /** The other side of [DATES_TO_YOU]: the addressee's days that would go to the sender. */
+    const val DATES_TO_SENDER = "datesToSender"
+
+    /**
      * A request's deadline, as an instant: epoch millis in decimal text (phase 3a).
      *
      * Two uses. On the first push of a request that waits for an answer ([DAY_SWAP_OFFERED],

@@ -2,7 +2,6 @@ package com.coparently.app.presentation.calendar
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -22,10 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -119,16 +114,17 @@ private const val DAYS_PER_WEEK = 7L
  *   index rather than the flat list is deliberate: `dayContent` runs for all 42 cells on every
  *   recomposition, so filtering the whole list per cell cost O(42·N) each time.
  * @param getProposedCustody What a **pending** custody proposal would make of a day, or null when
- *   nothing is pending. Separate from [getCustody] for the same reason [pendingSwapDates] is: a
+ *   nothing is pending. Separate from [getCustody] for the same reason [swapMarks] is: a
  *   proposal has changed nothing yet. The days it *would* move are washed in the proposed
  *   parent's hue at a lower alpha, over the agreed day, which keeps its full strength underneath.
  * @param schoolVacationDays Days inside a school vacation, public holidays inside one included
  *   (`HolidayProvider.schoolVacationDaysInRange`). Drawn as a thin neutral line along the cell's
  *   bottom edge that takes no height, so a month with a vacation is exactly as tall as one without
  *   — the constraint the removed month banner broke (see `CalendarScreen`).
- * @param pendingSwapDates Dates a one-off swap is being negotiated on. Deliberately separate from
- *   [getCustody]: a pending swap has changed nothing about whose day it is, and saying otherwise
- *   in the cell's colour would be a lie both parents act on.
+ * @param swapMarks Days being chosen for a swap on this phone, and days a swap waits on, each with
+ *   whom it would go to ([SwapMark], day swap design, 28 October 2026). Deliberately separate from
+ *   [getCustody]: a swap not yet agreed has changed nothing about whose day it is, so the wash
+ *   stays and the mark is drawn over it. In-month cells only.
  * @param swappedDates Dates an **accepted** swap decides. [getCustody] already answers whose day
  *   each one is; this set only tells the cell the answer came from a swap, so it (and the day
  *   after it) draws one solid fill instead of the handover diagonal — see `DayCellFills`.
@@ -156,11 +152,12 @@ fun MonthView(
     onMonthChange: (YearMonth) -> Unit,
     holidays: Map<LocalDate, Holiday> = emptyMap(),
     schoolVacationDays: Set<LocalDate> = emptySet(),
-    pendingSwapDates: Set<LocalDate> = emptySet(),
+    swapMarks: Map<LocalDate, SwapMark> = emptyMap(),
     swappedDates: Set<LocalDate> = emptySet(),
     onDayLongClick: ((LocalDate) -> Unit)? = null,
     onSwapDragTo: ((LocalDate) -> Unit)? = null,
-    swapSelection: Set<LocalDate> = emptySet()
+    selectingSwap: Boolean = false,
+    onSwapTap: ((LocalDate) -> Unit)? = null
 ) {
     val firstDayOfWeek = remember { DayOfWeek.MONDAY }
 
@@ -287,28 +284,25 @@ fun MonthView(
                         onDayClick = onDayClick,
                         holiday = holidays[day.date],
                         isSchoolVacation = day.date in schoolVacationDays,
-                        // A borrowed cell refuses what you would act on (design item 10), and a
-                        // pending swap is answered in its own month.
-                        isSwapPending = day.position == DayPosition.MonthDate &&
-                            day.date in pendingSwapDates,
+                        // A borrowed cell refuses what you would act on (design item 10): a swap is
+                        // chosen and answered in its own month.
+                        swapMark = swapMarks[day.date]?.takeIf { day.position == DayPosition.MonthDate },
                         isSwapped = day.date in swappedDates,
                         previousSwapped = day.date.minusDays(1) in swappedDates,
                         onDayLongClick = onDayLongClick,
                         onSwapDragTo = onSwapDragTo,
                         dayBounds = dayBounds,
-                        isInSwapSelection = day.date in swapSelection,
-                        // In selection mode a tap extends the run instead of opening Day view.
-                        // Outside it, tap keeps doing what the August design decided it does.
-                        selectingSwap = swapSelection.isNotEmpty()
+                        // In selection mode a tap only chooses — a borrowed day too, which the
+                        // screen pages to (`SwapTap`). Outside it, tap keeps doing what the August
+                        // design decided it does.
+                        selectingSwap = selectingSwap,
+                        onSwapTap = onSwapTap
                     )
                 }
             )
         }
     }
 }
-
-/** Outline width on a day picked for a multi-day swap. */
-private val SWAP_SELECTION_BORDER = 2.dp
 
 /** Thickness of the school-vacation line along a month cell's bottom edge (MON-13). */
 private val VACATION_LINE_HEIGHT = 2.dp
@@ -397,14 +391,14 @@ private fun DayCell(
     onDayClick: (LocalDate) -> Unit,
     holiday: Holiday? = null,
     isSchoolVacation: Boolean = false,
-    isSwapPending: Boolean = false,
+    swapMark: SwapMark? = null,
     isSwapped: Boolean = false,
     previousSwapped: Boolean = false,
     onDayLongClick: ((LocalDate) -> Unit)? = null,
     onSwapDragTo: ((LocalDate) -> Unit)? = null,
     dayBounds: MutableMap<LocalDate, Rect> = mutableMapOf(),
-    isInSwapSelection: Boolean = false,
-    selectingSwap: Boolean = false
+    selectingSwap: Boolean = false,
+    onSwapTap: ((LocalDate) -> Unit)? = null
 ) {
     val dims = dimensions()
     val date = day.date
@@ -513,11 +507,21 @@ private fun DayCell(
     } else {
         null
     }
-    val swapLabel = if (isSwapPending) {
-        stringResource(R.string.calendar_day_desc_swap_pending)
-    } else {
-        null
+    val swapToReader = parentNames.isReader(swapMark?.toSlot)
+    val swapLabel = when {
+        swapMark == null -> null
+        swapMark.pending && swapToReader -> stringResource(R.string.day_swap_cell_waiting_to_you)
+        swapMark.pending -> stringResource(R.string.day_swap_cell_waiting_to, parentNames.labelFor(swapMark.toSlot))
+        swapToReader -> stringResource(R.string.day_swap_cell_goes_to_you)
+        else -> stringResource(R.string.day_swap_cell_goes_to, parentNames.labelFor(swapMark.toSlot))
     }
+    val swapHatch = swapMark?.let {
+        ParentColors.container(
+            it.toSlot,
+            alpha = if (it.pending) ParentColors.proposalTintAlpha else ParentColors.custodyTintAlpha
+        )
+    }
+    val swapEdge = swapMark?.let { ParentColors.chipFill(it.toSlot) }
     val handoverLabel = fill.handoverFrom?.let {
         stringResource(
             R.string.calendar_day_desc_handover,
@@ -674,21 +678,6 @@ private fun DayCell(
             // second lays yesterday's parent over it at the same custody alpha. The weekend base
             // still shows through both halves, so this file's invariant survives.
             .clip(MaterialTheme.shapes.extraSmall)
-            // A day picked for a multi-day swap gets an outline, not a fill. The cell already
-            // stacks a weekend base, a custody overlay, a handover diagonal, a proposal preview
-            // and a today circle; a sixth fill would fight all of them, and the one thing the
-            // custody wash must never lose is which parent the day belongs to.
-            .then(
-                if (isInSwapSelection) {
-                    Modifier.border(
-                        width = SWAP_SELECTION_BORDER,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = MaterialTheme.shapes.extraSmall
-                    )
-                } else {
-                    Modifier
-                }
-            )
             .drawBehind {
                 handoverColor?.let { color ->
                     val triangle = Path().apply {
@@ -725,6 +714,12 @@ private fun DayCell(
                     }
                     drawPath(corner, color)
                 }
+                // A swap mark last of all (`SwapMark`): stripes in the wash of whom the day would
+                // go to, over the wash of whom it is with now — the one thing the wash must keep
+                // saying — and an edge in their deep tone, dashed while the swap waits.
+                if (swapHatch != null && swapEdge != null) {
+                    drawSwapMark(swapHatch, swapEdge, dashed = swapMark?.pending == true)
+                }
             }
             // Long-press offers the day to the co-parent. A day from a neighbouring month is
             // excluded: it is shown for context, not to be acted on, and its dimmed number and
@@ -732,12 +727,13 @@ private fun DayCell(
             // and no holiday tint either — it does carry the custody band, which is a pattern
             // rather than something you would answer.
             .combinedClickable(
-                // While a swap selection is open, a tap extends it — the same gesture that
-                // opened it. Outside selection mode the tap is untouched: it selects the day and
-                // opens Day view, which is the only route to creating an event on a chosen day.
+                // While days are being chosen, a tap only chooses — a borrowed day included, which
+                // the screen pages to and chooses there (the owner's report: it opened Day view).
+                // Outside selection mode the tap is untouched: it selects the day and opens Day
+                // view, which is the only route to creating an event on a chosen day.
                 onClick = {
-                    if (selectingSwap && isCurrentMonth) {
-                        onDayLongClick?.invoke(date)
+                    if (selectingSwap && onSwapTap != null) {
+                        onSwapTap(date)
                     } else {
                         onDayClick(date)
                     }
@@ -747,29 +743,16 @@ private fun DayCell(
             .padding(dims.paddingSmall / 2),
         contentAlignment = Alignment.TopCenter
     ) {
-        // Two arrows on a date a swap is being negotiated on. Not a colour: the cell's colour
-        // still means whose day it is *now*, and a pending swap has not changed that. The arrows
-        // say "this is being discussed", which is a different fact and deserves its own channel.
-        // They carry no content description of their own — the cell has one description and it
-        // already names the pending swap; two would announce it twice.
-        if (isSwapPending) {
-            Column(
-                modifier = Modifier.align(Alignment.TopEnd),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(SWAP_ARROW_SIZE)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(SWAP_ARROW_SIZE)
-                )
-            }
+        // Whom a chosen or waiting day would go to, in words (`SwapMark`): the colour alone must not
+        // carry the direction. No content description of its own — the cell's names it.
+        if (swapMark != null && swapEdge != null) {
+            SwapMarkPill(
+                name = parentNames.labelFor(swapMark.toSlot),
+                toReader = parentNames.isReader(swapMark.toSlot),
+                edge = swapEdge,
+                pending = swapMark.pending,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
 
         Column(
@@ -907,4 +890,3 @@ private const val MONTH_SETTLE_FLING_THRESHOLD = 300f
  * The pending-swap arrows. Small enough not to compete with the day number or the event dots —
  * a swap under discussion is a footnote on the cell, not its headline.
  */
-private val SWAP_ARROW_SIZE = 10.dp

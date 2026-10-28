@@ -292,7 +292,7 @@ class ChangeRequestViewModelTest {
 
         assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
         coVerify(exactly = 0) { custodyModelRepository.acceptProposal() }
-        coVerify(exactly = 0) { custodyModelRepository.applyDayOverrides(any(), any(), any()) }
+        coVerify(exactly = 0) { custodyModelRepository.applyDayOverrides(any(), any(), any(), any()) }
     }
 
     @Test
@@ -635,7 +635,7 @@ class ChangeRequestViewModelTest {
     fun `asking to change an agreed swap offers each day back from the agreement it reads`() = runTest(dispatcher) {
         coEvery { userRepository.getCurrentUserId() } returns "u1"
         val transform = slot<(Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>>()
-        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), capture(transform), any()) } returns
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), capture(transform), any(), any()) } returns
             Result.success(emptyMap())
         val agreed = DayOverride(
             toParent = "dad",
@@ -652,7 +652,9 @@ class ChangeRequestViewModelTest {
         vm.proposeSwapChange(listOf(LocalDate.of(2026, 10, 24), LocalDate.of(2026, 10, 23)), "Ill", answerBy = null)
         advanceUntilIdle()
 
-        coVerify { custodyModelRepository.applyDayOverridesForDates(listOf("2026-10-23", "2026-10-24"), any(), null) }
+        coVerify {
+            custodyModelRepository.applyDayOverridesForDates(listOf("2026-10-23", "2026-10-24"), any(), null, any())
+        }
         val current = mapOf("2026-10-23" to agreed)
         val change = transform.captured(current, "2026-10-23").getOrThrow().getValue("2026-10-23")
         assertEquals("mom", change.toParent)

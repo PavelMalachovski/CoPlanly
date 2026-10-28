@@ -4,8 +4,6 @@
     <string name="day_swap_sheet_title">Обміняти цей день</string>
     <string name="day_swap_currently_with">Зараз цей день належить: %1$s</string>
     <string name="day_swap_would_go_to">Ви пропонуєте його: %1$s</string>
-    <string name="day_swap_note_label">Коментар (необовʼязково)</string>
-    <string name="day_swap_offer">Запропонувати обмін</string>
     <string name="day_swap_cancel">Не зараз</string>
     <string name="day_swap_needs_coparent">Спершу зʼєднайтеся з другим із батьків — обмін ви узгоджуєте вдвох.</string>
     <string name="day_swap_error_refused">Не вдалося запропонувати обмін</string>
@@ -18,7 +16,7 @@
     <string name="day_swap_inbox_waiting">Чекає на відповідь</string>
     <string name="day_swap_accept">Прийняти</string>
     <string name="day_swap_decline">Відхилити</string>
-    <string name="day_swap_by_day_heading">Або дайте відповідь на кожен день</string>
+    <string name="day_swap_by_day_heading">Дайте відповідь на кожен день</string>
     <string name="day_swap_day_to">%1$s → %2$s</string>
     <string name="day_swap_send_answers">Надіслати ці відповіді</string>
     <string name="day_swap_day_answered">%1$s: %2$s</string>
@@ -28,21 +26,7 @@
     <string name="day_swap_strip_agreed">Погоджений обмін: цей день у: %1$s.</string>
     <string name="day_swap_strip_agreed_you">Погоджений обмін: цей день у вас.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
-    <string name="day_swap_sheet_title_range">Обміняти ці дні</string>
-    <string name="day_swap_select_hint">Натискайте інші дні, щоб розширити обмін</string>
     <string name="day_swap_selection_cancel">Скасувати вибір</string>
-    <plurals name="day_swap_day_count">
-        <item quantity="one">%1$d день</item>
-        <item quantity="few">%1$d дні</item>
-        <item quantity="many">%1$d днів</item>
-        <item quantity="other">%1$d дня</item>
-    </plurals>
-    <plurals name="day_swap_direction">
-        <item quantity="one">%1$d день переходить: %2$s → %3$s</item>
-        <item quantity="few">%1$d дні переходять: %2$s → %3$s</item>
-        <item quantity="many">%1$d днів переходять: %2$s → %3$s</item>
-        <item quantity="other">%1$d дня переходять: %2$s → %3$s</item>
-    </plurals>
     <plurals name="day_swap_skipped_days">
         <item quantity="one">Для %1$d вибраного дня не вказано, з ким діти — він не увійде в обмін.</item>
         <item quantity="few">Для %1$d вибраних днів не вказано, з ким діти — вони не увійдуть в обмін.</item>
@@ -85,4 +69,66 @@
         <item quantity="many">Ви запропонували помінятися %1$d днями: %2$s</item>
         <item quantity="other">Ви запропонували помінятися %1$d днями: %2$s</item>
     </plurals>
+    <!-- Choosing days to swap (day swap design, 28 October 2026, boards SW-1 and SW-2). -->
+    <string name="day_swap_start">Обмінятися днями</string>
+    <string name="day_swap_choose_title">Виберіть дні для обміну</string>
+    <string name="day_swap_close_selection">Завершити вибір днів</string>
+    <string name="day_swap_previous_month">Попередній місяць</string>
+    <string name="day_swap_next_month">Наступний місяць</string>
+    <!-- A month cell's swap mark (day swap design, boards SW-2 and SW-4): whom the day would go to. -->
+    <string name="day_swap_mark_to">→ %1$s</string>
+    <string name="day_swap_mark_to_you">→ вам</string>
+    <string name="day_swap_cell_goes_to">Вибрано для обміну, перейде: %1$s</string>
+    <string name="day_swap_cell_goes_to_you">Вибрано для обміну, перейде до вас</string>
+    <string name="day_swap_cell_waiting_to">Обмін чекає відповіді, перейде: %1$s</string>
+    <string name="day_swap_cell_waiting_to_you">Обмін чекає відповіді, перейде до вас</string>
+    <string name="day_swap_legend_waiting">Чекає відповіді</string>
+    <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
+    <string name="day_swap_bar_hint">Торкніться днів у календарі. Кожен перейде до того, у кого його немає.</string>
+    <string name="day_swap_next">Далі</string>
+    <plurals name="day_swap_bar_to">
+        <item quantity="one">%1$s — %2$d день: %3$s</item>
+        <item quantity="few">%1$s — %2$d дні: %3$s</item>
+        <item quantity="many">%1$s — %2$d днів: %3$s</item>
+        <item quantity="other">%1$s — %2$d дня: %3$s</item>
+    </plurals>
+    <plurals name="day_swap_bar_to_you">
+        <item quantity="one">Вам — %1$d день: %2$s</item>
+        <item quantity="few">Вам — %1$d дні: %2$s</item>
+        <item quantity="many">Вам — %1$d днів: %2$s</item>
+        <item quantity="other">Вам — %1$d дня: %2$s</item>
+    </plurals>
+    <!-- The review sheet (day swap design, board SW-3). -->
+    <string name="day_swap_sheet_title_with">Обмін: %1$s</string>
+    <string name="day_swap_you_give">Ви віддаєте: %1$s</string>
+    <string name="day_swap_you_take">Ви берете</string>
+    <string name="day_swap_sheet_caption">Так буде, якщо %1$s погодиться. До відповіді нічого не змінюється.</string>
+    <string name="day_swap_note_to">Повідомлення: %1$s (необов’язково)</string>
+    <string name="day_swap_change_days">Змінити дні</string>
+    <string name="day_swap_send_to">Надіслати: %1$s</string>
+    <!-- After a swap is sent (day swap design, board SW-4). -->
+    <string name="day_swap_sent">Надіслано: %1$s. До відповіді дні залишаються як є.</string>
+    <string name="day_swap_strip_asked_for">Ви попросили цей день: %1$s. Чекаємо на відповідь.</string>
+    <!-- Answering a swap (day swap design, board SW-6): the push's own words, the two sides, and the two modes. -->
+    <string name="day_swap_heading_both">%1$s пропонує обмін днями</string>
+    <string name="day_swap_side_you">Вам</string>
+    <string name="day_swap_note_from">%1$s пише:</string>
+    <string name="day_swap_accept_swap">Прийняти обмін</string>
+    <string name="day_swap_answer_by_day">Відповісти по днях</string>
+    <string name="day_swap_yes">Так</string>
+    <string name="day_swap_no">Ні</string>
+    <string name="day_swap_by_day_back">Назад</string>
+    <plurals name="day_swap_heading_gives">
+        <item quantity="one">%1$s пропонує вам %2$d день</item>
+        <item quantity="few">%1$s пропонує вам %2$d дні</item>
+        <item quantity="many">%1$s пропонує вам %2$d днів</item>
+        <item quantity="other">%1$s пропонує вам %2$d дня</item>
+    </plurals>
+    <plurals name="day_swap_heading_asks">
+        <item quantity="one">%1$s просить %2$d ваш день</item>
+        <item quantity="few">%1$s просить %2$d ваші дні</item>
+        <item quantity="many">%1$s просить %2$d ваших днів</item>
+        <item quantity="other">%1$s просить %2$d вашого дня</item>
+    </plurals>
+    <string name="day_swap_day_to_you">%1$s → вам</string>
 </resources>

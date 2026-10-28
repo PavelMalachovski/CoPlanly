@@ -10,4 +10,5 @@
     <string name="custody_child_follow_family">Снова следовать семейному графику</string>
     <string name="custody_diff_child_schedule_changed">Меняется и собственный график ребёнка.</string>
     <string name="home_child_with_parent_today">Сегодня %1$s и %2$s вместе</string>
+    <string name="home_child_with_parent_today_you">Сегодня %1$s с вами</string>
 </resources>

@@ -154,6 +154,23 @@ class ParentColorsTest {
     }
 
     @Test
+    fun `a day number reads at AA on a chosen swap day's hatch`() {
+        // A day chosen for a swap is hatched in the wash of whom it would go to, at the custody
+        // alpha, over the wash of whom it is with now (day swap design, 28 October 2026). A waiting
+        // day uses the proposal alpha, which the test above already holds.
+        forEveryWash { colour, dark, base, wash ->
+            presetColours.forEach { receiver ->
+                val hatched = receiver.washIn(dark)
+                    .copy(alpha = CoPlanlyColors.custodyTintAlpha(dark))
+                    .compositeOver(wash)
+                val ratio = ParentColors.contrastRatio(onSurface(dark), hatched)
+                val where = "${receiver.storedCode} over ${colour.storedCode} ${theme(dark)} $base"
+                assertTrue(ratio >= AA_NORMAL_TEXT, "$where: $ratio")
+            }
+        }
+    }
+
+    @Test
     fun `a holiday's day number reads at AA on the plain surface and the weekend grey`() {
         surfaces(dark = false).filter { (name, _) -> name != "surfaceContainer" }.forEach { (name, surface) ->
             val ratio = ParentColors.contrastRatio(CoPlanlyColors.HolidayRed, surface)

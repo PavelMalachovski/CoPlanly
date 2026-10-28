@@ -19,6 +19,7 @@ import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
+import com.coparently.app.utils.swapDateList
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,6 +33,7 @@ import org.junit.runner.RunWith
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Currency
 import java.util.Locale
@@ -166,6 +168,56 @@ class PushNotificationTest {
 
         assertNull(PushNotifier(appContext).receive(data, SIGNED_IN))
         assertNothingPosted()
+    }
+
+    @Test
+    fun aSwapOfferNamingItsDays_saysWhoOffersWhich_inEnglishAndInGerman() {
+        val toYou = listOf(LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 7))
+        val toSender = listOf(LocalDate.of(2026, 11, 14))
+        val base = payload(PushPayload.DAY_SWAP_GROUP_OFFERED) - PushPayload.ANSWER_BY
+        val gives = base + (PushPayload.DATES_TO_YOU to "2026-11-06,2026-11-07")
+        val asks = base + (PushPayload.DATES_TO_SENDER to "2026-11-14")
+        val both = gives + asks
+        for ((tag, context) in listOf("en" to localized("en"), "de" to localized("de"))) {
+            val locale = context.resources.configuration.locales[0]
+            val days = { dates: List<LocalDate> -> swapDateList(dates, locale) }
+
+            val offered = postAndRead(context, gives)
+            assertEquals(
+                "gives title ($tag)",
+                context.resources.getQuantityString(R.plurals.push_day_swap_gives_title, 2, ACTOR_NAME, 2),
+                offered.title
+            )
+            assertEquals(
+                "gives body ($tag)",
+                context.getString(R.string.push_day_swap_gives_body, days(toYou)),
+                offered.text
+            )
+
+            val asked = postAndRead(context, asks)
+            assertEquals(
+                "asks title ($tag)",
+                context.resources.getQuantityString(R.plurals.push_day_swap_asks_title, 1, ACTOR_NAME, 1),
+                asked.title
+            )
+            assertEquals(
+                "asks body ($tag)",
+                context.getString(R.string.push_day_swap_asks_body, days(toSender), ACTOR_NAME),
+                asked.text
+            )
+
+            val swapped = postAndRead(context, both)
+            assertEquals(
+                "both title ($tag)",
+                context.getString(R.string.push_day_swap_both_title, ACTOR_NAME),
+                swapped.title
+            )
+            assertEquals(
+                "both body ($tag)",
+                context.getString(R.string.push_day_swap_both_body, days(toYou), ACTOR_NAME, days(toSender)),
+                swapped.text
+            )
+        }
     }
 
     @Test

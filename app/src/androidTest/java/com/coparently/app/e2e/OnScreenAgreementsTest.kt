@@ -31,7 +31,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import com.coparently.app.utils.unbreakableDate
+import com.coparently.app.utils.swapDateList
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -47,7 +47,6 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -398,13 +397,9 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         return hasAnyAncestor(isDialog()) and hasText(sentence.substringBefore(SHARES_MARK), substring = true)
     }
 
-    /** Home's swap pop-up for one day offered by Bob, worded and dated as `AwaitingDialogs` words it. */
+    /** Home's swap pop-up for one day offered by Bob: the day's chip, dated as `SwapSideGroup` dates it. */
     private fun swapDialogFor(date: LocalDate): SemanticsMatcher = hasAnyAncestor(isDialog()) and hasText(
-        string(
-            R.string.home_dialog_swap_message,
-            bob.name,
-            unbreakableDate(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)))
-        )
+        swapDateList(listOf(date), Locale.getDefault())
     )
 
     private companion object {

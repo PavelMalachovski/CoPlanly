@@ -17,6 +17,15 @@
         <item quantity="many">Передача через %2$d дней, дальше — %1$s</item>
         <item quantity="other">Передача через %2$d дня, дальше — %1$s</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Передача сегодня, дальше — у вас</string>
+    <string name="home_handover_hero_tomorrow_you">Передача завтра, дальше — у вас</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">Передача через %1$d день, дальше — у вас</item>
+        <item quantity="few">Передача через %1$d дня, дальше — у вас</item>
+        <item quantity="many">Передача через %1$d дней, дальше — у вас</item>
+        <item quantity="other">Передача через %1$d дня, дальше — у вас</item>
+    </plurals>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d новое</item>
@@ -58,24 +67,11 @@
     <!-- No full stop after the date: FormatStyle.FULL ends it with "г.", and a sentence ending in
          an abbreviation takes no second period (it read "2026 г.." — docs/AUDIT-2026-10-design.md
          D-5). The colon keeps the nominative weekday the formatter produces grammatical. -->
-    <string name="home_dialog_swap_message">%1$s предлагает поменяться днём: %2$s</string>
     <string name="home_dialog_requests_title">Запросы</string>
     <string name="home_dialog_requests_message">Второй родитель ждёт вашего ответа на запросы.</string>
     <string name="home_dialog_requests_message_named">%1$s ждёт вашего ответа на запросы.</string>
     <string name="home_dialog_later">Позже</string>
     <string name="home_dialog_review">Посмотреть</string>
-    <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s предлагает поменяться %1$d днём: %3$s – %4$s</item>
-        <item quantity="few">%2$s предлагает поменяться %1$d днями: %3$s – %4$s</item>
-        <item quantity="many">%2$s предлагает поменяться %1$d днями: %3$s – %4$s</item>
-        <item quantity="other">%2$s предлагает поменяться %1$d днями: %3$s – %4$s</item>
-    </plurals>
-    <string name="home_dialog_swap_message_days_apart">%1$s предлагает поменяться этими днями: %2$s.</string>
-    <string name="home_dialog_swap_goes_to_day">Если вы согласитесь, %1$s получает этот день.</string>
-    <string name="home_dialog_swap_goes_to_days">Если вы согласитесь, %1$s получает эти дни.</string>
-    <string name="home_dialog_swap_goes_to_you_day">Если вы согласитесь, этот день будет вашим.</string>
-    <string name="home_dialog_swap_goes_to_you_days">Если вы согласитесь, эти дни будут вашими.</string>
-    <string name="home_dialog_swap_goes_each_way">Если вы согласитесь, каждый день перейдёт к другому родителю.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Добавить событие</string>

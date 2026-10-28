@@ -13,6 +13,7 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import java.time.LocalDate
 
 /**
@@ -73,8 +74,13 @@ internal fun DaySwapStrip(
     modifier: Modifier = Modifier
 ) {
     val text = when (state) {
-        is DaySwapStripState.OfferedByMe ->
+        // Which way the day goes, said as the parent who sent it would (board SW-4): a day they
+        // asked for, or a day they offered.
+        is DaySwapStripState.OfferedByMe -> if (parentNames.isReader(state.toParent)) {
+            stringResource(R.string.day_swap_strip_asked_for, parentNames.coParentLabel())
+        } else {
             stringResource(R.string.day_swap_strip_offered_by_you, parentNames.labelFor(state.toParent))
+        }
         is DaySwapStripState.OfferedToMe -> if (parentNames.isReader(state.toParent)) {
             stringResource(R.string.day_swap_strip_offered_to_reader, parentNames.labelForUid(state.byUid))
         } else {

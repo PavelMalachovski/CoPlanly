@@ -10,4 +10,5 @@
     <string name="custody_child_follow_family">Wieder dem Familienplan folgen</string>
     <string name="custody_diff_child_schedule_changed">Auch der eigene Plan eines Kindes ändert sich.</string>
     <string name="home_child_with_parent_today">%1$s ist heute bei %2$s</string>
+    <string name="home_child_with_parent_today_you">%1$s ist heute bei dir</string>
 </resources>

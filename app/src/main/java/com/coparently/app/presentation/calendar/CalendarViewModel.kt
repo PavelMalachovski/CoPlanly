@@ -8,6 +8,7 @@ import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PartialSwapRun
+import com.coparently.app.data.repository.SwapOfferer
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.CustodyChangeAnnouncement
 import com.coparently.app.domain.custody.CustodyProposal
@@ -47,6 +48,15 @@ import javax.inject.Inject
 
 /** Keeps the shared flows warm across brief unsubscriptions (config changes). */
 private const val HANDOVER_STOP_TIMEOUT_MS = 5_000L
+
+/**
+ * An offer that reached the server (day swap design, 28 October 2026), so the screen can say it
+ * went and offer to withdraw exactly what was sent.
+ *
+ * @property groupId The id every day of the offer carries.
+ * @property dayCount How many days were offered.
+ */
+data class SwapSent(val groupId: String, val dayCount: Int)
 
 /**
  * Why offering a one-off day swap did not work.
@@ -159,6 +169,10 @@ class CalendarViewModel @Inject constructor(
      */
     private val _swapError = MutableStateFlow<SwapError?>(null)
     val swapError: StateFlow<SwapError?> = _swapError.asStateFlow()
+
+    /** The offer that last reached the server, until the screen has said so ([clearSwapSent]). */
+    private val _swapSent = MutableStateFlow<SwapSent?>(null)
+    val swapSent: StateFlow<SwapSent?> = _swapSent.asStateFlow()
 
     private val _custodyModel = MutableStateFlow<CustodyModel?>(null)
     val custodyModel: StateFlow<CustodyModel?> = _custodyModel.asStateFlow()
@@ -339,8 +353,9 @@ class CalendarViewModel @Inject constructor(
      */
     fun offerDaySwap(date: LocalDate, toParent: String, note: String? = null, answerBy: AnswerByPick? = null) {
         viewModelScope.launch {
-            val myUid = parents.value.me?.uid
-            if (myUid == null) {
+            val me = parents.value.me
+            val myUid = me?.uid
+            if (me == null || myUid == null) {
                 _swapError.value = SwapError.NotReady
                 return@launch
             }
@@ -359,8 +374,9 @@ class CalendarViewModel @Inject constructor(
                         groupId = groupId
                     )
                 },
-                answerBy = answerBy
-            ).onFailure { _swapError.value = SwapError.Refused }
+                answerBy = answerBy,
+                offerer = SwapOfferer(me.slot, me.name)
+            ).onSuccess { _swapSent.value = SwapSent(groupId, 1) }.onFailure { _swapError.value = SwapError.Refused }
         }
     }
 
@@ -389,8 +405,9 @@ class CalendarViewModel @Inject constructor(
         answerBy: AnswerByPick? = null
     ) {
         viewModelScope.launch {
-            val myUid = parents.value.me?.uid
-            if (myUid == null) {
+            val me = parents.value.me
+            val myUid = me?.uid
+            if (me == null || myUid == null) {
                 _swapError.value = SwapError.NotReady
                 return@launch
             }
@@ -415,8 +432,9 @@ class CalendarViewModel @Inject constructor(
                         note = note
                     )
                 },
-                answerBy = answerBy
-            ).onFailure { cause ->
+                answerBy = answerBy,
+                offerer = SwapOfferer(me.slot, me.name)
+            ).onSuccess { _swapSent.value = SwapSent(groupId, targets.size) }.onFailure { cause ->
                 _swapError.value = if (cause is PartialSwapRun) {
                     SwapError.Partial(cause.written, cause.total)
                 } else {
@@ -424,6 +442,11 @@ class CalendarViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** Forgets [swapSent], once the screen has said the offer went. */
+    fun clearSwapSent() {
+        _swapSent.value = null
     }
 
     /** Clears whatever [swapError] is showing, once the screen has shown it. */

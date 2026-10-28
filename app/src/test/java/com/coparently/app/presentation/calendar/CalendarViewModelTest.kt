@@ -3,6 +3,7 @@ package com.coparently.app.presentation.calendar
 import com.coparently.app.data.local.dao.CustodyScheduleDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.SwapOfferer
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
 import com.coparently.app.domain.custody.DayOverride
@@ -103,7 +104,7 @@ class CalendarViewModelTest {
         val pick = AnswerByPick.Preset(AnswerByPreset.WEEK)
         val date = LocalDate.of(2026, 11, 20)
         val transform = slot<(Map<String, DayOverride>) -> Result<Map<String, DayOverride>>>()
-        coEvery { custodyModelRepository.applyDayOverrides(any(), capture(transform), any()) } returns
+        coEvery { custodyModelRepository.applyDayOverrides(any(), capture(transform), any(), any()) } returns
             Result.success(emptyMap())
         val signedIn = calendarViewModel(testParentsSource(me = alice))
         backgroundScope.launch { signedIn.parents.collect {} }
@@ -112,7 +113,7 @@ class CalendarViewModelTest {
         signedIn.offerDaySwap(date, toParent = "dad", answerBy = pick)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { custodyModelRepository.applyDayOverrides("2026-11-20", any(), pick) }
+        coVerify(exactly = 1) { custodyModelRepository.applyDayOverrides("2026-11-20", any(), pick, any()) }
         // A group of one: the id its clock is named by is on the entry the transform writes.
         val offered = transform.captured(emptyMap()).getOrThrow().getValue("2026-11-20")
         assertNotNull(offered.groupId)
@@ -124,7 +125,7 @@ class CalendarViewModelTest {
     @Test
     fun `a run of days passes the deadline on, once for the whole group`() = runTest {
         val pick = AnswerByPick.Preset(AnswerByPreset.TOMORROW)
-        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) } returns
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) } returns
             Result.success(emptyMap())
         val signedIn = calendarViewModel(testParentsSource(me = alice))
         backgroundScope.launch { signedIn.parents.collect {} }
@@ -135,8 +136,43 @@ class CalendarViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
-            custodyModelRepository.applyDayOverridesForDates(listOf("2026-11-20", "2026-11-21"), any(), pick)
+            custodyModelRepository.applyDayOverridesForDates(listOf("2026-11-20", "2026-11-21"), any(), pick, any())
         }
+    }
+
+    @Test
+    fun `an offer that reached the server is said to have gone, naming its sender`() = runTest {
+        val offerer = slot<SwapOfferer>()
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), capture(offerer)) } returns
+            Result.success(emptyMap())
+        val signedIn = calendarViewModel(testParentsSource(me = alice))
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+        val first = LocalDate.of(2026, 11, 20)
+
+        signedIn.offerDaySwapForDates(listOf(first, first.plusDays(1), first.plusDays(2)), toParentFor = { "dad" })
+        advanceUntilIdle()
+
+        assertEquals(SwapOfferer(slot = "mom", name = "Alice"), offerer.captured)
+        assertEquals(3, signedIn.swapSent.value?.dayCount)
+        assertNotNull(signedIn.swapSent.value?.groupId)
+        signedIn.clearSwapSent()
+        assertNull(signedIn.swapSent.value)
+    }
+
+    @Test
+    fun `a refused offer is not said to have gone`() = runTest {
+        coEvery { custodyModelRepository.applyDayOverrides(any(), any(), any(), any()) } returns
+            Result.failure(IllegalStateException("refused"))
+        val signedIn = calendarViewModel(testParentsSource(me = alice))
+        backgroundScope.launch { signedIn.parents.collect {} }
+        signedIn.parents.first { it.me != null }
+
+        signedIn.offerDaySwap(LocalDate.of(2026, 11, 20), toParent = "dad")
+        advanceUntilIdle()
+
+        assertNull(signedIn.swapSent.value)
+        assertEquals(SwapError.Refused, signedIn.swapError.value)
     }
 
     @Test

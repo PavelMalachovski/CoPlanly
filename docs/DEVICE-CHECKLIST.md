@@ -1506,6 +1506,41 @@ sticker cases). What is left is what the phones draw and a real pairing of four 
   `presentation/chat/SettleUpPayment.kt`, `presentation/support/`, `data/support/`,
   `data/family/KnownFamilies.kt`, `presentation/common/ParentsSource.kt`.
 
+### 3.32 Day swaps understood the first time · 2P, 1P for the grid
+
+The owner's day-swap design (CLAUDE.md design refresh item 23). Pinned by `SwapSidesTest`,
+`SwapTapTest`, `SwapMarkTest`, `SwapPushTest`, `SwapPushWordingTest`, `DaySwapGroupWaitingTest`,
+`CalendarViewModelTest`, `ParentColorsTest`'s hatch case, the rules suite's swap-dates bounds,
+`TwoParentCustodyTest` (the push's fields read back) and `PushNotificationTest` (each direction's
+words, English and German). What is left is the gesture on glass and a real push on a locked screen.
+
+- [ ] **The way in.** Month view, paired: the "⇄" at the end of the legend row; a long press on it
+      says "Swap days". Tapping it opens "Choose days to swap" with nothing chosen.
+- [ ] **Choosing across months.** Pick the 30th, tap the arrow to the next month, pick the 2nd: both
+      stay chosen; a tap on a greyed day of the next month at the end of the grid pages there and
+      chooses it, and never opens Day view. Rotate the phone: the days stay chosen.
+- [ ] **Which way, before sending.** Each chosen day shows stripes in the colour of whom it goes to
+      and "→ {initial}" or "→ you"; the bar lists one line per way; **Next** opens "Swap with {name}"
+      with "You give {name}", "You take" and the month as it would look. **Change days** goes back
+      with the days kept.
+- [ ] **After sending** (2P). "Sent to {name}…" with **Withdraw**; the days on both phones carry the
+      dashed mark and the legend says "Waiting for an answer"; Day view says "You offered this day
+      to {name}" or "You asked {name} for this day".
+- [ ] **The push** (2P, locked screen, English and Russian). An offer of two of your days reads
+      "{name} offers you 2 days" with the dates; asking for one reads "{name} asks for 1 of your days";
+      both ways reads "{name} proposes a day swap — You: … {name}: …". A co-parent on an older build
+      still gets "Your co-parent proposes swapping …".
+- [ ] **Answering** (2P). The card and Home's pop-up say who offers which way, quote the note, and
+      answer with **Decline** / **Accept swap**; **Answer day by day** shows Yes/No per day; send one
+      day only: the card then shows only the days still waiting.
+- [ ] **Home says "you".** A handover to you reads "Handover to you today" (RU "Передача сегодня,
+      дальше — у вас"); with two children apart, the one with you reads "… is with you today".
+- **If it fails:** `presentation/calendar/CalendarScreen.kt`, `SwapTap.kt`, `SwapMark*.kt`,
+  `SwapSelectionChrome.kt`, `components/DaySwapSelectionBar.kt`, `components/DaySwapSheet.kt`,
+  `components/SwapDayChips.kt`, `changerequests/DaySwapCard.kt`, `changerequests/SwapOfferContent.kt`,
+  `changerequests/SwapDayAnswers.kt`, `home/AwaitingDialogs.kt`, `data/repository/SwapPush.kt`,
+  `data/remote/firebase/SwapPushWording.kt`, `firestore.rules` (`datesToYou`, `datesToSender`).
+
 ---
 
 ## 4. Release-build checks

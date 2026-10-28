@@ -6,10 +6,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -18,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -28,9 +25,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -46,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -56,7 +50,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -66,17 +59,22 @@ import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.SwapSides
+import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
+import com.coparently.app.presentation.calendar.components.DaySwapSelectionBar
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.DaySwapStrip
 import com.coparently.app.presentation.calendar.components.DaySwapStripActions
 import com.coparently.app.presentation.calendar.components.DaySwapStripState
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
+import com.coparently.app.presentation.calendar.components.SwapSheetActions
+import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
@@ -91,7 +89,6 @@ import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -257,14 +254,15 @@ fun CalendarScreen(
     // id alone opened the first one on screen and showed its date instead of the tapped one's.
     var previewEventStart by remember { mutableStateOf<LocalDateTime?>(null) }
 
-    // Day-swap selection: a long-press picks a day, further taps pick or unpick single days (any
-    // days, mine to give and theirs to take — `SwapSelection`), and the sheet opens when the
-    // parent commits. Screen state rather than ViewModel state for the same reason
-    // `previewEventId` is: it lives and dies with this grid, and surviving process death would
-    // restore a selection over a calendar the user has since paged away from.
-    // Plain `remember`, like `previewEventId` above: a half-made selection is transient, and
-    // restoring one over a grid the user has since paged away from would be worse than losing it.
-    var swapSelection by remember { mutableStateOf(emptySet<LocalDate>()) }
+    // Day-swap selection: the legend's ⇄ button or a long-press opens it, taps pick or unpick
+    // single days (any days, mine to give and theirs to take — `SwapSelection`), and the sheet
+    // opens when the parent commits. Screen state rather than ViewModel state: it lives and dies
+    // with this grid. Saveable since the day swap design (28 October 2026): the selection now
+    // outlives paging by design — a parent picks the 30th, pages, and picks the 2nd — so a
+    // rotation mid-way must not lose it. `selectingSwap` is its own flag because the button
+    // opens the mode with nothing chosen yet.
+    var selectingSwap by rememberSaveable { mutableStateOf(false) }
+    var swapSelection by rememberSaveable(stateSaver = SwapSelectionSaver) { mutableStateOf(emptySet<LocalDate>()) }
     // The day a drag started on, and what was picked before it. A drag must redraw its run from
     // where the finger went down to where it is now, including *shrinking* it when the finger
     // comes back — which the set alone cannot say.
@@ -276,6 +274,7 @@ fun CalendarScreen(
     // long-press entirely rather than opening a sheet that would have to apologise.
     val offerSwapDay: ((LocalDate) -> Unit)? = parents.coParent?.let {
         fun(date: LocalDate) {
+            selectingSwap = true
             swapAnchor = date
             swapBeforeDrag = swapSelection - date
             swapSelection = SwapSelection.toggled(swapSelection, date)
@@ -289,7 +288,25 @@ fun CalendarScreen(
             }
         }
     }
-    var swapSheetOpen by remember { mutableStateOf(false) }
+    // Saveable with the selection it reviews, so a rotation keeps the sheet rather than leaving its
+    // day marked on the grid with nothing open (final review #5).
+    var swapSheetOpen by rememberSaveable { mutableStateOf(false) }
+    fun endSwapSelection() {
+        selectingSwap = false
+        swapSelection = emptySet()
+        swapAnchor = null
+    }
+    // A tap while choosing (`SwapTap`): a borrowed day pages to its month and is chosen there.
+    val tapSwapDay: (LocalDate) -> Unit = { date ->
+        when (val tap = swapTapFor(date, displayedMonth, selecting = true)) {
+            is SwapTap.Toggle -> swapSelection = SwapSelection.toggled(swapSelection, tap.date)
+            is SwapTap.PageAndToggle -> {
+                calendarViewModel.showMonth(tap.month)
+                swapSelection = SwapSelection.toggled(swapSelection, tap.date)
+            }
+            is SwapTap.OpenDay -> Unit
+        }
+    }
     // Day view's visible "Swap this day" (D-10): one day, straight to the sheet. The long-press
     // on a month cell had been the only way to offer a day.
     val offerDayFromDayView: ((LocalDate) -> Unit)? = offerSwapDay?.let {
@@ -374,13 +391,26 @@ fun CalendarScreen(
     // An offer past its deadline (phase 3a) waits on nobody's answer, so its days lose the mark on
     // both phones until a last chance brings it back.
     val unansweredSwapDates = (inboxRequests as? RequestsState.Ready)?.inbox?.unansweredSwapDates.orEmpty()
-    val pendingSwapDates: Set<LocalDate> = remember(dayOverrides, unansweredSwapDates) {
+    val pendingSwapTo: Map<LocalDate, String> = remember(dayOverrides, unansweredSwapDates) {
         dayOverrides
             .filterValues { it.isPending }
-            .keys
-            .mapNotNull { iso -> runCatching { LocalDate.parse(iso) }.getOrNull() }
-            .toSet() - unansweredSwapDates
+            .mapNotNull { (iso, offer) ->
+                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { it to offer.toParent }
+            }
+            .toMap() - unansweredSwapDates
     }
+    // Whom each chosen or waiting day would go to, drawn on the grid (`SwapMark`).
+    // A child's own band (FAM-4) is not the schedule a swap moves, and its cells take no swap tap:
+    // choosing ends when the grid stops following the family (final review #2).
+    LaunchedEffect(grid.followsFamily) {
+        if (!grid.followsFamily && selectingSwap) endSwapSelection()
+    }
+    // A chosen day is marked only while it is being chosen or reviewed (final review #5).
+    val swapMarksShown = swapMarks(
+        selection = if (selectingSwap || swapSheetOpen) swapSelection else emptySet(),
+        holderOf = getCustody,
+        pendingTo = pendingSwapTo
+    )
 
     // The dates an accepted swap decides. `getCustody` already answers whose day each one is;
     // this set only tells the grid the answer came from a swap, so the cell (and the one after
@@ -569,7 +599,7 @@ fun CalendarScreen(
         if (tabTaps != answeredTabTaps) {
             answeredTabTaps = tabTaps
             dayOpenedFromMonth = false
-            swapSelection = emptySet()
+            endSwapSelection()
             calendarViewModel.setViewMode(CalendarViewMode.MONTH)
             calendarViewModel.showMonth(YearMonth.now())
         }
@@ -582,18 +612,27 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            CalendarHeader(
-                selectedDate = anchorDate,
-                viewMode = viewMode,
-                onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
-                onNavigateToToday = { calendarViewModel.showMonth(YearMonth.now()) },
-                onJumpToDate = { showDatePicker = true },
-                onFiltersClick = { showTypeFilters = true },
-                filtersActive = parentFilter != ParentFilter.BOTH ||
-                    hiddenEventTypes.isNotEmpty() ||
-                    !showHolidays,
-                onSettingsClick = onSettingsClick
-            )
+            if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
+                SwapSelectionHeader(
+                    month = displayedMonth,
+                    onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonths(1)) },
+                    onNextMonth = { calendarViewModel.showMonth(displayedMonth.plusMonths(1)) },
+                    onClose = ::endSwapSelection
+                )
+            } else {
+                CalendarHeader(
+                    selectedDate = anchorDate,
+                    viewMode = viewMode,
+                    onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
+                    onNavigateToToday = { calendarViewModel.showMonth(YearMonth.now()) },
+                    onJumpToDate = { showDatePicker = true },
+                    onFiltersClick = { showTypeFilters = true },
+                    filtersActive = parentFilter != ParentFilter.BOTH ||
+                        hiddenEventTypes.isNotEmpty() ||
+                        !showHolidays,
+                    onSettingsClick = onSettingsClick
+                )
+            }
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -816,6 +855,13 @@ fun CalendarScreen(
                         CustodyLegend(
                             parentNames = parentNames,
                             showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
+                            showPendingSwap = viewMode == CalendarViewMode.MONTH && grid.followsFamily &&
+                                pendingSwapTo.keys.any { YearMonth.from(it) == displayedMonth },
+                            // The visible way into a swap (SW-1): the long press alone was found
+                            // by nobody. Month only, where the grid can show the chosen days.
+                            trailing = offerSwapDay?.takeIf {
+                                viewMode == CalendarViewMode.MONTH && !selectingSwap && grid.followsFamily
+                            }?.let { { SwapDaysButton(onClick = { selectingSwap = true }) } },
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
                                 vertical = dims.paddingSmall / 2
@@ -827,14 +873,12 @@ fun CalendarScreen(
                     // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:
                     // week and day views draw no swap markers at all, so a selection made there would
                     // be invisible.
-                    if (swapSelection.isNotEmpty() && viewMode == CalendarViewMode.MONTH) {
+                    if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
                         DaySwapSelectionBar(
-                            dayCount = swapSelection.size,
-                            onContinue = { swapSheetOpen = true },
-                            onCancel = {
-                                swapSelection = emptySet()
-                                swapAnchor = null
-                            },
+                            sides = SwapSides.of(swapSelection, getCustody, parents.me?.slot.orEmpty()),
+                            parentNames = parentNames,
+                            onNext = { swapSheetOpen = true },
+                            onCancel = ::endSwapSelection,
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
                                 vertical = dims.paddingSmall / 2
@@ -940,13 +984,14 @@ fun CalendarScreen(
                                     getContactWindows = grid.windows,
                                     parentNames = parentNames,
                                     // A child's own band (FAM-4) is not the schedule a swap moves.
-                                    pendingSwapDates = if (grid.followsFamily) pendingSwapDates else emptySet(),
+                                    swapMarks = if (grid.followsFamily) swapMarksShown else emptyMap(),
                                     swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
                                     onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
                                     // A finger that long-pressed and kept moving redraws the run
                                     // from the anchor, so coming back shortens it again.
                                     onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
-                                    swapSelection = swapSelection,
+                                    selectingSwap = selectingSwap && grid.followsFamily,
+                                    onSwapTap = tapSwapDay,
                                     // Selects the day and opens Day view, where an empty hour
                                     // slot creates an event — the owner's walkthrough found the
                                     // select-only tap a dead end: two redesign passes removed
@@ -1024,44 +1069,48 @@ fun CalendarScreen(
         }
     }
 
-    // Day-swap sheet
+    // Day-swap sheet (board SW-3): the chosen days split by way, and the months they fall in.
     if (swapSheetOpen && swapSelection.isNotEmpty()) {
-        val dates = swapSelection.sorted()
-
+        val sides = SwapSides.of(swapSelection, getCustody, parents.me?.slot.orEmpty())
+        val months = remember(sides) {
+            swapMiniMonths(
+                days = sides.offerable.mapNotNull { day -> receiverOf(getCustody(day))?.let { day to it } }.toMap(),
+                familyEvents = emptyList(),
+                custodyFor = getCustody
+            )
+        }
+        // From the grid, closing the sheet goes back to choosing with the days kept; from Day
+        // view's single day there is nothing to go back to.
+        val closeSheet = {
+            swapSheetOpen = false
+            if (!selectingSwap) endSwapSelection()
+        }
         DaySwapSheet(
-            dates = dates,
-            custodyFor = getCustody,
+            offer = SwapSheetOffer(sides, parentNames.coParentLabel(), months),
             parentNames = parentNames,
-            onOffer = { offered, note, answerBy ->
-                if (offered.size == 1) {
-                    // One day keeps the single write, the single chat card and the single push
-                    // type an older co-parent build already understands.
-                    val date = offered.first()
-                    val toParent = if (getCustody(date) == "mom") "dad" else "mom"
-                    calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
-                } else {
-                    calendarViewModel.offerDaySwapForDates(
-                        dates = offered,
-                        toParentFor = { day ->
-                            when (getCustody(day)) {
-                                "mom" -> "dad"
-                                "dad" -> "mom"
-                                else -> null
-                            }
-                        },
-                        note = note,
-                        answerBy = answerBy
-                    )
-                }
-                swapSheetOpen = false
-                swapSelection = emptySet()
-                swapAnchor = null
-            },
-            onDismiss = {
-                swapSheetOpen = false
-                swapSelection = emptySet()
-                swapAnchor = null
-            }
+            actions = SwapSheetActions(
+                onOffer = { offered, note, answerBy ->
+                    if (offered.size == 1) {
+                        // One day keeps the single write, the single chat card and the single
+                        // push type an older co-parent build already understands.
+                        val date = offered.first()
+                        receiverOf(getCustody(date))?.let { toParent ->
+                            calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
+                        }
+                    } else {
+                        calendarViewModel.offerDaySwapForDates(
+                            dates = offered,
+                            toParentFor = { day -> receiverOf(getCustody(day)) },
+                            note = note,
+                            answerBy = answerBy
+                        )
+                    }
+                    swapSheetOpen = false
+                    endSwapSelection()
+                },
+                onCancel = closeSheet,
+                onChangeDays = closeSheet.takeIf { selectingSwap }
+            )
         )
     }
 
@@ -1090,6 +1139,30 @@ fun CalendarScreen(
         }
     }
 
+    // An offer that reached the server is said to have gone (board SW-4), with a way to take back
+    // exactly what was sent: the days of its group as the grid holds them when Withdraw is tapped.
+    val swapSent by calendarViewModel.swapSent.collectAsState()
+    val swapSentMessage = stringResource(R.string.day_swap_sent, parentNames.coParentLabel())
+    val swapWithdrawLabel = stringResource(R.string.change_request_withdraw)
+    // Keyed on the group and cleared only once the snackbar is done: clearing first changed the
+    // key mid-effect, which cancelled the snackbar before anyone could tap Withdraw (final review #1).
+    LaunchedEffect(swapSent?.groupId) {
+        val sent = swapSent ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = swapSentMessage,
+            actionLabel = swapWithdrawLabel,
+            duration = SnackbarDuration.Long
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            val sentDays = dayOverrides.mapNotNull { (iso, offer) ->
+                if (offer.groupId != sent.groupId || !offer.isPending) return@mapNotNull null
+                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, offer) }
+            }.sortedBy { it.date }
+            if (sentDays.isNotEmpty()) changeRequestViewModel.withdrawSwapGroup(DaySwapGroup(sentDays))
+        }
+        calendarViewModel.clearSwapSent()
+    }
+
     // Event type filter sheet
     if (showTypeFilters) {
         EventTypeFilterSheet(
@@ -1108,82 +1181,5 @@ fun CalendarScreen(
             onDismiss = { showTypeFilters = false },
             sheetState = typeFilterSheetState
         )
-    }
-}
-
-/**
- * The contextual bar shown while a multi-day swap is being picked.
- *
- * A temporary bar rather than a change to the calendar header, which the August 2026 design pins
- * to one row (title / Today / Filters / gear). It says how many days are picked — the number the
- * co-parent will be asked about — and offers the only two ways out.
- *
- * @param dayCount How many days are currently selected.
- * @param onContinue Opens the offer sheet.
- * @param onCancel Drops the selection.
- * @param modifier Modifier for the bar.
- */
-@Composable
-private fun DaySwapSelectionBar(
-    dayCount: Int,
-    onContinue: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BackHandler(onBack = onCancel)
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        // The text and the two buttons are stacked, not sharing one row. They shared one until
-        // a device test showed what that costs: the buttons take their label's width, the
-        // weighted text column takes what is left, and "Отменить выбор" plus "Предложить обмен"
-        // leave nothing on a phone — the count wrapped to one letter per line and the bar grew
-        // into a tall ladder of characters with the buttons overlapping across it. English fits
-        // and hid it. Every text here is now single-line and clipped rather than wrapped, so a
-        // longer translation shortens the sentence instead of growing the bar.
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
-            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
-        ) {
-            Text(
-                text = LocalContext.current.resources.getQuantityString(
-                    R.plurals.day_swap_day_count,
-                    dayCount,
-                    dayCount
-                ),
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(R.string.day_swap_select_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onCancel) {
-                    Text(
-                        text = stringResource(R.string.day_swap_selection_cancel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Button(onClick = onContinue) {
-                    Text(
-                        text = stringResource(R.string.day_swap_offer),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
     }
 }

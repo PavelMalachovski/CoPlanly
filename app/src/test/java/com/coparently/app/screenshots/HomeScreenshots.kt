@@ -44,15 +44,18 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
         )
     }
 
-    /** FAM-4: a day the children are with different parents names each child with theirs. */
+    /**
+     * FAM-4: a day the children are with different parents names each child with theirs; the
+     * handover and the child with the reader say "you" (owner request, 28 October 2026).
+     */
     @Test
     fun handoverHeroChildrenApart() = snap("home_handover_hero_children_apart") {
         HandoverHero(
             info = HandoverInfo(
                 date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS),
                 daysUntil = HANDOVER_IN_DAYS,
-                fromParent = "mom",
-                toParent = "dad"
+                fromParent = "dad",
+                toParent = "mom"
             ),
             parentNames = ScreenshotFixtures.parentNames,
             childrenToday = listOf(ChildWithParent("Ema", "mom"), ChildWithParent("Tomáš", "dad"))

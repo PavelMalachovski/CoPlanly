@@ -2,7 +2,9 @@ package com.coparently.app.e2e
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.repository.PatternSubmission
+import com.coparently.app.data.repository.SwapOfferer
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.custody.CustodyWriteKind
@@ -16,6 +18,7 @@ import com.coparently.app.domain.model.CustodyModelType
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -91,6 +94,7 @@ class TwoParentCustodyTest : TwoParentTest() {
         val offered = EmulatorEnvironment.awaitQueuedPush(bob.uid, "day_swap_offered")
         assertEquals(aliceDay, offered["date"])
         assertNull("a single day carries no count", offered["dayCount"])
+        assertSwapDates(offered, mapOf(aliceDay to otherSlotOn(agreed, aliceDay)), to = bob, from = alice)
         assertEquals(alice.uid, awaitOverride(bob, aliceDay) { it.isPending }.requestedBy)
 
         refuseSelfAcceptance(aliceDay)
@@ -152,6 +156,7 @@ class TwoParentCustodyTest : TwoParentTest() {
         val offered = EmulatorEnvironment.awaitQueuedPush(bob.uid, "day_swap_group_offered")
         assertEquals(aliceRun.first(), offered["date"])
         assertEquals(ALICE_RUN_DAYS.toString(), offered["dayCount"])
+        assertSwapDates(offered, aliceRun.associateWith { otherSlotOn(agreed, it) }, to = bob, from = alice)
         val groupIds = aliceRun.map { day -> awaitOverride(bob, day) { it.isPending }.groupId }.toSet()
         assertEquals("one run is one group", 1, groupIds.size)
         answerDays(bob, aliceRun, accept = false).getOrThrow()
@@ -279,13 +284,16 @@ class TwoParentCustodyTest : TwoParentTest() {
     ): Result<Map<String, DayOverride>> {
         val atIso = LocalDateTime.now().toString()
         val groupId = UUID.randomUUID().toString()
+        // Who offers, as `CalendarViewModel` passes it: the push names them and each day's way.
+        val offerer = SwapOfferer(slotOf(parent), parent.name)
         if (toSlotByDate.size == 1) {
             val (date, toSlot) = toSlotByDate.entries.single()
             return parent.custodyRepository.applyDayOverrides(
                 date = date,
                 transform = { current ->
                     DayOverrideTransition.offer(current, date, toSlot, parent.uid, atIso, groupId = groupId)
-                }
+                },
+                offerer = offerer
             )
         }
         return parent.custodyRepository.applyDayOverridesForDates(
@@ -298,8 +306,31 @@ class TwoParentCustodyTest : TwoParentTest() {
                     atIso = atIso,
                     groupId = groupId
                 )
-            }
+            },
+            offerer = offerer
         )
+    }
+
+    /** [parent]'s slot as the server assigned it at pairing. */
+    private suspend fun slotOf(parent: EmulatorParent): String =
+        requireNotNull(parent.firestore.collection("users").document(parent.uid).get().await().getString("role"))
+
+    /**
+     * The offer's push names [from] and splits [toSlotByDate] by way, from [to]'s side: the days that
+     * would go to them in `datesToYou`, the rest in `datesToSender` (day swap design, 28 October 2026).
+     */
+    private suspend fun assertSwapDates(
+        push: Map<*, *>,
+        toSlotByDate: Map<String, String>,
+        to: EmulatorParent,
+        from: EmulatorParent
+    ) {
+        val readerSlot = slotOf(to)
+        val toReader = toSlotByDate.filterValues { it == readerSlot }.keys.sorted()
+        val toSender = toSlotByDate.filterValues { it != readerSlot }.keys.sorted()
+        assertEquals(toReader.joinToString(",").ifEmpty { null }, push[PushPayload.DATES_TO_YOU])
+        assertEquals(toSender.joinToString(",").ifEmpty { null }, push[PushPayload.DATES_TO_SENDER])
+        assertEquals(from.name, push[PushPayload.ACTOR])
     }
 
     /**

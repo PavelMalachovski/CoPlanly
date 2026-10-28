@@ -4,8 +4,6 @@
     <string name="day_swap_sheet_title">Diesen Tag tauschen</string>
     <string name="day_swap_currently_with">Dieser Tag gehört gerade %1$s</string>
     <string name="day_swap_would_go_to">Du bietest ihn %1$s an</string>
-    <string name="day_swap_note_label">Notiz (optional)</string>
-    <string name="day_swap_offer">Tausch anbieten</string>
     <string name="day_swap_cancel">Jetzt nicht</string>
     <string name="day_swap_needs_coparent">Verknüpfe zuerst den anderen Elternteil – einen Tausch vereinbart ihr zu zweit.</string>
     <string name="day_swap_error_refused">Der Tausch konnte nicht angeboten werden</string>
@@ -18,8 +16,8 @@
     <string name="day_swap_inbox_waiting">Wartet auf eine Antwort</string>
     <string name="day_swap_accept">Annehmen</string>
     <string name="day_swap_decline">Ablehnen</string>
-    <string name="day_swap_by_day_heading">Oder jeden Tag einzeln beantworten</string>
-    <string name="day_swap_day_to">%1$s, an %2$s</string>
+    <string name="day_swap_by_day_heading">Jeden Tag einzeln beantworten</string>
+    <string name="day_swap_day_to">%1$s → %2$s</string>
     <string name="day_swap_send_answers">Diese Antworten senden</string>
     <string name="day_swap_day_answered">%1$s: %2$s</string>
     <string name="day_swap_strip_offered_by_you">Du hast diesen Tag %1$s angeboten. Die Antwort steht noch aus.</string>
@@ -28,17 +26,7 @@
     <string name="day_swap_strip_agreed">Vereinbarter Tausch: Dieser Tag ist bei %1$s.</string>
     <string name="day_swap_strip_agreed_you">Vereinbarter Tausch: Dieser Tag ist bei dir.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
-    <string name="day_swap_sheet_title_range">Diese Tage tauschen</string>
-    <string name="day_swap_select_hint">Tippe weitere Tage an, um den Tausch zu erweitern</string>
     <string name="day_swap_selection_cancel">Auswahl abbrechen</string>
-    <plurals name="day_swap_day_count">
-        <item quantity="one">%1$d Tag</item>
-        <item quantity="other">%1$d Tage</item>
-    </plurals>
-    <plurals name="day_swap_direction">
-        <item quantity="one">%1$d Tag geht von %2$s an %3$s</item>
-        <item quantity="other">%1$d Tage gehen von %2$s an %3$s</item>
-    </plurals>
     <plurals name="day_swap_skipped_days">
         <item quantity="one">Für %1$d ausgewählten Tag ist keine Betreuung hinterlegt; er bleibt außen vor.</item>
         <item quantity="other">Für %1$d ausgewählte Tage ist keine Betreuung hinterlegt; sie bleiben außen vor.</item>
@@ -67,4 +55,58 @@
         <item quantity="one">Du hast %2$s einen Tausch von %1$d Tag vorgeschlagen</item>
         <item quantity="other">Du hast %2$s einen Tausch von %1$d Tagen vorgeschlagen</item>
     </plurals>
+    <!-- Choosing days to swap (day swap design, 28 October 2026, boards SW-1 and SW-2). -->
+    <string name="day_swap_start">Tage tauschen</string>
+    <string name="day_swap_choose_title">Tage zum Tauschen wählen</string>
+    <string name="day_swap_close_selection">Auswahl beenden</string>
+    <string name="day_swap_previous_month">Vorheriger Monat</string>
+    <string name="day_swap_next_month">Nächster Monat</string>
+    <!-- A month cell's swap mark (day swap design, boards SW-2 and SW-4): whom the day would go to. -->
+    <string name="day_swap_mark_to">→ %1$s</string>
+    <string name="day_swap_mark_to_you">→ dir</string>
+    <string name="day_swap_cell_goes_to">Zum Tausch gewählt, ginge an\u00A0%1$s</string>
+    <string name="day_swap_cell_goes_to_you">Zum Tausch gewählt, käme zu dir</string>
+    <string name="day_swap_cell_waiting_to">Ein Tausch wartet auf Antwort, ginge an\u00A0%1$s</string>
+    <string name="day_swap_cell_waiting_to_you">Ein Tausch wartet auf Antwort, käme zu dir</string>
+    <string name="day_swap_legend_waiting">Wartet auf Antwort</string>
+    <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
+    <string name="day_swap_bar_hint">Tippe auf Tage im Kalender. Jeder geht an den, der ihn nicht hat.</string>
+    <string name="day_swap_next">Weiter</string>
+    <plurals name="day_swap_bar_to">
+        <item quantity="one">%1$s — %2$d Tag: %3$s</item>
+        <item quantity="other">%1$s — %2$d Tage: %3$s</item>
+    </plurals>
+    <plurals name="day_swap_bar_to_you">
+        <item quantity="one">Dir — %1$d Tag: %2$s</item>
+        <item quantity="other">Dir — %1$d Tage: %2$s</item>
+    </plurals>
+    <!-- The review sheet (day swap design, board SW-3). -->
+    <string name="day_swap_sheet_title_with">Tausch mit\u00A0%1$s</string>
+    <string name="day_swap_you_give">Du gibst %1$s</string>
+    <string name="day_swap_you_take">Du nimmst</string>
+    <string name="day_swap_sheet_caption">So sieht es aus, wenn %1$s zustimmt. Bis zur Antwort ändert sich nichts.</string>
+    <string name="day_swap_note_to">Nachricht an\u00A0%1$s (optional)</string>
+    <string name="day_swap_change_days">Tage ändern</string>
+    <string name="day_swap_send_to">An\u00A0%1$s senden</string>
+    <!-- After a swap is sent (day swap design, board SW-4). -->
+    <string name="day_swap_sent">An\u00A0%1$s gesendet. Bis zur Antwort bleiben die Tage, wie sie sind.</string>
+    <string name="day_swap_strip_asked_for">Du hast %1$s um diesen Tag gebeten. Wartet auf Antwort.</string>
+    <!-- Answering a swap (day swap design, board SW-6): the push's own words, the two sides, and the two modes. -->
+    <string name="day_swap_heading_both">%1$s schlägt einen Tagetausch vor</string>
+    <string name="day_swap_side_you">Dir</string>
+    <string name="day_swap_note_from">%1$s schreibt:</string>
+    <string name="day_swap_accept_swap">Tausch annehmen</string>
+    <string name="day_swap_answer_by_day">Tag für Tag antworten</string>
+    <string name="day_swap_yes">Ja</string>
+    <string name="day_swap_no">Nein</string>
+    <string name="day_swap_by_day_back">Zurück</string>
+    <plurals name="day_swap_heading_gives">
+        <item quantity="one">%1$s bietet dir %2$d Tag an</item>
+        <item quantity="other">%1$s bietet dir %2$d Tage an</item>
+    </plurals>
+    <plurals name="day_swap_heading_asks">
+        <item quantity="one">%1$s bittet um %2$d deiner Tage</item>
+        <item quantity="other">%1$s bittet um %2$d deiner Tage</item>
+    </plurals>
+    <string name="day_swap_day_to_you">%1$s → dir</string>
 </resources>

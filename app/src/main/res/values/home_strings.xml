@@ -19,6 +19,13 @@
         <item quantity="one">Handover to %1$s in %2$d day</item>
         <item quantity="other">Handover to %1$s in %2$d days</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Handover to you today</string>
+    <string name="home_handover_hero_tomorrow_you">Handover to you tomorrow</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">Handover to you in %1$d day</item>
+        <item quantity="other">Handover to you in %1$d days</item>
+    </plurals>
 
     <!-- Stat tiles. Both are deep links, so each carries an action caption. -->
     <plurals name="home_stat_unread_count">
@@ -64,24 +71,11 @@
 
     <!-- Parent identity labels. -->
     <string name="home_dialog_swap_title">Day swap</string>
-    <string name="home_dialog_swap_message">%1$s proposes swapping %2$s.</string>
     <string name="home_dialog_requests_title">Requests</string>
     <string name="home_dialog_requests_message">Your co-parent has requests waiting for your answer.</string>
     <string name="home_dialog_requests_message_named">%1$s is waiting for your answer on some requests.</string>
     <string name="home_dialog_later">Later</string>
     <string name="home_dialog_review">Review</string>
-    <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s proposes swapping %1$d day, %3$s.</item>
-        <item quantity="other">%2$s proposes swapping %1$d days, %3$s to %4$s.</item>
-    </plurals>
-    <string name="home_dialog_swap_message_days_apart">%1$s proposes swapping these days: %2$s.</string>
-    <!-- Under a day-swap offer: who has the offered days if it is accepted (second audit — the
-         offer said "changing who has the child" and not to whom). %1$s is that parent's name. -->
-    <string name="home_dialog_swap_goes_to_day">If you accept, %1$s gets the day.</string>
-    <string name="home_dialog_swap_goes_to_days">If you accept, %1$s gets the days.</string>
-    <string name="home_dialog_swap_goes_to_you_day">If you accept, the day is yours.</string>
-    <string name="home_dialog_swap_goes_to_you_days">If you accept, the days are yours.</string>
-    <string name="home_dialog_swap_goes_each_way">If you accept, each day goes to the other parent.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Add event</string>

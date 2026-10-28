@@ -36,7 +36,6 @@
     <string name="calendar_day_desc_outside_month">Вне текущего месяца</string>
     <string name="calendar_day_desc_with_parent">С кем: %1$s</string>
     <string name="calendar_day_desc_handover">Передача. До: %1$s, после: %2$s</string>
-    <string name="calendar_day_desc_swap_pending">Обмен днями ждёт ответа</string>
     <string name="calendar_day_desc_school_vacation">Школьные каникулы</string>
     <string name="calendar_day_desc_proposal_pending">Предложено: %1$s, ещё не согласовано</string>
     <plurals name="calendar_day_desc_events">

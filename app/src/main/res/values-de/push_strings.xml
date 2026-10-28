@@ -91,4 +91,18 @@
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
     <string name="push_request_last_chance_title">Mehr Zeit zum Antworten</string>
     <string name="push_request_last_chance_body">%1$s wartet auf deine Antwort bis %2$s.</string>
+    <!-- A day-swap offer that names its days (day swap design, 28 October 2026): who offers
+         which days. %1$s in a title is the sender, %2$d the days; a body lists the dates. -->
+    <plurals name="push_day_swap_gives_title">
+        <item quantity="one">%1$s bietet dir %2$d Tag an</item>
+        <item quantity="other">%1$s bietet dir %2$d Tage an</item>
+    </plurals>
+    <string name="push_day_swap_gives_body">Bei dir: %1$s.</string>
+    <plurals name="push_day_swap_asks_title">
+        <item quantity="one">%1$s bittet um %2$d deiner Tage</item>
+        <item quantity="other">%1$s bittet um %2$d deiner Tage</item>
+    </plurals>
+    <string name="push_day_swap_asks_body">An\u00A0%2$s: %1$s.</string>
+    <string name="push_day_swap_both_title">%1$s schlägt einen Tagetausch vor</string>
+    <string name="push_day_swap_both_body">Dir: %1$s. %2$s: %3$s.</string>
 </resources>

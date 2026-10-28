@@ -15,12 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
+import com.coparently.app.presentation.calendar.drawSwapMark
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -45,16 +47,38 @@ internal val LEGEND_SWATCH = DpSize(20.dp, 14.dp)
  *
  * @param parentNames Resolves a slot to that parent's name; a slot nobody holds is left out
  * @param showContactWindows Whether the schedule has contact time, so its mark needs explaining
+ * @param showPendingSwap Whether a day on screen waits for a swap's answer, so its dashed mark
+ *   needs explaining (day swap design, board SW-4)
+ * @param trailing Drawn at the row's end, centred on it — the "⇄" that starts a day swap (day swap
+ *   design, board SW-1), or null
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CustodyLegend(
     parentNames: ParentNames,
     showContactWindows: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showPendingSwap: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null
 ) {
     val slots = LEGEND_PARENT_SLOTS.filter { parentNames.isKnown(it) }
     if (slots.isEmpty()) return
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        LegendEntries(slots, parentNames, showContactWindows, showPendingSwap, Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
+/** The legend's entries, wrapping to more lines when they do not fit; see [CustodyLegend]. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LegendEntries(
+    slots: List<String>,
+    parentNames: ParentNames,
+    showContactWindows: Boolean,
+    showPendingSwap: Boolean,
+    modifier: Modifier
+) {
     val first = ParentColors.container(LEGEND_PARENT_SLOTS[0], alpha = ParentColors.custodyTintAlpha)
     val second = ParentColors.container(LEGEND_PARENT_SLOTS[1], alpha = ParentColors.custodyTintAlpha)
     val surface = MaterialTheme.colorScheme.surface
@@ -106,6 +130,18 @@ internal fun CustodyLegend(
                     drawPath(corner, mark)
                 }
             }
+        }
+        if (showPendingSwap) PendingSwapEntry(surface, mark)
+    }
+}
+
+/** The legend's "Waiting for an answer": the dashed edge a cell draws round a day a swap waits on. */
+@Composable
+private fun PendingSwapEntry(surface: Color, mark: Color) {
+    LegendEntry(label = stringResource(R.string.day_swap_legend_waiting)) {
+        Canvas(modifier = Modifier.size(LEGEND_SWATCH)) {
+            drawRect(surface)
+            drawSwapMark(hatch = Color.Transparent, edge = mark, dashed = true)
         }
     }
 }

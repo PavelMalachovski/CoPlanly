@@ -15,6 +15,13 @@
         <item quantity="one">In %2$d Tag Übergabe an\u00A0%1$s</item>
         <item quantity="other">In %2$d Tagen Übergabe an\u00A0%1$s</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Heute Übergabe an dich</string>
+    <string name="home_handover_hero_tomorrow_you">Morgen Übergabe an dich</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">In %1$d Tag Übergabe an dich</item>
+        <item quantity="other">In %1$d Tagen Übergabe an dich</item>
+    </plurals>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d ungelesen</item>
@@ -51,22 +58,11 @@
     <string name="home_activity_withdrawn">Zurückgezogen</string>
 
     <string name="home_dialog_swap_title">Tagestausch</string>
-    <string name="home_dialog_swap_message">%1$s schlägt einen Tagestausch für %2$s vor.</string>
     <string name="home_dialog_requests_title">Anfragen</string>
     <string name="home_dialog_requests_message">Der andere Elternteil hat Anfragen, die auf deine Antwort warten.</string>
     <string name="home_dialog_requests_message_named">%1$s wartet auf deine Antwort auf Anfragen.</string>
     <string name="home_dialog_later">Später</string>
     <string name="home_dialog_review">Prüfen</string>
-    <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s schlägt einen Tausch für %1$d Tag vor: %3$s.</item>
-        <item quantity="other">%2$s schlägt einen Tausch für %1$d Tage vor: %3$s bis %4$s.</item>
-    </plurals>
-    <string name="home_dialog_swap_message_days_apart">%1$s schlägt einen Tausch an diesen Tagen vor: %2$s.</string>
-    <string name="home_dialog_swap_goes_to_day">Wenn du zustimmst, bekommt %1$s den Tag.</string>
-    <string name="home_dialog_swap_goes_to_days">Wenn du zustimmst, bekommt %1$s die Tage.</string>
-    <string name="home_dialog_swap_goes_to_you_day">Wenn du zustimmst, gehört der Tag dir.</string>
-    <string name="home_dialog_swap_goes_to_you_days">Wenn du zustimmst, gehören die Tage dir.</string>
-    <string name="home_dialog_swap_goes_each_way">Wenn du zustimmst, geht jeder Tag an den anderen Elternteil.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Termin hinzufügen</string>

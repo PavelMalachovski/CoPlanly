@@ -162,7 +162,7 @@ object TodayWidgetText {
             },
             handover = model.handover?.let { handover ->
                 WidgetLine(
-                    handoverText(context, handover, names.labelFor(handover.toParent)),
+                    handoverText(context, handover, names),
                     palette.of(handover.toParent)
                 )
             },
@@ -177,13 +177,18 @@ object TodayWidgetText {
         )
     }
 
-    /** The hero's wording: today, tomorrow, or in N days. */
-    private fun handoverText(context: Context, handover: HandoverInfo, to: String): String = when (handover.daysUntil) {
-        0L -> context.getString(R.string.home_handover_hero_today, to)
-        1L -> context.getString(R.string.home_handover_hero_tomorrow, to)
-        else -> {
-            val days = handover.daysUntil.toInt()
-            context.resources.getQuantityString(R.plurals.home_handover_hero_in_days, days, to, days)
+    /** The hero's wording: today, tomorrow, or in N days — to "you" for the reader, as Home says it. */
+    private fun handoverText(context: Context, handover: HandoverInfo, names: ParentNames): String {
+        val days = handover.daysUntil.toInt()
+        val to = names.labelFor(handover.toParent)
+        val toReader = names.isReader(handover.toParent)
+        return when {
+            toReader && handover.daysUntil == 0L -> context.getString(R.string.home_handover_hero_today_you)
+            toReader && handover.daysUntil == 1L -> context.getString(R.string.home_handover_hero_tomorrow_you)
+            toReader -> context.resources.getQuantityString(R.plurals.home_handover_hero_in_days_you, days, days)
+            handover.daysUntil == 0L -> context.getString(R.string.home_handover_hero_today, to)
+            handover.daysUntil == 1L -> context.getString(R.string.home_handover_hero_tomorrow, to)
+            else -> context.resources.getQuantityString(R.plurals.home_handover_hero_in_days, days, to, days)
         }
     }
 

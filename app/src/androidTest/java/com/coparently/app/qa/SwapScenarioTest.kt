@@ -26,7 +26,7 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import com.coparently.app.utils.unbreakableDate
+import com.coparently.app.utils.swapDateList
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -37,8 +37,6 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -108,9 +106,10 @@ class SwapScenarioTest : QaOnScreenTest() {
             openTab(BottomNavDestination.CALENDAR)
             viewMode(R.string.calendar_viewmode_day)
             tap(textButton(R.string.day_swap_sheet_title))
-            waitFor("the swap sheet", textButton(R.string.day_swap_offer))
+            val send = hasText(string(R.string.day_swap_send_to, coParentName)) and hasClickAction()
+            waitFor("the swap sheet", send)
             tap(hasText(string(R.string.answer_by_three_days)) and hasClickAction())
-            tap(textButton(R.string.day_swap_offer))
+            tap(send)
             groupId = runBlocking { awaitCoParentOverride(today) { it.status == DayOverrideStatus.PENDING }.groupId }
                 ?: error("the offer carries no group id")
         }
@@ -288,13 +287,9 @@ class SwapScenarioTest : QaOnScreenTest() {
         result
     }
 
-    /** Home's swap pop-up for [date] offered by the co-parent, worded as `AwaitingDialogs` words it. */
+    /** Home's swap pop-up for [date] offered by the co-parent: the day's chip, dated as `SwapSideGroup` dates it. */
     private fun swapDialogFor(date: LocalDate): SemanticsMatcher = hasAnyAncestor(isDialog()) and hasText(
-        string(
-            R.string.home_dialog_swap_message,
-            coParentName,
-            unbreakableDate(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(Locale.forLanguageTag(variant.language))))
-        )
+        swapDateList(listOf(date), Locale.forLanguageTag(variant.language))
     )
 
     private companion object {

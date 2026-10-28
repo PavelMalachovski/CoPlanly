@@ -136,8 +136,11 @@ jobs:
           # The branch may have moved while this job ran (a push after the request). The files this
           # commit touches are generated, so rebasing onto the newer head is safe; without it the
           # push was refused and the job's whole run was lost.
-          # The branch name reaches the shell through env and quotes, never `${{ }}`: git allows
-          # `$`, `(` and `;` in a name, and this step holds a token that can push.
+          # The branch name reaches the shell through env and quotes, never through an Actions
+          # expression spliced into the script: git allows `$`, `(` and `;` in a name, and this
+          # step holds a token that can push. (Do not write the expression's own braces in this
+          # comment either: GitHub parses them even here, and an empty one made every run of this
+          # workflow fail as a "workflow file issue" from 27 October 2026.)
           git fetch origin "$BRANCH"
           git rebase "origin/$BRANCH"
           git push origin "HEAD:$BRANCH"

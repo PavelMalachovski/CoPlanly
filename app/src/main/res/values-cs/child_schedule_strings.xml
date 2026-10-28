@@ -10,4 +10,5 @@
     <string name="custody_child_follow_family">Znovu se řídit rodinným rozvrhem</string>
     <string name="custody_diff_child_schedule_changed">Mění se i vlastní rozvrh dítěte.</string>
     <string name="home_child_with_parent_today">Dnes jsou spolu %1$s a %2$s</string>
+    <string name="home_child_with_parent_today_you">Dnes je %1$s s vámi</string>
 </resources>

@@ -10,4 +10,5 @@
     <string name="custody_child_follow_family">Follow the family schedule again</string>
     <string name="custody_diff_child_schedule_changed">A child\'s own schedule changes too.</string>
     <string name="home_child_with_parent_today">%1$s is with %2$s today</string>
+    <string name="home_child_with_parent_today_you">%1$s is with you today</string>
 </resources>

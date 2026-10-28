@@ -17,6 +17,15 @@
         <item quantity="many">Za %2$d dne přebírá %1$s</item>
         <item quantity="other">Za %2$d dní přebírá %1$s</item>
     </plurals>
+    <!-- The same headline when the handover is to the reader (owner request, 28 October 2026). -->
+    <string name="home_handover_hero_today_you">Dnes přebíráte vy</string>
+    <string name="home_handover_hero_tomorrow_you">Zítra přebíráte vy</string>
+    <plurals name="home_handover_hero_in_days_you">
+        <item quantity="one">Za %1$d den přebíráte vy</item>
+        <item quantity="few">Za %1$d dny přebíráte vy</item>
+        <item quantity="many">Za %1$d dne přebíráte vy</item>
+        <item quantity="other">Za %1$d dní přebíráte vy</item>
+    </plurals>
 
     <plurals name="home_stat_unread_count">
         <item quantity="one">%1$d nepřečtená</item>
@@ -55,24 +64,11 @@
     <string name="home_activity_withdrawn">Staženo</string>
 
     <string name="home_dialog_swap_title">Výměna dnů</string>
-    <string name="home_dialog_swap_message">%1$s navrhuje výměnu dne: %2$s.</string>
     <string name="home_dialog_requests_title">Žádosti</string>
     <string name="home_dialog_requests_message">Druhý rodič čeká na vaši odpověď na žádosti.</string>
     <string name="home_dialog_requests_message_named">%1$s čeká na vaši odpověď na žádosti.</string>
     <string name="home_dialog_later">Později</string>
     <string name="home_dialog_review">Zkontrolovat</string>
-    <plurals name="home_dialog_swap_message_days">
-        <item quantity="one">%2$s navrhuje výměnu %1$d dne: %3$s.</item>
-        <item quantity="few">%2$s navrhuje výměnu %1$d dnů: %3$s až %4$s.</item>
-        <item quantity="many">%2$s navrhuje výměnu %1$d dne: %3$s až %4$s.</item>
-        <item quantity="other">%2$s navrhuje výměnu %1$d dnů: %3$s až %4$s.</item>
-    </plurals>
-    <string name="home_dialog_swap_message_days_apart">%1$s navrhuje výměnu těchto dnů: %2$s.</string>
-    <string name="home_dialog_swap_goes_to_day">Pokud souhlasíte, %1$s dostane ten den.</string>
-    <string name="home_dialog_swap_goes_to_days">Pokud souhlasíte, %1$s dostane ty dny.</string>
-    <string name="home_dialog_swap_goes_to_you_day">Pokud souhlasíte, ten den připadne vám.</string>
-    <string name="home_dialog_swap_goes_to_you_days">Pokud souhlasíte, ty dny připadnou vám.</string>
-    <string name="home_dialog_swap_goes_each_way">Pokud souhlasíte, každý den připadne druhému rodiči.</string>
 
     <!-- The empty seven-day card's action. -->
     <string name="home_week_empty_action">Přidat událost</string>
