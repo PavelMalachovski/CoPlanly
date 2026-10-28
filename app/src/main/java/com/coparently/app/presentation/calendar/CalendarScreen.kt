@@ -66,6 +66,7 @@ import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.presentation.calendar.components.CalendarHeader
@@ -1037,18 +1038,13 @@ fun CalendarScreen(
                     // One day keeps the single write, the single chat card and the single push
                     // type an older co-parent build already understands.
                     val date = offered.first()
-                    val toParent = if (getCustody(date) == "mom") "dad" else "mom"
-                    calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
+                    receiverOf(getCustody(date))?.let { toParent ->
+                        calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
+                    }
                 } else {
                     calendarViewModel.offerDaySwapForDates(
                         dates = offered,
-                        toParentFor = { day ->
-                            when (getCustody(day)) {
-                                "mom" -> "dad"
-                                "dad" -> "mom"
-                                else -> null
-                            }
-                        },
+                        toParentFor = { day -> receiverOf(getCustody(day)) },
                         note = note,
                         answerBy = answerBy
                     )
