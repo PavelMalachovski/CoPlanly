@@ -282,7 +282,12 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     a pending change request from that co-parent (a query keyed on `requestedTo`, the
     field the rule reads), a schedule proposal or day swap awaiting me (`custody_models/{id}`
     by **id** — `allow get` only, never a query), or a proposed expense split awaiting me
-    (`family_settings/{id}`, by id too; `FamilySignal.SPLIT`, October 2026). Since phase 3a it also reads each other family's
+    (`family_settings/{id}`, by id too; `FamilySignal.SPLIT`, October 2026), and since board SW-7
+    a child support proposal (`support_agreements/{id}`, by id), a professional's access awaiting
+    my consent (`professional_grants`, one query keyed by that family: `familyParents
+    array-contains` me and `familyId ==`, with its composite index) or plan answers awaiting me
+    (`parenting_plans/{id}`, by id) — `SUPPORT`, `PROFESSIONAL`, `PLAN`, through
+    `AgreementSignalSources`. Since phase 3a it also reads each other family's
     request clocks (item 42), so a request past its deadline — no answer, or waiting on the
     proposer's last chance — lights nothing; until they answer, or when they cannot be read, the
     dot is what it was before clocks. Only the selected family is mirrored, so no
@@ -961,7 +966,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 460 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 470 images — the count the committed baselines hold).
   The window is a phone's, 393 × 851 dp, so a component taller than that at 2.0× is cut at the
   window's bottom edge (a Settings group in German, the friend comparison); the screen itself scrolls.
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`
@@ -2432,7 +2437,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     co-parent's feed (`RequestsRow`, `HomeFeed`), and the calendar banner — so the row and the
     banner count from one `RequestInbox`: the row its `count`, the banner `countWithoutProposal`,
     because a waiting custody proposal draws a banner of its own (and a split is about money, not
-    the calendar, so it counts on the row only). Six things not to undo.
+    the calendar, so it counts on the row only). Seven things not to undo.
     - **Swaps and the proposal come from the family's own custody document**, asked for by its id
       (`CustodyModelRepository.observeSharedOf`), and so do the mini months' custody days — never
       from `observeShared` alone, which replays the previous family's document until the next
@@ -2477,6 +2482,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
       `MiniMonth`; the event form says so while the event would wait (`descriptionReachesCoParent`,
       which states `EventAcceptanceTransition.required`'s rule).
 
+    - **Three agreements wait beside the requests** (board SW-7, 28 October 2026; spec
+      `docs/superpowers/specs/2026-10-28-day-swap-ux-and-requests-design.md`, PR 2): the co-parent's
+      child support proposal, a professional's access waiting for this parent's consent, and the
+      parenting plan questions the co-parent answered that this parent has neither answered nor
+      ticked as they read now, or whose tick names an older wording
+      (`ParentingPlanComparison.questionsAwaitingYou`). `FamilyAgreementsSource` reads the three for
+      the family on screen alone, each starting empty and turning empty when its listener fails, so
+      they never hold the inbox back; `RequestInbox.withAgreements` places them in `Waiting.support`,
+      `professionals` and `planQuestions`. They count on Home's row (the plan as one row however many
+      questions) and **never** on the calendar banner; they raise no pop-up, write no history and send
+      no push. Each is a compact row (`AgreementRows.kt`) that opens its own screen — Child support,
+      Professionals, the plan — where it is answered. The sender's own support proposal and a
+      professional they consented to sit under *Waiting for {co-parent}* with **Withdraw request**
+      (`AgreementWithdrawals`: the support store's `clearProposal`, the grant's `revoke`).
 41. **The phone keeps a custody schedule per family** (October 2026, schema 45). Each
     `custody_models` row names its family in `familyId`, which is the id of the family's
     `custody_models` document. `CustodyModelRepository` answers every question from Room for the
