@@ -160,6 +160,24 @@ a day stays and enters selection mode with that day selected.
   mode: one row per day ("Fri 6 Nov → you") with a Yes/No segmented control, "Back" and "Send
   answer". The per-day chips are no longer drawn beside the main buttons.
 - Deadline rules of item 42 (`hidesAnswers`, decline-only) apply to both modes unchanged.
+- **Day by day is a partial answer** (owner decision, 28 October 2026). "Send answer" is enabled
+  once at least one day is marked; the days left unmarked keep waiting. After a partial answer the
+  card, its groups, the mini months and the main buttons show and decide only the days still
+  waiting (`decideSwapDays` already writes one run per answer).
+
+**7. Home says "you" to the reader** (owner request, 28 October 2026). The handover hero's
+headline and the children-today lines name the reader as "you" when the slot is theirs
+(`ParentNames.isReader`), as design item 22 already does for the hero's current line and the week:
+new strings `home_handover_hero_today_you`, `home_handover_hero_tomorrow_you`, plurals
+`home_handover_hero_in_days_you` and `home_child_with_parent_today_you`, in five locales
+(RU "Передача сегодня, дальше — у вас", "Сегодня %1$s с вами").
+
+**Builder decisions settled with the owner.**
+- Swap pushes also carry `actorName` (already an allowed key) so the receiving phone names the
+  proposer without a profile read.
+- `offerDaySwapForDates` returns the offer's group id, so the snackbar's Withdraw withdraws exactly
+  what was sent.
+- The selection bar carries month arrows, so paging while selecting needs no swipe.
 
 ### PR 2 — Requests gather everything (board SW-7)
 
@@ -173,9 +191,20 @@ screen through `RequestsSource` (item 40):
 - **Professional access waiting for this parent's consent**: a `ProfessionalGrant` in
   `WAITING_FOR_YOU` for the family on screen (item 29). Row: "Professional access" — "{role}
   {name} — your consent is needed". Opens Professionals.
-- **Parenting plan**: questions where the co-parent has an answer this parent has neither answered
-  nor agreed to (`ParentingPlanComparison` status `ONLY_THEIRS`). One row for all of them:
-  "Parenting plan" — "{name} answered {n} questions — compare and agree". Opens the plan.
+- **Parenting plan**: questions where the co-parent has an answer and this parent has neither an
+  answer nor an agreement tick (`ParentingPlanComparison` status `ONLY_THEIRS`), and questions both
+  answered whose agreement lapsed because the co-parent edited their answer (status `OPEN` with a
+  stale tick). One row for all of them: "Parenting plan" — "{name} answered {n} questions — compare
+  and agree". Opens the plan.
+
+**The sender's side** (owner decision). The sender's own support proposal and a professional
+invitation still waiting for the co-parent's consent appear under *Waiting for {co-parent}* with
+**Withdraw**, as the split does. History is unchanged.
+
+**The family switcher** (design item 13) lights its dot for the three new kinds waiting in another
+family: new `FamilySignal` kinds and per-family listeners in `OtherFamiliesSignals`, every read by
+document id (`support_agreements/{id}`, `parenting_plans/{id}`, `professional_grants` keyed by
+family), never a query across families.
 
 All three count in `Waiting.count` (Home's row) and are listed in the inbox's *Waiting for your
 answer* section as compact rows that open their own screens; the calendar banner's
