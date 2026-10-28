@@ -69,4 +69,15 @@
         <item quantity="one">%1$s and %2$d more day</item>
         <item quantity="other">%1$s and %2$d more days</item>
     </plurals>
+    <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
+    <string name="request_support_theirs">%1$s proposes %2$s a month, on day %3$d, from %4$s</string>
+    <string name="request_support_mine">You proposed %1$s a month, on day %2$d, from %3$s</string>
+    <string name="request_professional_title">Professional access</string>
+    <string name="request_professional_theirs">%1$s %2$s — your consent is needed</string>
+    <string name="request_professional_mine">%1$s %2$s — waiting for %3$s to consent</string>
+    <string name="request_agreement_withdraw_failed">That could not be withdrawn. Check your connection and try again.</string>
+    <plurals name="request_plan_answered">
+        <item quantity="one">%1$s answered %2$d question — compare and agree</item>
+        <item quantity="other">%1$s answered %2$d questions — compare and agree</item>
+    </plurals>
 </resources>

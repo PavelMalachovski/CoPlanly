@@ -7,6 +7,7 @@ import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.SwapOfferer
+import com.coparently.app.data.requests.AgreementWithdrawals
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -94,7 +95,8 @@ class ChangeRequestViewModel @Inject constructor(
     private val planReferenceSource: PlanReferenceSource,
     private val requestClockActions: RequestClockActions,
     private val requestsSource: RequestsSource,
-    private val familySettingsRepository: FamilySettingsRepository
+    private val familySettingsRepository: FamilySettingsRepository,
+    private val agreementWithdrawals: AgreementWithdrawals
 ) : ViewModel() {
 
     /**
@@ -594,6 +596,31 @@ class ChangeRequestViewModel @Inject constructor(
 
     /** Takes this parent's own proposed split back; the agreed split never moved. */
     fun withdrawSplit() = answerSplit("Withdrawing", familySettingsRepository::withdrawProposal)
+
+    /**
+     * Withdraws this parent's own child support proposal as the inbox drew it (board SW-7) — the
+     * agreement of the family on screen when the inbox was placed, never one read after a switch.
+     * The co-parent's proposal is not this parent's to withdraw, and nothing happens.
+     */
+    fun withdrawSupport() {
+        val ready = requests.value as? RequestsState.Ready ?: return
+        val agreement = ready.agreements.support?.takeIf { it.proposal?.proposedBy == ready.scope.myUid } ?: return
+        withdrawAgreement("child support") { agreementWithdrawals.withdrawSupport(agreement) }
+    }
+
+    /** Ends the professional grant [grantId] this parent consented to and the co-parent has not. */
+    fun withdrawProfessional(grantId: String) {
+        withdrawAgreement("a professional grant") { agreementWithdrawals.withdrawProfessional(grantId) }
+    }
+
+    private fun withdrawAgreement(what: String, write: suspend () -> Boolean) {
+        viewModelScope.launch {
+            if (!write()) {
+                Log.w(TAG, "Withdrawing $what failed")
+                _errorMessage.value = UiText.Res(R.string.request_agreement_withdraw_failed)
+            }
+        }
+    }
 
     /**
      * Writes an answer to the split proposal of the family the inbox drew.

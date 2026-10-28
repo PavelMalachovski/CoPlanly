@@ -61,4 +61,15 @@
         <item quantity="one">%1$s und %2$d weiterer Tag</item>
         <item quantity="other">%1$s und %2$d weitere Tage</item>
     </plurals>
+    <!-- Child support, a professional's access and the parenting plan in the Requests inbox (board SW-7) -->
+    <string name="request_support_theirs">%1$s schlägt %2$s im Monat vor, am %3$d. Tag, ab %4$s</string>
+    <string name="request_support_mine">Sie haben %1$s im Monat vorgeschlagen, am %2$d. Tag, ab %3$s</string>
+    <string name="request_professional_title">Zugang für Fachleute</string>
+    <string name="request_professional_theirs">%1$s %2$s — Ihre Zustimmung wird gebraucht</string>
+    <string name="request_professional_mine">%1$s %2$s — wartet auf die Zustimmung von %3$s</string>
+    <string name="request_agreement_withdraw_failed">Das konnte nicht zurückgezogen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.</string>
+    <plurals name="request_plan_answered">
+        <item quantity="one">%1$s hat %2$d Frage beantwortet — vergleichen und zustimmen</item>
+        <item quantity="other">%1$s hat %2$d Fragen beantwortet — vergleichen und zustimmen</item>
+    </plurals>
 </resources>

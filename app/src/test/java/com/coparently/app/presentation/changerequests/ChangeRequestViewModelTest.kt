@@ -179,7 +179,8 @@ class ChangeRequestViewModelTest {
             familySettingsRepository = familySettingsRepository,
             familyAgreementsSource = agreementsSource
         ),
-        familySettingsRepository = familySettingsRepository
+        familySettingsRepository = familySettingsRepository,
+        agreementWithdrawals = mockk(relaxed = true)
     )
 
     /** The split document of the family Olya shares with Pavel, agreed half each, with [by]'s 35/65 proposal. */

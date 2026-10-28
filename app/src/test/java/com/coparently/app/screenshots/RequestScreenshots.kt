@@ -1,21 +1,33 @@
 package com.coparently.app.screenshots
 
 import android.app.Application
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.events.EventAcceptance
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.domain.support.SupportProposal
+import com.coparently.app.domain.support.SupportTerms
 import com.coparently.app.presentation.calendar.MiniMonthMark
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.changerequests.AwaitingEventActions
 import com.coparently.app.presentation.changerequests.AwaitingEventCard
+import com.coparently.app.presentation.changerequests.PlanRequestRow
+import com.coparently.app.presentation.changerequests.ProfessionalRequestRow
 import com.coparently.app.presentation.changerequests.RequestHistoryGroup
+import com.coparently.app.presentation.changerequests.SupportRequestRow
+import com.coparently.app.presentation.theme.Spacing
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.math.BigDecimal
+import java.time.YearMonth
 
 /**
  * What a parent answers a request with (phase 2): the mini month, the card of an event waiting
@@ -101,7 +113,40 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
     }
 
+    /**
+     * Child support, a professional's access and the plan in the inbox (board SW-7): Pavel's three
+     * as Olya reads them, then her own support proposal and consent, each with Withdraw.
+     */
+    @Test
+    fun agreementRows() = snap("requests_agreements") {
+        val terms = SupportTerms(BigDecimal("3500"), "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth.of(2026, 6))
+        val parents = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID)
+        fun grant(consentBy: String) = ProfessionalGrant(
+            id = "family__pro",
+            familyId = "family",
+            familyParents = parents,
+            proUid = "pro",
+            role = ProfessionalRole.MEDIATOR,
+            name = "Dana Nováková",
+            invitedBy = consentBy,
+            grantedAtMillis = 1L,
+            expiresAtMillis = Long.MAX_VALUE,
+            consents = mapOf(consentBy to 1L)
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            val names = ScreenshotFixtures.parentNames
+            SupportRequestRow(SupportProposal(terms, ScreenshotFixtures.CO_PARENT_UID, 1L), false, names, {}, {})
+            ProfessionalRequestRow(grant(ScreenshotFixtures.CO_PARENT_UID), false, names, {}, {})
+            PlanRequestRow(PLAN_QUESTIONS, names.labelForUid(ScreenshotFixtures.CO_PARENT_UID)) {}
+            SupportRequestRow(SupportProposal(terms, ScreenshotFixtures.MY_UID, 1L), true, names, {}, {})
+            ProfessionalRequestRow(grant(ScreenshotFixtures.MY_UID), true, names, {}, {})
+        }
+    }
+
     companion object {
+        /** How many plan questions Pavel's answers leave waiting. */
+        private const val PLAN_QUESTIONS = 3
+
         /** How far ahead of the fixtures' today the marked day sits — one of Pavel's days. */
         private const val MARKED_DAY_OFFSET = 8L
 

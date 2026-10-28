@@ -96,17 +96,20 @@ import java.time.LocalDate
  *   history row once answered — and scrolled into view; when the event has no request at all, a
  *   snackbar says so once the inbox has loaded.
  * @param openSection A section to scroll to on arrival, or null — Home opens History this way.
+ * @param onOpenAgreement Opens the screen a child support, professional or plan row is answered on.
  * @param viewModel Change-request state
  */
 @Composable
 // One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
-// change an agreed swap. Splitting it for the metric would scatter state the screen owns.
-@Suppress("LongMethod")
+// change an agreed swap. Splitting it for the metric would scatter state the screen owns; the parameters
+// are its three ways out, its two arrival targets and its ViewModel.
+@Suppress("LongMethod", "LongParameterList")
 fun ChangeRequestsScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,
     linkedEventId: String? = null,
     openSection: InboxSection? = null,
+    onOpenAgreement: (AgreementScreen) -> Unit = {},
     viewModel: ChangeRequestViewModel = hiltViewModel()
 ) {
     val state by viewModel.requests.collectAsState()
@@ -125,8 +128,8 @@ fun ChangeRequestsScreen(
         linkedEventId?.let { eventId -> ready?.let { ChangeRequestHighlight.forEvent(it.changeRequests, eventId) } }
     }
     val changingSwap = remember { mutableStateOf<HistoryEntry?>(null) }
-    val answers = remember(viewModel, onOpenEvent) {
-        InboxAnswers.of(viewModel, onOpenEvent) { changingSwap.value = it }
+    val answers = remember(viewModel, onOpenEvent, onOpenAgreement) {
+        InboxAnswers.of(viewModel, InboxOpeners(onOpenEvent, onOpenAgreement)) { changingSwap.value = it }
     }
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -308,7 +311,8 @@ private data class InboxCards(
             is InboxItem.AwaitingEvent -> item.timed
             is InboxItem.Swap -> item.timed
             is InboxItem.Request -> item.timed
-            is InboxItem.Header, is InboxItem.History -> null
+            is InboxItem.Header, is InboxItem.History,
+            is InboxItem.Support, is InboxItem.Professional, is InboxItem.Plan -> null
         } ?: return null
         val clock = timed.clock
         val role = if (clock.proposerUid == scope.myUid) ClockRole.PROPOSER else ClockRole.RESPONDER
@@ -327,6 +331,17 @@ private data class InboxCards(
 }
 
 /**
+ * Where the inbox's cards lead: an event to its editor, an agreement row to its own screen.
+ *
+ * @property openEvent Opens the event with this id.
+ * @property openAgreement Opens the screen a child support, professional or plan row names.
+ */
+internal data class InboxOpeners(
+    val openEvent: (String) -> Unit,
+    val openAgreement: (AgreementScreen) -> Unit
+)
+
+/**
  * How the inbox's cards answer, open and withdraw, and act on a request's clock (phase 3a), bound
  * once to the ViewModel.
  */
@@ -343,6 +358,9 @@ internal data class InboxAnswers(
     val withdrawProposal: () -> Unit,
     val answerSplit: (accept: Boolean) -> Unit,
     val withdrawSplit: () -> Unit,
+    val withdrawSupport: () -> Unit,
+    val withdrawProfessional: (grantId: String) -> Unit,
+    val openAgreement: (AgreementScreen) -> Unit,
     val markSeen: (clockId: String) -> Unit,
     val giveLastChance: (clockId: String) -> Unit,
     val proposeSwapChange: (HistoryEntry) -> Unit
@@ -350,10 +368,10 @@ internal data class InboxAnswers(
     companion object {
         fun of(
             viewModel: ChangeRequestViewModel,
-            onOpenEvent: (String) -> Unit,
+            openers: InboxOpeners,
             onProposeSwapChange: (HistoryEntry) -> Unit
         ) = InboxAnswers(
-            openEvent = onOpenEvent,
+            openEvent = openers.openEvent,
             answerRequest = { id, accept -> if (accept) viewModel.accept(id) else viewModel.decline(id) },
             withdrawRequest = viewModel::cancel,
             answerSwap = viewModel::decideSwapGroup,
@@ -365,6 +383,9 @@ internal data class InboxAnswers(
             withdrawProposal = viewModel::withdrawProposal,
             answerSplit = { accept -> if (accept) viewModel.acceptSplit() else viewModel.declineSplit() },
             withdrawSplit = viewModel::withdrawSplit,
+            withdrawSupport = viewModel::withdrawSupport,
+            withdrawProfessional = viewModel::withdrawProfessional,
+            openAgreement = openers.openAgreement,
             markSeen = viewModel::markSeen,
             giveLastChance = viewModel::giveLastChance,
             proposeSwapChange = onProposeSwapChange
@@ -431,6 +452,7 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             onCancel = { answers.withdrawRequest(item.request.id) },
             isHighlighted = item.request.id == cards.highlightedRequestId
         )
+        is InboxItem.Support, is InboxItem.Professional, is InboxItem.Plan -> AgreementItemRow(item, cards, answers)
         is InboxItem.History -> RequestHistoryGroup(
             entries = item.entries,
             parentNames = cards.parentNames,
@@ -438,6 +460,33 @@ private fun InboxCardContent(item: InboxItem, cards: InboxCards, answers: InboxA
             highlightedKey = cards.highlightedRequestId?.let { "cr_$it" },
             onProposeChange = answers.proposeSwapChange
         )
+    }
+}
+
+/** Child support, a professional's access or the plan (board SW-7): a compact row opening its screen. */
+@Composable
+private fun AgreementItemRow(item: InboxItem, cards: InboxCards, answers: InboxAnswers) {
+    when (item) {
+        is InboxItem.Support -> SupportRequestRow(
+            proposal = item.proposal,
+            mine = item.mine,
+            parentNames = cards.parentNames,
+            onOpen = { answers.openAgreement(AgreementScreen.SUPPORT) },
+            onWithdraw = answers.withdrawSupport
+        )
+        is InboxItem.Professional -> ProfessionalRequestRow(
+            grant = item.grant,
+            mine = item.mine,
+            parentNames = cards.parentNames,
+            onOpen = { answers.openAgreement(AgreementScreen.PROFESSIONALS) },
+            onWithdraw = { answers.withdrawProfessional(item.grant.id) }
+        )
+        is InboxItem.Plan -> PlanRequestRow(
+            questionCount = item.questionCount,
+            coParentName = cards.parentNames.labelForUid(cards.scope.coParentUid),
+            onOpen = { answers.openAgreement(AgreementScreen.PARENTING_PLAN) }
+        )
+        else -> Unit
     }
 }
 

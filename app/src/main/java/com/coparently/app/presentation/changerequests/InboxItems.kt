@@ -11,6 +11,8 @@ import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.domain.support.SupportProposal
 
 /**
  * The inbox's three sections (phase 2, spec §6.2), as the `section` route argument names them.
@@ -31,6 +33,18 @@ enum class InboxSection(val routeValue: String) {
         /** The section [value] names, or null for anything else — a missing argument included. */
         fun fromRoute(value: String?): InboxSection? = entries.firstOrNull { it.routeValue == value }
     }
+}
+
+/** The screen a compact Requests row opens (board SW-7): each kind is answered on its own screen. */
+enum class AgreementScreen {
+    /** Family → Money → Child support. */
+    SUPPORT,
+
+    /** Family → Professionals. */
+    PROFESSIONALS,
+
+    /** Family → Parenting plan. */
+    PARENTING_PLAN
 }
 
 /**
@@ -104,6 +118,34 @@ sealed interface InboxItem {
      */
     data class Request(val request: ChangeRequest, val timed: TimedRequest? = null) : InboxItem {
         override val key: String get() = "cr_${request.id}"
+    }
+
+    /**
+     * The family's child support proposal (board SW-7): a compact row that opens Child support.
+     *
+     * @property mine Whether this parent proposed it — then the row offers Withdraw.
+     */
+    data class Support(val proposal: SupportProposal, val mine: Boolean) : InboxItem {
+        override val key: String get() = if (mine) "sup_mine" else "sup_theirs"
+    }
+
+    /**
+     * A professional's access waiting for a consent: a compact row that opens Professionals.
+     *
+     * @property mine Whether this parent has consented and waits on the co-parent — then the row
+     *   offers Withdraw, which ends the grant.
+     */
+    data class Professional(val grant: ProfessionalGrant, val mine: Boolean) : InboxItem {
+        override val key: String get() = "pro_${grant.id}"
+    }
+
+    /**
+     * The parenting plan questions waiting on this parent, as one row that opens the plan.
+     *
+     * @property questionCount How many questions wait.
+     */
+    data class Plan(val questionCount: Int) : InboxItem {
+        override val key: String get() = "plan"
     }
 
     /** The whole history, as one group. */
@@ -240,5 +282,8 @@ object InboxItems {
         }
         waiting.swaps.forEach { add(InboxItem.Swap(it, inbox.timedFor(RequestDeadlineId.forSwap(it)))) }
         waiting.changeRequests.forEach { add(InboxItem.Request(it, inbox.timedFor(RequestDeadlineId.forChange(it)))) }
+        waiting.support?.let { add(InboxItem.Support(it, mine = it.proposedBy == scope.myUid)) }
+        waiting.professionals.forEach { add(InboxItem.Professional(it, mine = scope.myUid in it.consents)) }
+        if (waiting.planQuestions.isNotEmpty()) add(InboxItem.Plan(waiting.planQuestions.size))
     }
 }
