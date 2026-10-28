@@ -91,4 +91,12 @@
     <string name="day_swap_close_selection">Завершити вибір днів</string>
     <string name="day_swap_previous_month">Попередній місяць</string>
     <string name="day_swap_next_month">Наступний місяць</string>
+    <!-- A month cell's swap mark (day swap design, boards SW-2 and SW-4): whom the day would go to. -->
+    <string name="day_swap_mark_to">→ %1$s</string>
+    <string name="day_swap_mark_to_you">→ вам</string>
+    <string name="day_swap_cell_goes_to">Вибрано для обміну, перейде: %1$s</string>
+    <string name="day_swap_cell_goes_to_you">Вибрано для обміну, перейде до вас</string>
+    <string name="day_swap_cell_waiting_to">Обмін чекає відповіді, перейде: %1$s</string>
+    <string name="day_swap_cell_waiting_to_you">Обмін чекає відповіді, перейде до вас</string>
+    <string name="day_swap_legend_waiting">Чекає відповіді</string>
 </resources>

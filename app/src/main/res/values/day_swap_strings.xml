@@ -74,4 +74,12 @@
     <string name="day_swap_close_selection">Stop choosing days</string>
     <string name="day_swap_previous_month">Previous month</string>
     <string name="day_swap_next_month">Next month</string>
+    <!-- A month cell's swap mark (day swap design, boards SW-2 and SW-4): whom the day would go to. -->
+    <string name="day_swap_mark_to">→ %1$s</string>
+    <string name="day_swap_mark_to_you">→ you</string>
+    <string name="day_swap_cell_goes_to">Chosen to swap, would go to %1$s</string>
+    <string name="day_swap_cell_goes_to_you">Chosen to swap, would come to you</string>
+    <string name="day_swap_cell_waiting_to">A swap waits for an answer, would go to %1$s</string>
+    <string name="day_swap_cell_waiting_to_you">A swap waits for an answer, would come to you</string>
+    <string name="day_swap_legend_waiting">Waiting for an answer</string>
 </resources>

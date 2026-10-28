@@ -73,4 +73,12 @@
     <string name="day_swap_close_selection">Auswahl beenden</string>
     <string name="day_swap_previous_month">Vorheriger Monat</string>
     <string name="day_swap_next_month">Nächster Monat</string>
+    <!-- A month cell's swap mark (day swap design, boards SW-2 and SW-4): whom the day would go to. -->
+    <string name="day_swap_mark_to">→ %1$s</string>
+    <string name="day_swap_mark_to_you">→ dir</string>
+    <string name="day_swap_cell_goes_to">Zum Tausch gewählt, ginge an\u00A0%1$s</string>
+    <string name="day_swap_cell_goes_to_you">Zum Tausch gewählt, käme zu dir</string>
+    <string name="day_swap_cell_waiting_to">Ein Tausch wartet auf Antwort, ginge an\u00A0%1$s</string>
+    <string name="day_swap_cell_waiting_to_you">Ein Tausch wartet auf Antwort, käme zu dir</string>
+    <string name="day_swap_legend_waiting">Wartet auf Antwort</string>
 </resources>

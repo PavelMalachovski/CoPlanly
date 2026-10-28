@@ -91,4 +91,12 @@
     <string name="day_swap_close_selection">Ukončit výběr dnů</string>
     <string name="day_swap_previous_month">Předchozí měsíc</string>
     <string name="day_swap_next_month">Další měsíc</string>
+    <!-- A month cell's swap mark (day swap design, boards SW-2 and SW-4): whom the day would go to. -->
+    <string name="day_swap_mark_to">→ %1$s</string>
+    <string name="day_swap_mark_to_you">→ vám</string>
+    <string name="day_swap_cell_goes_to">Vybráno k výměně, připadne: %1$s</string>
+    <string name="day_swap_cell_goes_to_you">Vybráno k výměně, připadne vám</string>
+    <string name="day_swap_cell_waiting_to">Výměna čeká na odpověď, připadne: %1$s</string>
+    <string name="day_swap_cell_waiting_to_you">Výměna čeká na odpověď, připadne vám</string>
+    <string name="day_swap_legend_waiting">Čeká na odpověď</string>
 </resources>

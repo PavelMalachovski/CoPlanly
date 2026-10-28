@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.coparently.app.presentation.calendar.MonthView
+import com.coparently.app.presentation.calendar.SwapMark
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
@@ -67,9 +68,12 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
 private val MONTH_GRID_HEIGHT = 560.dp
 private const val PENDING_SWAP_DAY = 27
 
+/** The day the fixture shows being chosen for a swap. */
+private const val CHOSEN_SWAP_DAY = 20
+
 /**
  * May 2026's grid with every `DayCellFills` layer: custody with contact windows, a holiday,
- * school vacation, a pending swap and events. Shared with [ContrastScreenshots].
+ * school vacation, a swap waiting for an answer, a day being chosen for one, and events. Shared with [ContrastScreenshots].
  */
 @Composable
 internal fun MonthGridFixture() {
@@ -84,7 +88,11 @@ internal fun MonthGridFixture() {
             onMonthChange = {},
             holidays = ScreenshotFixtures.holidays,
             schoolVacationDays = ScreenshotFixtures.schoolVacationDays,
-            pendingSwapDates = setOf(ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY))
+            // Both forms of a swap mark: a day waiting for an answer, and one being chosen.
+            swapMarks = mapOf(
+                ScreenshotFixtures.MONTH.atDay(PENDING_SWAP_DAY) to SwapMark(toSlot = "dad", pending = true),
+                ScreenshotFixtures.MONTH.atDay(CHOSEN_SWAP_DAY) to SwapMark(toSlot = "mom", pending = false)
+            )
         )
     }
 }

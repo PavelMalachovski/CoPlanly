@@ -393,13 +393,16 @@ fun CalendarScreen(
     // An offer past its deadline (phase 3a) waits on nobody's answer, so its days lose the mark on
     // both phones until a last chance brings it back.
     val unansweredSwapDates = (inboxRequests as? RequestsState.Ready)?.inbox?.unansweredSwapDates.orEmpty()
-    val pendingSwapDates: Set<LocalDate> = remember(dayOverrides, unansweredSwapDates) {
+    val pendingSwapTo: Map<LocalDate, String> = remember(dayOverrides, unansweredSwapDates) {
         dayOverrides
             .filterValues { it.isPending }
-            .keys
-            .mapNotNull { iso -> runCatching { LocalDate.parse(iso) }.getOrNull() }
-            .toSet() - unansweredSwapDates
+            .mapNotNull { (iso, offer) ->
+                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { it to offer.toParent }
+            }
+            .toMap() - unansweredSwapDates
     }
+    // Whom each chosen or waiting day would go to, drawn on the grid (`SwapMark`).
+    val swapMarksShown = swapMarks(swapSelection, getCustody, pendingSwapTo)
 
     // The dates an accepted swap decides. `getCustody` already answers whose day each one is;
     // this set only tells the grid the answer came from a swap, so the cell (and the one after
@@ -844,6 +847,8 @@ fun CalendarScreen(
                         CustodyLegend(
                             parentNames = parentNames,
                             showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
+                            showPendingSwap = viewMode == CalendarViewMode.MONTH &&
+                                pendingSwapTo.keys.any { YearMonth.from(it) == displayedMonth },
                             // The visible way into a swap (SW-1): the long press alone was found
                             // by nobody. Month only, where the grid can show the chosen days.
                             trailing = offerSwapDay?.takeIf {
@@ -970,13 +975,12 @@ fun CalendarScreen(
                                     getContactWindows = grid.windows,
                                     parentNames = parentNames,
                                     // A child's own band (FAM-4) is not the schedule a swap moves.
-                                    pendingSwapDates = if (grid.followsFamily) pendingSwapDates else emptySet(),
+                                    swapMarks = if (grid.followsFamily) swapMarksShown else emptyMap(),
                                     swappedDates = if (grid.followsFamily) swappedDates else emptySet(),
                                     onDayLongClick = offerSwapDay?.takeIf { grid.followsFamily },
                                     // A finger that long-pressed and kept moving redraws the run
                                     // from the anchor, so coming back shortens it again.
                                     onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
-                                    swapSelection = swapSelection,
                                     selectingSwap = selectingSwap && grid.followsFamily,
                                     onSwapTap = tapSwapDay,
                                     // Selects the day and opens Day view, where an empty hour
