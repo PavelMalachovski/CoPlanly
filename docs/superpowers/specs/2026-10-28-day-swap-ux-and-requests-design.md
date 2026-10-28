@@ -1,8 +1,10 @@
 # Day swaps understood the first time, and every request in one place
 
-Status: design, approved boards on the "Обмен днями" page of the October 2026 audit canvas
-(https://claude.ai/artifact/SCCWCHGRERphDjRDvfoAqa, boards SW-1 to SW-7). Owner decisions of
-28 October 2026.
+Status: PR 1 (the swap flow, boards SW-1 to SW-6, and Home's "you") implemented in
+PavelMalachovski/CoPlanly#155; PR 2 (Requests, SW-7) to follow. Boards on the "Обмен днями" page of
+the October 2026 audit canvas (https://claude.ai/artifact/SCCWCHGRERphDjRDvfoAqa). Owner decisions
+of 28 October 2026. One deviation from SW-2: a month cell's mark names the co-parent by initial
+("→ P"), because a whole name did not fit the cell.
 
 ## Intent
 
