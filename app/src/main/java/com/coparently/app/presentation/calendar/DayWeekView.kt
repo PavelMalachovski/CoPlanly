@@ -15,7 +15,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -115,7 +113,6 @@ import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.hourGutterWidthFor
 import com.coparently.app.presentation.theme.labelMediumEmphasized
-import com.coparently.app.presentation.theme.labelSmallEmphasized
 import com.coparently.app.utils.ClockFormat
 import com.coparently.app.utils.hourLabel
 import com.coparently.app.utils.localizedDate
@@ -129,9 +126,6 @@ import kotlin.math.roundToInt
 
 /** Virtual center page of the day/week pager (allows ~3 years of swiping each way). */
 private const val PAGER_BASE_PAGE = 1200
-
-/** Height of the custody band drawn above the week's day headers. */
-private val CUSTODY_BAND_HEIGHT = 16.dp
 
 /** Full-hue bar on an event block's start edge, carrying parent identity. */
 private val EVENT_ACCENT_BAR_WIDTH = 3.dp
@@ -355,19 +349,6 @@ private fun DayWeekPage(
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(horizontal = dims.paddingSmall)
             ) {
-                // Custody band across the visible week. The column tint alone answers "whose day
-                // is this?" only once the eye has settled on a column; the band answers it for
-                // the whole week at a glance, and shows where the handover falls.
-                if (daysCount > 1) {
-                    CustodyWeekBand(
-                        dates = currentDates,
-                        getCustody = getCustody,
-                        parentNames = parentNames,
-                        gutterWidth = gutterWidth,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                }
-
                 // Week number for 3 days and week views (absolutely positioned, doesn't affect layout)
                 if (daysCount >= 3) {
                     val weekFields = WeekFields.ISO // Always use Monday-first week
@@ -572,9 +553,7 @@ private fun DayWeekPage(
                                         isWeekend = isWeekend,
                                         isToday = isToday,
                                         custody = custody,
-                                        proposedCustody = getProposedCustody(date),
-                                        // Day view keeps the wash; the week's band says it.
-                                        custodyWash = currentDates.size == 1
+                                        proposedCustody = getProposedCustody(date)
                                     )
                                     val baseColor = when (fill.base) {
                                         DayCellBase.WEEKEND ->
@@ -1742,84 +1721,4 @@ private fun resizedEnd(
     val moved = resizedTime(end, dragPx, hourHeightPx, RESIZE_STEP_MINUTES)
     val earliest = start.plusMinutes(MIN_EVENT_MINUTES).let { if (it.isAfter(end)) end else it }
     return if (moved.isBefore(earliest)) earliest else moved
-}
-
-/**
- * Solid band above the week's day headers, split into runs of consecutive same-custody days.
- *
- * Each run is drawn in the parent's solid chip tone ([ParentColors.chipFill], so its label
- * clears AA) and labelled when it is wide enough to hold a word; a one-day
- * run gets no label, because a clipped "M" is worse than a plain coloured block. Column geometry
- * (gutter width, weights, 4dp gaps) mirrors the header and content rows so the band lines up
- * with the days it describes.
- *
- * @param dates Visible dates, in order
- * @param getCustody Unified custody lookup (model first, legacy schedules as fallback)
- * @param gutterWidth Width of the hour-label gutter the band must skip
- * @param modifier Modifier for the band row
- */
-@Composable
-private fun CustodyWeekBand(
-    dates: List<LocalDate>,
-    getCustody: (LocalDate) -> String?,
-    parentNames: ParentNames,
-    gutterWidth: Dp,
-    modifier: Modifier = Modifier
-) {
-    // Collapse the week into runs so a Mon–Wed stretch is one block, not three.
-    val runs: List<Pair<String?, Int>> = remember(dates, getCustody) {
-        buildList {
-            dates.forEach { date ->
-                val custody = getCustody(date)
-                val last = lastOrNull()
-                if (last != null && last.first == custody) {
-                    set(lastIndex, custody to last.second + 1)
-                } else {
-                    add(custody to 1)
-                }
-            }
-        }
-    }
-    if (runs.all { it.first == null }) return
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            // At least the band's height, and as tall as its name needs: a fixed 16dp clipped the
-            // label top and bottom at 1.5x text. Intrinsic height keeps every run the same height.
-            .height(IntrinsicSize.Min)
-            .heightIn(min = CUSTODY_BAND_HEIGHT),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
-    ) {
-        Box(modifier = Modifier.width(gutterWidth))
-
-        runs.forEach { (custody, days) ->
-            // The solid chip-grade tone, not the full-strength fill: the band carries a name in
-            // white-or-black, and white on the full pink is 4.35:1, under AA. The label colour is
-            // then picked by contrast against whatever the family chose.
-            val color = when (custody) {
-                "mom" -> ParentColors.chipFill("mom")
-                "dad" -> ParentColors.chipFill("dad")
-                else -> Color.Transparent
-            }
-            Box(
-                modifier = Modifier
-                    .weight(days.toFloat())
-                    .fillMaxHeight()
-                    .background(color, CoPlanlyCorners.Tag),
-                contentAlignment = Alignment.Center
-            ) {
-                if (custody != null && days >= 2) {
-                    Text(
-                        text = parentNames.labelFor(custody),
-                        style = MaterialTheme.typography.labelSmallEmphasized,
-                        color = ParentColors.onFill(color),
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
 }

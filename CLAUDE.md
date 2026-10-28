@@ -455,10 +455,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     - **The custody screen opens on an overview** (`CustodyOverview`, `CustodySection`, H3): one row
       per part — pattern, contact time, seasonal, children's — each saying what it holds, and a part
       opens in place with Back returning to the overview.
-    - **Week view's hour grid draws no custody wash** (`DayCellFills.weekHourCell(custodyWash =
-      false)`, H2): seven washed columns hid the events; Day view keeps the wash, and the header row
-      still says whose day it is. Event titles wrap to the lines their block has room for
-      (`titleLinesFor`).
+    - **Week view says whose day it is the way Day and Month do: by the custody wash** (owner
+      decision, 28 October 2026, reversing H2's neutral hour grid). There is no named band over the
+      week's columns any more: the legend above the grid names the colours, and a second strip of
+      names repeated it. Event titles wrap to the lines their block has room for (`titleLinesFor`).
     - **Home's activity offers Review only while a request waits** (M2), and says how it ended once
       answered; the handover hero carries no Review chip (M3).
     - **Expenses shows one currency's summary at a time** with chips (M7), a row says how it divides

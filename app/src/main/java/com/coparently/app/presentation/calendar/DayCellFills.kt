@@ -203,24 +203,19 @@ object DayCellFills {
      * @param proposedCustody Whose day this would be under a pending proposal, or null when
      *   nothing is pending. The week view gets the same preview as the month grid: unlike the
      *   handover diagonal and the swap arrows — which package C kept to the month, because the
-     *   week already shows a handover as the boundary between two runs of its custody band — a
+     *   week already shows a handover as the boundary between two washed columns — a
      *   pending proposal has no other form in this layout. Leaving it out would make the week
      *   the one view that shows a schedule as settled while the month says it is not.
-     * @param custodyWash Whether the hours carry the custody wash. Day view keeps it; Week view
-     *   leaves the hour grid neutral (UX audit H2), because a whole screen of one parent's tint
-     *   drowned its narrow event blocks, and whose day it is already runs along the custody band
-     *   over the columns. The weekend base and a pending proposal's preview stay either way.
      */
     fun weekHourCell(
         isWeekend: Boolean,
         isToday: Boolean,
         custody: String?,
-        proposedCustody: String? = null,
-        custodyWash: Boolean = true
+        proposedCustody: String? = null
     ): DayCellFill =
         DayCellFill(
             base = baseFor(isWeekend),
-            overlay = custodyOverlay(custody)?.takeIf { custodyWash }
+            overlay = custodyOverlay(custody)
                 ?: if (isToday) DayCellOverlay.TODAY else DayCellOverlay.NONE,
             pendingProposalFor = pendingProposal(custody, proposedCustody)
         )
