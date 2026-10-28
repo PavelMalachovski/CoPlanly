@@ -73,6 +73,8 @@ import com.coparently.app.presentation.calendar.components.DaySwapStrip
 import com.coparently.app.presentation.calendar.components.DaySwapStripActions
 import com.coparently.app.presentation.calendar.components.DaySwapStripState
 import com.coparently.app.presentation.calendar.components.EventTypeFilterSheet
+import com.coparently.app.presentation.calendar.components.SwapSheetActions
+import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.FamilyMemberFilterStrip
 import com.coparently.app.presentation.common.LocalDatePickerDialog
@@ -1055,37 +1057,48 @@ fun CalendarScreen(
         }
     }
 
-    // Day-swap sheet
+    // Day-swap sheet (board SW-3): the chosen days split by way, and the months they fall in.
     if (swapSheetOpen && swapSelection.isNotEmpty()) {
-        val dates = swapSelection.sorted()
-
+        val sides = SwapSides.of(swapSelection, getCustody, parents.me?.slot.orEmpty())
+        val months = remember(sides) {
+            swapMiniMonths(
+                days = sides.offerable.mapNotNull { day -> receiverOf(getCustody(day))?.let { day to it } }.toMap(),
+                familyEvents = emptyList(),
+                custodyFor = getCustody
+            )
+        }
+        // From the grid, closing the sheet goes back to choosing with the days kept; from Day
+        // view's single day there is nothing to go back to.
+        val closeSheet = {
+            swapSheetOpen = false
+            if (!selectingSwap) endSwapSelection()
+        }
         DaySwapSheet(
-            dates = dates,
-            custodyFor = getCustody,
+            offer = SwapSheetOffer(sides, parentNames.coParentLabel(), months),
             parentNames = parentNames,
-            onOffer = { offered, note, answerBy ->
-                if (offered.size == 1) {
-                    // One day keeps the single write, the single chat card and the single push
-                    // type an older co-parent build already understands.
-                    val date = offered.first()
-                    receiverOf(getCustody(date))?.let { toParent ->
-                        calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
+            actions = SwapSheetActions(
+                onOffer = { offered, note, answerBy ->
+                    if (offered.size == 1) {
+                        // One day keeps the single write, the single chat card and the single
+                        // push type an older co-parent build already understands.
+                        val date = offered.first()
+                        receiverOf(getCustody(date))?.let { toParent ->
+                            calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
+                        }
+                    } else {
+                        calendarViewModel.offerDaySwapForDates(
+                            dates = offered,
+                            toParentFor = { day -> receiverOf(getCustody(day)) },
+                            note = note,
+                            answerBy = answerBy
+                        )
                     }
-                } else {
-                    calendarViewModel.offerDaySwapForDates(
-                        dates = offered,
-                        toParentFor = { day -> receiverOf(getCustody(day)) },
-                        note = note,
-                        answerBy = answerBy
-                    )
-                }
-                swapSheetOpen = false
-                endSwapSelection()
-            },
-            onDismiss = {
-                swapSheetOpen = false
-                endSwapSelection()
-            }
+                    swapSheetOpen = false
+                    endSwapSelection()
+                },
+                onCancel = closeSheet,
+                onChangeDays = closeSheet.takeIf { selectingSwap }
+            )
         )
     }
 

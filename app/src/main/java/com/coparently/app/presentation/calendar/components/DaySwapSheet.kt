@@ -2,7 +2,8 @@ package com.coparently.app.presentation.calendar.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -20,169 +21,165 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
+import com.coparently.app.domain.custody.SwapSides
+import com.coparently.app.domain.custody.receiverOf
+import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.changerequests.SwapMonths
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberAnswerByOffer
-import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
- * Offers one day, or several, to the other parent.
+ * What the review sheet offers: the chosen days split by way, whom they are offered to, and the
+ * months they fall in, each day in the wash of whom it would go to.
  *
- * Reached by long-pressing a day on the month grid; long-pressing and then tapping further days
- * picks or unpicks them one at a time — any days, this parent's to give and the co-parent's to take
- * (21 October 2026, `SwapSelection`). Long-press rather than a menu because the calendar's tap is already spoken for
- * — it selects the day and opens Day view — and the design refresh removed the unlabelled header
- * actions on purpose.
+ * @property sides The chosen days, from this parent's side.
+ * @property coParentName The co-parent's name, which the title, the note and the button use.
+ * @property months [com.coparently.app.presentation.calendar.swapMiniMonths]'s months, or empty to
+ *   draw none.
+ */
+internal data class SwapSheetOffer(
+    val sides: SwapSides,
+    val coParentName: String,
+    val months: List<MiniMonthModel> = emptyList()
+)
+
+/**
+ * What the review sheet's buttons do.
+ *
+ * @property onOffer Sends the offerable days, the note and the deadline.
+ * @property onCancel Closes the sheet without sending.
+ * @property onChangeDays Back to choosing, keeping the days; null where there is no grid to go
+ *   back to (the inbox's "Propose a change"), and the button then reads "Not now".
+ */
+internal class SwapSheetActions(
+    val onOffer: (dates: List<LocalDate>, note: String?, answerBy: AnswerByPick) -> Unit,
+    val onCancel: () -> Unit,
+    val onChangeDays: (() -> Unit)? = null
+)
+
+/**
+ * Offers one day, or several, to the other parent: the review step of a day swap (day swap design,
+ * 28 October 2026, board SW-3).
+ *
+ * "You give Lana" and "You take", each with its days; the months as they will look if Lana accepts;
+ * an optional message, the deadline, and "Send to Lana". It replaced a sheet that counted the days
+ * and said "Mom gives 2 days to Dad" in grey under it, which the owner could not read a direction
+ * from.
  *
  * **This sheet never applies anything by itself.** It offers; the co-parent answers in the inbox.
  * A swap that applied itself would just be an edit, which the custody editor already does, and
  * the whole point of the feature is that a day changes hands only when both parents have said so.
  *
- * **Each day flips to its own complement.** A run that spans a handover therefore exchanges in
- * both directions rather than handing every day to one parent, which is what the grid already
- * showed the parent when they selected it. Days the app has no custody answer for are excluded
- * from the offer and counted out loud, rather than being guessed at.
- *
- * The two parents are named, never "Mom" or "Dad": every label goes through [ParentNames], as
- * everywhere else in this app.
- *
- * @param dates The selected days, soonest first. Never empty.
- * @param custodyFor The slot that has a given day now — `"mom"` or `"dad"`, or null when nothing
- *   answers for it.
- * @param parentNames Resolves a slot to that parent's name.
- * @param onOffer Called with the days that can actually be offered, an optional note, and the
- *   deadline the parent chose for the answer (phase 3a).
- * @param onDismiss Closes the sheet without offering anything.
+ * **Each day goes to whoever does not have it** ([SwapSides]). Days the app has no custody answer
+ * for are left out of the offer and counted out loud, rather than guessed at.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DaySwapSheet(
-    dates: List<LocalDate>,
-    custodyFor: (LocalDate) -> String?,
-    parentNames: ParentNames,
-    onOffer: (dates: List<LocalDate>, note: String?, answerBy: AnswerByPick) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // Only days with a custody answer can be exchanged: with nothing recorded there is nothing to
-    // swap *from*, so the sheet says so rather than guessing which parent would give the day up.
-    val offerable = remember(dates) { dates.filter { custodyFor(it) != null } }
-    var note by remember { mutableStateOf("") }
-    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
-
+internal fun DaySwapSheet(offer: SwapSheetOffer, parentNames: ParentNames, actions: SwapSheetActions) {
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = actions.onCancel,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.XL)
-                .padding(bottom = Spacing.XL),
-            verticalArrangement = Arrangement.spacedBy(Spacing.M)
-        ) {
-            SwapHeading(dates)
-            if (offerable.isEmpty()) {
+        DaySwapSheetContent(offer, parentNames, actions)
+    }
+}
+
+/**
+ * The sheet's body, split out of the `ModalBottomSheet` so a screenshot can capture it (a sheet
+ * opens its own window, which a node capture does not see).
+ */
+@Composable
+internal fun DaySwapSheetContent(
+    offer: SwapSheetOffer,
+    parentNames: ParentNames,
+    actions: SwapSheetActions,
+    modifier: Modifier = Modifier
+) {
+    var note by rememberSaveable { mutableStateOf("") }
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
+    val sides = offer.sides
+    val name = offer.coParentName
+    val me = parentNames.parents.me?.slot
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.XL)
+            .padding(bottom = Spacing.XL),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
+    ) {
+        Text(
+            text = stringResource(R.string.day_swap_sheet_title_with, name),
+            style = MaterialTheme.typography.titleLargeEmphasized
+        )
+        if (sides.isEmpty) {
+            Text(
+                text = stringResource(R.string.day_swap_needs_coparent),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            receiverOf(me)?.let { other ->
+                SwapSideGroup(stringResource(R.string.day_swap_you_give, name), sides.toOther, other)
+            }
+            me?.let { SwapSideGroup(stringResource(R.string.day_swap_you_take), sides.toOfferer, it) }
+            if (sides.unknown.isNotEmpty()) {
                 Text(
-                    text = stringResource(R.string.day_swap_needs_coparent),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = pluralStringResource(
+                        R.plurals.day_swap_skipped_days,
+                        sides.unknown.size,
+                        sides.unknown.size
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } else {
-                SwapSummary(offerable, custodyFor, parentNames)
-                SwapNote(dates.size - offerable.size, note) { note = it }
-                SwapDeadline(offerable, parentNames, answerBy) { answerBy = it }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.day_swap_cancel))
-                }
-                if (offerable.isNotEmpty()) {
-                    Button(onClick = { onOffer(offerable, note.ifBlank { null }, answerBy) }) {
-                        Text(stringResource(R.string.day_swap_offer))
-                    }
-                }
+            if (offer.months.isNotEmpty()) {
+                SwapMonths(offer.months, parentNames)
+                Text(
+                    text = stringResource(R.string.day_swap_sheet_caption, name),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text(stringResource(R.string.day_swap_note_to, name)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            SwapDeadline(sides.offerable, name, answerBy) { answerBy = it }
+        }
+        SwapSheetButtons(sides, name, actions) { actions.onOffer(sides.offerable, note.ifBlank { null }, answerBy) }
+    }
+}
+
+/** "Change days" (or "Not now") and "Send to {name}", wrapping under each other at a large font. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SwapSheetButtons(sides: SwapSides, name: String, actions: SwapSheetActions, onSend: () -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+        verticalArrangement = Arrangement.spacedBy(Spacing.XS)
+    ) {
+        val back = actions.onChangeDays
+        TextButton(onClick = back ?: actions.onCancel) {
+            Text(stringResource(if (back != null) R.string.day_swap_change_days else R.string.day_swap_cancel))
+        }
+        if (!sides.isEmpty) {
+            Button(onClick = onSend) { Text(stringResource(R.string.day_swap_send_to, name)) }
         }
     }
-}
-
-/**
- * The sheet's title and the day; the first and last day of a consecutive run; or, for days picked
- * apart, each day — "from Monday to Friday" would claim the days between.
- */
-@Composable
-private fun SwapHeading(dates: List<LocalDate>) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL) }
-    val shortFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
-    Text(
-        text = stringResource(
-            if (dates.size == 1) R.string.day_swap_sheet_title else R.string.day_swap_sheet_title_range
-        ),
-        style = MaterialTheme.typography.titleLargeEmphasized
-    )
-    Text(
-        text = if (dates.size == 1) {
-            dates.first().format(dateFormatter)
-        } else if (!isConsecutive(dates)) {
-            dates.joinToString(", ") { it.format(shortFormatter) }
-        } else {
-            stringResource(
-                R.string.day_swap_range,
-                dates.first().format(dateFormatter),
-                dates.last().format(dateFormatter)
-            )
-        },
-        style = MaterialTheme.typography.bodyLarge
-    )
-}
-
-/**
- * The days that can be offered: how many, and who gives up what.
- *
- * The count leads, because it is the thing the co-parent will be asked about and the thing a parent
- * selecting a week wants confirmed before they commit.
- */
-@Composable
-private fun SwapSummary(offerable: List<LocalDate>, custodyFor: (LocalDate) -> String?, parentNames: ParentNames) {
-    Text(
-        text = LocalContext.current.resources.getQuantityString(
-            R.plurals.day_swap_day_count,
-            offerable.size,
-            offerable.size
-        ),
-        style = MaterialTheme.typography.bodyMedium
-    )
-    DirectionLines(offerable, custodyFor, parentNames)
-}
-
-/** How many selected days were left out for want of a custody answer, and the optional note. */
-@Composable
-private fun SwapNote(skipped: Int, note: String, onNoteChange: (String) -> Unit) {
-    if (skipped > 0) {
-        Text(
-            text = LocalContext.current.resources.getQuantityString(R.plurals.day_swap_skipped_days, skipped, skipped),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-    OutlinedTextField(
-        value = note,
-        onValueChange = onNoteChange,
-        label = { Text(stringResource(R.string.day_swap_note_label)) },
-        modifier = Modifier.fillMaxWidth()
-    )
 }
 
 /**
@@ -192,7 +189,7 @@ private fun SwapNote(skipped: Int, note: String, onNoteChange: (String) -> Unit)
 @Composable
 private fun SwapDeadline(
     offerable: List<LocalDate>,
-    parentNames: ParentNames,
+    coParentName: String,
     selected: AnswerByPick,
     onSelect: (AnswerByPick) -> Unit
 ) {
@@ -201,41 +198,8 @@ private fun SwapDeadline(
         offer = rememberAnswerByOffer(cap),
         selected = selected,
         onSelect = onSelect,
-        coParentName = parentNames.coParentLabel()
+        coParentName = coParentName
     )
-}
-
-/**
- * Who gives up how many days, one line per direction.
- *
- * A run that stays on one side of every handover produces a single line and reads exactly as the
- * old single-day sheet did. A run that crosses one produces two, which is the honest description
- * of what the offer does — and the thing a "N days would go to X" summary would get wrong.
- */
-@Composable
-private fun DirectionLines(
-    dates: List<LocalDate>,
-    custodyFor: (LocalDate) -> String?,
-    parentNames: ParentNames
-) {
-    val context = LocalContext.current
-    val bySlot = dates.groupBy { custodyFor(it) }
-    // Slot order, not encounter order, so both phones describe the same offer the same way.
-    listOf("mom", "dad").forEach { slot ->
-        val days = bySlot[slot] ?: return@forEach
-        val toParent = if (slot == "mom") "dad" else "mom"
-        Text(
-            text = context.resources.getQuantityString(
-                R.plurals.day_swap_direction,
-                days.size,
-                days.size,
-                parentNames.labelFor(slot),
-                parentNames.labelFor(toParent)
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
 
 /** Whether [dates], soonest first, are one run of consecutive days. */

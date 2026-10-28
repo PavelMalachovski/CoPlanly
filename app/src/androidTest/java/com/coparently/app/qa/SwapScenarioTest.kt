@@ -108,9 +108,10 @@ class SwapScenarioTest : QaOnScreenTest() {
             openTab(BottomNavDestination.CALENDAR)
             viewMode(R.string.calendar_viewmode_day)
             tap(textButton(R.string.day_swap_sheet_title))
-            waitFor("the swap sheet", textButton(R.string.day_swap_offer))
+            val send = hasText(string(R.string.day_swap_send_to, coParentName)) and hasClickAction()
+            waitFor("the swap sheet", send)
             tap(hasText(string(R.string.answer_by_three_days)) and hasClickAction())
-            tap(textButton(R.string.day_swap_offer))
+            tap(send)
             groupId = runBlocking { awaitCoParentOverride(today) { it.status == DayOverrideStatus.PENDING }.groupId }
                 ?: error("the offer carries no group id")
         }

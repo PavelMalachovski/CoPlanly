@@ -16,7 +16,11 @@ import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
 import com.coparently.app.presentation.calendar.components.DaySwapSelectionBar
+import com.coparently.app.presentation.calendar.components.DaySwapSheetContent
+import com.coparently.app.presentation.calendar.components.SwapSheetActions
+import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.VacationBanner
+import com.coparently.app.presentation.calendar.swapMiniMonths
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -78,6 +82,27 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
             parentNames = ScreenshotFixtures.parentNames,
             onNext = {},
             onCancel = {}
+        )
+    }
+
+    /** The review sheet for an offer that gives two days and takes one, with its month. */
+    @Test
+    fun swapSheet() = snap("calendar_swap_sheet") {
+        val month = ScreenshotFixtures.MONTH
+        val give = listOf(month.atDay(SWAP_GIVE_DAY), month.atDay(SWAP_GIVE_DAY + 1))
+        val take = listOf(month.atDay(SWAP_TAKE_DAY))
+        DaySwapSheetContent(
+            offer = SwapSheetOffer(
+                sides = SwapSides(toOther = give, toOfferer = take),
+                coParentName = "Bob",
+                months = swapMiniMonths(
+                    days = give.associateWith { "dad" } + take.associateWith { "mom" },
+                    familyEvents = emptyList(),
+                    custodyFor = ScreenshotFixtures::custodyFor
+                )
+            ),
+            parentNames = ScreenshotFixtures.parentNames,
+            actions = SwapSheetActions(onOffer = { _, _, _ -> }, onCancel = {}, onChangeDays = {})
         )
     }
 

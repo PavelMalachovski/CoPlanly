@@ -54,6 +54,7 @@ import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.SwapDirection
+import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
@@ -61,6 +62,8 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.parentingplan.CitationStatus
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
+import com.coparently.app.presentation.calendar.components.SwapSheetActions
+import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.isConsecutive
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.EmptyState
@@ -73,6 +76,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.custody.custodyDiffDescription
+import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
@@ -206,15 +210,21 @@ private fun SwapChangeSheet(
         LaunchedEffect(Unit) { onDismiss() }
         return
     }
+    // Each day goes back from whom the agreement gave it to; no mini months, since this screen
+    // holds the agreed days alone and not the schedule around them.
     DaySwapSheet(
-        dates = ahead,
-        custodyFor = entry.swapDays::get,
+        offer = SwapSheetOffer(
+            SwapSides.of(ahead, entry.swapDays::get, parentNames.parents.me?.slot.orEmpty()),
+            parentNames.coParentLabel()
+        ),
         parentNames = parentNames,
-        onOffer = { dates, note, answerBy ->
-            onOffer(dates, note, answerBy)
-            onDismiss()
-        },
-        onDismiss = onDismiss
+        actions = SwapSheetActions(
+            onOffer = { dates, note, answerBy ->
+                onOffer(dates, note, answerBy)
+                onDismiss()
+            },
+            onCancel = onDismiss
+        )
     )
 }
 
