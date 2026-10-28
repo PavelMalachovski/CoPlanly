@@ -27,6 +27,7 @@ class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val syncService: SyncService,
+    private val googleCalendarAutoImport: GoogleCalendarAutoImport,
     private val crashlyticsManager: CrashlyticsManager
 ) : CoroutineWorker(context, workerParams) {
 
@@ -54,6 +55,7 @@ class SyncWorker @AssistedInject constructor(
             if (requestedSinceRunStarted.getAndSet(false)) {
                 enqueueFollowUp(applicationContext)
             }
+            importFromGoogle()
             if (result.isSuccess) Result.success() else Result.retry()
         } catch (e: CancellationException) {
             // WorkManager stopping the worker is not a failure to report.
@@ -62,6 +64,21 @@ class SyncWorker @AssistedInject constructor(
             Log.e(TAG, "Periodic sync threw; will retry.", e)
             crashlyticsManager.recordException(e)
             Result.retry()
+        }
+    }
+
+    /**
+     * The automatic Google Calendar import, after the sync and apart from it: Google's answer
+     * decides nothing about whether the sync is retried, and a failure here never fails the run.
+     */
+    private suspend fun importFromGoogle() {
+        try {
+            googleCalendarAutoImport.importIfDue()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            Log.w(TAG, "Automatic Google Calendar import threw.", e)
+            crashlyticsManager.recordException(e)
         }
     }
 

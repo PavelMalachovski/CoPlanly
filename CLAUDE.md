@@ -2931,7 +2931,11 @@ below hold what it fixed in place.
     Its create, update and delete had no caller and went with the full `calendar` scope.
     `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
     easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
-    an event shared. Three things not to undo.
+    an event shared. **The import runs on its own while the switch is on** (owner request, 28 October
+    2026): `SyncWorker` calls `GoogleCalendarAutoImport.importIfDue` after every sync — app start,
+    each return to the foreground, the calendar's pull to refresh and the fifteen-minute tick — at
+    most once per five minutes and only on a connection this device holds. It is the button's own
+    import, apart from the sync: its failure never fails or retries the sync run. Three things not to undo.
     - **The code, the privacy policy, its hosted copy and the home page name one scope.**
       `tools/check-invariants.js` check 6 fails when they part. `GoogleCalendarAccessTest` fails on
       a wider scope or on a public method beside `listEvents`. Writing to Google, or reading a

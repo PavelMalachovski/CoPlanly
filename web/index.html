@@ -135,7 +135,7 @@
 
   <section id="google-calendar">
     <h2 data-t="googleHead">Google Calendar, if you connect it</h2>
-    <p data-t="googleIntro">Connecting Google Calendar is optional. If you connect it, CoPlanly asks Google for one permission: to see the events on the calendars you own (calendar.events.owned.readonly). It uses it to copy the events of your primary calendar for the next twelve months into CoPlanly on your phone, when you switch the sync on or tap to sync.</p>
+    <p data-t="googleIntro">Connecting Google Calendar is optional. If you connect it, CoPlanly asks Google for one permission: to see the events on the calendars you own (calendar.events.owned.readonly). It uses it to copy the events of your primary calendar for the next twelve months into CoPlanly on your phone while the sync is on: when you switch it on or tap to sync, when you open the app and about every fifteen minutes.</p>
     <ul>
       <li data-t="googlePrivate">Imported events stay on your phone. They are marked private, so they are not uploaded to our servers and your co-parent does not see them, unless you open one and make it a shared event yourself.</li>
       <li data-t="googleNoWrite">CoPlanly never creates, changes or deletes anything in your Google Calendar, and never reads a calendar somebody else shares with you.</li>
@@ -199,7 +199,7 @@ const TEXT = {
     f8Head: 'Záznam pro advokáta nebo mediátora',
     f8Body: 'PDF nebo CSV s tím, co jste si zapsali a napsali.',
     googleHead: 'Google Kalendář, pokud ho připojíte',
-    googleIntro: 'Připojení Google Kalendáře je nepovinné. Když ho připojíte, CoPlanly požádá Google o jediné oprávnění: vidět události v kalendářích, které vlastníte (calendar.events.owned.readonly). Použije ho ke zkopírování událostí z vašeho hlavního kalendáře na příštích dvanáct měsíců do CoPlanly ve vašem telefonu – když synchronizaci zapnete nebo ji spustíte ručně.',
+    googleIntro: 'Připojení Google Kalendáře je nepovinné. Když ho připojíte, CoPlanly požádá Google o jediné oprávnění: vidět události v kalendářích, které vlastníte (calendar.events.owned.readonly). Použije ho ke zkopírování událostí z vašeho hlavního kalendáře na příštích dvanáct měsíců do CoPlanly ve vašem telefonu, dokud je synchronizace zapnutá: když ji zapnete nebo spustíte ručně, při otevření aplikace a zhruba každých patnáct minut.',
     googlePrivate: 'Importované události zůstávají ve vašem telefonu. Jsou označené jako soukromé, takže se nenahrávají na naše servery a druhý rodič je nevidí – dokud některou sami neotevřete a neuděláte z ní sdílenou událost.',
     googleNoWrite: 'CoPlanly ve vašem Google Kalendáři nic nevytváří, nemění ani nemaže a nikdy nečte kalendář, který s vámi sdílí někdo jiný.',
     googleEnd: 'Odpojit ho můžete kdykoli v Nastavení → Synchronizace, nebo přístup CoPlanly odebrat ve svém účtu Google.',
@@ -237,7 +237,7 @@ const TEXT = {
     f8Head: 'Eine Aufzeichnung für Anwalt oder Mediation',
     f8Body: 'Ein PDF oder CSV mit dem, was ihr beide eingetragen und geschrieben habt.',
     googleHead: 'Google Kalender, wenn du ihn verbindest',
-    googleIntro: 'Google Kalender zu verbinden ist freiwillig. Wenn du ihn verbindest, bittet CoPlanly Google um eine einzige Berechtigung: die Termine in den Kalendern zu sehen, die dir gehören (calendar.events.owned.readonly). Damit kopiert CoPlanly die Termine deines Hauptkalenders für die nächsten zwölf Monate in die App auf deinem Handy – wenn du die Synchronisierung einschaltest oder von Hand startest.',
+    googleIntro: 'Google Kalender zu verbinden ist freiwillig. Wenn du ihn verbindest, bittet CoPlanly Google um eine einzige Berechtigung: die Termine in den Kalendern zu sehen, die dir gehören (calendar.events.owned.readonly). Damit kopiert CoPlanly die Termine deines Hauptkalenders für die nächsten zwölf Monate in die App auf deinem Handy, solange die Synchronisierung an ist: wenn du sie einschaltest oder von Hand startest, beim Öffnen der App und etwa alle fünfzehn Minuten.',
     googlePrivate: 'Importierte Termine bleiben auf deinem Handy. Sie sind als privat markiert: Sie werden nicht auf unsere Server hochgeladen, und der andere Elternteil sieht sie nicht – außer du öffnest einen und machst ihn selbst zu einem gemeinsamen Termin.',
     googleNoWrite: 'CoPlanly erstellt, ändert oder löscht nichts in deinem Google Kalender und liest nie einen Kalender, den jemand anderes mit dir teilt.',
     googleEnd: 'Du kannst die Verbindung jederzeit unter Einstellungen → Sync trennen oder den Zugriff von CoPlanly in deinem Google-Konto entfernen.',
@@ -275,7 +275,7 @@ const TEXT = {
     f8Head: 'Запись для адвоката или медиатора',
     f8Body: 'PDF или CSV с тем, что вы оба записали и написали.',
     googleHead: 'Google Календарь, если вы его подключите',
-    googleIntro: 'Подключать Google Календарь необязательно. Если вы его подключите, CoPlanly попросит у Google одно разрешение — видеть события в календарях, владельцем которых вы являетесь (calendar.events.owned.readonly). С его помощью приложение копирует события вашего основного календаря на ближайшие двенадцать месяцев в CoPlanly на вашем телефоне — когда вы включаете синхронизацию или запускаете её вручную.',
+    googleIntro: 'Подключать Google Календарь необязательно. Если вы его подключите, CoPlanly попросит у Google одно разрешение — видеть события в календарях, владельцем которых вы являетесь (calendar.events.owned.readonly). С его помощью приложение копирует события вашего основного календаря на ближайшие двенадцать месяцев в CoPlanly на вашем телефоне, пока синхронизация включена: когда вы её включаете или запускаете вручную, при открытии приложения и примерно раз в пятнадцать минут.',
     googlePrivate: 'Импортированные события остаются на вашем телефоне. Они помечены как личные: не загружаются на наши серверы, и второй родитель их не видит — пока вы сами не откроете событие и не сделаете его общим.',
     googleNoWrite: 'CoPlanly ничего не создаёт, не изменяет и не удаляет в вашем Google Календаре и никогда не читает календари, которыми с вами поделился кто-то другой.',
     googleEnd: 'Отключить его можно в любой момент в разделе «Настройки → Синхронизация» или отозвать доступ CoPlanly в своём аккаунте Google.',
@@ -313,7 +313,7 @@ const TEXT = {
     f8Head: 'Запис для адвоката чи медіатора',
     f8Body: 'PDF або CSV з тим, що ви обоє записали й написали.',
     googleHead: 'Google Календар, якщо ви його підключите',
-    googleIntro: 'Підключати Google Календар необовʼязково. Якщо ви його підключите, CoPlanly попросить у Google один дозвіл — бачити події в календарях, власником яких ви є (calendar.events.owned.readonly). За його допомогою застосунок копіює події вашого основного календаря на найближчі дванадцять місяців у CoPlanly на вашому телефоні — коли ви вмикаєте синхронізацію або запускаєте її вручну.',
+    googleIntro: 'Підключати Google Календар необовʼязково. Якщо ви його підключите, CoPlanly попросить у Google один дозвіл — бачити події в календарях, власником яких ви є (calendar.events.owned.readonly). За його допомогою застосунок копіює події вашого основного календаря на найближчі дванадцять місяців у CoPlanly на вашому телефоні, поки синхронізацію ввімкнено: коли ви її вмикаєте або запускаєте вручну, під час відкриття застосунку й приблизно раз на пʼятнадцять хвилин.',
     googlePrivate: 'Імпортовані події залишаються на вашому телефоні. Вони позначені як особисті: не завантажуються на наші сервери, і другий із батьків їх не бачить — доки ви самі не відкриєте подію й не зробите її спільною.',
     googleNoWrite: 'CoPlanly нічого не створює, не змінює й не видаляє у вашому Google Календарі та ніколи не читає календарі, якими з вами поділився хтось інший.',
     googleEnd: 'Відключити його можна будь-коли в розділі «Налаштування → Синхронізація» або відкликати доступ CoPlanly у своєму акаунті Google.',

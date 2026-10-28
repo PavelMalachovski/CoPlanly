@@ -7,6 +7,7 @@
     <string name="settings_google_sync">Kalendář Google</string>
     <string name="settings_gcal_enable_sync">Zapnout synchronizaci</string>
     <string name="settings_gcal_private_note">Importované události zůstanou v tomto zařízení. Váš Kalendář Google je osobní, takže se z něj s druhým rodičem nic nesdílí.</string>
+    <string name="settings_gcal_auto_note">Když je synchronizace zapnutá, nové a změněné události se načtou samy: při otevření aplikace a zhruba každých 15 minut.</string>
     <string name="settings_parent_color">Moje barva</string>
     <string name="settings_parent_color_desc">Jak se označují vaše události, dny v péči a výdaje. Druhý rodič si vybírá svou.</string>
     <string name="parent_color_pink">Růžová</string>
