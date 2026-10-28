@@ -7,6 +7,7 @@
     <string name="settings_google_sync">Google-Kalender-Sync</string>
     <string name="settings_gcal_enable_sync">Synchronisierung aktivieren</string>
     <string name="settings_gcal_private_note">Importierte Termine bleiben auf diesem Gerät. Dein Google Kalender ist privat, es wird also nichts davon mit dem anderen Elternteil geteilt.</string>
+    <string name="settings_gcal_auto_note">Solange die Synchronisierung an ist, kommen neue und geänderte Termine von selbst: beim Öffnen der App und etwa alle 15 Minuten.</string>
     <string name="settings_parent_color">Meine Farbe</string>
     <string name="settings_parent_color_desc">Wie deine Termine, Betreuungstage und Ausgaben markiert werden. Der andere Elternteil wählt seine eigene.</string>
     <string name="parent_color_pink">Rosa</string>

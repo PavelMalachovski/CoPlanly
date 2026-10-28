@@ -7,6 +7,7 @@
     <string name="settings_google_sync">Google Календарь</string>
     <string name="settings_gcal_enable_sync">Включить синхронизацию</string>
     <string name="settings_gcal_private_note">Импортированные события остаются на этом устройстве. Google Calendar — ваш личный календарь, поэтому второму родителю из него ничего не передаётся.</string>
+    <string name="settings_gcal_auto_note">Пока синхронизация включена, новые и изменённые события подтягиваются сами: при открытии приложения и примерно раз в 15 минут.</string>
     <string name="settings_parent_color">Мой цвет</string>
     <string name="settings_parent_color_desc">Как отмечаются ваши события, дни проживания и расходы. Второй родитель выбирает свой цвет.</string>
     <string name="parent_color_pink">Розовый</string>

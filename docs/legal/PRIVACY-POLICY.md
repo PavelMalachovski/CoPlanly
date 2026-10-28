@@ -296,9 +296,11 @@ stays there.
 
 If you connect a Google account (Settings → Sync), CoPlanly asks Google for **read-only access
 to the events on the calendars you own** — Google shows it as "See the events on Google calendars
-you own" (the `calendar.events.owned.readonly` permission) — and uses it for one thing: when you
-switch the sync on or tap to sync, it reads the events of your **primary** Google Calendar for the
-next twelve months and copies them into the calendar on your phone. It never creates, changes or
+you own" (the `calendar.events.owned.readonly` permission) — and uses it for one thing: while the
+sync is on, it reads the events of your **primary** Google Calendar for the next twelve months and
+copies them into the calendar on your phone. It does so when you switch the sync on or tap to sync,
+and on its own when you open the app and about every fifteen minutes in the background; turning
+the sync off stops it. It never creates, changes or
 deletes anything in your Google Calendar, and never reads a calendar somebody else shares with
 you.
 

@@ -455,10 +455,10 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     - **The custody screen opens on an overview** (`CustodyOverview`, `CustodySection`, H3): one row
       per part — pattern, contact time, seasonal, children's — each saying what it holds, and a part
       opens in place with Back returning to the overview.
-    - **Week view's hour grid draws no custody wash** (`DayCellFills.weekHourCell(custodyWash =
-      false)`, H2): seven washed columns hid the events; Day view keeps the wash, and the header row
-      still says whose day it is. Event titles wrap to the lines their block has room for
-      (`titleLinesFor`).
+    - **Week view says whose day it is the way Day and Month do: by the custody wash** (owner
+      decision, 28 October 2026, reversing H2's neutral hour grid). There is no named band over the
+      week's columns any more: the legend above the grid names the colours, and a second strip of
+      names repeated it. Event titles wrap to the lines their block has room for (`titleLinesFor`).
     - **Home's activity offers Review only while a request waits** (M2), and says how it ended once
       answered; the handover hero carries no Review chip (M3).
     - **Expenses shows one currency's summary at a time** with chips (M7), a row says how it divides
@@ -2931,7 +2931,11 @@ below hold what it fixed in place.
     Its create, update and delete had no caller and went with the full `calendar` scope.
     `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
     easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
-    an event shared. Three things not to undo.
+    an event shared. **The import runs on its own while the switch is on** (owner request, 28 October
+    2026): `SyncWorker` calls `GoogleCalendarAutoImport.importIfDue` after every sync — app start,
+    each return to the foreground, the calendar's pull to refresh and the fifteen-minute tick — at
+    most once per five minutes and only on a connection this device holds. It is the button's own
+    import, apart from the sync: its failure never fails or retries the sync run. Three things not to undo.
     - **The code, the privacy policy, its hosted copy and the home page name one scope.**
       `tools/check-invariants.js` check 6 fails when they part. `GoogleCalendarAccessTest` fails on
       a wider scope or on a public method beside `listEvents`. Writing to Google, or reading a

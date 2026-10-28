@@ -87,6 +87,13 @@ object PreferenceKeys {
     const val GOOGLE_CALENDAR_SYNC_ENABLED = "google_calendar_sync_enabled"
 
     /**
+     * When the background sync last imported from Google Calendar on its own, as epoch millis in
+     * text (`GoogleCalendarAutoImport`): it spaces the automatic imports, so opening the app three
+     * times in a minute asks Google once. The Settings button ignores it.
+     */
+    const val GOOGLE_CALENDAR_LAST_AUTO_IMPORT = "google_calendar_last_auto_import"
+
+    /**
      * Whether this person picked the default currency themselves in Settings: `true` when they
      * did, absent otherwise. Until then the stored default is a guess — the device region's on
      * first launch — which the country they give for the calendar replaces

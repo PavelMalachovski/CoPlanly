@@ -8,6 +8,7 @@
     <string name="settings_google_sync">Google Calendar sync</string>
     <string name="settings_gcal_enable_sync">Enable sync</string>
     <string name="settings_gcal_private_note">Imported events stay on this device. Your Google Calendar is personal, so nothing from it is shared with your co-parent.</string>
+    <string name="settings_gcal_auto_note">While sync is on, new and changed events arrive on their own: when you open the app and about every 15 minutes.</string>
     <string name="settings_parent_color">My colour</string>
     <string name="settings_parent_color_desc">How your events, custody days and expenses are marked. Your co-parent picks their own.</string>
     <string name="parent_color_pink">Pink</string>

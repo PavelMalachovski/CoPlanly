@@ -1048,15 +1048,7 @@ private fun GoogleCalendarActions(
             )
         }
 
-        // What the toggle actually does, said out loud. An import is private — it stays on the
-        // device that pulled it and never reaches the co-parent — and a sync control that did
-        // not say so would be read as "publish my calendar to them", which is the opposite.
-        // Design item 8: no affordance may leave the user guessing what it promises.
-        Text(
-            text = stringResource(R.string.settings_gcal_private_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        GoogleCalendarNotes(isSyncEnabled)
 
         when (syncState) {
             is GoogleCalendarSyncState.Syncing -> StatusLine(
@@ -1082,6 +1074,30 @@ private fun GoogleCalendarActions(
             onSignIn = onSignIn,
             onSyncNow = onSyncNow,
             onCalendarSignOut = onCalendarSignOut
+        )
+    }
+}
+
+/**
+ * What the Google Calendar switch does, said out loud, and when it runs.
+ *
+ * An import is private — it stays on the device that pulled it and never reaches the co-parent —
+ * and a sync control that did not say so would be read as "publish my calendar to them", which is
+ * the opposite (design item 8). While the switch is on the import also runs on its own
+ * (`GoogleCalendarAutoImport`), so the button reads as "now", not as the only way in.
+ */
+@Composable
+private fun GoogleCalendarNotes(isSyncEnabled: Boolean) {
+    Text(
+        text = stringResource(R.string.settings_gcal_private_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    if (isSyncEnabled) {
+        Text(
+            text = stringResource(R.string.settings_gcal_auto_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
