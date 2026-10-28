@@ -73,7 +73,8 @@ private const val CHOSEN_SWAP_DAY = 20
 
 /**
  * May 2026's grid with every `DayCellFills` layer: custody with contact windows, a holiday,
- * school vacation, a swap waiting for an answer, a day being chosen for one, and events. Shared with [ContrastScreenshots].
+ * school vacation, a swap waiting for an answer, a day being chosen for one, and events. Shared
+ * with [ContrastScreenshots].
  */
 @Composable
 internal fun MonthGridFixture() {
