@@ -29,7 +29,6 @@
     <string name="day_swap_strip_agreed_you">Vereinbarter Tausch: Dieser Tag ist bei dir.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Diese Tage tauschen</string>
-    <string name="day_swap_select_hint">Tippe weitere Tage an, um den Tausch zu erweitern</string>
     <string name="day_swap_selection_cancel">Auswahl abbrechen</string>
     <plurals name="day_swap_day_count">
         <item quantity="one">%1$d Tag</item>
@@ -81,4 +80,15 @@
     <string name="day_swap_cell_waiting_to">Ein Tausch wartet auf Antwort, ginge an\u00A0%1$s</string>
     <string name="day_swap_cell_waiting_to_you">Ein Tausch wartet auf Antwort, käme zu dir</string>
     <string name="day_swap_legend_waiting">Wartet auf Antwort</string>
+    <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
+    <string name="day_swap_bar_hint">Tippe auf Tage im Kalender. Jeder geht an den, der ihn nicht hat.</string>
+    <string name="day_swap_next">Weiter</string>
+    <plurals name="day_swap_bar_to">
+        <item quantity="one">%1$s — %2$d Tag: %3$s</item>
+        <item quantity="other">%1$s — %2$d Tage: %3$s</item>
+    </plurals>
+    <plurals name="day_swap_bar_to_you">
+        <item quantity="one">Dir — %1$d Tag: %2$s</item>
+        <item quantity="other">Dir — %1$d Tage: %2$s</item>
+    </plurals>
 </resources>

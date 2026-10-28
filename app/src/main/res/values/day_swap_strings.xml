@@ -30,7 +30,6 @@
     <string name="day_swap_strip_agreed_you">Agreed swap: this day is with you.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Swap these days</string>
-    <string name="day_swap_select_hint">Tap more days to extend the swap</string>
     <string name="day_swap_selection_cancel">Cancel selection</string>
     <plurals name="day_swap_day_count">
         <item quantity="one">%1$d day</item>
@@ -82,4 +81,15 @@
     <string name="day_swap_cell_waiting_to">A swap waits for an answer, would go to %1$s</string>
     <string name="day_swap_cell_waiting_to_you">A swap waits for an answer, would come to you</string>
     <string name="day_swap_legend_waiting">Waiting for an answer</string>
+    <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
+    <string name="day_swap_bar_hint">Tap days on the calendar. Each goes to whoever does not have it.</string>
+    <string name="day_swap_next">Next</string>
+    <plurals name="day_swap_bar_to">
+        <item quantity="one">%1$s — %2$d day: %3$s</item>
+        <item quantity="other">%1$s — %2$d days: %3$s</item>
+    </plurals>
+    <plurals name="day_swap_bar_to_you">
+        <item quantity="one">You — %1$d day: %2$s</item>
+        <item quantity="other">You — %1$d days: %2$s</item>
+    </plurals>
 </resources>

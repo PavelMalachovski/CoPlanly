@@ -29,7 +29,6 @@
     <string name="day_swap_strip_agreed_you">Погоджений обмін: цей день у вас.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Обміняти ці дні</string>
-    <string name="day_swap_select_hint">Натискайте інші дні, щоб розширити обмін</string>
     <string name="day_swap_selection_cancel">Скасувати вибір</string>
     <plurals name="day_swap_day_count">
         <item quantity="one">%1$d день</item>
@@ -99,4 +98,19 @@
     <string name="day_swap_cell_waiting_to">Обмін чекає відповіді, перейде: %1$s</string>
     <string name="day_swap_cell_waiting_to_you">Обмін чекає відповіді, перейде до вас</string>
     <string name="day_swap_legend_waiting">Чекає відповіді</string>
+    <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
+    <string name="day_swap_bar_hint">Торкніться днів у календарі. Кожен перейде до того, у кого його немає.</string>
+    <string name="day_swap_next">Далі</string>
+    <plurals name="day_swap_bar_to">
+        <item quantity="one">%1$s — %2$d день: %3$s</item>
+        <item quantity="few">%1$s — %2$d дні: %3$s</item>
+        <item quantity="many">%1$s — %2$d днів: %3$s</item>
+        <item quantity="other">%1$s — %2$d дня: %3$s</item>
+    </plurals>
+    <plurals name="day_swap_bar_to_you">
+        <item quantity="one">Вам — %1$d день: %2$s</item>
+        <item quantity="few">Вам — %1$d дні: %2$s</item>
+        <item quantity="many">Вам — %1$d днів: %2$s</item>
+        <item quantity="other">Вам — %1$d дня: %2$s</item>
+    </plurals>
 </resources>

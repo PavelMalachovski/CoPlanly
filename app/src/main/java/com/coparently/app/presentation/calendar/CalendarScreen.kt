@@ -6,10 +6,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -18,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -28,9 +25,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -46,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -56,7 +50,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
@@ -66,6 +59,7 @@ import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
@@ -73,6 +67,7 @@ import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
+import com.coparently.app.presentation.calendar.components.DaySwapSelectionBar
 import com.coparently.app.presentation.calendar.components.DaySwapSheet
 import com.coparently.app.presentation.calendar.components.DaySwapStrip
 import com.coparently.app.presentation.calendar.components.DaySwapStripActions
@@ -92,7 +87,6 @@ import com.coparently.app.presentation.navigation.CalendarTabTaps
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
-import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -867,8 +861,9 @@ fun CalendarScreen(
                     // be invisible.
                     if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
                         DaySwapSelectionBar(
-                            dayCount = swapSelection.size,
-                            onContinue = { swapSheetOpen = true },
+                            sides = SwapSides.of(swapSelection, getCustody, parents.me?.slot.orEmpty()),
+                            parentNames = parentNames,
+                            onNext = { swapSheetOpen = true },
                             onCancel = ::endSwapSelection,
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
@@ -1137,82 +1132,5 @@ fun CalendarScreen(
             onDismiss = { showTypeFilters = false },
             sheetState = typeFilterSheetState
         )
-    }
-}
-
-/**
- * The contextual bar shown while a multi-day swap is being picked.
- *
- * A temporary bar rather than a change to the calendar header, which the August 2026 design pins
- * to one row (title / Today / Filters / gear). It says how many days are picked — the number the
- * co-parent will be asked about — and offers the only two ways out.
- *
- * @param dayCount How many days are currently selected.
- * @param onContinue Opens the offer sheet.
- * @param onCancel Drops the selection.
- * @param modifier Modifier for the bar.
- */
-@Composable
-private fun DaySwapSelectionBar(
-    dayCount: Int,
-    onContinue: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BackHandler(onBack = onCancel)
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        // The text and the two buttons are stacked, not sharing one row. They shared one until
-        // a device test showed what that costs: the buttons take their label's width, the
-        // weighted text column takes what is left, and "Отменить выбор" plus "Предложить обмен"
-        // leave nothing on a phone — the count wrapped to one letter per line and the bar grew
-        // into a tall ladder of characters with the buttons overlapping across it. English fits
-        // and hid it. Every text here is now single-line and clipped rather than wrapped, so a
-        // longer translation shortens the sentence instead of growing the bar.
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
-            verticalArrangement = Arrangement.spacedBy(Spacing.XXS)
-        ) {
-            Text(
-                text = LocalContext.current.resources.getQuantityString(
-                    R.plurals.day_swap_day_count,
-                    dayCount,
-                    dayCount
-                ),
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(R.string.day_swap_select_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onCancel) {
-                    Text(
-                        text = stringResource(R.string.day_swap_selection_cancel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Button(onClick = onContinue) {
-                    Text(
-                        text = stringResource(R.string.day_swap_offer),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
     }
 }

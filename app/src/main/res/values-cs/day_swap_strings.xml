@@ -29,7 +29,6 @@
     <string name="day_swap_strip_agreed_you">Dohodnutá výměna: tento den připadá vám.</string>
     <string name="day_swap_range">%1$s – %2$s</string>
     <string name="day_swap_sheet_title_range">Vyměnit tyto dny</string>
-    <string name="day_swap_select_hint">Klepnutím na další dny výměnu rozšíříte</string>
     <string name="day_swap_selection_cancel">Zrušit výběr</string>
     <plurals name="day_swap_day_count">
         <item quantity="one">%1$d den</item>
@@ -99,4 +98,19 @@
     <string name="day_swap_cell_waiting_to">Výměna čeká na odpověď, připadne: %1$s</string>
     <string name="day_swap_cell_waiting_to_you">Výměna čeká na odpověď, připadne vám</string>
     <string name="day_swap_legend_waiting">Čeká na odpověď</string>
+    <!-- The bar while days are chosen (day swap design, board SW-2): one line per way the days go. -->
+    <string name="day_swap_bar_hint">Klepněte na dny v kalendáři. Každý připadne tomu, kdo ho nemá.</string>
+    <string name="day_swap_next">Další</string>
+    <plurals name="day_swap_bar_to">
+        <item quantity="one">%1$s — %2$d den: %3$s</item>
+        <item quantity="few">%1$s — %2$d dny: %3$s</item>
+        <item quantity="many">%1$s — %2$d dne: %3$s</item>
+        <item quantity="other">%1$s — %2$d dní: %3$s</item>
+    </plurals>
+    <plurals name="day_swap_bar_to_you">
+        <item quantity="one">Vám — %1$d den: %2$s</item>
+        <item quantity="few">Vám — %1$d dny: %2$s</item>
+        <item quantity="many">Vám — %1$d dne: %2$s</item>
+        <item quantity="other">Vám — %1$d dní: %2$s</item>
+    </plurals>
 </resources>

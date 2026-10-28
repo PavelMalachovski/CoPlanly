@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.presentation.calendar.MonthView
+import com.coparently.app.presentation.calendar.SwapDaysButton
 import com.coparently.app.presentation.calendar.SwapMark
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
 import com.coparently.app.presentation.calendar.components.CustodyLegend
+import com.coparently.app.presentation.calendar.components.DaySwapSelectionBar
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,15 +51,41 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
         }
     }
 
-    /** The legend over the grid: both parents, the handover diagonal and the contact-time corner. */
+    /**
+     * The legend over the grid: both parents, the handover diagonal, the contact-time corner, a
+     * swap waiting for an answer, and the "⇄" that starts a swap.
+     */
     @Test
     fun legend() = snap("calendar_legend") {
-        CustodyLegend(parentNames = ScreenshotFixtures.parentNames, showContactWindows = true)
+        CustodyLegend(
+            parentNames = ScreenshotFixtures.parentNames,
+            showContactWindows = true,
+            showPendingSwap = true,
+            trailing = { SwapDaysButton(onClick = {}) }
+        )
+    }
+
+    /** The bar while days are chosen: a line each way, and a day nobody is recorded for. */
+    @Test
+    fun selectionBar() = snap("calendar_swap_selection_bar") {
+        val month = ScreenshotFixtures.MONTH
+        DaySwapSelectionBar(
+            sides = SwapSides(
+                toOther = listOf(month.atDay(SWAP_GIVE_DAY), month.atDay(SWAP_GIVE_DAY + 1)),
+                toOfferer = listOf(month.atDay(SWAP_TAKE_DAY)),
+                unknown = listOf(month.atDay(SWAP_TAKE_DAY + 1))
+            ),
+            parentNames = ScreenshotFixtures.parentNames,
+            onNext = {},
+            onCancel = {}
+        )
     }
 
     companion object {
         private val BANNER_GAP = 8.dp
         private const val PENDING_REQUESTS = 2
+        private const val SWAP_GIVE_DAY = 13
+        private const val SWAP_TAKE_DAY = 20
 
         /** The variants this class runs over. */
         @JvmStatic
