@@ -468,6 +468,35 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
       calendar feed and the export used to open on.
     - **A family friend's calendar lists only days with events** (L2); children and pets carry no
       Sync button (L1); a professional's code field opens from a link (L3).
+23. **A day swap says which way each day goes, everywhere** (owner decisions, 28 October 2026;
+    `docs/superpowers/specs/2026-10-28-day-swap-ux-and-requests-design.md`, boards SW-1 to SW-7 on
+    the audit's Design canvas). Six things not to undo.
+    - **One split, `domain/custody/SwapSides`**: each day goes to whoever does not hold it
+      (`receiverOf`), and the bar, the review sheet, the grid's marks, the push and the answer card
+      all read it; a day nobody is recorded for is left out and counted, never guessed.
+    - **The way in is visible**: an icon-only "⇄" (`SwapDaysButton`, "Swap days" for TalkBack and on
+      a long press, owner decision) at the end of the legend row opens selection mode empty; the long
+      press stays. While choosing, the calendar header is `SwapSelectionHeader` (close, title, month
+      arrows), **a tap only chooses** — a borrowed day pages to its month and is chosen there
+      (`SwapTap`), never opens Day view — and the selection is `rememberSaveable` across paging and
+      rotation.
+    - **A chosen or waiting day is marked by whom it would go to** (`SwapMark`, `drawSwapMark`,
+      `SwapMarkPill`): stripes in the receiver's wash over the holder's, an edge in their deep tone,
+      dashed while waiting, and "→ Lana"/"→ you" in words. They replaced the grey arrows; in-month
+      cells only. `ParentColorsTest` holds the day number on the hatch to AA.
+    - **The sheet shows both sides and the result** (`DaySwapSheet` over `DaySwapSheetContent`):
+      "You give Lana", "You take", the mini months, "Send to Lana"; after sending, a snackbar says it
+      went and offers Withdraw for exactly that group (`CalendarViewModel.swapSent`).
+    - **The push names the sender and the dates**: `datesToYou`/`datesToSender` (ISO dates, from the
+      addressee's side, bounded at 160 in `firestore.rules`) and `actorName` ride the existing swap
+      types (`swapPush`, `SwapOfferer`); the receiving phone words "Lana offers you 2 days" through
+      `swapPushWording`, and an older sender's push keeps its old sentence.
+    - **An answer is one pair of buttons, or day by day on request**: the card and Home's dialog lead
+      with the push's own heading (`swapOfferHeading`), draw the two sides and the note as a quote,
+      "Accept swap"/"Accept", and "Answer day by day" (two waiting days or more) switches to
+      `SwapDayAnswers` in their place. A part-answer leaves the rest waiting, and the card then shows
+      and decides only those (`DaySwapGroup.waitingOn`).
+    Home's hero and its children's lines say "you" too (`handoverHeadline`, `ChildrenTodayLines`).
 
 ## UX/UI overhaul (July 2026 design review) — implemented, keep consistent
 
@@ -922,7 +951,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **The `screenshots` job is how UI is reviewed without a phone** (September 2026). Roborazzi on
   Robolectric's native graphics renders the tests in `app/src/test/java/com/coparently/app/
   screenshots/` — Home's cards, the month grid with every `DayCellFills` layer, the calendar
-  banners, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
+  banners, the day-swap bar and review sheet, a Settings group, `EmptyState`, `ErrorState`, `InlineBanner`, `StickyActionBar`, the
   offline banner, the Expenses summary header and its collapsed line, a chat thread, the event
   preview body, the consent screen, the family switcher chip, the "My colour" picker, the requests
   inbox's cards, mini month and history, and the family-friend comparison, invite sheet, agenda day
@@ -931,7 +960,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   audit found money cut off at sizes the matrix never rendered) and the default vs a purple/orange
   parent palette (`ScreenshotVariants`: ten variants for text-heavy components, four for the rest,
   and high contrast in both themes for the month grid, a Settings group and a banner
-  (`ContrastScreenshots`, design item 17); 440 images — the count the committed baselines hold).
+  (`ContrastScreenshots`, design item 17); 460 images — the count the committed baselines hold).
   The window is a phone's, 393 × 851 dp, so a component taller than that at 2.0× is cut at the
   window's bottom edge (a Settings group in German, the friend comparison); the screen itself scrolls.
   **To view:** open the run's `screenshots` artefact, unzip, open `index.html`

@@ -257,6 +257,16 @@ const RULES = [
       'K/presentation/chat/SettleUpPayment.kt', 'K/presentation/common/ParentsSource.kt'],
   },
   {
+    sections: ['3.32'],
+    why: 'day swaps: the ⇄ button, choosing across months, the marks, the sheet, the push wording, answering by day, Home\'s "you"',
+    paths: ['K/presentation/calendar/SwapTap.kt', 'K/presentation/calendar/SwapMark*.kt',
+      'K/presentation/calendar/SwapSelectionChrome.kt', 'K/presentation/calendar/components/DaySwap*.kt',
+      'K/presentation/calendar/components/SwapDayChips.kt', 'K/presentation/changerequests/DaySwapCard.kt',
+      'K/presentation/changerequests/SwapOfferContent.kt', 'K/presentation/changerequests/SwapDayAnswers.kt',
+      'K/data/repository/SwapPush.kt', 'K/data/remote/firebase/SwapPushWording.kt',
+      'K/domain/custody/SwapSides.kt', 'K/presentation/home/ChildrenTodayLines.kt'],
+  },
+  {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
     paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',
