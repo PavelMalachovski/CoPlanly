@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
-import com.coparently.app.data.repository.ParentingPlanPair
+import com.coparently.app.domain.parentingplan.ParentingPlanPair
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.theme.Spacing
 

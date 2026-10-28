@@ -80,6 +80,12 @@ data class ParentingPlanEntry(
     }
 }
 
+/** Both halves of one family's plan, as a screen needs them. */
+data class ParentingPlanPair(
+    val yours: ParentingPlanEntry,
+    val theirs: ParentingPlanEntry?
+)
+
 /** Where one question stands between the two parents. */
 enum class PlanQuestionStatus {
     /** Neither parent has written anything. */
@@ -165,4 +171,26 @@ object ParentingPlanComparison {
      */
     fun answeredByYou(yours: ParentingPlanEntry): Int =
         ParentingPlanCatalogue.questionIds.count { yours.answerTo(it) != null }
+
+    /**
+     * The questions waiting on the signed-in parent's word (Requests, board SW-7), in catalogue
+     * order: the co-parent answered and this parent has neither an answer nor a tick of that answer
+     * as it reads now ([PlanQuestionStatus.ONLY_THEIRS]), or both answered and this parent's tick
+     * names an older wording of it — the agreement lapsed because the co-parent edited
+     * ([PlanQuestionStatus.OPEN] with a stale tick).
+     *
+     * A disagreement this parent never ticked waits on nobody in particular, and is not listed.
+     */
+    fun questionsAwaitingYou(yours: ParentingPlanEntry, theirs: ParentingPlanEntry?): List<String> {
+        if (theirs == null) return emptyList()
+        return ParentingPlanCatalogue.questions.map { it.id }.filter { id ->
+            val other = theirs.answerTo(id) ?: return@filter false
+            val tick = yours.agreedTo[id]
+            when (statusOf(id, yours, theirs)) {
+                PlanQuestionStatus.ONLY_THEIRS -> tick != other
+                PlanQuestionStatus.OPEN -> tick != null && tick != other
+                else -> false
+            }
+        }
+    }
 }

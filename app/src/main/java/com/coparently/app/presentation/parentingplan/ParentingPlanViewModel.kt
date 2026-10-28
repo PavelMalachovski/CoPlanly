@@ -7,12 +7,12 @@ import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.data.repository.ParentingPlanPair
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.parentingplan.ParentingPlanPair
 import com.coparently.app.domain.parentingplan.PlanScheduleLink
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository

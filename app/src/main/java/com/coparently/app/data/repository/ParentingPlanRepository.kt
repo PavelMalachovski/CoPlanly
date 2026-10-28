@@ -6,6 +6,7 @@ import com.coparently.app.data.local.dao.ParentingPlanDao
 import com.coparently.app.data.local.entity.ParentingPlanEntryEntity
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.parentingplan.ParentingPlanPair
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CancellationException
@@ -18,12 +19,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
 import javax.inject.Inject
 import javax.inject.Singleton
-
-/** Both halves of one family's plan, as a screen needs them. */
-data class ParentingPlanPair(
-    val yours: ParentingPlanEntry,
-    val theirs: ParentingPlanEntry?
-)
 
 /**
  * This phone's Room copy of one family's plan.

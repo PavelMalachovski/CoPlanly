@@ -2,7 +2,6 @@ package com.coparently.app.e2e
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
-import com.coparently.app.data.repository.ParentingPlanPair
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.domain.expenses.FamilySettings
 import com.coparently.app.domain.expenses.SplitRatio
@@ -10,6 +9,7 @@ import com.coparently.app.domain.expenses.SplitRatioOutcome
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.parentingplan.ParentingPlanComparison
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.parentingplan.ParentingPlanPair
 import com.coparently.app.domain.parentingplan.PlanQuestionStatus
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
