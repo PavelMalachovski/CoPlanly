@@ -97,4 +97,22 @@
          (%1$s = the proposer's name, %2$s = the weekday, day and time it ends). -->
     <string name="push_request_last_chance_title">Více času na odpověď</string>
     <string name="push_request_last_chance_body">%1$s čeká na vaši odpověď do %2$s.</string>
+    <!-- A day-swap offer that names its days (day swap design, 28 October 2026): who offers
+         which days. %1$s in a title is the sender, %2$d the days; a body lists the dates. -->
+    <plurals name="push_day_swap_gives_title">
+        <item quantity="one">%1$s vám nabízí %2$d den</item>
+        <item quantity="few">%1$s vám nabízí %2$d dny</item>
+        <item quantity="many">%1$s vám nabízí %2$d dne</item>
+        <item quantity="other">%1$s vám nabízí %2$d dní</item>
+    </plurals>
+    <string name="push_day_swap_gives_body">U vás: %1$s.</string>
+    <plurals name="push_day_swap_asks_title">
+        <item quantity="one">%1$s žádá o %2$d váš den</item>
+        <item quantity="few">%1$s žádá o %2$d vaše dny</item>
+        <item quantity="many">%1$s žádá o %2$d vašeho dne</item>
+        <item quantity="other">%1$s žádá o %2$d vašich dní</item>
+    </plurals>
+    <string name="push_day_swap_asks_body">Dostane %2$s: %1$s.</string>
+    <string name="push_day_swap_both_title">%1$s navrhuje výměnu dnů</string>
+    <string name="push_day_swap_both_body">Vám: %1$s. %2$s: %3$s.</string>
 </resources>

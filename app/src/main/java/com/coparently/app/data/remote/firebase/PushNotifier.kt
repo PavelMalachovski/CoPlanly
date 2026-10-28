@@ -18,6 +18,7 @@ import com.coparently.app.utils.DAY_IN_SENTENCE
 import com.coparently.app.utils.answerByText
 import com.coparently.app.utils.isoDateText
 import com.coparently.app.utils.localizedDate
+import com.coparently.app.utils.swapDateList
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.time.Instant
@@ -120,12 +121,54 @@ class PushNotifier(private val context: Context) {
             return PushText(sender, data[PushPayload.PREVIEW].orEmpty())
         }
 
+        return framedText(type, data)
+    }
+
+    /** Every push but the chat preview: a frame from this phone's strings, filled from [data]. */
+    private fun framedText(type: String?, data: Map<String, String>): PushText? {
+        // A swap offer that names its days says who offers which (day swap design, 28 October
+        // 2026); one from an older sender falls through to the sentence it always had.
+        swapPushWording(type, data)?.let { return swapOfferText(it, type.orEmpty(), data) }
+
         // `type?.let` rather than `PUSH_TEXT[type]`: the map is keyed on a non-null String, so
         // indexing it with the nullable value straight off the payload does not compile.
         val spec = type?.let { PUSH_TEXT[it] } ?: return null
         return bodyOf(spec, data)?.let { body ->
             PushText(context.getString(spec.title), withDeadline(type, body, data))
         }
+    }
+
+    /**
+     * The push of a swap offer worded by [wording], with its deadline after the body: the sender's name (or "Your
+     * co-parent") and the days in the reader's language ([swapDateList]).
+     */
+    private fun swapOfferText(wording: SwapPushWording, type: String, data: Map<String, String>): PushText {
+        val actor = data[PushPayload.ACTOR]?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.push_actor_fallback)
+        val locale = context.resources.configuration.locales[0]
+        val resources = context.resources
+        val (title, body) = when (wording) {
+            is SwapPushWording.Gives -> resources.getQuantityString(
+                R.plurals.push_day_swap_gives_title,
+                wording.toYou.size,
+                actor,
+                wording.toYou.size
+            ) to context.getString(R.string.push_day_swap_gives_body, swapDateList(wording.toYou, locale))
+            is SwapPushWording.Asks -> resources.getQuantityString(
+                R.plurals.push_day_swap_asks_title,
+                wording.toSender.size,
+                actor,
+                wording.toSender.size
+            ) to context.getString(R.string.push_day_swap_asks_body, swapDateList(wording.toSender, locale), actor)
+            is SwapPushWording.Both -> context.getString(R.string.push_day_swap_both_title, actor) to
+                context.getString(
+                    R.string.push_day_swap_both_body,
+                    swapDateList(wording.toYou, locale),
+                    actor,
+                    swapDateList(wording.toSender, locale)
+                )
+        }
+        return PushText(title, withDeadline(type, body, data))
     }
 
     /**
