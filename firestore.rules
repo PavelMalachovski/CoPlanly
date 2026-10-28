@@ -2400,6 +2400,11 @@ service cloud.firestore {
                       // other free-text key: a field the rule does not know about is a field
                       // with no bound.
                       isValidLength(request.resource.data.get('data', {}).get('dayCount', ''), 0, 4) &&
+                      // A swap offer's days, each way, from the addressee's side: comma-separated
+                      // ISO dates (14 days at most, 153 characters), which the receiving phone
+                      // words in its own language. Bounded like every key a client writes.
+                      isValidLength(request.resource.data.get('data', {}).get('datesToYou', ''), 0, 160) &&
+                      isValidLength(request.resource.data.get('data', {}).get('datesToSender', ''), 0, 160) &&
                       // A request's deadline, as epoch millis in decimal text (13 characters
                       // today) - the day-swap, change-request, custody-proposal and split-proposal
                       // pushes carry it so their first notification can say when to answer by, and

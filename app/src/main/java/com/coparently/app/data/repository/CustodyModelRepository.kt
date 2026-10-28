@@ -1157,12 +1157,15 @@ constructor(
      * @param transform The transition to apply, from [DayOverrideTransition].
      * @param answerBy The deadline the offering parent chose (phase 3a), or null for none. An offer
      *   given one starts its clock once it is written, and its push says when; an answer starts none.
+     * @param offerer The parent making an offer, so its push can name them and say which way each
+     *   day goes (day swap design, 28 October 2026); null for an answer.
      * @return The applied map, or the transition's own failure.
      */
     suspend fun applyDayOverrides(
         date: String,
         transform: (Map<String, DayOverride>) -> Result<Map<String, DayOverride>>,
-        answerBy: AnswerByPick? = null
+        answerBy: AnswerByPick? = null,
+        offerer: SwapOfferer? = null
     ): Result<Map<String, DayOverride>> {
         val pair = currentPair()
             ?: return Result.failure(IllegalStateException("No co-parent to agree a swap with"))
@@ -1172,7 +1175,9 @@ constructor(
         // change-request path once had: there must be exactly one way a change reaches the
         // thread, and this is it. The status the transition produced *is* the announcement —
         // offered, agreed or turned down — so nothing here has to be told which it was.
-        next[date]?.let { entry -> announceSwap(pair, entry, listOf(date), answerBy) }
+        next[date]?.let { entry ->
+            announceSwap(pair, entry, listOf(date), answerBy, offerer?.sidesOf(next, listOf(date)))
+        }
         return Result.success(next)
     }
 
@@ -1202,13 +1207,15 @@ constructor(
      * @param transform The transition for one date, from [DayOverrideTransition].
      * @param answerBy The deadline the offering parent chose (phase 3a), or null for none; see
      *   [applyDayOverrides].
+     * @param offerer The parent making an offer, or null for an answer; see [applyDayOverrides].
      * @return The map after the last successful write.
      */
     @Suppress("ReturnCount") // one early refusal per reason; see the KDoc
     suspend fun applyDayOverridesForDates(
         dates: List<String>,
         transform: (Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>,
-        answerBy: AnswerByPick? = null
+        answerBy: AnswerByPick? = null,
+        offerer: SwapOfferer? = null
     ): Result<Map<String, DayOverride>> {
         if (dates.isEmpty()) {
             return Result.failure(IllegalArgumentException("A swap needs at least one day"))
@@ -1224,14 +1231,14 @@ constructor(
             } catch (e: CancellationException) {
                 // The caller left mid-run: this day's write ends with it and no later day is
                 // written, but the days already written are on the server and are told of.
-                announceRun(pair, latest, changed, answerBy)
+                announceRun(pair, latest, changed, answerBy, offerer)
                 throw e
             }
             val applied = result.getOrElse { cause ->
                 // Announce whatever *did* land before reporting the failure. Returning straight
                 // out left the days already written with no chat card and no push at all: the
                 // co-parent's schedule had moved and nothing had told them.
-                announceRun(pair, latest, changed, answerBy)
+                announceRun(pair, latest, changed, answerBy, offerer)
                 return if (changed.isEmpty()) {
                     Result.failure(cause)
                 } else {
@@ -1243,7 +1250,7 @@ constructor(
         }
 
         val map = latest ?: return Result.failure(IllegalStateException("Nothing was written"))
-        announceRun(pair, map, changed, answerBy)
+        announceRun(pair, map, changed, answerBy, offerer)
         return Result.success(map)
     }
 
@@ -1260,10 +1267,11 @@ constructor(
         pair: CustodyPair,
         map: Map<String, DayOverride>?,
         changed: List<String>,
-        answerBy: AnswerByPick?
+        answerBy: AnswerByPick?,
+        offerer: SwapOfferer?
     ) {
         val first = changed.firstOrNull() ?: return
-        map?.get(first)?.let { entry -> announceSwap(pair, entry, changed, answerBy) }
+        map?.get(first)?.let { entry -> announceSwap(pair, entry, changed, answerBy, offerer?.sidesOf(map, changed)) }
     }
 
     /**
@@ -1339,19 +1347,25 @@ constructor(
      *   single-day wording on the other phone; more picks the grouped one, which is the whole point of
      *   the group.
      * @param answerBy The deadline the offering parent chose, or null for none; see [swapClock].
+     * @param offer Who offered which way, for the push; null for an answer.
      */
     private suspend fun announceSwap(
         pair: CustodyPair,
         entry: DayOverride,
         dates: List<String>,
-        answerBy: AnswerByPick?
+        answerBy: AnswerByPick?,
+        offer: SwapOffer? = null
     ) = withContext(NonCancellable) {
         val answerByMillis = startClock(swapClock(pair, entry, dates, answerBy))
         activityAnnouncer.announce(
             announcement = swapAnnouncement(dates.first(), entry.status),
             partnerUid = pair.partnerUid()
         )
-        notifyPartnerOfSwap(pair, dates.first(), entry.status, dates.size, answerByMillis)
+        notifyPartnerOfSwap(
+            pair,
+            swapPush(dates.first(), entry.status, dates.size, offer?.sides, offer?.name),
+            answerByMillis
+        )
     }
 
     /**
@@ -1367,15 +1381,9 @@ constructor(
      * An offer whose clock was written also carries its deadline ([PushPayload.ANSWER_BY]), so the
      * first notification can say when the answer is due (phase 3a); an older build ignores the key.
      */
-    private suspend fun notifyPartnerOfSwap(
-        pair: CustodyPair,
-        date: String,
-        status: DayOverrideStatus,
-        dayCount: Int,
-        answerByMillis: Long?
-    ) {
+    private suspend fun notifyPartnerOfSwap(pair: CustodyPair, push: Map<String, String>?, answerByMillis: Long?) {
         val partnerUid = pair.participants.firstOrNull { it != pair.myUid } ?: return
-        val push = swapPush(date, status, dayCount) ?: return
+        if (push == null) return
         fcmService.queueNotificationForUser(partnerUid, push.withAnswerBy(answerByMillis))
     }
 
@@ -1608,37 +1616,6 @@ private fun swapAnnouncement(date: String, status: DayOverrideStatus) = Activity
     title = date,
     whenIso = date
 )
-
-/**
- * The push about a swap of [date]: its type and its date, and for a run of [dayCount] days the
- * count — what the receiving device writes its sentence from, in the reader's language (SEC-3).
- * Null for a withdrawal, which has no push type of its own (adding one takes four places agreeing,
- * CLAUDE.md item 15): its chat card is pushed like any message.
- */
-private fun swapPush(date: String, status: DayOverrideStatus, dayCount: Int): Map<String, String>? {
-    val action = when (status) {
-        DayOverrideStatus.PENDING -> "offered"
-        DayOverrideStatus.ACCEPTED -> "accepted"
-        DayOverrideStatus.DECLINED -> "declined"
-        DayOverrideStatus.CANCELLED -> return null
-    }
-    // A run of days gets its own type carrying the count, rather than a date the reader
-    // would have to expand into a range. The count is a string like every other payload
-    // value: `notification_queue` documents hold strings, and the receiving device parses
-    // it — a type it cannot parse composes nothing at all, which is the SEC-3 rule.
-    return if (dayCount > 1) {
-        mapOf(
-            PushPayload.TYPE to "day_swap_group_$action",
-            PushPayload.DATE to date,
-            PushPayload.DAY_COUNT to dayCount.toString()
-        )
-    } else {
-        mapOf(
-            PushPayload.TYPE to "day_swap_$action",
-            PushPayload.DATE to date
-        )
-    }
-}
 
 /** [this] push with the request's deadline (phase 3a) when its clock was written; as it is otherwise. */
 private fun Map<String, String>.withAnswerBy(answerByMillis: Long?): Map<String, String> =

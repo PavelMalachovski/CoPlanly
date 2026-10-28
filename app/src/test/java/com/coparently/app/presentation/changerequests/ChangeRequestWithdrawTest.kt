@@ -176,7 +176,9 @@ class ChangeRequestWithdrawTest {
     fun `withdrawing a swap withdraws each of this parent's days still waiting, from the map it reads`() =
         runTest(dispatcher) {
             val transform = slot<(Map<String, DayOverride>, String) -> Result<Map<String, DayOverride>>>()
-            coEvery { custodyModelRepository.applyDayOverridesForDates(any(), capture(transform), any()) } returns
+            coEvery {
+                custodyModelRepository.applyDayOverridesForDates(any(), capture(transform), any(), any())
+            } returns
                 Result.success(emptyMap())
             val vm = inboxDrawn()
 
@@ -184,7 +186,7 @@ class ChangeRequestWithdrawTest {
             advanceUntilIdle()
 
             coVerify {
-                custodyModelRepository.applyDayOverridesForDates(listOf("2026-10-30", "2026-10-31"), any(), null)
+                custodyModelRepository.applyDayOverridesForDates(listOf("2026-10-30", "2026-10-31"), any(), null, any())
             }
             val pending = mapOf("2026-10-30" to offer())
             val withdrawn = transform.captured(pending, "2026-10-30").getOrThrow().getValue("2026-10-30")
@@ -200,7 +202,7 @@ class ChangeRequestWithdrawTest {
     fun `an offer answered day by day takes the accepted days, then turns down the rest`() = runTest(dispatcher) {
         // 21 October 2026, Zuzana's test: one run per answer, a day left out stays waiting.
         val transforms = mutableListOf<Pair<List<String>, SwapTransform>>()
-        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) } answers {
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) } answers {
             transforms += firstArg<List<String>>() to secondArg()
             Result.success(emptyMap())
         }
@@ -239,12 +241,12 @@ class ChangeRequestWithdrawTest {
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.change_request_error_offer_answered), vm.errorMessage.value)
-        coVerify(exactly = 0) { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) }
+        coVerify(exactly = 0) { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) }
     }
 
     @Test
     fun `a failed swap withdrawal says so`() = runTest(dispatcher) {
-        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) } returns
+        coEvery { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) } returns
             Result.failure(IllegalStateException("offline"))
         val vm = inboxDrawn()
 
@@ -262,7 +264,7 @@ class ChangeRequestWithdrawTest {
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
-        coVerify(exactly = 0) { custodyModelRepository.applyDayOverridesForDates(any(), any(), any()) }
+        coVerify(exactly = 0) { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) }
     }
 
     @Test

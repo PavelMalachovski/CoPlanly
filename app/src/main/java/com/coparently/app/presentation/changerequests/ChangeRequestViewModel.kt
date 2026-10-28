@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.SwapOfferer
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadlineId
@@ -401,16 +402,20 @@ class ChangeRequestViewModel @Inject constructor(
                     DayOverrideTransition.offerAll(current, mapOf(date to otherSlot(agreed)), uid, atIso, groupId, note)
                 }
             }
+            // Who is asking, so the push names them and each day's way (day swap design). The name
+            // only words a sentence the other phone falls back on, so the rendered stream will do.
+            val offerer = parentsSource.signedInSlot()?.let { SwapOfferer(it, parents.value.me?.name.orEmpty()) }
             val result = if (days.size == 1) {
                 // One day keeps the single write and single card an older co-parent build reads,
                 // as the calendar's sheet does.
                 custodyModelRepository.applyDayOverrides(
                     date = days.first(),
                     transform = { current -> reoffer(current, days.first()) },
-                    answerBy = answerBy
+                    answerBy = answerBy,
+                    offerer = offerer
                 )
             } else {
-                custodyModelRepository.applyDayOverridesForDates(days, reoffer, answerBy)
+                custodyModelRepository.applyDayOverridesForDates(days, reoffer, answerBy, offerer)
             }
             result.onFailure { e ->
                 Log.w(TAG, "Asking to change an agreed swap failed", e)

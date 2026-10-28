@@ -144,6 +144,37 @@ describe('SEC-3: notification payloads', () => {
     });
   });
 
+  describe('a day swap\'s dates (28 October 2026)', () => {
+    // Fourteen ISO dates joined with commas is 153 characters: the most one offer can carry.
+    const fourteen = Array.from({length: 14}, (_, i) =>
+      `2026-11-${String(i + 1).padStart(2, '0')}`).join(',');
+
+    it('accepts the dates each way at the largest offer', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_group_offered', actorName: 'Alice', date: '2026-11-01',
+        dayCount: '14', datesToYou: fourteen,
+      })));
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_group_offered', actorName: 'Alice', date: '2026-11-01',
+        dayCount: '14', datesToSender: fourteen,
+      })));
+    });
+
+    it('bounds each list like every key a client writes', async () => {
+      const db = env.authenticatedContext(ALICE).firestore();
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'day_swap_group_offered', datesToYou: 'x'.repeat(161),
+      })));
+      await assertFails(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered', datesToSender: 'x'.repeat(161),
+      })));
+      await assertSucceeds(db.collection('notification_queue').add(queued({
+        type: 'day_swap_offered', datesToSender: 'x'.repeat(160),
+      })));
+    });
+  });
+
   describe('a new expense\'s figures (21 October 2026)', () => {
     it('accepts the amount, the share and the currency, and bounds each', async () => {
       const db = env.authenticatedContext(ALICE).firestore();
