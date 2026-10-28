@@ -85,4 +85,10 @@
         <item quantity="many">Ви запропонували помінятися %1$d днями: %2$s</item>
         <item quantity="other">Ви запропонували помінятися %1$d днями: %2$s</item>
     </plurals>
+    <!-- Choosing days to swap (day swap design, 28 October 2026, boards SW-1 and SW-2). -->
+    <string name="day_swap_start">Обмінятися днями</string>
+    <string name="day_swap_choose_title">Виберіть дні для обміну</string>
+    <string name="day_swap_close_selection">Завершити вибір днів</string>
+    <string name="day_swap_previous_month">Попередній місяць</string>
+    <string name="day_swap_next_month">Наступний місяць</string>
 </resources>

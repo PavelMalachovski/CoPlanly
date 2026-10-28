@@ -258,14 +258,15 @@ fun CalendarScreen(
     // id alone opened the first one on screen and showed its date instead of the tapped one's.
     var previewEventStart by remember { mutableStateOf<LocalDateTime?>(null) }
 
-    // Day-swap selection: a long-press picks a day, further taps pick or unpick single days (any
-    // days, mine to give and theirs to take — `SwapSelection`), and the sheet opens when the
-    // parent commits. Screen state rather than ViewModel state for the same reason
-    // `previewEventId` is: it lives and dies with this grid, and surviving process death would
-    // restore a selection over a calendar the user has since paged away from.
-    // Plain `remember`, like `previewEventId` above: a half-made selection is transient, and
-    // restoring one over a grid the user has since paged away from would be worse than losing it.
-    var swapSelection by remember { mutableStateOf(emptySet<LocalDate>()) }
+    // Day-swap selection: the legend's ⇄ button or a long-press opens it, taps pick or unpick
+    // single days (any days, mine to give and theirs to take — `SwapSelection`), and the sheet
+    // opens when the parent commits. Screen state rather than ViewModel state: it lives and dies
+    // with this grid. Saveable since the day swap design (28 October 2026): the selection now
+    // outlives paging by design — a parent picks the 30th, pages, and picks the 2nd — so a
+    // rotation mid-way must not lose it. `selectingSwap` is its own flag because the button
+    // opens the mode with nothing chosen yet.
+    var selectingSwap by rememberSaveable { mutableStateOf(false) }
+    var swapSelection by rememberSaveable(stateSaver = SwapSelectionSaver) { mutableStateOf(emptySet<LocalDate>()) }
     // The day a drag started on, and what was picked before it. A drag must redraw its run from
     // where the finger went down to where it is now, including *shrinking* it when the finger
     // comes back — which the set alone cannot say.
@@ -277,6 +278,7 @@ fun CalendarScreen(
     // long-press entirely rather than opening a sheet that would have to apologise.
     val offerSwapDay: ((LocalDate) -> Unit)? = parents.coParent?.let {
         fun(date: LocalDate) {
+            selectingSwap = true
             swapAnchor = date
             swapBeforeDrag = swapSelection - date
             swapSelection = SwapSelection.toggled(swapSelection, date)
@@ -291,6 +293,22 @@ fun CalendarScreen(
         }
     }
     var swapSheetOpen by remember { mutableStateOf(false) }
+    fun endSwapSelection() {
+        selectingSwap = false
+        swapSelection = emptySet()
+        swapAnchor = null
+    }
+    // A tap while choosing (`SwapTap`): a borrowed day pages to its month and is chosen there.
+    val tapSwapDay: (LocalDate) -> Unit = { date ->
+        when (val tap = swapTapFor(date, displayedMonth, selecting = true)) {
+            is SwapTap.Toggle -> swapSelection = SwapSelection.toggled(swapSelection, tap.date)
+            is SwapTap.PageAndToggle -> {
+                calendarViewModel.showMonth(tap.month)
+                swapSelection = SwapSelection.toggled(swapSelection, tap.date)
+            }
+            is SwapTap.OpenDay -> Unit
+        }
+    }
     // Day view's visible "Swap this day" (D-10): one day, straight to the sheet. The long-press
     // on a month cell had been the only way to offer a day.
     val offerDayFromDayView: ((LocalDate) -> Unit)? = offerSwapDay?.let {
@@ -570,7 +588,7 @@ fun CalendarScreen(
         if (tabTaps != answeredTabTaps) {
             answeredTabTaps = tabTaps
             dayOpenedFromMonth = false
-            swapSelection = emptySet()
+            endSwapSelection()
             calendarViewModel.setViewMode(CalendarViewMode.MONTH)
             calendarViewModel.showMonth(YearMonth.now())
         }
@@ -583,18 +601,27 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            CalendarHeader(
-                selectedDate = anchorDate,
-                viewMode = viewMode,
-                onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
-                onNavigateToToday = { calendarViewModel.showMonth(YearMonth.now()) },
-                onJumpToDate = { showDatePicker = true },
-                onFiltersClick = { showTypeFilters = true },
-                filtersActive = parentFilter != ParentFilter.BOTH ||
-                    hiddenEventTypes.isNotEmpty() ||
-                    !showHolidays,
-                onSettingsClick = onSettingsClick
-            )
+            if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
+                SwapSelectionHeader(
+                    month = displayedMonth,
+                    onPreviousMonth = { calendarViewModel.showMonth(displayedMonth.minusMonths(1)) },
+                    onNextMonth = { calendarViewModel.showMonth(displayedMonth.plusMonths(1)) },
+                    onClose = ::endSwapSelection
+                )
+            } else {
+                CalendarHeader(
+                    selectedDate = anchorDate,
+                    viewMode = viewMode,
+                    onViewModeChange = { mode -> calendarViewModel.setViewMode(mode) },
+                    onNavigateToToday = { calendarViewModel.showMonth(YearMonth.now()) },
+                    onJumpToDate = { showDatePicker = true },
+                    onFiltersClick = { showTypeFilters = true },
+                    filtersActive = parentFilter != ParentFilter.BOTH ||
+                        hiddenEventTypes.isNotEmpty() ||
+                        !showHolidays,
+                    onSettingsClick = onSettingsClick
+                )
+            }
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -817,6 +844,11 @@ fun CalendarScreen(
                         CustodyLegend(
                             parentNames = parentNames,
                             showContactWindows = custodyModel?.contactWindows?.isNotEmpty() == true,
+                            // The visible way into a swap (SW-1): the long press alone was found
+                            // by nobody. Month only, where the grid can show the chosen days.
+                            trailing = offerSwapDay?.takeIf {
+                                viewMode == CalendarViewMode.MONTH && !selectingSwap
+                            }?.let { { SwapDaysButton(onClick = { selectingSwap = true }) } },
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
                                 vertical = dims.paddingSmall / 2
@@ -828,14 +860,11 @@ fun CalendarScreen(
                     // predictive back is on, so a `BackHandler` clears it too. Shown only in MONTH:
                     // week and day views draw no swap markers at all, so a selection made there would
                     // be invisible.
-                    if (swapSelection.isNotEmpty() && viewMode == CalendarViewMode.MONTH) {
+                    if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
                         DaySwapSelectionBar(
                             dayCount = swapSelection.size,
                             onContinue = { swapSheetOpen = true },
-                            onCancel = {
-                                swapSelection = emptySet()
-                                swapAnchor = null
-                            },
+                            onCancel = ::endSwapSelection,
                             modifier = Modifier.padding(
                                 horizontal = dims.paddingMedium,
                                 vertical = dims.paddingSmall / 2
@@ -948,6 +977,8 @@ fun CalendarScreen(
                                     // from the anchor, so coming back shortens it again.
                                     onSwapDragTo = dragSwapTo?.takeIf { grid.followsFamily },
                                     swapSelection = swapSelection,
+                                    selectingSwap = selectingSwap && grid.followsFamily,
+                                    onSwapTap = tapSwapDay,
                                     // Selects the day and opens Day view, where an empty hour
                                     // slot creates an event — the owner's walkthrough found the
                                     // select-only tap a dead end: two redesign passes removed
@@ -1050,13 +1081,11 @@ fun CalendarScreen(
                     )
                 }
                 swapSheetOpen = false
-                swapSelection = emptySet()
-                swapAnchor = null
+                endSwapSelection()
             },
             onDismiss = {
                 swapSheetOpen = false
-                swapSelection = emptySet()
-                swapAnchor = null
+                endSwapSelection()
             }
         )
     }

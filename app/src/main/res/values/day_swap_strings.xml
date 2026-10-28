@@ -68,4 +68,10 @@
         <item quantity="one">You proposed swapping %1$d day with %2$s</item>
         <item quantity="other">You proposed swapping %1$d days with %2$s</item>
     </plurals>
+    <!-- Choosing days to swap (day swap design, 28 October 2026, boards SW-1 and SW-2). -->
+    <string name="day_swap_start">Swap days</string>
+    <string name="day_swap_choose_title">Choose days to swap</string>
+    <string name="day_swap_close_selection">Stop choosing days</string>
+    <string name="day_swap_previous_month">Previous month</string>
+    <string name="day_swap_next_month">Next month</string>
 </resources>

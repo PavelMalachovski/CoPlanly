@@ -160,7 +160,9 @@ fun MonthView(
     swappedDates: Set<LocalDate> = emptySet(),
     onDayLongClick: ((LocalDate) -> Unit)? = null,
     onSwapDragTo: ((LocalDate) -> Unit)? = null,
-    swapSelection: Set<LocalDate> = emptySet()
+    swapSelection: Set<LocalDate> = emptySet(),
+    selectingSwap: Boolean = false,
+    onSwapTap: ((LocalDate) -> Unit)? = null
 ) {
     val firstDayOfWeek = remember { DayOfWeek.MONDAY }
 
@@ -297,9 +299,11 @@ fun MonthView(
                         onSwapDragTo = onSwapDragTo,
                         dayBounds = dayBounds,
                         isInSwapSelection = day.date in swapSelection,
-                        // In selection mode a tap extends the run instead of opening Day view.
-                        // Outside it, tap keeps doing what the August design decided it does.
-                        selectingSwap = swapSelection.isNotEmpty()
+                        // In selection mode a tap only chooses — a borrowed day too, which the
+                        // screen pages to (`SwapTap`). Outside it, tap keeps doing what the August
+                        // design decided it does.
+                        selectingSwap = selectingSwap,
+                        onSwapTap = onSwapTap
                     )
                 }
             )
@@ -404,7 +408,8 @@ private fun DayCell(
     onSwapDragTo: ((LocalDate) -> Unit)? = null,
     dayBounds: MutableMap<LocalDate, Rect> = mutableMapOf(),
     isInSwapSelection: Boolean = false,
-    selectingSwap: Boolean = false
+    selectingSwap: Boolean = false,
+    onSwapTap: ((LocalDate) -> Unit)? = null
 ) {
     val dims = dimensions()
     val date = day.date
@@ -732,12 +737,13 @@ private fun DayCell(
             // and no holiday tint either — it does carry the custody band, which is a pattern
             // rather than something you would answer.
             .combinedClickable(
-                // While a swap selection is open, a tap extends it — the same gesture that
-                // opened it. Outside selection mode the tap is untouched: it selects the day and
-                // opens Day view, which is the only route to creating an event on a chosen day.
+                // While days are being chosen, a tap only chooses — a borrowed day included, which
+                // the screen pages to and chooses there (the owner's report: it opened Day view).
+                // Outside selection mode the tap is untouched: it selects the day and opens Day
+                // view, which is the only route to creating an event on a chosen day.
                 onClick = {
-                    if (selectingSwap && isCurrentMonth) {
-                        onDayLongClick?.invoke(date)
+                    if (selectingSwap && onSwapTap != null) {
+                        onSwapTap(date)
                     } else {
                         onDayClick(date)
                     }

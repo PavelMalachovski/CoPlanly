@@ -67,4 +67,10 @@
         <item quantity="one">Du hast %2$s einen Tausch von %1$d Tag vorgeschlagen</item>
         <item quantity="other">Du hast %2$s einen Tausch von %1$d Tagen vorgeschlagen</item>
     </plurals>
+    <!-- Choosing days to swap (day swap design, 28 October 2026, boards SW-1 and SW-2). -->
+    <string name="day_swap_start">Tage tauschen</string>
+    <string name="day_swap_choose_title">Tage zum Tauschen wählen</string>
+    <string name="day_swap_close_selection">Auswahl beenden</string>
+    <string name="day_swap_previous_month">Vorheriger Monat</string>
+    <string name="day_swap_next_month">Nächster Monat</string>
 </resources>

@@ -45,16 +45,34 @@ internal val LEGEND_SWATCH = DpSize(20.dp, 14.dp)
  *
  * @param parentNames Resolves a slot to that parent's name; a slot nobody holds is left out
  * @param showContactWindows Whether the schedule has contact time, so its mark needs explaining
+ * @param trailing Drawn at the row's end, centred on it — the "⇄" that starts a day swap (day swap
+ *   design, board SW-1), or null
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CustodyLegend(
     parentNames: ParentNames,
     showContactWindows: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null
 ) {
     val slots = LEGEND_PARENT_SLOTS.filter { parentNames.isKnown(it) }
     if (slots.isEmpty()) return
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        LegendEntries(slots, parentNames, showContactWindows, Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
+/** The legend's entries, wrapping to more lines when they do not fit; see [CustodyLegend]. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LegendEntries(
+    slots: List<String>,
+    parentNames: ParentNames,
+    showContactWindows: Boolean,
+    modifier: Modifier
+) {
     val first = ParentColors.container(LEGEND_PARENT_SLOTS[0], alpha = ParentColors.custodyTintAlpha)
     val second = ParentColors.container(LEGEND_PARENT_SLOTS[1], alpha = ParentColors.custodyTintAlpha)
     val surface = MaterialTheme.colorScheme.surface

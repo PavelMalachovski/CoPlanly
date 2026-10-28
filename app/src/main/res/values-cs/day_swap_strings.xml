@@ -85,4 +85,10 @@
         <item quantity="many">Navrhli jste výměnu %1$d dne: %2$s</item>
         <item quantity="other">Navrhli jste výměnu %1$d dnů: %2$s</item>
     </plurals>
+    <!-- Choosing days to swap (day swap design, 28 October 2026, boards SW-1 and SW-2). -->
+    <string name="day_swap_start">Vyměnit dny</string>
+    <string name="day_swap_choose_title">Vyberte dny k výměně</string>
+    <string name="day_swap_close_selection">Ukončit výběr dnů</string>
+    <string name="day_swap_previous_month">Předchozí měsíc</string>
+    <string name="day_swap_next_month">Další měsíc</string>
 </resources>
