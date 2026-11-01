@@ -34,6 +34,9 @@ kizitonwose calendar's multiplatform artifact. Firebase goes through GitLive's
 fixed the conventions this plan reuses. Read both, and the parts of `CLAUDE.md` each task names,
 before starting.
 
+**Execution method: subagent-driven** (owner decision, 1 November 2026): a fresh implementer per
+task and a fresh reviewer before the next task starts, then a whole-branch review.
+
 **Start gate.** Three conditions, all required:
 1. Phase 1 (PR #158) is merged. That happens after the Android release (spec §2).
 2. **MON-25 is done**: the request clocks' on-time steps run in a scheduled Cloud Function (spec
