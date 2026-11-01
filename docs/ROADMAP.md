@@ -2780,11 +2780,15 @@ platform caches; they do not fail the link. So:
 
 **Firebase on two platforms: GitLive** (phase 2's first decision, 1 November 2026; spec §5.1
 step 4 and §7). The shared data layer reaches Firebase through GitLive's `firebase-kotlin-sdk`
-(Apache 2.0), not through `expect`/`actual` wrappers of our own. A throwaway spike ran every
-criterion as one commonTest test, on an Android emulator and on an iOS simulator, each against the
-Auth, Firestore, Functions and Storage emulators. Of the thirteen rows, eleven pass on both
-platforms through GitLive alone. The Storage row passes with a small platform half beside GitLive.
-The FCM token cannot be run on emulators at all. Four reasons:
+(Apache 2.0), not through `expect`/`actual` wrappers of our own.
+
+`FIREBASE_CHOICE = gitlive`
+
+A throwaway spike ran every criterion as one commonTest test, on an Android emulator and on an iOS
+simulator, each against the Auth, Firestore, Functions and Storage emulators. Of the thirteen
+rows, eleven pass on both platforms through GitLive alone, the sign-in row only in the form the
+test used (below). The Storage row passes with a small platform half beside GitLive. The FCM token
+cannot be run on emulators at all. Four reasons:
 - **Nothing failed.** Offline persistence, `Source.SERVER` without a cache fallback,
   `hasPendingWrites`, `ESTIMATE`, server timestamps, two-field updates, transactions, the two
   query shapes, named apps, the regional callable with its `details`, Storage metadata, and the
@@ -2808,8 +2812,26 @@ The FCM token cannot be run on emulators at all. Four reasons:
 | A named `FirebaseApp` initialised with its own options, with its own cache (the e2e parents) | Pass | Pass |
 | A callable in `europe-west3`: the reply, `FAILED_PRECONDITION` with its `details` map, and nothing served in another region (pairing, AI) | Pass | Pass |
 | Storage: an upload with custom metadata, a download to a file, no download URL (MON-23, L-4) | Pass, with a platform half: GitLive has no download-to-file, so the test calls the SDK's `getFile` through `StorageReference.android` | Pass, with a platform half: `writeToFile` through `StorageReference.ios` |
-| Auth with a Google ID token credential, on the Auth emulator (sign-in) | Pass | Pass. GitLive's iOS side also requires an access token, which Google Sign-In on iOS gives. |
+| Auth with a Google ID token credential, on the Auth emulator (sign-in) | Pass with an ID token and an access token. Not run: the ID token alone (`accessToken = null`), which the app uses today (below). | Pass with an ID token and an access token, the only form GitLive's iOS side accepts (below). |
 | The FCM registration token (`FcmService`) | Not testable on emulators: there is no FCM emulator, and a token needs Google Play services and a real project. Judged from the API: `getToken()` and `deleteToken()` exist. | Not testable on emulators: it needs APNs and a real project. Judged from the API, as on Android. |
+
+**What the sign-in row did not cover.** The test passed an ID token *and* an access token on both
+platforms. The app's Android sign-in passes the ID token alone
+(`FirebaseAuthService`: `GoogleAuthProvider.getCredential(idToken, null)`), and that path was not
+run. GitLive's API, read at tag v2.7.0 (commit `71a3940`):
+- **Common:** `GoogleAuthProvider.credential(idToken: String?, accessToken: String?)`
+  (`firebase-auth/src/commonMain/kotlin/dev/gitlive/firebase/auth/credentials.kt`).
+- **Android:** it requires only that one of the two is present, then passes both to the Android
+  SDK's `getCredential(idToken, accessToken)` unchanged
+  (`firebase-auth/src/androidMain/.../credentials.kt`). So `accessToken = null` reaches the same
+  SDK call the app makes today.
+- **iOS:** it `requireNotNull`s both, then calls `FIRGoogleAuthProvider.credentialWithIDToken`
+  (`firebase-auth/src/appleMain/.../credentials.kt`). A null access token throws before Firebase is
+  called. Google Sign-In on iOS supplies both.
+
+Phase 2's task 8, which moves sign-in to the shared data layer, must test the ID-token-only path on
+Android against the Auth emulator before
+`FirebaseAuthService` goes through GitLive.
 
 Evidence: Android passed in runs 41318121538 and 41318558085 of the spike workflow; iOS passed in
 run 41318558085 (iPhone 17 Pro simulator, Xcode 26.6). The spike and its workflow were removed
