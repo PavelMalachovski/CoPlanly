@@ -1912,37 +1912,23 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
-  # The same tests on an iOS simulator, and the `Shared` framework the iPhone app links, on the
-  # owner's Mac: a self-hosted runner (docs/IOS-RUNNER.md), because only Xcode links an Apple
-  # binary and runs a simulator. Three conditions, and all three are deliberate.
-  #
-  #  * `shared`: as the Linux job.
-  #  * The repository variable `IOS_RUNNER_READY` is `true`. The owner sets it once the runner is
-  #    registered and online. Without it the job would wait for a runner that does not exist —
-  #    for a day, holding `report` and its comment — so until then it is *skipped*. After it is
-  #    set, a Mac that is switched off makes the job wait in the queue, visibly; it never passes.
-  #  * A push (to `main`) or a pull request from a branch of this repository; a fork's is skipped.
-  #    This is defence in depth, not the lock: a self-hosted runner executes whatever a job's
-  #    workflow and build scripts say, on the owner's own machine, and a fork's pull request runs
-  #    its own copy of this file, which can drop this `if` or add a job for the runner's labels.
-  #    The boundary is the repository setting "Require approval for all external contributors"
-  #    (docs/IOS-RUNNER.md, step 3), which a fork cannot edit.
+  # The same tests on an iOS simulator, and the `Shared` framework the iPhone app links, on a
+  # GitHub-hosted macOS runner, because only Xcode links an Apple binary and runs a simulator. The
+  # repository is public, so macOS runners cost nothing, and a fork's code runs on GitHub's machine,
+  # never on anybody's own (owner decision, 1 November 2026: this replaced the self-hosted Mac of
+  # docs/IOS-RUNNER.md, which stays as a fallback). Gated like the Linux job, on `shared`.
+  # `macos-latest` rather than a numbered image, so the job never names an image GitHub retired;
+  # the "Xcode" step prints which one ran. Kotlin 2.3.21 builds and runs these tests on Xcode 26
+  # and, on the owner's Mac, on Xcode 27.2 (ROADMAP MON-24).
   shared-ios:
-    name: Shared — iOS simulator tests and framework (Mac)
+    name: Shared — iOS simulator tests and framework (macOS)
     needs: changes
-    if: >-
-      needs.changes.outputs.shared == 'true'
-      && vars.IOS_RUNNER_READY == 'true'
-      && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, macOS, ARM64, coplanly]
+    if: needs.changes.outputs.shared == 'true'
+    runs-on: macos-latest
     timeout-minutes: 45
     permissions:
       contents: read
       checks: write
-    # Every third-party action here is pinned to a commit, with its tag beside it: this job runs on
-    # the owner's own machine, and a tag can be moved to other code. The `actions/*` steps are
-    # GitHub's own and stay on tags, as everywhere else in this file. Update a pin by resolving the
-    # tag again (`git ls-remote https://github.com/<owner>/<repo> refs/tags/<tag> 'refs/tags/<tag>^{}'`).
     steps:
       - uses: actions/checkout@v4
 
@@ -1952,20 +1938,24 @@ jobs:
           java-version: '17'
           distribution: temurin
 
-      # The Mac keeps its own ~/.gradle and ~/.konan between runs, so there is nothing for the
-      # action's cache to save: it would only upload and restore gigabytes the disk already has.
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4 (v4.4.3)
+        uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: true
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # The Kotlin/Native compiler and its dependencies, as in the Linux job: a few hundred MB that
+      # would otherwise download on every run.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build.gradle.kts') }}
 
       # Gradle configures every project before it runs a task, and `:app` and `:shared` both apply
       # the Android plugin, which fails configuration with "SDK location not found" when no
-      # ANDROID_HOME or local.properties names one, even when only iOS tasks were asked for. This
-      # puts one on the Mac (in its home directory, kept between runs), so the owner installs
-      # nothing for it.
+      # ANDROID_HOME or local.properties names one, even when only iOS tasks were asked for.
       - name: Set up the Android SDK
-        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3 (v3.2.2)
+        uses: android-actions/setup-android@v3
 
       - name: Xcode
         run: xcodebuild -version
@@ -1995,7 +1985,7 @@ jobs:
 
       - name: Publish test check run
         if: always()
-        uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6 (v6.6.2)
+        uses: mikepenz/action-junit-report@v6
         with:
           check_name: Shared tests (iOS simulator)
           report_paths: shared/build/test-results/iosSimulatorArm64Test/*.xml

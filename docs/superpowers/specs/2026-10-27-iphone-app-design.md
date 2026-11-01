@@ -316,9 +316,11 @@ overturn any of them.
    design pass: the clock document, the five rule shapes, the server-only writes, the withdrawal
    of a custody or split proposal at the end, and the DPIA (R22). Reminders stay local
    notifications.
-3. **CI for iOS: the owner's Mac as a self-hosted runner.** The macOS jobs run on it; Linux jobs
-   stay hosted. The workflow must not run untrusted pull requests from forks on it. The owner sets
-   up the runner (💻); the job definitions are cloud work.
+3. **CI for iOS: GitHub-hosted macOS runners** (revised 1 November 2026). The owner first chose
+   their own Mac as a self-hosted runner; before it was set up, the owner chose GitHub's macOS
+   runners instead — free for a public repository, nothing to keep switched on, and no fork's code
+   on a private machine. `docs/IOS-RUNNER.md` keeps the self-hosted setup as the fallback, should
+   the repository go private or a job need a newer Xcode than GitHub's images carry.
 4. **Paid features count for the family, wherever they were bought.** When MON-11 is built, the
    entitlement is held by the server per family and fed by both Google Play Billing and StoreKit
    (App Store guideline 3.1.1). This shapes MON-11; it does not block the iPhone app.

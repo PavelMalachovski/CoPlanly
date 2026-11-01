@@ -2633,7 +2633,7 @@ journal alone would be the way to add one, and it is a product decision, not a d
 ### MON-24 · **PHASE 1 BUILT** · P1 · L · CoPlanly for iPhone
 
 **Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
-jobs on the owner's Mac as a self-hosted runner; 💻 the iPhone, TestFlight and App Store review.
+jobs on a GitHub-hosted macOS runner; 💻 the iPhone, TestFlight and App Store review.
 
 **Answers:** the iPhone parent, until now served only by the read-only feed (MON-17). Owner
 decisions of 27 October 2026: one Kotlin codebase on Compose Multiplatform; on the iPhone, Apple's
@@ -2652,8 +2652,11 @@ an isolated branch and merge only after the Android release; plan
 - **Toolchain** (Task 1): Kotlin 2.3.21, KSP 2.3.11, Roborazzi 1.76.0, coroutines 1.11.0; no
   screenshot moved.
 - **The `:shared` module and its CI** (Task 2): Android, `iosArm64` and `iosSimulatorArm64`
-  targets, the `shared` job on Linux (JVM tests and the iOS klib) and `shared-ios` on the owner's
-  Mac (`docs/IOS-RUNNER.md`), skipped until `IOS_RUNNER_READY` is set.
+  targets, the `shared` job on Linux (JVM tests and the iOS klib and test klib) and `shared-ios` on
+  a GitHub-hosted `macos-latest` runner (simulator tests and the framework). `shared-ios` was first
+  written for the owner's Mac as a self-hosted runner; on 1 November 2026 the owner chose GitHub's
+  macOS runners instead, free for a public repository and with no fork code on a private machine.
+  `docs/IOS-RUNNER.md` keeps the self-hosted setup as the fallback.
 - **The domain moved** (Tasks 3–8), every package unchanged, by `git mv`: all but the 40 files
   of the stay list below (the app had 186 domain files on 1 November); CLAUDE.md's architecture
   map says where a `domain/…` path now lives. JVM-only calls became small seams (`Sha256`, `secureRandomBytes`, `canonicalDecomposition`, `Lzma1Raw`)
@@ -2775,18 +2778,15 @@ platform caches; they do not fail the link. So:
 3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
    App Store Connect will require by then.
 
-**Left for phase 1, all the owner's (💻):**
-1. Set Settings → Actions → General to "Require approval for all external contributors" first —
-   the runner's boundary, since a fork's pull request runs its own copy of the workflow and the
-   job's fork guard is only defence in depth — then register the Mac runner (`docs/IOS-RUNNER.md`),
-   preferably under a standard macOS account of its own, on the Mac's Xcode 27.2, and set the
-   repository variable `IOS_RUNNER_READY` to `true`.
+**Left for phase 1:**
+1. ~~Register the Mac as a self-hosted runner~~ — not needed: `shared-ios` runs on GitHub's macOS
+   runners (owner decision, 1 November 2026).
 2. Run `shared-ios` green once — "Shared tests (iOS simulator)" runs every `commonTest`, and
    `:shared:linkDebugFrameworkIosSimulatorArm64` produces `Shared.framework`. Both ran green by hand
    on the owner's Mac (Xcode 27.2, 818 tests, 0 failures) on 1 November 2026, after commonTest's
    names were made legal for Kotlin/Native (it refuses a comma or parentheses in a backticked name,
    which the JVM accepts); the Linux `shared` job now compiles commonTest for iOS too. What is left
-   is the same run through the runner, so the check is CI's and not a hand's.
+   is the same run in CI on the hosted macOS runner, so the check is CI's and not a hand's.
 3. Merge after the Android release and its first feedback round (spec §2), and only once step 2
    is green.
 

@@ -1,5 +1,13 @@
 # The Mac runner for iOS CI
 
+> **Not in use (1 November 2026).** The `shared-ios` job runs on a GitHub-hosted `macos-latest`
+> runner instead: the repository is public, so it costs nothing, and no fork's code reaches a
+> private machine. This page is kept as the fallback — for the day the repository goes private, or
+> a job needs an Xcode newer than GitHub's images carry. To switch back, point `shared-ios`'s
+> `runs-on` at `[self-hosted, macOS, ARM64, coplanly]` and restore its fork guard and
+> `IOS_RUNNER_READY` condition (see the job's history in `.github/workflows/ci.yml`), after steps
+> 1–8 below.
+
 The iPhone work (MON-24, `docs/superpowers/specs/2026-10-27-iphone-app-design.md` §9.3) builds and
 tests on the owner's Mac, registered with GitHub as a **self-hosted runner**. Linux jobs stay on
 GitHub's hosted runners. Everything on this page is the owner's to do (💻): a cloud session cannot

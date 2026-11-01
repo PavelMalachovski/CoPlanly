@@ -955,20 +955,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more, because Kover merges `:shared` into the app's coverage report.
   **`shared-ios`** runs `:shared:iosSimulatorArm64Test` and `:shared:linkDebugFrameworkIosSimulatorArm64`
-  (check run "Shared tests (iOS simulator)", `require_tests`) on the owner's Mac, a self-hosted
-  runner labelled `self-hosted, macOS, ARM64, coplanly` (`docs/IOS-RUNNER.md`). Two things not to
-  undo. **No fork's code runs on the Mac without the owner's approval**: the repository setting
-  "Require approval for all external contributors" (Settings → Actions → General) is the
-  boundary, because a self-hosted runner executes whatever a job's workflow and build scripts say,
-  on the owner's machine, and a fork's pull request runs its own copy of `ci.yml` — it can drop the
-  job's guard or add a job for the runner's labels. The job's `if`, `github.event_name == 'push' ||
-  github.event.pull_request.head.repo.full_name == github.repository`, is defence in depth, not the
-  lock; keep it, and never approve a fork run that touches `.github/`, the Gradle build files or
-  `tools/` (`docs/IOS-RUNNER.md`). And
-  **it is skipped until the repository variable `IOS_RUNNER_READY` is `true`**, which the owner sets
-  once the runner is online: without it the job would queue for a day for a runner that does not
-  exist, holding `report`. Once it is set, a Mac that is off makes the job wait in the queue,
-  visibly, and never turns it green. `:shared:detekt` runs in the `detekt` job against the app's config and the app's
+  (check run "Shared tests (iOS simulator)", `require_tests`) on a **GitHub-hosted** `macos-latest`
+  runner, gated on `shared` like the Linux job (owner decision, 1 November 2026). The repository is
+  public, so macOS runners are free, and a fork's code runs on GitHub's machine, never on anybody's
+  own. It replaced a self-hosted job on the owner's Mac before that job ever ran; don't bring a
+  self-hosted runner back for this without reading `docs/IOS-RUNNER.md`, which keeps the setup and
+  its security boundary as the fallback (a fork's pull request runs its own copy of `ci.yml`, so
+  only the repository's "Require approval for all external contributors" setting protects a
+  self-hosted machine). `:shared:detekt` runs in the `detekt` job against the app's config and the app's
   baseline file — one baseline for both modules, which `:app:detektBaseline` writes because it also
   reads `shared/src` (`:shared:detektBaseline` is disabled: detekt's baseline task replaces the
   file's findings with its own run's, so a second writer would erase the first's).
