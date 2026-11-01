@@ -1,6 +1,7 @@
 package com.coparently.app.domain.export
 
-import java.security.MessageDigest
+import com.coparently.app.domain.files.toHex
+import com.coparently.app.domain.platform.Sha256
 
 /**
  * The two files an export can be.
@@ -51,12 +52,6 @@ object RecordId {
 /** The fingerprint the server registers and the verification page recomputes. */
 object ExportFingerprint {
 
-    private const val BYTE_MASK = 0xff
-    private const val HEX_RADIX = 16
-
     /** SHA-256 of [bytes], as 64 lowercase hex characters — the form `registerExportReceipt` accepts. */
-    fun sha256Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { byte ->
-            (byte.toInt() and BYTE_MASK).toString(HEX_RADIX).padStart(2, '0')
-        }
+    fun sha256Hex(bytes: ByteArray): String = Sha256.digest(bytes).toHex()
 }

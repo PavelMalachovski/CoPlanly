@@ -1,10 +1,10 @@
 package com.coparently.app.domain.school
 
-import java.security.MessageDigest
+import com.coparently.app.domain.files.toHex
+import com.coparently.app.domain.platform.Sha256
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Locale
 
 /**
  * The four fields an import owns on an event; everything else on the event is the parent's.
@@ -63,8 +63,7 @@ internal object SchoolImportIds {
 
     /** [text]'s SHA-256, in lower-case hex. */
     fun sha256Hex(text: String): String =
-        MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(Locale.ROOT, it) }
+        Sha256.digest(text.encodeToByteArray()).toHex()
 }
 
 /**
