@@ -530,11 +530,19 @@ When touching the UI, keep these invariants:
    server's sweeps and account deletion, because an older build may still write one. Don't bring
    a budget screen back without a product decision. Tab switches, including Home's stat-tile deep
    links, go through `NavHostController.navigateToTab` so they share one back-stack policy.)*
-2. **Toolchain**: compileSdk/targetSdk 36, Kotlin 2.1 (+ `kotlin.plugin.compose`),
+2. **Toolchain**: compileSdk/targetSdk 36, AGP 8.10.1, **Kotlin 2.3.21** (+ `kotlin.plugin.compose`
+   at the same version; MON-24, November 2026),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
    used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
-   Kotlin 2.x metadata), Hilt and Room on **KSP** (`2.1.0-1.0.29`; kapt is gone — move KSP with Kotlin), Navigation 2.9.3, Hilt 2.56.2, predictive back on. **Firebase BoM 34.4.0 with no `-ktx`
+   Kotlin 2.x metadata), Hilt and Room on **KSP2** (KSP `2.3.11`; kapt is gone), Navigation 2.9.3,
+   Hilt 2.58 (androidx.hilt's processor and `hilt-work` 1.3.0), kotlinx-coroutines 1.11.0,
+   predictive back on. **Kotlin, KSP, Dagger and Roborazzi move together, and AGP holds them
+   back**: KSP has been versioned apart from Kotlin since 2.3.0 and is
+   KSP2 only; 2.3.12 and later need AGP 8.12. Dagger 2.58 is the newest whose Hilt plugin accepts
+   AGP 8, and its `hiltJavaCompile` step reads Kotlin metadata up to 2.3 only. So Kotlin 2.4 waits
+   for AGP 9 and Dagger 2.60. Compiler options go through `kotlin { compilerOptions { … } }`;
+   `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.4.0 with no `-ktx`
    artifacts** (audit L-2): 34.0.0 removed them, and the Kotlin extensions (`Firebase`, `logEvent`,
    `storageMetadata`, …) are imported from the product's own package
    (`com.google.firebase.analytics.logEvent`, never `…analytics.ktx…`). `Task.await()` comes from the
@@ -989,9 +997,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Roborazzi task runs only the screenshot package and `testDebugUnitTest` excludes it**
   (`roborazziRequested` in `app/build.gradle.kts`), so `build-test` stays fast and a rendering
   failure cannot redden it. **Robolectric runs SDK 34, not 36** (`SCREENSHOT_SDK`): 4.16.1
-  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi stays at 1.60.0**, the
-  last release built with Kotlin 2.0; later ones are built with Kotlin 2.3, whose metadata this Kotlin 2.1 compiler is
-  not guaranteed to read — upgrade the two together. And **a private composable a test needs becomes
+  supports 36 but only on JDK 21, and every job builds on 17. **Roborazzi is at 1.76.0**, built
+  with Kotlin 2.3 (metadata 2.3.0) like every release since 1.61.0, so it needs this project's
+  Kotlin 2.3 or later. Never take a Roborazzi built with a newer Kotlin than the project's, because
+  the compiler reads metadata at most one minor version ahead. Upgrade the two together. And **a private composable a test needs becomes
   `internal`**, never public (`HandoverHero`, `StatTiles`, `TimelineRow`, `ChatThreadHeader`), and
   a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
   opens its own window that a node capture does not see. Every fixture date is pinned (May 2026,

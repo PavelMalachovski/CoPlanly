@@ -265,10 +265,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     bundle {
         // Keep every locale in the base APK. Play otherwise splits the AAB by language and
         // installs only the device's languages, so picking another one in Settings → Language
@@ -374,12 +370,15 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-    // Hilt - Updated to latest stable
-    implementation("com.google.dagger:hilt-android:2.56.2")
-    ksp("com.google.dagger:hilt-compiler:2.56.2")
+    // Hilt — the same version as the Hilt plugin in the root build.gradle.kts (see why there).
+    implementation("com.google.dagger:hilt-android:2.58")
+    ksp("com.google.dagger:hilt-compiler:2.58")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
+    // androidx.hilt 1.3.0 is the first whose processor targets Kotlin 2 and KSP2, which is all KSP
+    // runs since 2.3.0; the compiler and the runtime it generates for move together. 1.4.0 needs
+    // compileSdk 37 and AGP 9.2. hilt-navigation-compose carries no processor and stays.
+    implementation("androidx.hilt:hilt-work:1.3.0")
+    ksp("androidx.hilt:hilt-compiler:1.3.0")
 
     // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it)
     val roomVersion = "2.7.2"
@@ -396,8 +395,9 @@ dependencies {
     implementation("net.zetetic:sqlcipher-android:4.6.1@aar")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
-    // Coroutines - Updated to latest stable
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Coroutines — 1.11.0, the companion release of Kotlin 2.2.20 and the newest stable; every
+    // kotlinx-coroutines artifact below takes the same version.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // WorkManager for background tasks. 2.10.x (CQ-17) for its Doze and foreground-service
     // fixes, which is what the 15-minute periodic sync runs into; 2.11 raised minSdk and is a
@@ -471,7 +471,7 @@ dependencies {
     // product's own package since BoM 32.5, which is where every import in `app/src` already
     // points. Don't add a `-ktx` artifact back: it no longer resolves. 34.4.0 rather than the
     // newest 34.x because it is contemporary with the rest of this toolchain (Compose BOM
-    // 2025.10, AGP 8.10, Kotlin 2.1); move it on a machine that can run
+    // 2025.10, AGP 8.10); move it on a machine that can run
     // `./gradlew :app:dependencies`.
     val firebaseBom = platform("com.google.firebase:firebase-bom:34.4.0")
     implementation(firebaseBom)
@@ -489,7 +489,7 @@ dependencies {
     // `Task.await()` (kotlinx.coroutines.tasks), which the data layer calls throughout. It used
     // to arrive only transitively through the Firebase modules; declared so a BoM move cannot
     // take it away. Same version as kotlinx-coroutines-android above.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
 
     // Coil for async image loading in Compose (receipt photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -497,6 +497,11 @@ dependencies {
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test"))
+    // kotlin-reflect at the compiler's own version. MockK asks for 2.0.0, which reads Kotlin
+    // metadata only up to 2.1, and this module is compiled with Kotlin 2.3; a reflection library
+    // older than the compiler is unsupported. Unversioned, it follows the Kotlin plugin.
+    testImplementation(kotlin("reflect"))
+    androidTestImplementation(kotlin("reflect"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
@@ -514,8 +519,8 @@ dependencies {
     androidTestImplementation("io.mockk:mockk-android:1.14.0")
 
     // Coroutines Test - Latest stable
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 
     // Turbine for Flow testing
     testImplementation("app.cash.turbine:turbine:1.2.0")
@@ -528,13 +533,13 @@ dependencies {
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
     // Hilt testing - Updated to match Hilt version
-    testImplementation("com.google.dagger:hilt-android-testing:2.56.2")
-    kspTest("com.google.dagger:hilt-compiler:2.56.2")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.56.2")
+    testImplementation("com.google.dagger:hilt-android-testing:2.58")
+    kspTest("com.google.dagger:hilt-compiler:2.58")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.58")
     // OneParentOnScreenTest: the app's pairing path asks WorkManager for a sync, and
     // HiltTestApplication is not the Configuration.Provider the manifest expects.
     androidTestImplementation("androidx.work:work-testing:2.10.5")
-    kspAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
+    kspAndroidTest("com.google.dagger:hilt-compiler:2.58")
 
     // Navigation Testing
     androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
@@ -545,7 +550,7 @@ dependencies {
     // the tests pin `@Config(sdk = [34])` — see `ScreenshotMatrix`. `ui-test-junit4` provides
     // `createComposeRule`; its activity comes from the `ui-test-manifest` debug dependency above.
     testImplementation("org.robolectric:robolectric:4.16.1")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.60.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.76.0")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     // The widget's layout, composed and asserted on the JVM (TodayWidgetContentTest).
@@ -566,11 +571,20 @@ configurations.named("androidTestImplementation") {
     exclude(group = "org.junit.platform")
 }
 
+// The JVM bytecode target, in the compilerOptions DSL: `android { kotlinOptions { … } }` is an
+// error since Kotlin 2.2.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 // Hilt and Room run on KSP, not kapt: kapt generated Java stubs for every Kotlin file before
 // processing, the single slowest phase of every build in CI. Room writes
 // `schemas/<version>.json` from this argument. It is a plain string, so Gradle does not know the
 // directory is an output — a KSP task restored from the build cache writes nothing there, which
-// is why the Regenerate workflow runs `kspDebugKotlin --rerun`.
+// is why the Regenerate workflow runs `kspDebugKotlin --rerun`. Since KSP 2.3 (MON-24) the
+// processors run on KSP2, the only mode KSP still has.
 //
 // `room.generateKotlin = false` keeps Room emitting the Java it emitted under kapt. Room's Kotlin
 // output is stricter about nullability in queries; switching to it is a separate change with its
