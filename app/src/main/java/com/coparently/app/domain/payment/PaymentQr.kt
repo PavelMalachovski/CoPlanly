@@ -1,12 +1,10 @@
 package com.coparently.app.domain.payment
 
-import org.tukaani.xz.LZMA2Options
-import org.tukaani.xz.LZMAOutputStream
-import java.io.ByteArrayOutputStream
+import com.coparently.app.domain.platform.Lzma1Raw
+import com.coparently.app.domain.platform.canonicalDecomposition
+import com.coparently.app.domain.text.Crc32
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.text.Normalizer
-import java.util.zip.CRC32
 
 /**
  * One payment a parent is asked to make: to whom, how much, and what the bank shows as the note.
@@ -103,7 +101,7 @@ object PaymentQr {
 
     /** [text] in plain ASCII: accents dropped, anything else outside printable ASCII and `*` removed. */
     internal fun ascii(text: String): String =
-        Normalizer.normalize(text, Normalizer.Form.NFD)
+        text.canonicalDecomposition()
             .filter { it.code in PRINTABLE_ASCII && it != '*' }
             .trim()
 
@@ -113,30 +111,22 @@ object PaymentQr {
      * PAY by square, version 1.0 with the 1.1 beneficiary fields, as the Slovak banks' reference
      * encoder writes it: the tab-separated "Pay" document, its CRC32 in front, raw LZMA1
      * (lc 3, lp 0, pb 2, 128 KiB dictionary), a four-byte header (two zero bytes for type and
-     * version, then the uncompressed length, little-endian), all of it in base32hex.
+     * version, then the uncompressed length, little-endian), all of it in base32hex. The
+     * compression is [Lzma1Raw]'s, which has those settings; where the platform has no encoder
+     * (iOS, for now) there is no code, and the screen still offers the IBAN.
      */
     internal object PayBySquare {
         private const val ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUV"
-        private const val DICTIONARY = 1 shl 17
-        private const val LITERAL_CONTEXT_BITS = 3
-        private const val POSITION_BITS = 2
         private const val BYTE_MASK = 0xFF
         private const val BITS_PER_BYTE = 8
         private const val BITS_PER_CHAR = 5
         private const val CHAR_MASK = 31
 
-        fun encode(request: PaymentRequest): String {
-            val payload = document(request).toByteArray(Charsets.UTF_8)
-            val crc = CRC32().apply { update(payload) }.value
+        fun encode(request: PaymentRequest): String? {
+            val payload = document(request).encodeToByteArray()
+            val crc = Crc32.of(payload)
             val withCrc = littleEndian(crc, Int.SIZE_BYTES) + payload
-            val compressed = ByteArrayOutputStream().also { out ->
-                val options = LZMA2Options().apply {
-                    setLcLp(LITERAL_CONTEXT_BITS, 0)
-                    pb = POSITION_BITS
-                    dictSize = DICTIONARY
-                }
-                LZMAOutputStream(out, options, true).use { it.write(withCrc) }
-            }.toByteArray()
+            val compressed = Lzma1Raw.encode(withCrc) ?: return null
             val header = byteArrayOf(0, 0) + littleEndian(withCrc.size.toLong(), 2)
             return base32hex(header + compressed)
         }
