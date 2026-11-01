@@ -4,26 +4,24 @@ import com.coparently.app.domain.custody.ChildOverrideCodec
 import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.DecodedChildOverrides
 import com.coparently.app.domain.custody.SharedCustody
-import com.google.gson.Gson
+import com.coparently.app.domain.serialization.StoredJson
 
 /**
  * Room's form of each child's own schedule (FAM-4): a JSON array of the [ChildOverrideCodec]
  * strings, the same strings the Firestore document carries — unreadable entries included,
  * verbatim, so a row never loses an override a newer build wrote.
  *
- * Gson only ever sees an array of strings, never the [ChildScheduleOverride] data class, so R8 has
- * no field names to rename. [SeasonalLayerJson]'s two rules hold: none is stored as null, and an
+ * The JSON only ever holds an array of strings, never the [ChildScheduleOverride] data class, so the
+ * stored text depends on no class's field names. [SeasonalLayerJson]'s two rules hold: none is stored as null, and an
  * unreadable column degrades to no overrides rather than throwing on the path that paints the grid.
  */
 object ChildOverrideJson {
-
-    private val gson = Gson()
 
     /** The overrides as JSON, or null when there are none. */
     fun encode(overrides: List<ChildScheduleOverride>, unreadable: List<String>): String? =
         ChildOverrideCodec.encodeAll(overrides, unreadable)
             .takeIf { it.isNotEmpty() }
-            ?.let { gson.toJson(it) }
+            ?.let { StoredJson.encode(StoredJson.strings, it) }
 
     /**
      * What the mirror stores for [remote]'s overrides: the document's list, or — when the document
@@ -41,7 +39,7 @@ object ChildOverrideJson {
     /** [json] as overrides, or none when it is null, blank or unreadable. */
     fun decode(json: String?): DecodedChildOverrides {
         if (json.isNullOrBlank()) return DecodedChildOverrides()
-        val values = runCatching { gson.fromJson(json, Array<String>::class.java) }.getOrNull()
-        return ChildOverrideCodec.decodeAll(values?.toList())
+        val values = runCatching { StoredJson.decodeOrNull(StoredJson.strings, json) }.getOrNull()
+        return ChildOverrideCodec.decodeAll(values)
     }
 }

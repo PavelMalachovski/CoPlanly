@@ -4,8 +4,8 @@ import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.gson.Gson
 import kotlinx.datetime.toJavaLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -27,7 +27,6 @@ import java.time.format.DateTimeFormatter
 internal object EventDocument {
 
     private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    private val gson = Gson()
 
     /**
      * Reads one document into a Room row, already marked as coming from the server.
@@ -80,7 +79,7 @@ internal object EventDocument {
         updatedAtMillis = updatedAtMillis,
         syncedToFirestore = true,
         createdByFirebaseUid = data["createdByFirebaseUid"] as? String,
-        sharedWithJson = gson.toJson(data["sharedWith"] ?: emptyList<String>()),
+        sharedWithJson = StoredJson.encodeValue(data["sharedWith"] ?: emptyList<String>()),
         lastModifiedBy = data["lastModifiedBy"] as? String,
         permissions = data["permissions"] as? String ?: "read_write",
         imageUrl = (data["imageUrl"] as? String)?.ifBlank { null },
@@ -210,7 +209,8 @@ internal object EventDocument {
      * Normalised on the way in — blanks dropped, duplicates collapsed — so a row's stored form
      * does not depend on which build wrote the document.
      */
-    fun membersJson(raw: Any?): String = gson.toJson(FamilyMemberRef.store(FamilyMemberRef.parse(raw)))
+    fun membersJson(raw: Any?): String =
+        StoredJson.encode(StoredJson.strings, FamilyMemberRef.store(FamilyMemberRef.parse(raw)))
 
     /**
      * The `forMembers` array a document carries, from a Room row's JSON column.
@@ -220,7 +220,7 @@ internal object EventDocument {
      */
     fun storedMembers(forMembersJson: String): List<String> {
         val stored = runCatching {
-            gson.fromJson(forMembersJson, Array<String>::class.java)?.toList()
+            StoredJson.decodeOrNull(StoredJson.strings, forMembersJson)
         }.getOrNull()
         return FamilyMemberRef.store(FamilyMemberRef.parse(stored))
     }

@@ -15,8 +15,8 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.professionals.ProfessionalRole
+import com.coparently.app.domain.serialization.StoredJson
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.gson.Gson
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -220,7 +220,8 @@ class FamilyIsolationTest : TwoParentTest() {
         // `MultiFamilyRecordsTest`; keep the three in step.
         val remote = checkNotNull(alice.userRepository.getRemoteUserProfile(alice.uid))
         val local = checkNotNull(alice.database.userDao().getUserById(alice.uid))
-        alice.database.userDao().updateUser(local.copy(partnerIdsJson = Gson().toJson(remote.partnerIds)))
+        val partnerIdsJson = StoredJson.encode(StoredJson.strings, remote.partnerIds)
+        alice.database.userDao().updateUser(local.copy(partnerIdsJson = partnerIdsJson))
         alice.selectedFamilySource.reconcile()
         checkNotNull(alice.selectedFamilySource.select(FamilyKey.of(alice.uid, carol.uid)))
         assertEquals(carol.uid, alice.parentsSource.coParentUid())

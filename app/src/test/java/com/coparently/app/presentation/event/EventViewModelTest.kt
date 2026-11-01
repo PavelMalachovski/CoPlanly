@@ -106,7 +106,6 @@ class EventViewModelTest {
             EventUseCases(createEvent, updateEvent, deleteEvent, getEvents),
             errorHandler,
             encryptedPreferences,
-            Gson(),
             photoStorage = mockk(relaxed = true),
             parentsSource = testParentsSource(me = signedInParent),
             familyMembersSource = testFamilyMembersSource()
@@ -406,7 +405,6 @@ class EventViewModelTest {
         EventUseCases(createEvent, updateEvent, deleteEvent, getEvents),
         errorHandler,
         encryptedPreferences,
-        Gson(),
         photoStorage = mockk(relaxed = true),
         parentsSource = testParentsSource(
             me = signedInParent,
@@ -419,6 +417,7 @@ class EventViewModelTest {
     fun `a draft typed for one family never comes back on the other family's form`() = runTest {
         val carolsDraft = EventDraft("Pick up at Carol's", "", "dad", "general", "2026-07-20", "16:00", "17:00")
         every { encryptedPreferences.getEventDraft(any()) } returns null
+        // Written by Gson, as a build before MON-24 saved a draft: it still opens.
         every { encryptedPreferences.getEventDraft("carol__u1") } returns Gson().toJson(carolsDraft)
 
         assertEquals("Pick up at Carol's", formInFamilyWith("carol").loadEventDraft()?.title)

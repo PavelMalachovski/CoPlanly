@@ -23,9 +23,8 @@ import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -47,8 +46,6 @@ class ExpenseRepositoryImpl(
     private val fcmService: FcmService,
     private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : ExpenseRepository {
-
-    private val gson = Gson()
 
     /**
      * The family on screen's expenses. A parent in two families sees one family's money at a
@@ -436,9 +433,8 @@ class ExpenseRepositoryImpl(
 
     /** A Room row as a domain expense. `internal` for the wire-format contract tests. */
     internal fun ExpenseEntity.toDomain(): Expense {
-        val stringListType = object : TypeToken<List<String>>() {}.type
-        val splitBetween: List<String> = gson.fromJson(splitBetweenJson, stringListType)
-        val forMembers: List<String> = gson.fromJson(forMembersJson, stringListType)
+        val splitBetween = StoredJson.decodeOrNull(StoredJson.strings, splitBetweenJson).orEmpty()
+        val forMembers = StoredJson.decodeOrNull(StoredJson.strings, forMembersJson).orEmpty()
 
         return Expense(
             id = id,
@@ -466,13 +462,13 @@ class ExpenseRepositoryImpl(
             id = id,
             familyId = familyId,
             // `childId` is a dead column and is left null; see ExpenseEntity.
-            forMembersJson = gson.toJson(FamilyMemberRef.store(forMembers)),
+            forMembersJson = StoredJson.encode(StoredJson.strings, FamilyMemberRef.store(forMembers)),
             title = title,
             amount = amount,
             currency = currency,
             category = category.name,
             paidBy = paidBy,
-            splitBetweenJson = gson.toJson(splitBetween),
+            splitBetweenJson = StoredJson.encode(StoredJson.strings, splitBetween),
             date = date.toJavaLocalDate(),
             receiptUrl = receiptUrl,
             notes = notes,

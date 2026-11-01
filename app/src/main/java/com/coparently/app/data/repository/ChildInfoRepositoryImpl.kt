@@ -18,13 +18,14 @@ import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.repository.ChildInfoRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.serialization.builtins.ListSerializer
 import java.time.Instant
 
 /**
@@ -37,10 +38,6 @@ class ChildInfoRepositoryImpl(
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreChildInfoDataSource: FirestoreChildInfoDataSource
 ) : ChildInfoRepository {
-
-    private val gson = GsonBuilder()
-        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
-        .create()
 
     override fun getAllChildInfo(): Flow<List<ChildInfo>> =
         getAllChildInfoInEveryFamily().inFamilyOnScreen(
@@ -281,33 +278,19 @@ class ChildInfoRepositoryImpl(
             id = id,
             childName = childName,
             dateOfBirth = dateOfBirth?.toKotlinLocalDateTime(),
-            medications = gson.fromJson(
-                medicationsJson,
-                Array<com.coparently.app.domain.model.Medication>::class.java
-            ).toList(),
-            activities = gson.fromJson(
-                activitiesJson,
-                Array<com.coparently.app.domain.model.Activity>::class.java
-            ).toList(),
-            allergies = gson.fromJson(allergiesJson, Array<String>::class.java).toList(),
+            medications = StoredJson.decodeOrNull(MEDICATIONS, medicationsJson).orEmpty(),
+            activities = StoredJson.decodeOrNull(ACTIVITIES, activitiesJson).orEmpty(),
+            allergies = StoredJson.decodeOrNull(StoredJson.strings, allergiesJson).orEmpty(),
             medicalNotes = medicalNotes,
-            emergencyContacts = gson.fromJson(
-                emergencyContactsJson,
-                Array<com.coparently.app.domain.model.EmergencyContact>::class.java
-            ).toList(),
-            schoolInfo = schoolInfoJson?.let {
-                gson.fromJson(
-                    it,
-                    com.coparently.app.domain.model.SchoolInfo::class.java
-                )
-            },
+            emergencyContacts = StoredJson.decodeOrNull(EMERGENCY_CONTACTS, emergencyContactsJson).orEmpty(),
+            schoolInfo = StoredJson.decodeOrNull(SCHOOL_INFO, schoolInfoJson),
             medicalProfile = (
-                gson.fromJson(medicalProfileJson, MedicalProfile::class.java) ?: MedicalProfile()
+                StoredJson.decodeOrNull(MedicalProfile.serializer(), medicalProfileJson) ?: MedicalProfile()
                 ).withSanitizedVaccinationNames(),
             medicalPhotos = ChildInfoPhotos.decode(
-                gson.fromJson(medicalPhotosJson, Array<String>::class.java)?.toList()
+                StoredJson.decodeOrNull(StoredJson.strings, medicalPhotosJson)
             ),
-            guests = ChildInfoGuests.decode(gson.fromJson(guestsJson, Map::class.java)),
+            guests = ChildInfoGuests.decode(StoredJson.decodeValue(guestsJson)),
             createdAt = createdAt.toKotlinLocalDateTime(),
             updatedAt = updatedAt.toKotlinLocalDateTime(),
             createdByFirebaseUid = createdByFirebaseUid,
@@ -325,15 +308,15 @@ class ChildInfoRepositoryImpl(
             id = id,
             childName = childName,
             dateOfBirth = dateOfBirth?.toJavaLocalDateTime(),
-            medicationsJson = gson.toJson(medications),
-            activitiesJson = gson.toJson(activities),
-            allergiesJson = gson.toJson(allergies),
+            medicationsJson = StoredJson.encode(MEDICATIONS, medications),
+            activitiesJson = StoredJson.encode(ACTIVITIES, activities),
+            allergiesJson = StoredJson.encode(StoredJson.strings, allergies),
             medicalNotes = medicalNotes,
-            emergencyContactsJson = gson.toJson(emergencyContacts),
-            schoolInfoJson = schoolInfo?.let { gson.toJson(it) },
-            medicalProfileJson = gson.toJson(medicalProfile),
-            medicalPhotosJson = gson.toJson(medicalPhotos),
-            guestsJson = gson.toJson(ChildInfoGuests.encode(guests)),
+            emergencyContactsJson = StoredJson.encode(EMERGENCY_CONTACTS, emergencyContacts),
+            schoolInfoJson = schoolInfo?.let { StoredJson.encode(SCHOOL_INFO, it) },
+            medicalProfileJson = StoredJson.encode(MedicalProfile.serializer(), medicalProfile),
+            medicalPhotosJson = StoredJson.encode(StoredJson.strings, medicalPhotos),
+            guestsJson = StoredJson.encodeValue(ChildInfoGuests.encode(guests)),
             createdAt = createdAt.toJavaLocalDateTime(),
             updatedAt = updatedAt.toJavaLocalDateTime(),
             // Derived at the one boundary every save crosses, from the wall clock each save path
@@ -396,7 +379,7 @@ class ChildInfoRepositoryImpl(
                     "grade" to it.grade
                 )
             },
-            "medicalProfile" to gson.fromJson(gson.toJson(medicalProfile), Map::class.java),
+            "medicalProfile" to StoredJson.decodeObject(StoredJson.encode(MedicalProfile.serializer(), medicalProfile)),
             "medicalPhotos" to medicalPhotos,
             "guests" to ChildInfoGuests.encode(guests),
             "createdAt" to IsoText.dateTime(createdAt),
@@ -458,7 +441,7 @@ class ChildInfoRepositoryImpl(
             },
             medicalProfile = (
                 (this["medicalProfile"] as? Map<*, *>)?.let {
-                    gson.fromJson(gson.toJson(it), MedicalProfile::class.java)
+                    StoredJson.decodeOrNull(MedicalProfile.serializer(), StoredJson.encodeValue(it))
                 } ?: MedicalProfile()
                 ).withSanitizedVaccinationNames(),
             medicalPhotos = ChildInfoPhotos.decode(this["medicalPhotos"]),
@@ -473,3 +456,9 @@ class ChildInfoRepositoryImpl(
         )
     }
 }
+
+/** The stored forms of a child's lists and school details, as [StoredJson] reads and writes them. */
+private val MEDICATIONS = ListSerializer(com.coparently.app.domain.model.Medication.serializer())
+private val ACTIVITIES = ListSerializer(com.coparently.app.domain.model.Activity.serializer())
+private val EMERGENCY_CONTACTS = ListSerializer(com.coparently.app.domain.model.EmergencyContact.serializer())
+private val SCHOOL_INFO = com.coparently.app.domain.model.SchoolInfo.serializer()

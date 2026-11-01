@@ -5,6 +5,7 @@ import com.coparently.app.data.school.bakalari.BakalariJson.text
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -48,7 +49,7 @@ class BakalariSchoolDirectory internal constructor(
     /** Every town with at least one school, in the directory's order. The unnamed bucket is skipped. */
     suspend fun towns(): List<SchoolTown> =
         BakalariJson.arrayOf(fetch(directoryUrl)).mapNotNull { element ->
-            val town = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
+            val town = element as? JsonObject ?: return@mapNotNull null
             val name = town.text("name")?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             SchoolTown(name, town.text("schoolCount")?.toIntOrNull() ?: 0)
         }

@@ -18,13 +18,14 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.serialization.builtins.ListSerializer
 
 /**
  * Implementation of [PetRepository].
@@ -42,10 +43,6 @@ class PetRepositoryImpl(
     private val firebaseAuthService: FirebaseAuthService,
     private val firestorePetDataSource: FirestorePetDataSource
 ) : PetRepository {
-
-    private val gson = GsonBuilder()
-        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
-        .create()
 
     override fun getAllPets(): Flow<List<Pet>> {
         return petDao.getAllPets().map { entities ->
@@ -307,15 +304,13 @@ class PetRepositoryImpl(
             species = PetSpecies.fromStored(species),
             breed = breed,
             dateOfBirth = dateOfBirth?.toKotlinLocalDateTime(),
-            medications = gson.fromJson(medicationsJson, Array<Medication>::class.java)
-                ?.toList() ?: emptyList(),
-            vaccinations = gson.fromJson(vaccinationsJson, Array<Vaccination>::class.java)
-                ?.toList() ?: emptyList(),
+            medications = StoredJson.decodeOrNull(MEDICATIONS, medicationsJson) ?: emptyList(),
+            vaccinations = StoredJson.decodeOrNull(VACCINATIONS, vaccinationsJson) ?: emptyList(),
             specialNeeds = specialNeeds,
             feedingNotes = feedingNotes,
             vetName = vetName,
             vetPhone = vetPhone,
-            photos = gson.fromJson(photosJson, Array<String>::class.java)?.toList() ?: emptyList(),
+            photos = StoredJson.decodeOrNull(StoredJson.strings, photosJson) ?: emptyList(),
             createdAt = createdAt.toKotlinLocalDateTime(),
             updatedAt = updatedAt.toKotlinLocalDateTime(),
             createdByFirebaseUid = createdByFirebaseUid,
@@ -335,13 +330,13 @@ class PetRepositoryImpl(
             species = species.name,
             breed = breed,
             dateOfBirth = dateOfBirth?.toJavaLocalDateTime(),
-            medicationsJson = gson.toJson(medications),
-            vaccinationsJson = gson.toJson(vaccinations),
+            medicationsJson = StoredJson.encode(MEDICATIONS, medications),
+            vaccinationsJson = StoredJson.encode(VACCINATIONS, vaccinations),
             specialNeeds = specialNeeds,
             feedingNotes = feedingNotes,
             vetName = vetName,
             vetPhone = vetPhone,
-            photosJson = gson.toJson(photos),
+            photosJson = StoredJson.encode(StoredJson.strings, photos),
             createdAt = createdAt.toJavaLocalDateTime(),
             updatedAt = updatedAt.toJavaLocalDateTime(),
             // Derived at the one boundary every save crosses, from the wall clock each save path
@@ -444,3 +439,7 @@ class PetRepositoryImpl(
         )
     }
 }
+
+/** The stored forms of a pet's medications and vaccinations, as [StoredJson] reads and writes them. */
+private val MEDICATIONS = ListSerializer(Medication.serializer())
+private val VACCINATIONS = ListSerializer(Vaccination.serializer())

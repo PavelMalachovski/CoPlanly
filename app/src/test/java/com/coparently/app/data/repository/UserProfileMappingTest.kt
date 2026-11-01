@@ -9,7 +9,7 @@ import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.model.Vaccination
-import com.google.gson.GsonBuilder
+import com.coparently.app.domain.serialization.StoredJson
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -53,11 +53,7 @@ class UserProfileMappingTest {
 
     @Test
     fun `an empty stored profile deserialises to real empty lists, not to nulls`() {
-        val gson = GsonBuilder()
-            .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
-            .create()
-
-        val parsed = gson.fromJson("{}", MedicalProfile::class.java)
+        val parsed = StoredJson.decode(MedicalProfile.serializer(), "{}")
 
         // Route through a nullable reference so the check is a real null test rather than
         // something the compiler optimises away on a type it believes cannot be null.
@@ -72,33 +68,24 @@ class UserProfileMappingTest {
     }
 
     @Test
-    fun `a vaccination JSON missing its name field leaves the raw JVM field null`() {
-        // Documents the landmine `withSanitizedVaccinationNames` exists to repair.
-        // `Vaccination`'s first parameter (`name`) has no default, so — unlike `MedicalProfile`
-        // above — Kotlin emits no no-arg constructor for it. Gson falls back to
-        // `UnsafeAllocator`, which skips every constructor, so a field missing from the stored
-        // JSON keeps its raw allocation value: null, despite the non-null declared type. This
-        // is the actual Gson behaviour, not the desired one — see the next test for the fix
-        // every `MedicalProfile` parse site applies.
-        val gson = GsonBuilder()
-            .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
-            .create()
-
-        val parsed = gson.fromJson("""{"date":"2024-03-12"}""", Vaccination::class.java)
+    fun `a vaccination JSON missing its name field reads as an empty name, not a JVM null`() {
+        // The landmine `withSanitizedVaccinationNames` was written for. `Vaccination`'s first
+        // parameter (`name`) has no default, so Kotlin emits no no-arg constructor for it, and
+        // Gson used to fall back to `UnsafeAllocator`, leaving a field missing from the stored
+        // JSON at null despite the non-null declared type. `StoredJson` (MON-24) fills a missing
+        // required text with an empty one before it decodes, so the name is never null.
+        val parsed = StoredJson.decode(Vaccination.serializer(), """{"date":"2024-03-12"}""")
 
         val name: String? = parsed.name
-        assertNull(name, "expected Gson's raw UnsafeAllocator gap to still be null here")
+        assertEquals("", name)
+        assertEquals(LocalDate(2024, 3, 12), parsed.date)
     }
 
     @Test
     fun `withSanitizedVaccinationNames repairs a vaccination missing its name`() {
-        val gson = GsonBuilder()
-            .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
-            .create()
-
-        val parsed = gson.fromJson(
-            """{"vaccinations":[{"date":"2024-03-12"}]}""",
-            MedicalProfile::class.java
+        val parsed = StoredJson.decode(
+            MedicalProfile.serializer(),
+            """{"vaccinations":[{"date":"2024-03-12"}]}"""
         ).withSanitizedVaccinationNames()
 
         val name: String? = parsed.vaccinations.single().name

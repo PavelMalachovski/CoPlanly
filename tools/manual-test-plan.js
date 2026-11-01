@@ -328,7 +328,7 @@ const RULES = [
   },
   {
     sections: ['4.1'],
-    why: 'R8, Gson models or the build itself',
+    why: 'R8, stored JSON models or the build itself',
     paths: ['app/proguard-rules.pro', 'app/build.gradle.kts', 'build.gradle.kts',
       'gradle.properties', 'gradle/**', 'settings.gradle.kts', 'K/data/sync/**',
       'tools/check-r8-mapping.js', 'app/proguard-r8test.pro', 'app/src/r8Test/**', 'tools/check-r8-probe.js',

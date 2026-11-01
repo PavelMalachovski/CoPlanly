@@ -14,12 +14,12 @@ import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
 import com.google.firebase.firestore.FieldValue
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -44,10 +44,6 @@ class UserRepositoryImpl(
     private val firestoreFamilyDataSource: FirestoreFamilyDataSource,
     private val fcmService: FcmService
 ) : UserRepository {
-
-    private val gson = GsonBuilder()
-        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
-        .create()
 
     override fun getAllUsers(): Flow<List<User>> {
         return userDao.getAllUsers().map { entities ->
@@ -360,7 +356,7 @@ class UserRepositoryImpl(
             googleCalendarSyncEnabled = remote?.get("googleCalendarSyncEnabled") as? Boolean ?: false,
             googleCalendarId = remote?.string("googleCalendarId"),
             partnerId = remote?.string("partnerId"),
-            partnerIdsJson = gson.toJson(remote?.partnerUids().orEmpty()),
+            partnerIdsJson = StoredJson.encode(StoredJson.strings, remote?.partnerUids().orEmpty()),
             fcmToken = remote?.string("fcmToken"),
             dateOfBirth = remote?.string("dateOfBirth"),
             phone = remote?.string("phone"),
@@ -590,8 +586,7 @@ class UserRepositoryImpl(
             googleCalendarSyncEnabled = googleCalendarSyncEnabled,
             googleCalendarId = googleCalendarId,
             partnerId = partnerId,
-            partnerIds = gson.fromJson(partnerIdsJson, Array<String>::class.java)
-                ?.toList().orEmpty(),
+            partnerIds = StoredJson.decodeOrNull(StoredJson.strings, partnerIdsJson).orEmpty(),
             fcmToken = fcmToken,
             dateOfBirth = parseProfileDate(dateOfBirth),
             phone = phone,
@@ -619,7 +614,7 @@ class UserRepositoryImpl(
             googleCalendarSyncEnabled = googleCalendarSyncEnabled,
             googleCalendarId = googleCalendarId,
             partnerId = partnerId,
-            partnerIdsJson = gson.toJson(partnerIds),
+            partnerIdsJson = StoredJson.encode(StoredJson.strings, partnerIds),
             fcmToken = fcmToken,
             dateOfBirth = dateOfBirth?.let(IsoText::date),
             phone = phone,

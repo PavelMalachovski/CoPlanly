@@ -36,7 +36,7 @@ class R8ProbeInstrumentation : Instrumentation() {
 
     override fun onStart() {
         super.onStart()
-        val cases = R8GsonProbe(targetContext).run()
+        val cases = R8JsonProbe(targetContext).run()
         for (case in cases) {
             sendStatus(
                 STATUS_CASE,

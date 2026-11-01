@@ -21,7 +21,7 @@ import kotlinx.datetime.LocalDateTime
 /**
  * The values the probe writes: every field set, so every key has to appear in the JSON.
  *
- * A field left at its default would be a field the probe cannot see renamed — Gson omits a null,
+ * A field left at its default would be a field the probe cannot see renamed — the JSON omits a null,
  * and an empty list proves nothing about the element type. Dates are fixed so a failure reads the
  * same on every run. ASCII only, so `am instrument`'s output survives any shell encoding.
  */
@@ -40,7 +40,7 @@ internal object ProbeFixtures {
 
     val vaccination = Vaccination(name = "MMR", date = LocalDate(2019, 5, 1))
 
-    /** What the probe expects [vaccination]'s date to be written as (`LocalDateJsonAdapter`). */
+    /** What the probe expects [vaccination]'s date to be written as (`StoredLocalDateSerializer`). */
     const val VACCINATION_DATE = "2019-05-01"
 
     val medicalProfile = MedicalProfile(

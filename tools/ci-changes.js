@@ -44,7 +44,7 @@ const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|
  * The Kotlin Multiplatform module (MON-24), its build file and its sources in every source set.
  * The app compiles it, so a path here is an Android path for every other output too, and it is
  * treated as the build is: every Android job, every emulator leg. Its commonMain holds the domain
- * the app's screens render, its converters reach Gson and R8, and its Android target is held to
+ * the app's screens render, its stored models reach `StoredJson` and R8, and its Android target is held to
  * minSdk 26, which is what the API 26 leg confirms at runtime. The `shared` output is true for
  * this and for [BUILD], whose root and module build files and workflow can change what the module
  * compiles against.
@@ -91,10 +91,10 @@ const UPGRADE_UNAFFECTED = /^(docs\/|functions\/|firestore-tests\/|web\/|web-tes
 
 /**
  * Android paths the R8 runtime probe (`r8-runtime` job) cannot be affected by: nothing in them is
- * handed to Gson, compiled into the probe, or read by R8 as a rule. Everything else Android runs
+ * written through `StoredJson`, compiled into the probe, or read by R8 as a rule. Everything else Android runs
  * it — the data, domain and DI layers (the models, their converters and the constructors the probe
  * calls), `presentation/event/` (`EventDraft`), the manifest, the probe itself and its scripts —
- * and the build files, proguard rules and workflow run everything through `BUILD`. A new Gson call
+ * and the build files, proguard rules and workflow run everything through `BUILD`. A new stored model
  * in a skipped path is still caught the same day by `invariants` (check-invariants.js check 5),
  * and on `main` by the job itself.
  */

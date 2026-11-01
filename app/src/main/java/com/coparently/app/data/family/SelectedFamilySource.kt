@@ -7,7 +7,7 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.domain.family.FamilyKey
-import com.google.gson.Gson
+import com.coparently.app.domain.serialization.StoredJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -67,16 +67,6 @@ class SelectedFamilySource(
 ) {
 
     /**
-     * Reads the stored co-parent list, which is a JSON array of plain uid strings.
-     *
-     * Room and Firebase Auth directly, rather than `UserRepository`: this is injected into
-     * `PairingRepositoryImpl` and `SyncService`, and reaching back through a repository whose
-     * own graph reaches those would be a dependency cycle waiting to close. All this needs is
-     * one row and one uid.
-     */
-    private val gson = Gson()
-
-    /**
      * A switch [select] was asked for before this device knew the family, waiting for the
      * [reconcile] that brings the family in — or for [PENDING_SWITCH_MILLIS] to pass.
      *
@@ -122,9 +112,16 @@ class SelectedFamilySource(
             .map { row -> row?.let { optionsFor(uid, it.partnerIdsJson) }.orEmpty() }
             .distinctUntilChanged()
 
+    /**
+     * Reads the stored co-parent list, which is a JSON array of plain uid strings.
+     *
+     * Room and Firebase Auth directly, rather than `UserRepository`: this is injected into
+     * `PairingRepositoryImpl` and `SyncService`, and reaching back through a repository whose
+     * own graph reaches those would be a dependency cycle waiting to close. All this needs is
+     * one row and one uid.
+     */
     private fun optionsFor(uid: String, partnerIdsJson: String?): List<FamilyOption> =
-        gson.fromJson(partnerIdsJson, Array<String>::class.java)
-            ?.toList().orEmpty()
+        StoredJson.decodeOrNull(StoredJson.strings, partnerIdsJson).orEmpty()
             .mapNotNull { partnerUid ->
                 FamilyKey.orNull(uid, partnerUid)?.let { FamilyOption(it, partnerUid) }
             }

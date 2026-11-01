@@ -1,10 +1,8 @@
 package com.coparently.app.data.versions
 
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.versions.EventVersionKind
-import com.google.gson.GsonBuilder
-import com.google.gson.ToNumberPolicy
-import com.google.gson.reflect.TypeToken
 
 /**
  * What a saved revision of an event looks like on the wire, defined once (MON-4).
@@ -64,29 +62,26 @@ object EventVersionDocument {
     }
 
     /**
-     * Numbers come back as `Long` when they are whole, so a snapshot that went through Room and
-     * back uploads `reminderMinutes: 15`, not `15.0` — the same value the event document holds.
+     * The event document as JSON, for the Room outbox. A null field is written as `null` rather
+     * than left out, as the Gson instance before MON-24 was configured to (`serializeNulls`), so
+     * the snapshot reads back with every key the event document had.
      */
-    private val gson = GsonBuilder()
-        .serializeNulls()
-        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .create()
-    private val mapType = object : TypeToken<Map<String, Any?>>() {}.type
-    private val listType = object : TypeToken<List<String>>() {}.type
+    fun encodeSnapshot(snapshot: Map<String, Any?>): String = StoredJson.encodeValue(snapshot, serializeNulls = true)
 
-    /** The event document as JSON, for the Room outbox. */
-    fun encodeSnapshot(snapshot: Map<String, Any?>): String = gson.toJson(snapshot)
-
-    /** The event document back out of the Room outbox; empty when the JSON is unreadable. */
+    /**
+     * The event document back out of the Room outbox; empty when the JSON is unreadable. Numbers
+     * come back as `Long` when they are whole, so a snapshot that went through Room and back
+     * uploads `reminderMinutes: 15`, not `15.0` — the same value the event document holds.
+     */
     fun decodeSnapshot(json: String): Map<String, Any?> =
-        runCatching { gson.fromJson<Map<String, Any?>>(json, mapType) }.getOrNull().orEmpty()
+        runCatching { StoredJson.decodeObject(json, StoredJson.Numbers.LONG_OR_DOUBLE) }.getOrNull().orEmpty()
 
     /** An audience as JSON, for the Room outbox. */
-    fun encodeAudience(audience: List<String>): String = gson.toJson(audience)
+    fun encodeAudience(audience: List<String>): String = StoredJson.encode(StoredJson.strings, audience)
 
     /** An audience back out of the Room outbox; empty when the JSON is unreadable. */
     fun decodeAudience(json: String): List<String> =
-        runCatching { gson.fromJson<List<String>>(json, listType) }.getOrNull().orEmpty()
+        runCatching { StoredJson.decodeOrNull(StoredJson.strings, json) }.getOrNull().orEmpty()
 
     /**
      * The document to upload, minus [RECORDED_AT], which only the caller can stamp — it has to be

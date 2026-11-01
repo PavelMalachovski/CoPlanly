@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("io.gitlab.arturbosch.detekt")
     id("io.github.takahirom.roborazzi")
     id("org.jetbrains.kotlinx.kover")
@@ -444,8 +445,18 @@ dependencies {
     // older install can remain — never bump it to write with it again.
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Gson for JSON - Updated to latest
-    implementation("com.google.code.gson:gson:2.11.0")
+    // JSON for everything the app stores or sends as text goes through `StoredJson` (`:shared`),
+    // on kotlinx.serialization, which replaced Gson in MON-24 and writes the bytes Gson wrote. The
+    // same version as the shared module's, declared here because the app's own models
+    // (`EventDraft`) and the school import's tree reads use it directly.
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    // Not a dependency: Google's calendar client (`google-api-client` -> `google-http-client-gson`)
+    // still brings Gson for `GsonFactory`, asking for 2.10. This keeps it at 2.11.0, the version
+    // the app declared and ran until MON-24, so removing the app's own use of Gson does not move
+    // the calendar's. It goes with that client (Task 5 of the iPhone work's phase 2).
+    constraints {
+        implementation("com.google.code.gson:gson:2.11.0")
+    }
 
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
@@ -508,6 +519,10 @@ dependencies {
 
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
+    // The oracle `GsonParityTest` compares `StoredJson` with, and the wire contracts' fixture
+    // printer: the Gson the app shipped until MON-24, at the version it shipped. Tests only — the
+    // app itself has no Gson since then (Google's calendar client still brings one of its own).
+    testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test"))
     // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
     // reads Kotlin metadata only up to 2.1, and this module is compiled with Kotlin 2.3; a

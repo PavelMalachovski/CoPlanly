@@ -16,9 +16,9 @@ import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.repository.PairingRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -54,9 +54,6 @@ class PairingRepositoryImpl(
     // repository, not a ViewModel, so it is allowed to resolve resources directly.
     private val context: Context
 ) : PairingRepository {
-
-    /** For the stored co-parent list, which is a JSON array of plain uid strings. */
-    private val gson = Gson()
 
     /**
      * What [onPairingStateObserved] last mirrored into Room, so repeated emissions of an unchanged
@@ -320,9 +317,8 @@ class PairingRepositoryImpl(
      */
     private suspend fun mirrorPartnersIntoRoom(uid: String, coParents: Set<String>) {
         val local = userDao.getUserById(uid) ?: return
-        val stored = gson.fromJson(local.partnerIdsJson, Array<String>::class.java)
-            ?.toList().orEmpty()
-        val nextJson = gson.toJson(stored + coParents.filterNot { it in stored })
+        val stored = StoredJson.decodeOrNull(StoredJson.strings, local.partnerIdsJson).orEmpty()
+        val nextJson = StoredJson.encode(StoredJson.strings, stored + coParents.filterNot { it in stored })
         if (nextJson != local.partnerIdsJson) {
             userDao.updateUser(local.copy(partnerIdsJson = nextJson))
         }

@@ -200,10 +200,10 @@ test('the R8 runtime probe runs for the models, their converters, the probe and 
     'app/src/main/java/com/coparently/app/domain/model/MedicalProfile.kt',
     'app/src/main/java/com/coparently/app/data/repository/ChildInfoRepositoryImpl.kt',
     'app/src/main/java/com/coparently/app/data/local/Converters.kt',
-    'app/src/main/java/com/coparently/app/di/koin/SerializationModule.kt',
+    'shared/src/commonMain/kotlin/com/coparently/app/domain/serialization/StoredJson.kt',
     'app/src/main/java/com/coparently/app/presentation/event/EventViewModel.kt',
     'app/src/main/AndroidManifest.xml',
-    'app/src/r8Test/java/com/coparently/app/r8probe/R8GsonProbe.kt',
+    'app/src/r8Test/java/com/coparently/app/r8probe/R8JsonProbe.kt',
     'app/proguard-r8test.pro',
     'tools/run-r8-probe.sh',
     'tools/check-r8-probe.js',
@@ -214,7 +214,7 @@ test('the R8 runtime probe runs for the models, their converters, the probe and 
   }
 });
 
-test('the R8 runtime probe skips what Gson and R8 never see', () => {
+test('the R8 runtime probe skips what StoredJson and R8 never see', () => {
   for (const path of [
     'app/src/main/java/com/coparently/app/presentation/home/HomeScreen.kt',
     'app/src/main/res/values/strings.xml',

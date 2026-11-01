@@ -8,12 +8,19 @@ import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolImportKind
 import com.coparently.app.domain.school.SchoolImportRecord
 import com.coparently.app.domain.school.SchoolStudent
-import com.google.gson.JsonObject
-import com.google.gson.JsonParseException
-import com.google.gson.JsonParser
+import com.coparently.app.domain.serialization.StoredJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
@@ -52,8 +59,8 @@ data class StoredSchoolConnection(
  * persists each commit under its lock) — which is what lets `BakalariAuthorizer` write a rotated
  * refresh token down **before** it uses it.
  *
- * The value is JSON written and read by hand ([SchoolConnectionCodec]), never Gson over a data
- * class, which R8 would rename.
+ * The value is JSON written and read by hand ([SchoolConnectionCodec]), never a serializer over a
+ * data class, so the stored text depends on no class's shape.
  */
 class SchoolConnectionStore(
     private val preferences: EncryptedPreferences
@@ -129,44 +136,46 @@ internal object SchoolConnectionCodec {
 
     private const val VERSION = 1
 
-    /** [stored] as its JSON text. */
+    /**
+     * [stored] as its JSON text: the text Gson's `JsonObject.toString()` wrote before MON-24, which
+     * [StoredJson.printTree] prints byte for byte.
+     */
     fun encode(stored: StoredSchoolConnection): String {
         val connection = stored.connection
-        val root = JsonObject()
-        root.addProperty("v", VERSION)
-        root.addProperty("id", connection.id)
-        root.addProperty("owner", stored.ownerUid)
-        root.addProperty("system", "bakalari")
-        root.addProperty("baseUrl", connection.baseUrl)
-        root.addProperty("username", connection.username)
-        root.addProperty("schoolName", connection.schoolName)
-        root.addProperty("studentName", connection.studentName)
-        root.addProperty("childId", connection.childId)
-        connection.familyId?.let { root.addProperty("familyId", it) }
-        root.addProperty("status", connection.status.stored)
-        connection.lastSuccessAtMillis?.let { root.addProperty("lastSuccessAt", it) }
-        root.addProperty("userUid", stored.student.userUid)
-        root.addProperty("fullName", stored.student.fullName)
-        root.addProperty("classId", stored.student.classId)
-        root.addProperty("accessToken", stored.tokens.accessToken)
-        root.addProperty("refreshToken", stored.tokens.refreshToken)
-        root.addProperty("expiresAt", stored.tokens.expiresAtMillis)
-        val ledger = JsonObject()
-        stored.ledger.forEach { (eventId, record) ->
-            ledger.addProperty(eventId, "${record.kind.stored}|${record.lastDate}|${record.fingerprint}")
+        val root = buildJsonObject {
+            put("v", VERSION)
+            put("id", connection.id)
+            put("owner", stored.ownerUid)
+            put("system", "bakalari")
+            put("baseUrl", connection.baseUrl)
+            put("username", connection.username)
+            put("schoolName", connection.schoolName)
+            put("studentName", connection.studentName)
+            put("childId", connection.childId)
+            connection.familyId?.let { put("familyId", it) }
+            put("status", connection.status.stored)
+            connection.lastSuccessAtMillis?.let { put("lastSuccessAt", it) }
+            put("userUid", stored.student.userUid)
+            put("fullName", stored.student.fullName)
+            put("classId", stored.student.classId)
+            put("accessToken", stored.tokens.accessToken)
+            put("refreshToken", stored.tokens.refreshToken)
+            put("expiresAt", stored.tokens.expiresAtMillis)
+            putJsonObject("ledger") {
+                stored.ledger.forEach { (eventId, record) ->
+                    put(eventId, "${record.kind.stored}|${record.lastDate}|${record.fingerprint}")
+                }
+            }
         }
-        root.add("ledger", ledger)
-        return root.toString()
+        return StoredJson.printTree(root)
     }
 
     /** The record [text] holds, or null when it cannot be read. */
     fun decode(text: String): StoredSchoolConnection? = try {
-        JsonParser.parseString(text).takeIf { it.isJsonObject }?.asJsonObject?.let(::read)
-    } catch (e: JsonParseException) {
+        (StoredJson.parse(text) as? JsonObject)?.let(::read)
+    } catch (e: SerializationException) {
         null
-    } catch (e: IllegalStateException) {
-        null
-    } catch (e: UnsupportedOperationException) {
+    } catch (e: IllegalArgumentException) {
         null
     }
 
@@ -198,13 +207,13 @@ internal object SchoolConnectionCodec {
                 refreshToken = root.string("refreshToken").orEmpty(),
                 expiresAtMillis = root.number("expiresAt") ?: 0L
             ),
-            ledger = readLedger(root.get("ledger")?.takeIf { it.isJsonObject }?.asJsonObject)
+            ledger = readLedger(root["ledger"] as? JsonObject)
         )
     }
 
     private fun readLedger(ledger: JsonObject?): Map<String, SchoolImportRecord> =
-        ledger?.entrySet().orEmpty().mapNotNull { (eventId, value) ->
-            val parts = value.takeIf { it.isJsonPrimitive }?.asString?.split('|') ?: return@mapNotNull null
+        ledger.orEmpty().mapNotNull { (eventId, value) ->
+            val parts = value.textOrNull()?.split('|') ?: return@mapNotNull null
             if (parts.size != LEDGER_PARTS) return@mapNotNull null
             val kind = SchoolImportKind.of(parts[0]) ?: return@mapNotNull null
             val date = try {
@@ -215,11 +224,14 @@ internal object SchoolConnectionCodec {
             eventId to SchoolImportRecord(kind, date, parts[2])
         }.toMap()
 
-    private fun JsonObject.string(name: String): String? =
-        get(name)?.takeIf { it.isJsonPrimitive }?.asString
+    private fun JsonObject.string(name: String): String? = get(name)?.textOrNull()
 
+    /** A number written as a number, as Gson's `isNumber` asked; a quoted one is not. */
     private fun JsonObject.number(name: String): Long? =
-        get(name)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asLong
+        (get(name) as? JsonPrimitive)?.takeIf { it !== JsonNull && !it.isString }?.longOrNull
+
+    /** A string, number or boolean as its text — Gson's `getAsString` of a primitive; null else. */
+    private fun JsonElement.textOrNull(): String? = (this as? JsonPrimitive)?.takeIf { it !== JsonNull }?.content
 
     private const val LEDGER_PARTS = 3
 }

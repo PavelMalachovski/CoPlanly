@@ -28,9 +28,9 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.versions.EventVersionKind
-import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -59,8 +59,6 @@ class EventRepositoryImpl(
     private val fcmService: FcmService,
     private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : EventRepository {
-
-    private val gson = Gson()
 
     /**
      * Every event this phone holds for the family on screen. A parent in two families sees one at
@@ -527,7 +525,7 @@ class EventRepositoryImpl(
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             sharedWith = runCatching {
-                gson.fromJson(sharedWithJson, Array<String>::class.java)?.toList()
+                StoredJson.decodeOrNull(StoredJson.strings, sharedWithJson)
             }.getOrNull() ?: emptyList(),
             lastModifiedBy = lastModifiedBy,
             permissions = permissions,
@@ -549,7 +547,7 @@ class EventRepositoryImpl(
             familyId = familyId,
             forMembers = FamilyMemberRef.parse(
                 runCatching {
-                    gson.fromJson(forMembersJson, Array<String>::class.java)?.toList()
+                    StoredJson.decodeOrNull(StoredJson.strings, forMembersJson)
                 }.getOrNull()
             )
         )
@@ -576,7 +574,7 @@ class EventRepositoryImpl(
             updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
-            sharedWithJson = gson.toJson(sharedWith),
+            sharedWithJson = StoredJson.encode(StoredJson.strings, sharedWith),
             lastModifiedBy = lastModifiedBy,
             permissions = permissions,
             isPrivate = isPrivate,
@@ -591,7 +589,7 @@ class EventRepositoryImpl(
             isImportant = isImportant,
             friendParticipates = friendParticipates,
             familyId = familyId,
-            forMembersJson = gson.toJson(FamilyMemberRef.store(forMembers))
+            forMembersJson = StoredJson.encode(StoredJson.strings, FamilyMemberRef.store(forMembers))
         )
     }
 

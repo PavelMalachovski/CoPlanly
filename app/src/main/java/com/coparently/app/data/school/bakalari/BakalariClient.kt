@@ -6,6 +6,7 @@ import com.coparently.app.domain.school.SchoolWeek
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -60,7 +61,7 @@ class BakalariClient internal constructor(
         val (status, body) = execute(Request.Builder().url(urlOf(baseUrl, "api")).get().build())
         val versioned = status == HTTP_OK && runCatching {
             BakalariJson.arrayOf(body).any { element ->
-                element.isJsonObject && !element.asJsonObject.text("ApiVersion").isNullOrBlank()
+                element is JsonObject && !element.text("ApiVersion").isNullOrBlank()
             }
         }.getOrDefault(false)
         if (!versioned) throw BakalariException.NotBakalari()

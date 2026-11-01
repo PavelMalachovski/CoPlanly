@@ -19,7 +19,6 @@ import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
-import com.coparently.app.data.repository.LocalDateJsonAdapter
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.requests.RequestClockKeeper
@@ -33,9 +32,9 @@ import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.serialization.StoredJson
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -81,14 +80,6 @@ class SyncService(
     private val requestClockKeeper: RequestClockKeeper,
     private val knownFamilies: KnownFamilies
 ) {
-    // Defensive only: this Gson converts maps, lists and string arrays and never meets a date. The
-    // `medicalProfile` column is read as a `Map` below, never as `MedicalProfile`, so the adapter
-    // that `ChildInfoRepositoryImpl` and `PetRepositoryImpl` need for `Vaccination.date` (a kotlinx
-    // `LocalDate`, written as ISO text) does nothing here. It stays registered so that a future
-    // `MedicalProfile` read through this Gson keeps that text; phase 2 replaces Gson (MON-24).
-    private val gson = GsonBuilder()
-        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
-        .create()
     private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     private val _syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
@@ -609,7 +600,7 @@ class SyncService(
         partnerId: String?
     ): List<String> {
         val stored = runCatching {
-            gson.fromJson(sharedWithJson, Array<String>::class.java)?.toList()
+            StoredJson.decodeOrNull(StoredJson.strings, sharedWithJson)
         }.getOrNull().orEmpty()
         val entitled = (listOf(userId) + listOfNotNull(creatorUid, partnerId))
             .filter { it.isNotBlank() }
@@ -681,15 +672,15 @@ class SyncService(
                 "id" to entity.id,
                 "childName" to entity.childName,
                 "dateOfBirth" to entity.dateOfBirth?.format(formatter),
-                "medications" to gson.fromJson(entity.medicationsJson, List::class.java),
-                "activities" to gson.fromJson(entity.activitiesJson, List::class.java),
-                "allergies" to gson.fromJson(entity.allergiesJson, List::class.java),
+                "medications" to StoredJson.decodeArray(entity.medicationsJson),
+                "activities" to StoredJson.decodeArray(entity.activitiesJson),
+                "allergies" to StoredJson.decodeArray(entity.allergiesJson),
                 "medicalNotes" to entity.medicalNotes,
-                "emergencyContacts" to gson.fromJson(entity.emergencyContactsJson, List::class.java),
-                "schoolInfo" to entity.schoolInfoJson?.let { gson.fromJson(it, Map::class.java) },
-                "medicalProfile" to gson.fromJson(entity.medicalProfileJson, Map::class.java),
+                "emergencyContacts" to StoredJson.decodeArray(entity.emergencyContactsJson),
+                "schoolInfo" to entity.schoolInfoJson?.let { StoredJson.decodeObject(it) },
+                "medicalProfile" to StoredJson.decodeObject(entity.medicalProfileJson),
                 "medicalPhotos" to ChildInfoPhotos.decode(
-                    gson.fromJson(entity.medicalPhotosJson, List::class.java)
+                    StoredJson.decodeArray(entity.medicalPhotosJson)
                 ),
                 "guests" to ChildInfoGuests.encode(guestsOf(entity)),
                 "createdAt" to entity.createdAt.format(formatter),
@@ -774,15 +765,15 @@ class SyncService(
                                 "id" to localEntity.id,
                                 "childName" to localEntity.childName,
                                 "dateOfBirth" to localEntity.dateOfBirth?.format(formatter),
-                                "medications" to gson.fromJson(localEntity.medicationsJson, List::class.java),
-                                "activities" to gson.fromJson(localEntity.activitiesJson, List::class.java),
-                                "allergies" to gson.fromJson(localEntity.allergiesJson, List::class.java),
+                                "medications" to StoredJson.decodeArray(localEntity.medicationsJson),
+                                "activities" to StoredJson.decodeArray(localEntity.activitiesJson),
+                                "allergies" to StoredJson.decodeArray(localEntity.allergiesJson),
                                 "medicalNotes" to localEntity.medicalNotes,
-                                "emergencyContacts" to gson.fromJson(localEntity.emergencyContactsJson, List::class.java),
-                                "schoolInfo" to localEntity.schoolInfoJson?.let { gson.fromJson(it, Map::class.java) },
-                                "medicalProfile" to gson.fromJson(localEntity.medicalProfileJson, Map::class.java),
+                                "emergencyContacts" to StoredJson.decodeArray(localEntity.emergencyContactsJson),
+                                "schoolInfo" to localEntity.schoolInfoJson?.let { StoredJson.decodeObject(it) },
+                                "medicalProfile" to StoredJson.decodeObject(localEntity.medicalProfileJson),
                                 "medicalPhotos" to ChildInfoPhotos.decode(
-                                    gson.fromJson(localEntity.medicalPhotosJson, List::class.java)
+                                    StoredJson.decodeArray(localEntity.medicalPhotosJson)
                                 ),
                                 "guests" to ChildInfoGuests.encode(guestsOf(localEntity)),
                                 "createdAt" to localEntity.createdAt.format(formatter),
@@ -876,7 +867,7 @@ class SyncService(
                 // yank a parent out of the family they are looking at on every sync tick. The
                 // real set arrives as `partnerIds`, below, and the selection is reconciled
                 // against it afterwards.
-                partnerIdsJson = gson.toJson(remotePartnerUids(remoteUserData)),
+                partnerIdsJson = StoredJson.encode(StoredJson.strings, remotePartnerUids(remoteUserData)),
                 fcmToken = remoteUserData["fcmToken"] as? String,
                 // A document that predates the `role` field, a failed partial read, or one
                 // that (should not, but did) carry a blank string must not blank out a role
@@ -1046,7 +1037,7 @@ class SyncService(
      * both drop the same ones, on the same rule.
      */
     private fun guestsOf(entity: com.coparently.app.data.local.entity.ChildInfoEntity) =
-        ChildInfoGuests.decode(gson.fromJson(entity.guestsJson, Map::class.java))
+        ChildInfoGuests.decode(StoredJson.decodeValue(entity.guestsJson))
 
     /**
      * Converts Firestore child info data to ChildInfoEntity.
@@ -1072,15 +1063,15 @@ class SyncService(
             id = this["id"] as String,
             childName = this["childName"] as String,
             dateOfBirth = (this["dateOfBirth"] as? String)?.let { LocalDateTime.parse(it, formatter) },
-            medicationsJson = gson.toJson(this["medications"] ?: emptyList<Any>()),
-            activitiesJson = gson.toJson(this["activities"] ?: emptyList<Any>()),
-            allergiesJson = gson.toJson(this["allergies"] ?: emptyList<String>()),
+            medicationsJson = StoredJson.encodeValue(this["medications"] ?: emptyList<Any>()),
+            activitiesJson = StoredJson.encodeValue(this["activities"] ?: emptyList<Any>()),
+            allergiesJson = StoredJson.encodeValue(this["allergies"] ?: emptyList<String>()),
             medicalNotes = this["medicalNotes"] as? String,
-            emergencyContactsJson = gson.toJson(this["emergencyContacts"] ?: emptyList<Any>()),
-            schoolInfoJson = (this["schoolInfo"] as? Map<*, *>)?.let { gson.toJson(it) },
-            medicalProfileJson = gson.toJson(this["medicalProfile"] ?: emptyMap<String, Any?>()),
-            medicalPhotosJson = gson.toJson(ChildInfoPhotos.decode(this["medicalPhotos"])),
-            guestsJson = gson.toJson(ChildInfoGuests.encode(ChildInfoGuests.decode(this["guests"]))),
+            emergencyContactsJson = StoredJson.encodeValue(this["emergencyContacts"] ?: emptyList<Any>()),
+            schoolInfoJson = (this["schoolInfo"] as? Map<*, *>)?.let { StoredJson.encodeValue(it) },
+            medicalProfileJson = StoredJson.encodeValue(this["medicalProfile"] ?: emptyMap<String, Any?>()),
+            medicalPhotosJson = StoredJson.encodeValue(ChildInfoPhotos.decode(this["medicalPhotos"])),
+            guestsJson = StoredJson.encodeValue(ChildInfoGuests.encode(ChildInfoGuests.decode(this["guests"]))),
             createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
             // Read as UTC — what an upgraded build writes — and a legacy naive value the same way,
             // wrong by its writer's offset and irreducibly so (schema 40, see `EventTimestamp`).

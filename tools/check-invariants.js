@@ -16,15 +16,17 @@
  *  3. **Push-type agreement (SEC-3, CLAUDE.md item 15).** A type has to be named in four
  *     places; missing from any one of them it is a push that silently never appears, and a
  *     server-only type that leaks into the client allow-list is a forgeable notification.
- *  4. **Gson models survive R8.** Gson derives JSON keys from Kotlin *field names* by
- *     reflection, and R8 renames fields it cannot see being read, so a model that no
- *     `-keepclassmembers ... { <fields>; }` rule covers is written with obfuscated keys in
- *     release builds only. This shipped once (see `app/proguard-rules.pro`) and was found a
- *     second time in `DayOverride`, which sits in `domain.custody` rather than under the
- *     `domain.model.**` wildcard. Debug never reproduces it, because debug does not minify.
- *  5. **Gson models are probed at runtime.** Every type check 4 finds must have a case in the R8
- *     runtime probe (`app/src/r8Test/`), which the `r8-runtime` CI job runs inside a minified
- *     build on an emulator; `tools/check-r8-probe.js` then requires each case to pass.
+ *  4. **No Gson in production code.** Until MON-24 Gson derived the stored JSON keys from Kotlin
+ *     *field names* by reflection, and R8 renamed fields it could not see being read: a model no
+ *     `-keepclassmembers ... { <fields>; }` rule covered was written with obfuscated keys in
+ *     release builds only. It shipped once (see `app/proguard-rules.pro`) and was found a second
+ *     time in `DayOverride`. `StoredJson` replaced it, byte for byte, with serializers that carry
+ *     their keys as literals; this check keeps Gson from coming back into the app or the shared
+ *     module's code (tests keep it as the oracle `GsonParityTest` compares with).
+ *  5. **Stored models are probed at runtime.** Every `@Serializable` class or enum in production
+ *     code — a model whose JSON `StoredJson` writes — must have a case in the R8 runtime probe
+ *     (`app/src/r8Test/`), which the `r8-runtime` CI job runs inside a minified build on an
+ *     emulator; `tools/check-r8-probe.js` then requires each case to pass.
  *  6. **The Google scope the app asks for is the one it discloses.** Google verifies the OAuth
  *     consent screen against the privacy policy and the home page, and a parent reads them to
  *     decide whether to connect. `GoogleCalendarAccess.SCOPE` must be the only Calendar scope
@@ -259,20 +261,20 @@ function checkPushTypes() {
   );
 }
 
-// ---- 4: Gson models are kept from R8 ----------------------------------------
+// ---- 4: no Gson in production code -----------------------------------------
 
-const PROGUARD = 'app/proguard-rules.pro';
 const SOURCE_ROOT = 'app/src/main/java';
 /**
- * The shared module's production code (MON-24): the domain moves there with its package unchanged,
- * and a domain model the app hands to Gson (`DayOverride`, the child and pet records) is still one
- * the release build must keep. Without it a moved model would drop out of checks 4 and 5 silently.
+ * The shared module's production code (MON-24): the domain moved there with its package unchanged,
+ * and its models are stored too (`DayOverride`, the child and pet records), so checks 4 and 5 read
+ * it beside the app's. The platform source sets count: they ship as much as `commonMain` does.
  */
-const SHARED_SOURCE_ROOT = 'shared/src/commonMain/kotlin';
+const SHARED_SOURCE_ROOTS = ['shared/src/commonMain/kotlin', 'shared/src/androidMain/kotlin', 'shared/src/iosMain/kotlin'];
 
 /** Every Kotlin file under the source root, recursively. */
 function kotlinFiles(dir = SOURCE_ROOT, out = []) {
   const abs = path.join(ROOT, dir);
+  if (!fs.existsSync(abs)) return out;
   for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
     const rel = path.join(dir, entry.name);
     if (entry.isDirectory()) kotlinFiles(rel, out);
@@ -281,150 +283,78 @@ function kotlinFiles(dir = SOURCE_ROOT, out = []) {
   return out;
 }
 
+/** Every production Kotlin file, the app's and the shared module's. */
+function productionFiles() {
+  return [...kotlinFiles(), ...SHARED_SOURCE_ROOTS.flatMap((root) => kotlinFiles(root))];
+}
+
 /**
- * Simple name -> fully-qualified name, for every type this project declares.
+ * The production files that import Gson, as path -> the first import found.
  *
- * Used to tell a project model apart from a platform or library type in a Gson call: only the
- * former can be renamed by R8 into a JSON key nobody reads back.
+ * Google's calendar client still brings Gson for its own `GsonFactory`
+ * (`com.google.api.client.json.gson`), which is not an import of `com.google.gson` and is not
+ * counted; it goes with that client.
  */
-function declaredTypes(files) {
-  const index = new Map();
+function gsonImports(files = productionFiles()) {
+  const found = new Map();
   for (const file of files) {
-    const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
-    const pkg = src.match(/^package\s+([\w.]+)/m);
-    if (!pkg) continue;
-    const decl = /^\s*(?:@\w+\s+)*(?:public\s+|internal\s+|private\s+)?(?:data\s+|sealed\s+|value\s+|abstract\s+|open\s+)*(?:class|object|enum\s+class|interface)\s+(\w+)/gm;
-    for (let m; (m = decl.exec(src)); ) {
-      if (!index.has(m[1])) index.set(m[1], `${pkg[1]}.${m[1]}`);
-    }
+    const m = /^import\s+(com\.google\.gson\.[\w.]+)/m.exec(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+    if (m) found.set(file, m[1]);
   }
-  return index;
+  return found;
 }
 
-/** The `-keepclassmembers class X { <fields>; }` patterns, as matcher functions. */
-function fieldKeepPatterns(proguard) {
-  const patterns = [];
-  const re = /-keepclassmembers\s+class\s+([\w.$*]+)\s*\{([^}]*)\}/g;
-  for (let m; (m = re.exec(proguard)); ) {
-    if (!/<fields>|\*\s*;/.test(m[2])) continue;
-    patterns.push(m[1]);
+function checkNoGson() {
+  const found = gsonImports();
+  for (const [file, imported] of found) {
+    fail(
+      `${file} imports ${imported} — the app's JSON goes through StoredJson (shared/…/domain/serialization), ` +
+        'which writes the bytes Gson wrote; Gson left production code in MON-24 and stays as a test oracle only'
+    );
   }
-  return patterns;
+  console.log(`gson: ${found.size} production file(s) import it`);
 }
 
-/** ProGuard glob semantics: `**` crosses package separators, `*` does not. */
-function keepMatches(pattern, fqcn) {
-  const rx = new RegExp(
-    '^' +
-      pattern
-        .replace(/[.$]/g, (c) => '\\' + c)
-        .replace(/\*\*/g, '\u0000')
-        .replace(/\*/g, '[^.]*')
-        .replace(/\u0000/g, '.*') +
-      '$'
-  );
-  return rx.test(fqcn);
-}
-
-/**
- * The arguments of every `fromJson(` call in [src], each up to its own closing parenthesis.
- *
- * A call split over lines — `gson.fromJson(\n json,\n SchoolInfo::class.java\n)` — is invisible
- * to a line-scoped pattern, and that is how `SchoolInfo` went undiscovered. Balancing the
- * parentheses stays inside the one call, so it cannot run on into unrelated code the way an
- * unanchored multi-line pattern would.
- */
-function fromJsonArguments(src) {
-  const out = [];
-  for (const m of src.matchAll(/fromJson\s*(?:<[^>]*>)?\s*\(/g)) {
-    let depth = 1;
-    let i = m.index + m[0].length;
-    const start = i;
-    while (i < src.length && depth > 0) {
-      if (src[i] === '(') depth++;
-      else if (src[i] === ')') depth--;
-      i++;
-    }
-    out.push(src.slice(start, i - 1));
-  }
-  return out;
-}
-
-/**
- * Every project type the app hands to Gson, as fully-qualified name -> the file that does.
- *
- * Types named as a Gson target: `X::class.java`, `Array<X>::class.java`, and every type argument
- * of a `TypeToken<...>`. Anything the project does not declare is a platform or library type and
- * cannot be renamed into a stored key. Exported for `tools/check-r8-probe.js`, which requires the
- * runtime probe to have passed a case for each of these.
- */
-function gsonTargets() {
-  const files = [...kotlinFiles(), ...kotlinFiles(SHARED_SOURCE_ROOT)];
-  const index = declaredTypes(files);
-  const targets = new Map();
-  for (const file of files) {
-    const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
-    if (!/\bgson\b|\bGson\(/i.test(src)) continue;
-
-    // Line-scoped on purpose. An unanchored `TypeToken<...>` or `fromJson(...)` pattern runs
-    // past its own statement and swallows unrelated identifiers further down the file, which
-    // reports repositories and navigation routes as Gson models. Multi-line `fromJson` calls
-    // are read by balancing their parentheses instead (`fromJsonArguments`).
-    const named = [];
-    for (const line of src.split('\n')) {
-      for (const m of line.matchAll(/Array<([\w.]+)>::class\.java/g)) named.push(m[1]);
-      for (const m of line.matchAll(/fromJson\s*\([^)]*?([\w.]+)::class\.java/g)) named.push(m[1]);
-      for (const m of line.matchAll(/TypeToken<([^<>]*(?:<[^<>]*>[^<>]*)*)>/g)) {
-        for (const id of m[1].matchAll(/[\w.]+/g)) named.push(id[0]);
-      }
-    }
-    for (const args of fromJsonArguments(src)) {
-      for (const m of args.matchAll(/Array<([\w.]+)>::class\.java/g)) named.push(m[1]);
-      for (const m of args.matchAll(/(?:^|[^\w.>])([\w.]+)::class\.java/g)) named.push(m[1]);
-    }
-
-    for (const raw of named) {
-      const simple = raw.includes('.') ? raw.slice(raw.lastIndexOf('.') + 1) : raw;
-      const fqcn = raw.includes('.') ? raw : index.get(simple);
-      if (!fqcn || !fqcn.startsWith('com.coparently.')) continue;
-      if (!index.has(simple)) continue;
-      if (!targets.has(fqcn)) targets.set(fqcn, file);
-    }
-  }
-  return targets;
-}
-
-function checkGsonKeepRules() {
-  const patterns = fieldKeepPatterns(read(PROGUARD));
-  if (!patterns.length) fail(`${PROGUARD} declares no \`-keepclassmembers ... { <fields>; }\` rule at all`);
-  const targets = gsonTargets();
-
-  for (const [fqcn, file] of targets) {
-    if (!patterns.some((p) => keepMatches(p, fqcn))) {
-      fail(
-        `${fqcn} is serialised by Gson (${file}) but no \`-keepclassmembers ... { <fields>; }\` rule ` +
-          `in ${PROGUARD} covers it — R8 will rename its fields and the release build writes JSON ` +
-          `keys nobody reads back`
-      );
-    }
-  }
-
-  console.log(`gson models: ${targets.size} project types reflected, ${patterns.length} field-keep rules`);
-}
-
-// ---- 5: every Gson model is probed at runtime --------------------------------
+// ---- 5: every stored model is probed at runtime -----------------------------
 
 const PROBE_SOURCES = 'app/src/r8Test/java';
 
 /**
- * Every Gson target must be named, as a string literal, in the R8 runtime probe
+ * Every `@Serializable` class, data class or enum in production code, as fully-qualified name ->
+ * the file that declares it: the models whose JSON `StoredJson` writes. Exported for
+ * `tools/check-r8-probe.js`, which requires the runtime probe to have passed a case for each.
+ *
+ * A nested declaration is named by its own simple name under the file's package, as the probe's
+ * labels have always named them; none is nested today.
+ */
+function storedJsonModels() {
+  const models = new Map();
+  for (const file of productionFiles()) {
+    const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    if (!src.includes('@Serializable')) continue;
+    const pkg = src.match(/^package\s+([\w.]+)/m);
+    if (!pkg) continue;
+    // `@Serializable` (or `@Serializable(with = …)`) on its own line or before the modifiers, then
+    // the declaration. A `@Serializable(with = …)` on a property is not followed by `class`.
+    const decl =
+      /@Serializable(?:\([^)]*\))?\s+(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|internal|private|data|enum|sealed|abstract|open|value)\s+)*(?:class|object|interface)\s+(\w+)/g;
+    for (let m; (m = decl.exec(src)); ) {
+      const fqcn = `${pkg[1]}.${m[1]}`;
+      if (!models.has(fqcn)) models.set(fqcn, file);
+    }
+  }
+  return models;
+}
+
+/**
+ * Every stored model must be named, as a string literal, in the R8 runtime probe
  * (`app/src/r8Test/`, run by the `r8-runtime` CI job).
  *
- * A keep rule (check 4) and a kept field name (`check-r8-mapping.js`) are not the same as the
- * minified app reading its own JSON back; the probe is. It reports each case under the source's
- * fully-qualified name, a literal because R8 renames the classes themselves, and the CI check
- * requires a passing case for every type found here. This catches the omission a PR earlier,
- * without an emulator: a new model must arrive with a probe case.
+ * The probe writes each model through the app's own call site inside the minified build and checks
+ * the keys and the read-back. It reports each case under the source's fully-qualified name, a
+ * literal because R8 renames the classes themselves, and the CI check requires a passing case for
+ * every type found here. This catches the omission a PR earlier, without an emulator: a new model
+ * must arrive with a probe case.
  */
 function checkProbeCoverage() {
   const dir = path.join(ROOT, PROBE_SOURCES);
@@ -435,17 +365,18 @@ function checkProbeCoverage() {
   const probeSource = kotlinFiles(PROBE_SOURCES)
     .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8'))
     .join('\n');
-  const targets = gsonTargets();
-  for (const [fqcn, file] of targets) {
+  const models = storedJsonModels();
+  if (!models.size) fail('no @Serializable model found in production code — the discovery in check 5 is broken');
+  for (const [fqcn, file] of models) {
     if (!probeSource.includes(`"${fqcn}"`)) {
       fail(
-        `${fqcn} is serialised by Gson (${file}) but the R8 runtime probe (${PROBE_SOURCES}) has no ` +
-          `case for it — add one to R8GsonProbe that writes it through the production call site and ` +
+        `${fqcn} is @Serializable (${file}) but the R8 runtime probe (${PROBE_SOURCES}) has no ` +
+          `case for it — add one to R8JsonProbe that writes it through the production call site and ` +
           `reports it as "${fqcn}"`
       );
     }
   }
-  console.log(`r8 probe: ${targets.size} Gson model(s) named in ${PROBE_SOURCES}`);
+  console.log(`r8 probe: ${models.size} stored model(s) named in ${PROBE_SOURCES}`);
 }
 
 // ---- 6. the Google scope the app asks for is the one it discloses ------------
@@ -506,7 +437,7 @@ function checkGoogleScopeDisclosed() {
 if (require.main === module) {
   checkLocales();
   checkPushTypes();
-  checkGsonKeepRules();
+  checkNoGson();
   checkProbeCoverage();
   checkGoogleScopeDisclosed();
 
@@ -518,4 +449,4 @@ if (require.main === module) {
   console.log('\nAll invariants hold.');
 }
 
-module.exports = { gsonTargets, googleScopeProblems };
+module.exports = { storedJsonModels, gsonImports, googleScopeProblems };

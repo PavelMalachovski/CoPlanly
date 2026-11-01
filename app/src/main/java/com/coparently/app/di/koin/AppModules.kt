@@ -8,7 +8,8 @@ import org.koin.core.module.Module
  *
  * One module per former Hilt module, under the same name, holds what that module bound or
  * provided; [dataModule], [domainModule], [presentationModule], [viewModelModule] and
- * [workerModule] hold what Hilt built from `@Inject` constructors.
+ * [workerModule] hold what Hilt built from `@Inject` constructors. The former `serializationModule`
+ * provided the one injectable Gson; it went with Gson (MON-24), since `StoredJson` is an object.
  */
 val appModules: List<Module> = listOf(
     aiModule,
@@ -27,7 +28,6 @@ val appModules: List<Module> = listOf(
     requestClockModule,
     schoolModule,
     securityModule,
-    serializationModule,
     sharedFilesModule,
     familyDocumentCacheDaoModule,
     supportModule,

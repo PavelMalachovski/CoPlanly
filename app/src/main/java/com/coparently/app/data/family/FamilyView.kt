@@ -5,7 +5,7 @@ import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
-import com.google.gson.Gson
+import com.coparently.app.domain.serialization.StoredJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -113,14 +113,12 @@ data class FamilyView(
         /** Shows everything: signed out, or no row yet. */
         val EVERYTHING = FamilyView(me = null, onScreen = null, others = emptySet())
 
-        private val gson = Gson()
-
         /** The view of the signed-in [uid] from their Room row. */
         fun of(uid: String, row: UserEntity?): FamilyView {
             if (row == null) return EVERYTHING
             val onScreen = FamilyKey.orNull(uid, row.partnerId)
-            val parsed = runCatching { gson.fromJson(row.partnerIdsJson, Array<String>::class.java) }
-            val partners = parsed.getOrNull()?.toList().orEmpty()
+            val parsed = runCatching { StoredJson.decodeOrNull(StoredJson.strings, row.partnerIdsJson) }
+            val partners = parsed.getOrNull().orEmpty()
             val others = partners.mapNotNull { FamilyKey.orNull(uid, it) }.toSet() - setOfNotNull(onScreen)
             return FamilyView(me = uid, onScreen = onScreen, others = others, partnersKnown = parsed.isSuccess)
         }

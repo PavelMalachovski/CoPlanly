@@ -7,8 +7,7 @@ import com.coparently.app.data.local.entity.ParentingPlanEntryEntity
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.parentingplan.ParentingPlanPair
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.coparently.app.domain.serialization.StoredJson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -17,6 +16,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 
 /**
  * This phone's Room copy of one family's plan.
@@ -39,11 +40,10 @@ data class ParentingPlanLocalCopy(
 class ParentingPlanRepository(
     private val dao: ParentingPlanDao,
     private val remote: FirestoreParentingPlanDataSource,
-    private val gson: Gson,
     private val crashlyticsManager: CrashlyticsManager
 ) {
 
-    private val textMapType = object : TypeToken<Map<String, String>>() {}.type
+    private val textMap = MapSerializer(String.serializer(), String.serializer())
 
     /**
      * Both halves of [familyId]'s plan, live.
@@ -157,8 +157,8 @@ class ParentingPlanRepository(
     private fun <T> Flow<*>.mirrorOnly(): Flow<T> = transform { }
 
     private fun ParentingPlanEntryEntity.toDomain() = ParentingPlanEntry(
-        answers = gson.fromJson(answersJson, textMapType) ?: emptyMap(),
-        agreedTo = gson.fromJson(agreedToJson, textMapType) ?: emptyMap(),
+        answers = StoredJson.decodeOrNull(textMap, answersJson) ?: emptyMap(),
+        agreedTo = StoredJson.decodeOrNull(textMap, agreedToJson) ?: emptyMap(),
         catalogueVersion = catalogueVersion,
         updatedAtMillis = updatedAtMillis
     )
@@ -171,10 +171,10 @@ class ParentingPlanRepository(
         familyId = familyId,
         authorUid = authorUid,
         catalogueVersion = catalogueVersion,
-        // Gson over a plain `Map<String, String>`, never over a model class: R8 rewrote a
-        // Gson-mapped model's field names once already and it shipped (see `FamilyMemberRef`).
-        answersJson = gson.toJson(answers),
-        agreedToJson = gson.toJson(agreedTo),
+        // A plain `Map<String, String>`, never a model class: R8 rewrote a Gson-mapped model's
+        // field names once already and it shipped (see `FamilyMemberRef`).
+        answersJson = StoredJson.encode(textMap, answers),
+        agreedToJson = StoredJson.encode(textMap, agreedTo),
         updatedAtMillis = updatedAtMillis,
         syncedToFirestore = synced
     )

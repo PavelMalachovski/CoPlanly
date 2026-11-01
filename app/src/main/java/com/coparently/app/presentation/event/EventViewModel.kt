@@ -9,6 +9,7 @@ import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.RecordPhotoStorage
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.durationUntil
 import com.coparently.app.domain.time.plus
 import com.coparently.app.presentation.common.FamilyMember
@@ -17,7 +18,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.toUiText
-import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +42,7 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Clock
 
@@ -57,9 +58,13 @@ private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
  * Issue 1.3: Draft saving functionality.
  *
  * [endDaySpan] (days from the start date to the end date) and [allDay] came with the form's end
- * date and "All day" switch (October 2026). A draft saved before them has neither key, and Gson
- * reads the missing ones as 0 and false: a one-day timed event, which is what it was.
+ * date and "All day" switch (October 2026). A draft saved before them has neither key, and the
+ * missing ones read as 0 and false: a one-day timed event, which is what it was.
+ *
+ * Stored as [StoredJson] text, the same bytes Gson wrote for it before MON-24, so a draft saved by
+ * an older build still opens.
  */
+@Serializable
 data class EventDraft(
     val title: String,
     val description: String,
@@ -89,7 +94,6 @@ class EventViewModel(
     private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
     private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
     private val encryptedPreferences: EncryptedPreferences,
-    private val gson: Gson,
     private val photoStorage: RecordPhotoStorage,
     private val parentsSource: ParentsSource,
     familyMembersSource: FamilyMembersSource
@@ -515,7 +519,7 @@ class EventViewModel(
     fun saveEventDraft(draft: EventDraft) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val draftJson = gson.toJson(draft)
+                val draftJson = StoredJson.encode(EventDraft.serializer(), draft)
                 // EncryptedPreferences seals and writes on the calling thread; keep it off Main.
                 encryptedPreferences.putEventDraft(draftFamily.await(), draftJson)
             } catch (e: Exception) {
@@ -531,7 +535,7 @@ class EventViewModel(
     suspend fun loadEventDraft(): EventDraft? {
         return try {
             val draftJson = encryptedPreferences.getEventDraft(draftFamily.await()) ?: return null
-            gson.fromJson(draftJson, EventDraft::class.java)
+            StoredJson.decodeOrNull(EventDraft.serializer(), draftJson)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

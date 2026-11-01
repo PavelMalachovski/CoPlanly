@@ -89,8 +89,6 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
-import com.google.gson.GsonBuilder
-import com.google.gson.Strictness
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -408,7 +406,6 @@ class EmulatorParent private constructor(
     val parentingPlanRepository = ParentingPlanRepository(
         dao = database.parentingPlanDao(),
         remote = planDataSource,
-        gson = GsonBuilder().setStrictness(Strictness.LENIENT).create(),
         crashlyticsManager = mockk<CrashlyticsManager>(relaxed = true)
     )
 

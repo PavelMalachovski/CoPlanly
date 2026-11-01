@@ -3,8 +3,13 @@ package com.coparently.app.data.repository
 import com.coparently.app.domain.model.MedicalProfile
 
 /**
- * Repairs a [MedicalProfile] Gson just parsed, for the one field its constructor fallback
- * cannot protect.
+ * Repairs a [MedicalProfile] just read back, for the one field Gson's constructor fallback could
+ * not protect.
+ *
+ * Since MON-24 the profile is read by `StoredJson`, which fills a missing required text with an
+ * empty one before it decodes (`StoredJsonTolerance`), so a vaccination without a name already
+ * reads as `""` and this is a second guard rather than the only one. The rest of this note is why
+ * it was written, under Gson.
  *
  * [MedicalProfile] itself is safe: every constructor parameter has a default, so Kotlin emits
  * a public no-arg constructor, Gson's `ConstructorConstructor` finds it via reflection, and
@@ -21,12 +26,12 @@ import com.coparently.app.domain.model.MedicalProfile
  * `.isBlank()`, `.length` or string comparison on that field would throw where the type system
  * promises it cannot.
  *
- * Applied at every site that reads a [MedicalProfile] back out of Gson —
+ * Applied at every site that reads a stored [MedicalProfile] back —
  * `UserRepositoryImpl.toDomain`/`toUser` and `ChildInfoRepositoryImpl.toDomain`/`toChildInfo` —
  * rather than by adding a default to `Vaccination` or otherwise changing either class's
  * declaration: other tasks depend on their exact shape.
  *
- * @receiver The profile Gson just returned, which may carry vaccinations with a JVM-level
+ * @receiver The profile just read, which under Gson could carry vaccinations with a JVM-level
  *   null `name`
  * @return The same profile, with every vaccination's `name` guaranteed non-null
  */

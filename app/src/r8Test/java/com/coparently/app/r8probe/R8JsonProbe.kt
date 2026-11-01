@@ -13,7 +13,7 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.toDomain
 import com.coparently.app.data.repository.toEntity
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.di.koin.provideGson
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.presentation.event.EventDraft
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.calendar.model.Events
@@ -25,38 +25,37 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
 /**
- * Round-trips every type the app hands to Gson through the app's **own** serialization code, in a
- * minified build, and reports what came out (REL-7).
+ * Round-trips every model whose JSON the app stores through the app's **own** serialization code,
+ * in a minified build, and reports what came out (REL-7).
  *
- * `tools/check-r8-mapping.js` proves the keep rules held for field *names*; this proves the
- * minified code *runs*: that the JSON keys are the source names, that a `TypeToken` still carries
- * its generic signature (R8 full mode strips `Signature` from classes nothing keeps, and Gson then
- * throws), that Gson can still construct each model, and that what is written reads back equal.
- * It is compiled only into the `r8Test` build type, which is `release` plus this package, a keep
- * rule for its entry point (`app/proguard-r8test.pro`) and the debug signing key.
+ * It was `R8GsonProbe` until MON-24, when `StoredJson` (kotlinx.serialization, byte for byte what
+ * Gson wrote) replaced Gson; the cases and the key assertions are the same. What it proves now is
+ * that the minified code *runs*: that the JSON keys are the source names (a generated serializer
+ * carries them as literals, so R8 renaming a field must change nothing), that R8 left each
+ * generated serializer whole, and that what is written reads back equal. Google's calendar models,
+ * which google-http-client still fills by reflection through its own Gson, keep their case until
+ * that client goes. It is compiled only into the `r8Test` build type, which is `release` plus this
+ * package, a keep rule for its entry point (`app/proguard-r8test.pro`) and the debug signing key.
  *
  * **Production paths, not copies of them.** A child and a pet go through `ChildInfoRepositoryImpl`
  * and `PetRepositoryImpl` into a real (in-memory) Room database, and the probe reads the stored
  * row's JSON columns and then the repository's own read-back. Custody swaps go through
- * `DayOverrideJson`, the event draft through the injectable Gson `serializationModule` provides,
- * chat and revisions through their mappers — each with the `TypeToken` its file declares. For a
- * `X::class.java` target the call site is immaterial (renaming is a property of the class); for a
- * `TypeToken` it is the anonymous class at the call site that R8 may strip, so those are always
- * the production ones.
+ * `DayOverrideJson`, the event draft through `StoredJson` as `EventViewModel` saves it, chat and
+ * revisions through their mappers, each with the serializer its file declares.
  *
  * **Signed out, on a Firebase app of its own.** The repositories write to Firestore only for a
  * signed-in user, and this one never signs in: a named [FirebaseApp] on the credential-free
  * `demo-coplanly` project, as the e2e parents use, reaches no server and needs no
  * `google-services.json`. So the Firestore map `ChildInfoRepositoryImpl.toFirestoreMap()` builds
- * is not itself inspected — but its `medicalProfile` is `gson.fromJson(gson.toJson(profile),
- * Map::class.java)` on the same Gson instance that wrote the Room column checked here, so the keys
- * are the same keys; and it reads a downloaded one back through the same `fromJson` as the row.
+ * is not itself inspected — but its `medicalProfile` is the Room column's own `StoredJson` text
+ * read back as a map, so the keys are the same keys; and it reads a downloaded one back through the
+ * same decode as the row.
  *
  * The one thing this build cannot be is byte-identical to `release`: the probe is extra code, so
  * R8 sees extra callers and may inline differently. What it decides by *rule* — which fields keep
  * their names, which classes keep their signatures — is the same, and that is what is checked.
  */
-internal class R8GsonProbe(private val context: Context) {
+internal class R8JsonProbe(private val context: Context) {
 
     /** Runs every case; never throws — a failure to even start is reported as a case too. */
     fun run(): List<ProbeCase> {
@@ -75,7 +74,7 @@ internal class R8GsonProbe(private val context: Context) {
                 database.close()
             }
         }
-        return setup + cases + dayOverrideCases() + eventDraftCases() + calendarCases() + typeTokenCases()
+        return setup + cases + dayOverrideCases() + eventDraftCases() + calendarCases() + libraryTypeCases()
     }
 
     private fun firebaseApp(): FirebaseApp =
@@ -134,7 +133,7 @@ internal class R8GsonProbe(private val context: Context) {
                 VACCINATION_KEYS,
                 back.medicalProfile.vaccinations == child.medicalProfile.vaccinations
             )
-            // `LocalDateJsonAdapter`: the date is written as ISO text, not as a reflected object.
+            // `StoredLocalDateSerializer`: the date is written as ISO text, not as an object.
             value(
                 VACCINATION,
                 vaccinations.toString(),
@@ -182,11 +181,10 @@ internal class R8GsonProbe(private val context: Context) {
     }
 
     private fun eventDraftCases(): List<ProbeCase> {
-        val via = "provideGson (lenient, serializationModule), as EventViewModel saves a draft"
+        val via = "StoredJson with EventDraft.serializer(), as EventViewModel saves a draft"
         return guarded(listOf(EVENT_DRAFT), via) {
-            val gson = provideGson()
-            val json = gson.toJson(ProbeFixtures.eventDraft)
-            val back = gson.fromJson(json, EventDraft::class.java)
+            val json = StoredJson.encode(EventDraft.serializer(), ProbeFixtures.eventDraft)
+            val back = StoredJson.decodeOrNull(EventDraft.serializer(), json)
             keys(EVENT_DRAFT, json, EVENT_DRAFT_KEYS, back == ProbeFixtures.eventDraft)
         }
     }
@@ -204,11 +202,11 @@ internal class R8GsonProbe(private val context: Context) {
     }
 
     /**
-     * The `TypeToken`s over library types. Nothing here can be renamed, but each anonymous
-     * `TypeToken` subclass needs its generic signature at runtime, and full-mode R8 keeps a
-     * signature only where a rule says so (Gson 2.11's own consumer rules do, today).
+     * The serializers over library types — lists and maps of texts and numbers, and the untyped
+     * values `StoredJson.encodeValue` writes — in the files that were Gson's `TypeToken`s. Nothing
+     * here can be renamed; what is checked is that the minified mappers still write and read them.
      */
-    private fun typeTokenCases(): List<ProbeCase> {
+    private fun libraryTypeCases(): List<ProbeCase> {
         val converters = guarded(listOf(TOKEN_CONVERTERS), "Converters (Room TypeConverter)") {
             val tool = Converters()
             val list = listOf("uid-a", "uid-b")
@@ -239,8 +237,9 @@ internal class R8GsonProbe(private val context: Context) {
         /** The label a failure to set the probe up at all is reported under. */
         const val PROBE = "probe"
 
-        // Every type tools/check-invariants.js finds handed to Gson must be named in this
-        // directory as a literal, and tools/check-r8-probe.js requires a passing case for each.
+        // Every @Serializable model tools/check-invariants.js finds in production code must be
+        // named in this directory as a literal, and tools/check-r8-probe.js requires a passing
+        // case for each.
         const val MEDICATION = "com.coparently.app.domain.model.Medication"
         const val ACTIVITY = "com.coparently.app.domain.model.Activity"
         const val EMERGENCY_CONTACT = "com.coparently.app.domain.model.EmergencyContact"
@@ -256,9 +255,9 @@ internal class R8GsonProbe(private val context: Context) {
         const val CHILD_INFO = "com.coparently.app.domain.model.ChildInfo"
         const val PET = "com.coparently.app.domain.model.Pet"
         const val CALENDAR_EVENTS = "com.google.api.services.calendar.model.Events"
-        const val TOKEN_CONVERTERS = "TypeToken<List<String>> in Converters"
-        const val TOKEN_CHAT = "TypeTokens in ChatMappers"
-        const val TOKEN_EVENT_VERSIONS = "TypeTokens in EventVersionDocument"
+        const val TOKEN_CONVERTERS = "List<String> in Converters"
+        const val TOKEN_CHAT = "Lists, mark maps and activity maps in ChatMappers"
+        const val TOKEN_EVENT_VERSIONS = "Snapshots and audiences in EventVersionDocument"
 
         private val CHILD_TYPES = listOf(
             MEDICATION,

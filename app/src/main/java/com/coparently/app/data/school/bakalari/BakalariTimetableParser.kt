@@ -6,7 +6,7 @@ import com.coparently.app.data.school.bakalari.BakalariJson.text
 import com.coparently.app.domain.school.SchoolDay
 import com.coparently.app.domain.school.SchoolDayType
 import com.coparently.app.domain.school.SchoolWeek
-import com.google.gson.JsonObject
+import kotlinx.serialization.json.JsonObject
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

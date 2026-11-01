@@ -13,7 +13,7 @@
 
     <instrumentation
         android:name="com.coparently.app.r8probe.R8ProbeInstrumentation"
-        android:label="R8 Gson probe"
+        android:label="R8 JSON probe"
         android:targetPackage="${applicationId}" />
 
 </manifest>

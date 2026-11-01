@@ -7,12 +7,13 @@ import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
+import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -25,24 +26,18 @@ import java.time.format.DateTimeFormatter
  * conversions instead of writing a second, subtly different set.
  */
 
-private val gson = Gson()
-
 private val chatDateFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-private val stringListType = object : TypeToken<List<String>>() {}.type
-
-/** The stored shape of an activity payload — the same sub-map the Firestore document carries. */
-private val activityMapType = object : TypeToken<Map<String, Any?>>() {}.type
-
-private val markMapType = object : TypeToken<Map<String, Long>>() {}.type
+/** A read or delivery mark map: uid -> epoch millis. */
+private val markMap = MapSerializer(String.serializer(), Long.serializer())
 
 /** The stored row as a domain conversation, with both mark maps decoded. */
 internal fun ConversationEntity.toDomain(): Conversation = Conversation(
     id = id,
-    participants = gson.fromJson(participantsJson, stringListType) ?: emptyList(),
+    participants = StoredJson.decodeOrNull(StoredJson.strings, participantsJson) ?: emptyList(),
     title = title,
-    lastReadAt = gson.fromJson(lastReadAtJson, markMapType) ?: emptyMap(),
-    lastDeliveredAt = gson.fromJson(lastDeliveredAtJson, markMapType) ?: emptyMap(),
+    lastReadAt = StoredJson.decodeOrNull(markMap, lastReadAtJson) ?: emptyMap(),
+    lastDeliveredAt = StoredJson.decodeOrNull(markMap, lastDeliveredAtJson) ?: emptyMap(),
     lastMessageAtMillis = lastMessageAtMillis,
     archived = archived,
     createdAt = createdAt.toKotlinLocalDateTime(),
@@ -52,10 +47,10 @@ internal fun ConversationEntity.toDomain(): Conversation = Conversation(
 /** The domain conversation as a storable row, with both mark maps encoded. */
 internal fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     id = id,
-    participantsJson = gson.toJson(participants),
+    participantsJson = StoredJson.encode(StoredJson.strings, participants),
     title = title,
-    lastReadAtJson = gson.toJson(lastReadAt),
-    lastDeliveredAtJson = gson.toJson(lastDeliveredAt),
+    lastReadAtJson = StoredJson.encode(markMap, lastReadAt),
+    lastDeliveredAtJson = StoredJson.encode(markMap, lastDeliveredAt),
     lastMessageAtMillis = lastMessageAtMillis,
     archived = archived,
     createdAt = createdAt.toJavaLocalDateTime(),
@@ -81,14 +76,15 @@ internal fun MessageEntity.toDomain(): Message = Message(
     // on the path that draws the thread. Unguarded, one such row killed the whole list.
     messageType = runCatching { MessageType.valueOf(messageType) }
         .getOrDefault(MessageType.TEXT),
-    attachments = gson.fromJson(attachmentsJson, stringListType) ?: emptyList(),
+    attachments = StoredJson.decodeOrNull(StoredJson.strings, attachmentsJson) ?: emptyList(),
     isRead = isRead,
     replyToMessageId = replyToMessageId,
     syncedToFirestore = syncedToFirestore,
     status = runCatching { MessageSendStatus.valueOf(status ?: MessageSendStatus.SENT.name) }
         .getOrDefault(MessageSendStatus.SENT),
     activity = activityJson
-        ?.let { json -> runCatching { gson.fromJson<Map<String, Any?>>(json, activityMapType) }.getOrNull() }
+        // The stored shape of an activity payload: the same sub-map the Firestore document carries.
+        ?.let { json -> runCatching { StoredJson.decodeObject(json) }.getOrNull() }
         ?.let(ActivityAnnouncement::fromMap)
 )
 
@@ -101,12 +97,12 @@ internal fun Message.toEntity(): MessageEntity = MessageEntity(
     content = content,
     sentAtMillis = sentAtMillis,
     messageType = messageType.name,
-    attachmentsJson = gson.toJson(attachments),
+    attachmentsJson = StoredJson.encode(StoredJson.strings, attachments),
     isRead = isRead,
     replyToMessageId = replyToMessageId,
     syncedToFirestore = syncedToFirestore,
     status = status.name,
-    activityJson = activity?.let { gson.toJson(it.toMap()) }
+    activityJson = activity?.let { StoredJson.encodeValue(it.toMap()) }
 )
 
 /**

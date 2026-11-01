@@ -7,8 +7,8 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
+import com.coparently.app.domain.serialization.StoredJson
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.datetime.LocalDateTime
@@ -158,7 +158,7 @@ class MultiFamilyRecordsTest : TwoParentTest() {
     private suspend fun learnFamiliesFromServer(parent: EmulatorParent) {
         val remote = checkNotNull(parent.userRepository.getRemoteUserProfile(parent.uid))
         val local = checkNotNull(parent.database.userDao().getUserById(parent.uid))
-        val withEveryFamily = local.copy(partnerIdsJson = Gson().toJson(remote.partnerIds))
+        val withEveryFamily = local.copy(partnerIdsJson = StoredJson.encode(StoredJson.strings, remote.partnerIds))
         parent.database.userDao().updateUser(withEveryFamily)
         parent.selectedFamilySource.reconcile()
     }
