@@ -4,12 +4,11 @@ import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
-import javax.inject.Inject
 
 /**
  * Use case for deleting an event.
  */
-class DeleteEventUseCase @Inject constructor(
+class DeleteEventUseCase(
     private val eventRepository: EventRepository,
     private val analyticsManager: AnalyticsManager,
     private val crashlyticsManager: CrashlyticsManager,

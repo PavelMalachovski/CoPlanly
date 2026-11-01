@@ -801,8 +801,8 @@ jobs:
   #    `NoSuchMethodError` on an old device. Lint's NewApi catches most of it, not all — not a
   #    library that does it for you. 32-bit x86 on purpose: it is a second ABI for SQLCipher's
   #    native library, whose absence is exactly the failure `EncryptedDatabase.fallBackTo` handles.
-  #    **Caveat:** mockk only mocks *final* classes on API 28+, and `FakeFirebaseModule` mocks
-  #    Firebase types. If one of them is final, the Hilt UI tests fail on this leg and only here —
+  #    **Caveat:** mockk only mocks *final* classes on API 28+, and `fakeFirebaseModule` mocks
+  #    Firebase types. If one of them is final, the UI tests that load it fail on this leg and only here —
   #    that is a finding about the test module (swap the mock for an open fake), not a reason to
   #    drop the leg.
   #  * **30 — the level this job was built and first made green on.**
@@ -827,8 +827,10 @@ jobs:
       checks: write
     strategy:
       fail-fast: false
-      # The legs are defined in tools/ci-changes.js (LEG_26, LEG_30, LEG_16KB — the 16 KB leg runs
-      # the non-Hilt tests only, because MockK's agent does not load on 16 KB pages) and chosen per
+      # The legs are defined in tools/ci-changes.js (LEG_26, LEG_30, LEG_16KB — the 16 KB leg skips
+      # every test marked `@UsesFakeFirebase`, through `notAnnotation=
+      # com.coparently.app.testing.UsesFakeFirebase`, because the fake Firebase override mocks
+      # through MockK's agent, which does not load on 16 KB pages) and chosen per
       # pull request by the `changes` job: API 30 always, 26 and 16 KB when the diff reaches what
       # they exist for, all three on `main`.
       matrix:
@@ -889,7 +891,7 @@ jobs:
 
       # CQ-1 and SEC-2. What runs here: the migration tests against real SQLite files (only the
       # versions whose schemas exist — see CLAUDE.md for why eight of them are @Ignore'd), the
-      # Hilt UI tests, which build the whole graph with Room real, and `EncryptedDatabaseTest`,
+      # UI tests, which build the whole Koin graph with Room real, and `EncryptedDatabaseTest`,
       # which builds every on-disk state `SqlCipherMigration` names — fresh install, plaintext
       # upgrade, an interrupted export, a lost passphrase — and opens each through the production
       # path. What it cannot prove is an upgrade over data an *older build* wrote, on a phone's
@@ -1060,9 +1062,9 @@ jobs:
   #  * **No `google-services.json`, fake or otherwise.** The tests configure their FirebaseApps
   #    from `FirebaseOptions` for the `demo-coplanly` project, which needs no credentials and
   #    cannot reach production. The plugin gate in `app/build.gradle.kts` stays closed.
-  #  * **The `instrumented` job above is untouched.** These tests are not Hilt tests and install
-  #    no module; without the `coplanlyEmulatorHost` argument they skip themselves, so that job
-  #    reports them as skipped and keeps `FakeFirebaseModule` for everything else.
+  #  * **The `instrumented` job above is untouched.** These tests start no Koin graph and install
+  #    no override; without the `coplanlyEmulatorHost` argument they skip themselves, so that job
+  #    reports them as skipped and keeps `fakeFirebaseModule`'s mocks for everything else.
   #  * **A skip is a failure here.** The last step reads the XML and fails on any skipped test,
   #    so a missing argument cannot turn this job green by running nothing.
   #  * **Two JDKs.** The emulators need 21+ on PATH (firestore-tests/README.md); Gradle builds on

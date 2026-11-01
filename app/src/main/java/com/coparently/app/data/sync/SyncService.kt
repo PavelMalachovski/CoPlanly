@@ -45,20 +45,17 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for managing synchronization between local database and Firestore.
  * Handles bidirectional sync of events, child info, and user data.
  * Provides real-time sync status updates.
  */
-@Singleton
-// Ten collaborators, all injected: a Hilt graph edge list, not a call signature anybody
+// Ten collaborators, all injected: a Koin graph edge list, not a call signature anybody
 // writes by hand, and grouping them behind a wrapper type would only hide which sync
 // destinations this service actually has - the same reasoning `PairingViewModel` uses.
 @Suppress("LongParameterList")
-class SyncService @Inject constructor(
+class SyncService(
     private val eventDao: EventDao,
     private val childInfoDao: ChildInfoDao,
     private val userDao: UserDao,

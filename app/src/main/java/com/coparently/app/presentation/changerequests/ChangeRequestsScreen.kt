@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.ChangeRequestHighlight
@@ -82,6 +81,7 @@ import com.coparently.app.utils.dateWithTime
 import com.coparently.app.utils.format
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The requests inbox of the family on screen (phase 2, spec §6.2), in three sections: what waits
@@ -114,7 +114,7 @@ fun ChangeRequestsScreen(
     linkedEventId: String? = null,
     openSection: InboxSection? = null,
     onOpenAgreement: (AgreementScreen) -> Unit = {},
-    viewModel: ChangeRequestViewModel = hiltViewModel()
+    viewModel: ChangeRequestViewModel = koinViewModel()
 ) {
     val state by viewModel.requests.collectAsState()
     val miniMonths by viewModel.miniMonths.collectAsState()

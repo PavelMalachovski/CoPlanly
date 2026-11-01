@@ -16,15 +16,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Implementation of PreferencesRepository.
  * Manages user preferences using EncryptedPreferences.
  */
-@Singleton
-class PreferencesRepositoryImpl @Inject constructor(
+class PreferencesRepositoryImpl(
     private val encryptedPreferences: EncryptedPreferences,
     private val currencyHints: CurrencyHints
 ) : PreferencesRepository {

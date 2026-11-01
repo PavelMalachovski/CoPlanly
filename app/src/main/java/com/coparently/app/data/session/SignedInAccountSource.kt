@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * "Who am I signed in as", as a flow, for the screens that need to say so out loud.
@@ -35,8 +33,7 @@ import javax.inject.Singleton
  * The preference between them is [ProfileIdentity]'s, the same one the write path uses, so
  * what this shows and what the co-parent reads out of Firestore cannot drift apart.
  */
-@Singleton
-class SignedInAccountSource @Inject constructor(
+class SignedInAccountSource(
     private val authService: FirebaseAuthService,
     private val userDao: UserDao
 ) {

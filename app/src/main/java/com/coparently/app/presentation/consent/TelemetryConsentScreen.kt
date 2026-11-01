@@ -23,11 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The first-run question about analytics and crash reporting (REL-5).
@@ -51,7 +51,7 @@ import com.coparently.app.presentation.theme.Spacing
 @Composable
 fun TelemetryConsentScreen(
     onAnswered: () -> Unit,
-    viewModel: TelemetryConsentViewModel = hiltViewModel()
+    viewModel: TelemetryConsentViewModel = koinViewModel()
 ) {
     Column(
         modifier = Modifier

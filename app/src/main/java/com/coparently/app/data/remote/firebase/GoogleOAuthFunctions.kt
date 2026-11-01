@@ -6,8 +6,6 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * What Google returned for an authorization code.
@@ -44,8 +42,7 @@ data class GoogleTokens(
  * Google had revoked: the app kept refreshing it and never offered a reconnect. See [failureOf]
  * for the table, two reasons long.
  */
-@Singleton
-class GoogleOAuthFunctions @Inject constructor(
+class GoogleOAuthFunctions(
     private val functions: FirebaseFunctions
 ) {
 

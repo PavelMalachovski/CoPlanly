@@ -7,7 +7,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -29,7 +29,7 @@ import java.util.UUID
  * Still not covered, and kept on `docs/DEVICE-CHECKLIST.md`: the push that wakes a phone (FCM has
  * no emulator), and anything that needs two *screens* at once.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OneParentOnScreenTest : AliceOnScreenTest() {
 

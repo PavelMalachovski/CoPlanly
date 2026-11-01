@@ -4,10 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.coparently.app.data.security.EncryptionException
 import com.coparently.app.data.security.EncryptionManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.SecureRandom
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The passphrase that opens the encrypted Room database (SEC-2).
@@ -31,9 +28,8 @@ import javax.inject.Singleton
  * one encoding that survives both without quoting or escaping. Base64 would have been shorter and
  * would have put `/` and `+` inside a SQL literal for no gain.
  */
-@Singleton
-class DatabaseKey @Inject constructor(
-    @ApplicationContext context: Context,
+class DatabaseKey(
+    context: Context,
     private val encryptionManager: EncryptionManager
 ) {
 

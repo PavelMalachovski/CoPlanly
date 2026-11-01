@@ -9,8 +9,6 @@ import com.google.api.services.calendar.model.Events
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.ZoneId
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Google Calendar API wrapper for Android: it reads, and only reads.
@@ -20,8 +18,7 @@ import javax.inject.Singleton
  * writes nothing to Google, and `GoogleCalendarAccessTest` fails if a public method is added, so
  * the scope, the privacy policy and the consent screen are looked at again first.
  */
-@Singleton
-class GoogleCalendarApi @Inject constructor() {
+class GoogleCalendarApi {
     companion object {
         private const val APPLICATION_NAME = "CoPlanly"
         private val JSON_FACTORY = GsonFactory.getDefaultInstance()

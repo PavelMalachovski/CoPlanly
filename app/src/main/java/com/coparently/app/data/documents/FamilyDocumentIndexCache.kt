@@ -9,8 +9,6 @@ import com.coparently.app.domain.documents.VaultListing
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** What the vault listener reported, before the cache decides what the screen sees. */
 sealed interface VaultIndexEvent {
@@ -38,8 +36,7 @@ sealed interface VaultIndexEvent {
  * family's documents; an account switch wipes the table with the rest of Room
  * (`AccountSwitchGuard` → `clearAllTables`).
  */
-@Singleton
-class FamilyDocumentIndexCache @Inject constructor(
+class FamilyDocumentIndexCache(
     private val dao: FamilyDocumentCacheDao
 ) {
 

@@ -9,15 +9,12 @@ import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.model.Message
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Files waiting to leave the phone with their chat message (MON-23).
@@ -33,9 +30,8 @@ import javax.inject.Singleton
  * only until the upload lands, then moves to [SharedFileCache] so the sender can open it without
  * downloading it back.
  */
-@Singleton
-class ChatAttachmentOutbox @Inject constructor(
-    @ApplicationContext private val context: Context,
+class ChatAttachmentOutbox(
+    private val context: Context,
     private val stager: SharedFileStager,
     private val storage: SharedFileStorage,
     private val cache: SharedFileCache,

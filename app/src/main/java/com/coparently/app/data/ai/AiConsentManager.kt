@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The AI-assist consent: whether this parent has it, recording it, and withdrawing it.
@@ -33,8 +31,7 @@ import javax.inject.Singleton
  *
  * @param userRepository Holds the consent on the signed-in parent's profile.
  */
-@Singleton
-class AiConsentManager @Inject constructor(
+class AiConsentManager(
     private val userRepository: UserRepository
 ) {
 

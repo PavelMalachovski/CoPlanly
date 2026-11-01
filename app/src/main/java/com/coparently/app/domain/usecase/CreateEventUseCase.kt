@@ -17,7 +17,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import java.util.UUID
-import javax.inject.Inject
 import kotlin.time.Clock
 
 /**
@@ -25,7 +24,7 @@ import kotlin.time.Clock
  * Encapsulates validation, creation, and analytics logic — and, for an event that waits for the
  * co-parent's answer, the start of its request clock (phase 3a, spec §5.1).
  */
-class CreateEventUseCase @Inject constructor(
+class CreateEventUseCase(
     private val eventRepository: EventRepository,
     private val eventValidator: EventValidator,
     private val analyticsManager: AnalyticsManager,

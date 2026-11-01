@@ -16,8 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Everything the phone keeps about one school connection (MON-8).
@@ -57,8 +55,7 @@ data class StoredSchoolConnection(
  * The value is JSON written and read by hand ([SchoolConnectionCodec]), never Gson over a data
  * class, which R8 would rename.
  */
-@Singleton
-class SchoolConnectionStore @Inject constructor(
+class SchoolConnectionStore(
     private val preferences: EncryptedPreferences
 ) {
     private val version = MutableStateFlow(0L)

@@ -9,11 +9,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.event.EventPreviewSheet
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Opens a chat card about an event, given the event's id ([ChatCardTarget.Event]) — or null where
@@ -44,7 +44,7 @@ fun ChatEventCardHost(
     parentNames: ParentNames,
     onEditEvent: ((eventId: String) -> Unit)?,
     onOpenInbox: (() -> Unit)?,
-    viewModel: ChatEventCardViewModel = hiltViewModel(),
+    viewModel: ChatEventCardViewModel = koinViewModel(),
     content: @Composable () -> Unit
 ) {
     val enabled = onEditEvent != null && onOpenInbox != null

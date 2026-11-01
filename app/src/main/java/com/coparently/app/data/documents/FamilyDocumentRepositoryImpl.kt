@@ -12,15 +12,12 @@ import com.coparently.app.domain.documents.FamilyDocumentPaths
 import com.coparently.app.domain.documents.VaultListing
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.FamilyDocumentRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.io.File
 import java.io.IOException
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore- and Storage-backed [FamilyDocumentRepository] (MON-23).
@@ -31,9 +28,8 @@ import javax.inject.Singleton
  * written from here and never uploads. The bytes live in Storage and are never reached by a
  * download URL (CLAUDE.md item 31).
  */
-@Singleton
-class FamilyDocumentRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+class FamilyDocumentRepositoryImpl(
+    private val context: Context,
     private val index: FamilyDocumentIndex,
     private val authService: FirebaseAuthService,
     private val stager: SharedFileStager,

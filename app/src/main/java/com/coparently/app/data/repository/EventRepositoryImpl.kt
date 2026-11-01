@@ -39,8 +39,6 @@ import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Implementation of EventRepository.
@@ -50,9 +48,8 @@ import javax.inject.Singleton
  * Private events (isPrivate = true) are never pushed to Firestore, so they
  * stay visible only on the creator's device.
  */
-@Singleton
 @Suppress("LongParameterList") // one more sender: the important-event push (21 October 2026)
-class EventRepositoryImpl @Inject constructor(
+class EventRepositoryImpl(
     private val eventDao: EventDao,
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,

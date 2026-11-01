@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.export.ExportedFile
 import com.coparently.app.domain.export.ExportFormat
@@ -67,6 +66,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.Flow
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 
 /**
@@ -83,7 +83,7 @@ import java.time.LocalDate
 @Composable
 fun ExportScreen(
     onNavigateBack: () -> Unit,
-    viewModel: ExportViewModel = hiltViewModel()
+    viewModel: ExportViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current

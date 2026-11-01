@@ -5,12 +5,9 @@ import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.export.ExportFileWriter
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Removes what an account leaves on the phone outside the encrypted database: the plaintext
@@ -37,9 +34,8 @@ import javax.inject.Singleton
  * Best effort: a file that cannot be deleted is logged by directory, never by name, and never
  * stops a sign-out or a deletion.
  */
-@Singleton
-class DeviceTraces @Inject constructor(
-    @ApplicationContext private val context: Context
+class DeviceTraces(
+    private val context: Context
 ) {
 
     /** What sign-out removes; see the class comment. */

@@ -32,7 +32,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
@@ -62,7 +61,6 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -70,12 +68,12 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import javax.inject.Inject
 
 /**
  * How a settle-up card shows the payer what to pay (tester feedback, October 2026: "a QR code for
@@ -95,8 +93,7 @@ val LocalSettleUpPayment = compositionLocalOf<(@Composable (Message, Boolean) ->
 data class PayeeAccount(val uid: String, val iban: String?)
 
 /** Follows the co-parent of the family on screen and the IBAN they receive payments on. */
-@HiltViewModel
-class SettleUpPaymentViewModel @Inject constructor(
+class SettleUpPaymentViewModel(
     chatPartnerSource: ChatPartnerSource,
     paymentAccounts: PaymentAccounts
 ) : ViewModel() {
@@ -126,8 +123,8 @@ class SettleUpPaymentViewModel @Inject constructor(
 fun SettleUpPaymentHost(
     parentNames: ParentNames,
     onOpenSupport: (() -> Unit)? = null,
-    viewModel: SettleUpPaymentViewModel = hiltViewModel(),
-    paymentsViewModel: PaymentsViewModel = hiltViewModel(),
+    viewModel: SettleUpPaymentViewModel = koinViewModel(),
+    paymentsViewModel: PaymentsViewModel = koinViewModel(),
     content: @Composable () -> Unit
 ) {
     val payee by viewModel.payee.collectAsState()

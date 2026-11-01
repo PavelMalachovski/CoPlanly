@@ -4,8 +4,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.time.ZoneId
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The time every part of the request clocks asks (phase 3a, spec §4.1): the moment, the device's
@@ -19,7 +17,6 @@ import javax.inject.Singleton
  *
  * @property ticks Emits once at once, then at each minute boundary, for as long as it is collected.
  */
-@Singleton
 class RequestTime internal constructor(
     private val now: () -> Long,
     private val zoneOf: () -> ZoneId,
@@ -27,7 +24,6 @@ class RequestTime internal constructor(
 ) {
 
     /** The system's time, the device's zone as it is now, and a tick on every minute. */
-    @Inject
     constructor() : this(System::currentTimeMillis, ZoneId::systemDefault, minuteTicks())
 
     /** The moment, in epoch millis. */

@@ -39,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
@@ -51,6 +50,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.copySensitive
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -71,7 +71,7 @@ import java.time.format.FormatStyle
 @Composable
 fun CalendarFeedScreen(
     onNavigateUp: () -> Unit,
-    viewModel: CalendarFeedViewModel = hiltViewModel()
+    viewModel: CalendarFeedViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current

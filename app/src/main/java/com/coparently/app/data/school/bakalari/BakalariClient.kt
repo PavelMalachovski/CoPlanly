@@ -1,7 +1,6 @@
 package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import com.coparently.app.di.SchoolHttpClient
 import com.coparently.app.domain.school.SchoolEvent
 import com.coparently.app.domain.school.SchoolWeek
 import kotlinx.coroutines.CoroutineDispatcher
@@ -14,8 +13,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A signed-in session's two tokens (MON-8).
@@ -43,7 +40,6 @@ data class BakalariTokens(
  * Stateless. Refreshing, the rotation of the refresh token and writing it down before it is used
  * are [BakalariAuthorizer]'s job.
  */
-@Singleton
 class BakalariClient internal constructor(
     private val http: OkHttpClient,
     private val requireHttps: Boolean,
@@ -52,8 +48,7 @@ class BakalariClient internal constructor(
 ) {
 
     /** The production client: https only, on the IO dispatcher, on the wall clock. */
-    @Inject
-    constructor(@SchoolHttpClient http: OkHttpClient) : this(http, true, Dispatchers.IO, System::currentTimeMillis)
+    constructor(http: OkHttpClient) : this(http, true, Dispatchers.IO, System::currentTimeMillis)
 
     /**
      * Whether [baseUrl] answers as a Bakaláři server: `GET {base}/api`, which needs no sign-in and

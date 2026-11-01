@@ -8,7 +8,6 @@ import com.coparently.app.domain.friends.FriendCalendarRead
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.presentation.professionals.ProfessionalAgenda
 import com.coparently.app.presentation.professionals.ProfessionalDay
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
-import javax.inject.Inject
 
 /** What a family friend's calendar is showing. */
 sealed interface FriendCalendarUiState {
@@ -61,8 +59,7 @@ sealed interface FriendCalendarUiState {
  * reason the professional's is not the parents' grid: the grid is built on Room and on edit
  * affordances a reader outside the pair must not be shown.
  */
-@HiltViewModel
-class FriendCalendarViewModel @Inject constructor(
+class FriendCalendarViewModel(
     savedStateHandle: SavedStateHandle,
     private val friendRepository: FriendRepository
 ) : ViewModel() {

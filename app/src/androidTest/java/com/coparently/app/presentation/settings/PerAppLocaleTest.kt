@@ -16,19 +16,18 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
 import com.coparently.app.presentation.MainActivity
+import com.coparently.app.testing.KoinTestRule
 import com.coparently.app.testing.SignedInSession
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.After
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import javax.inject.Inject
 
 /**
  * Switches the app's language the way Settings → Language does —
@@ -42,24 +41,22 @@ import javax.inject.Inject
  * read from the app's own resources in that locale, so a reworded translation does not fail it —
  * only a screen that ignores the choice does.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class PerAppLocaleTest {
 
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val koinRule = KoinTestRule()
 
     @get:Rule(order = 1)
     val composeTestRule = createEmptyComposeRule()
 
-    @Inject
-    lateinit var session: SignedInSession
+    val session: SignedInSession by lazy { koinRule.get() }
 
     private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
     fun signIn() {
-        hiltRule.inject()
         session.signIn()
         composeTestRule.mainClock.autoAdvance = false
     }

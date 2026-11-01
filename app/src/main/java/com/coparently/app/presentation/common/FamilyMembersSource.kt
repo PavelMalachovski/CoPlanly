@@ -6,8 +6,6 @@ import com.coparently.app.domain.repository.PetRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Somebody this family cares for, ready to be named on a chip.
@@ -35,8 +33,7 @@ data class FamilyMember(
  * defect CLAUDE.md records for `ExpenseViewModel.sharedWith` — and does not need to: what a
  * parent picked comes down from the form as an explicit list.
  */
-@Singleton
-class FamilyMembersSource @Inject constructor(
+class FamilyMembersSource(
     private val childInfoRepository: ChildInfoRepository,
     private val petRepository: PetRepository
 ) {

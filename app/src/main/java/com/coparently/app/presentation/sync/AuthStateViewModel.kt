@@ -12,7 +12,6 @@ import com.coparently.app.domain.onboarding.OnboardingState
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.UserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
 
 /**
  * ViewModel for managing authentication state across the app.
@@ -30,12 +28,11 @@ import javax.inject.Inject
  * be walked through the first-run questionnaire. Both answers live here rather than in a second
  * view model so the start destination has one source that cannot disagree with itself.
  */
-@HiltViewModel
-// Eight collaborators, all injected: a Hilt graph edge list, and the last four are what sign-out
+// Eight collaborators, all injected: a Koin graph edge list, and the last four are what sign-out
 // has to undo on this device (push token, school tokens, pending reminders, pending request-clock
 // steps) — the same reasoning `PairingViewModel` uses.
 @Suppress("LongParameterList")
-class AuthStateViewModel @Inject constructor(
+class AuthStateViewModel(
     private val firebaseAuthService: FirebaseAuthService,
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,

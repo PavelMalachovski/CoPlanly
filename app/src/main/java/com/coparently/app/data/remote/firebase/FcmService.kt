@@ -6,15 +6,12 @@ import com.coparently.app.domain.family.FamilyKey
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for managing Firebase Cloud Messaging tokens and notifications.
  * Handles token registration, updates, and notification payload creation.
  */
-@Singleton
-class FcmService @Inject constructor(
+class FcmService(
     private val firebaseMessaging: FirebaseMessaging,
     private val firestore: FirebaseFirestore,
     private val firebaseAuthService: FirebaseAuthService,

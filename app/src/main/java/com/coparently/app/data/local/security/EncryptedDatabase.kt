@@ -4,14 +4,11 @@ import android.content.Context
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.coparently.app.data.crashlytics.CrashlyticsManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import net.zetetic.database.DatabaseErrorHandler
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import java.io.File
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Opens Room on an encrypted SQLite file, converting an existing plaintext one on the way (SEC-2).
@@ -53,9 +50,8 @@ import javax.inject.Singleton
  * over a database an *older build* wrote, under a phone's hardware-backed Keystore: that first run
  * is an acceptance step, `docs/DEVICE-CHECKLIST.md` §2.1.
  */
-@Singleton
-class EncryptedDatabase @Inject constructor(
-    @ApplicationContext private val context: Context,
+class EncryptedDatabase(
+    private val context: Context,
     private val databaseKey: DatabaseKey,
     private val crashlyticsManager: CrashlyticsManager
 ) {

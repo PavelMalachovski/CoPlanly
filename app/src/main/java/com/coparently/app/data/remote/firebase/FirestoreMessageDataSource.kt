@@ -8,8 +8,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Data source for managing messages in Firestore.
@@ -21,8 +19,7 @@ import javax.inject.Singleton
  * finds only threads the server kept after a co-parent deleted their account: once that account
  * is gone, no pairing names the co-parent any more, so the id cannot be derived from one.
  */
-@Singleton
-class FirestoreMessageDataSource @Inject constructor(
+class FirestoreMessageDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val conversationsCollection = firestore.collection("conversations")

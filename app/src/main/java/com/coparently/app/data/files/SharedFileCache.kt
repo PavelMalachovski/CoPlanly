@@ -2,14 +2,11 @@ package com.coparently.app.data.files
 
 import android.content.Context
 import com.coparently.app.domain.files.toHex
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The downloaded bytes are not the ones whose digest the record carries; nothing is shown. */
 class SharedFileIntegrityException : IOException("Downloaded file does not match its recorded SHA-256")
@@ -24,9 +21,8 @@ class SharedFileIntegrityException : IOException("Downloaded file does not match
  * second check, and a file that does not match what a parent filed or sent is never opened as if
  * it did. The cache is the system's to clear — nothing here is the record, the server is.
  */
-@Singleton
-class SharedFileCache @Inject constructor(
-    @ApplicationContext private val context: Context,
+class SharedFileCache(
+    private val context: Context,
     private val storage: SharedFileStorage
 ) {
 

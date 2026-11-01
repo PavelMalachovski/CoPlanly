@@ -16,12 +16,11 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
 import org.junit.Test
 import org.junit.runner.RunWith
-import javax.inject.Inject
 
 /**
  * **The UI tour**: full-screen screenshots of Alice's real app, with a realistic family in it, for a
@@ -46,18 +45,15 @@ import javax.inject.Inject
  * language here, and names the output directory; the font scale is set on the device by
  * `tools/ui-tour/run-ui-tour.sh`. First-run screens are [UiTourOnboardingTest]'s.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class UiTourTest : AliceOnScreenTest() {
 
-    @Inject
-    lateinit var seed: UiTourSeed
+    val seed: UiTourSeed by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    val selectedFamilySource: SelectedFamilySource by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var friendRepository: FriendRepository
+    val friendRepository: FriendRepository by lazy { koinRule.get() }
 
     private val variant by lazy { UiTourVariant.current() }
     private val localized by lazy { variant.localized(context) }

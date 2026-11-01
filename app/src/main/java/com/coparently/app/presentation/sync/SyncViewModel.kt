@@ -17,12 +17,10 @@ import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * ViewModel для управления операциями синхронизации.
@@ -30,8 +28,7 @@ import javax.inject.Inject
  *
  * Использует Google Sign-In API для аутентификации с OAuth2 токенами.
  */
-@HiltViewModel
-class SyncViewModel @Inject constructor(
+class SyncViewModel(
     private val syncService: SyncService,
     private val calendarSyncRepository: CalendarSyncRepository,
     private val credentialManagerService: CredentialManagerService,

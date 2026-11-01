@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
@@ -59,6 +58,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDateTime
 
 /**
@@ -75,7 +75,7 @@ import java.time.LocalDateTime
 fun RequestChangeScreen(
     eventId: String,
     onBack: () -> Unit,
-    viewModel: RequestChangeViewModel = hiltViewModel()
+    viewModel: RequestChangeViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val coParentName = rememberParentNames(viewModel.parents.collectAsState().value).coParentLabel()

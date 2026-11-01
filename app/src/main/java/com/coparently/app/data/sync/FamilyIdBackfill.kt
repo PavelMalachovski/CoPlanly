@@ -10,8 +10,6 @@ import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.domain.family.FamilyKey
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Names the co-parenting relationship on local rows that were written before they could.
@@ -47,12 +45,11 @@ import javax.inject.Singleton
  * device's outbox, where the create rule (`createdByFirebaseUid == auth.uid`) rejects them for
  * ever.
  */
-@Singleton
 // Six DAOs and a preference store: the six tables *are* the job, so the list is the scope of
 // this class stated once rather than a signature anybody types. Taking the database instead
 // would trade that for a coupling the tests would then have to mock around.
 @Suppress("LongParameterList")
-class FamilyIdBackfill @Inject constructor(
+class FamilyIdBackfill(
     private val eventDao: EventDao,
     private val expenseDao: ExpenseDao,
     private val budgetDao: BudgetDao,

@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps the chat's Firestore listeners running for the life of the process, and restarts them
@@ -61,8 +59,7 @@ import javax.inject.Singleton
  * The listener cost is not new. The Activity-scoped collector already held both listeners for the
  * whole process; this moves them somewhere that says so and can restart them.
  */
-@Singleton
-class ChatMirror @Inject constructor(
+class ChatMirror(
     private val userRepository: UserRepository,
     private val chatPartnerSource: ChatPartnerSource,
     private val messageRepository: MessageRepository

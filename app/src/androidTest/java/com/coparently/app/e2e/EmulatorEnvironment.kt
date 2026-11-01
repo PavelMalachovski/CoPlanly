@@ -3,7 +3,7 @@ package com.coparently.app.e2e
 import android.content.Context
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
-import com.coparently.app.di.FirebaseModule
+import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
@@ -95,10 +95,10 @@ object EmulatorEnvironment {
             ?.takeIf { it.isNotBlank() }
 
     /**
-     * The Firebase app the **app under test** uses — the Hilt graph's `FirebaseAuth`, `Firestore`,
+     * The Firebase app the **app under test** uses — the Koin graph's `FirebaseAuth`, `Firestore`,
      * `Storage` and `Functions` — when this run has emulators, else null.
      *
-     * `FakeFirebaseModule` reads it: with no emulator host it keeps providing relaxed mocks, which
+     * `fakeFirebaseModule` reads it: with no emulator host it keeps providing relaxed mocks, which
      * is every run of the ordinary `instrumented` job; with one, the app's own screens talk to the
      * same emulators the other phone does (`OneParentOnScreenTest`). One per process, like the
      * default app it stands in for.
@@ -136,7 +136,7 @@ object EmulatorEnvironment {
                 .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
                 .build()
         }
-        FirebaseFunctions.getInstance(app, FirebaseModule.FUNCTIONS_REGION)
+        FirebaseFunctions.getInstance(app, FUNCTIONS_REGION)
             .useEmulator(host, FUNCTIONS_PORT)
         FirebaseStorage.getInstance(app).useEmulator(host, STORAGE_PORT)
         return app

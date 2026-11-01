@@ -16,9 +16,6 @@ import com.coparently.app.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** An email and password handed back by the system's password manager. */
 data class SavedPassword(val email: String, val password: String) {
@@ -43,9 +40,8 @@ data class SavedPassword(val email: String, val password: String) {
  * UI on an `Activity`, and the caller is a ViewModel, which outlives one — a stored reference
  * would leak it.
  */
-@Singleton
-class CredentialAuthenticator @Inject constructor(
-    @ApplicationContext private val context: Context
+class CredentialAuthenticator(
+    private val context: Context
 ) {
     private val credentialManager = CredentialManager.create(context)
 

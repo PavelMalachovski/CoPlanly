@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.repository.ProfessionalRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
-import javax.inject.Inject
 
 /** What the professional's calendar is showing. */
 sealed interface ProfessionalCalendarUiState {
@@ -49,8 +47,7 @@ sealed interface ProfessionalCalendarUiState {
  * phone does not hold for somebody else's family, and on edit affordances a professional must not
  * be shown.
  */
-@HiltViewModel
-class ProfessionalCalendarViewModel @Inject constructor(
+class ProfessionalCalendarViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: ProfessionalRepository
 ) : ViewModel() {

@@ -14,7 +14,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.sharedFileError
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +28,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** What the vault screen can show in place of, or as, its list. */
 sealed interface DocumentsList {
@@ -81,8 +79,7 @@ data class DocumentsUiState(
  * was tapped. Nothing is private here. The list is a Firestore listener; while it cannot reach the
  * server the repository answers from its Room copy of the index, and the state says so.
  */
-@HiltViewModel
-class FamilyDocumentsViewModel @Inject constructor(
+class FamilyDocumentsViewModel(
     private val repository: FamilyDocumentRepository,
     private val selectedFamilySource: SelectedFamilySource,
     private val authService: FirebaseAuthService,

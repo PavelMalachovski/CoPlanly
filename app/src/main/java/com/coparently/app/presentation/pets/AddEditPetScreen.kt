@@ -48,7 +48,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
@@ -71,6 +70,7 @@ import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.util.UUID
 
 /**
@@ -89,7 +89,7 @@ import java.util.UUID
 fun AddEditPetScreen(
     petId: String?,
     onNavigateBack: () -> Unit,
-    viewModel: PetsViewModel = hiltViewModel()
+    viewModel: PetsViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val isNewPet = petId == null || petId == "new"

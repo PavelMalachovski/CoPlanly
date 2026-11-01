@@ -6,8 +6,6 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * What a parent does to a request's clock from its card (phase 3a, spec §4.4, §4.5): the answering
@@ -26,8 +24,7 @@ import javax.inject.Singleton
  *   nothing, and nothing is written. Once the clock has it, the push, the card and the end follow
  *   even when the screen that asked has gone.
  */
-@Singleton
-class RequestClockActions @Inject constructor(
+class RequestClockActions(
     private val repository: RequestDeadlineRepository,
     private val records: RequestRecords,
     private val telling: RequestTelling,

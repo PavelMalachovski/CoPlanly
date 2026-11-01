@@ -5,8 +5,6 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A family's request clocks, seen at a moment that keeps moving (phase 3a, spec §4.1): what the
@@ -21,8 +19,7 @@ import javax.inject.Singleton
  * (spec §5.3): each snapshot hands the clocks it has not yet received to the [keeper], which
  * delivers them at once rather than at the next sync.
  */
-@Singleton
-class RequestClocks @Inject constructor(
+class RequestClocks(
     private val repository: RequestDeadlineRepository,
     private val time: RequestTime,
     private val keeper: RequestClockKeeper

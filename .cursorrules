@@ -11,7 +11,7 @@ rules:
   - Минимальный SDK = 26
   - Все UI-компоненты должны быть stateless
   - Использовать ViewModel для логики
-  - Dependency Injection через Hilt
+  - Dependency Injection через Koin
   - Тесты обязательны для каждого публичного метода репозитория
   - Не использовать deprecated API
   - Придерживаться Material3

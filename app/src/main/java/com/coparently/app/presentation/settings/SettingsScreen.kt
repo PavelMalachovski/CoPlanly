@@ -87,7 +87,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.consent.HealthConsentWithdrawal
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
@@ -139,6 +138,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
 
 /**
@@ -185,11 +185,11 @@ fun SettingsScreen(
     onNavigateToMyProfile: (() -> Unit)? = null,
     onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
-    syncViewModel: SyncViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
-    authStateViewModel: com.coparently.app.presentation.sync.AuthStateViewModel = hiltViewModel(),
-    telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel(),
-    healthConsentViewModel: HealthConsentViewModel = hiltViewModel()
+    syncViewModel: SyncViewModel = koinViewModel(),
+    settingsViewModel: SettingsViewModel = koinViewModel(),
+    authStateViewModel: com.coparently.app.presentation.sync.AuthStateViewModel = koinViewModel(),
+    telemetryConsentViewModel: TelemetryConsentViewModel = koinViewModel(),
+    healthConsentViewModel: HealthConsentViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val telemetryConsent by telemetryConsentViewModel.consent.collectAsState()
@@ -221,7 +221,7 @@ fun SettingsScreen(
     // The same state and the same switch as the top-bar chip (M-8), so the two entry points
     // cannot disagree about which family is on screen. Observed off the signed-in row rather
     // than reloaded on entry; the co-parents' names are the one remote read, and it is cached.
-    val familySwitcherViewModel: FamilySwitcherViewModel = hiltViewModel()
+    val familySwitcherViewModel: FamilySwitcherViewModel = koinViewModel()
     val familySwitcher by familySwitcherViewModel.state.collectAsState()
 
     if (showFamilySwitcher) {

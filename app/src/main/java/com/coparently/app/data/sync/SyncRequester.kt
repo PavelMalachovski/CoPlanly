@@ -1,9 +1,6 @@
 package com.coparently.app.data.sync
 
 import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Asks for one sync run as soon as there is a network, without waiting for the periodic tick.
@@ -29,9 +26,8 @@ interface SyncRequester {
 }
 
 /** The production [SyncRequester]: hands the request to WorkManager through [SyncWorker.syncNow]. */
-@Singleton
-class WorkManagerSyncRequester @Inject constructor(
-    @ApplicationContext private val context: Context
+class WorkManagerSyncRequester(
+    private val context: Context
 ) : SyncRequester {
 
     override fun requestSyncNow() = SyncWorker.syncNow(context)

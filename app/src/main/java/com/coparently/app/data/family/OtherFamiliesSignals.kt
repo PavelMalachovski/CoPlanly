@@ -45,8 +45,6 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toKotlinLocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * One kind of news a family that is not on screen can have waiting (M-8). The switcher draws a
@@ -116,10 +114,8 @@ enum class FamilySignal {
  * It only reads: it never creates a conversation, a custody document or a settings document.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Singleton
 class OtherFamiliesSignals
 @Suppress("LongParameterList") // one source per kind of signal, the signed-in parent, the switcher and the clocks
-@Inject
 constructor(
     private val userRepository: UserRepository,
     private val selectedFamilySource: SelectedFamilySource,

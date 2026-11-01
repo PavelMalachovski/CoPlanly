@@ -19,7 +19,6 @@ import com.coparently.app.domain.support.SupportTerms
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +33,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.YearMonth
-import javax.inject.Inject
 
 /** What the child support screen shows for the family on screen. */
 sealed interface SupportUiState {
@@ -77,9 +75,8 @@ sealed interface SupportUiState {
  * the parent saw rather than from whatever is on screen when it lands.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
 @Suppress("LongParameterList") // the agreement, its payments, the reminder, and who is who
-class SupportViewModel @Inject constructor(
+class SupportViewModel(
     private val store: SupportAgreementStore,
     private val payments: PaymentStore,
     private val reminders: SupportReminders,

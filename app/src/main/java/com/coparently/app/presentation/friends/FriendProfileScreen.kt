@@ -34,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.presentation.common.AccountAvatar
@@ -43,6 +42,7 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The friend's own profile, authored by them (item 16).
@@ -60,7 +60,7 @@ import com.coparently.app.presentation.theme.labelLargeEmphasized
 @Composable
 fun FriendProfileScreen(
     onNavigateUp: () -> Unit,
-    viewModel: FriendViewModel = hiltViewModel()
+    viewModel: FriendViewModel = koinViewModel()
 ) {
     val stored by viewModel.myProfile.collectAsState()
     val saveError by viewModel.saveError.collectAsState()

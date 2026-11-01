@@ -17,12 +17,9 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.utils.answerByText
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The local notifications a request's clock posts on this phone (phase 3a, spec §4.3–§4.4, §5.3):
@@ -38,9 +35,8 @@ import javax.inject.Singleton
  * a tap opens the Requests inbox in the clock's family, like the request's own push (CLAUDE.md
  * item 15). Nothing is posted while notifications are not allowed.
  */
-@Singleton
-class RequestNotices @Inject constructor(
-    @ApplicationContext private val context: Context,
+class RequestNotices(
+    private val context: Context,
     private val pairingRepository: PairingRepository
 ) {
 

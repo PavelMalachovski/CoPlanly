@@ -9,8 +9,6 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Tells the co-parent what changed, from the place the change became durable.
@@ -36,8 +34,7 @@ import javax.inject.Singleton
  *   announcement is not retried on its own; see this package's spec, §8.
  * @param userRepository Resolves the signed-in uid and the co-parent's.
  */
-@Singleton
-class ActivityAnnouncer @Inject constructor(
+class ActivityAnnouncer(
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository
 ) {

@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Whether this family's app should offer child records, pet records, or both.
@@ -32,8 +30,7 @@ import javax.inject.Singleton
  * registered whatever this says: a deep link, or a push about a record the co-parent just
  * changed, must not land on a route that is not there.
  */
-@Singleton
-class FamilyKindSource @Inject constructor(
+class FamilyKindSource(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository
 ) {

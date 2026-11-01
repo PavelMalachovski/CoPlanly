@@ -7,8 +7,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for Firebase Authentication.
@@ -16,8 +14,7 @@ import javax.inject.Singleton
  *
  * @property firebaseAuth Firebase Authentication instance
  */
-@Singleton
-class FirebaseAuthService @Inject constructor(
+class FirebaseAuthService(
     private val firebaseAuth: FirebaseAuth
 ) {
     /**

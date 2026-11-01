@@ -8,8 +8,6 @@ import com.google.firebase.storage.storageMetadata
 import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The bytes of vault documents, chat attachments (MON-23) and record photographs (L-4) in Cloud
@@ -19,8 +17,7 @@ import javax.inject.Singleton
  * `storage.rules` for whoever holds it, and the whole point of the MON-23 blocks is that the
  * rules decide who reads these files. So a reader downloads through the SDK, as themselves.
  */
-@Singleton
-class SharedFileStorage @Inject constructor(
+class SharedFileStorage(
     private val storage: FirebaseStorage
 ) {
 

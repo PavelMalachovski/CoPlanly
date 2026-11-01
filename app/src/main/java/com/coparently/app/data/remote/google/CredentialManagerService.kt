@@ -14,11 +14,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Сервис для аутентификации Google с использованием Google Sign-In API и OAuth2.
@@ -26,9 +23,8 @@ import javax.inject.Singleton
  *
  * @see <a href="https://developers.google.com/identity/sign-in/android/start">Google Sign-In for Android</a>
  */
-@Singleton
-class CredentialManagerService @Inject constructor(
-    @ApplicationContext private val context: Context,
+class CredentialManagerService(
+    private val context: Context,
     private val encryptedPreferences: EncryptedPreferences,
     private val googleOAuthFunctions: GoogleOAuthFunctions
 ) {

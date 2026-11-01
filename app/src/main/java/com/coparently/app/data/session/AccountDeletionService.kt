@@ -12,8 +12,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Erases the signed-in account: everything the server holds, then everything this device does.
@@ -33,9 +31,8 @@ import javax.inject.Singleton
  * explicitly, and only after the server reports success: clearing first would destroy the
  * user's data even on a run that failed and has to be retried.
  */
-@Singleton
 @Suppress("LongParameterList") // one collaborator per piece of the account this phone holds
-class AccountDeletionService @Inject constructor(
+class AccountDeletionService(
     private val functions: FirebaseFunctions,
     private val database: CoPlanlyDatabase,
     private val encryptedPreferences: EncryptedPreferences,

@@ -9,7 +9,6 @@ import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.repository.UserRepository
 import java.time.YearMonth
-import javax.inject.Inject
 import kotlin.math.abs
 
 /**
@@ -21,7 +20,7 @@ import kotlin.math.abs
  * a fact the reader's phone words, in the reader's language, and a message cannot be edited once
  * it is in the thread. The payer's phone shows a payment code under it.
  */
-class SettleUpMessages @Inject constructor(
+class SettleUpMessages(
     private val activityAnnouncer: ActivityAnnouncer,
     private val userRepository: UserRepository
 ) {

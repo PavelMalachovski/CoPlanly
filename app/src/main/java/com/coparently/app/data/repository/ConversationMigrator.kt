@@ -6,8 +6,6 @@ import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.domain.chat.ConversationKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Merges a parent pair's legacy, randomly-id'd conversations into the canonical one.
@@ -59,8 +57,7 @@ import javax.inject.Singleton
  * `archived = false`, so [MessageDao.getActiveConversations] does not return it as a candidate,
  * and the migration makes zero calls for it.
  */
-@Singleton
-class ConversationMigrator @Inject constructor(
+class ConversationMigrator(
     private val messageDao: MessageDao,
     private val firestoreMessageDataSource: FirestoreMessageDataSource
 ) {

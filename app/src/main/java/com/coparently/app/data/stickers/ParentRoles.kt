@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * How each parent's stickers address them: `users/{uid}.parentRole`, "dad", "mom" or "parent",
@@ -25,8 +23,7 @@ import javax.inject.Singleton
  * column is needed. It is read **only** to word a sticker; every other label in the app stays the
  * person's name (CLAUDE.md, "Parent colours identify a person, not a role").
  */
-@Singleton
-class ParentRoles @Inject constructor(
+class ParentRoles(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuthService
 ) {

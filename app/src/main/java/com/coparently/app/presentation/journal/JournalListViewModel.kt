@@ -6,7 +6,6 @@ import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** What the journal list shows. */
 sealed interface JournalListState {
@@ -39,8 +37,7 @@ sealed interface JournalListState {
  * ([com.coparently.app.data.family.FamilyView]). The export keeps its own scope (`RecordJournal`).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class JournalListViewModel @Inject constructor(
+class JournalListViewModel(
     private val repository: JournalRepository,
     userRepository: UserRepository,
     familyViewSource: FamilyViewSource

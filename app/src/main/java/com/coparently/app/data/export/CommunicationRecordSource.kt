@@ -28,8 +28,6 @@ import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
 import java.time.LocalDate
 import java.time.ZoneId
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Gathers what a communication record is built from (MON-3).
@@ -44,8 +42,7 @@ import javax.inject.Singleton
  * profile can reach a document meant for a court (`docs/DESIGN-court-record.md` §4); and no
  * private event, which never left this phone and must not leave it in a file either.
  */
-@Singleton
-class CommunicationRecordSource @Inject constructor(
+class CommunicationRecordSource(
     private val versions: FirestoreEventVersionDataSource,
     private val recorder: EventVersionRecorder,
     private val eventRepository: EventRepository,

@@ -9,19 +9,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.YearMonth
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * [AiAssistRepository] over the `aiAssist` callable, through the app's one [FirebaseFunctions]
- * instance — `FirebaseModule.FUNCTIONS_REGION`, `europe-west3`, where the model is called too.
+ * instance — `FUNCTIONS_REGION` in `di/koin/FirebaseModule.kt`, `europe-west3`, where the model
+ * is called too.
  *
  * **Every failure is an answer, never an exception**, as in `ExportReceipts`: a refusal is
  * classified by [AiAssistErrors], and offline, a timeout or a network error is
  * [AiAssistResult.Unavailable]. Nothing here logs a request's or an answer's text.
  */
-@Singleton
-class FunctionsAiAssistRepository @Inject constructor(
+class FunctionsAiAssistRepository(
     private val functions: FirebaseFunctions
 ) : AiAssistRepository {
 

@@ -18,7 +18,6 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.toUiText
 import com.google.gson.Gson
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,7 +42,6 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toLocalDateTime
-import javax.inject.Inject
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Clock
 
@@ -87,8 +85,7 @@ internal sealed interface EventQuery {
     data class Range(val start: LocalDateTime, val end: LocalDateTime) : EventQuery
 }
 
-@HiltViewModel
-class EventViewModel @Inject constructor(
+class EventViewModel(
     private val eventUseCases: com.coparently.app.domain.usecase.EventUseCases,
     private val errorHandler: com.coparently.app.domain.error.ErrorHandler,
     private val encryptedPreferences: EncryptedPreferences,

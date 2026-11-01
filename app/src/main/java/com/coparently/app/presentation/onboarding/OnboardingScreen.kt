@@ -52,7 +52,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.CountryPicker
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
@@ -78,6 +77,7 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The first-run wizard: the co-parent link, notifications, the parent's name and country, and the
@@ -106,8 +106,8 @@ fun OnboardingScreen(
     onFinished: () -> Unit,
     onOpenCustodySetup: () -> Unit,
     onOpenPairing: (enterCode: Boolean) -> Unit,
-    viewModel: OnboardingViewModel = hiltViewModel(),
-    scheduleViewModel: CustodySetupViewModel = hiltViewModel()
+    viewModel: OnboardingViewModel = koinViewModel(),
+    scheduleViewModel: CustodySetupViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val schedule by scheduleViewModel.uiState.collectAsState()

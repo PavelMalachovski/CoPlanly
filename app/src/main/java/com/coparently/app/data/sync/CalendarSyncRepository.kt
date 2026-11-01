@@ -20,15 +20,12 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
-import javax.inject.Inject
-import javax.inject.Singleton
 import com.google.api.services.calendar.model.Event as GoogleEvent
 
 /**
  * Repository for synchronizing events between local database and Google Calendar.
  */
-@Singleton
-class CalendarSyncRepository @Inject constructor(
+class CalendarSyncRepository(
     private val eventDao: EventDao,
     private val googleCalendarApi: GoogleCalendarApi,
     private val credentialProvider: CredentialProvider,

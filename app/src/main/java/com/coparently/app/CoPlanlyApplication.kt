@@ -3,7 +3,6 @@ package com.coparently.app
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -12,71 +11,71 @@ import com.coparently.app.data.files.RecordPhotoImageLoader
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
+import com.coparently.app.di.koin.appModules
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.google.firebase.FirebaseApp
-import dagger.hilt.android.HiltAndroidApp
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
+import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.factory.KoinWorkerFactory
+import org.koin.core.context.startKoin
 
 /**
  * Application class for CoPlanly.
- * Marks the application for Hilt dependency injection and initializes Firebase services.
- *
- * @see HiltAndroidApp
+ * Starts the Koin graph ([appModules]) and initializes Firebase services.
  */
-@HiltAndroidApp
 class CoPlanlyApplication : Application(), Configuration.Provider, ImageLoaderFactory {
-
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
 
     /**
      * Repairs the signed-in user's Firestore profile at every session boundary.
-     * Field-injected rather than created here so Hilt owns its dependencies.
+     * Resolved from the graph rather than created here so Koin owns its dependencies.
      */
-    @Inject
-    lateinit var sessionProfileSynchronizer: SessionProfileSynchronizer
+    private val sessionProfileSynchronizer: SessionProfileSynchronizer by inject()
 
     /**
      * Applies the analytics and crash-reporting consent for the life of the process (REL-5).
-     * Field-injected for the same reason as [sessionProfileSynchronizer], and started here
-     * because it belongs to the process rather than to any screen.
+     * Resolved from the graph for the same reason as [sessionProfileSynchronizer], and started
+     * here because it belongs to the process rather than to any screen.
      */
-    @Inject
-    lateinit var telemetryConsentApplier: TelemetryConsentApplier
+    private val telemetryConsentApplier: TelemetryConsentApplier by inject()
 
     /**
      * Keeps the chat's Firestore listeners attached and restarts them when they end (CQ-8).
-     * Field-injected and started here for the same reason as the two above: the mirror belongs
+     * Resolved and started here for the same reason as the two above: the mirror belongs
      * to the process. It used to be held open by a badge on a screen, which is why a listener
      * that failed once stayed failed until the app was killed.
      */
-    @Inject
-    lateinit var chatMirror: ChatMirror
+    private val chatMirror: ChatMirror by inject()
 
-    @Inject
-    lateinit var todayWidgetRefresher: TodayWidgetRefresher
+    private val todayWidgetRefresher: TodayWidgetRefresher by inject()
 
     /**
      * Builds Coil's image loader with the record-photo fetcher (L-4), so a stored medical, pet,
      * receipt or event photograph is fetched as the signed-in parent and never by download URL.
      */
-    @Inject
-    lateinit var recordPhotoImageLoader: RecordPhotoImageLoader
+    private val recordPhotoImageLoader: RecordPhotoImageLoader by inject()
 
-    /** Coil asks for its loader lazily, after [onCreate] has injected the fields above. */
+    /** Coil asks for its loader lazily, after [onCreate] has started the graph. */
     override fun newImageLoader(): ImageLoader = recordPhotoImageLoader.build(this)
 
     /**
-     * Provides WorkManager configuration with HiltWorkerFactory.
-     * This enables dependency injection in WorkManager workers.
+     * Provides WorkManager configuration with Koin's worker factory, which builds every worker
+     * declared with `workerOf` in [appModules] and leaves any other to WorkManager's default.
      */
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
+            .setWorkerFactory(KoinWorkerFactory())
             .build()
 
     override fun onCreate() {
         super.onCreate()
+
+        // The graph first: everything below resolves from it. Instrumented tests never get here —
+        // their runner substitutes an application that starts nothing, and each test starts its
+        // own graph with its overrides (`KoinTestRule`).
+        startKoin {
+            androidContext(this@CoPlanlyApplication)
+            modules(appModules)
+        }
 
         // Initialize Firebase
         val firebaseApp = FirebaseApp.initializeApp(this)
@@ -110,7 +109,8 @@ class CoPlanlyApplication : Application(), Configuration.Provider, ImageLoaderFa
         sessionProfileSynchronizer.start()
 
         // Schedule periodic background sync
-        // Note: WorkManager is initialized via Hilt, so we can schedule work here
+        // Note: WorkManager is initialized on demand from [workManagerConfiguration], so work can
+        // be scheduled here
         SyncWorker.schedulePeriodicSync(this)
 
         // ...and one right now, plus one every time the app comes back to the foreground.

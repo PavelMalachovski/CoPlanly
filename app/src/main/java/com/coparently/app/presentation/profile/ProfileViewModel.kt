@@ -10,7 +10,6 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.observeSignedInUser
 import com.coparently.app.presentation.common.projectedCoParentUid
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +23,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
-import javax.inject.Inject
 
 /**
  * State of a profile screen — the signed-in parent's own, and the co-parent's.
@@ -82,8 +80,7 @@ data class ProfileUiState(
  *   co-parent's remote one.
  * @param pairingRepository Reports which uid, if any, is the co-parent.
  */
-@HiltViewModel
-class ProfileViewModel @Inject constructor(
+class ProfileViewModel(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository
 ) : ViewModel() {

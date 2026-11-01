@@ -11,7 +11,6 @@ import com.coparently.app.data.family.UnassignedRecord
 import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.family.UnassignedSnapshot
 import com.coparently.app.domain.repository.UserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** The groups the list draws, in order, each with the kinds it holds. */
 enum class UnassignedGroup(val kinds: Set<UnassignedKind>) {
@@ -115,8 +113,7 @@ sealed interface UnassignedNotice {
  * instance and paid only by [state], which only the screen collects; [summary] names nobody.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class UnassignedRecordsViewModel @Inject constructor(
+class UnassignedRecordsViewModel(
     private val unassignedRecords: UnassignedRecords,
     private val selectedFamilySource: SelectedFamilySource,
     private val userRepository: UserRepository

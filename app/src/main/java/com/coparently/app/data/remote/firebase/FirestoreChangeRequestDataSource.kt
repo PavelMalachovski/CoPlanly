@@ -6,8 +6,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Data source for event change requests in Firestore.
@@ -15,8 +13,7 @@ import javax.inject.Singleton
  * Only documents involving the current user (as requester or addressee) are observed,
  * so a device never pulls other families' requests.
  */
-@Singleton
-class FirestoreChangeRequestDataSource @Inject constructor(
+class FirestoreChangeRequestDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val collection = firestore.collection("change_requests")

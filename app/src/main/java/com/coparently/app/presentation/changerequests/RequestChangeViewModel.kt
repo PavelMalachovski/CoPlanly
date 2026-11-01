@@ -22,7 +22,6 @@ import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * State of the "request a change" form.
@@ -64,8 +62,7 @@ sealed interface RequestChangeUiState {
 /**
  * ViewModel for proposing a new time for an existing event to the other parent.
  */
-@HiltViewModel
-class RequestChangeViewModel @Inject constructor(
+class RequestChangeViewModel(
     private val eventRepository: EventRepository,
     private val changeRequestRepository: ChangeRequestRepository,
     private val userRepository: UserRepository,

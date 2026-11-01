@@ -2,7 +2,6 @@ package com.coparently.app.data.sync
 
 import android.content.Context
 import android.util.Log
-import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -13,8 +12,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.coparently.app.data.crashlytics.CrashlyticsManager
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
@@ -22,10 +19,9 @@ import java.util.concurrent.TimeUnit
  * WorkManager worker for periodic background synchronization.
  * Runs every 15 minutes to sync data with Firestore, whenever there is a network to sync over.
  */
-@HiltWorker
-class SyncWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
+class SyncWorker(
+    context: Context,
+    workerParams: WorkerParameters,
     private val syncService: SyncService,
     private val googleCalendarAutoImport: GoogleCalendarAutoImport,
     private val crashlyticsManager: CrashlyticsManager

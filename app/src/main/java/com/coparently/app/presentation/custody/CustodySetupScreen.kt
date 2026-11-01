@@ -63,7 +63,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByOffer
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -96,6 +95,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
@@ -109,7 +109,7 @@ import java.util.Locale
 @Composable
 fun CustodySetupScreen(
     onNavigateBack: () -> Unit,
-    viewModel: CustodySetupViewModel = hiltViewModel()
+    viewModel: CustodySetupViewModel = koinViewModel()
 ) {
     val dims = dimensions()
     val uiState by viewModel.uiState.collectAsState()
@@ -149,7 +149,7 @@ fun CustodySetupScreen(
     // One part of the screen at a time, opened from the overview (UX audit H3). A child's own
     // schedule is edited in the pattern part, and an editor opened from the parenting plan goes
     // straight to the part its answer is about.
-    val seasonalViewModel: SeasonalScheduleViewModel = hiltViewModel()
+    val seasonalViewModel: SeasonalScheduleViewModel = koinViewModel()
     val layersState by seasonalViewModel.layersState.collectAsState()
     var section by rememberCustodySection(
         openPattern = uiState.planReference != null,

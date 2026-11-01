@@ -1,6 +1,7 @@
 package com.coparently.app.di
 
 import com.coparently.app.data.remote.firebase.QRCodeService
+import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.testing.NoFcm
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -10,34 +11,32 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.components.SingletonComponent
-import dagger.hilt.testing.TestInstallIn
 import io.mockk.mockk
-import javax.inject.Singleton
+import org.koin.dsl.module
 
 /**
- * Replaces [FirebaseModule] for instrumented tests, so nothing reaches a real Firebase SDK.
+ * Overrides `firebaseModule` for instrumented tests, so nothing reaches a real Firebase SDK.
+ * `KoinTestRule` loads it after the app's modules; each definition here replaces the app's of the
+ * same type, and a test that loads it carries `@UsesFakeFirebase`.
  *
- * Without this the suite cannot run at all. Every provider in [FirebaseModule] calls a
+ * Without this the suite cannot run at all. Every definition in `firebaseModule` calls a
  * `getInstance()` that requires a default `FirebaseApp`, and `FirebaseApp` is initialised by a
  * content provider that reads `google-services.json` — which is gitignored and has never existed
- * in CI. The first provider the graph touches therefore throws
- * `IllegalStateException: Default FirebaseApp is not initialized`, and because the graph is built
- * while `MainActivity` is being created, that kills the process and takes the whole
+ * in CI. The first definition the graph resolves therefore throws
+ * `IllegalStateException: Default FirebaseApp is not initialized`, and because the graph is
+ * resolved while `MainActivity` is being created, that kills the process and takes the whole
  * instrumentation run with it rather than failing one test.
  *
- * `HiltTestRunner` substituting `HiltTestApplication` does not prevent it: that stops
- * `CoPlanlyApplication.onCreate` from running, not the Hilt graph from being constructed.
+ * `KoinTestRunner` substituting `KoinTestApplication` does not prevent it: that stops
+ * `CoPlanlyApplication.onCreate` from running, not the graph from being resolved.
  *
  * Shipping a fake `google-services.json` would also have worked and was rejected: the Google
  * Services and Crashlytics plugins in `app/build.gradle.kts` apply *only* when that file is
  * present, so adding one changes what every Android job builds — to fix a problem that belongs
- * to the tests. Replacing the module keeps the change inside `androidTest`.
+ * to the tests. Overriding the module keeps the change inside `androidTest`.
  *
  * The mocks are relaxed because no test here asserts on Firebase: these tests are about
- * composables and about Room. What matters is that the graph builds and that
+ * composables and about Room. What matters is that the graph resolves and that
  * [com.coparently.app.data.local.CoPlanlyDatabase] is still the real one, so opening it through
  * SQLCipher (SEC-2) is genuinely exercised rather than stubbed out.
  *
@@ -48,50 +47,33 @@ import javax.inject.Singleton
  * (`OneParentOnScreenTest`). Messaging, Analytics and Crashlytics stay mocks there too: FCM has no
  * emulator, and telemetry must never switch on in a test. Every other run sees exactly the mocks.
  */
-@Module
-@TestInstallIn(components = [SingletonComponent::class], replaces = [FirebaseModule::class])
-object FakeFirebaseModule {
-
-    @Provides
-    @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth =
+val fakeFirebaseModule = module {
+    single<FirebaseAuth> {
         EmulatorEnvironment.appUnderTest?.let { FirebaseAuth.getInstance(it) } ?: mockk(relaxed = true)
+    }
 
-    @Provides
-    @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore =
+    single<FirebaseFirestore> {
         EmulatorEnvironment.appUnderTest?.let { FirebaseFirestore.getInstance(it) } ?: mockk(relaxed = true)
+    }
 
-    @Provides
-    @Singleton
-    fun provideFirebaseStorage(): FirebaseStorage =
+    single<FirebaseStorage> {
         EmulatorEnvironment.appUnderTest?.let { FirebaseStorage.getInstance(it) } ?: mockk(relaxed = true)
+    }
 
-    @Provides
-    @Singleton
-    fun provideFirebaseMessaging(): FirebaseMessaging = NoFcm.messaging()
+    single<FirebaseMessaging> { NoFcm.messaging() }
 
-    @Provides
-    @Singleton
-    fun provideFirebaseAnalytics(): FirebaseAnalytics = mockk(relaxed = true)
+    single<FirebaseAnalytics> { mockk(relaxed = true) }
 
-    @Provides
-    @Singleton
-    fun provideFirebaseCrashlytics(): FirebaseCrashlytics = mockk(relaxed = true)
+    single<FirebaseCrashlytics> { mockk(relaxed = true) }
 
-    @Provides
-    @Singleton
-    fun provideFirebaseFunctions(): FirebaseFunctions =
+    single<FirebaseFunctions> {
         EmulatorEnvironment.appUnderTest?.let {
-            FirebaseFunctions.getInstance(it, FirebaseModule.FUNCTIONS_REGION)
+            FirebaseFunctions.getInstance(it, FUNCTIONS_REGION)
         } ?: mockk(relaxed = true)
+    }
 
-    /**
-     * The real service, not a mock: it encodes a bitmap with ZXing and touches no Firebase
-     * despite its package. Provided here because [FirebaseModule] provides it, and this module
-     * replaces that one wholesale.
-     */
-    @Provides
-    @Singleton
-    fun provideQRCodeService(): QRCodeService = QRCodeService()
+    // The real service, not a mock: it encodes a bitmap with ZXing and touches no Firebase despite
+    // its package. Defined here because `firebaseModule` defines it, and this module stands in for
+    // that one as a whole.
+    single { QRCodeService() }
 }

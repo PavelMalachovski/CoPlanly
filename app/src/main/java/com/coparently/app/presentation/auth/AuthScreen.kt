@@ -35,7 +35,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
@@ -49,6 +48,7 @@ import com.coparently.app.presentation.theme.rememberReducedMotion
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.utils.findActivity
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Authentication screen for login and registration.
@@ -58,7 +58,7 @@ import kotlinx.coroutines.launch
 fun AuthScreen(
     onAuthSuccess: () -> Unit,
     onViewModelReady: ((AuthViewModel) -> Unit)? = null,
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: AuthViewModel = koinViewModel()
 ) {
     // Call the callback when viewModel is ready
     viewModel.onAuthSuccess = onAuthSuccess

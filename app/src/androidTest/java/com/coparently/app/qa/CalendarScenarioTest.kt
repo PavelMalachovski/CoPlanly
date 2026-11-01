@@ -17,9 +17,9 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -30,7 +30,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalDateTime
-import javax.inject.Inject
 
 /**
  * The calendar as a parent uses it: events created through the real form and found again in the
@@ -40,12 +39,11 @@ import javax.inject.Inject
  * Titles are Czech, as the testers' family writes them, and carry a short id so a title already
  * on screen from an earlier step can never satisfy a later one.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class CalendarScenarioTest : QaOnScreenTest() {
 
-    @Inject
-    lateinit var eventRepository: EventRepository
+    val eventRepository: EventRepository by lazy { koinRule.get() }
 
     @Test
     fun createKinds() {

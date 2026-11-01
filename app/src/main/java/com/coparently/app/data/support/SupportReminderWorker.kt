@@ -9,7 +9,6 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -32,9 +31,6 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.support.SupportReminderRule
 import com.coparently.app.domain.support.SupportTerms
 import com.coparently.app.presentation.expenses.currencyFormat
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -45,8 +41,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Reminds the payer of this month's child support (25 October 2026): every few hours, for each
@@ -57,11 +51,10 @@ import javax.inject.Singleton
  * nothing when either read fails: a reminder that is not sure keeps quiet. With no reminder left
  * on, the job cancels itself.
  */
-@HiltWorker
 @Suppress("LongParameterList") // WorkManager's two, and one per thing a reminder reads
-class SupportReminderWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
+class SupportReminderWorker(
+    context: Context,
+    workerParams: WorkerParameters,
     private val auth: FirebaseAuthService,
     private val reminders: SupportReminders,
     private val agreements: SupportAgreementStore,
@@ -179,9 +172,8 @@ interface SupportReminderScheduler {
  * [SupportReminderScheduler] over WorkManager: unique periodic work [WORK_NAME], every
  * [INTERVAL_HOURS] hours with a network, kept rather than replaced.
  */
-@Singleton
-class WorkManagerSupportReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class WorkManagerSupportReminderScheduler(
+    private val context: Context
 ) : SupportReminderScheduler {
 
     override fun schedule() {

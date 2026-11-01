@@ -26,7 +26,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +49,6 @@ import kotlinx.datetime.previousOrSame
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.todayIn
 import java.util.UUID
-import javax.inject.Inject
 import kotlin.time.Clock
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
@@ -84,11 +82,10 @@ private const val CONTACT_SUNDAY = 6
  * family while this screen stays on the back stack, and a family with no schedule used to keep the
  * previous family's pattern in the form, ready to be proposed to the wrong co-parent.
  */
-@HiltViewModel
 // One form, two hosts (the custody screen and onboarding's schedule step): the step's two entry
 // points sit beside the form's setters rather than in a second ViewModel over the same state.
 @Suppress("TooManyFunctions")
-class CustodySetupViewModel @Inject constructor(
+class CustodySetupViewModel(
     private val custodyModelRepository: CustodyModelRepository,
     parentsSource: ParentsSource,
     savedStateHandle: SavedStateHandle,

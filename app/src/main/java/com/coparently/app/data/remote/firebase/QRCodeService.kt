@@ -6,15 +6,12 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for generating QR codes using ZXing library.
  * Creates QR codes that can be shared for co-parent pairing invitations.
  */
-@Singleton
-class QRCodeService @Inject constructor() {
+class QRCodeService {
 
     /**
      * Generates a QR code bitmap from the provided text content.

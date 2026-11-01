@@ -14,7 +14,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.presentation.common.ParentsSource
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +32,6 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Decides when the Today widget redraws. Every redraw goes through [TodayWidget.refreshAll],
@@ -53,9 +50,8 @@ import javax.inject.Singleton
  *   be let go in the background, as every screen already does.
  * - **Midnight** ([TodayWidgetMidnight]): "today" moves on with nothing written anywhere.
  */
-@Singleton
-class TodayWidgetRefresher @Inject constructor(
-    @ApplicationContext private val context: Context,
+class TodayWidgetRefresher(
+    private val context: Context,
     private val database: CoPlanlyDatabase,
     private val names: TodayWidgetNames,
     private val parentsSource: ParentsSource

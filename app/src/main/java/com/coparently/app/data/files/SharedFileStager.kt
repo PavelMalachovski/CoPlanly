@@ -5,7 +5,6 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import com.coparently.app.domain.files.SharedFilePolicy
 import com.coparently.app.domain.files.toHex
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -13,8 +12,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A file copied into this app's own storage, measured and hashed on the way (MON-23).
@@ -47,9 +44,8 @@ class SharedFileRejectedException(val rejection: SharedFilePolicy.Rejection) :
  * a private copy, and hashed while it is read. A file over the cap is abandoned mid-copy rather
  * than read to the end.
  */
-@Singleton
-class SharedFileStager @Inject constructor(
-    @ApplicationContext private val context: Context
+class SharedFileStager(
+    private val context: Context
 ) {
 
     /**

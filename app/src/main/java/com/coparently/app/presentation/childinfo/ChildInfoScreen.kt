@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.files.RecordPhotoKind
@@ -43,6 +42,7 @@ import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -72,7 +72,7 @@ fun ChildInfoScreen(
     onNavigateBack: () -> Unit,
     onOpenChild: (String) -> Unit,
     onAddChild: () -> Unit,
-    viewModel: ChildInfoViewModel = hiltViewModel()
+    viewModel: ChildInfoViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsState()

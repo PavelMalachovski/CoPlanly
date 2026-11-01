@@ -7,14 +7,12 @@ import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.google.CredentialAuthenticator
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * State for the login screen: the four ways in, and why the last attempt failed.
@@ -22,8 +20,7 @@ import javax.inject.Inject
  * Every credential operation takes the [Activity] as a parameter. Credential Manager hosts its UI
  * on one, and a ViewModel outlives an Activity — storing the reference would leak it.
  */
-@HiltViewModel
-class AuthViewModel @Inject constructor(
+class AuthViewModel(
     private val firebaseAuthService: FirebaseAuthService,
     private val credentialAuthenticator: CredentialAuthenticator,
     private val analyticsManager: AnalyticsManager,

@@ -73,7 +73,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatio
@@ -103,6 +102,7 @@ import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
@@ -116,7 +116,7 @@ import kotlin.math.roundToInt
 fun AddExpenseScreen(
     onBack: () -> Unit,
     expenseId: String? = null,
-    viewModel: ExpenseViewModel = hiltViewModel()
+    viewModel: ExpenseViewModel = koinViewModel()
 ) {
     // Saveable, like every field below: the form used to be `remember`ed, so turning the phone,
     // or the camera app pushing this one out of memory, lost everything typed

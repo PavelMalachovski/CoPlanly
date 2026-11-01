@@ -53,7 +53,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatAttachment
@@ -65,6 +64,7 @@ import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
 
 /**
@@ -82,7 +82,7 @@ val LocalChatAttachments = compositionLocalOf<(@Composable (Message, Boolean) ->
  */
 @Composable
 fun ChatAttachmentsHost(
-    viewModel: ChatAttachmentViewModel = hiltViewModel(),
+    viewModel: ChatAttachmentViewModel = koinViewModel(),
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -125,7 +125,7 @@ fun ChatComposerMenu(
     onRequestChange: () -> Unit,
     onTemplates: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatAttachmentViewModel = hiltViewModel()
+    viewModel: ChatAttachmentViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     var picked by rememberSaveable { mutableStateOf<String?>(null) }

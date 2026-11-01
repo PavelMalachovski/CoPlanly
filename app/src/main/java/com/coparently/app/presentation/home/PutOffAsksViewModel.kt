@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +12,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /**
  * Which of Home's asks this person put off with "Later" (release audit R-2).
@@ -30,8 +28,7 @@ import javax.inject.Inject
  * it also has two, and a dismissal in one family no longer forgets the other family's put-offs.
  * [putOff] is the family on screen's, following the switcher.
  */
-@HiltViewModel
-class PutOffAsksViewModel @Inject constructor(
+class PutOffAsksViewModel(
     private val preferences: EncryptedPreferences,
     familyViewSource: FamilyViewSource
 ) : ViewModel() {

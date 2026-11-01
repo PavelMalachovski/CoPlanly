@@ -22,8 +22,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.time.YearMonth
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Payments between the two parents of a family (25 October 2026): `payments/{id}`, one per
@@ -33,8 +31,7 @@ import javax.inject.Singleton
  * written once by each parent, and a phone offline simply does not show it yet. Each step posts a
  * card in the family's thread, pushed like any message — no push type of its own.
  */
-@Singleton
-class PaymentStore @Inject constructor(
+class PaymentStore(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuthService,
     private val userRepository: UserRepository,

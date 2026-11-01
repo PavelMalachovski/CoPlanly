@@ -19,7 +19,6 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -36,8 +35,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore-backed [PairingRepository].
@@ -45,8 +42,7 @@ import javax.inject.Singleton
  * Reads are realtime snapshot listeners; the two writes that touch the other
  * parent's document (accept, unpair) go through Cloud Functions.
  */
-@Singleton
-class PairingRepositoryImpl @Inject constructor(
+class PairingRepositoryImpl(
     private val firestore: FirebaseFirestore,
     private val authService: FirebaseAuthService,
     private val pairingFunctions: PairingFunctions,
@@ -56,7 +52,7 @@ class PairingRepositoryImpl @Inject constructor(
     private val syncRequester: SyncRequester,
     // Application context only, for the localized conversation-title fallback. This is a
     // repository, not a ViewModel, so it is allowed to resolve resources directly.
-    @ApplicationContext private val context: Context
+    private val context: Context
 ) : PairingRepository {
 
     /** For the stored co-parent list, which is a JSON array of plain uid strings. */

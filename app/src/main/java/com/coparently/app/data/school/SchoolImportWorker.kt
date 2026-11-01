@@ -2,7 +2,6 @@ package com.coparently.app.data.school
 
 import android.content.Context
 import android.util.Log
-import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -10,13 +9,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Runs the daily school import (MON-8) for every connection of the signed-in account.
@@ -26,10 +20,9 @@ import javax.inject.Singleton
  * connection left, the job cancels itself, so a phone that disconnected its last school is not
  * woken daily for nothing.
  */
-@HiltWorker
-class SchoolImportWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
+class SchoolImportWorker(
+    context: Context,
+    workerParams: WorkerParameters,
     private val importer: SchoolImporter,
     private val scheduler: SchoolImportScheduler
 ) : CoroutineWorker(context, workerParams) {
@@ -67,9 +60,8 @@ interface SchoolImportScheduler {
  * only with a network, kept rather than replaced so connecting a second school does not move the
  * first one's clock.
  */
-@Singleton
-class WorkManagerSchoolImportScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class WorkManagerSchoolImportScheduler(
+    private val context: Context
 ) : SchoolImportScheduler {
 
     override fun schedule() {

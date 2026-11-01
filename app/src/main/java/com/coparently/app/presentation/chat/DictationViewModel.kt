@@ -5,7 +5,6 @@ import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
 import com.coparently.app.domain.dictation.DictationText
 import com.coparently.app.domain.dictation.SpeechDictation
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import javax.inject.Inject
 
 /**
  * What the composer's microphone shows.
@@ -52,8 +50,7 @@ data class DictatedText(val text: String, val final: Boolean)
  * speaking, or by [cancel] — which the screen calls when the parent types or sends, when the
  * screen stops, and which [onCleared] calls too, so the microphone never outlives the thread.
  */
-@HiltViewModel
-class DictationViewModel @Inject constructor(
+class DictationViewModel(
     private val dictation: SpeechDictation
 ) : ViewModel() {
 

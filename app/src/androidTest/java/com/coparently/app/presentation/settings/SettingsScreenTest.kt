@@ -4,36 +4,30 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.presentation.MainActivity
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import org.junit.Before
+import com.coparently.app.testing.KoinTestRule
+import com.coparently.app.testing.UsesFakeFirebase
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * UI tests for SettingsScreen using Compose and Hilt.
+ * UI tests for SettingsScreen using Compose and the app's Koin graph.
  * Tests user interactions and UI state changes.
  *
  * Note: These are simplified tests. For full testing, you would need to:
- * - Mock dependencies with Hilt test modules
+ * - Mock dependencies with Koin override modules
  * - Test navigation callbacks
  * - Test ViewModel interactions
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class SettingsScreenTest {
 
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val koinRule = KoinTestRule()
 
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
-
-    @Before
-    fun init() {
-        hiltRule.inject()
-    }
 
     @Test
     fun settingsScreen_displaysTopBar() {

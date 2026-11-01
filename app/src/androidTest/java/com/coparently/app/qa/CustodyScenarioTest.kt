@@ -13,7 +13,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -22,7 +22,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import javax.inject.Inject
 
 /**
  * Changing the schedule itself: Zuzana's Christmas — Lena with Igor in Prague on the 24th and
@@ -30,12 +29,11 @@ import javax.inject.Inject
  * base pattern answered on the other screen (`…AsIgor`). Neither ever changes the calendar until
  * it is accepted.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class CustodyScenarioTest : QaOnScreenTest() {
 
-    @Inject
-    lateinit var custodyRepository: CustodyModelRepository
+    val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
     @Test
     fun christmasLayer() {

@@ -10,8 +10,6 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toKotlinTimeZone
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** How a step of a request's clock went. */
 enum class StepResult {
@@ -56,8 +54,7 @@ enum class StepResult {
  * is not enqueued twice, so a step that fired early answers [StepResult.RETRY] when its time is
  * moments away and [StepResult.DONE] otherwise, and leaves the rest to the keeper's sweep.
  */
-@Singleton
-class RequestClockSteps @Inject constructor(
+class RequestClockSteps(
     private val repository: RequestDeadlineRepository,
     private val records: RequestRecords,
     private val notices: RequestNotices,

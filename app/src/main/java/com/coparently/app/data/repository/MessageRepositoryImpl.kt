@@ -24,8 +24,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.transform
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Room-backed implementation of [MessageRepository].
@@ -49,8 +47,7 @@ import javax.inject.Singleton
  * both listeners were denied about half a second before `ensureConversation` created the
  * conversation document, and that entire session ran on local data.
  */
-@Singleton
-class MessageRepositoryImpl @Inject constructor(
+class MessageRepositoryImpl(
     private val messageDao: MessageDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreMessageDataSource: FirestoreMessageDataSource,

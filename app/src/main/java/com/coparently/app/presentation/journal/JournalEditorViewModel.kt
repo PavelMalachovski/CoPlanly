@@ -11,7 +11,6 @@ import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * The journal editor's state.
@@ -65,8 +63,7 @@ data class JournalEditorState(
  * last-edited time change. A new entry is stamped with the family at create (item 18), read fresh
  * through [ParentsSource.coParentUid] — a save path never reads a shared flow's `.value` (item 17).
  */
-@HiltViewModel
-class JournalEditorViewModel @Inject constructor(
+class JournalEditorViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: JournalRepository,
     private val userRepository: UserRepository,

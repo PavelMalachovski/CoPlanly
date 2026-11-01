@@ -3,14 +3,12 @@ package com.coparently.app.presentation.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.utils.NetworkMonitor
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /**
  * Whether to tell the parent the phone is offline (docs/AUDIT-2026-10-design.md D-16).
@@ -23,8 +21,7 @@ import javax.inject.Inject
  * Going offline shows only after [OFFLINE_GRACE_MS], so a Wi-Fi-to-mobile handover or a lift
  * ride does not flash a banner; coming back hides it at once.
  */
-@HiltViewModel
-class ConnectivityViewModel @Inject constructor(
+class ConnectivityViewModel(
     networkMonitor: NetworkMonitor
 ) : ViewModel() {
 

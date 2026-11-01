@@ -28,7 +28,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.stickers.ParentRoleAnswer
 import com.coparently.app.domain.stickers.Sticker
@@ -38,6 +37,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * "My stickers" (Settings → Family, October 2026): how this parent's stickers address them, the
@@ -50,7 +50,7 @@ import com.coparently.app.presentation.theme.Spacing
 @Composable
 fun MyStickersScreen(
     onNavigateUp: () -> Unit,
-    viewModel: StickersViewModel = hiltViewModel()
+    viewModel: StickersViewModel = koinViewModel()
 ) {
     val parents by viewModel.parents.collectAsState()
     val coParentName = rememberParentNames(parents).labelForUid(parents.coParent?.uid)

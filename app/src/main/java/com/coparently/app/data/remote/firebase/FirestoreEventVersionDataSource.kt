@@ -5,8 +5,6 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * `event_versions` — the immutable revisions of events (MON-4).
@@ -15,8 +13,7 @@ import javax.inject.Singleton
  * no update and no delete here because `firestore.rules` allows neither to anybody, and a method
  * that could only ever fail would sit here named like ordinary API.
  */
-@Singleton
-class FirestoreEventVersionDataSource @Inject constructor(
+class FirestoreEventVersionDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val collection get() = firestore.collection(EventVersionDocument.COLLECTION)

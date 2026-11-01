@@ -13,7 +13,6 @@ import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.pairing.pairingMessageRes
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
-import javax.inject.Inject
 
 /**
  * The friend-invite sheet's state.
@@ -81,8 +79,7 @@ data class FriendRedeemState(
  * flows are disjoint: a parent's device has grants and no profile of its own, a friend's device
  * has a profile and a grant per family that admitted them (L-5).
  */
-@HiltViewModel
-class FriendViewModel @Inject constructor(
+class FriendViewModel(
     private val friendRepository: FriendRepository,
     parentsSource: ParentsSource
 ) : ViewModel() {

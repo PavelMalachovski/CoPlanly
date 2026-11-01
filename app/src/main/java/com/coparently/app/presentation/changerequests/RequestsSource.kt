@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
-import javax.inject.Inject
 
 /** Where the requests of the family on screen stand. */
 sealed interface RequestsState {
@@ -108,7 +107,7 @@ sealed interface RequestsState {
 @OptIn(ExperimentalCoroutinesApi::class)
 // the five sources the requests are derived from, and the two that say whose and which family's they are
 @Suppress("LongParameterList")
-class RequestsSource @Inject constructor(
+class RequestsSource(
     private val changeRequestRepository: ChangeRequestRepository,
     private val eventRepository: EventRepository,
     private val custodyModelRepository: CustodyModelRepository,

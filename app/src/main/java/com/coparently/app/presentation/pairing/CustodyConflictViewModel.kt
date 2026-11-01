@@ -7,7 +7,6 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * State for the pairing conflict screen: the two patterns to compare, who the two parents are,
@@ -24,8 +22,7 @@ import javax.inject.Inject
  * The decision itself is not here — it is [CustodyConflictResolver], already made by the time
  * this screen opens. What is left is presenting it and writing the answer.
  */
-@HiltViewModel
-class CustodyConflictViewModel @Inject constructor(
+class CustodyConflictViewModel(
     private val pendingCustodyConflict: PendingCustodyConflict,
     private val custodyModelRepository: CustodyModelRepository,
     parentsSource: ParentsSource

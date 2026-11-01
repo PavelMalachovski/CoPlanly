@@ -3,8 +3,6 @@ package com.coparently.app.presentation.pairing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A conflict, plus the one fact the screen needs that the conflict itself does not carry.
@@ -48,8 +46,7 @@ data class CustodyConflictPrompt(
  * shared document is untouched, so nothing is destroyed by the loss; the two simply stay
  * unreconciled until someone edits the schedule.
  */
-@Singleton
-class PendingCustodyConflict @Inject constructor() {
+class PendingCustodyConflict {
 
     private val _prompt = MutableStateFlow<CustodyConflictPrompt?>(null)
 

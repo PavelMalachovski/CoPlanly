@@ -47,7 +47,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -67,6 +66,7 @@ import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.dateWithTime
 import com.coparently.app.utils.format
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * A single conversation thread.
@@ -120,9 +120,9 @@ fun ChatScreen(
     onOpenExport: ((conversationId: String) -> Unit)? = null,
     onBlock: (() -> Unit)? = null,
     onOpenSupport: (() -> Unit)? = null,
-    viewModel: ChatViewModel = hiltViewModel(),
-    searchViewModel: ChatSearchViewModel = hiltViewModel(),
-    dictationViewModel: DictationViewModel = hiltViewModel()
+    viewModel: ChatViewModel = koinViewModel(),
+    searchViewModel: ChatSearchViewModel = koinViewModel(),
+    dictationViewModel: DictationViewModel = koinViewModel()
 ) {
     val messages by viewModel.messages.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()

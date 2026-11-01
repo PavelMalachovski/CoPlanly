@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.family.FamilyKey
@@ -70,6 +69,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -84,7 +84,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Suppress("LongMethod") // one scaffold, its four states and its dialog
-fun SupportScreen(onNavigateUp: () -> Unit, viewModel: SupportViewModel = hiltViewModel()) {
+fun SupportScreen(onNavigateUp: () -> Unit, viewModel: SupportViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsState()
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()

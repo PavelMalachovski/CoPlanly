@@ -17,7 +17,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
@@ -41,6 +40,7 @@ import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The co-parent's pending custody proposal, as Home's dialog asks about it.
@@ -142,7 +142,7 @@ internal fun AwaitingDialogs(
     parentNames: ParentNames,
     asks: HomeAsks,
     actions: AwaitingActions,
-    putOffAsks: PutOffAsksViewModel = hiltViewModel()
+    putOffAsks: PutOffAsksViewModel = koinViewModel()
 ) {
     // Stored, not remembered: "Later" puts an ask off until it changes (release audit R-2), and
     // an ask that followed the screen came back on every visit to Home.

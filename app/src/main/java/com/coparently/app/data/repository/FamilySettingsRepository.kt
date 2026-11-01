@@ -33,8 +33,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * How a submitted ratio was applied.
@@ -113,8 +111,7 @@ data class FamilySplit(
  * @param fcmService Queues the pushes, a type and nothing else (SEC-3).
  * @param requestDeadlines Starts a proposal's clock.
  */
-@Singleton
-class FamilySettingsRepository @Inject constructor(
+class FamilySettingsRepository(
     private val dataSource: FirestoreFamilySettingsDataSource,
     private val userRepository: UserRepository,
     private val preferences: EncryptedPreferences,

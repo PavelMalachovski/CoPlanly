@@ -29,7 +29,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,7 +50,6 @@ import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.todayIn
 import java.time.LocalDate
 import java.util.UUID
-import javax.inject.Inject
 import kotlin.time.Clock
 
 /** Keeps the flows warm across a configuration change. */
@@ -105,8 +103,7 @@ data class FairnessUiState(
  * [CustodyModelRepository.submitSeasonalLayers], which is the same proposal road a base-pattern
  * change takes, and the fairness card only counts.
  */
-@HiltViewModel
-class SeasonalScheduleViewModel @Inject constructor(
+class SeasonalScheduleViewModel(
     private val custodyModelRepository: CustodyModelRepository,
     private val userRepository: UserRepository,
     childInfoRepository: ChildInfoRepository,

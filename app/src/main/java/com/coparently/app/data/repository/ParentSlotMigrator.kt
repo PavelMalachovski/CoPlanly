@@ -6,8 +6,6 @@ import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Moves this device's records from one parent slot to the other.
@@ -41,8 +39,7 @@ import javax.inject.Singleton
  * stamped with — see [reslotIfSlotChanged] for why that record exists and why it is not
  * [com.coparently.app.domain.model.User.role].
  */
-@Singleton
-class ParentSlotMigrator @Inject constructor(
+class ParentSlotMigrator(
     private val database: CoPlanlyDatabase,
     private val eventDao: EventDao,
     private val custodyModelRepository: CustodyModelRepository,

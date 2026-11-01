@@ -2,15 +2,12 @@ package com.coparently.app.data.remote.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Remote data source for users using Firestore.
  * Handles all Firestore operations for user profiles.
  */
-@Singleton
-class FirestoreUserDataSource @Inject constructor(
+class FirestoreUserDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val usersCollection = "users"

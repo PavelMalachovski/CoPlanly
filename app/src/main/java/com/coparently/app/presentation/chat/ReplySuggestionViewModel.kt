@@ -7,11 +7,9 @@ import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.presentation.ai.AiAssistSession
 import com.coparently.app.presentation.ai.AiAssistState
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
 
 /**
  * "Suggest a reply" in the templates sheet: a draft written server-side from the thread's last
@@ -24,8 +22,7 @@ import javax.inject.Inject
  * @param consentManager The AI-assist consent, asked before the first request
  * @param repository The `aiAssist` callable
  */
-@HiltViewModel
-class ReplySuggestionViewModel @Inject constructor(
+class ReplySuggestionViewModel(
     availability: AiAssistAvailability,
     consentManager: AiConsentManager,
     private val repository: AiAssistRepository

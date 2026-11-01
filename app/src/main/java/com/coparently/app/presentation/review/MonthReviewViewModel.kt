@@ -29,7 +29,6 @@ import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +47,6 @@ import kotlinx.datetime.minusMonth
 import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.yearMonth
-import javax.inject.Inject
 
 /** Keeps the flows warm across a configuration change. */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -58,7 +56,7 @@ private const val STOP_TIMEOUT_MS = 5_000L
  * `MonthSpendDependencies` bundles Home's: every one of them feeds [MonthReviewViewModel.state]
  * and nothing else.
  */
-data class MonthReviewSources @Inject constructor(
+data class MonthReviewSources(
     val custodyModelRepository: CustodyModelRepository,
     val eventRepository: EventRepository,
     val expenseRepository: ExpenseRepository,
@@ -74,7 +72,7 @@ data class MonthReviewSources @Inject constructor(
  * @property consentManager The consent, asked before the first request
  * @property repository The `aiAssist` callable
  */
-data class MonthReviewAssist @Inject constructor(
+data class MonthReviewAssist(
     val availability: AiAssistAvailability,
     val consentManager: AiConsentManager,
     val repository: AiAssistRepository
@@ -111,8 +109,7 @@ private data class CustodyInputs(
  * @param assist The summary's availability, consent and callable
  * @param familyViewSource Which expenses the money figures count: the family on screen's own
  */
-@HiltViewModel
-class MonthReviewViewModel @Inject constructor(
+class MonthReviewViewModel(
     sources: MonthReviewSources,
     assist: MonthReviewAssist,
     familyViewSource: FamilyViewSource

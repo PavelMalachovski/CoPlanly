@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.dagger.hilt.android")
     id("io.gitlab.arturbosch.detekt")
     id("io.github.takahirom.roborazzi")
     id("org.jetbrains.kotlinx.kover")
@@ -156,7 +155,7 @@ android {
         versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
         versionName = "1.1.0"
 
-        testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
+        testInstrumentationRunner = "com.coparently.app.KoinTestRunner"
 
         // REL-4. Where the hosted privacy policy lives, read by the Settings row and the
         // telemetry consent screen. Blank until the policy is published, and blank hides both
@@ -379,15 +378,19 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-    // Hilt — the same version as the Hilt plugin in the root build.gradle.kts (see why there).
-    implementation("com.google.dagger:hilt-android:2.58")
-    ksp("com.google.dagger:hilt-compiler:2.58")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    // androidx.hilt 1.3.0 is the first whose processor targets Kotlin 2 and KSP2, which is all KSP
-    // runs since 2.3.0; the compiler and the runtime it generates for move together. 1.4.0 needs
-    // compileSdk 37 and AGP 9.2. hilt-navigation-compose carries no processor and stays.
-    implementation("androidx.hilt:hilt-work:1.3.0")
-    ksp("androidx.hilt:hilt-compiler:1.3.0")
+    // Koin (MON-24 phase 2): dependency injection resolved at runtime, with no processor, so the
+    // graph is checked by `KoinGraphTest` (`verify()` over every module) instead of at compile time.
+    // 4.1.1, not the newer 4.2.x: 4.2's Compose artifacts depend on Compose Multiplatform 1.10,
+    // activity 1.12 and lifecycle 2.10, which would lift this app's Compose past its BOM above and
+    // move every screenshot baseline inside a DI change. 4.1.1 asks for Compose 1.8.2 (the BOM's
+    // 1.9 wins), lifecycle 2.9.3 and activity 1.10.1 (above the 2.8.7 and 1.9.3 declared here, so
+    // those two resolve up), and is built with Kotlin 2.1.21, which this project's 2.3.21 compiler
+    // reads. `koin-androidx-compose` brings `koinViewModel()` (koin-compose-viewmodel) with it.
+    val koinBom = platform("io.insert-koin:koin-bom:4.1.1")
+    implementation(koinBom)
+    implementation("io.insert-koin:koin-android")
+    implementation("io.insert-koin:koin-androidx-compose")
+    implementation("io.insert-koin:koin-androidx-workmanager")
 
     // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it)
     val roomVersion = "2.7.2"
@@ -545,14 +548,15 @@ dependencies {
     // ArchCore Testing for LiveData and ViewModel
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
-    // Hilt testing - Updated to match Hilt version
-    testImplementation("com.google.dagger:hilt-android-testing:2.58")
-    kspTest("com.google.dagger:hilt-compiler:2.58")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.58")
+    // Koin's graph check for the JVM tests (`KoinGraphTest`). Not for androidTest: koin-test
+    // carries kotlin-reflect, which the test APK must not (see kotlin-reflect above); the
+    // instrumented tests start and stop the graph with koin-android alone (`KoinTestRule`).
+    testImplementation(koinBom)
+    testImplementation("io.insert-koin:koin-test")
+    testImplementation("io.insert-koin:koin-test-junit4")
     // OneParentOnScreenTest: the app's pairing path asks WorkManager for a sync, and
-    // HiltTestApplication is not the Configuration.Provider the manifest expects.
+    // KoinTestApplication is not the Configuration.Provider the manifest expects.
     androidTestImplementation("androidx.work:work-testing:2.10.5")
-    kspAndroidTest("com.google.dagger:hilt-compiler:2.58")
 
     // Navigation Testing
     androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
@@ -592,12 +596,12 @@ kotlin {
     }
 }
 
-// Hilt and Room run on KSP, not kapt: kapt generated Java stubs for every Kotlin file before
-// processing, the single slowest phase of every build in CI. Room writes
-// `schemas/<version>.json` from this argument. It is a plain string, so Gradle does not know the
-// directory is an output — a KSP task restored from the build cache writes nothing there, which
-// is why the Regenerate workflow runs `kspDebugKotlin --rerun`. Since KSP 2.3 (MON-24) the
-// processors run on KSP2, the only mode KSP still has.
+// Room runs on KSP, not kapt (so did Hilt, until Koin replaced it in MON-24 phase 2): kapt
+// generated Java stubs for every Kotlin file before processing, the single slowest phase of every
+// build in CI. Room writes `schemas/<version>.json` from this argument. It is a plain string, so
+// Gradle does not know the directory is an output — a KSP task restored from the build cache
+// writes nothing there, which is why the Regenerate workflow runs `kspDebugKotlin --rerun`. Since
+// KSP 2.3 (MON-24) the processors run on KSP2, the only mode KSP still has.
 //
 // `room.generateKotlin = false` keeps Room emitting the Java it emitted under kapt. Room's Kotlin
 // output is stricter about nullability in queries; switching to it is a separate change with its
@@ -683,33 +687,24 @@ tasks.withType<Test>().configureEach {
 // verification rule, deliberately — a gate on a number nobody has yet watched move would be
 // tuned to pass rather than to mean something.
 //
-// The exclusions are code nobody here writes: Hilt/Dagger's generated factories, injectors and
-// components, Room's `_Impl` DAOs and database, Compose's lambda singletons and previews, and
-// BuildConfig. Counting them would make the percentage mostly a measure of how much the annotation processors emit.
+// The exclusions are code nobody here writes: Room's `_Impl` DAOs and database, Compose's lambda
+// singletons and previews, and BuildConfig. Counting them would make the percentage mostly a
+// measure of how much the annotation processors emit.
 // In Kover's class filters `*` matches any characters, dots and `$` included.
 kover {
     reports {
         filters {
             excludes {
                 classes(
-                    "*_Factory*",
-                    "*_MembersInjector",
-                    "*_HiltModules*",
-                    "*_HiltComponents*",
-                    "*_GeneratedInjector",
-                    "*_ComponentTreeDeps",
-                    "*Hilt_*",
                     "*_Impl",
                     "*_Impl$*",
                     "*_AutoMigration_*",
                     "*ComposableSingletons*",
                     "*.BuildConfig",
                 )
-                packages("hilt_aggregated_deps", "dagger.hilt.internal.aggregatedroot.codegen")
                 annotatedBy(
                     "androidx.compose.ui.tooling.preview.Preview",
                     "javax.annotation.processing.Generated",
-                    "dagger.internal.DaggerGenerated",
                 )
             }
         }

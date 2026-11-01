@@ -23,8 +23,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Reads and writes the one custody document a pair shares.
@@ -47,8 +45,7 @@ import javax.inject.Singleton
  * same sorted array; and a non-merge `set()` that omitted `participants` would be denied as an
  * evaluation error.
  */
-@Singleton
-class FirestoreCustodyDataSource @Inject constructor(
+class FirestoreCustodyDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val custodyCollection = firestore.collection(COLLECTION)

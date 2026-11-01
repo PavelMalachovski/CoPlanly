@@ -1,16 +1,13 @@
-package com.coparently.app.di
+package com.coparently.app.di.koin
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.Strictness
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
+import org.koin.dsl.module
 
 /**
- * The one injectable [Gson].
+ * The one injectable [Gson], as the graph builds it — a function of its own so that the R8 probe
+ * (`R8GsonProbe`) builds exactly this instance without starting the graph.
  *
  * It lived in `AIModule` until the AI subsystem was deleted (MON-7), which is a poor place for a
  * general serialization binding and cost a CI round to discover: nothing in the AI packages was
@@ -29,13 +26,11 @@ import javax.inject.Singleton
  * registered). That inconsistency is pre-existing and is not resolved by this module — it is
  * simply where the injectable instance now lives.
  */
-@Module
-@InstallIn(SingletonComponent::class)
-object SerializationModule {
+fun provideGson(): Gson = GsonBuilder()
+    .setStrictness(Strictness.LENIENT)
+    .create()
 
-    @Provides
-    @Singleton
-    fun provideGson(): Gson = GsonBuilder()
-        .setStrictness(Strictness.LENIENT)
-        .create()
+/** Provides [provideGson]'s instance, once for the process. */
+val serializationModule = module {
+    single { provideGson() }
 }

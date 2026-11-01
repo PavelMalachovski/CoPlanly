@@ -8,10 +8,8 @@ import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.stateInLoadable
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import javax.inject.Inject
 
 /** Keeps the flow warm across a configuration change. */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -26,8 +24,7 @@ private const val STOP_TIMEOUT_MS = 5_000L
  * This screen never writes. Editing goes to the child's record, where the list already lives, so
  * there is one list and one editor.
  */
-@HiltViewModel
-class ContactsViewModel @Inject constructor(
+class ContactsViewModel(
     childInfoRepository: ChildInfoRepository,
     petRepository: PetRepository
 ) : ViewModel() {

@@ -11,7 +11,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.home.MonthSpendDependencies
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /** How long the Family tab keeps its sources after the screen stops collecting. */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -38,8 +36,7 @@ private const val STOP_TIMEOUT_MS = 5_000L
  * @param childInfoRepository The family on screen's children
  * @param custodyModelRepository The family on screen's schedule, which the schedule row names
  */
-@HiltViewModel
-class FamilyViewModel @Inject constructor(
+class FamilyViewModel(
     monthSpendDependencies: MonthSpendDependencies,
     parentsSource: ParentsSource,
     userRepository: UserRepository,

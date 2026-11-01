@@ -20,7 +20,6 @@ import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,7 +30,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
-import javax.inject.Inject
 
 /**
  * Why a photograph did not make it on or off the record.
@@ -81,8 +79,7 @@ data class GuestInviteState(
  * ViewModel for managing child information.
  * Handles CRUD operations and UI state for child info screens.
  */
-@HiltViewModel
-class ChildInfoViewModel @Inject constructor(
+class ChildInfoViewModel(
     private val childInfoRepository: ChildInfoRepository,
     private val photoStorage: RecordPhotoStorage,
     private val guestRepository: GuestRepository,

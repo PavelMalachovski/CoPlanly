@@ -26,7 +26,7 @@ data class PhotoOwner(
  * (L-4). Provided once by `MainActivity`.
  *
  * **The default is null, and null draws no photograph** — a tree that nobody provided (a preview,
- * a screenshot test, a Hilt test that never signs in) shows every record without its photos,
+ * a screenshot test, an instrumented test that never signs in) shows every record without its photos,
  * which is the safe way to be wrong.
  */
 val LocalPhotoViewerUid = compositionLocalOf<String?> { null }

@@ -6,8 +6,6 @@ import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.domain.family.FamilyKey
 import kotlinx.coroutines.CancellationException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps `known_families` current for every live family: the co-parent's name and the two slots
@@ -22,8 +20,7 @@ import javax.inject.Singleton
  * Every read is best effort, one family at a time: a failed read keeps the row as it was, and
  * never blanks a name or a slot already known.
  */
-@Singleton
-class KnownFamilies @Inject constructor(
+class KnownFamilies(
     private val dao: KnownFamilyDao,
     private val users: FirestoreUserDataSource,
     private val families: FirestoreFamilyDataSource

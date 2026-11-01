@@ -10,8 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.security.EncryptionManager
 import com.coparently.app.di.buildCoPlanlyDatabase
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.KoinTestRule
+import com.coparently.app.testing.UsesFakeFirebase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,16 +24,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import javax.inject.Inject
 
 /**
  * Runs the SEC-2 open path — SQLCipher, the Keystore-wrapped passphrase and the plaintext
  * conversion — on a real device or emulator (CQ-1's instrumented job).
  *
  * Until this existed the conversion of an existing plaintext database had run nowhere: the unit
- * suite covers [SqlCipherMigration.next] as a pure function, and the Hilt UI tests only ever open
+ * suite covers [SqlCipherMigration.next] as a pure function, and the UI tests only ever open
  * a database that starts empty. Here every state that function names is built on disk and handed
- * to the production open path, [buildCoPlanlyDatabase] with the Hilt-provided [EncryptedDatabase]
+ * to the production open path, [buildCoPlanlyDatabase] with the graph's own [EncryptedDatabase]
  * and [DatabaseKey], so what is proven is the code the app runs rather than a copy of it.
  *
  * **Hermetic by construction.** The database lives under a name of its own ([DB_NAME]), never
@@ -47,17 +46,15 @@ import javax.inject.Inject
  * software-backed, and no database here was written by an *older build* of the app. The first
  * upgrade on a phone that holds real data stays an acceptance step.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class EncryptedDatabaseTest {
 
     @get:Rule
-    val hiltRule = HiltAndroidRule(this)
+    val koinRule = KoinTestRule()
 
-    @Inject
     lateinit var encryptedDatabase: EncryptedDatabase
 
-    @Inject
     lateinit var databaseKey: DatabaseKey
 
     private val context: Context =
@@ -74,7 +71,8 @@ class EncryptedDatabaseTest {
 
     @Before
     fun setUp() {
-        hiltRule.inject()
+        encryptedDatabase = koinRule.get()
+        databaseKey = koinRule.get()
         storedPassphrase = keyStore.getString(KEY_WRAPPED_PASSPHRASE, null)
         deleteTestFiles()
         databaseFile.parentFile?.mkdirs()
@@ -213,8 +211,8 @@ class EncryptedDatabaseTest {
     }
 
     /**
-     * The passphrase is stable: two recoveries, and a second [DatabaseKey] built the way Hilt
-     * builds one, all answer the same value. And a freshly minted one is on disk the moment
+     * The passphrase is stable: two recoveries, and a second [DatabaseKey] built the way the
+     * graph builds one, all answer the same value. And a freshly minted one is on disk the moment
      * `mint` returns — the `commit`, not `apply`, that `DatabaseKey` insists on.
      */
     @Test

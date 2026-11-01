@@ -12,8 +12,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore-backed [GuestRepository].
@@ -22,8 +20,7 @@ import javax.inject.Singleton
  * same reason pairing's is — it writes a child record the caller cannot yet read, let alone
  * write, since the `child_info` update rule requires the writer to already be in `sharedWith`.
  */
-@Singleton
-class GuestRepositoryImpl @Inject constructor(
+class GuestRepositoryImpl(
     private val firestore: FirebaseFirestore,
     private val authService: FirebaseAuthService,
     private val pairingFunctions: PairingFunctions

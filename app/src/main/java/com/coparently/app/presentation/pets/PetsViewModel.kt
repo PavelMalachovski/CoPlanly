@@ -14,7 +14,6 @@ import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Why a photograph did not make it on or off the pet's record.
@@ -71,8 +69,7 @@ enum class PetSaveOutcome {
  * the `ChildInfoViewModel` defect CLAUDE.md documents, where any background emission
  * silently repointed the editor at the wrong record.
  */
-@HiltViewModel
-class PetsViewModel @Inject constructor(
+class PetsViewModel(
     private val petRepository: PetRepository,
     private val photoStorage: RecordPhotoStorage,
     private val firebaseAuthService: FirebaseAuthService,

@@ -9,7 +9,6 @@ import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The calendar-feed screen's state (MON-17).
@@ -54,8 +52,7 @@ data class CalendarFeedUiState(
  * listing — and making links into — the family it was opened for. A switch drops the previous
  * family's links and a just-made URL, then lists the new family's.
  */
-@HiltViewModel
-class CalendarFeedViewModel @Inject constructor(
+class CalendarFeedViewModel(
     private val repository: CalendarFeedRepository,
     familyViewSource: FamilyViewSource
 ) : ViewModel() {

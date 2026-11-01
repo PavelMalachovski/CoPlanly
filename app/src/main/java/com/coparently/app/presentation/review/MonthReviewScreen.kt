@@ -41,7 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.review.MonthMoney
 import com.coparently.app.domain.review.MonthReview
@@ -60,6 +59,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.YearMonth
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Settings → Family → *Month in review*: whose days the month's were, the handovers, the swaps,
@@ -78,7 +78,7 @@ import kotlinx.datetime.YearMonth
 @Composable
 fun MonthReviewScreen(
     onNavigateUp: () -> Unit,
-    viewModel: MonthReviewViewModel = hiltViewModel()
+    viewModel: MonthReviewViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val names = rememberParentNames(viewModel.parents.collectAsState().value)

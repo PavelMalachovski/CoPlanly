@@ -2,16 +2,13 @@ package com.coparently.app.data.support
 
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import java.time.YearMonth
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * This phone's child support reminders (25 October 2026): per account and family, how many days
  * before the due day to remind, and the month it last did. On this phone only — a setting about
  * this phone's notifications — and gone at sign-out with the rest of the sealed store.
  */
-@Singleton
-class SupportReminders @Inject constructor(private val preferences: EncryptedPreferences) {
+class SupportReminders(private val preferences: EncryptedPreferences) {
 
     /** How many days before the due day [uid] is reminded in [familyId], or null when not at all. */
     fun daysBefore(uid: String, familyId: String): Int? =

@@ -8,8 +8,6 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * [CalendarFeedRepository] over the `createCalendarFeed`, `listCalendarFeeds` and
@@ -19,8 +17,7 @@ import javax.inject.Singleton
  * one thing that must not be kept: it is a bearer credential for the family's calendar, and the
  * parent has already put it where it belongs, in the calendar app they shared it to.
  */
-@Singleton
-class CalendarFeedRepositoryImpl @Inject constructor(
+class CalendarFeedRepositoryImpl(
     private val functions: FirebaseFunctions
 ) : CalendarFeedRepository {
 

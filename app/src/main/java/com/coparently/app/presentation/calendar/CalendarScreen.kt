@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.domain.custody.ContactWindow
@@ -95,6 +94,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -172,9 +172,9 @@ fun CalendarScreen(
     onAddEventClick: (LocalDate?, Int?) -> Unit,
     onSettingsClick: (() -> Unit)? = null,
     onChangeRequestsClick: (() -> Unit)? = null,
-    eventViewModel: EventViewModel = hiltViewModel(),
-    calendarViewModel: CalendarViewModel = hiltViewModel(),
-    changeRequestViewModel: com.coparently.app.presentation.changerequests.ChangeRequestViewModel = hiltViewModel()
+    eventViewModel: EventViewModel = koinViewModel(),
+    calendarViewModel: CalendarViewModel = koinViewModel(),
+    changeRequestViewModel: com.coparently.app.presentation.changerequests.ChangeRequestViewModel = koinViewModel()
 ) {
     val dims = dimensions()
     val haptic = LocalHapticFeedback.current

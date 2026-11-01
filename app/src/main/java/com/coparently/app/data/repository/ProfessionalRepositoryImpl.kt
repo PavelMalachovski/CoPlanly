@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore-backed [ProfessionalRepository] (MON-18).
@@ -43,8 +41,7 @@ import javax.inject.Singleton
  * what an unconsented or expired grant *should* produce on the professional's side, and a screen
  * must show "nothing to read" then, not crash or spin.
  */
-@Singleton
-class ProfessionalRepositoryImpl @Inject constructor(
+class ProfessionalRepositoryImpl(
     private val firestore: FirebaseFirestore,
     private val authService: FirebaseAuthService,
     private val pairingFunctions: PairingFunctions,

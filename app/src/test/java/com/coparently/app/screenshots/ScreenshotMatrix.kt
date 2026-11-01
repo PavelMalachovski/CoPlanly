@@ -59,7 +59,7 @@ private val FRAME_PADDING = 16.dp
  *
  * Subclasses carry their own `@RunWith(ParameterizedRobolectricTestRunner::class)`,
  * `@GraphicsMode(NATIVE)` and `@Config(sdk = [SCREENSHOT_SDK], application = Application::class)`.
- * The plain `Application` matters: the manifest names `CoPlanlyApplication`, whose Hilt graph
+ * The plain `Application` matters: the manifest names `CoPlanlyApplication`, whose Koin graph
  * reaches Firebase, and nothing rendered here needs it.
  *
  * @param variant Language, theme, font scale and palette for this run

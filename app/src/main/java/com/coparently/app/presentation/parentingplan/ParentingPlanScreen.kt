@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.domain.parentingplan.ParentingPlanComparison
@@ -45,6 +44,7 @@ import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The parenting plan: a question list, each parent's answer beside it, and where they agree
@@ -72,7 +72,7 @@ import com.coparently.app.presentation.theme.Spacing
 fun ParentingPlanScreen(
     onNavigateBack: () -> Unit,
     onProposeSchedule: (String) -> Unit = {},
-    viewModel: ParentingPlanViewModel = hiltViewModel()
+    viewModel: ParentingPlanViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val parents by viewModel.parents.collectAsState()

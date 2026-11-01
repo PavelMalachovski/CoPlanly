@@ -5,7 +5,8 @@ Guidance for Claude Code (and other AI assistants) working in this repository.
 ## What this project is
 
 CoPlanly — an Android shared-calendar app for separated parents. Kotlin + Jetpack Compose
-(Material 3), Clean Architecture with Hilt, Room as the offline-first source of truth,
+(Material 3), Clean Architecture with Koin (Hilt until MON-24 phase 2, November 2026), Room as the
+offline-first source of truth,
 Firebase (Auth/Firestore/FCM) for sync between the two parents, Google Calendar integration.
 **No AI in the client:** the Gemini subsystem was deleted in August 2026 (MON-7) — ~3,200 lines
 reachable from no navigation graph, with the API key shipping in every APK. AI came back **only**
@@ -535,13 +536,16 @@ When touching the UI, keep these invariants:
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
    used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
-   Kotlin 2.x metadata), Hilt and Room on **KSP2** (KSP `2.3.11`; kapt is gone), Navigation 2.9.3,
-   Hilt 2.58 (androidx.hilt's processor and `hilt-work` 1.3.0), kotlinx-coroutines 1.11.0,
-   predictive back on. **Kotlin, KSP, Dagger and Roborazzi move together, and AGP holds them
-   back**: KSP has been versioned apart from Kotlin since 2.3.0 and is
-   KSP2 only; 2.3.12 and later need AGP 8.12. Dagger's Hilt plugin accepts AGP 8 up to 2.59 (2.59.1
-   asks for AGP 9), and up to 2.59 its `hiltJavaCompile` step reads Kotlin metadata up to 2.3 only.
-   So Kotlin 2.4 waits for AGP 9 and Dagger 2.60. **Kotlin/Native pins Xcode too**: 2.3.21 supports
+   Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone), Navigation 2.9.3,
+   **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
+   `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
+   Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
+   for a Compose BOM that has them), kotlinx-coroutines 1.11.0, predictive back on. **Kotlin, KSP
+   and Roborazzi move together, and AGP holds them back**: KSP has been versioned apart from Kotlin
+   since 2.3.0 and is KSP2 only; 2.3.12 and later need AGP 8.12. Dagger used to be the second
+   brake — 2.59, the last Dagger for AGP 8, reads Kotlin metadata only up to 2.3 — and it left with
+   Hilt, so **only AGP 9 now blocks Kotlin 2.4** (plan Task 13 of the iPhone work's
+   phase 2). **Kotlin/Native pins Xcode too**: 2.3.21 supports
    Xcode up to 26.0 (2.4.21 up to 26.4; Xcode 27 needs Kotlin 2.5). In practice 2.3.21 builds, links
    and runs commonTest on the owner's Xcode 27.2 (November 2026; eight harmless linker warnings about
    its prebuilt caches), so the runner uses that, with an Xcode 26 beside it through the runner's
@@ -611,7 +615,7 @@ When touching the UI, keep these invariants:
    Never hardcode user-visible text in composables — see "Localization (i18n)" below.
 
 DB note: installs older than the migration chain (schema < v5) are wiped via
-`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `DatabaseModule` — a v3 install used to
+`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `buildCoPlanlyDatabase` (`di/DatabaseBuilder.kt`) — a v3 install used to
 crash with "migration from 3 to 9 required but not found".
 
 ## Build & verify
@@ -684,25 +688,30 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   only throws on an old device, and it is a second ABI for SQLCipher's native library), **API 30**
   (where the job was first made green), and **API 35 on `google_apis_ps16k`** (16 KB memory pages,
   which Play requires; a misaligned `.so` fails `System.loadLibrary` there). **The 16 KB leg runs
-  no Hilt test** (`notAnnotation=…HiltAndroidTest` in the matrix's `test-args`): MockK's own
+  no test that loads the fake Firebase override** (`notAnnotation=com.coparently.app.testing.
+  UsesFakeFirebase` in the matrix's `test-args`, set in `tools/ci-changes.js`): MockK's own
   inline-mocking agent, `libmockkjvmtiagent.so`, does not dlopen on 16 KB pages even at 1.14.0
-  ("empty/missing DT_HASH/DT_GNU_HASH"), and every Hilt test mocks through it in
-  `FakeFirebaseModule` — a test-tool failure that says nothing about the app. What the leg exists
-  to prove is `NativeLibrariesTest`'s job, which is non-Hilt and mock-free: it loads SQLCipher and
+  ("empty/missing DT_HASH/DT_GNU_HASH"), and every test that starts the Koin graph through
+  `testing/KoinTestRule` mocks through it in `fakeFirebaseModule` — a test-tool failure that says
+  nothing about the app. **Every test class that uses `KoinTestRule` carries `@UsesFakeFirebase`**
+  (`testing/UsesFakeFirebase.kt`; the abstract bases too) — one without it fails that leg, which is
+  how a missing one is found. What the leg exists to prove is `NativeLibrariesTest`'s job, which
+  starts no graph and is mock-free: it loads SQLCipher and
   writes an encrypted database, and runs ML Kit OCR and barcode scanning on a blank image. Lift
   the filter only once a MockK release loads there. Every test check run sets `require_tests`, so
   a job that died before writing results cannot publish a green check. One caveat on 26:
-  mockk mocks *final* classes only on API 28+, so if a Firebase type `FakeFirebaseModule` mocks is
-  final, the Hilt UI tests fail on that leg alone — replace that mock with an open fake, do not
+  mockk mocks *final* classes only on API 28+, so if a Firebase type `fakeFirebaseModule` mocks is
+  final, the UI tests that load it fail on that leg alone — replace that mock with an open fake, do not
   drop the leg. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
   **(1) Firebase.** `AuthScreenTest` and `SettingsScreenTest` start the real `MainActivity`,
-  whose Hilt graph reaches `FirebaseModule.provideFirebaseMessaging` →
+  whose Hilt graph (Koin's since MON-24 phase 2) reaches the `FirebaseMessaging` definition →
   `FirebaseMessaging.getInstance()`, and CI has no `google-services.json` (it is gitignored), so
   the process died with "Default FirebaseApp is not initialized" and took the run with it at 15
-  of 34 tests. `HiltTestRunner` substituting `HiltTestApplication` does not help: it stops
-  `CoPlanlyApplication.onCreate` running, not the graph being built. Fixed by
-  `androidTest`'s `FakeFirebaseModule`, a `@TestInstallIn` replacing `FirebaseModule` with
-  relaxed mocks — except in a run that carries the emulator host (the `e2e` job, below), where it
+  of 34 tests. The runner substituting a test application (`KoinTestRunner` and
+  `KoinTestApplication` now, `HiltTestRunner` and `HiltTestApplication` then) does not help: it
+  stops `CoPlanlyApplication.onCreate` running, not the graph being resolved. Fixed by
+  `androidTest`'s `fakeFirebaseModule` (`di/FakeFirebaseModule.kt`), an override of
+  `firebaseModule` with relaxed mocks — except in a run that carries the emulator host (the `e2e` job, below), where it
   hands Auth, Firestore, Storage and Functions the real SDKs of `EmulatorEnvironment.appUnderTest`
   so the app's own screens talk to the emulators; Messaging, Analytics and Crashlytics stay mocks
   there too. **Do not "simplify" that by committing a fake `google-services.json`** — the
@@ -713,7 +722,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   further (September 2026): it builds every on-disk state `SqlCipherMigration` names — fresh
   install, plaintext upgrade with and without a stored passphrase, a stale export beside the
   original, an export whose rename never happened, a leftover beside an encrypted file, a lost
-  passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `DatabaseModule`
+  passphrase — and opens each through `buildCoPlanlyDatabase`, the builder `databaseModule`
   itself calls, under a database name of its own. It snapshots and restores `DatabaseKey`'s
   preferences around each case, because that store has one fixed name the UI tests' real
   database also depends on; keep that if you add a case that forgets or mints a passphrase.
@@ -737,8 +746,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   picker opens `presentation/common/PickerDates.kt`'s `LocalDatePickerDialog`; don't give a screen
   its own copy of the millis conversion again), the per-app locale switch, the export's files and
   share intent, and a signed-in walk of the main screens with a basic accessibility sweep;
-  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Two things to know before adding one.
-  A test that launches `MainActivity` signs in through `androidTest`'s `testing/SignedInSession` —
+  `docs/DEVICE-CHECKLIST.md` marks what they cover **[CI]**. Three things to know before adding one.
+  **A test that needs the app's graph starts it with `testing/KoinTestRule`** as its outermost rule
+  (`@get:Rule(order = 0)`, before the compose rule launches anything) and carries
+  `@UsesFakeFirebase`: the rule starts Koin with `appModules` and then `instrumentedTestOverrides`
+  (`androidTest/.../di/`: `fakeFirebaseModule`, `fakeInstallReferrerModule` and the test-only
+  classes), whose definitions replace the app's of the same type, and stops it after the test — one
+  graph per test, as Hilt built one component per test. The rule resolves what a field `@Inject`
+  used to (`koinRule.get()`), and it stays on koin-android alone: koin-test carries kotlin-reflect,
+  which the test APK must not (see the toolchain line). A test that launches `MainActivity` signs in
+  through `androidTest`'s `testing/SignedInSession` —
   a stubbed `currentUser` on the mocked `FirebaseAuth`, a real Room row with onboarding done, the
   telemetry question answered "no", all undone in `@After` because the emulator's files outlive the
   test — and **pauses the Compose clock** (`testing/PausedClock.kt`): the splash and the list
@@ -756,8 +773,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   two-phone round a runner *can* do. `app/src/androidTest/java/com/coparently/app/e2e/` runs two
   parents in one process — each an `EmulatorParent`: a **named** `FirebaseApp` built from
   `FirebaseOptions` for the credential-free `demo-coplanly` project, its own in-memory Room, and
-  the production data layer constructed by hand from the constructors Hilt calls (one process has
-  one `SingletonComponent`, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
+  the production data layer constructed by hand from the constructors the Koin graph calls (one
+  process has one global Koin graph, and this needs two of everything). `tools/e2e/run-two-parent-tests.sh`
   wraps `firebase emulators:exec --only auth,firestore,functions,storage` around a Node smoke
   (`tools/e2e/pairing-smoke.js`, which pairs two accounts over REST in seconds and fails with a
   reason before an APK is installed) and `connectedDebugAndroidTest` filtered to that package with
@@ -788,7 +805,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   with Bob through the callable — Bob's event is drawn on her Home after one
   `SyncService.performFullSync()` (the call `SyncWorker` makes), his message in her thread, and
   what she types into the real composer reaches his phone. It starts `ChatMirror` itself, because
-  `HiltTestApplication` never runs `CoPlanlyApplication.onCreate`. Its setup is the abstract
+  `KoinTestApplication` (`HiltTestApplication` before MON-24 phase 2) never runs
+  `CoPlanlyApplication.onCreate`. Its setup is the abstract
   `AliceOnScreenTest`, which two more classes share: `OnScreenAgreementsTest` (Bob's change request
   raising the calendar banner and accepted from the inbox; his custody proposal, day swaps and a
   seasonal layer popping up on Home and answered there, the layer then naming him in today's
@@ -800,7 +818,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the Compose clock paused and every wait bounded. Five things not to undo.
   **No `google-services.json`** here either, for the reason given above. **The tests skip
   themselves without the host argument**, so the `instrumented` job runs them as skipped and
-  keeps `FakeFirebaseModule` for everything else — and the `e2e` job fails on any skip, so the
+  keeps `fakeFirebaseModule`'s mocks for everything else — and the `e2e` job fails on any skip, so the
   same switch cannot turn it green by running nothing. **Cleartext to `10.0.2.2` and `127.0.0.1`
   is allowed in `app/src/debug/res/xml/network_security_config.xml`, debug only**: Auth and
   Functions reach their emulators over plain HTTP through the platform stack, and an
@@ -854,6 +872,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   through a DAO: an entity's constructor changes with every added column, which is exactly the
   pull request this job is for. A PR that changes a listed signature fails the seed with
   `NoSuchMethodError` — adapt the fixture (reflection, or SQL) until the change is on the base.
+  `buildCoPlanlyDatabase` is one of them, which is why `di/DatabaseBuilder.kt` keeps the JVM class
+  name it had as `DatabaseModule.kt` (`@file:JvmName("DatabaseModuleKt")`), and why the test
+  application (`KoinTestApplication`) must not touch Koin: the seed runs it in a base build that may
+  have none.
   **Both classes skip themselves without `-e coplanlyUpgradePhase seed|verify`**, which is what
   keeps them — they write the real database and preference store — out of the `instrumented`
   job; the seed also refuses to run over an existing database. **A skip is a failure here**:
@@ -911,8 +933,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   every Back the tour pressed waited on it (week 5's tour stopped at its third screen).
 
   Still run the build locally before pushing — CI is a backstop, not a substitute.
-  After switching branches, prefer `clean` — stale Hilt/KSP generated sources from another branch cause
-  errors like "Could not find class file for '…Application'".
+  After switching branches, prefer `clean` — stale KSP generated sources from another branch cause
+  errors (with Hilt, before MON-24 phase 2, "Could not find class file for '…Application'").
 - **The `r8-runtime` job runs the minified app** ("Android — minified build at runtime (R8)",
   REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names;
   neither sees R8 full mode's runtime failures — a `TypeToken` whose generic signature was stripped
@@ -923,12 +945,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   key, telemetry flags off, no `applicationIdSuffix` (so a local `google-services.json` still
   matches). Its own source set, `app/src/r8Test/`, adds `R8ProbeInstrumentation`, a
   **self-targeting `<instrumentation>`**: `am instrument` starts it inside the minified process, it
-  skips `Application.onCreate` (whose Hilt graph needs a default FirebaseApp, which CI has no
+  skips `Application.onCreate` (whose Koin graph needs a default FirebaseApp, which CI has no
   `google-services.json` for — and must not get one), and `R8GsonProbe` builds the production
   classes by hand the way the e2e parents do: a child and a pet through `ChildInfoRepositoryImpl`/
   `PetRepositoryImpl` into an in-memory Room, signed out on a named `demo-coplanly` FirebaseApp, then
   the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the draft Gson from
-  `SerializationModule`; the chat and revision mappers' `TypeToken`s; `Converters`; the calendar's
+  `provideGson()` (`di/koin/SerializationModule.kt`); the chat and revision mappers' `TypeToken`s; `Converters`; the calendar's
   `@Key` models. `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
   fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
   a value that does not read back equal, a probe that did not finish, and a Gson model
@@ -1053,7 +1075,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   render → no screenshots; and the **emulator matrix is API 30 alone** unless the diff reaches
   what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
   `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
-  what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseModule.kt`, the
+  what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseBuilder.kt` and
+  `di/koin/DatabaseModule.kt`, the
   telemetry answer's form, `app/schemas/`, the manifest, its own tests and scripts, the
   `wire/current/` fixtures), the build, or
   any path the script does not know; and the `web` job runs on anything but docs and the Android
@@ -1176,7 +1199,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   records** (`record` in `tools/ci-changes.js`): on the API 30 image screenrecord's software
   encoder aborted `media.codec` and surfaceflinger followed, which Gradle reports as "System has
   crashed" mid-suite — the recorder had become the failure it was meant to explain.
-  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Hilt/Room/
+  `coverage-report` — Kover (`org.jetbrains.kotlinx.kover` 0.9.9, `app/build.gradle.kts`, Room- and
   Compose-generated classes filtered out). Coverage is **visibility, not a gate**: there is no
   verification rule, and its step is the one place in `ci.yml` where `continue-on-error` is
   right, because failing to *report* a number must not turn a green build red. `screenshots` (the gallery:
@@ -1189,7 +1212,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 - **Jetpack Compose only** — never add XML layouts.
 - **Stateless composables** — state lives in ViewModels (`StateFlow`), UI receives values
   and callbacks. Follow the existing `UiState` sealed-class pattern.
-- **Hilt** for all DI. New modules go to `app/src/main/java/com/coparently/app/di/`.
+- **Koin** for all DI (Hilt until MON-24 phase 2). Modules live in
+  `app/src/main/java/com/coparently/app/di/koin/` and are listed in `appModules` (`AppModules.kt`);
+  a class the graph builds is a `singleOf`/`factoryOf`/`viewModelOf`/`workerOf` there (a `single`
+  for what is one per process, as a Hilt `@Singleton` was), an interface is bound with
+  `single<I> { get<Impl>() }` in the module named after its feature, and a qualifier is
+  `named("…")`. **Koin checks nothing at compile time**: `KoinGraphTest` runs `verify()` over every
+  module, so a constructor parameter no definition provides fails the unit tests rather than a
+  screen. A composable takes its ViewModel with `koinViewModel()` (`org.koin.compose.viewmodel`),
+  keeping the caller's `ViewModelStoreOwner` (`ViewModelScopeTest`); `MainActivity` with
+  `by viewModel()`, which resolves the same instance for the same owner.
 - **minSdk = 26** — beware of newer `java.time` additions
   (e.g. `LocalDate.ofInstant` is API 34+; use `Instant.atZone(...).toLocalDate()`).
 - **KDoc** on public classes/functions; code and comments in **English**.
@@ -1348,8 +1380,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   repeating the conversion (item 5 above).
 - **Telemetry has exactly one switch, and a provider may only ever close it** (REL-5, Aug 2026).
   `data/telemetry/TelemetryConsentApplier` is the sole caller of `setAnalyticsCollectionEnabled`
-  and `setCrashlyticsCollectionEnabled`; `FirebaseModule`'s providers pass `false` and nothing
-  else touches either. That is not tidiness — before it, `FirebaseModule` applied
+  and `setCrashlyticsCollectionEnabled`; `firebaseModule`'s definitions pass `false` and nothing
+  else touches either. That is not tidiness — before it, Hilt's `FirebaseModule` applied
   `BuildConfig.ENABLE_CRASHLYTICS` and `CoPlanlyApplication.onCreate` then called
   `setCrashlyticsCollectionEnabled(true)` unconditionally a moment later, so the debug flag was
   overruled on every launch and nothing failed. **A gate any other line may overrule is not a
@@ -1374,7 +1406,8 @@ domain/    — models, repository interfaces, use cases, holidays, ReminderSched
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
-di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
+di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
+             listed in appModules), and the database builder (DatabaseBuilder.kt)
 ```
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
@@ -1386,7 +1419,8 @@ root changed. **The exceptions are the phase-1 stay list**, still under
 `app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
 file by file:
 - dependency injection, Android or the data layer — the event use cases and `EventValidator` in
-  `usecase/` (Hilt's `@Inject`, analytics and Crashlytics; `RecurrenceExpander` moved),
+  `usecase/` (analytics and Crashlytics, and Hilt's `@Inject` until MON-24 phase 2;
+  `RecurrenceExpander` moved),
   `error/ErrorHandler.kt`, `activity/ActivityAnnouncer.kt`, `model/MessageTemplate.kt`
   (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`);
 - `java.time` not yet converted — the communication record's builder, CSV and layouts in
@@ -2981,7 +3015,8 @@ below hold what it fixed in place.
    code does is the defect L-1 was.
 2. **Every Cloud Function runs in `europe-west3`.** Declare each one through `regional` in
    `functions/index.js`, never `functions.` directly.
-   - Five places name the region: `FUNCTIONS_REGION` there, `FirebaseModule.FUNCTIONS_REGION`,
+   - Five places name the region: `FUNCTIONS_REGION` there, `FUNCTIONS_REGION` in
+     `di/koin/FirebaseModule.kt`,
      `web/verify/`'s `PRODUCTION_FUNCTIONS_BASE`, `tools/e2e/pairing-smoke.js` and
      `web-tests/support/emulators.js`. Change them together.
    - `tools/check-e2e-coverage.js` finds callables declared either way.

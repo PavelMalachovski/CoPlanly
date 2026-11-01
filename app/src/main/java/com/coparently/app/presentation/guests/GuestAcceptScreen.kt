@@ -28,12 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -56,7 +56,7 @@ import java.time.format.FormatStyle
 fun GuestAcceptScreen(
     onDone: () -> Unit,
     prefilledCode: String? = null,
-    viewModel: GuestAcceptViewModel = hiltViewModel()
+    viewModel: GuestAcceptViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 

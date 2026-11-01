@@ -73,7 +73,7 @@ import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.versions.EventVersionRecorder
-import com.coparently.app.di.FirebaseModule
+import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.family.FamilyKey
@@ -111,13 +111,13 @@ import java.util.UUID
  * One parent's phone, in one process: a Firebase app of its own, a Room database of its own, and
  * the production data layer wired over both.
  *
- * **Why not Hilt.** A process has one `SingletonComponent`, and the scenario needs two of
+ * **Why not the Koin graph.** A process has one global Koin graph, and the scenario needs two of
  * everything — two signed-in accounts, two Firestore clients with separate caches, two Room
  * files. So each parent is a *named* [FirebaseApp] (`FirebaseApp.initializeApp(context, options,
- * name)`), and the repositories are built by hand from the same constructors Hilt calls. That
- * leaves the ordinary instrumented job exactly as it was: nothing here is a Hilt module, so
- * `FakeFirebaseModule` still replaces `FirebaseModule` for every `@HiltAndroidTest`, and no
- * `google-services.json` is involved on either side.
+ * name)`), and the repositories are built by hand from the same constructors the graph calls. That
+ * leaves the ordinary instrumented job exactly as it was: nothing here is a Koin module, so
+ * `fakeFirebaseModule` still overrides `firebaseModule` for every test `KoinTestRule` starts, and
+ * no `google-services.json` is involved on either side.
  *
  * **What is real and what is not.** Every class that reads or writes Firestore, Auth, Functions or
  * Room is the production class: the data sources, `EventRepositoryImpl`, `ExpenseRepositoryImpl`,
@@ -148,7 +148,7 @@ class EmulatorParent private constructor(
 
     val auth: FirebaseAuth = FirebaseAuth.getInstance(app)
     val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(app)
-    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app, FirebaseModule.FUNCTIONS_REGION)
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance(app, FUNCTIONS_REGION)
     val storage: FirebaseStorage = FirebaseStorage.getInstance(app)
 
     /**

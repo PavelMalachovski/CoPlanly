@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The conversations kept for this parent after a co-parent deleted their account ([DepartedThread]).
@@ -27,8 +25,7 @@ import javax.inject.Singleton
  * The listener's query returns only marked threads, so for every parent whose co-parent has not
  * deleted an account it answers an empty list and costs one listener while a chat screen is open.
  */
-@Singleton
-class DepartedThreadSource @Inject constructor(
+class DepartedThreadSource(
     private val userRepository: UserRepository,
     private val messages: FirestoreMessageDataSource
 ) {

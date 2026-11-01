@@ -54,7 +54,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -87,6 +86,7 @@ import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -166,8 +166,8 @@ fun ExpenseScreen(
     onEditExpense: (String) -> Unit = {},
     onNavigateUp: (() -> Unit)? = null,
     onSettleUp: () -> Unit = {},
-    viewModel: ExpenseViewModel = hiltViewModel(),
-    paymentsViewModel: PaymentsViewModel = hiltViewModel()
+    viewModel: ExpenseViewModel = koinViewModel(),
+    paymentsViewModel: PaymentsViewModel = koinViewModel()
 ) {
     val expensesState by viewModel.expenses.collectAsState()
     // "I paid" and "Money arrived" for each month and currency (25 October 2026).

@@ -11,8 +11,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Who the chat is with, as far as this device knows *right now*.
@@ -53,8 +51,7 @@ sealed interface ChatPartner {
  * No Firestore listener is added: the projection is Room's own invalidation on one row, and the
  * pairing listener is the one chat already held.
  */
-@Singleton
-class ChatPartnerSource @Inject constructor(
+class ChatPartnerSource(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository,
     private val selectedFamilySource: SelectedFamilySource

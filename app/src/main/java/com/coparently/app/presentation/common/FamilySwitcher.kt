@@ -33,12 +33,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.FamilySignal
 import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Wide enough for a first name and a surname; a longer one ellipsises. */
 private val CHIP_MAX_WIDTH = 160.dp
@@ -70,7 +70,7 @@ private val ROW_DOT_GAP = 8.dp
 @Composable
 fun FamilySwitcherChip(
     modifier: Modifier = Modifier,
-    viewModel: FamilySwitcherViewModel = hiltViewModel()
+    viewModel: FamilySwitcherViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     var showDialog by rememberSaveable { mutableStateOf(false) }

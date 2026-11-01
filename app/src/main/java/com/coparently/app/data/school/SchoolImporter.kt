@@ -30,8 +30,6 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * One school update (MON-8): fetch, plan, write.
@@ -40,7 +38,6 @@ import javax.inject.Singleton
  * function the JVM tests reach. Updates of one connection run one at a time — the daily job and
  * "Update now" can meet — so two passes never both create the same event.
  */
-@Singleton
 class SchoolImporter internal constructor(
     private val authorizer: BakalariAuthorizer,
     private val client: BakalariClient,
@@ -60,7 +57,7 @@ class SchoolImporter internal constructor(
      * @property familySlots The importer's slot in the connection's family, which may differ from
      *   the profile's (per-family slots, 25 October 2026).
      */
-    class Collaborators @Inject constructor(
+    class Collaborators(
         val writer: SchoolEventWriter,
         val wording: SchoolImportWordingSource,
         val children: ChildInfoRepository,
@@ -68,7 +65,6 @@ class SchoolImporter internal constructor(
     )
 
     /** The production importer, on the system clock. */
-    @Inject
     constructor(
         authorizer: BakalariAuthorizer,
         client: BakalariClient,

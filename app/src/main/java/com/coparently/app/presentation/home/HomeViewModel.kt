@@ -39,7 +39,6 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.coParentOnScreen
 import com.coparently.app.presentation.common.observeSignedInUser
 import com.coparently.app.presentation.common.projectedCoParentUid
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -59,7 +58,6 @@ import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
-import javax.inject.Inject
 
 /** A per-currency subtotal of this month's spending. */
 data class CurrencyAmount(val currency: String, val amount: Double)
@@ -84,7 +82,7 @@ data class MonthSpend(val byCurrency: List<CurrencyAmount>)
  * [familyViewSource] joined for the same reason: it decides which of the month's expenses the
  * tile adds up — the family on screen's own (owner decision, October 2026).
  */
-data class MonthSpendDependencies @Inject constructor(
+data class MonthSpendDependencies(
     val expenseRepository: ExpenseRepository,
     val preferencesRepository: PreferencesRepository,
     val familyViewSource: FamilyViewSource
@@ -114,7 +112,7 @@ data class MonthSpendDependencies @Inject constructor(
  * the handover hero needs to name each child on a day they are not all with the same parent
  * (FAM-4). It is the family's identity too, and the constructor was still at its limit.
  */
-data class HomeIdentityDependencies @Inject constructor(
+data class HomeIdentityDependencies(
     val userRepository: UserRepository,
     val pairingRepository: PairingRepository,
     val parentsSource: ParentsSource,
@@ -203,8 +201,7 @@ sealed interface HomeUiState {
  * messages, and the recent changes the *other* parent made.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class HomeViewModel @Inject constructor(
+class HomeViewModel(
     eventRepository: EventRepository,
     requestsSource: RequestsSource,
     custodyModelRepository: CustodyModelRepository,

@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.professionals.ProfessionalGrant
@@ -40,6 +39,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -61,7 +61,7 @@ import java.time.format.FormatStyle
 @Composable
 fun ProfessionalCalendarScreen(
     onNavigateUp: () -> Unit,
-    viewModel: ProfessionalCalendarViewModel = hiltViewModel()
+    viewModel: ProfessionalCalendarViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Scaffold(

@@ -5,9 +5,6 @@ import com.coparently.app.R
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.school.SchoolDayType
 import com.coparently.app.domain.school.SchoolImportWording
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The titles an import writes, in the importing parent's language (MON-8).
@@ -20,9 +17,8 @@ import javax.inject.Singleton
  * activity: on Android 12L and below that follows the device's language rather than the app's
  * own choice, as a push does (CLAUDE.md item 15).
  */
-@Singleton
-class SchoolImportWordingSource @Inject constructor(
-    @ApplicationContext private val context: Context,
+class SchoolImportWordingSource(
+    private val context: Context,
     private val childInfoRepository: ChildInfoRepository
 ) {
 

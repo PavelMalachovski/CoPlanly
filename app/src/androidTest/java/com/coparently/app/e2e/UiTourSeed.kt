@@ -61,14 +61,13 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * The family the UI tour photographs: Alice and Bob, their children Emma and Leo, the dog Max —
  * and everything a parent would have after a few weeks of using the app, written through the same
  * repositories the screens save through.
  *
- * Alice's records go through **her app's own** repositories (this class is built by Hilt, from the
+ * Alice's records go through **her app's own** repositories (this class is built by Koin, from the
  * graph `MainActivity` runs on), so they are in her Room the moment they are saved. Bob's go through
  * his `EmulatorParent` and reach Alice the way they would reach a phone: the custody document through
  * her mirror, his events through `SyncService.performFullSync()`, his messages through `ChatMirror`,
@@ -78,7 +77,7 @@ import javax.inject.Inject
  * the rest still seed, because a tour with one card missing is worth far more than no tour.
  */
 @Suppress("LongParameterList") // one repository per kind of record the tour shows
-class UiTourSeed @Inject constructor(
+class UiTourSeed(
     private val events: EventRepository,
     private val expenses: ExpenseRepository,
     private val children: ChildInfoRepository,

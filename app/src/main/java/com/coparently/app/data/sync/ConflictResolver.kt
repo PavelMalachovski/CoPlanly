@@ -2,15 +2,12 @@ package com.coparently.app.data.sync
 
 import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.EventEntity
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Handles conflict resolution when local and remote data differs.
  * Implements various strategies for resolving data conflicts during synchronization.
  */
-@Singleton
-class ConflictResolver @Inject constructor() {
+class ConflictResolver {
 
     /**
      * Resolves conflict between local and remote event.

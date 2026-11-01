@@ -181,8 +181,8 @@
         </service>
 
         <!--
-          WorkManager is initialized on-demand via Hilt (CoPlanlyApplication implements
-          Configuration.Provider). Remove the default WorkManagerInitializer that the
+          WorkManager is initialized on demand with Koin's worker factory (CoPlanlyApplication
+          implements Configuration.Provider). Remove the default WorkManagerInitializer that the
           work-runtime library merges in, so it does not conflict with the custom
           configuration. Required by the RemoveWorkManagerInitializer lint check.
         -->

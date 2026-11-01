@@ -37,7 +37,7 @@ import kotlin.test.assertNull
  * Who a shared expense is recorded as being split between.
  *
  * The case worth a file of its own: the Add Expense screen is its own route with its own
- * `hiltViewModel()`, and it collects `agreedRatio` but never `parents`. `parents` is shared with
+ * `koinViewModel()`, and it collects `agreedRatio` but never `parents`. `parents` is shared with
  * `WhileSubscribed`, so in that instance it had never emitted and answered "no co-parent" for
  * every save — `splitBetween` named the payer alone, the payer's own month read correctly, and
  * the co-parent's showed nothing owed at all. Nothing in the test suite noticed, because nothing

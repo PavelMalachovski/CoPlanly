@@ -6,8 +6,6 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import kotlinx.coroutines.flow.lastOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Imports from Google Calendar on its own, from the background sync (owner request, October 2026:
@@ -20,8 +18,7 @@ import javax.inject.Singleton
  * the button runs ([CalendarSyncRepository.syncFromGoogle]), so every event still arrives private
  * (Legal item 10) and a re-import keeps what the parent set in the app.
  */
-@Singleton
-class GoogleCalendarAutoImport @Inject constructor(
+class GoogleCalendarAutoImport(
     private val calendarSyncRepository: CalendarSyncRepository,
     private val credentialManagerService: CredentialManagerService,
     private val encryptedPreferences: EncryptedPreferences

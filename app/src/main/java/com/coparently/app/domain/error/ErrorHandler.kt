@@ -4,8 +4,6 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.domain.usecase.ValidationException
 import com.coparently.app.utils.NetworkMonitor
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Classifies a failure that reaches a ViewModel as an arbitrary [Throwable] (CQ-11).
@@ -17,8 +15,7 @@ import javax.inject.Singleton
  * (`UiText.Res(R.string.change_request_error_apply_failed)` and the like), which is more useful to
  * a parent than a sentence chosen by exception type. Do not route those through here.
  */
-@Singleton
-class ErrorHandler @Inject constructor(
+class ErrorHandler(
     private val crashlyticsManager: CrashlyticsManager,
     private val networkMonitor: NetworkMonitor
 ) {

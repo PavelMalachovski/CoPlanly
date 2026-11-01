@@ -1,8 +1,6 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.domain.repository.MessageRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The two chat-side steps a fresh pairing (or every launch while already paired) needs, run as
@@ -15,8 +13,7 @@ import javax.inject.Singleton
  * conversation, so it must never run before [MessageRepository.ensureConversation] has created
  * it.
  */
-@Singleton
-class PostPairingConversationSetup @Inject constructor(
+class PostPairingConversationSetup(
     private val messageRepository: MessageRepository,
     private val conversationMigrator: ConversationMigrator
 ) {

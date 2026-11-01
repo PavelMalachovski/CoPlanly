@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.presentation.common.AccountAvatar
@@ -44,6 +43,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * A friend, as the two parents read them: their face, what they are to the family, and the two
@@ -66,7 +66,7 @@ fun FriendDetailScreen(
     friendUid: String,
     onNavigateUp: () -> Unit,
     onRevoked: () -> Unit,
-    viewModel: FriendViewModel = hiltViewModel()
+    viewModel: FriendViewModel = koinViewModel()
 ) {
     LaunchedEffect(friendUid) { viewModel.openFriend(friendUid) }
     val profile by viewModel.viewedProfile.collectAsState()

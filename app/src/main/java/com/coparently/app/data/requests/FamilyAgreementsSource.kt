@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
-import javax.inject.Inject
 
 /**
  * One family's child support, professional grants and parenting plan (board SW-7): what the
@@ -27,7 +26,7 @@ import javax.inject.Inject
  * grants kept to it — so another family's can never be placed. Each starts empty and turns empty
  * when its listener fails: the requests are never held back by these three.
  */
-class FamilyAgreementsSource @Inject constructor(
+class FamilyAgreementsSource(
     private val supportStore: SupportAgreementStore,
     private val professionalRepository: ProfessionalRepository,
     private val planRepository: ParentingPlanRepository

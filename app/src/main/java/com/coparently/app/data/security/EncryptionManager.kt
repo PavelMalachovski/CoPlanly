@@ -4,14 +4,11 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Manages encryption and decryption of sensitive data using Android Keystore.
@@ -23,9 +20,8 @@ import javax.inject.Singleton
  * - 12-byte IV for GCM mode
  * - 128-bit authentication tag
  */
-@Singleton
-class EncryptionManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class EncryptionManager(
+    private val context: Context
 ) {
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
         load(null)

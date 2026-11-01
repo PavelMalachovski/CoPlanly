@@ -19,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
@@ -27,7 +26,6 @@ import com.coparently.app.data.payment.PaymentAccounts
 import com.coparently.app.data.payment.SettleUpMessages
 import com.coparently.app.domain.payment.Iban
 import com.coparently.app.presentation.theme.Spacing
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,10 +34,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import javax.inject.Inject
 import kotlin.math.abs
 
 /**
@@ -64,8 +62,7 @@ enum class SettleUpSend { IDLE, SENDING, SENT, IBAN_NOT_SAVED }
  * Sends a settle-up card, and keeps this parent's IBAN — the account the co-parent's payment code
  * pays to (tester feedback, October 2026).
  */
-@HiltViewModel
-class SettleUpViewModel @Inject constructor(
+class SettleUpViewModel(
     private val settleUpMessages: SettleUpMessages,
     private val paymentAccounts: PaymentAccounts
 ) : ViewModel() {
@@ -125,7 +122,7 @@ fun SettleUpDialog(
     coParentName: String,
     onDismiss: () -> Unit,
     onSent: () -> Unit,
-    viewModel: SettleUpViewModel = hiltViewModel()
+    viewModel: SettleUpViewModel = koinViewModel()
 ) {
     val savedIban by viewModel.myIban.collectAsState()
     val send by viewModel.sendState.collectAsState()

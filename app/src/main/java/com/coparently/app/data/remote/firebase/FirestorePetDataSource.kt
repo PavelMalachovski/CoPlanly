@@ -6,8 +6,6 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Remote data source for pets using Firestore.
@@ -18,8 +16,7 @@ import javax.inject.Singleton
  * deliberately **not** ordered server-side: `array-contains` plus `orderBy` on another
  * field needs a composite index, and Room orders the list for display anyway.
  */
-@Singleton
-class FirestorePetDataSource @Inject constructor(
+class FirestorePetDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val petsCollection = "pets"

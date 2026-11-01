@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendAccessDuration
@@ -40,6 +39,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -74,7 +74,7 @@ fun FriendsScreen(
     onOpenFriend: (String) -> Unit,
     onOpenMyProfile: () -> Unit,
     onOpenFriendCalendar: (String) -> Unit,
-    viewModel: FriendViewModel = hiltViewModel()
+    viewModel: FriendViewModel = koinViewModel()
 ) {
     val friends by viewModel.friends.collectAsState()
     val invite by viewModel.invite.collectAsState()

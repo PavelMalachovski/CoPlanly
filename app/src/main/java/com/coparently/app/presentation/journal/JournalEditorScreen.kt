@@ -34,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.LocalDatePickerDialog
@@ -45,6 +44,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Writing or editing one private journal entry (MON-22): the day it is about, the text, and a
@@ -56,7 +56,7 @@ import com.coparently.app.presentation.theme.Spacing
 @Composable
 fun JournalEditorScreen(
     onNavigateUp: () -> Unit,
-    viewModel: JournalEditorViewModel = hiltViewModel()
+    viewModel: JournalEditorViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current

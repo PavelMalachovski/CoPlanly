@@ -8,14 +8,13 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import javax.inject.Inject
 import kotlin.time.Clock
 
 /**
  * Validator for Event domain model.
  * Validates event data before creation or update.
  */
-class EventValidator @Inject constructor() {
+class EventValidator {
 
     /**
      * Validates an event.

@@ -13,8 +13,6 @@ import com.coparently.app.domain.usecase.CreateEventUseCase
 import com.coparently.app.domain.usecase.DeleteEventUseCase
 import com.coparently.app.domain.usecase.EventValidator
 import com.coparently.app.domain.usecase.UpdateEventUseCase
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * How many events an update changed.
@@ -46,8 +44,7 @@ data class SchoolImportCounts(
  * The use cases are built here rather than injected: `UseCaseModule` provides them in the
  * `ViewModelComponent`, and this writer runs from a worker in the singleton graph.
  */
-@Singleton
-class SchoolEventWriter @Inject constructor(
+class SchoolEventWriter(
     private val eventDao: EventDao,
     private val eventRepository: EventRepository,
     analyticsManager: AnalyticsManager,

@@ -8,12 +8,10 @@ import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.GuestRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * What the guest-accept screen shows.
@@ -40,8 +38,7 @@ data class GuestAcceptUiState(
  * raise a custody conflict — and none of it should be one `if` away from a grandmother's
  * read-only access to one child.
  */
-@HiltViewModel
-class GuestAcceptViewModel @Inject constructor(
+class GuestAcceptViewModel(
     private val guestRepository: GuestRepository
 ) : ViewModel() {
 

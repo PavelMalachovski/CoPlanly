@@ -11,7 +11,6 @@ import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.domain.stickers.StickerKind
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * What the stickers look like from this phone (October 2026, owner decisions): the stickers this
@@ -33,8 +31,7 @@ import javax.inject.Inject
  * Home's card, its "Send a sticker" sheet, its one question about the role and the "My stickers"
  * screen all read this one ViewModel, so they cannot disagree about what was seen.
  */
-@HiltViewModel
-class StickersViewModel @Inject constructor(
+class StickersViewModel(
     private val store: StickerStore,
     private val roles: ParentRoles,
     private val familyViewSource: FamilyViewSource,

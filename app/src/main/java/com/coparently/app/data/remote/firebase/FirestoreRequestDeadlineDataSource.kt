@@ -13,8 +13,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * `request_deadlines` — the clock of each request that waits on the other parent (phase 3a).
@@ -36,8 +34,7 @@ import javax.inject.Singleton
  * **The server's times are read with [ServerTimestampBehavior.ESTIMATE]**: a write this phone has
  * made and the server has not yet stamped reads as this phone's estimate rather than as nothing.
  */
-@Singleton
-class FirestoreRequestDeadlineDataSource @Inject constructor(
+class FirestoreRequestDeadlineDataSource(
     firestore: FirebaseFirestore
 ) {
     private val collection = firestore.collection(RequestDeadlineDocument.COLLECTION)

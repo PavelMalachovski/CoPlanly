@@ -17,7 +17,6 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.OpenedFile
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.sharedFileError
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -29,7 +28,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Files in the chat thread (MON-23): sending one, drawing its thumbnail, opening it.
@@ -45,8 +43,7 @@ import javax.inject.Inject
  * bubble never claims "sent" for a file still on the phone. Attachments do not wait out the MON-19
  * pause: the confirmation dialog before sending is their deliberate step.
  */
-@HiltViewModel
-class ChatAttachmentViewModel @Inject constructor(
+class ChatAttachmentViewModel(
     private val outbox: ChatAttachmentOutbox,
     private val cache: SharedFileCache,
     private val messageRepository: MessageRepository,

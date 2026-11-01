@@ -24,7 +24,6 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiError
 import com.coparently.app.presentation.common.UiState
 import com.coparently.app.presentation.theme.ParentColor
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -40,14 +39,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
-import javax.inject.Inject
 
 /**
  * ViewModel for Settings screen.
  * Manages settings state and user preferences.
  */
-@HiltViewModel
-class SettingsViewModel @Inject constructor(
+class SettingsViewModel(
     private val fcmService: FcmService,
     private val accountDeletionService: AccountDeletionService,
     private val userRepository: UserRepository,

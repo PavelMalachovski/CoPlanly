@@ -19,8 +19,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The two parents of this family, as this device knows them.
@@ -116,8 +114,7 @@ data class Parents(
  *   parent showing their second family saw the first one's name and colour on the event form,
  *   over records that were the second family's, while [coParentUid] already named the second.
  */
-@Singleton
-class ParentsSource @Inject constructor(
+class ParentsSource(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository,
     private val familySlots: FamilySlotsSource = FamilySlotsSource.None
@@ -133,7 +130,7 @@ class ParentsSource @Inject constructor(
 
     /**
      * The shared upstream. **Every subscriber gets this one flow**, which is what makes the
-     * `@Singleton` mean anything.
+     * graph's `single` mean anything.
      *
      * Without sharing, each collector stood up its own copy — and this is not a cheap flow to
      * duplicate. [PairingRepository.observePairingState] attaches *four* Firestore snapshot

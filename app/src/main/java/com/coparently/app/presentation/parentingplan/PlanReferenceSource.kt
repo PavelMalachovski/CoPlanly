@@ -12,8 +12,6 @@ import com.coparently.app.presentation.common.ParentsSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The parenting plan as the custody screens need it (MON-21): the agreed answer an editor quotes,
@@ -23,8 +21,7 @@ import javax.inject.Singleton
  * family and the two halves the same way. Everything it decides is [PlanScheduleLink]'s; this only
  * reads.
  */
-@Singleton
-class PlanReferenceSource @Inject constructor(
+class PlanReferenceSource(
     private val repository: ParentingPlanRepository,
     private val userRepository: UserRepository,
     private val parentsSource: ParentsSource

@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,12 +56,13 @@ import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.coparently.app.utils.ClockFormat
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * CompositionLocal for providing Google Sign-In callback throughout the app.
@@ -86,28 +86,21 @@ private const val SPLASH_HOLD_MAX_MS = 1_500L
  * preferences set via AppCompatDelegate.setApplicationLocales are applied to this
  * activity's configuration on every recreation, including on Android < 13.
  */
-@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    @Inject
-    lateinit var notificationManager: NotificationManager
+    private val notificationManager: NotificationManager by inject()
 
-    @Inject
-    lateinit var preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository by inject()
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    private val selectedFamilySource: SelectedFamilySource by inject()
 
     /** Source of [LocalPhotoViewerUid]: who is signed in decides which record photos draw (L-4). */
-    @Inject
-    lateinit var firebaseAuthService: FirebaseAuthService
+    private val firebaseAuthService: FirebaseAuthService by inject()
 
-    @Inject
-    lateinit var todayWidgetRefresher: TodayWidgetRefresher
+    private val todayWidgetRefresher: TodayWidgetRefresher by inject()
 
     /** The pairing code an invitation's Play link carried through the install, read once. */
-    @Inject
-    lateinit var installReferrerSource: InstallReferrerSource
+    private val installReferrerSource: InstallReferrerSource by inject()
 
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
@@ -173,21 +166,21 @@ class MainActivity : AppCompatActivity() {
         onConsumed = { _pendingDestination.value = null }
     )
 
-    private val syncViewModel: SyncViewModel by viewModels()
+    private val syncViewModel: SyncViewModel by viewModel()
 
     /**
      * What the navigation graph decides its first screen from, read here to hold the splash until
-     * that is known. The same instances `NavGraph` gets from `hiltViewModel()`: both are scoped to
+     * that is known. The same instances `NavGraph` gets from `koinViewModel()`: both are scoped to
      * this activity.
      */
-    private val authStateViewModel: AuthStateViewModel by viewModels()
-    private val telemetryConsentViewModel: TelemetryConsentViewModel by viewModels()
+    private val authStateViewModel: AuthStateViewModel by viewModel()
+    private val telemetryConsentViewModel: TelemetryConsentViewModel by viewModel()
 
     /** Source of [LocalParentPalette] for the whole tree (UX-15). */
-    private val parentPaletteViewModel: ParentPaletteViewModel by viewModels()
+    private val parentPaletteViewModel: ParentPaletteViewModel by viewModel()
 
     /** Source of [LocalFamilyView]: where each record stands for the family on screen. */
-    private val familyViewViewModel: FamilyViewViewModel by viewModels()
+    private val familyViewViewModel: FamilyViewViewModel by viewModel()
 
     // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(

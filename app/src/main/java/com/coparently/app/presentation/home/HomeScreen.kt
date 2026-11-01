@@ -73,7 +73,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.family.placementFamilyId
@@ -119,6 +118,7 @@ import com.coparently.app.utils.previewParentNames
 import com.coparently.app.utils.shortTime
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.util.Currency
@@ -175,9 +175,9 @@ fun HomeScreen(
     onOpenChat: () -> Unit,
     onAddEvent: () -> Unit,
     onOpenUnassignedRecords: (() -> Unit)? = null,
-    viewModel: HomeViewModel = hiltViewModel(),
-    changeRequestViewModel: ChangeRequestViewModel = hiltViewModel(),
-    putOffAsks: PutOffAsksViewModel = hiltViewModel()
+    viewModel: HomeViewModel = koinViewModel(),
+    changeRequestViewModel: ChangeRequestViewModel = koinViewModel(),
+    putOffAsks: PutOffAsksViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val today by rememberToday()

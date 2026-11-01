@@ -7,14 +7,12 @@ import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * What a tap on a chat card about an event found ([ChatCardTarget.Event]).
@@ -84,8 +82,7 @@ sealed interface EventCardOutcome {
  * @param eventRepository Reads the event, from Room first and the server second
  * @param userRepository The signed-in uid, which decides whether the event waits on this parent
  */
-@HiltViewModel
-class ChatEventCardViewModel @Inject constructor(
+class ChatEventCardViewModel(
     private val eventRepository: EventRepository,
     private val userRepository: UserRepository
 ) : ViewModel() {

@@ -7,7 +7,6 @@ import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The Settings row for the AI-assist consent: whether it was given, and turning it off (GDPR
@@ -29,8 +27,7 @@ import javax.inject.Inject
  *   and the profile is never read
  * @param manager Reads and withdraws the consent
  */
-@HiltViewModel
-class AiConsentViewModel @Inject constructor(
+class AiConsentViewModel(
     availability: AiAssistAvailability,
     private val manager: AiConsentManager
 ) : ViewModel() {

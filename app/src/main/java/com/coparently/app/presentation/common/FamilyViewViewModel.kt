@@ -4,18 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /**
  * The [FamilyView] `MainActivity` provides as [LocalFamilyView]. Activity-scoped like
  * `ParentPaletteViewModel`, and adds nothing but a Room observation of the signed-in parent's row.
  */
-@HiltViewModel
-class FamilyViewViewModel @Inject constructor(source: FamilyViewSource) : ViewModel() {
+class FamilyViewViewModel(source: FamilyViewSource) : ViewModel() {
 
     /** The view, following every switch. */
     val view: StateFlow<FamilyView> = source.observe()

@@ -15,13 +15,10 @@ import com.coparently.app.domain.export.PageGeometry
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.RecordLayout
 import com.coparently.app.domain.export.RecordVerificationLayout
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A file the share sheet can hand to another app.
@@ -43,9 +40,8 @@ data class ExportedFile(val uri: Uri, val mimeType: String)
  * nothing else exposes at all. Every write clears the previous export first: a court record left
  * lying in a cache directory is a copy nobody meant to keep.
  */
-@Singleton
-class ExportFileWriter @Inject constructor(
-    @ApplicationContext private val context: Context
+class ExportFileWriter(
+    private val context: Context
 ) {
 
     /**

@@ -23,8 +23,6 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** What a request's own record says when a step of its clock looks (phase 3a). */
 enum class RecordStatus {
@@ -84,10 +82,8 @@ data class RecordLook(val status: RecordStatus, val card: CardSubject?)
  * A read that fails — offline, for [lookOnServer] — is [RecordStatus.UNKNOWN], never "gone": a step
  * must not close a request it could not see.
  */
-@Singleton
 class RequestRecords
 @Suppress("LongParameterList") // one reader and one writer per kind of record, and the signed-in parent
-@Inject
 constructor(
     private val changeRequestRepository: ChangeRequestRepository,
     private val eventRepository: EventRepository,

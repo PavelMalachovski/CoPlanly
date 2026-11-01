@@ -19,8 +19,8 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -32,7 +32,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * What Alice **sees** with her second family on screen: nothing of the first (isolation audit,
@@ -46,12 +45,11 @@ import javax.inject.Inject
  * so the screen has drawn family B's records, and then no node may show the canary in its text or
  * its content description.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OnScreenIsolationTest : AliceOnScreenTest() {
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    val selectedFamilySource: SelectedFamilySource by lazy { koinRule.get() }
 
     @Test
     fun withTheSecondFamilyOnScreenNoScreenShowsTheFirstFamilysRecords() {

@@ -21,9 +21,9 @@ import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -38,7 +38,7 @@ import java.time.LocalDate
  * badge, search that ignores diacritics, the pause before sending that makes Undo real, a file,
  * and a card about an event that opens it.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class ChatScenarioTest : QaOnScreenTest() {
 

@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.files.SharedFilePolicy
@@ -48,6 +47,7 @@ import com.coparently.app.presentation.common.newSharedFileCaptureUri
 import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The family's document vault (MON-23): court orders, school letters, identity scans.
@@ -68,7 +68,7 @@ import com.coparently.app.presentation.theme.Spacing
 @Composable
 fun FamilyDocumentsScreen(
     onNavigateUp: () -> Unit,
-    viewModel: FamilyDocumentsViewModel = hiltViewModel()
+    viewModel: FamilyDocumentsViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val names = rememberParentNames(viewModel.parents.collectAsState().value)

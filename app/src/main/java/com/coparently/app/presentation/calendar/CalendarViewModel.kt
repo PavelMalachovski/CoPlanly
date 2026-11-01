@@ -25,7 +25,6 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,7 +46,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.util.UUID
-import javax.inject.Inject
 
 /** Keeps the shared flows warm across brief unsubscriptions (config changes). */
 private const val HANDOVER_STOP_TIMEOUT_MS = 5_000L
@@ -94,8 +92,7 @@ sealed interface SwapError {
  * Handles custody schedule data, custody model, view mode,
  * parent filtering (You / Both / Co-parent) and event type filters.
  */
-@HiltViewModel
-class CalendarViewModel @Inject constructor(
+class CalendarViewModel(
     private val custodyScheduleDao: CustodyScheduleDao,
     private val custodyModelRepository: CustodyModelRepository,
     private val encryptedPreferences: EncryptedPreferences,

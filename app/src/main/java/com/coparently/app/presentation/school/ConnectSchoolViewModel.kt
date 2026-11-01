@@ -17,7 +17,6 @@ import com.coparently.app.data.school.bakalari.SchoolTown
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
-import javax.inject.Inject
 
 /** The steps of connecting a school, in order (MON-8). */
 enum class ConnectStep {
@@ -143,8 +141,7 @@ data class ConnectSchoolUiState(
  * **Nothing is chosen for the parent.** Several children: none is ticked. Several families: none
  * is ticked. A family with no child records says so and offers nothing.
  */
-@HiltViewModel
-class ConnectSchoolViewModel @Inject constructor(
+class ConnectSchoolViewModel(
     savedStateHandle: SavedStateHandle,
     private val accounts: SchoolAccounts,
     private val directory: BakalariSchoolDirectory,

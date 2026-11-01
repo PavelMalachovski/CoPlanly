@@ -9,16 +9,13 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The vault's index in Firestore, `family_documents/{id}` (MON-23): the live listener, the create
  * and the tombstone. Room holds a read-through copy of what the listener confirmed
  * ([FamilyDocumentIndexCache]); nothing here writes to Room and nothing in Room is written back.
  */
-@Singleton
-class FamilyDocumentIndex @Inject constructor(
+class FamilyDocumentIndex(
     private val firestore: FirebaseFirestore,
     private val cache: FamilyDocumentIndexCache
 ) {

@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
@@ -48,6 +47,7 @@ import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Who outside the family can read it as a professional, and the controls that change that
@@ -70,7 +70,7 @@ fun ProfessionalsScreen(
     onNavigateUp: () -> Unit,
     onOpenCalendar: (String) -> Unit,
     onOpenPlan: (String) -> Unit,
-    viewModel: ProfessionalsViewModel = hiltViewModel()
+    viewModel: ProfessionalsViewModel = koinViewModel()
 ) {
     val familyGrants by viewModel.familyGrants.collectAsState()
     val myGrants by viewModel.myGrants.collectAsState()

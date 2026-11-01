@@ -4,8 +4,6 @@ import com.coparently.app.domain.export.PlanSource
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The sections a parent may add to a communication record, each behind its own checkbox: the
@@ -14,8 +12,7 @@ import javax.inject.Singleton
  * One dependency for the export flow rather than one per section, because neither is part of what
  * [CommunicationRecordSource] gathers for every record, and the two share that one property.
  */
-@Singleton
-class OptionalRecordSections @Inject constructor(
+class OptionalRecordSections(
     private val plans: ParentingPlanRecordSource,
     private val journal: JournalRepository
 ) {

@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.User
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
@@ -53,6 +52,7 @@ import com.coparently.app.utils.format
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -82,7 +82,7 @@ import java.time.format.FormatStyle
 fun ProfileScreen(
     editable: Boolean,
     onNavigateUp: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val haptic = LocalHapticFeedback.current

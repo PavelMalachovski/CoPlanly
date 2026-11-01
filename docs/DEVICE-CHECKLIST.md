@@ -70,7 +70,7 @@ TalkBack, AppCompat's per-app locale switching, or a screen assembled from real 
 checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
 
 **What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
-`FakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
+`fakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
 (the minified `r8Test` build, API 30) runs the `R8GsonProbe` row, and the `web` job (no Android
 at all: Chromium and Node against the Functions emulator) runs the `web-tests/` row. A check they cover is
 marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and

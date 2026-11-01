@@ -19,8 +19,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * How a withdrawal of the child-health consent ended.
@@ -62,8 +60,7 @@ enum class HealthConsentWithdrawal {
  *   update path is used, so each cleared record syncs to the co-parent like any edit.
  * @param photoStorage Deletes the medical photographs a withdrawal removes.
  */
-@Singleton
-class HealthConsentManager @Inject constructor(
+class HealthConsentManager(
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
     private val photoStorage: RecordPhotoStorage

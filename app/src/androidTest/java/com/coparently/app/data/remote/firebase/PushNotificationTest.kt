@@ -53,8 +53,9 @@ import java.util.Locale
  * activities only and never a service. On API 33+ the system applies a per-app choice to the
  * whole process, so the process configuration *is* that choice there.
  *
- * Deliberately not a Hilt test: nothing here is injected, so it also runs on the 16 KB-page
- * API 35 leg, where the Hilt tests' MockK agent cannot load. Posting is paced
+ * Deliberately starts no Koin graph and carries no `@UsesFakeFirebase`: nothing here is injected,
+ * so it also runs on the 16 KB-page API 35 leg, where the fake Firebase override's MockK agent
+ * cannot load. Posting is paced
  * ([POST_INTERVAL_MS]) because `cancel` is asynchronous, so a re-post of a reused id (pairing,
  * chat) can land as an *update* — and `NotificationManagerService` silently sheds a package's
  * updates above about five a second, which would look exactly like a push this app dropped.

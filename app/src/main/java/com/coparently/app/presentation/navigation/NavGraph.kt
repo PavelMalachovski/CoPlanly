@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -75,6 +74,7 @@ import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.StateFlow
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Navigation graph for the app.
@@ -107,9 +107,9 @@ fun NavGraph(
     pendingChatOpen: PendingChatOpen,
     pendingDestinationOpen: PendingDestinationOpen
 ) {
-    val authStateViewModel: AuthStateViewModel = hiltViewModel()
-    val telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel()
-    val connectivityViewModel: ConnectivityViewModel = hiltViewModel()
+    val authStateViewModel: AuthStateViewModel = koinViewModel()
+    val telemetryConsentViewModel: TelemetryConsentViewModel = koinViewModel()
+    val connectivityViewModel: ConnectivityViewModel = koinViewModel()
     val isAuthenticated by authStateViewModel.isAuthenticated.collectAsState()
     val isLoading by authStateViewModel.isLoading.collectAsState()
     val needsOnboarding by authStateViewModel.needsOnboarding.collectAsState()
@@ -1248,7 +1248,7 @@ fun NavGraph(
 /**
  * The Chat tab's unread-message count, for [CoPlanlyBottomBar]'s badge.
  *
- * `hiltViewModel()` resolves against [androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner],
+ * `koinViewModel()` resolves against [androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner],
  * which is decided by *composition position*, not by which Kotlin function the call happens
  * to sit in — so calling it here, from the same place [NavGraph] calls it for
  * `authStateViewModel`, keeps this [ChatViewModel] instance scoped to that same ambient owner
@@ -1257,13 +1257,13 @@ fun NavGraph(
  * to avoid growing [NavGraph] — already the codebase's longest function and already flagged
  * by detekt's `LongMethod` check — by lines that have nothing to do with routing.
  *
- * The Chat/Conversations screens keep creating their *own* `hiltViewModel()` instance, scoped
+ * The Chat/Conversations screens keep creating their *own* `koinViewModel()` instance, scoped
  * to their own back-stack entry, independent of this one; both merely observe the same
  * repository-backed flows, so there is no read-mark or state conflict between the two.
  */
 @Composable
 private fun rememberChatUnreadCount(): Int {
-    val chatViewModel: ChatViewModel = hiltViewModel()
+    val chatViewModel: ChatViewModel = koinViewModel()
     val unreadCount by chatViewModel.unreadCount.collectAsState()
     return unreadCount
 }

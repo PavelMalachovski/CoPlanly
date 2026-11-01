@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.domain.parentingplan.ParentingPlanComparison
@@ -37,6 +36,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The parenting plan as a professional reads it (MON-18): every question, both parents' answers,
@@ -53,7 +53,7 @@ import com.coparently.app.presentation.theme.Spacing
 @Composable
 fun ProfessionalPlanScreen(
     onNavigateUp: () -> Unit,
-    viewModel: ProfessionalPlanViewModel = hiltViewModel()
+    viewModel: ProfessionalPlanViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Scaffold(

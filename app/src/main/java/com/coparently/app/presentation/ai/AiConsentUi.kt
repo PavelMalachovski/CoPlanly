@@ -17,7 +17,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.presentation.common.ConfirmationDialog
@@ -25,6 +24,7 @@ import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.utils.localizedDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 
@@ -65,7 +65,7 @@ fun AiConsentDialog(onAgree: () -> Unit, onCancel: () -> Unit) {
 @Composable
 fun SectionGroupScope.AiConsentSettingsEntry(
     snackbarHostState: SnackbarHostState,
-    viewModel: AiConsentViewModel = hiltViewModel()
+    viewModel: AiConsentViewModel = koinViewModel()
 ) {
     if (!viewModel.available) return
     val consent by viewModel.consent.collectAsState()

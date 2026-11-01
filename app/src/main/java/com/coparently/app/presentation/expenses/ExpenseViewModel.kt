@@ -38,7 +38,6 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.stateInLoadable
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.common.valueOrNull
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,9 +54,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.util.UUID
-import javax.inject.Inject
 
 /** Keeps derived flows warm across brief unsubscriptions (config changes). */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -111,8 +110,7 @@ sealed interface ReceiptScanState {
  * functions: each is one thing the money screen does.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // see the class KDoc
-@HiltViewModel
-class ExpenseViewModel @Inject constructor(
+class ExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
     private val userRepository: UserRepository,
     private val receiptStorage: RecordPhotoStorage,
@@ -170,7 +168,7 @@ class ExpenseViewModel @Inject constructor(
      *
      * Resolved through [ParentsSource.coParentUid], **not** through `parents.value`. That
      * StateFlow is `WhileSubscribed` and the Add Expense screen — a route with its own
-     * `hiltViewModel()` instance — collects `agreedRatio` but never `parents`, so it had never
+     * `koinViewModel()` instance — collects `agreedRatio` but never `parents`, so it had never
      * emitted and answered `null` for every save. The result was a `splitBetween` naming only
      * the payer: the payer's own month looked right, and the co-parent's showed nothing owed.
      */

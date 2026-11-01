@@ -48,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.repository.RatioSubmission
 import com.coparently.app.domain.model.CustodyModelType
@@ -72,6 +71,7 @@ import com.coparently.app.presentation.stickers.HomeStickers
 import com.coparently.app.presentation.stickers.StickersRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Slot 1 and slot 2, as the split row names them. */
 private const val SLOT_ONE = "mom"
@@ -140,9 +140,9 @@ data class FamilyDestinations(
 @Suppress("LongMethod") // five labelled groups of rows, in order; splitting would only scatter them
 fun FamilyScreen(
     destinations: FamilyDestinations,
-    viewModel: FamilyViewModel = hiltViewModel(),
-    settingsViewModel: SettingsViewModel = hiltViewModel(),
-    earlierFamiliesViewModel: EarlierFamiliesViewModel = hiltViewModel()
+    viewModel: FamilyViewModel = koinViewModel(),
+    settingsViewModel: SettingsViewModel = koinViewModel(),
+    earlierFamiliesViewModel: EarlierFamiliesViewModel = koinViewModel()
 ) {
     val earlierFamilies by earlierFamiliesViewModel.families.collectAsState()
     val money by viewModel.money.collectAsState()

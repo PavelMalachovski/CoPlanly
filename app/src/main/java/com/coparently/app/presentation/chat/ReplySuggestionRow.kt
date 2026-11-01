@@ -19,13 +19,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.ai.AiConsentDialog
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * "Suggest a reply", the first row of the templates sheet — or nothing at all when this build
@@ -46,7 +46,7 @@ fun ReplySuggestionRow(
     conversationId: String,
     draftHint: String,
     onSuggested: (String) -> Unit,
-    viewModel: ReplySuggestionViewModel = hiltViewModel()
+    viewModel: ReplySuggestionViewModel = koinViewModel()
 ) {
     if (!viewModel.available) return
     val state by viewModel.state.collectAsState()

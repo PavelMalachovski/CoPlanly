@@ -3,10 +3,8 @@ package com.coparently.app.presentation.event
 import androidx.lifecycle.ViewModel
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyResolver
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
-import javax.inject.Inject
 
 /**
  * Whose day a date is, for the event form's owner (21 October 2026, Zuzana's test: the
@@ -15,8 +13,7 @@ import javax.inject.Inject
  * Its own ViewModel rather than one more dependency of [EventViewModel], which every calendar
  * surface shares: only the form asks this, once per start date.
  */
-@HiltViewModel
-class EventOwnerViewModel @Inject constructor(
+class EventOwnerViewModel(
     private val custodyModelRepository: CustodyModelRepository
 ) : ViewModel() {
 

@@ -24,11 +24,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.childinfo.components.GuestInviteSheet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * One child's record: everything the family holds about them, read-only, every row opening the
@@ -56,7 +56,7 @@ fun ChildDetailScreen(
     childInfoId: String,
     onNavigateBack: () -> Unit,
     onEditClick: (String) -> Unit,
-    viewModel: ChildInfoViewModel = hiltViewModel()
+    viewModel: ChildInfoViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current

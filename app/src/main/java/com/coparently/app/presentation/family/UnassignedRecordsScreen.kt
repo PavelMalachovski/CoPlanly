@@ -48,7 +48,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.AssignOutcome
 import com.coparently.app.data.family.FamilyOption
@@ -65,6 +64,7 @@ import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.utils.localizedDate
+import org.koin.compose.viewmodel.koinViewModel
 
 /** A record's day, in the reader's own order: "Aug 3, 2026", "3. 8. 2026". */
 private const val DATE_SKELETON = "yMMMd"
@@ -91,7 +91,7 @@ private const val KEEP_ONLY_MINE = ""
 @Composable
 fun UnassignedRecordsScreen(
     onNavigateUp: () -> Unit,
-    viewModel: UnassignedRecordsViewModel = hiltViewModel()
+    viewModel: UnassignedRecordsViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val busy by viewModel.busy.collectAsState()

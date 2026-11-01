@@ -59,7 +59,7 @@ internal object UpgradeFixture {
     const val PHASE_SEED = "seed"
     const val PHASE_VERIFY = "verify"
 
-    /** `DatabaseModule.DATABASE_NAME`: the file that exists on real devices. */
+    /** `com.coparently.app.di.DATABASE_NAME`: the file that exists on real devices. */
     const val DATABASE_NAME = "coparently_database"
 
     /** `DatabaseKey`'s own preference file and key; renaming either should fail this check. */
@@ -112,15 +112,15 @@ internal object UpgradeFixture {
     fun keyStore(context: Context): SharedPreferences =
         context.getSharedPreferences(KEY_STORE_NAME, Context.MODE_PRIVATE)
 
-    /** A [DatabaseKey] built the way Hilt builds one. */
+    /** A [DatabaseKey] built the way the app's Koin graph builds one. */
     fun databaseKey(context: Context): DatabaseKey = DatabaseKey(context, EncryptionManager(context))
 
-    /** The production preference store, built the way Hilt builds it. */
+    /** The production preference store, built the way the app's Koin graph builds it. */
     fun preferences(context: Context): EncryptedPreferences =
         EncryptedPreferences(context, EncryptionManager(context))
 
     /**
-     * Opens the real database through [buildCoPlanlyDatabase] — the builder `DatabaseModule`
+     * Opens the real database through [buildCoPlanlyDatabase] — the builder `databaseModule`
      * calls — hands it to [block] and closes it.
      *
      * Crashlytics is a relaxed mock: `EncryptedDatabase` only reports through it on a failure

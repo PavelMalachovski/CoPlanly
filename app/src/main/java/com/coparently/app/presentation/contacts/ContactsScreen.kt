@@ -32,7 +32,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.contacts.ContactDirectory
 import com.coparently.app.domain.contacts.ContactGroup
@@ -47,6 +46,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 /** How the numbers on one row are joined. Punctuation, not text — nothing to translate. */
 private const val NUMBER_SEPARATOR = " · "
@@ -75,7 +75,7 @@ private const val NUMBER_SEPARATOR = " · "
 fun ContactsScreen(
     onNavigateUp: () -> Unit,
     onAddContact: () -> Unit,
-    viewModel: ContactsViewModel = hiltViewModel()
+    viewModel: ContactsViewModel = koinViewModel()
 ) {
     val groupsState by viewModel.groups.collectAsState()
     val groups = groupsState.valueOrNull.orEmpty()

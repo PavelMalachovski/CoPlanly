@@ -5,8 +5,6 @@ import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.domain.export.PlanSource
 import com.coparently.app.domain.family.FamilyKey
 import kotlinx.coroutines.CancellationException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Reads the parenting plan for a communication record (MON-5 in MON-3's export).
@@ -20,8 +18,7 @@ import javax.inject.Singleton
  * Separate from [CommunicationRecordSource] because the plan is optional in an export and is not
  * bound to its period; the export flow asks for it only when the parent ticked it.
  */
-@Singleton
-class ParentingPlanRecordSource @Inject constructor(
+class ParentingPlanRecordSource(
     private val plans: ParentingPlanRepository
 ) {
 

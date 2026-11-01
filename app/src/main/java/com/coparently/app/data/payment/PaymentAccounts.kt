@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The bank account each parent receives a settle-up payment on: `users/{uid}.paymentIban`, written
@@ -26,8 +24,7 @@ import javax.inject.Singleton
  * edited. A value that is not a valid IBAN reads as none, so a payment code is never built from
  * one.
  */
-@Singleton
-class PaymentAccounts @Inject constructor(
+class PaymentAccounts(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuthService
 ) {

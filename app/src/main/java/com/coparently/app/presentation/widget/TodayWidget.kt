@@ -31,12 +31,10 @@ import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.theme.DarkColorScheme
 import com.coparently.app.presentation.theme.LightColorScheme
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import java.time.LocalDate
 
 /**
@@ -85,7 +83,7 @@ class TodayWidget : GlanceAppWidget() {
          * draws, and what the UI tour renders to review it.
          */
         internal suspend fun contentState(context: Context): TodayWidgetContentState {
-            val source = entryPoint(context)
+            val source = entryPoint()
             val today = LocalDate.now()
             val userId = source.userRepository().getCurrentUserId()?.takeIf { it.isNotBlank() }
             val model = if (userId == null) {
@@ -118,26 +116,23 @@ class TodayWidget : GlanceAppWidget() {
             }
         }
 
-        private fun entryPoint(context: Context): TodayWidgetEntryPoint =
-            EntryPointAccessors.fromApplication(context.applicationContext, TodayWidgetEntryPoint::class.java)
+        private fun entryPoint(): TodayWidgetEntryPoint = TodayWidgetEntryPoint()
     }
 }
 
-/** What the widget reads, from the app's singleton graph: it is not a Hilt-injected class. */
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface TodayWidgetEntryPoint {
+/** What the widget reads, from the app's Koin graph: the widget itself is not built by Koin. */
+class TodayWidgetEntryPoint : KoinComponent {
     /** Today's events, from Room. */
-    fun eventRepository(): EventRepository
+    fun eventRepository(): EventRepository = get()
 
     /** The stored custody pattern and swaps, from Room. */
-    fun custodyModelRepository(): CustodyModelRepository
+    fun custodyModelRepository(): CustodyModelRepository = get()
 
     /** Who is signed in. */
-    fun userRepository(): UserRepository
+    fun userRepository(): UserRepository = get()
 
     /** The parents' names as the app last loaded them. */
-    fun widgetNames(): TodayWidgetNames
+    fun widgetNames(): TodayWidgetNames = get()
 }
 
 /** Declares [TodayWidget] to the system; see the `<receiver>` in the manifest. */

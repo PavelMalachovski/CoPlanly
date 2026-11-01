@@ -6,8 +6,6 @@ import com.coparently.app.domain.chat.ChatSearchResult
 import com.coparently.app.domain.repository.ChatSearchRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Room-only [ChatSearchRepository]: a `LIKE` for candidates, [ChatSearch] for the decision.
@@ -19,8 +17,7 @@ import javax.inject.Singleton
  * cheaper answer is an FTS4 table, which is a schema change and is recorded as MON-15's later
  * step in docs/ROADMAP.md.
  */
-@Singleton
-class ChatSearchRepositoryImpl @Inject constructor(
+class ChatSearchRepositoryImpl(
     private val messageDao: MessageDao
 ) : ChatSearchRepository {
 

@@ -8,8 +8,6 @@ import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.changerequests.RequestDeadline
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * What the proposer's phone tells the answering parent about a request's clock (phase 3a, spec
@@ -22,8 +20,7 @@ import javax.inject.Singleton
  * Best-effort, like every announcement: a push that cannot be queued or a card that cannot be
  * posted is logged and dropped, and never undoes the write that caused it.
  */
-@Singleton
-class RequestTelling @Inject constructor(
+class RequestTelling(
     private val activityAnnouncer: ActivityAnnouncer,
     private val fcmService: FcmService,
     private val authService: FirebaseAuthService

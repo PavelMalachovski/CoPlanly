@@ -20,8 +20,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Stickers between parents (October 2026, owner decisions): `stickers/{id}`, read by its receiver
@@ -33,8 +31,7 @@ import javax.inject.Singleton
  * Firestore only, no Room table: a sticker is a small thing a parent looks at on Home, and a copy
  * on the phone would have to be cleared at unpair as the server clears its own.
  */
-@Singleton
-class StickerStore @Inject constructor(
+class StickerStore(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuthService,
     private val userRepository: UserRepository,

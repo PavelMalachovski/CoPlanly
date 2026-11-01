@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.BuildConfig
 import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
@@ -75,6 +74,7 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Which of the two pairing jobs the user is doing.
@@ -113,7 +113,7 @@ fun PairingScreen(
     prefilledCode: String? = null,
     startOnCodeEntry: Boolean = false,
     startOnUnpair: Boolean = false,
-    viewModel: PairingViewModel = hiltViewModel()
+    viewModel: PairingViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     // The co-parent of the family on screen, never the server's first (design refresh item 12).

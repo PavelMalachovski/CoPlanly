@@ -26,8 +26,8 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.utils.swapDateList
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -40,7 +40,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Day swaps between the two parents, with a deadline — Zuzana's "a month without an answer".
@@ -53,18 +52,15 @@ import javax.inject.Inject
  * them (`TwoParentRequestDeadlinesTest` does the same). No step waits for a reminder: reminders are
  * kept out of the night on the runner's clock, and the run may be at night.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class SwapScenarioTest : QaOnScreenTest() {
 
-    @Inject
-    lateinit var custodyRepository: CustodyModelRepository
+    val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var requestDeadlineRepository: RequestDeadlineRepository
+    val requestDeadlineRepository: RequestDeadlineRepository by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var requestClockSteps: RequestClockSteps
+    val requestClockSteps: RequestClockSteps by lazy { koinRule.get() }
 
     @Test
     fun answerOnScreenAsIgor() {

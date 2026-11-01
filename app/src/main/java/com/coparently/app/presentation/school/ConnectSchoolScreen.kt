@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.presentation.common.BannerTone
@@ -55,6 +54,7 @@ import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Connecting a child's Bakaláři account (MON-8), one step at a time: the town, the school (or an
@@ -73,7 +73,7 @@ import com.coparently.app.presentation.theme.titleMediumEmphasized
 fun ConnectSchoolScreen(
     onNavigateUp: () -> Unit,
     onDone: () -> Unit,
-    viewModel: ConnectSchoolViewModel = hiltViewModel()
+    viewModel: ConnectSchoolViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     var password by remember { mutableStateOf("") }

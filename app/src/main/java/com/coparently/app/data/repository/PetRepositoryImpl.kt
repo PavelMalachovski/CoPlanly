@@ -25,8 +25,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Implementation of [PetRepository].
@@ -38,8 +36,7 @@ import javax.inject.Singleton
  * purpose — the child record's document map exists in seven places across two files, and
  * that duplication has already shipped bugs twice. Keep the pet document's schema here.
  */
-@Singleton
-class PetRepositoryImpl @Inject constructor(
+class PetRepositoryImpl(
     private val petDao: PetDao,
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,

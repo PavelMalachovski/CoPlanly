@@ -1,8 +1,6 @@
 package com.coparently.app.data.crashlytics
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Manager for logging exceptions and custom data to Firebase Crashlytics.
@@ -10,8 +8,7 @@ import javax.inject.Singleton
  *
  * @property crashlytics Firebase Crashlytics instance
  */
-@Singleton
-class CrashlyticsManager @Inject constructor(
+class CrashlyticsManager(
     private val crashlytics: FirebaseCrashlytics
 ) {
 

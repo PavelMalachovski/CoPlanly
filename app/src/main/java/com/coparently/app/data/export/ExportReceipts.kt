@@ -8,8 +8,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The client half of MON-16: reserving the record id an export prints, and registering the
@@ -21,8 +19,7 @@ import javax.inject.Singleton
  * honestly says it cannot be checked; the one outcome this class must never allow is a file that
  * names an id the server holds no hash for.
  */
-@Singleton
-class ExportReceipts @Inject constructor(
+class ExportReceipts(
     private val functions: FirebaseFunctions
 ) {
 

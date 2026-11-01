@@ -14,9 +14,9 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.e2e.EmulatorParent
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -25,7 +25,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalDateTime
-import javax.inject.Inject
 
 /**
  * Two families, kept apart — the defect the testers found. Zuzana co-parents Lena with Igor and
@@ -38,12 +37,11 @@ import javax.inject.Inject
  * requests and their clocks across families (`MultiFamilyCustodyTest`, `MultiFamilyRecordsTest`
  * and `OnScreenFamiliesTest` hold those in the e2e job).
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class IsolationScenarioTest : QaOnScreenTest() {
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    val selectedFamilySource: SelectedFamilySource by lazy { koinRule.get() }
 
     /** The family with Igor on screen, Carol's beside it. */
     @Test

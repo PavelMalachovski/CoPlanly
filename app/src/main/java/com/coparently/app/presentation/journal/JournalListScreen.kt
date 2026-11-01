@@ -41,7 +41,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.presentation.common.EmptyState
@@ -51,6 +50,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 
 /** How much of an entry's first line the list shows under its date. */
 private const val PREVIEW_CHARS = 120
@@ -73,7 +73,7 @@ fun JournalListScreen(
     onNavigateUp: () -> Unit,
     onOpenEntry: (String) -> Unit,
     onNewEntry: () -> Unit,
-    viewModel: JournalListViewModel = hiltViewModel()
+    viewModel: JournalListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }

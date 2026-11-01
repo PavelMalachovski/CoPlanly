@@ -10,8 +10,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps the signed-in user's profile document in existence and up to date, for the whole
@@ -37,8 +35,7 @@ import javax.inject.Singleton
  * ran for a user who opened the pairing screen; the pairing rewrite dropped it, which is how
  * the underlying gap became visible.
  */
-@Singleton
-class SessionProfileSynchronizer @Inject constructor(
+class SessionProfileSynchronizer(
     private val authService: FirebaseAuthService,
     private val userRepository: UserRepository,
     private val accountSwitchGuard: AccountSwitchGuard

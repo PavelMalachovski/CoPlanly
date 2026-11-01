@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The signed-in parent's [FamilyView], following every switch — for a screen that marks or counts
@@ -19,8 +17,7 @@ import javax.inject.Singleton
  * still needs is to tell the rest apart: a family's totals and balance add up its own records only
  * ([FamilyView.counts]), and a record that is "only mine" or from an earlier family carries a mark.
  */
-@Singleton
-class FamilyViewSource @Inject constructor(
+class FamilyViewSource(
     private val auth: FirebaseAuthService,
     private val userDao: UserDao
 ) {

@@ -8,21 +8,17 @@ import androidx.core.content.ContextCompat
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Manager for handling push notification setup and registration.
  * Coordinates FCM token management and notification permissions.
  */
-@Singleton
-class NotificationManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+class NotificationManager(
+    private val context: Context,
     private val fcmService: FcmService,
     private val firebaseAuthService: FirebaseAuthService,
     private val crashlyticsManager: CrashlyticsManager

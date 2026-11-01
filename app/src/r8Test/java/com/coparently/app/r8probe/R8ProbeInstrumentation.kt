@@ -26,7 +26,7 @@ class R8ProbeInstrumentation : Instrumentation() {
     /**
      * Deliberately does **not** call `Application.onCreate`.
      *
-     * `CoPlanlyApplication.onCreate` injects its Hilt graph, and that graph builds Firebase's
+     * `CoPlanlyApplication.onCreate` starts its Koin graph, and that graph builds Firebase's
      * default-app singletons (`FirebaseAuth.getInstance()`), which throw without a
      * `google-services.json` — CI has none, and must not get one (CLAUDE.md). The probe builds
      * the classes it needs by hand, as the e2e parents do, so the Application object is attached

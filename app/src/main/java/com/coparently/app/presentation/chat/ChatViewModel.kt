@@ -22,7 +22,6 @@ import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -49,7 +48,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Whether this account has a co-parent to chat with, as far as the chat screen knows
@@ -101,9 +99,8 @@ sealed interface ChatEvent {
  * freshly paired device does not have yet, which left the "chat with my co-parent" action
  * permanently dead for that ViewModel instance.
  */
-@HiltViewModel
 @Suppress("LongParameterList") // the chat's sources: messages, session, events, partner, drafts, kept threads
-class ChatViewModel @Inject constructor(
+class ChatViewModel(
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,

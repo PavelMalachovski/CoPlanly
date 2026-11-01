@@ -6,15 +6,12 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Remote data source for child information using Firestore.
  * Handles all Firestore operations for child info shared between parents.
  */
-@Singleton
-class FirestoreChildInfoDataSource @Inject constructor(
+class FirestoreChildInfoDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val childInfoCollection = "child_info"

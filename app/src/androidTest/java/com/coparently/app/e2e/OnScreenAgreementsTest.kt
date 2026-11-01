@@ -31,8 +31,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.utils.swapDateList
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
@@ -55,7 +55,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * What Alice **sees** when Bob asks her something, and what her answer on screen does on his
@@ -72,15 +71,13 @@ import javax.inject.Inject
  * that tells Alice to look, motion, and the colours of the band — the day cell is asserted by its
  * accessibility description, which names the parent, not by its pixels.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OnScreenAgreementsTest : AliceOnScreenTest() {
 
-    @Inject
-    lateinit var eventRepository: EventRepository
+    val eventRepository: EventRepository by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var custodyRepository: CustodyModelRepository
+    val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
     @Test
     fun bobsChangeRequestRaisesTheCalendarBannerAndAliceAcceptsItInTheInbox() {

@@ -4,12 +4,11 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDateTime
-import javax.inject.Inject
 
 /**
  * Use case for retrieving events.
  */
-class GetEventsUseCase @Inject constructor(
+class GetEventsUseCase(
     private val eventRepository: EventRepository
 ) {
     /**

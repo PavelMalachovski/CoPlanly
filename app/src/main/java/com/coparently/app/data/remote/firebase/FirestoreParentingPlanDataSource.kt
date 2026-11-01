@@ -10,8 +10,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The shared half of a family's parenting plan (MON-5).
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  * The id is `FamilyKey.of(myUid, partnerUid)`, so it is the same string `custody_models`,
  * `family_settings` and `conversations` are already named with, and no lookup is needed to find it.
  */
-@Singleton
-class FirestoreParentingPlanDataSource @Inject constructor(
+class FirestoreParentingPlanDataSource(
     private val firestore: FirebaseFirestore
 ) {
 

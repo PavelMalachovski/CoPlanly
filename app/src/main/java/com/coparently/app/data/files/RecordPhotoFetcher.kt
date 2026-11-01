@@ -16,8 +16,6 @@ import kotlinx.coroutines.CancellationException
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Loads a [ViewablePhoto] for Coil (L-4): downloads it through the Storage SDK **as the signed-in
@@ -80,8 +78,7 @@ class RecordPhotoKeyer : Keyer<ViewablePhoto> {
  * application hands it to Coil through `ImageLoaderFactory`, so every `AsyncImage` in the app can be
  * given a [ViewablePhoto].
  */
-@Singleton
-class RecordPhotoImageLoader @Inject constructor(
+class RecordPhotoImageLoader(
     private val cache: SharedFileCache,
     private val authService: FirebaseAuthService
 ) {

@@ -20,7 +20,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.observeSignedInUser
 import com.coparently.app.presentation.common.projectedCoParentUid
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -38,7 +37,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
 
 /** What the parenting-plan screen is showing. */
 sealed interface ParentingPlanUiState {
@@ -100,8 +98,7 @@ sealed interface ParentingPlanUiState {
 /**
  * The parenting plan: this parent's answers, the co-parent's, and where they agree (MON-5).
  */
-@HiltViewModel
-class ParentingPlanViewModel @Inject constructor(
+class ParentingPlanViewModel(
     private val repository: ParentingPlanRepository,
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository,

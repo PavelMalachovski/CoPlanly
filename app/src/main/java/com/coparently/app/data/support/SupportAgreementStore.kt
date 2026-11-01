@@ -21,8 +21,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** What [SupportAgreementStore.observe] knows of a family's child support. */
 sealed interface SupportRead {
@@ -43,8 +41,7 @@ sealed interface SupportRead {
  * Each step posts a card in the family's thread, pushed like any message — no push type of its
  * own — and the months paid are `payments` of kind `support` (`PaymentStore`).
  */
-@Singleton
-class SupportAgreementStore @Inject constructor(
+class SupportAgreementStore(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuthService,
     private val userRepository: UserRepository,

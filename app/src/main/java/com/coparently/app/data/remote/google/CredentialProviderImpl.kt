@@ -8,8 +8,6 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpRequest
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.HttpResponseException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * [CredentialProvider] over the tokens [CredentialManagerService] keeps.
@@ -19,8 +17,7 @@ import javax.inject.Singleton
  * minutes" — and return null when it was not, so the renewal it was written to perform never ran,
  * and an import failed about an hour after Google Calendar was connected.
  */
-@Singleton
-class CredentialProviderImpl @Inject constructor(
+class CredentialProviderImpl(
     private val credentialManagerService: CredentialManagerService,
     private val encryptedPreferences: EncryptedPreferences
 ) : CredentialProvider {

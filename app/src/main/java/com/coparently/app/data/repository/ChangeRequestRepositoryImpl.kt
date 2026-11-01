@@ -28,11 +28,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class ChangeRequestRepositoryImpl @Inject constructor(
+class ChangeRequestRepositoryImpl(
     private val changeRequestDao: ChangeRequestDao,
     private val firestoreDataSource: FirestoreChangeRequestDataSource,
     private val firebaseAuthService: FirebaseAuthService,

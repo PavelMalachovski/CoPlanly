@@ -24,8 +24,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Implementation of UserRepository.
@@ -39,8 +37,7 @@ import javax.inject.Singleton
  * behind another file.
  */
 @Suppress("TooManyFunctions")
-@Singleton
-class UserRepositoryImpl @Inject constructor(
+class UserRepositoryImpl(
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreUserDataSource: FirestoreUserDataSource,

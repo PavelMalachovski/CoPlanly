@@ -91,7 +91,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -137,6 +136,7 @@ import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -237,15 +237,15 @@ fun AddEditEventScreen(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onRequestChange: ((String) -> Unit)? = null,
-    viewModel: EventViewModel = hiltViewModel(),
-    friendViewModel: com.coparently.app.presentation.friends.FriendViewModel = hiltViewModel()
+    viewModel: EventViewModel = koinViewModel(),
+    friendViewModel: com.coparently.app.presentation.friends.FriendViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     // The family's live calendar friends (item 16). Empty for most families, which is why the
     // participation toggle below is absent rather than disabled when there is nobody to name.
     val calendarFriends by friendViewModel.friends.collectAsState()
     // Whose day the start date is, for a new event's owner (autoEventOwner).
-    val ownerViewModel: EventOwnerViewModel = hiltViewModel()
+    val ownerViewModel: EventOwnerViewModel = koinViewModel()
     val parentNames = rememberParentNames(viewModel.parents.collectAsState().value)
     // The signed-in parent - the one source of truth for "who am I" already threaded into this
     // screen (see ParentsSource). Nothing here learns the signed-in slot any other way.

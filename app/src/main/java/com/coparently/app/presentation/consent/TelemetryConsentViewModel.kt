@@ -4,12 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.telemetry.TelemetryConsent
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Records the analytics and crash-reporting answer (REL-5).
@@ -19,8 +17,7 @@ import javax.inject.Inject
  * for the life of the process — so this ViewModel disappearing with its screen changes nothing,
  * and there is still exactly one caller of the collection setters.
  */
-@HiltViewModel
-class TelemetryConsentViewModel @Inject constructor(
+class TelemetryConsentViewModel(
     private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 

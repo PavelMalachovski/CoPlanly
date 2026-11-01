@@ -9,7 +9,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.e2e.EmulatorEnvironment.step
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
 import org.junit.Test
@@ -25,7 +25,7 @@ import java.util.UUID
  * The walk presses Next while it is enabled and stops at the first step that needs an answer the
  * tour does not give, or at the last one — it never presses Finish, so nothing is saved.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class UiTourOnboardingTest : AliceOnScreenTest() {
 

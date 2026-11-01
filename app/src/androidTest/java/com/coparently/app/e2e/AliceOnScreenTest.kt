@@ -3,9 +3,8 @@ package com.coparently.app.e2e
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -16,6 +15,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -40,12 +40,13 @@ import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.navigation.BOTTOM_BAR_TEST_TAG
 import com.coparently.app.presentation.navigation.BottomNavDestination
 import com.coparently.app.presentation.navigation.NAVIGATION_RAIL_TEST_TAG
+import com.coparently.app.testing.KoinTestRule
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.exists
 import com.coparently.app.testing.pumpUntil
 import com.coparently.app.testing.settle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
-import dagger.hilt.android.testing.HiltAndroidRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,20 +63,19 @@ import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.rules.Timeout
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Alice's **real app**, on screen, against the emulators, with Bob on the data layer of a second
  * phone in the same process — the setup every on-screen e2e test shares.
  *
- * Alice is the Hilt graph `MainActivity` builds. `FakeFirebaseModule` gives it the real Auth,
+ * Alice is the Koin graph `MainActivity` runs on. `fakeFirebaseModule` gives it the real Auth,
  * Firestore, Storage and Functions SDKs of [EmulatorEnvironment.appUnderTest] when the run has an
  * emulator host, and the Room database is the real SQLCipher one. She signs up on the Auth
  * emulator, `ensureProfile` writes her profile, and she is paired with Bob through the real
  * callable — the same steps as a phone, minus the onboarding screens, which are marked done so the
  * app opens on Home.
  *
- * Two things the app does from `CoPlanlyApplication.onCreate`, which `HiltTestApplication` never
+ * Two things the app does from `CoPlanlyApplication.onCreate`, which `KoinTestApplication` never
  * runs, are started here by hand: the process-wide chat mirror, and — where a test needs it, in
  * place of the fifteen-minute `SyncWorker` tick — `SyncService.performFullSync()`, the call that
  * worker makes.
@@ -85,13 +85,15 @@ import javax.inject.Inject
  * real time. Every text a test looks for is read from the app's own string resources, so a test
  * does not depend on the emulator's language.
  *
- * A subclass is a `@HiltAndroidTest`; the fields below are injected into it with its own.
+ * A subclass carries `@UsesFakeFirebase`, as this class does; [koinRule] starts the graph the
+ * fields below are resolved from.
  * Without the emulator host argument every test skips itself in [startAliceOnScreenAndBobBesideHer].
  */
+@UsesFakeFirebase
 abstract class AliceOnScreenTest {
 
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val koinRule = KoinTestRule()
 
     @get:Rule(order = 1)
     val composeTestRule = createEmptyComposeRule()
@@ -104,37 +106,26 @@ abstract class AliceOnScreenTest {
     @get:Rule(order = 3)
     val timeout: Timeout = EmulatorEnvironment.testTimeout()
 
-    @Inject
     lateinit var firebaseAuth: FirebaseAuth
 
-    @Inject
     lateinit var userRepository: UserRepository
 
-    @Inject
     lateinit var userDao: UserDao
 
-    @Inject
     lateinit var pairingRepository: PairingRepository
 
-    @Inject
     lateinit var preferencesRepository: PreferencesRepository
 
-    @Inject
     lateinit var encryptedPreferences: EncryptedPreferences
 
-    @Inject
     lateinit var chatMirror: ChatMirror
 
-    @Inject
     lateinit var syncService: SyncService
 
-    @Inject
     lateinit var database: CoPlanlyDatabase
 
-    @Inject
     lateinit var accountSwitchGuard: AccountSwitchGuard
 
-    @Inject
     lateinit var parentRoles: ParentRoles
 
     protected val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -194,7 +185,7 @@ abstract class AliceOnScreenTest {
     fun startAliceOnScreenAndBobBesideHer() {
         assumeRunnable()
         initializeWorkManager()
-        hiltRule.inject()
+        injectFromGraph()
         savedConsent = encryptedPreferences.getString(PreferenceKeys.TELEMETRY_CONSENT, null)
         savedPause = encryptedPreferences.getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, true)
         step("before: sign up Alice")
@@ -238,6 +229,25 @@ abstract class AliceOnScreenTest {
     }
 
     /**
+     * Resolves the fields above from the test's Koin graph, at the point Hilt's field injection
+     * used to run: after [assumeRunnable], so a skipped test resolves nothing. A subclass's own
+     * fields are resolved lazily, on first use.
+     */
+    private fun injectFromGraph() {
+        firebaseAuth = koinRule.get()
+        userRepository = koinRule.get()
+        userDao = koinRule.get()
+        pairingRepository = koinRule.get()
+        preferencesRepository = koinRule.get()
+        encryptedPreferences = koinRule.get()
+        chatMirror = koinRule.get()
+        syncService = koinRule.get()
+        database = koinRule.get()
+        accountSwitchGuard = koinRule.get()
+        parentRoles = koinRule.get()
+    }
+
+    /**
      * Skips the test unless this run can do it: the emulator host by default, and the UI tour's own
      * switch on top of it for the tour. Called first in `@Before`, before anything is signed up.
      */
@@ -250,7 +260,7 @@ abstract class AliceOnScreenTest {
 
     @After
     fun tearDown() {
-        // Skipped (no emulator host): nothing was injected, so there is nothing to undo.
+        // Skipped (no emulator host): nothing was resolved, so there is nothing to undo.
         if (!::encryptedPreferences.isInitialized) return
         step("after: close")
         scenario?.close()
@@ -262,7 +272,7 @@ abstract class AliceOnScreenTest {
         runCatching { database.clearAllTables() }
         encryptedPreferences.putString(PreferenceKeys.TELEMETRY_CONSENT, savedConsent.orEmpty())
         encryptedPreferences.putBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, savedPause)
-        // Each test builds a new Hilt graph (a new Room instance on the same file) but shares the
+        // Each test builds a new Koin graph (a new Room instance on the same file) but shares the
         // process-wide FirebaseAuth and Firestore. This graph's shared streams (the custody mirror,
         // ParentsSource, FamilyKindSource) stay up for their WhileSubscribed(5 s) after the
         // activity closes, and in that window they followed the *next* test's account: the stale
@@ -340,7 +350,7 @@ abstract class AliceOnScreenTest {
 
     /**
      * WorkManager as the app would have it. The manifest removes WorkManager's own initializer
-     * because `CoPlanlyApplication` is its `Configuration.Provider` — and `HiltTestApplication`
+     * because `CoPlanlyApplication` is its `Configuration.Provider` — and `KoinTestApplication`
      * is not, so the first `WorkManager.getInstance` threw. The pairing path reaches it
      * (`SyncRequester` on the Paired transition), the throw landed in `observePairingState`'s
      * `catch`, and the flow ended before Alice ever saw herself paired. Nothing here runs the

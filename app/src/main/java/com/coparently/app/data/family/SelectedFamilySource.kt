@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.atomic.AtomicReference
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * One co-parenting relationship this device can be looking at.
@@ -61,8 +59,7 @@ data class FamilyOption(
  * survive sign-out, so a second account on the same device must not inherit the first one's
  * choice.
  */
-@Singleton
-class SelectedFamilySource @Inject constructor(
+class SelectedFamilySource(
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,
     private val firestoreUserDataSource: FirestoreUserDataSource,

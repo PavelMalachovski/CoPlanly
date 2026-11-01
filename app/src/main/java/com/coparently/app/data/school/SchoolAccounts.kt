@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A sign-in that has not been saved yet: the connect flow holds it while the parent chooses the
@@ -39,8 +37,7 @@ data class SchoolSignIn(
  * The phone signs in to the school itself; the password is passed to [signIn] or [reconnect] and
  * nowhere else, and neither keeps it.
  */
-@Singleton
-class SchoolAccounts @Inject constructor(
+class SchoolAccounts(
     private val client: BakalariClient,
     private val store: SchoolConnectionStore,
     private val userRepository: UserRepository,

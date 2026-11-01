@@ -5,7 +5,7 @@ import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.session.AccountDeletionService
-import com.coparently.app.di.FirebaseModule
+import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.custody.SharedCustodyRead
@@ -463,7 +463,7 @@ class TwoParentAccessTest : TwoParentTest() {
 
         EmulatorEnvironment.step("Bob deletes his account")
         AccountDeletionService(
-            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
+            functions = FirebaseFunctions.getInstance(bob.app, FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService,
@@ -503,7 +503,7 @@ class TwoParentAccessTest : TwoParentTest() {
         EmulatorEnvironment.step("Bob deletes his account")
         val deletedAt = System.currentTimeMillis()
         AccountDeletionService(
-            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
+            functions = FirebaseFunctions.getInstance(bob.app, FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService,
@@ -746,7 +746,7 @@ class TwoParentAccessTest : TwoParentTest() {
         const val PLAN_ANSWER = "Alternate weeks, handover on Monday at school"
 
         /** The functions' region, and so the emulator's URL path. */
-        const val REGION = FirebaseModule.FUNCTIONS_REGION
+        const val REGION = FUNCTIONS_REGION
         const val HTTP_OK = 200
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404

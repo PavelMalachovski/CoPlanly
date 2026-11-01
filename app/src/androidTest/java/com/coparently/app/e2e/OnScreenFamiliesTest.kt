@@ -22,8 +22,8 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.testing.settle
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -32,7 +32,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * The family switcher (M-8, design item 13) on Alice's real screens, with two co-parents: Bob,
@@ -51,12 +50,11 @@ import javax.inject.Inject
  * screen switching families when tapped, the chip on Expenses, TalkBack reading the dot, and two
  * or three screens at once.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OnScreenFamiliesTest : AliceOnScreenTest() {
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    val selectedFamilySource: SelectedFamilySource by lazy { koinRule.get() }
 
     @Test
     fun carolsMessageDotsTheSwitcherAndSwitchingBringsHerThreadOntoTheChatTab() {

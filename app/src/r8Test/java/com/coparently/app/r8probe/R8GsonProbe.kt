@@ -13,7 +13,7 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.toDomain
 import com.coparently.app.data.repository.toEntity
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.di.SerializationModule
+import com.coparently.app.di.koin.provideGson
 import com.coparently.app.presentation.event.EventDraft
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.calendar.model.Events
@@ -38,7 +38,7 @@ import org.json.JSONObject
  * **Production paths, not copies of them.** A child and a pet go through `ChildInfoRepositoryImpl`
  * and `PetRepositoryImpl` into a real (in-memory) Room database, and the probe reads the stored
  * row's JSON columns and then the repository's own read-back. Custody swaps go through
- * `DayOverrideJson`, the event draft through the injectable Gson `SerializationModule` provides,
+ * `DayOverrideJson`, the event draft through the injectable Gson `serializationModule` provides,
  * chat and revisions through their mappers — each with the `TypeToken` its file declares. For a
  * `X::class.java` target the call site is immaterial (renaming is a property of the class); for a
  * `TypeToken` it is the anonymous class at the call site that R8 may strip, so those are always
@@ -182,9 +182,9 @@ internal class R8GsonProbe(private val context: Context) {
     }
 
     private fun eventDraftCases(): List<ProbeCase> {
-        val via = "SerializationModule.provideGson (lenient), as EventViewModel saves a draft"
+        val via = "provideGson (lenient, serializationModule), as EventViewModel saves a draft"
         return guarded(listOf(EVENT_DRAFT), via) {
-            val gson = SerializationModule.provideGson()
+            val gson = provideGson()
             val json = gson.toJson(ProbeFixtures.eventDraft)
             val back = gson.fromJson(json, EventDraft::class.java)
             keys(EVENT_DRAFT, json, EVENT_DRAFT_KEYS, back == ProbeFixtures.eventDraft)

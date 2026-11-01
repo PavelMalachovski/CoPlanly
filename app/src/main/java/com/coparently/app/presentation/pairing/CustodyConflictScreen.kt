@@ -37,7 +37,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.ParentNames
@@ -47,6 +46,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -73,7 +73,7 @@ import java.util.Locale
 @Composable
 fun CustodyConflictScreen(
     onResolved: () -> Unit,
-    viewModel: CustodyConflictViewModel = hiltViewModel()
+    viewModel: CustodyConflictViewModel = koinViewModel()
 ) {
     val prompt by viewModel.prompt.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()

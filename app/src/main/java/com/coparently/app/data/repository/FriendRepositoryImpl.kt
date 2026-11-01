@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore-backed [FriendRepository].
@@ -44,8 +42,7 @@ import javax.inject.Singleton
  * path. The security rule enforces the same instant server-side, so this is presentation, not the
  * gate.
  */
-@Singleton
-class FriendRepositoryImpl @Inject constructor(
+class FriendRepositoryImpl(
     private val firestore: FirebaseFirestore,
     private val authService: FirebaseAuthService,
     private val pairingFunctions: PairingFunctions,

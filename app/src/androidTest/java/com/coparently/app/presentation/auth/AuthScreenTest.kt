@@ -4,9 +4,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.presentation.MainActivity
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import org.junit.Before
+import com.coparently.app.testing.KoinTestRule
+import com.coparently.app.testing.UsesFakeFirebase
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,20 +14,15 @@ import org.junit.runner.RunWith
  * UI tests for AuthScreen.
  * Tests authentication flow UI elements and interactions.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class AuthScreenTest {
 
     @get:Rule(order = 0)
-    val hiltRule = HiltAndroidRule(this)
+    val koinRule = KoinTestRule()
 
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
-
-    @Before
-    fun init() {
-        hiltRule.inject()
-    }
 
     @Test
     fun authScreen_displaysEmailField() {

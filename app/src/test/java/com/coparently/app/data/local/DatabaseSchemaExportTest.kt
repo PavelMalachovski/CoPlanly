@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * `app/schemas/` stopped at `14.json` while the database climbed to 33, and nothing noticed for
  * nineteen versions. The cost was not theoretical: `MigrationTestHelper` builds a database at a
  * past version *from these files*, so every migration since v14 shipped with no fixture to test
- * it against — and `DatabaseModule` deliberately refuses destructive migration above v4, which
+ * it against — and `buildCoPlanlyDatabase` deliberately refuses destructive migration above v4, which
  * makes a broken one a crash on launch for somebody with real data rather than a wipe.
  *
  * **What this test does and does not catch, corrected.** It reads `app/schemas/` off disk, and

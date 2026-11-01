@@ -29,7 +29,6 @@ import com.coparently.app.presentation.common.CoParentOnScreen
 import com.coparently.app.presentation.common.coParentOnScreen
 import com.coparently.app.presentation.common.observeSignedInUser
 import com.coparently.app.presentation.common.projectedCoParentUid
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -43,7 +42,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
 
 /**
  * Transient state of the pairing form — everything that is not the pairing
@@ -107,12 +105,11 @@ sealed interface PairingEvent {
  * ViewModel for the pairing screen: exposes the realtime [PairingState] from
  * the repository plus the local form state, and forwards its actions.
  */
-@HiltViewModel
-// Eight collaborators, all injected: this is a Hilt graph edge list, not a call signature
+// Eight collaborators, all injected: this is a Koin graph edge list, not a call signature
 // anybody writes by hand, and grouping them behind a wrapper type would only hide which
 // dependencies this screen actually has.
 @Suppress("LongParameterList")
-class PairingViewModel @Inject constructor(
+class PairingViewModel(
     private val pairingRepository: PairingRepository,
     private val qrCodeService: QRCodeService,
     private val analyticsManager: AnalyticsManager,

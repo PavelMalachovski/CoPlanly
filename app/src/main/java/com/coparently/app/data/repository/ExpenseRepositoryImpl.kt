@@ -36,12 +36,9 @@ import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.math.BigDecimal
 import java.math.RoundingMode
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
 @Suppress("LongParameterList") // one more source: each family's own slots (25 October 2026)
-class ExpenseRepositoryImpl @Inject constructor(
+class ExpenseRepositoryImpl(
     private val expenseDao: ExpenseDao,
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,

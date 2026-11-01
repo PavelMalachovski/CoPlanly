@@ -7,7 +7,6 @@ import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.consent.HealthConsentWithdrawal
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.consent.isCurrent
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The child-health consent gate (GDPR Art. 9(2)(a)), for every screen that asks or withdraws it:
@@ -31,8 +29,7 @@ import javax.inject.Inject
  *
  * @param manager Reads, records and withdraws the consent.
  */
-@HiltViewModel
-class HealthConsentViewModel @Inject constructor(
+class HealthConsentViewModel(
     private val manager: HealthConsentManager
 ) : ViewModel() {
 

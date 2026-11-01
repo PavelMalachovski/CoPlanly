@@ -37,7 +37,6 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +62,6 @@ import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDateTime
 import java.util.UUID
-import javax.inject.Inject
 
 private const val TAG = "ChangeRequestViewModel"
 
@@ -90,8 +88,7 @@ private const val INBOX_WAIT_MS = 10_000L
 // each kind brings its own answers, and splitting the inbox's answers across ViewModels would put one
 // screen's decisions in two places.
 @Suppress("LongParameterList", "TooManyFunctions")
-@HiltViewModel
-class ChangeRequestViewModel @Inject constructor(
+class ChangeRequestViewModel(
     private val changeRequestRepository: ChangeRequestRepository,
     private val eventRepository: EventRepository,
     private val eventUseCases: EventUseCases,

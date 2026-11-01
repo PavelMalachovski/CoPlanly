@@ -16,7 +16,6 @@ import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.theme.ParentColorChoice
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +29,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
 import java.util.Locale
-import javax.inject.Inject
 
 /**
  * What the wizard knows about the co-parent link.
@@ -190,11 +188,10 @@ data class OnboardingUiState(
  * @param preferencesRepository Takes the confirmed country's currency as the default for new
  *   expenses, unless the parent already chose one
  */
-@HiltViewModel
-// Eight collaborators, all injected: a Hilt graph edge list, not a call signature anybody writes
+// Eight collaborators, all injected: a Koin graph edge list, not a call signature anybody writes
 // by hand, and a wrapper type would only hide which dependencies this screen actually has.
 @Suppress("LongParameterList")
-class OnboardingViewModel @Inject constructor(
+class OnboardingViewModel(
     private val userRepository: UserRepository,
     private val childInfoRepository: ChildInfoRepository,
     private val petRepository: PetRepository,

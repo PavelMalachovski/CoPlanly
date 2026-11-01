@@ -3,7 +3,6 @@ package com.coparently.app.data.family
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.domain.repository.ProfessionalRepository
-import javax.inject.Inject
 
 /**
  * The three listeners [OtherFamiliesSignals] adds per other family for board SW-7 — child support,
@@ -13,7 +12,7 @@ import javax.inject.Inject
  * @property professionalRepository The family's grants naming this parent, keyed by family.
  * @property planDataSource `parenting_plans/{familyId}`, by id.
  */
-class AgreementSignalSources @Inject constructor(
+class AgreementSignalSources(
     val supportStore: SupportAgreementStore,
     val professionalRepository: ProfessionalRepository,
     val planDataSource: FirestoreParentingPlanDataSource

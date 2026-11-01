@@ -72,14 +72,14 @@ const EMULATOR_SENSITIVE = /^(app\/src\/main\/AndroidManifest\.xml$|app\/src\/ma
 /**
  * What the `upgrade` job (the base build's data opened by this build) can be broken by: the
  * database and everything under `data/local/` (entities, migrations, SQLCipher, the preference
- * store), the Keystore wrapper, the builder in `DatabaseModule`, the telemetry answer's stored
- * form, the constructors the seed calls (`UpgradeFixture` lists them), the exported schemas, the
+ * store), the Keystore wrapper, the builder in `DatabaseBuilder.kt` and `databaseModule`, the
+ * telemetry answer's stored form, the constructors the seed calls (`UpgradeFixture` lists them), the exported schemas, the
  * manifest, native libraries, the test runner, and the job's own tests and scripts. Also
  * `app/src/test/resources/wire/current/`: the job runs the *base* build's `WireContractTest` over
  * what this branch writes, and a change there is exactly a change to the wire format — a mapper
  * change that alters a document cannot land without one, because `CurrentWireFixturesTest` fails.
  */
-const UPGRADE_INPUTS = /^(app\/src\/test\/resources\/wire\/current\/|app\/src\/main\/java\/com\/coparently\/app\/(data\/local\/|data\/security\/|data\/crashlytics\/|data\/telemetry\/|domain\/telemetry\/|di\/DatabaseModule\.kt$)|app\/schemas\/|app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/androidTest\/java\/com\/coparently\/app\/(upgrade\/|HiltTestRunner\.kt$)|tools\/upgrade\/|tools\/ci-background-build\.sh$|tools\/stop-emulator\.sh$)/;
+const UPGRADE_INPUTS = /^(app\/src\/test\/resources\/wire\/current\/|app\/src\/main\/java\/com\/coparently\/app\/(data\/local\/|data\/security\/|data\/crashlytics\/|data\/telemetry\/|domain\/telemetry\/|di\/DatabaseBuilder\.kt$|di\/koin\/DatabaseModule\.kt$)|app\/schemas\/|app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/androidTest\/java\/com\/coparently\/app\/(upgrade\/|KoinTestRunner\.kt$)|tools\/upgrade\/|tools\/ci-background-build\.sh$|tools\/stop-emulator\.sh$)/;
 
 /**
  * Paths the `upgrade` job is known not to depend on. Anything outside this list *and* outside
@@ -140,14 +140,15 @@ const VIRTUAL_TESTER_ONLY = /^(\.github\/virtual-tester-request$|\.github\/workf
  */
 const LEG_30 = { 'api-level': 30, target: 'default', arch: 'x86_64', label: '', 'test-args': '', record: false };
 const LEG_26 = { 'api-level': 26, target: 'default', arch: 'x86', label: '', 'test-args': '', record: true };
-// MockK's inline-mocking agent does not dlopen on 16 KB pages, and every Hilt test mocks through
-// it, so this leg runs the non-Hilt tests only (NativeLibrariesTest is what it exists for).
+// MockK's inline-mocking agent does not dlopen on 16 KB pages, and every test that loads the fake
+// Firebase override (`@UsesFakeFirebase`) mocks through it, so this leg runs the others only
+// (NativeLibrariesTest is what it exists for).
 const LEG_16KB = {
   'api-level': 35,
   target: 'google_apis_ps16k',
   arch: 'x86_64',
   label: ', 16 KB pages',
-  'test-args': '-Pandroid.testInstrumentationRunnerArguments.notAnnotation=dagger.hilt.android.testing.HiltAndroidTest',
+  'test-args': '-Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.coparently.app.testing.UsesFakeFirebase',
   record: false,
 };
 const FULL_MATRIX = [LEG_26, LEG_30, LEG_16KB];

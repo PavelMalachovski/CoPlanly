@@ -9,7 +9,6 @@ import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.YearMonth
-import javax.inject.Inject
 
 /**
  * Payments between the two parents of the family on screen: "I paid" and "Money arrived" for a
@@ -35,8 +33,7 @@ import javax.inject.Inject
  * @property myUid The signed-in parent, for [com.coparently.app.domain.payments.PaymentState.of].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class PaymentsViewModel @Inject constructor(
+class PaymentsViewModel(
     private val store: PaymentStore,
     auth: FirebaseAuthService,
     familyViewSource: FamilyViewSource

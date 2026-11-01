@@ -43,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.presentation.common.EmptyState
@@ -54,6 +53,7 @@ import com.coparently.app.presentation.common.WideColumn
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.utils.dateWithTime
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The Chat tab: the conversation list, and the single entry point into a chat with the co-parent.
@@ -107,7 +107,7 @@ fun ConversationsScreen(
     onOpenExport: ((conversationId: String) -> Unit)? = null,
     onBlock: (() -> Unit)? = null,
     onOpenSupport: (() -> Unit)? = null,
-    viewModel: ChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel = koinViewModel()
 ) {
     val conversationsState by viewModel.conversations.collectAsState()
     val conversations = conversationsState.valueOrNull.orEmpty()

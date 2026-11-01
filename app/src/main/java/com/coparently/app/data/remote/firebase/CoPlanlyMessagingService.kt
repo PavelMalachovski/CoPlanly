@@ -6,12 +6,11 @@ import com.coparently.app.data.sync.SyncWorker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
 
 /**
  * Firebase Cloud Messaging service for handling push notifications.
@@ -34,14 +33,11 @@ import javax.inject.Inject
  * What a push *says* and where its tap leads is [PushNotifier]'s: this class supplies the
  * signed-in account and the sync, and hands everything else over.
  */
-@AndroidEntryPoint
 class CoPlanlyMessagingService : FirebaseMessagingService() {
 
-    @Inject
-    lateinit var fcmService: FcmService
+    private val fcmService: FcmService by inject()
 
-    @Inject
-    lateinit var crashlyticsManager: CrashlyticsManager
+    private val crashlyticsManager: CrashlyticsManager by inject()
 
     override fun onCreate() {
         super.onCreate()

@@ -3,12 +3,10 @@ package com.coparently.app.presentation.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.presentation.theme.ParentPalette
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /**
  * The family's two parent colours, for `MainActivity` to provide as
@@ -26,8 +24,7 @@ import javax.inject.Inject
  * Activity's lifecycle, so it lets go while the app is in the background and `ParentsSource`'s
  * own `WhileSubscribed` can stop.
  */
-@HiltViewModel
-class ParentPaletteViewModel @Inject constructor(
+class ParentPaletteViewModel(
     parentsSource: ParentsSource
 ) : ViewModel() {
 

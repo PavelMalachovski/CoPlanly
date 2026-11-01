@@ -11,8 +11,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Reads and writes the one money-agreement document a pair shares.
@@ -30,8 +28,7 @@ import javax.inject.Singleton
  * field decides which phone's document survives and its zone-less ordering is a known defect
  * (SEC-4), and a greenfield document costs nothing to get right.
  */
-@Singleton
-class FirestoreFamilySettingsDataSource @Inject constructor(
+class FirestoreFamilySettingsDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val collection = firestore.collection(COLLECTION)

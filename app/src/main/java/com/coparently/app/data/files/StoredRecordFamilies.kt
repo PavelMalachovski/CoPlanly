@@ -5,7 +5,6 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.domain.files.RecordPhotoKind
-import javax.inject.Inject
 
 /**
  * A record as this phone stores it, for a photograph uploaded without its family.
@@ -24,7 +23,7 @@ data class StoredRecordFamily(val familyId: String?)
  * has two (`RecordPhotoPaths.uploadFamily`), and the four record kinds live in four tables, so this
  * reads the one the photograph's kind names.
  */
-class StoredRecordFamilies @Inject constructor(
+class StoredRecordFamilies(
     private val expenseDao: ExpenseDao,
     private val childInfoDao: ChildInfoDao,
     private val petDao: PetDao,

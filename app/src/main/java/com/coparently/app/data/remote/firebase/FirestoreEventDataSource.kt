@@ -10,15 +10,12 @@ import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Remote data source for events using Firestore.
  * Handles all Firestore operations for events.
  */
-@Singleton
-class FirestoreEventDataSource @Inject constructor(
+class FirestoreEventDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val eventsCollection = "events"

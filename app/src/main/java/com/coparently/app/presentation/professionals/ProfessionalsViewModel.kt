@@ -10,7 +10,6 @@ import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.presentation.pairing.pairingMessageRes
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The invite sheet's state (MON-18).
@@ -66,8 +64,7 @@ data class ProfessionalRedeemState(
  * (a parent's grants name them in `familyParents`, a professional's name them in `proUid`), and a
  * person who is both sees both.
  */
-@HiltViewModel
-class ProfessionalsViewModel @Inject constructor(
+class ProfessionalsViewModel(
     private val repository: ProfessionalRepository
 ) : ViewModel() {
 

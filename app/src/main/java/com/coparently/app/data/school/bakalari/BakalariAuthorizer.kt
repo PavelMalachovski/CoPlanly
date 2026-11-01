@@ -6,8 +6,6 @@ import com.coparently.app.domain.school.SchoolConnectionStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps a school connection signed in (MON-8).
@@ -24,7 +22,6 @@ import javax.inject.Singleton
  *
  * A `401` on a resource call refreshes once and retries once; a second `401` is the answer.
  */
-@Singleton
 class BakalariAuthorizer internal constructor(
     private val client: BakalariClient,
     private val store: SchoolConnectionStore,
@@ -32,7 +29,6 @@ class BakalariAuthorizer internal constructor(
 ) {
 
     /** The production authorizer, on the wall clock. */
-    @Inject
     constructor(client: BakalariClient, store: SchoolConnectionStore) : this(client, store, System::currentTimeMillis)
 
     private val locks = ConcurrentHashMap<String, Mutex>()

@@ -2,7 +2,6 @@ package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.school.bakalari.BakalariJson.objects
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import com.coparently.app.di.SchoolHttpClient
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -11,8 +10,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A town in Bakaláři's school directory.
@@ -39,7 +36,6 @@ data class DirectorySchool(val name: String, val baseUrl: String)
  * is why the connect flow also takes an address typed by hand. Nothing here is cached; a third
  * party's mirror of the list is deliberately not used.
  */
-@Singleton
 class BakalariSchoolDirectory internal constructor(
     private val http: OkHttpClient,
     private val directoryUrl: HttpUrl,
@@ -47,8 +43,7 @@ class BakalariSchoolDirectory internal constructor(
 ) {
 
     /** The production directory. */
-    @Inject
-    constructor(@SchoolHttpClient http: OkHttpClient) : this(http, DIRECTORY.toHttpUrl(), Dispatchers.IO)
+    constructor(http: OkHttpClient) : this(http, DIRECTORY.toHttpUrl(), Dispatchers.IO)
 
     /** Every town with at least one school, in the directory's order. The unnamed bucket is skipped. */
     suspend fun towns(): List<SchoolTown> =

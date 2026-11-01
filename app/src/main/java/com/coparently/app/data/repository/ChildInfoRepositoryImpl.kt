@@ -26,15 +26,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Implementation of [ChildInfoRepository].
  * Coordinates between local database and Firestore for child information.
  */
-@Singleton
-class ChildInfoRepositoryImpl @Inject constructor(
+class ChildInfoRepositoryImpl(
     private val childInfoDao: ChildInfoDao,
     private val userDao: UserDao,
     private val firebaseAuthService: FirebaseAuthService,

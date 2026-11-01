@@ -12,8 +12,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.toKotlinTimeZone
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps this phone's part of every open request clock in hand (phase 3a, spec §4.3, §4.5, §5.3).
@@ -37,7 +35,6 @@ import javax.inject.Singleton
  * under an id of their own; and the sweep keeps only clocks whose other parent is still one of this
  * parent's co-parents (CLAUDE.md items 38, 41).
  */
-@Singleton
 class RequestClockKeeper internal constructor(
     private val repository: RequestDeadlineRepository,
     private val steps: RequestClockSteps,
@@ -47,7 +44,6 @@ class RequestClockKeeper internal constructor(
 ) {
 
     /** The production keeper: its deliveries run for as long as the process does. */
-    @Inject
     constructor(
         repository: RequestDeadlineRepository,
         steps: RequestClockSteps,

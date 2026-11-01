@@ -28,7 +28,6 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.parentLabel
 import com.coparently.app.presentation.common.parentLabelByUid
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -42,7 +41,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.ZoneId
-import javax.inject.Inject
 
 /**
  * The export screen's state.
@@ -151,9 +149,8 @@ internal data class EarlierFamilyName(val familyId: String, val name: String?, v
  * server's marks ([DepartedThreadSource]) — the one the chat banner opened this screen for
  * ([ExportCounterpart.choose]), or, for a parent with nobody paired, the one they were left.
  */
-@HiltViewModel
 @Suppress("LongParameterList") // one input per section of the record, plus who it is with
-class ExportViewModel @Inject constructor(
+class ExportViewModel(
     private val source: CommunicationRecordSource,
     private val sections: OptionalRecordSections,
     private val writer: ExportFileWriter,

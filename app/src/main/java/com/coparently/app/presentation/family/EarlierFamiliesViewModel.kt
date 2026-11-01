@@ -10,7 +10,6 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.UserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +18,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /**
  * Family → Earlier families: the families this parent was in and is no longer, each with its
@@ -30,9 +28,8 @@ import javax.inject.Inject
  * before Room has spoken.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
 @Suppress("LongParameterList") // one source per kind of record an ended family left
-class EarlierFamiliesViewModel @Inject constructor(
+class EarlierFamiliesViewModel(
     eventRepository: EventRepository,
     expenseRepository: ExpenseRepository,
     childInfoRepository: ChildInfoRepository,

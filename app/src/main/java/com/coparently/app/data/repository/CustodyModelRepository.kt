@@ -65,8 +65,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.time.Clock
 
 /**
@@ -124,7 +122,6 @@ class PartialSwapRun(
     cause: Throwable
 ) : IllegalStateException("Only $written of $total days went through", cause)
 
-@Singleton
 // The one owner of the custody document's writes: splitting it would give the read-then-write
 // rules (items 24, 30, 33, 41) two homes.
 @Suppress("TooManyFunctions", "LargeClass")
@@ -140,7 +137,7 @@ constructor(
     private val scope: CoroutineScope
 ) {
     /**
-     * The constructor Hilt uses. [scope] is not part of the graph — it is a process-lifetime
+     * The constructor the Koin graph uses. [scope] is not part of the graph, being a process-lifetime
      * detail of this singleton, the same way `ParentsSource` owns its own — so it is supplied
      * here rather than bound in a module.
      *
@@ -150,7 +147,6 @@ constructor(
      * production-visible way to attach a second, unshared snapshot listener, which is precisely
      * what the sharing exists to prevent.
      */
-    @Inject
     constructor(
         custodyModelDao: CustodyModelDao,
         userRepository: UserRepository,

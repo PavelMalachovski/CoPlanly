@@ -9,7 +9,6 @@ import com.coparently.app.domain.chat.ChatSearchResult
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** What the search panel over a chat thread shows. */
 sealed interface ChatSearchState {
@@ -66,8 +64,7 @@ data class ChatSearchJump(val messageId: String, val windowNeeded: Int)
  * Its own ViewModel rather than more of `ChatViewModel`, which is already at detekt's function
  * budget and whose lifetime is tied to the process-wide unread badge.
  */
-@HiltViewModel
-class ChatSearchViewModel @Inject constructor(
+class ChatSearchViewModel(
     private val chatSearchRepository: ChatSearchRepository,
     parentsSource: ParentsSource
 ) : ViewModel() {

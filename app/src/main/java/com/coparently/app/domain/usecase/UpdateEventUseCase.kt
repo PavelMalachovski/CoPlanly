@@ -7,13 +7,12 @@ import com.coparently.app.domain.model.ValidationResult
 import com.coparently.app.domain.repository.EventRepository
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import javax.inject.Inject
 import kotlin.time.Clock
 
 /**
  * Use case for updating an existing event.
  */
-class UpdateEventUseCase @Inject constructor(
+class UpdateEventUseCase(
     private val eventRepository: EventRepository,
     private val eventValidator: EventValidator,
     private val analyticsManager: AnalyticsManager,

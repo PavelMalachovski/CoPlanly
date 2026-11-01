@@ -16,8 +16,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps every saved revision of a shared event (MON-4; CLAUDE.md item 25).
@@ -30,8 +28,7 @@ import javax.inject.Singleton
  * call sites, because a revision is a copy of the event on its way to Firestore, and item 3 is
  * about exactly that.
  */
-@Singleton
-class EventVersionRecorder @Inject constructor(
+class EventVersionRecorder(
     private val outboxDao: EventVersionOutboxDao,
     private val userDao: UserDao,
     private val remote: FirestoreEventVersionDataSource

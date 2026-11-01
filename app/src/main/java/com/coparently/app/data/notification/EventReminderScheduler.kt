@@ -11,13 +11,10 @@ import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
 import java.time.Duration
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.time.Clock
 
 /**
@@ -26,9 +23,8 @@ import kotlin.time.Clock
  * rescheduling replaces the previous work request. For a recurring event it is the next
  * occurrence's ([ReminderPlanner]); [ReminderWorker] schedules the one after when it fires.
  */
-@Singleton
-class EventReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class EventReminderScheduler(
+    private val context: Context
 ) : ReminderScheduler {
 
     override fun schedule(event: Event) {

@@ -3,8 +3,6 @@ package com.coparently.app.data.remote.firebase
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Data source for `families/{familyId}` — the document that says who co-parents with whom.
@@ -17,8 +15,7 @@ import javax.inject.Singleton
  *
  * See docs/DESIGN-multi-family.md, M-3.
  */
-@Singleton
-class FirestoreFamilyDataSource @Inject constructor(
+class FirestoreFamilyDataSource(
     private val firestore: FirebaseFirestore
 ) {
     private val familiesCollection = firestore.collection("families")

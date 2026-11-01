@@ -16,8 +16,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore-backed [RequestDeadlineRepository] (phase 3a, spec §5.1).
@@ -38,8 +36,7 @@ import javax.inject.Singleton
  *
  * No log line names a clock: its id spells the proposer's uid, and a proposal's the family's two more.
  */
-@Singleton
-class RequestDeadlineRepositoryImpl @Inject constructor(
+class RequestDeadlineRepositoryImpl(
     private val dataSource: FirestoreRequestDeadlineDataSource,
     private val authService: FirebaseAuthService,
     private val scheduler: RequestClockScheduler

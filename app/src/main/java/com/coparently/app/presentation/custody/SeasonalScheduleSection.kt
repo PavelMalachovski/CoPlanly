@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.presentation.common.GroupLabel
@@ -42,6 +41,7 @@ import com.coparently.app.utils.format
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
 import kotlinx.datetime.toKotlinLocalDate
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -66,7 +66,7 @@ private data class EditorTarget(
  * "Propose a change" opens this section's editor.
  */
 @Composable
-fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel()) {
+fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = koinViewModel()) {
     val dims = dimensions()
     val layers by viewModel.layersState.collectAsState()
     val fairness by viewModel.fairnessState.collectAsState()

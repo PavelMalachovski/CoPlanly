@@ -16,7 +16,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.*
@@ -36,6 +35,7 @@ import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.util.UUID
 
 /**
@@ -58,11 +58,11 @@ import java.util.UUID
 fun AddEditChildInfoScreen(
     childInfoId: String?,
     onNavigateBack: () -> Unit,
-    viewModel: ChildInfoViewModel = hiltViewModel()
+    viewModel: ChildInfoViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     // The consent gate is shared with onboarding and Settings, so it is its own ViewModel.
-    val healthConsentViewModel: HealthConsentViewModel = hiltViewModel()
+    val healthConsentViewModel: HealthConsentViewModel = koinViewModel()
     val medicalUnlocked by healthConsentViewModel.unlocked.collectAsState()
     val askingConsent by healthConsentViewModel.asking.collectAsState()
     if (askingConsent) {

@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transform
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * This phone's Room copy of one family's plan.
@@ -38,8 +36,7 @@ data class ParentingPlanLocalCopy(
  * uses: [observe] merges a remote branch that only *fills* Room with a local branch that is the
  * only one emitting. A failed listener therefore costs the co-parent's updates, not the screen.
  */
-@Singleton
-class ParentingPlanRepository @Inject constructor(
+class ParentingPlanRepository(
     private val dao: ParentingPlanDao,
     private val remote: FirestoreParentingPlanDataSource,
     private val gson: Gson,

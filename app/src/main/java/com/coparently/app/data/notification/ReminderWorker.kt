@@ -10,7 +10,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.coparently.app.R
@@ -20,8 +19,6 @@ import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.MainActivity
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 
 /**
  * Worker that fires a local reminder notification before an event starts.
@@ -38,10 +35,9 @@ import dagger.assisted.AssistedInject
  * recurring event keeps reminding every week. The request replaces this very work under its
  * unique name, so it is the last thing done.
  */
-@HiltWorker
-class ReminderWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
+class ReminderWorker(
+    context: Context,
+    params: WorkerParameters,
     private val eventDao: EventDao,
     private val reminderScheduler: ReminderScheduler
 ) : CoroutineWorker(context, params) {

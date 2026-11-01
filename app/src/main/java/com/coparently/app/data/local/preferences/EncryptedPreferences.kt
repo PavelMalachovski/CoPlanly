@@ -6,11 +6,8 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.coparently.app.data.security.EncryptionManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Encrypted SharedPreferences wrapper for secure storage.
@@ -60,7 +57,6 @@ import javax.inject.Singleton
  * starts empty (the user re-authorises Calendar), and a device that cannot seal anything keeps the
  * store in memory — never on disk in clear text.
  */
-@Singleton
 class EncryptedPreferences internal constructor(
     private val context: Context,
     private val cipher: StoreCipher,
@@ -69,9 +65,8 @@ class EncryptedPreferences internal constructor(
 ) {
 
     /** The production store: the Keystore key [encryptionManager] holds, the app's own files. */
-    @Inject
     constructor(
-        @ApplicationContext context: Context,
+        context: Context,
         encryptionManager: EncryptionManager
     ) : this(context, KeystoreCipher(encryptionManager))
 

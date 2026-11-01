@@ -7,8 +7,6 @@ import com.coparently.app.domain.repository.JournalRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * [JournalRepository] over Room alone (MON-22).
@@ -16,8 +14,7 @@ import javax.inject.Singleton
  * Deliberately has no Firestore data source, no sync hook and no push: the only dependency is the
  * DAO, so there is nothing here a later change could route an entry off the phone through.
  */
-@Singleton
-class JournalRepositoryImpl @Inject constructor(
+class JournalRepositoryImpl(
     private val journalDao: JournalDao
 ) : JournalRepository {
 

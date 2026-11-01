@@ -29,13 +29,13 @@ import java.io.File
  * **16 KB page** device (Play's requirement, the API 35 `google_apis_ps16k` leg) can `dlopen`
  * them at all. A library whose ELF segments are 4 KB-aligned fails there before any Kotlin runs.
  *
- * Deliberately **not** a Hilt test and **no MockK**: MockK's own inline-mocking agent
- * (`libmockkjvmtiagent.so`) is a test-only library that does not load on 16 KB pages, so every
- * Hilt test (they all install `FakeFirebaseModule`'s mocks) fails on that leg for a reason that
- * says nothing about the app. The leg runs only non-Hilt tests (see `ci.yml`), and this class is
- * what gives it something to prove: SQLCipher (`libsqlcipher.so`, the SEC-2 database), ML Kit
- * text recognition (receipt OCR) and ML Kit barcode scanning (the pairing QR). The Hilt tests keep
- * running on API 26 and 30.
+ * Deliberately **not** a `@UsesFakeFirebase` test and **no MockK**: MockK's own inline-mocking
+ * agent (`libmockkjvmtiagent.so`) is a test-only library that does not load on 16 KB pages, so
+ * every test that starts the Koin graph (they all load `fakeFirebaseModule`'s mocks) fails on that
+ * leg for a reason that says nothing about the app. The leg skips every `@UsesFakeFirebase` class
+ * (see `tools/ci-changes.js`), and this class is what gives it something to prove: SQLCipher
+ * (`libsqlcipher.so`, the SEC-2 database), ML Kit text recognition (receipt OCR) and ML Kit barcode
+ * scanning (the pairing QR). The `@UsesFakeFirebase` tests keep running on API 26 and 30.
  */
 @RunWith(AndroidJUnit4::class)
 class NativeLibrariesTest {

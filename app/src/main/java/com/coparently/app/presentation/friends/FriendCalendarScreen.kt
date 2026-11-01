@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.friends.CalendarFriendGrant
@@ -46,6 +45,7 @@ import com.coparently.app.presentation.professionals.WindowPager
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -66,7 +66,7 @@ import java.time.format.FormatStyle
 @Composable
 fun FriendCalendarScreen(
     onNavigateUp: () -> Unit,
-    viewModel: FriendCalendarViewModel = hiltViewModel()
+    viewModel: FriendCalendarViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val ready = uiState as? FriendCalendarUiState.Ready

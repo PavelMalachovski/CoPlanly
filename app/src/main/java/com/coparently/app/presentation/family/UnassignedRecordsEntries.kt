@@ -12,12 +12,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Settings → Family's row for "Records without a family", with how many wait, followed by its
@@ -34,7 +34,7 @@ import com.coparently.app.presentation.theme.IconSizes
 @Composable
 fun SectionGroupScope.UnassignedRecordsRow(
     onOpen: () -> Unit,
-    viewModel: UnassignedRecordsViewModel = hiltViewModel()
+    viewModel: UnassignedRecordsViewModel = koinViewModel()
 ) {
     val summary by viewModel.summary.collectAsState()
     if (summary.count == 0) return
@@ -69,7 +69,7 @@ fun SectionGroupScope.UnassignedRecordsRow(
 @Composable
 fun UnassignedRecordsPrompt(
     onChoose: () -> Unit,
-    viewModel: UnassignedRecordsViewModel = hiltViewModel()
+    viewModel: UnassignedRecordsViewModel = koinViewModel()
 ) {
     val summary by viewModel.summary.collectAsState()
     if (!summary.askOnHome) return

@@ -7,7 +7,6 @@ import com.coparently.app.data.family.FamilySignal
 import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.domain.repository.UserRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The families this parent is in, and which one the device is showing.
@@ -82,8 +80,7 @@ data class FamilySwitcherState(
  * [OtherFamiliesSignals] rather than by this instance, and none at all for a one-family account.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class FamilySwitcherViewModel @Inject constructor(
+class FamilySwitcherViewModel(
     private val selectedFamilySource: SelectedFamilySource,
     userRepository: UserRepository,
     otherFamiliesSignals: OtherFamiliesSignals

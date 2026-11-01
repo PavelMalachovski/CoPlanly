@@ -7,7 +7,6 @@ import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.repository.ProfessionalRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /** What the professional's parenting-plan view is showing. */
 sealed interface ProfessionalPlanUiState {
@@ -47,8 +45,7 @@ sealed interface ProfessionalPlanUiState {
  * Read-only by construction — it holds no save path — and neither half is privileged: the
  * professional is nobody's "you", so the two are shown in the family's stored order.
  */
-@HiltViewModel
-class ProfessionalPlanViewModel @Inject constructor(
+class ProfessionalPlanViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: ProfessionalRepository
 ) : ViewModel() {

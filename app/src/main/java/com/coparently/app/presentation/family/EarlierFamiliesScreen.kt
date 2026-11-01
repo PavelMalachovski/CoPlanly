@@ -31,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
@@ -43,6 +42,7 @@ import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
+import org.koin.compose.viewmodel.koinViewModel
 
 /** A record's day, in the reader's own order. */
 private const val DATE_SKELETON = "yMMMd"
@@ -66,7 +66,7 @@ private const val MAX_ROWS = 30
 fun EarlierFamiliesScreen(
     onNavigateUp: () -> Unit,
     onOpen: (String) -> Unit,
-    viewModel: EarlierFamiliesViewModel = hiltViewModel()
+    viewModel: EarlierFamiliesViewModel = koinViewModel()
 ) {
     val families by viewModel.families.collectAsState()
     Scaffold(topBar = { BackTopBar(stringResource(R.string.earlier_families_title), onNavigateUp) }) { padding ->
@@ -129,7 +129,7 @@ fun EarlierFamilyScreen(
     onNavigateUp: () -> Unit,
     onOpenDocuments: () -> Unit,
     onExport: () -> Unit,
-    viewModel: EarlierFamiliesViewModel = hiltViewModel()
+    viewModel: EarlierFamiliesViewModel = koinViewModel()
 ) {
     val families by viewModel.families.collectAsState()
     val family = families?.firstOrNull { it.familyId == familyId }

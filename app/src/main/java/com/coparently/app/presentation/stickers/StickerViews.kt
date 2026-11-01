@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.DialogProperties
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
@@ -49,6 +48,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import org.koin.compose.viewmodel.koinViewModel
 
 /** The role this parent's stickers address them by, or null while none is known. */
 internal fun ParentRoleAnswer.roleOrNull(): ParentRole? = (this as? ParentRoleAnswer.Answered)?.role
@@ -92,7 +92,7 @@ internal fun senderLine(sticker: Sticker, coParentName: String): String =
  * @param coParentName The co-parent of the family on screen, by name.
  */
 @Composable
-fun HomeStickers(coParentName: String, viewModel: StickersViewModel = hiltViewModel()) {
+fun HomeStickers(coParentName: String, viewModel: StickersViewModel = koinViewModel()) {
     val unseen by viewModel.unseen.collectAsState()
     val role by viewModel.role.collectAsState()
     val family by viewModel.familyOnScreen.collectAsState()
@@ -217,7 +217,7 @@ private fun SendStickerSheet(
  * stays until the answer is saved.
  */
 @Composable
-fun ParentRolePrompt(viewModel: StickersViewModel = hiltViewModel()) {
+fun ParentRolePrompt(viewModel: StickersViewModel = koinViewModel()) {
     val role by viewModel.role.collectAsState()
     val failed by viewModel.roleSaveFailed.collectAsState()
     if (role != ParentRoleAnswer.Unanswered) return

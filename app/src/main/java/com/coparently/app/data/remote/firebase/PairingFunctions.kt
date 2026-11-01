@@ -10,8 +10,6 @@ import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Thin client for the invitation Cloud Functions.
@@ -26,8 +24,7 @@ import javax.inject.Singleton
  * that is made by two separate callables in `functions/index.js`, each of which refuses the
  * other's `kind`.
  */
-@Singleton
-class PairingFunctions @Inject constructor(
+class PairingFunctions(
     private val functions: FirebaseFunctions
 ) {
 

@@ -9,10 +9,7 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.coparently.app.data.requests.RequestClockWorker
 import com.coparently.app.domain.notification.RequestClockScheduler
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * WorkManager-based implementation of [RequestClockScheduler].
@@ -24,9 +21,8 @@ import javax.inject.Singleton
  * its retries and was lost. A reminder reads this phone's copy and runs on time, online or not.
  * The work is run by [RequestClockWorker].
  */
-@Singleton
-class WorkRequestClockScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class WorkRequestClockScheduler(
+    private val context: Context
 ) : RequestClockScheduler {
 
     override fun scheduleReminder(clockId: String, atMillis: Long) =

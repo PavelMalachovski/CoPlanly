@@ -11,14 +11,12 @@ import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolSyncFailure
 import com.coparently.app.domain.school.SchoolSyncResult
 import com.coparently.app.presentation.common.UiText
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * One connection as the list shows it.
@@ -61,8 +59,7 @@ data class SchoolImportUiState(
  * screen (isolation audit, October 2026). A connection of a family that has ended stays listed, as
  * that family's other records do, so it can still be disconnected.
  */
-@HiltViewModel
-class SchoolImportViewModel @Inject constructor(
+class SchoolImportViewModel(
     private val accounts: SchoolAccounts,
     private val importer: SchoolImporter,
     childInfoRepository: ChildInfoRepository,

@@ -7,13 +7,10 @@ import com.android.installreferrer.api.InstallReferrerClient.InstallReferrerResp
 import com.android.installreferrer.api.InstallReferrerStateListener
 import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.InstallReferrerSource
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /** What one of Play's answers means for asking again. */
@@ -45,9 +42,8 @@ internal fun referrerOutcome(responseCode: Int): ReferrerOutcome = when (respons
  * install from the plain listing, or a Play Store without the service — so an ordinary install
  * stops asking after its first launch.
  */
-@Singleton
-class PlayInstallReferrerSource @Inject constructor(
-    @ApplicationContext private val context: Context
+class PlayInstallReferrerSource(
+    private val context: Context
 ) : InstallReferrerSource {
 
     private val marks by lazy { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }

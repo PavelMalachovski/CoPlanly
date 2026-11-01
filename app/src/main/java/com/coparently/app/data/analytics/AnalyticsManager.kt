@@ -2,8 +2,6 @@ package com.coparently.app.data.analytics
 
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.logEvent
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Manager for logging analytics events to Firebase Analytics.
@@ -11,8 +9,7 @@ import javax.inject.Singleton
  *
  * @property analytics Firebase Analytics instance
  */
-@Singleton
-class AnalyticsManager @Inject constructor(
+class AnalyticsManager(
     private val analytics: FirebaseAnalytics
 ) {
 

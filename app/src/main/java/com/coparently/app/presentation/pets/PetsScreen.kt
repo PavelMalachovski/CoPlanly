@@ -28,7 +28,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.presentation.common.EmptyState
@@ -39,6 +38,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.theme.Spacing
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The pets list: one row per pet, tapping opens the editor, the FAB adds a new one.
@@ -57,7 +57,7 @@ import com.coparently.app.presentation.theme.Spacing
 fun PetsScreen(
     onNavigateBack: () -> Unit,
     onEditPet: (String) -> Unit,
-    viewModel: PetsViewModel = hiltViewModel()
+    viewModel: PetsViewModel = koinViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val uiState by viewModel.uiState.collectAsState()

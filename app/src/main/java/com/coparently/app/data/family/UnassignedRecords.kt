@@ -33,8 +33,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** What kind of record is waiting for a family, with the prefix of its [UnassignedRecord.key]. */
 enum class UnassignedKind(val key: String) {
@@ -152,11 +150,10 @@ enum class AssignOutcome {
  * co-parent's record (`FamilyIdBackfill` gives those the family with their author), never a private
  * event (it belongs to nobody but its author anyway) and never a pending deletion.
  */
-@Singleton
 // The five tables this answers about, the two repositories whose write paths an expense and a
 // schedule must take, and the sync and the store: the list is the scope of the class.
 @Suppress("LongParameterList")
-class UnassignedRecords @Inject constructor(
+class UnassignedRecords(
     private val userDao: UserDao,
     private val eventDao: EventDao,
     private val expenseDao: ExpenseDao,
