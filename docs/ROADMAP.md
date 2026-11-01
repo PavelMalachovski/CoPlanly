@@ -2778,6 +2778,63 @@ platform caches; they do not fail the link. So:
 3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
    App Store Connect will require by then.
 
+**Firebase on two platforms: GitLive** (phase 2's first decision, 1 November 2026; spec §5.1
+step 4 and §7). The shared data layer reaches Firebase through GitLive's `firebase-kotlin-sdk`
+(Apache 2.0), not through `expect`/`actual` wrappers of our own. A throwaway spike ran every
+criterion as one commonTest test, on an Android emulator and on an iOS simulator, each against the
+Auth, Firestore, Functions and Storage emulators. Of the thirteen rows, eleven pass on both
+platforms through GitLive alone. The Storage row passes with a small platform half beside GitLive.
+The FCM token cannot be run on emulators at all. Four reasons:
+- **Nothing failed.** Offline persistence, `Source.SERVER` without a cache fallback,
+  `hasPendingWrites`, `ESTIMATE`, server timestamps, two-field updates, transactions, the two
+  query shapes, named apps, the regional callable with its `details`, Storage metadata, and the
+  Google credential on the Auth emulator all behave the same through one common API.
+- **Android cannot move.** GitLive's Android half calls the same Android SDK the app calls today.
+- **Its gaps are small.** Each gap closes with a few lines beside it, through the native handles
+  GitLive exposes (`StorageReference.android`, `.ios`).
+- **Less of our own code.** A wrapper of our own would be one interface per product with two
+  implementations, all of it written, tested and kept up to date here.
+
+| Criterion (used by) | Android, API 30 emulator | iOS simulator |
+| --- | --- | --- |
+| Offline persistence: an offline write reads back, then lands after reconnecting (every outbox) | Pass | Pass |
+| `get(Source.SERVER)` fails offline (`UNAVAILABLE`) and does not answer from the cache (export, request clocks) | Pass | Pass |
+| `hasPendingWrites` on a local echo, then false once acknowledged (change-request mirror) | Pass | Pass |
+| `ServerTimestampBehavior.ESTIMATE`: null under `NONE`, the local clock under `ESTIMATE` (request clocks) | Pass | Pass |
+| `FieldValue.serverTimestamp()` inside `set()` (`event_versions`) | Pass | Pass |
+| `update()` of two fields leaves the rest of the document alone (tombstones) | Pass | Pass |
+| A transaction that reads, then writes (custody and split withdrawals) | Pass | Pass |
+| `array-contains` and `whereIn` queries, answered by the server (sync) | Pass | Pass |
+| A named `FirebaseApp` initialised with its own options, with its own cache (the e2e parents) | Pass | Pass |
+| A callable in `europe-west3`: the reply, `FAILED_PRECONDITION` with its `details` map, and nothing served in another region (pairing, AI) | Pass | Pass |
+| Storage: an upload with custom metadata, a download to a file, no download URL (MON-23, L-4) | Pass, with a platform half: GitLive has no download-to-file, so the test calls the SDK's `getFile` through `StorageReference.android` | Pass, with a platform half: `writeToFile` through `StorageReference.ios` |
+| Auth with a Google ID token credential, on the Auth emulator (sign-in) | Pass | Pass. GitLive's iOS side also requires an access token, which Google Sign-In on iOS gives. |
+| The FCM registration token (`FcmService`) | Not testable on emulators: there is no FCM emulator, and a token needs Google Play services and a real project. Judged from the API: `getToken()` and `deleteToken()` exist. | Not testable on emulators: it needs APNs and a real project. Judged from the API, as on Android. |
+
+Evidence: Android passed in runs 41318121538 and 41318558085 of the spike workflow; iOS passed in
+run 41318558085 (iPhone 17 Pro simulator, Xcode 26.6). The spike and its workflow were removed
+once this was recorded; their history is on draft pull request #158.
+
+**Versions the spike ran.** GitLive 2.7.0, the newest stable release, built with Kotlin 2.2.21
+and readable by this project's 2.3.21. 3.0.0-alpha02 is built with Kotlin 2.4, so it waits for
+the Kotlin 2.4 step above. The spike used the app's toolchain: Kotlin 2.3.21, AGP 8.10.1, minSdk 26.
+- **Android:** GitLive 2.7.0 imports Firebase BoM 34.18.0, so the app's Firebase libraries rise
+  from 34.4.0 when GitLive arrives (Firestore 26.6.0, Auth 24.2.0, Functions 22.1.1, Storage
+  22.0.1, Messaging 25.1.2). That is a version bump of the same SDK, not a new one. It lands with
+  the data-layer move and is checked by the e2e job like any upgrade.
+- **iOS:** Firebase iOS SDK 11.8.0, the version GitLive's bindings were generated against, through
+  the Kotlin CocoaPods plugin. The pods are linked only (`linkOnly`), because GitLive publishes
+  its own cinterop. A cold pod build took about 20 minutes on a hosted macOS runner, so the iOS
+  jobs will cache it.
+
+**Carried into the data-layer move.**
+- **The Storage download to a file** is a platform half beside GitLive, a few lines on each side,
+  as in the spike.
+- **The FCM token is judged from the API only.** Before `FcmService` moves, a phone with a real
+  project checks `getToken()` on each platform; on iOS the token also needs APNs (spec §5.4).
+- **GitLive's iOS `FirebaseApp.options`** reads `databaseURL` as non-null. So either every app
+  sets a `databaseUrl`, or no iOS code reads `options` back.
+
 **Left for phase 1:**
 1. ~~Register the Mac as a self-hosted runner~~ — not needed: `shared-ios` runs on GitHub's macOS
    runners (owner decision, 1 November 2026).

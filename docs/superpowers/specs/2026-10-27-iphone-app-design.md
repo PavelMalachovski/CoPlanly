@@ -257,7 +257,9 @@ Phases 1–2 are about a third of the work, phases 3–4 another third, and 5–
 Left to the builder:
 
 - Koin or kotlin-inject (§5.1 step 3).
-- GitLive or `expect`/`actual` Firebase (§5.1 step 4), decided by the spike.
+- ~~GitLive or `expect`/`actual` Firebase (§5.1 step 4), decided by the spike.~~ Decided on
+  1 November 2026: GitLive's `firebase-kotlin-sdk`, with small platform halves where its common
+  API stops (ROADMAP MON-24, "Firebase on two platforms").
 - Native or Compose navigation bars inside a tab (§5.2), decided by the spike.
 - ML Kit iOS or Apple Vision for OCR and QR.
 - The iOS UI tour tool.
