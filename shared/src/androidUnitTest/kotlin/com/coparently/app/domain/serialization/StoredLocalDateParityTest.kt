@@ -1,4 +1,4 @@
-package com.coparently.app.data.repository
+package com.coparently.app.domain.serialization
 
 import com.coparently.app.domain.model.BloodType
 import com.coparently.app.domain.model.MedicalProfile
@@ -13,6 +13,7 @@ import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.serialization.builtins.ListSerializer
 import org.junit.Test
 import java.lang.reflect.Type
 import java.time.LocalDate
@@ -22,20 +23,17 @@ import kotlin.test.fail
 
 /**
  * The stored medical profile and pet vaccination list keep their bytes now that `Vaccination.date`
- * is a kotlinx-datetime date (MON-24).
+ * is a kotlinx-datetime date written by [StoredLocalDateSerializer] (MON-24; this test held the Gson
+ * adapter in between, `LocalDateJsonAdapter`, to the same oracle).
  *
- * The oracle is the `java.time` adapter this build replaced, verbatim ([LegacyLocalDateJsonAdapter]),
- * over twins of the two models that still hold a `java.time.LocalDate` ([LegacyVaccination],
- * [LegacyMedicalProfile]): the same field names, so Gson writes the same keys. On seeded random
- * input both must write the same JSON, and both must read the same text to the same date or fail
- * with the same exception — a Room column or a Firestore map written by an older build reads exactly
- * as it did, and one this build writes reads on an older build.
+ * The oracle is the `java.time` adapter the app used before either, verbatim
+ * ([LegacyLocalDateJsonAdapter]), over twins of the two models that held a `java.time.LocalDate`
+ * ([LegacyVaccination], [LegacyMedicalProfile]): the same field names, so Gson writes the same keys.
+ * On seeded random input both must write the same JSON, and both must read the same text to the
+ * same date or fail with the same exception — a Room column or a Firestore map written by an older
+ * build reads exactly as it did, and one this build writes reads on an older build.
  */
-class LocalDateJsonAdapterParityTest {
-
-    private val current: Gson = GsonBuilder()
-        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
-        .create()
+class StoredLocalDateParityTest {
 
     private val legacy: Gson = GsonBuilder()
         .registerTypeAdapter(LocalDate::class.java, LegacyLocalDateJsonAdapter())
@@ -59,8 +57,12 @@ class LocalDateJsonAdapterParityTest {
                 hereditaryConditions = profile.hereditaryConditions,
                 vaccinations = dates.mapIndexed { index, date -> LegacyVaccination("v$index", date) }
             )
-            assertEquals(legacy.toJson(twin), current.toJson(profile), "$dates")
-            assertEquals(legacy.toJson(twin.vaccinations), current.toJson(profile.vaccinations), "$dates")
+            assertEquals(legacy.toJson(twin), StoredJson.encode(MedicalProfile.serializer(), profile), "$dates")
+            assertEquals(
+                legacy.toJson(twin.vaccinations),
+                StoredJson.encode(ListSerializer(Vaccination.serializer()), profile.vaccinations),
+                "$dates"
+            )
         }
     }
 
@@ -70,7 +72,7 @@ class LocalDateJsonAdapterParityTest {
         repeat(CASES) {
             val json = """{"name":"MMR","date":${randomDateJson(random)}}"""
             val old = runCatching { legacy.fromJson(json, LegacyVaccination::class.java) }
-            val new = runCatching { current.fromJson(json, Vaccination::class.java) }
+            val new = runCatching { StoredJson.decode(Vaccination.serializer(), json) }
             when {
                 old.isSuccess && new.isSuccess ->
                     assertEquals(old.getOrThrow().date, new.getOrThrow().date?.toJavaLocalDate(), json)

@@ -1,5 +1,7 @@
 package com.coparently.app.domain.custody
 
+import kotlinx.serialization.Serializable
+
 /**
  * Where a single day's override stands.
  *
@@ -7,6 +9,7 @@ package com.coparently.app.domain.custody
  * calendar draws a pending one, but `CustodyResolver` steps straight past them to the agreed pattern.
  * Letting a pending swap move a day would show both parents a day neither of them agreed to.
  */
+@Serializable
 enum class DayOverrideStatus {
     /** Offered, and waiting for the other parent's answer. */
     PENDING,
@@ -72,10 +75,12 @@ enum class DayOverrideStatus {
  *   correctly with no migration and no backfill.
  * @property earlier The answers this day was given before it was offered again, as
  *   [DayOverrideDecisionCodec] strings, oldest first; null for none. Nullable rather than an empty
- *   default because Room's Gson reads an entry written before the field existed without running
- *   the constructor. Carried verbatim by every answer (`copy()`), and by a new offer of the day,
- *   which appends the answer it replaces ([DayOverrideTransition.offer]).
+ *   default because Room's Gson (before MON-24) read an entry written before the field existed
+ *   without running the constructor, and it stays so that this build writes what that one wrote.
+ *   Carried verbatim by every answer (`copy()`), and by a new offer of the day, which appends the
+ *   answer it replaces ([DayOverrideTransition.offer]).
  */
+@Serializable
 data class DayOverride(
     val toParent: String,
     val requestedBy: String,

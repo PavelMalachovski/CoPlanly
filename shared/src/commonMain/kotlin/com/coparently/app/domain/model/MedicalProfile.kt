@@ -1,6 +1,8 @@
 package com.coparently.app.domain.model
 
+import com.coparently.app.domain.serialization.StoredLocalDateSerializer
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.Serializable
 
 /**
  * The medical facts an emergency needs, for one child.
@@ -19,6 +21,7 @@ import kotlinx.datetime.LocalDate
  * @property hereditaryConditions Conditions that run in the family
  * @property vaccinations Vaccines given, newest first is not enforced
  */
+@Serializable
 data class MedicalProfile(
     val bloodType: BloodType? = null,
     val intolerances: List<String> = emptyList(),
@@ -34,8 +37,10 @@ data class MedicalProfile(
  *   vaccine but not the month should still be able to record it, and "recorded without a date"
  *   is more useful than "not recorded".
  */
+@Serializable
 data class Vaccination(
     val name: String,
+    @Serializable(with = StoredLocalDateSerializer::class)
     val date: LocalDate? = null
 )
 
@@ -47,6 +52,7 @@ data class Vaccination(
  * the null group `O`, Russian and German write it `0` — which is why rendering goes through
  * `BloodType.labelRes()` and never through the constant name.
  */
+@Serializable
 enum class BloodType {
     A_POSITIVE,
     A_NEGATIVE,

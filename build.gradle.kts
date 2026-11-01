@@ -9,6 +9,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.21" apply false
     // The shared module (MON-24). Same artifact as the Android plugin above, so the same version.
     id("org.jetbrains.kotlin.multiplatform") version "2.3.21" apply false
+    // kotlinx.serialization's compiler plugin, which replaced Gson's reflection (MON-24). It ships
+    // with the compiler, so it always takes the Kotlin version.
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.3.21" apply false
     // Annotation processing for Room (Hilt's processor left with Hilt, MON-24 phase 2). Since 2.3.0
     // KSP is versioned on its own and is KSP2 only (no Kotlin prefix). 2.3.11 is built against
     // Kotlin 2.3.20, analyses with a 2.4.20 development build, and requires AGP 8.10 or later;

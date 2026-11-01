@@ -2,6 +2,7 @@ package com.coparently.app.domain.model
 
 import com.coparently.app.domain.guests.GuestGrant
 import kotlinx.datetime.LocalDateTime
+import kotlinx.serialization.Serializable
 
 /**
  * Domain model representing information about a child.
@@ -67,6 +68,7 @@ data class ChildInfo(
  * @property frequency How often to take (e.g., "2 times daily")
  * @property notes Additional notes about the medication
  */
+@Serializable
 data class Medication(
     val name: String,
     val dosage: String,
@@ -83,6 +85,7 @@ data class Medication(
  * @property contactPerson Contact person for the activity
  * @property contactPhone Phone number of contact person
  */
+@Serializable
 data class Activity(
     val name: String,
     val schedule: String,
@@ -99,6 +102,7 @@ data class Activity(
  * @property phone Phone number
  * @property alternatePhone Alternative phone number
  */
+@Serializable
 data class EmergencyContact(
     val name: String,
     val relationship: String,
@@ -116,6 +120,7 @@ data class EmergencyContact(
  * @property teacherEmail Teacher's email
  * @property grade Child's grade
  */
+@Serializable
 data class SchoolInfo(
     val name: String,
     val address: String? = null,

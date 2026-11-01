@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // AGP 9 itself.
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.android.library")
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.kotlinx.kover")
@@ -51,6 +52,12 @@ kotlin {
             // underneath, which minSdk 26 has. `api`, because the domain's signatures take its
             // types (`EventTimestamp.ofWallClock`, `IsoText`); its jar carries its own R8 rules.
             api("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
+            // `StoredJson` (MON-24), which replaced Gson for every stored and sent JSON text. 1.11.0
+            // (April 2026) is the newest release built with a Kotlin no newer than this project's:
+            // Kotlin 2.3.20, which the 2.3.21 compiler reads; 1.12.0 is built with Kotlin 2.4.
+            // `api`, because `StoredJson`'s signatures take its `KSerializer` and `JsonElement`. Its
+            // jar carries its own R8 rules for the generated serializers.
+            api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
         }
         androidMain.dependencies {
             // PAY by square's raw LZMA1 encoder (`Lzma1Raw`), the version the app uses: one
@@ -65,6 +72,9 @@ kotlin {
         // where java.* exists. commonTest runs here too, as the Android unit tests.
         androidUnitTest.dependencies {
             implementation("junit:junit:4.13.2")
+            // The oracle `GsonParityTest` and `StoredLocalDateParityTest` compare `StoredJson` with:
+            // the Gson the app used until MON-24, at the version it used. Tests only.
+            implementation("com.google.code.gson:gson:2.11.0")
         }
     }
 }

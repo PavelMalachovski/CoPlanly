@@ -33,8 +33,8 @@ data class DayOverrideDecision(
  * decidedAt|groupId`, an empty field for a missing value.
  *
  * A string, like the project's other codecs (`ContactWindowCodec`, `SeasonalLayerCodec`), never
- * Gson over the data class: [DayOverride] is stored as Gson JSON in Room and kept by name for R8,
- * and a list of strings adds no new class for either to know about. None of the fields can hold a
+ * a serializer over the data class: [DayOverride] is stored in Room as `StoredJson` text with the
+ * bytes Gson wrote, and a list of strings adds no new class for that text to know about. None of the fields can hold a
  * `|`: slots, uids, ISO times and UUIDs.
  */
 object DayOverrideDecisionCodec {
