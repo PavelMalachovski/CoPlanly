@@ -84,10 +84,11 @@ class SyncService @Inject constructor(
     private val requestClockKeeper: RequestClockKeeper,
     private val knownFamilies: KnownFamilies
 ) {
-    // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
-    // `UserRepositoryImpl` register: `Vaccination.date` is a kotlinx `LocalDate`, and a document
-    // read back through a Gson without this adapter would fail to parse it back out of the ISO
-    // string the repositories already write - see `medicalProfile` handling below.
+    // Defensive only: this Gson converts maps, lists and string arrays and never meets a date. The
+    // `medicalProfile` column is read as a `Map` below, never as `MedicalProfile`, so the adapter
+    // that `ChildInfoRepositoryImpl` and `PetRepositoryImpl` need for `Vaccination.date` (a kotlinx
+    // `LocalDate`, written as ISO text) does nothing here. It stays registered so that a future
+    // `MedicalProfile` read through this Gson keeps that text; phase 2 replaces Gson (MON-24).
     private val gson = GsonBuilder()
         .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
         .create()

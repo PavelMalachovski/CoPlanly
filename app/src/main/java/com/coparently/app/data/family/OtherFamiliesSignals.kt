@@ -9,6 +9,7 @@ import com.coparently.app.data.repository.longOrNull
 import com.coparently.app.data.repository.markMap
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.support.SupportRead
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
@@ -401,6 +402,8 @@ constructor(
          * the one that does says it is open or in its last chance. [clockId] names the clock from
          * the family the two parents make.
          */
+        // `governing` is public in `:shared` only for its callers left in the app (MON-24).
+        @OptIn(InternalSharedApi::class)
         private fun stillWaits(clocks: ClocksAt, myUid: String, author: String, clockId: (String) -> String?): Boolean {
             val familyId = FamilyKey.orNull(myUid, author) ?: return true
             val scope = RequestScope(myUid, author, familyId, soleFamily = false)

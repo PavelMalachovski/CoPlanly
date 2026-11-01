@@ -1,5 +1,9 @@
+// `governing` and `UnansweredRows` are public in `:shared` only for this file and one more (MON-24).
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.domain.changerequests
 
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
