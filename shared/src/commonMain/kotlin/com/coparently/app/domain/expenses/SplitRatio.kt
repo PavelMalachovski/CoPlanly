@@ -1,5 +1,7 @@
 package com.coparently.app.domain.expenses
 
+import kotlin.jvm.JvmInline
+
 /** A whole share, in basis points. 10 000 bp = 100 %. */
 const val FULL_SHARE_BASIS_POINTS = 10_000
 

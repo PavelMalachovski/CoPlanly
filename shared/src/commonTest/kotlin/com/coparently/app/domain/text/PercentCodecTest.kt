@@ -79,6 +79,37 @@ class PercentCodecTest {
     }
 
     @Test
+    fun readsUnicodeHexDigitsAsTheJdkDoes() {
+        // Character.digit(c, 16) on JDK 21 for every digit of eight decimal-digit blocks (ASCII,
+        // fullwidth, Arabic-Indic, extended Arabic-Indic, Devanagari, Bengali, Thai, Myanmar):
+        // each reads as its value, so here, on iOS too, "%0" and the digit is that byte.
+        val zeros = listOf('\u0030', '\uFF10', '\u0660', '\u06F0', '\u0966', '\u09E6', '\u0E50', '\u1040')
+        for (zero in zeros) {
+            for (value in 0..9) {
+                val digit = zero + value
+                val code = "U+${digit.code.toString(HEX)}"
+                assertEquals(value.toChar().toString(), PercentCodec.decode("%0$digit"), code)
+            }
+        }
+        // As the first digit of the two.
+        for (value in 0..7) {
+            assertEquals((value * HEX).toChar().toString(), PercentCodec.decode("%${'\u0660' + value}0"))
+        }
+        // Latin and fullwidth Latin letters: A and F are 10 and 15 in either case.
+        for ((letter, value) in listOf('A' to 10, 'F' to 15, 'a' to 10, 'f' to 15)) {
+            assertEquals(value.toChar().toString(), PercentCodec.decode("%0$letter"))
+        }
+        for ((letter, value) in listOf('\uFF21' to 10, '\uFF26' to 15, '\uFF41' to 10, '\uFF46' to 15)) {
+            assertEquals(value.toChar().toString(), PercentCodec.decode("%0$letter"))
+        }
+        // Not hex digits to the JDK (Character.digit is -1): G, fullwidth G, superscript two,
+        // Roman numeral one, circled digit one.
+        for (other in listOf('G', '\uFF27', '\u00B2', '\u2160', '\u2460')) {
+            assertNull(PercentCodec.decode("%0$other"), "U+${other.code.toString(HEX)}")
+        }
+    }
+
+    @Test
     fun replacesMalformedUtf8AsTheJdkDoes() {
         assertEquals("\uFFFD", PercentCodec.decode("%C4"))
         assertEquals("\uFFFD", PercentCodec.decode("%FF"))
@@ -95,5 +126,9 @@ class PercentCodecTest {
         assertEquals("\uFFFD\uFFFD\uFFFD\uFFFD", PercentCodec.decode("%F4%90%80%80"))
         assertEquals("\uFFFD\uFFFD\uFFFD\uFFFD", PercentCodec.decode("%F0%80%80%80"))
         assertEquals("a\uFFFDb\u010D", PercentCodec.decode("a%C4b%C4%8D"))
+    }
+
+    private companion object {
+        const val HEX = 16
     }
 }

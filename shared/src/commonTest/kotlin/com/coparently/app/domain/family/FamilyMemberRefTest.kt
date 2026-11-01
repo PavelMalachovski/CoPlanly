@@ -3,7 +3,7 @@ package com.coparently.app.domain.family
 import com.coparently.app.domain.family.FamilyMemberRef.Child
 import com.coparently.app.domain.family.FamilyMemberRef.Pet
 import com.coparently.app.domain.family.FamilyMemberRef.Unknown
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull

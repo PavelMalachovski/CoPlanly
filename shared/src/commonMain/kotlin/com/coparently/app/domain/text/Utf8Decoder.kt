@@ -17,7 +17,7 @@ package com.coparently.app.domain.text
 internal object Utf8Decoder {
 
     /** U+FFFD REPLACEMENT CHARACTER, written in place of each maximal subpart. */
-    private const val REPLACEMENT = '�'
+    private const val REPLACEMENT = '\uFFFD'
 
     private const val BYTE_MASK = 0xFF
     private const val CONTINUATION_BITS = 6

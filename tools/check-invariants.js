@@ -263,6 +263,12 @@ function checkPushTypes() {
 
 const PROGUARD = 'app/proguard-rules.pro';
 const SOURCE_ROOT = 'app/src/main/java';
+/**
+ * The shared module's production code (MON-24): the domain moves there with its package unchanged,
+ * and a domain model the app hands to Gson (`DayOverride`, the child and pet records) is still one
+ * the release build must keep. Without it a moved model would drop out of checks 4 and 5 silently.
+ */
+const SHARED_SOURCE_ROOT = 'shared/src/commonMain/kotlin';
 
 /** Every Kotlin file under the source root, recursively. */
 function kotlinFiles(dir = SOURCE_ROOT, out = []) {
@@ -353,7 +359,7 @@ function fromJsonArguments(src) {
  * runtime probe to have passed a case for each of these.
  */
 function gsonTargets() {
-  const files = kotlinFiles();
+  const files = [...kotlinFiles(), ...kotlinFiles(SHARED_SOURCE_ROOT)];
   const index = declaredTypes(files);
   const targets = new Map();
   for (const file of files) {
