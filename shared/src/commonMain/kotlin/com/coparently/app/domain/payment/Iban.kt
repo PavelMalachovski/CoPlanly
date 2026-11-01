@@ -1,7 +1,5 @@
 package com.coparently.app.domain.payment
 
-import java.math.BigInteger
-
 /**
  * An IBAN as a parent types it, checked the way a bank checks it (ISO 13616): two letters, two
  * check digits, up to 30 letters and digits, and the mod-97 remainder of 1.
@@ -12,7 +10,6 @@ import java.math.BigInteger
 object Iban {
 
     private val SHAPE = Regex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$")
-    private val MOD = BigInteger.valueOf(97)
     private const val CHECK_CHARS = 4
     private const val GROUP = 4
     private const val LETTER_BASE = 10
@@ -25,7 +22,7 @@ object Iban {
         val digits = buildString {
             rearranged.forEach { ch -> if (ch.isDigit()) append(ch) else append(ch - 'A' + LETTER_BASE) }
         }
-        return compact.takeIf { BigInteger(digits).mod(MOD) == BigInteger.ONE }
+        return compact.takeIf { mod97(digits) == 1 }
     }
 
     /** The country an IBAN's account is held in: its first two letters. */
