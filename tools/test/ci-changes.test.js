@@ -131,7 +131,7 @@ test('an unfamiliar path is never skipped by the Android gate', () => {
 test('format writes one GITHUB_OUTPUT line per key, the matrix as one-line JSON', () => {
   const lines = format(decide(['app/src/main/res/values/strings.xml'])).trim().split('\n');
   assert.deepEqual(lines.map((l) => l.split('=')[0]),
-    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web']);
+    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web', 'shared']);
   const matrix = JSON.parse(lines[4].slice('matrix='.length));
   assert.equal(matrix[0]['api-level'], 30);
 });
@@ -271,4 +271,49 @@ test('a change to web-tests alone runs no Android job, no e2e and no upgrade', (
   assert.equal(d.e2e, false);
   assert.equal(d.upgrade, false);
   assert.equal(d.web, true);
+});
+
+test('a shared-module change runs the shared jobs and every Android job, on every emulator leg', () => {
+  const d = decide(['shared/src/commonMain/kotlin/x.kt']);
+  assert.equal(d.shared, true);
+  assert.equal(d.android, true);
+  assert.equal(d.e2e, true);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.upgrade, true);
+  assert.equal(d.r8runtime, true);
+  assert.deepEqual(legs(d), [26, 30, 35]);
+  // The Android app and its build do not reach the web page or the calendar feed.
+  assert.equal(d.web, false);
+});
+
+test('the shared jobs run on the module, the root and module build files and the workflow', () => {
+  for (const path of [
+    'shared/build.gradle.kts',
+    'shared/src/commonTest/kotlin/com/coparently/app/domain/files/HexDigestTest.kt',
+    'shared/src/iosMain/kotlin/x.kt',
+    'build.gradle.kts',
+    'settings.gradle.kts',
+    'gradle.properties',
+    'gradle/wrapper/gradle-wrapper.properties',
+    'app/build.gradle.kts',
+    '.github/workflows/ci.yml',
+  ]) {
+    assert.equal(decide([path]).shared, true, path);
+  }
+  assert.equal(everything().shared, true);
+});
+
+test('the shared jobs skip what the module cannot read', () => {
+  for (const path of [
+    'docs/x.md',
+    'CLAUDE.md',
+    'functions/index.js',
+    'firestore.rules',
+    'app/src/main/java/com/coparently/app/presentation/home/HomeScreen.kt',
+    'app/src/main/res/values/strings.xml',
+    'tools/ci-report.js',
+  ]) {
+    assert.equal(decide([path]).shared, false, path);
+  }
+  assert.equal(nothing().shared, false);
 });

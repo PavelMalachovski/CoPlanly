@@ -159,3 +159,17 @@ test('every checklist section the coverage map names exists', () => {
     assert.ok(sections.has(section), `tools/e2e/coverage.json names §${section}, which the checklist lacks`);
   }
 });
+
+test('the shared module is mapped as the app domain it came from (MON-24)', () => {
+  const S = 'shared/src/commonMain/kotlin/com/coparently/app/';
+  assert.deepEqual(sectionsFor([S + 'domain/files/HexDigest.kt']), sectionsFor([K + 'domain/files/HexDigest.kt']));
+  assert.ok(sectionsFor([S + 'domain/changerequests/RequestClock.kt']).includes('5.9'));
+  assert.ok(sectionsFor(['shared/src/iosMain/kotlin/com/coparently/app/domain/chat/X.kt']).includes('5.1'));
+  // The module's tests need no phone, as the app's own unit tests do not.
+  const tests = plan.planFor(['shared/src/commonTest/kotlin/com/coparently/app/domain/files/HexDigestTest.kt'], CHECKLIST);
+  assert.deepEqual(tests.items, []);
+  assert.deepEqual(tests.unmapped, []);
+  // A shared source no rule claims is listed under its own path, never dropped.
+  const unclaimed = 'shared/src/commonMain/kotlin/com/coparently/app/domain/zzz/Unclaimed.kt';
+  assert.deepEqual(plan.planFor([unclaimed], CHECKLIST).unmapped, [unclaimed]);
+});

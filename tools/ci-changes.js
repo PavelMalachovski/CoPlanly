@@ -5,10 +5,12 @@
  *
  *   git diff --name-only "$BASE_SHA"...HEAD | node tools/ci-changes.js >> "$GITHUB_OUTPUT"
  *
- * It prints seven `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
+ * It prints eight `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
  * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`),
- * `r8runtime` (the minified build run on an emulator, `r8-runtime`) and `web` (the verification
- * page in a browser and the calendar feed through an RFC 5545 parser, `web`). With `--all` it
+ * `r8runtime` (the minified build run on an emulator, `r8-runtime`), `web` (the verification
+ * page in a browser and the calendar feed through an RFC 5545 parser, `web`) and `shared` (the
+ * Kotlin Multiplatform module's own tests, `shared` on Linux and `shared-ios` on the Mac). With
+ * `--all` it
  * prints the answer for "run everything", which is what a push to `main`, a manual run, or a diff
  * that could not be computed gets.
  *
@@ -34,6 +36,17 @@ const UI_ONLY = /^(app\/src\/main\/java\/com\/coparently\/app\/presentation\/(?!
 
 /** The build itself: a change here can change anything, so it runs everything. */
 const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|app\/build\.gradle\.kts$|app\/proguard|\.github\/workflows\/)/;
+
+/**
+ * The Kotlin Multiplatform module (MON-24), its build file and its sources in every source set.
+ * The app compiles it, so a path here is an Android path for every other output too, and it is
+ * treated as the build is: every Android job, every emulator leg. Its commonMain holds the domain
+ * the app's screens render, its converters reach Gson and R8, and its Android target is held to
+ * minSdk 26, which is what the API 26 leg confirms at runtime. The `shared` output is true for
+ * this and for [BUILD], whose root and module build files and workflow can change what the module
+ * compiles against.
+ */
+const SHARED = /^shared\//;
 
 /**
  * What the screenshot job renders, what renders it, and what it compares against: the committed
@@ -92,7 +105,7 @@ const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/andro
  * `firestore-tests/` (whose lock file pins the Firebase CLI it starts the emulators with), the
  * workflow, and any path this file does not know.
  */
-const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
+const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
 
 /**
  * Paths no CI job reads: the UI tour's request file, its workflow and its scripts. The tour is a
@@ -138,12 +151,12 @@ const FULL_MATRIX = [LEG_26, LEG_30, LEG_16KB];
 
 /** The answer for "run everything". */
 function everything() {
-  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true };
+  return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true, shared: true };
 }
 
 /** The answer for a diff no job reads. */
 function nothing() {
-  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false };
+  return { android: false, e2e: false, screenshots: false, upgrade: false, matrix: [LEG_30], r8runtime: false, web: false, shared: false };
 }
 
 /**
@@ -156,7 +169,8 @@ function decide(paths) {
   const changed = all.filter((p) => !UI_TOUR_ONLY.test(p) && !VIRTUAL_TESTER_ONLY.test(p));
   if (changed.length === 0) return nothing();
 
-  const build = changed.some((p) => BUILD.test(p));
+  // A change to the shared module is decided as a change to the build is (see [SHARED]).
+  const build = changed.some((p) => BUILD.test(p) || SHARED.test(p));
   const android = changed.some((p) => !NON_ANDROID.test(p));
   const e2e = build || changed.some((p) => !NON_E2E.test(p) && !UI_ONLY.test(p));
   const screenshots = android && (build || changed.some((p) => SCREENSHOT_INPUTS.test(p)));
@@ -164,7 +178,8 @@ function decide(paths) {
   const upgrade = build || changed.some((p) => UPGRADE_INPUTS.test(p) || !UPGRADE_UNAFFECTED.test(p));
   const r8runtime = build || changed.some((p) => !NON_ANDROID.test(p) && !NON_R8_RUNTIME.test(p));
   const web = changed.some((p) => !NON_WEB.test(p));
-  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web };
+  const shared = build;
+  return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared };
 }
 
 /** The `$GITHUB_OUTPUT` lines for a decision. */
@@ -177,6 +192,7 @@ function format(decision) {
     `matrix=${JSON.stringify(decision.matrix)}`,
     `r8runtime=${decision.r8runtime}`,
     `web=${decision.web}`,
+    `shared=${decision.shared}`,
   ].join('\n') + '\n';
 }
 
@@ -191,7 +207,7 @@ if (require.main === module) {
     process.stderr.write(
       `android=${decision.android} e2e=${decision.e2e} screenshots=${decision.screenshots} ` +
         `upgrade=${decision.upgrade} ` +
-        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web}\n`,
+        `emulators=[${legs}] r8runtime=${decision.r8runtime} web=${decision.web} shared=${decision.shared}\n`,
     );
   }
 }

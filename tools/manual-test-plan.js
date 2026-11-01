@@ -37,6 +37,23 @@ const CHECKLIST = 'docs/DEVICE-CHECKLIST.md';
 const K = 'app/src/main/java/com/coparently/app/';
 
 /**
+ * The shared Kotlin Multiplatform module's production source roots (MON-24): `commonMain`,
+ * `androidMain`, `iosMain` and the like, never a `…Test` set. The domain moves there from `K/`
+ * with its package unchanged, so a file under one of them is planned as the `K/` file it was —
+ * the rules below keep naming the app's paths, and a move changes no check a phone needs.
+ */
+const SHARED_MAIN = /^shared\/src\/(?![A-Za-z]*Test\/)[A-Za-z]+\/kotlin\/com\/coparently\/app\//;
+
+/**
+ * @param {string} file a changed path
+ * @return {string} the path the rules are matched against: a shared production source as the
+ *   app source it stands for, anything else unchanged
+ */
+function asAppSource(file) {
+  return SHARED_MAIN.test(file) ? file.replace(SHARED_MAIN, K) : file;
+}
+
+/**
  * The mapping. `sections` are checklist section numbers ("2.1", or "7" for a top-level
  * section); `paths` are globs (`**` any depth, `*` within one segment), where a leading `K/`
  * stands for the app's Kotlin source root. Order is the order the checklist runs in.
@@ -404,7 +421,7 @@ const RULES = [
  * Paths whose change needs no phone at all. They are neither mapped nor reported as unmapped.
  */
 const NO_DEVICE = ['docs/**', '**/*.md', '.github/**', 'tools/**', 'firestore-tests/**', 'web-tests/**',
-  'app/src/test/**', 'app/config/detekt/**', '.cursor/**', '.gitignore', 'LICENSE'];
+  'app/src/test/**', 'shared/src/*Test/**', 'app/config/detekt/**', '.cursor/**', '.gitignore', 'LICENSE'];
 
 /**
  * @param {string} glob a pattern from RULES or NO_DEVICE
@@ -479,9 +496,10 @@ function planFor(files, checklist, e2eBySection = new Map()) {
   for (const file of files) {
     // Documentation needs no phone, wherever it lives (functions/README.md is not server code).
     if (/\.md$/.test(file)) continue;
+    const subject = asAppSource(file);
     let claimed = false;
     for (const rule of compiled) {
-      if (!rule.res.some((re) => re.test(file))) continue;
+      if (!rule.res.some((re) => re.test(subject))) continue;
       claimed = true;
       for (const s of rule.sections) {
         if (!sections.has(s)) {
@@ -495,7 +513,7 @@ function planFor(files, checklist, e2eBySection = new Map()) {
         bySection.set(s, item);
       }
     }
-    if (!claimed && !noDevice.some((re) => re.test(file)) && file.startsWith('app/src/main/')) {
+    if (!claimed && !noDevice.some((re) => re.test(file)) && subject.startsWith('app/src/main/')) {
       unmapped.push(file);
     }
   }
@@ -608,4 +626,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = {RULES, NO_DEVICE, K, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};
+module.exports = {RULES, NO_DEVICE, K, asAppSource, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};
