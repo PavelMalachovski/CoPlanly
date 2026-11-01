@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
@@ -334,11 +335,41 @@ abstract class AliceOnScreenTest {
         composeTestRule.settle()
     }
 
-    /** Types [text] into the chat composer on screen and presses Send. */
+    /**
+     * Types [text] into the chat composer on screen and presses Send.
+     *
+     * It also logs what the composer and the send button held around the tap. A message typed here
+     * once never reached the other phone, and the run's log could not say whether it was never
+     * sent (the field lost the text, or the button was disabled) or sent and lost on the way
+     * ([logLocalMessages] answers that half).
+     */
     protected fun sendInChat(text: String) {
         composeTestRule.onAllNodes(hasSetTextAction()).onFirst().performTextInput(text)
         composeTestRule.settle()
-        tap(hasContentDescription(string(R.string.chat_send)) and hasClickAction())
+        val send = hasContentDescription(string(R.string.chat_send)) and hasClickAction()
+        val typed = hasSetTextAction() and hasText(text)
+        step(
+            "chat: before the tap, the composer holds the text: ${composeTestRule.exists(typed)}, " +
+                "send is enabled: ${composeTestRule.exists(send and isEnabled())}"
+        )
+        tap(send)
+        step("chat: after the tap, the composer still holds the text: ${composeTestRule.exists(typed)}")
+    }
+
+    /**
+     * Logs, as errors under the e2e tag (which the CI job prints), every row Alice's Room holds in
+     * [conversationId] — content, status and whether it reached the server — so that a message
+     * which never arrived on the other phone shows where it stopped.
+     */
+    protected fun logLocalMessages(conversationId: String) {
+        val rows = runBlocking { database.messageDao().getMessagesOnce(conversationId) }
+        Log.e(EmulatorEnvironment.LOG_TAG, "Alice's Room holds ${rows.size} message(s) in $conversationId")
+        rows.forEach { row ->
+            Log.e(
+                EmulatorEnvironment.LOG_TAG,
+                "  from ${row.senderId}: \"${row.content}\" status=${row.status} synced=${row.syncedToFirestore}"
+            )
+        }
     }
 
     /** The app's own string, in the language [strings] reads — the emulator's, unless a test switched it. */

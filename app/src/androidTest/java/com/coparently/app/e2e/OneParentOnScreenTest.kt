@@ -8,6 +8,7 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
 import com.coparently.app.testing.UsesFakeFirebase
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -69,12 +70,19 @@ class OneParentOnScreenTest : AliceOnScreenTest() {
         step("chat: type and send")
         sendInChat(fromAlice)
         step("chat: wait for the reply on Bob's phone")
-        runBlocking {
-            withTimeout(EmulatorParent.WAIT_MS) {
-                bob.messageRepository.observeMessages(conversationId).first { list ->
-                    list.any { it.content == fromAlice && it.senderId == aliceUid }
+        try {
+            runBlocking {
+                withTimeout(EmulatorParent.WAIT_MS) {
+                    bob.messageRepository.observeMessages(conversationId).first { list ->
+                        list.any { it.content == fromAlice && it.senderId == aliceUid }
+                    }
                 }
             }
+        } catch (e: TimeoutCancellationException) {
+            // Where it stopped: no row means the composer never sent it; SENDING or ERROR means it
+            // was sent and the write did not land.
+            logLocalMessages(conversationId)
+            throw e
         }
     }
 

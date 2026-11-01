@@ -1177,7 +1177,7 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
       - name: Did the two-parent tests start?
@@ -1214,7 +1214,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       - name: The two-parent tests finished and passed
         if: always()
