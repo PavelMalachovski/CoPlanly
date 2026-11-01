@@ -493,7 +493,7 @@ dependencies {
     // had no consumer left in `app/src` at all — retrofit already had none before.
     // OkHttp was declared again for the school import (MON-8) and left the app's own dependencies
     // in MON-24 phase 2, when the import moved to Ktor in `:shared-data`. Its OkHttp engine brings
-    // OkHttp 5.5.1, which Coil 2.7 (built against 4.12) now runs on too: Coil uses only OkHttp's
+    // OkHttp 5.3.2, which Coil 2.7 (built against 4.12) now runs on too: Coil uses only OkHttp's
     // public API (calls, requests, responses, headers, cache control), which 5.x keeps
     // binary-compatible, and nothing in the app calls OkHttp itself any more.
 
@@ -571,7 +571,7 @@ dependencies {
     // Ktor's in-memory server for the school import's tests (MON-8): token rotation and the
     // refresh-and-retry on a 401, through the real client. It replaced OkHttp's MockWebServer when
     // the client moved to Ktor (MON-24); the version is `:shared-data`'s Ktor.
-    testImplementation("io.ktor:ktor-client-mock:3.6.1")
+    testImplementation("io.ktor:ktor-client-mock:3.5.1")
 
     // ArchCore Testing for LiveData and ViewModel
     testImplementation("androidx.arch.core:core-testing:2.2.0")

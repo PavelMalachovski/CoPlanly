@@ -19,12 +19,18 @@ plugins {
 }
 
 /**
- * Ktor 3.6.1 (29 October 2026), the newest 3.x. Its artifacts are built with Kotlin 2.3.21 (class
- * metadata 2.3.0, a stdlib dependency of 2.3.21), which this project's compiler reads, and it asks
- * for kotlinx-coroutines and kotlinx-serialization 1.11.0, the versions the project already uses.
- * Its OkHttp engine brings OkHttp 5.5.1 (see the app's build file).
+ * Ktor 3.5.1. Its artifacts are built with Kotlin 2.3.21 (class metadata 2.3.0, a stdlib dependency
+ * of 2.3.21), which this project's compiler reads, and it asks for kotlinx-coroutines and
+ * kotlinx-serialization 1.11.0, the versions the project already uses. Its OkHttp engine brings
+ * OkHttp 5.3.2 (see the app's build file).
+ *
+ * Not 3.6: Ktor 3.6.0 brings OkHttp 5.5.0 and 3.6.1 brings 5.5.1, and from OkHttp 5.5 the
+ * `okhttp-android` AAR requires compileSdk 37 (5.4 requires 36, 5.3.2 and older 1), which AGP 8.10
+ * cannot compile against — `checkDebugAarMetadata` fails. So Ktor 3.6 and later wait for AGP 9, as
+ * Kotlin 2.4 does. Don't force an older OkHttp under a newer Ktor: no test here runs the real OkHttp
+ * engine, so a binary mismatch would show only on a phone.
  */
-val ktorVersion = "3.6.1"
+val ktorVersion = "3.5.1"
 
 kotlin {
     androidTarget {
@@ -46,8 +52,8 @@ kotlin {
             // `api`, because the clients' public constructors take an `HttpClient`.
             api("io.ktor:ktor-client-core:$ktorVersion")
             // `kotlinx.io.IOException`, which a network failure arrives as on every platform (on
-            // the JVM it is `java.io.IOException` itself). The version Ktor 3.6.1 is built on.
-            api("org.jetbrains.kotlinx:kotlinx-io-core:0.9.1")
+            // the JVM it is `java.io.IOException` itself). The version Ktor 3.5.1 is built on.
+            api("org.jetbrains.kotlinx:kotlinx-io-core:0.9.0")
         }
         androidMain.dependencies {
             // OkHttp, which the school import already talked to schools with before the move.

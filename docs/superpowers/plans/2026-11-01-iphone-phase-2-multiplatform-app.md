@@ -674,7 +674,8 @@ ViewModels are about 57 of those files.
 ### Task 13: AGP 9 and Kotlin 2.4
 
 `CLAUDE.md`'s toolchain line names two blockers for Kotlin 2.4: AGP 9, and Dagger 2.60. Task 2
-removed Dagger, so only AGP 9 is left. ROADMAP MON-24 needs Kotlin 2.4 before phase 3.
+removed Dagger, so only AGP 9 is left. ROADMAP MON-24 needs Kotlin 2.4 before phase 3. AGP 9 also
+unblocks Ktor 3.6 and later, whose OkHttp 5.5 needs compileSdk 37 (Task 5 stayed on Ktor 3.5.1).
 
 **Files:**
 - Modify:
@@ -683,6 +684,7 @@ removed Dagger, so only AGP 9 is left. ROADMAP MON-24 needs Kotlin 2.4 before ph
     `com.android.kotlin.multiplatform.library` plugin);
   - `app/build.gradle.kts`;
   - Roborazzi and KSP versions;
+  - Ktor (`shared-data/build.gradle.kts`, and `ktor-client-mock` in the app), with compileSdk 37;
   - `CLAUDE.md` (toolchain line, its Xcode note);
   - `docs/IOS-RUNNER.md` and the spec if the Xcode range changes.
 

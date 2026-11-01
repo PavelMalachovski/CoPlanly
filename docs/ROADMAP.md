@@ -2734,8 +2734,9 @@ bytes are identical on Android):
   output. Gson stays only as a test oracle; Google's calendar client, which brought one, left in
   Task 5.
 - ~~**HTTP on Ktor**~~ **Done (phase 2, Task 5, November 2026)**: the `:shared-data` module holds
-  the Bakaláři client and school directory and Google Calendar's `events.list` on Ktor 3.6.1
-  (OkHttp engine on Android, which brings OkHttp 5.5.1; Darwin on iOS). OkHttp's own declaration,
+  the Bakaláři client and school directory and Google Calendar's `events.list` on Ktor 3.5.1
+  (OkHttp engine on Android, which brings OkHttp 5.3.2; Darwin on iOS — Ktor 3.6's OkHttp 5.5 needs
+  compileSdk 37, so Ktor moves with AGP 9). OkHttp's own declaration,
   MockWebServer, google-api-client and google-api-services-calendar left the app, with the Calendar
   models' keep rules and their R8 probe case. Each request is pinned to the bytes the old clients
   sent (`BakalariRequestShapeTest`, `GoogleCalendarRequestShapeTest`), and school addresses to
@@ -2786,7 +2787,8 @@ platform caches; they do not fail the link. So:
    `DEVELOPER_DIR` in the runner's `.env` (`docs/IOS-RUNNER.md`, step 1), is the fallback for the
    day a Kotlin/Native build stops working on the newer Xcode, not a step to take now.
 2. **Before phase 3** (the iPhone shell, built in Xcode day to day): AGP 9, which Dagger 2.60 and
-   so Kotlin 2.4 wait for (CLAUDE.md, toolchain), then Kotlin 2.4 (Xcode up to 26.4).
+   so Kotlin 2.4 wait for (CLAUDE.md, toolchain), then Kotlin 2.4 (Xcode up to 26.4). Ktor 3.6 and
+   later wait for it too: their OkHttp 5.5 needs compileSdk 37.
 3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
    App Store Connect will require by then.
 

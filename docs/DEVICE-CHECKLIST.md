@@ -1069,7 +1069,7 @@ is the first time the import meets a real server. Needs a parent (or student) Ba
 - [ ] Two children at the same school: connect each with its own Bakaláři login (Bakaláři issues
       one per child); each child's events carry that child.
 - **Since MON-24 phase 2** the client talks to the school through Ktor's OkHttp engine (OkHttp
-  5.5.1, from 4.12), from `shared-data/`. The requests, the timeouts and the redirects are pinned
+  5.3.2, from 4.12), from `shared-data/`. The requests, the timeouts and the redirects are pinned
   to what OkHttp 4.12 did (`BakalariRequestShapeTest`, `BakalariRedirectsTest`), but no real school has answered the new client yet: this section,
   run once on that build, is its acceptance.
 - **If it fails:** `data/school/bakalari/` (parsers and the authorizer in the app, the client and

@@ -562,12 +562,16 @@ When touching the UI, keep these invariants:
    `storageMetadata`, …) are imported from the product's own package
    (`com.google.firebase.analytics.logEvent`, never `…analytics.ktx…`). `Task.await()` comes from the
    explicitly declared `kotlinx-coroutines-play-services`, not from Firebase's transitive graph.
-   **Ktor 3.6.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
-   Google Calendar's: the newest 3.x, built with Kotlin 2.3.21 like this project, on the OkHttp
-   engine on Android (which brings **OkHttp 5.5.1**; the app declares no OkHttp of its own any more,
-   and Coil 2.7 runs on that one) and Darwin on iOS. google-api-client and
-   google-api-services-calendar left the build with it. Like kotlinx-serialization, it moves with
-   Kotlin: never take a Ktor built with a newer Kotlin than the project's (3.6.1 is built with 2.3.21).
+   **Ktor 3.5.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
+   Google Calendar's: built with Kotlin 2.3.21 like this project, on the OkHttp engine on Android
+   (which brings **OkHttp 5.3.2**; the app declares no OkHttp of its own any more, and Coil 2.7 runs
+   on that one) and Darwin on iOS. google-api-client and google-api-services-calendar left the build
+   with it. Like kotlinx-serialization, it moves with Kotlin: never take a Ktor built with a newer
+   Kotlin than the project's (3.5.1 is built with 2.3.21). **And AGP holds it back too**: OkHttp 5.5
+   and later (so Ktor 3.6 and later) need compileSdk 37, which AGP 8.10 cannot compile against
+   (`checkDebugAarMetadata` fails), so Ktor waits for AGP 9 with Kotlin 2.4. Don't force an older
+   OkHttp under a newer Ktor: no test runs the real OkHttp engine, so a mismatch would show only on a
+   phone.
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
