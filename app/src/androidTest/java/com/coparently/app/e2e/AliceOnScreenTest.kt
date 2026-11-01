@@ -357,15 +357,15 @@ abstract class AliceOnScreenTest {
     }
 
     /**
-     * Logs, as errors under the e2e tag (which the CI job prints), every row Alice's Room holds in
-     * [conversationId] — content, status and whether it reached the server — so that a message
-     * which never arrived on the other phone shows where it stopped.
+     * Logs every row Alice's Room holds in [conversationId] — content, status and whether it
+     * reached the server — so that a message which never arrived on the other phone shows where it
+     * stopped. At info level under the e2e tag, beside the timed steps the CI job prints.
      */
     protected fun logLocalMessages(conversationId: String) {
         val rows = runBlocking { database.messageDao().getMessagesOnce(conversationId) }
-        Log.e(EmulatorEnvironment.LOG_TAG, "Alice's Room holds ${rows.size} message(s) in $conversationId")
+        Log.i(EmulatorEnvironment.LOG_TAG, "Alice's Room holds ${rows.size} message(s) in $conversationId")
         rows.forEach { row ->
-            Log.e(
+            Log.i(
                 EmulatorEnvironment.LOG_TAG,
                 "  from ${row.senderId}: \"${row.content}\" status=${row.status} synced=${row.syncedToFirestore}"
             )

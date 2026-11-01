@@ -79,9 +79,10 @@ class OneParentOnScreenTest : AliceOnScreenTest() {
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            // Where it stopped: no row means the composer never sent it; SENDING or ERROR means it
-            // was sent and the write did not land.
-            logLocalMessages(conversationId)
+            // Where it stopped: no row means the composer never sent it or the send hold still keeps
+            // it (the e2e turns the pause off, so a held row is itself a finding); SENDING or ERROR
+            // means it was sent and the write did not land. A failed read must not replace the timeout.
+            runCatching { logLocalMessages(conversationId) }
             throw e
         }
     }
