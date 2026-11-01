@@ -1,7 +1,7 @@
 package com.coparently.app.domain.guests
 
 import com.coparently.app.domain.pairing.PairingUri
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
