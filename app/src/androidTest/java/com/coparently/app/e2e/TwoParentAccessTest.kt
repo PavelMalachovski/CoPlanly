@@ -39,6 +39,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -628,11 +629,11 @@ class TwoParentAccessTest : TwoParentTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = now.plusDays(2),
+            startDateTime = now.plusDays(2).toKotlinLocalDateTime(),
             eventType = "school",
             parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             isPrivate = isPrivate
         )
         parent.eventRepository.insertEvent(event)

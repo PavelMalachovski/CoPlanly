@@ -2,7 +2,7 @@ package com.coparently.app.domain.repository
 
 import com.coparently.app.domain.model.Event
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Repository interface for managing events.

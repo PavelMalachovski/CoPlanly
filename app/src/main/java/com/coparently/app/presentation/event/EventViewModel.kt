@@ -9,6 +9,8 @@ import com.coparently.app.domain.error.AppError
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.RecordPhotoStorage
+import com.coparently.app.domain.time.durationUntil
+import com.coparently.app.domain.time.plus
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Parents
@@ -34,12 +36,16 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Duration
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.time.Clock
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
@@ -337,16 +343,15 @@ class EventViewModel @Inject constructor(
                 // Store previous position for undo
                 lastMoveUndoInfo = PreviousEventPosition(eventId, event.startDateTime, event.endDateTime)
 
-                // An event with no end time keeps none: Duration.between(start, null) is an NPE
-                // (a platform-type Java call Kotlin lets through), and an all-day Google import
-                // is exactly such an event.
-                val duration = event.endDateTime?.let { Duration.between(event.startDateTime, it) }
+                // An event with no end time keeps none, and an all-day Google import is exactly
+                // such an event.
+                val duration = event.endDateTime?.let { event.startDateTime.durationUntil(it) }
                 val newTime = targetStartMinuteOfDay
                     ?.coerceIn(0, 24 * 60 - 1)
-                    ?.let { LocalTime.of(it / 60, it % 60) }
-                    ?: event.startDateTime.toLocalTime()
+                    ?.let { LocalTime(it / 60, it % 60) }
+                    ?: event.startDateTime.time
                 val newStart = targetDate.atTime(newTime)
-                val newEnd = duration?.let { newStart.plus(it) }
+                val newEnd = duration?.let { newStart + it }
                 val updatedEvent = event.copy(
                     startDateTime = newStart,
                     endDateTime = newEnd
@@ -418,10 +423,10 @@ class EventViewModel @Inject constructor(
                 if (event.isRecurring) return@launch
 
                 val updatedStart = newStartTime ?: event.startDateTime
-                val updatedEnd = newEndTime ?: (event.endDateTime ?: event.startDateTime.plusHours(1))
+                val updatedEnd = newEndTime ?: (event.endDateTime ?: event.startDateTime.plus(1, DateTimeUnit.HOUR))
 
                 // Validate that end is after start
-                if (updatedEnd.isBefore(updatedStart) || updatedEnd.isEqual(updatedStart)) {
+                if (updatedEnd <= updatedStart) {
                     _uiState.value = EventUiState.Error(UiText.Res(R.string.event_form_end_before_start))
                     return@launch
                 }
@@ -469,7 +474,7 @@ class EventViewModel @Inject constructor(
                 val role = parentsSource.signedInSlot() ?: event.parentOwner
                 val updated = event.copy(
                     pickupConfirmedBy = role,
-                    pickupConfirmedAt = LocalDateTime.now()
+                    pickupConfirmedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                 )
                 val result = eventUseCases.updateEvent(updated)
                 result.onSuccess {

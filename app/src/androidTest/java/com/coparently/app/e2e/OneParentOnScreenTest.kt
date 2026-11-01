@@ -11,6 +11,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -85,12 +86,12 @@ class OneParentOnScreenTest : AliceOnScreenTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusMinutes(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusMinutes(1).toKotlinLocalDateTime(),
             eventType = "appointment",
             parentOwner = bob.database.userDao().getUserById(bob.uid)?.role ?: "dad",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
     }
 

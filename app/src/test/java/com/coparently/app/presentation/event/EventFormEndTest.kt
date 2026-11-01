@@ -2,6 +2,10 @@ package com.coparently.app.presentation.event
 
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -21,19 +25,20 @@ class EventFormEndTest {
     private fun event(start: LocalDateTime, end: LocalDateTime?) = Event(
         id = "e1",
         title = "Weekend",
-        startDateTime = start,
-        endDateTime = end,
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = end?.toKotlinLocalDateTime(),
         eventType = "general",
         parentOwner = "mom",
-        createdAt = start,
-        updatedAt = start
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime()
     )
 
     /** What the form saves for [loaded] when only its title was edited. */
-    private fun savedEndOf(loaded: Event): LocalDateTime? {
-        val start = loaded.startDateTime
-        val endTime = loaded.endDateTime?.toLocalTime() ?: start.toLocalTime().plusHours(1)
+    private fun savedEndOf(loaded: Event): kotlinx.datetime.LocalDateTime? {
+        val start = loaded.startDateTime.toJavaLocalDateTime()
+        val endTime = loaded.endDateTime?.toJavaLocalDateTime()?.toLocalTime() ?: start.toLocalTime().plusHours(1)
         return formEndDateTime(start.toLocalDate(), endTime, endDaySpanOf(loaded), loaded.endDateTime == null)
+            ?.toKotlinLocalDateTime()
     }
 
     @Test
@@ -119,7 +124,7 @@ class EventFormEndTest {
         // Every surface that prints a time reads this shape as all day, over exactly those days.
         val saved = event(start, end)
         assertTrue(AllDayEvent.isAllDay(saved))
-        assertEquals(LocalDate.of(2026, 10, 25), AllDayEvent.lastDay(saved))
+        assertEquals(LocalDate.of(2026, 10, 25).toKotlinLocalDate(), AllDayEvent.lastDay(saved))
     }
 
     @Test
@@ -170,6 +175,6 @@ class EventFormEndTest {
     @Test
     fun `the last hour of the day does not wrap past midnight`() {
         assertEquals(LocalTime.of(23, 0), defaultStartTime(LocalTime.of(23, 40)))
-        assertEquals(AllDayEvent.LAST_MINUTE, defaultEndTime(LocalTime.of(23, 0)))
+        assertEquals(AllDayEvent.LAST_MINUTE.toJavaLocalTime(), defaultEndTime(LocalTime.of(23, 0)))
     }
 }

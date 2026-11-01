@@ -60,6 +60,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -134,12 +136,12 @@ class ChangeRequestViewModelTest {
     private val event = Event(
         id = "e1",
         title = "Dentist",
-        startDateTime = LocalDateTime.of(2026, 9, 10, 9, 0),
-        endDateTime = LocalDateTime.of(2026, 9, 10, 10, 0),
+        startDateTime = LocalDateTime.of(2026, 9, 10, 9, 0).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.of(2026, 9, 10, 10, 0).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0),
+        createdAt = LocalDateTime.of(2026, 9, 1, 9, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0).toKotlinLocalDateTime(),
         lastModifiedBy = "u2"
     )
     private val request = ChangeRequest(
@@ -148,8 +150,8 @@ class ChangeRequestViewModelTest {
         eventTitle = "Dentist",
         requestedBy = "u2",
         requestedTo = "u1",
-        currentStartDateTime = event.startDateTime,
-        currentEndDateTime = event.endDateTime,
+        currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
+        currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
         proposedStartDateTime = LocalDateTime.of(2026, 9, 11, 14, 0),
         proposedEndDateTime = LocalDateTime.of(2026, 9, 11, 15, 0),
         createdAt = LocalDateTime.of(2026, 9, 2, 9, 0)
@@ -230,8 +232,8 @@ class ChangeRequestViewModelTest {
         vm.accept("r1")
         advanceUntilIdle()
 
-        assertEquals(request.proposedStartDateTime, moved.captured.startDateTime)
-        assertEquals(request.proposedEndDateTime, moved.captured.endDateTime)
+        assertEquals(request.proposedStartDateTime.toKotlinLocalDateTime(), moved.captured.startDateTime)
+        assertEquals(request.proposedEndDateTime?.toKotlinLocalDateTime(), moved.captured.endDateTime)
         assertEquals("u1", moved.captured.lastModifiedBy)
         coVerify(exactly = 1) { changeRequestRepository.updateStatus("r1", ChangeRequestStatus.ACCEPTED) }
     }
@@ -323,8 +325,8 @@ class ChangeRequestViewModelTest {
     fun `a waiting event gets a mini month of its own month`() = runTest(dispatcher) {
         val waiting = event.copy(
             id = "e-waiting",
-            startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
-            endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30),
+            startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0).toKotlinLocalDateTime(),
+            endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30).toKotlinLocalDateTime(),
             createdByFirebaseUid = "u2",
             familyId = "u1__u2",
             acceptance = EventAcceptance.PENDING
@@ -346,8 +348,8 @@ class ChangeRequestViewModelTest {
     /** An event Pavel created on 21 October, waiting for Olya's answer. */
     private val waitingInOctober = event.copy(
         id = "e-waiting",
-        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
-        endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30),
+        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.of(2026, 10, 21, 17, 30).toKotlinLocalDateTime(),
         createdByFirebaseUid = "u2",
         familyId = "u1__u2",
         acceptance = EventAcceptance.PENDING

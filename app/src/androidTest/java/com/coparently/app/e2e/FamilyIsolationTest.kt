@@ -24,7 +24,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -178,7 +180,9 @@ class FamilyIsolationTest : TwoParentTest() {
             val stored = checkNotNull(alice.eventRepository.getEventById(event.id)) {
                 "${event.title} is not on Alice's phone"
             }
-            alice.eventRepository.updateEvent(stored.copy(title = "${stored.title} (moved)", updatedAt = now()))
+            alice.eventRepository.updateEvent(
+                stored.copy(title = "${stored.title} (moved)", updatedAt = now().toKotlinLocalDateTime())
+            )
         }
         inA.child?.let { child ->
             val stored = checkNotNull(alice.childInfoRepository.getChildInfoById(child.id))
@@ -408,11 +412,11 @@ class FamilyIsolationTest : TwoParentTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = now().plusDays(2),
+            startDateTime = now().plusDays(2).toKotlinLocalDateTime(),
             eventType = "school",
             parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-            createdAt = now(),
-            updatedAt = now()
+            createdAt = now().toKotlinLocalDateTime(),
+            updatedAt = now().toKotlinLocalDateTime()
         )
         parent.eventRepository.insertEvent(event)
         return event
@@ -475,8 +479,8 @@ class FamilyIsolationTest : TwoParentTest() {
             eventTitle = event.title,
             requestedBy = from.uid,
             requestedTo = to.uid,
-            currentStartDateTime = event.startDateTime,
-            proposedStartDateTime = event.startDateTime.plusDays(1),
+            currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusDays(1),
             note = note,
             createdAt = now()
         )

@@ -43,6 +43,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -155,7 +156,7 @@ class HomeViewModelTest {
             )
         )
 
-    private val storedEvent = java.time.LocalDateTime.of(2026, 9, 1, 9, 0).let { at ->
+    private val storedEvent = kotlinx.datetime.LocalDateTime(2026, 9, 1, 9, 0).let { at ->
         com.coparently.app.domain.model.Event(
             id = "e1",
             title = "Dentist",
@@ -329,14 +330,14 @@ class HomeViewModelTest {
             val first = storedEvent.copy(
                 id = "weekly",
                 title = "Swimming",
-                startDateTime = tomorrow,
-                endDateTime = tomorrow.plusHours(1),
+                startDateTime = tomorrow.toKotlinLocalDateTime(),
+                endDateTime = tomorrow.plusHours(1).toKotlinLocalDateTime(),
                 isRecurring = true,
                 recurrencePattern = "daily"
             )
             val second = first.copy(
-                startDateTime = tomorrow.plusDays(1),
-                endDateTime = tomorrow.plusDays(1).plusHours(1)
+                startDateTime = tomorrow.plusDays(1).toKotlinLocalDateTime(),
+                endDateTime = tomorrow.plusDays(1).plusHours(1).toKotlinLocalDateTime()
             )
             agendaEvents.value = listOf(first, second)
 
@@ -366,7 +367,8 @@ class HomeViewModelTest {
                 assertEquals(first, viewModel.previewEvent.value)
 
                 // An occurrence that has since left the dashboard falls back to the id alone.
-                viewModel.openPreview("weekly", tomorrow.plusDays(30), onMissing = { missing = true })
+                val gone = tomorrow.plusDays(30).toKotlinLocalDateTime()
+                viewModel.openPreview("weekly", gone, onMissing = { missing = true })
                 dispatcher.scheduler.advanceUntilIdle()
                 assertEquals(first, viewModel.previewEvent.value)
                 assertFalse(missing)

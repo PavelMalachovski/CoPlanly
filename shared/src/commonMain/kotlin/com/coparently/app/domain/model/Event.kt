@@ -2,7 +2,8 @@ package com.coparently.app.domain.model
 
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.family.FamilyMemberRef
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Domain model representing an event.
@@ -65,7 +66,7 @@ data class Event(
     val lastModifiedBy: String? = null,
     val permissions: String = "read_write", // "read_only" or "read_write"
     val isPrivate: Boolean = false,
-    val recurrenceEndDate: java.time.LocalDate? = null,
+    val recurrenceEndDate: LocalDate? = null,
     val pickupConfirmedBy: String? = null,
     val pickupConfirmedAt: LocalDateTime? = null,
     val reminderMinutes: Int? = null,

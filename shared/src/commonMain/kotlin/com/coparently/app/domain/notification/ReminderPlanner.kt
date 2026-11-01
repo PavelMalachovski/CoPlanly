@@ -1,8 +1,11 @@
 package com.coparently.app.domain.notification
 
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.minus
+import com.coparently.app.domain.time.plus
 import com.coparently.app.domain.usecase.RecurrenceExpander
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDateTime
 
 /**
  * The one reminder an event has pending: the occurrence it is for and when it is due.
@@ -43,16 +46,20 @@ object ReminderPlanner {
     fun nextReminder(event: Event, now: LocalDateTime): ReminderPlan? {
         val lead = event.reminderMinutes?.takeIf { it >= 0 }?.toLong() ?: return null
         // Start - lead > now  <=>  start > now + lead.
-        val earliestStart = now.plusMinutes(lead)
+        val earliestStart = now.plus(lead, DateTimeUnit.MINUTE)
         val start: LocalDateTime? = if (isRecurring(event)) {
-            RecurrenceExpander.expand(instant(event), earliestStart, earliestStart.plusDays(SEARCH_HORIZON_DAYS))
+            RecurrenceExpander.expand(
+                instant(event),
+                earliestStart,
+                earliestStart.plus(SEARCH_HORIZON_DAYS, DateTimeUnit.DAY)
+            )
                 .asSequence()
                 .map { it.startDateTime }
                 .firstOrNull { it > earliestStart }
         } else {
             event.startDateTime.takeIf { it > earliestStart }
         }
-        return start?.let { ReminderPlan(occurrenceStart = it, remindAt = it.minusMinutes(lead)) }
+        return start?.let { ReminderPlan(occurrenceStart = it, remindAt = it.minus(lead, DateTimeUnit.MINUTE)) }
     }
 
     /**

@@ -94,6 +94,7 @@ import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -255,7 +256,8 @@ fun CalendarScreen(
     var previewEventId by remember { mutableStateOf<String?>(null) }
     // The tapped occurrence's start: every occurrence of a recurring event shares its id, so the
     // id alone opened the first one on screen and showed its date instead of the tapped one's.
-    var previewEventStart by remember { mutableStateOf<LocalDateTime?>(null) }
+    // An occurrence is told apart by its start, which is the event's own kotlinx-datetime value.
+    var previewEventStart by remember { mutableStateOf<kotlinx.datetime.LocalDateTime?>(null) }
 
     // Day-swap selection: the legend's ⇄ button or a long-press opens it, taps pick or unpick
     // single days (any days, mine to give and theirs to take — `SwapSelection`), and the sheet
@@ -503,7 +505,7 @@ fun CalendarScreen(
     // Load events based on view mode
     LaunchedEffect(viewMode, queryAnchorDate) {
         val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
-        eventViewModel.loadEventsForDateRange(start, end)
+        eventViewModel.loadEventsForDateRange(start.toKotlinLocalDateTime(), end.toKotlinLocalDateTime())
     }
 
     // Show snackbar with undo when event is moved.
@@ -958,10 +960,14 @@ fun CalendarScreen(
                                         onAddEventClick(date, hour)
                                     },
                                     onEventDragDrop = { eventId, targetDate, targetHour ->
-                                        eventViewModel.moveEvent(eventId, targetDate, targetHour)
+                                        eventViewModel.moveEvent(eventId, targetDate.toKotlinLocalDate(), targetHour)
                                     },
                                     onEventResize = { eventId: String, newStartTime: LocalDateTime?, newEndTime: LocalDateTime? ->
-                                        eventViewModel.resizeEvent(eventId, newStartTime, newEndTime)
+                                        eventViewModel.resizeEvent(
+                                            eventId,
+                                            newStartTime?.toKotlinLocalDateTime(),
+                                            newEndTime?.toKotlinLocalDateTime()
+                                        )
                                     },
                                     onEventDelete = { eventId ->
                                         deleteEventWithUndo(eventId)

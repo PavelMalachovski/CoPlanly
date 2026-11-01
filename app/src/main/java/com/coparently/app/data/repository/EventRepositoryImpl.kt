@@ -28,14 +28,17 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.versions.EventVersionKind
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -60,7 +63,6 @@ class EventRepositoryImpl @Inject constructor(
     private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : EventRepository {
 
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val gson = Gson()
 
     /**
@@ -95,9 +97,10 @@ class EventRepositoryImpl @Inject constructor(
     override fun getEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Event>> {
         // Non-recurring events matched by the query + recurring events expanded
         // into their occurrences within the range.
+        // Room keeps java.time columns until the data layer moves (MON-24 phase 2).
         return kotlinx.coroutines.flow.combine(
-            eventDao.getSingleEventsByDateRange(start, end),
-            eventDao.getRecurringEventsStartedBefore(end)
+            eventDao.getSingleEventsByDateRange(start.toJavaLocalDateTime(), end.toJavaLocalDateTime()),
+            eventDao.getRecurringEventsStartedBefore(end.toJavaLocalDateTime())
         ) { single, recurring ->
             val singleEvents = CalendarVisibility.visible(single.map { it.toDomain() })
             val occurrences = com.coparently.app.domain.usecase.RecurrenceExpander.expandAll(
@@ -115,7 +118,7 @@ class EventRepositoryImpl @Inject constructor(
 
     /** One day's events, filtered by the same rule as the range query. */
     override fun getEventsByDate(date: LocalDateTime): Flow<List<Event>> {
-        return eventDao.getEventsByDate(date).map { entities ->
+        return eventDao.getEventsByDate(date.toJavaLocalDateTime()).map { entities ->
             CalendarVisibility.visible(entities.map { it.toDomain() })
         }.inFamilyOnScreen(
             firebaseAuthService,
@@ -408,7 +411,7 @@ class EventRepositoryImpl @Inject constructor(
                 entityType = ActivityEntityType.EVENT,
                 entityId = event.id,
                 title = event.title,
-                whenIso = event.startDateTime.format(dateFormatter)
+                whenIso = IsoText.dateTime(event.startDateTime)
             ),
             senderName = me?.name.orEmpty(),
             suppress = suppressed,
@@ -516,14 +519,14 @@ class EventRepositoryImpl @Inject constructor(
             id = id,
             title = title,
             description = description,
-            startDateTime = startDateTime,
-            endDateTime = endDateTime,
+            startDateTime = startDateTime.toKotlinLocalDateTime(),
+            endDateTime = endDateTime?.toKotlinLocalDateTime(),
             eventType = eventType,
             parentOwner = parentOwner,
             isRecurring = isRecurring,
             recurrencePattern = recurrencePattern,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toKotlinLocalDateTime(),
+            updatedAt = updatedAt.toKotlinLocalDateTime(),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             sharedWith = runCatching {
@@ -532,9 +535,9 @@ class EventRepositoryImpl @Inject constructor(
             lastModifiedBy = lastModifiedBy,
             permissions = permissions,
             isPrivate = isPrivate,
-            recurrenceEndDate = recurrenceEndDate,
+            recurrenceEndDate = recurrenceEndDate?.toKotlinLocalDate(),
             pickupConfirmedBy = pickupConfirmedBy,
-            pickupConfirmedAt = pickupConfirmedAt,
+            pickupConfirmedAt = pickupConfirmedAt?.toKotlinLocalDateTime(),
             reminderMinutes = reminderMinutes,
             imageUrl = imageUrl,
             // An unrecognised status from a newer build reads as NOT_REQUIRED rather than
@@ -543,7 +546,7 @@ class EventRepositoryImpl @Inject constructor(
             acceptance = runCatching { EventAcceptance.valueOf(acceptance) }
                 .getOrDefault(EventAcceptance.NOT_REQUIRED),
             acceptedBy = acceptedBy,
-            acceptedAt = acceptedAt,
+            acceptedAt = acceptedAt?.toKotlinLocalDateTime(),
             isImportant = isImportant,
             friendParticipates = friendParticipates,
             familyId = familyId,
@@ -563,31 +566,31 @@ class EventRepositoryImpl @Inject constructor(
             id = id,
             title = title,
             description = description,
-            startDateTime = startDateTime,
-            endDateTime = endDateTime,
+            startDateTime = startDateTime.toJavaLocalDateTime(),
+            endDateTime = endDateTime?.toJavaLocalDateTime(),
             eventType = eventType,
             parentOwner = parentOwner,
             isRecurring = isRecurring,
             recurrencePattern = recurrencePattern,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toJavaLocalDateTime(),
+            updatedAt = updatedAt.toJavaLocalDateTime(),
             // Derived here, at the one boundary every save crosses, from the wall clock each save
             // path already stamps — so no path can forget it (see `EventTimestamp.ofWallClock`).
-            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             sharedWithJson = gson.toJson(sharedWith),
             lastModifiedBy = lastModifiedBy,
             permissions = permissions,
             isPrivate = isPrivate,
-            recurrenceEndDate = recurrenceEndDate,
+            recurrenceEndDate = recurrenceEndDate?.toJavaLocalDate(),
             pickupConfirmedBy = pickupConfirmedBy,
-            pickupConfirmedAt = pickupConfirmedAt,
+            pickupConfirmedAt = pickupConfirmedAt?.toJavaLocalDateTime(),
             reminderMinutes = reminderMinutes,
             imageUrl = imageUrl,
             acceptance = acceptance.name,
             acceptedBy = acceptedBy,
-            acceptedAt = acceptedAt,
+            acceptedAt = acceptedAt?.toJavaLocalDateTime(),
             isImportant = isImportant,
             friendParticipates = friendParticipates,
             familyId = familyId,

@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -73,11 +74,11 @@ class FriendCalendarViewModelTest {
     private fun event(id: String, day: LocalDate) = Event(
         id = id,
         title = "Event $id",
-        startDateTime = day.atTime(10, 0),
+        startDateTime = day.atTime(10, 0).toKotlinLocalDateTime(),
         eventType = "OTHER",
         parentOwner = "mom",
-        createdAt = day.minusDays(7).atStartOfDay(),
-        updatedAt = day.minusDays(7).atStartOfDay(),
+        createdAt = day.minusDays(7).atStartOfDay().toKotlinLocalDateTime(),
+        updatedAt = day.minusDays(7).atStartOfDay().toKotlinLocalDateTime(),
         createdByFirebaseUid = "u1"
     )
 

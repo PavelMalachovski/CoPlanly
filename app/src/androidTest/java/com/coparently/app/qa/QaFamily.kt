@@ -13,6 +13,7 @@ import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -42,12 +43,12 @@ internal object QaFamily {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "other",
             parentOwner = slotOf(by),
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = by.uid,
             lastModifiedBy = by.uid,
             forMembers = forMembers,

@@ -7,6 +7,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -85,7 +86,8 @@ class TodayWidgetModelTest {
             event("evening", today.atTime(18, 0)),
             event("theirs", today.atTime(12, 0)).copy(isPrivate = true, createdByFirebaseUid = "uid-dad"),
             event("mine", today.atTime(11, 0)).copy(isPrivate = true, createdByFirebaseUid = "uid-mom"),
-            event("overnight", today.minusDays(1).atTime(20, 0)).copy(endDateTime = today.atTime(8, 0)),
+            event("overnight", today.minusDays(1).atTime(20, 0))
+                .copy(endDateTime = today.atTime(8, 0).toKotlinLocalDateTime()),
             event("morning", today.atTime(9, 0))
         )
 
@@ -117,10 +119,10 @@ class TodayWidgetModelTest {
     private fun event(id: String, start: LocalDateTime) = Event(
         id = id,
         title = id,
-        startDateTime = start,
+        startDateTime = start.toKotlinLocalDateTime(),
         eventType = "general",
         parentOwner = "mom",
-        createdAt = start,
-        updatedAt = start
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime()
     )
 }

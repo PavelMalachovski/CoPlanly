@@ -5,8 +5,8 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -31,7 +31,7 @@ class AwaitingAnswersTest {
     )
 
     private fun event(id: String, createdBy: String, acceptance: EventAcceptance) =
-        LocalDateTime.of(2026, 9, 28, 17, 30).let { at ->
+        LocalDateTime(2026, 9, 28, 17, 30).let { at ->
             Event(
                 id = id,
                 title = id,

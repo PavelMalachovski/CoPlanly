@@ -38,6 +38,7 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -199,7 +200,7 @@ private fun DayCard(day: ProfessionalDay, grant: ProfessionalGrant) {
 @Composable
 private fun EventRow(event: Event, grant: ProfessionalGrant) {
     val time = remember(event.startDateTime) {
-        shortTime().format(event.startDateTime)
+        event.startDateTime.format(shortTime())
     }
     SectionRow(
         title = event.title,

@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 import javax.inject.Inject
@@ -157,8 +158,8 @@ class MonthReviewViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val events: Flow<List<Event>> = selectedMonth.flatMapLatest { month ->
         sources.eventRepository.getEventsByDateRange(
-            month.atDay(1).atStartOfDay(),
-            month.atEndOfMonth().atTime(LocalTime.MAX)
+            month.atDay(1).atStartOfDay().toKotlinLocalDateTime(),
+            month.atEndOfMonth().atTime(LocalTime.MAX).toKotlinLocalDateTime()
         ).onStart { emit(emptyList()) }
     }
 

@@ -6,8 +6,11 @@ import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.usecase.RecurrenceExpander
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
-import java.time.LocalTime
 
 /**
  * The events a professional's (MON-18) or a calendar friend's (phase 2) read-only calendar shows,
@@ -40,10 +43,13 @@ object ProfessionalEvents {
             .mapNotNull { runCatching { toEvent(it) }.getOrNull() }
         return RecurrenceExpander.expandAll(
             CalendarVisibility.visible(masters),
-            from.atStartOfDay(),
-            to.atTime(LocalTime.MAX)
+            from.toKotlinLocalDate().atTime(0, 0),
+            to.toKotlinLocalDate().atTime(LAST_INSTANT_OF_DAY)
         )
     }
+
+    /** 23:59:59.999999999, `java.time.LocalTime.MAX`: the window's last day is whole. */
+    private val LAST_INSTANT_OF_DAY = LocalTime(23, 59, 59, 999_999_999)
 
     private fun toEvent(data: Map<String, Any?>): Event {
         val row = EventDocument.toEntity(data)
@@ -51,17 +57,17 @@ object ProfessionalEvents {
             id = row.id,
             title = row.title,
             description = row.description,
-            startDateTime = row.startDateTime,
-            endDateTime = row.endDateTime,
+            startDateTime = row.startDateTime.toKotlinLocalDateTime(),
+            endDateTime = row.endDateTime?.toKotlinLocalDateTime(),
             eventType = row.eventType,
             parentOwner = row.parentOwner,
             isRecurring = row.isRecurring,
             recurrencePattern = row.recurrencePattern,
-            createdAt = row.createdAt,
-            updatedAt = row.updatedAt,
+            createdAt = row.createdAt.toKotlinLocalDateTime(),
+            updatedAt = row.updatedAt.toKotlinLocalDateTime(),
             syncedToFirestore = true,
             createdByFirebaseUid = row.createdByFirebaseUid,
-            recurrenceEndDate = row.recurrenceEndDate,
+            recurrenceEndDate = row.recurrenceEndDate?.toKotlinLocalDate(),
             isImportant = row.isImportant,
             familyId = row.familyId,
             lastModifiedBy = row.lastModifiedBy,
@@ -70,7 +76,7 @@ object ProfessionalEvents {
             acceptance = runCatching { EventAcceptance.valueOf(row.acceptance) }
                 .getOrDefault(EventAcceptance.NOT_REQUIRED),
             acceptedBy = row.acceptedBy,
-            acceptedAt = row.acceptedAt,
+            acceptedAt = row.acceptedAt?.toKotlinLocalDateTime(),
             friendParticipates = row.friendParticipates
         )
     }

@@ -40,6 +40,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -75,12 +77,12 @@ class RequestChangeViewModelTest {
     private val event = Event(
         id = "e1",
         title = "Dentist",
-        startDateTime = LocalDateTime.of(2026, 9, 10, 9, 0),
-        endDateTime = LocalDateTime.of(2026, 9, 10, 10, 0),
+        startDateTime = LocalDateTime.of(2026, 9, 10, 9, 0).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.of(2026, 9, 10, 10, 0).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0),
+        createdAt = LocalDateTime.of(2026, 9, 1, 9, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0).toKotlinLocalDateTime(),
         familyId = FamilyKey.of("u1", "u2")
     )
     private val proposedStart = LocalDateTime.of(2026, 9, 11, 9, 0)
@@ -176,7 +178,7 @@ class RequestChangeViewModelTest {
         assertEquals(RequestChangeUiState.Saved, vm.uiState.value)
         assertEquals("u1", request.captured.requestedBy)
         assertEquals("u2", request.captured.requestedTo)
-        assertEquals(event.startDateTime, request.captured.currentStartDateTime)
+        assertEquals(event.startDateTime.toJavaLocalDateTime(), request.captured.currentStartDateTime)
         assertEquals(proposedStart, request.captured.proposedStartDateTime)
         assertNull(request.captured.note)
         assertEquals(ActivityKind.CHANGE_REQUESTED, announcement.captured.kind)

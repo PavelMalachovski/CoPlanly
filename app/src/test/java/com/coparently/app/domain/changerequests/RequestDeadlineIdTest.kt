@@ -12,6 +12,7 @@ import com.coparently.app.domain.model.Event
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
@@ -55,11 +56,11 @@ class RequestDeadlineIdTest {
     private fun event(creator: String?) = Event(
         id = "ev-1",
         title = "Swimming",
-        startDateTime = at.plusDays(5),
+        startDateTime = at.plusDays(5).toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = at,
-        updatedAt = at,
+        createdAt = at.toKotlinLocalDateTime(),
+        updatedAt = at.toKotlinLocalDateTime(),
         createdByFirebaseUid = creator
     )
 

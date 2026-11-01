@@ -36,6 +36,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 
 /**
@@ -95,7 +96,10 @@ class TodayWidget : GlanceAppWidget() {
                     today = today,
                     userId = userId,
                     events = source.eventRepository()
-                        .getEventsByDateRange(today.atStartOfDay(), today.plusDays(1).atStartOfDay())
+                        .getEventsByDateRange(
+                            today.atStartOfDay().toKotlinLocalDateTime(),
+                            today.plusDays(1).atStartOfDay().toKotlinLocalDateTime()
+                        )
                         .first(),
                     model = custody,
                     overrides = swaps

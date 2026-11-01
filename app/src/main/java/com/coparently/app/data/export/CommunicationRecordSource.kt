@@ -24,6 +24,8 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -186,11 +188,12 @@ class CommunicationRecordSource @Inject constructor(
         facts = EventFacts(
             title = title,
             description = description.orEmpty(),
-            start = startDateTime,
-            end = endDateTime,
+            // The record's facts stay java.time until the export moves (MON-24).
+            start = startDateTime.toJavaLocalDateTime(),
+            end = endDateTime?.toJavaLocalDateTime(),
             parentSlot = parentOwner,
             recurrence = if (isRecurring) recurrencePattern.orEmpty() else "",
-            recurrenceEnd = recurrenceEndDate
+            recurrenceEnd = recurrenceEndDate?.toJavaLocalDate()
         )
     )
 

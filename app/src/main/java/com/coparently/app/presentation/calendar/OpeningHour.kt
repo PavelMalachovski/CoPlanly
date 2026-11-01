@@ -2,6 +2,7 @@ package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.events.AllDayEvent
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -27,7 +28,7 @@ internal object OpeningHour {
     fun of(events: List<Event>, dates: List<LocalDate>, today: LocalDate, now: LocalTime): Int {
         val first = events.asSequence()
             .filterNot { AllDayEvent.isAllDay(it) }
-            .filter { it.startDateTime.toLocalDate() in dates }
+            .filter { it.startDateTime.date.toJavaLocalDate() in dates }
             .minOfOrNull { it.startDateTime.hour }
         val hour = when {
             first == null -> now.hour

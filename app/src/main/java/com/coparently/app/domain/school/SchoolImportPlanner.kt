@@ -2,6 +2,7 @@ package com.coparently.app.domain.school
 
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -232,12 +233,12 @@ object SchoolImportPlanner {
         id = id,
         title = fields.title,
         description = fields.description,
-        startDateTime = fields.start,
-        endDateTime = fields.end,
+        startDateTime = fields.start.toKotlinLocalDateTime(),
+        endDateTime = fields.end?.toKotlinLocalDateTime(),
         eventType = SCHOOL_EVENT_TYPE,
         parentOwner = input.target.ownerSlot,
-        createdAt = input.now,
-        updatedAt = input.now,
+        createdAt = input.now.toKotlinLocalDateTime(),
+        updatedAt = input.now.toKotlinLocalDateTime(),
         createdByFirebaseUid = input.target.ownerUid,
         lastModifiedBy = input.target.ownerUid,
         isPrivate = false,
@@ -252,14 +253,15 @@ object SchoolImportPlanner {
     private fun ImportItem.changedFrom(event: Event, record: SchoolImportRecord?): Boolean {
         if (record != null && record.fingerprint == fields.fingerprint) return false
         return event.title != fields.title || event.description != fields.description ||
-            event.startDateTime != fields.start || event.endDateTime != fields.end
+            event.startDateTime != fields.start.toKotlinLocalDateTime() ||
+            event.endDateTime != fields.end?.toKotlinLocalDateTime()
     }
 
     private fun Event.withFields(fields: ImportFields, editorUid: String) = copy(
         title = fields.title,
         description = fields.description,
-        startDateTime = fields.start,
-        endDateTime = fields.end,
+        startDateTime = fields.start.toKotlinLocalDateTime(),
+        endDateTime = fields.end?.toKotlinLocalDateTime(),
         lastModifiedBy = editorUid
     )
 }

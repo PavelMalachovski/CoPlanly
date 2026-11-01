@@ -118,6 +118,7 @@ import com.coparently.app.utils.format
 import com.coparently.app.utils.hourLabel
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaLocalTime
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -909,8 +910,10 @@ private fun EventChip(
     onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
     // Visible segment of the event within the current day (differs from the real event
     // times for multi-day / overnight events, which are clamped to each day).
-    displayStart: LocalDateTime = event.startDateTime,
-    displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plusHours(1),
+    // The grid draws in java.time; the event's own times are kotlinx-datetime (MON-24).
+    displayStart: LocalDateTime = event.startDateTime.toJavaLocalDateTime(),
+    displayEnd: LocalDateTime =
+        event.endDateTime?.toJavaLocalDateTime() ?: event.startDateTime.toJavaLocalDateTime().plusHours(1),
     // Continuation segments of multi-day events are not resizable/movable (ambiguous).
     resizable: Boolean = true,
     draggable: Boolean = true,
@@ -1263,7 +1266,7 @@ private fun EventChip(
                                         val minuteShift = snapSteps * MOVE_SNAP_MINUTES
                                         if (dayOffset != 0 || minuteShift != 0) {
                                             val newStart = resizedTime(
-                                                event.startDateTime.plusDays(dayOffset.toLong()),
+                                                event.startDateTime.toJavaLocalDateTime().plusDays(dayOffset.toLong()),
                                                 minuteShift.toFloat() / 60f * hourHeightPx,
                                                 hourHeightPx,
                                                 MOVE_SNAP_MINUTES
@@ -1622,8 +1625,8 @@ private fun layoutDayEvents(events: List<Event>, date: LocalDate): List<EventSeg
     data class Slice(val event: Event, val start: LocalDateTime, val end: LocalDateTime, val clamped: Boolean)
 
     val slices = events.mapNotNull { e ->
-        val s = e.startDateTime
-        val en = e.endDateTime ?: e.startDateTime.plusHours(1)
+        val s = e.startDateTime.toJavaLocalDateTime()
+        val en = e.endDateTime?.toJavaLocalDateTime() ?: s.plusHours(1)
         if (s.isBefore(dayEnd) && en.isAfter(dayStart)) {
             val cs = if (s.isBefore(dayStart)) dayStart else s
             val ce = if (en.isAfter(dayEnd)) dayEnd else en

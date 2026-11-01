@@ -4,9 +4,9 @@ import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.IsoText
 import com.google.gson.Gson
 import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -27,7 +27,6 @@ import java.time.format.DateTimeFormatter
 internal object EventDocument {
 
     private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    private val dateOnlyFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val gson = Gson()
 
     /**
@@ -121,19 +120,21 @@ internal object EventDocument {
             "id" to id,
             "title" to title,
             "description" to (description ?: ""),
-            "startDateTime" to startDateTime.format(formatter),
-            "endDateTime" to (endDateTime?.format(formatter) ?: ""),
+            // `IsoText.dateTime` is `ISO_LOCAL_DATE_TIME`'s text (seconds always printed), and
+            // `IsoText.date` is `ISO_LOCAL_DATE`'s; the wire is unchanged (MON-24).
+            "startDateTime" to IsoText.dateTime(startDateTime),
+            "endDateTime" to (endDateTime?.let(IsoText::dateTime) ?: ""),
             "eventType" to eventType,
             "parentOwner" to parentOwner,
             "isRecurring" to isRecurring,
             "recurrencePattern" to (recurrencePattern ?: ""),
-            "recurrenceEndDate" to (recurrenceEndDate?.format(dateOnlyFormatter) ?: ""),
+            "recurrenceEndDate" to (recurrenceEndDate?.let(IsoText::date) ?: ""),
             "pickupConfirmedBy" to (pickupConfirmedBy ?: ""),
-            "pickupConfirmedAt" to (pickupConfirmedAt?.format(formatter) ?: ""),
-            "createdAt" to createdAt.format(formatter),
+            "pickupConfirmedAt" to (pickupConfirmedAt?.let(IsoText::dateTime) ?: ""),
+            "createdAt" to IsoText.dateTime(createdAt),
             // UTC, offset-free: the field keeps its name and type so an older build still parses
             // it, and only the zone it expresses changed (MON-4, see `EventTimestamp`).
-            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime())),
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
             "createdByFirebaseUid" to creatorUid,
             "sharedWith" to audience,
             "lastModifiedBy" to (lastModifiedBy ?: creatorUid),
@@ -141,7 +142,7 @@ internal object EventDocument {
             "imageUrl" to (imageUrl ?: ""),
             "acceptance" to acceptance.name,
             "acceptedBy" to (acceptedBy ?: ""),
-            "acceptedAt" to (acceptedAt?.format(formatter) ?: ""),
+            "acceptedAt" to (acceptedAt?.let(IsoText::dateTime) ?: ""),
             "isImportant" to isImportant,
             "friendParticipates" to (friendParticipates ?: ""),
             // The relationship this event belongs to. It will replace `sharedWith` entirely:

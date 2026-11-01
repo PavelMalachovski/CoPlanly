@@ -603,7 +603,10 @@ class EventRepositoryImplTest {
         )
         every { eventDao.getRecurringEventsStartedBefore(any()) } returns flowOf(emptyList())
 
-        val events = repository.getEventsByDateRange(now.minusDays(1), now.plusDays(1)).first()
+        val events = repository.getEventsByDateRange(
+            now.minusDays(1).toKotlinLocalDateTime(),
+            now.plusDays(1).toKotlinLocalDateTime()
+        ).first()
 
         // This is the one query the month grid, the week view and the day view all read from, so
         // one filter here is what keeps three views from disagreeing about the same event.
@@ -626,7 +629,10 @@ class EventRepositoryImplTest {
             )
         )
 
-        val events = repository.getEventsByDateRange(now.minusDays(1), now.plusDays(30)).first()
+        val events = repository.getEventsByDateRange(
+            now.minusDays(1).toKotlinLocalDateTime(),
+            now.plusDays(30).toKotlinLocalDateTime()
+        ).first()
 
         assertEquals(emptyList(), events)
     }
@@ -640,7 +646,7 @@ class EventRepositoryImplTest {
             )
         )
 
-        val events = repository.getEventsByDate(now).first()
+        val events = repository.getEventsByDate(now.toKotlinLocalDateTime()).first()
 
         assertEquals(listOf("ordinary"), events.map { it.id })
     }
@@ -658,7 +664,7 @@ class EventRepositoryImplTest {
 
         assertEquals(EventAcceptance.ACCEPTED, event?.acceptance)
         assertEquals("uid-dad", event?.acceptedBy)
-        assertEquals(now, event?.acceptedAt)
+        assertEquals(now.toKotlinLocalDateTime(), event?.acceptedAt)
     }
 
     @Test
@@ -766,11 +772,11 @@ class EventRepositoryImplTest {
     private fun baseDomain() = Event(
         id = "e1",
         title = "Soccer",
-        startDateTime = now,
-        endDateTime = now.plusHours(1),
+        startDateTime = now.toKotlinLocalDateTime(),
+        endDateTime = now.plusHours(1).toKotlinLocalDateTime(),
         eventType = "sports",
         parentOwner = "mom",
-        createdAt = now,
-        updatedAt = now
+        createdAt = now.toKotlinLocalDateTime(),
+        updatedAt = now.toKotlinLocalDateTime()
     )
 }

@@ -44,7 +44,9 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
@@ -107,7 +109,8 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         runBlocking {
             awaitRequestOnBobsPhone(request.id, ChangeRequestStatus.ACCEPTED)
             withTimeout(EmulatorParent.WAIT_MS) {
-                while (bob.eventRepository.fetchRemoteEvent(event.id)?.startDateTime != request.proposedStartDateTime) {
+                val proposed = request.proposedStartDateTime.toKotlinLocalDateTime()
+                while (bob.eventRepository.fetchRemoteEvent(event.id)?.startDateTime != proposed) {
                     delay(POLL_MS)
                 }
             }
@@ -246,12 +249,12 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "appointment",
             parentOwner = checkNotNull(userDao.getUserById(aliceUid)).role,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         eventRepository.insertEvent(event)
         return checkNotNull(eventRepository.getEventById(event.id))
@@ -265,10 +268,10 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
             eventTitle = event.title,
             requestedBy = bob.uid,
             requestedTo = aliceUid,
-            currentStartDateTime = event.startDateTime,
-            currentEndDateTime = event.endDateTime,
-            proposedStartDateTime = event.startDateTime.plusHours(2),
-            proposedEndDateTime = event.endDateTime?.plusHours(2),
+            currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
+            currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2),
+            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2),
             note = "Could we move it?",
             createdAt = LocalDateTime.now()
         )

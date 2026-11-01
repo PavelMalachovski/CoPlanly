@@ -29,6 +29,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 
@@ -162,7 +163,7 @@ private fun eventWhenText(event: Event): String {
             start.format(localizedDate("MMMEd")),
             start.format(shortTime())
         )
-        end.toLocalDate() == start.toLocalDate() -> stringResource(
+        end.date == start.date -> stringResource(
             R.string.event_acceptance_when,
             start.format(localizedDate("MMMEd")),
             start.format(shortTime()),

@@ -2,8 +2,8 @@ package com.coparently.app.presentation.event
 
 import com.coparently.app.domain.events.EventAcceptanceTransition
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -112,7 +112,7 @@ class AddEditEventScreenTest {
     fun `the description hint follows the rule that makes an event wait for an answer`() {
         // Phase 2, spec §5.2: the hint promises the co-parent will read the description when they
         // answer, so it may appear exactly when the event will wait for their answer.
-        val at = LocalDateTime.of(2026, 10, 21, 16, 0)
+        val at = LocalDateTime(2026, 10, 21, 16, 0)
         val event = Event(
             id = "e1",
             title = "Dentist",

@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -538,8 +539,8 @@ class ChatViewModel @Inject constructor(
      */
     val upcomingEvents: StateFlow<List<Event>> = eventRepository
         .getEventsByDateRange(
-            LocalDateTime.now(),
-            LocalDateTime.now().plusDays(UPCOMING_DAYS)
+            LocalDateTime.now().toKotlinLocalDateTime(),
+            LocalDateTime.now().plusDays(UPCOMING_DAYS).toKotlinLocalDateTime()
         )
         .map { events ->
             events.filter { !it.isPrivate }.sortedBy { it.startDateTime }

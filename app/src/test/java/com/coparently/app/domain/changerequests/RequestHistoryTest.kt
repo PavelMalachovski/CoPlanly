@@ -12,6 +12,7 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDateTime
@@ -75,16 +76,16 @@ class RequestHistoryTest {
     ) = Event(
         id = id,
         title = "Dentist",
-        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
+        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "dad",
-        createdAt = created,
-        updatedAt = created,
+        createdAt = created.toKotlinLocalDateTime(),
+        updatedAt = created.toKotlinLocalDateTime(),
         createdByFirebaseUid = "u1",
         familyId = familyId,
         acceptance = acceptance,
         acceptedBy = "u2".takeIf { acceptedAt != null },
-        acceptedAt = acceptedAt
+        acceptedAt = acceptedAt?.toKotlinLocalDateTime()
     )
 
     private fun history(

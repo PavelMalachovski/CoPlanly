@@ -2,6 +2,8 @@ package com.coparently.app.domain.school
 
 import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.platform.Sha256
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -172,8 +174,8 @@ internal object SchoolImportItems {
         val earlier = input.ledger.filterValues { it.kind == SchoolImportKind.DAY_OFF }.keys
             .mapNotNull { (input.existing[it] as? ExistingImport.Live)?.event }
             .firstOrNull { event ->
-                val start = event.startDateTime.toLocalDate()
-                val end = event.endDateTime?.toLocalDate() ?: start
+                val start = event.startDateTime.date.toJavaLocalDate()
+                val end = event.endDateTime?.date?.toJavaLocalDate() ?: start
                 event.title == run.title && start.isBefore(run.first) &&
                     (!end.isBefore(run.first) || onlyWeekendBetween(end, run.first))
             } ?: return null
@@ -181,7 +183,12 @@ internal object SchoolImportItems {
             id = earlier.id,
             kind = SchoolImportKind.DAY_OFF,
             lastDate = run.last,
-            fields = ImportFields(run.title, null, earlier.startDateTime, run.last.atStartOfDay())
+            fields = ImportFields(
+                run.title,
+                null,
+                earlier.startDateTime.toJavaLocalDateTime(),
+                run.last.atStartOfDay()
+            )
         )
     }
 

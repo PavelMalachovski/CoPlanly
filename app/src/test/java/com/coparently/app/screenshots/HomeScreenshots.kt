@@ -13,6 +13,7 @@ import com.coparently.app.presentation.home.HandoverHero
 import com.coparently.app.presentation.home.MonthSpend
 import com.coparently.app.presentation.home.StatTiles
 import com.coparently.app.presentation.home.TimelineRow
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,7 +67,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     @Test
     fun todayCard() = snap("home_today_card") {
         DayAgendaCard(
-            date = ScreenshotFixtures.TODAY,
+            date = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
             events = ScreenshotFixtures.todayEvents,
             custody = ScreenshotFixtures.custodyFor(ScreenshotFixtures.TODAY),
             parentNames = ScreenshotFixtures.parentNames,
@@ -78,7 +79,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     @Test
     fun weekTimeline() = snap("home_week_timeline") {
         val entries = ScreenshotFixtures.monthEvents.values.flatten()
-            .filter { it.startDateTime.toLocalDate() >= ScreenshotFixtures.TODAY }
+            .filter { it.startDateTime.date.toJavaLocalDate() >= ScreenshotFixtures.TODAY }
             .sortedBy { it.startDateTime }
             .take(WEEK_ROWS)
         Column {
@@ -86,7 +87,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
                 TimelineRow(
                     entry = WeekEntry(
                         event = event,
-                        dayParent = ScreenshotFixtures.custodyFor(event.startDateTime.toLocalDate()),
+                        dayParent = ScreenshotFixtures.custodyFor(event.startDateTime.date.toJavaLocalDate()),
                         key = "${event.id}@${event.startDateTime}"
                     ),
                     parentNames = ScreenshotFixtures.parentNames,

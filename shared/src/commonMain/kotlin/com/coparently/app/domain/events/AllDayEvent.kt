@@ -1,8 +1,10 @@
 package com.coparently.app.domain.events
 
 import com.coparently.app.domain.model.Event
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.minus
 
 /**
  * Whether an event reads as an all-day one, and which days it covers.
@@ -21,15 +23,15 @@ object AllDayEvent {
      * From this time of day an end closes its day, rather than being a timed end. The event form
      * saves an all-day event's end here, as the Google and school imports do.
      */
-    val LAST_MINUTE: LocalTime = LocalTime.of(23, 59)
+    val LAST_MINUTE: LocalTime = LocalTime(23, 59)
 
     /** Whether [event] starts at midnight and ends at a day's end (or has no end). */
     fun isAllDay(event: Event): Boolean {
-        if (event.startDateTime.toLocalTime() != LocalTime.MIDNIGHT) return false
+        if (event.startDateTime.time != MIDNIGHT) return false
         val end = event.endDateTime ?: return true
-        val endTime = end.toLocalTime()
-        return !end.isBefore(event.startDateTime) &&
-            (endTime == LocalTime.MIDNIGHT || !endTime.isBefore(LAST_MINUTE))
+        val endTime = end.time
+        return end >= event.startDateTime &&
+            (endTime == MIDNIGHT || endTime >= LAST_MINUTE)
     }
 
     /**
@@ -38,13 +40,16 @@ object AllDayEvent {
      * when there is no end.
      */
     fun lastDay(event: Event): LocalDate {
-        val start = event.startDateTime.toLocalDate()
+        val start = event.startDateTime.date
         val end = event.endDateTime ?: return start
-        val last = if (end.toLocalTime() == LocalTime.MIDNIGHT) {
-            end.toLocalDate().minusDays(1)
+        val last = if (end.time == MIDNIGHT) {
+            end.date.minus(1, DateTimeUnit.DAY)
         } else {
-            end.toLocalDate()
+            end.date
         }
-        return if (last.isBefore(start)) start else last
+        return if (last < start) start else last
     }
+
+    /** 00:00, which kotlinx-datetime names no constant for. */
+    private val MIDNIGHT: LocalTime = LocalTime(0, 0)
 }

@@ -28,6 +28,7 @@ import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.swapMiniMonths
@@ -59,6 +60,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -217,9 +219,9 @@ class ChangeRequestViewModel @Inject constructor(
             }
             val result = eventUseCases.updateEvent(
                 event.copy(
-                    startDateTime = request.proposedStartDateTime,
-                    endDateTime = request.proposedEndDateTime,
-                    updatedAt = LocalDateTime.now(),
+                    startDateTime = request.proposedStartDateTime.toKotlinLocalDateTime(),
+                    endDateTime = request.proposedEndDateTime?.toKotlinLocalDateTime(),
+                    updatedAt = LocalDateTime.now().toKotlinLocalDateTime(),
                     lastModifiedBy = _currentUserId.value.takeIf { it.isNotEmpty() }
                         ?: event.lastModifiedBy
                 )
@@ -399,7 +401,7 @@ class ChangeRequestViewModel @Inject constructor(
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
                 ?: userRepository.getCurrentUserId()
                 ?: return@launch
-            val days = dates.distinct().sorted().map { it.toString() }
+            val days = dates.distinct().sorted().map(IsoText::date)
             if (days.isEmpty() || !stillShowsItsFamily()) return@launch
             val atIso = LocalDateTime.now().toString()
             val groupId = UUID.randomUUID().toString()
@@ -766,7 +768,7 @@ class ChangeRequestViewModel @Inject constructor(
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
                 ?: userRepository.getCurrentUserId()
                 ?: return@launch
-            val now = LocalDateTime.now()
+            val now = LocalDateTime.now().toKotlinLocalDateTime()
             val result = if (accept) {
                 EventAcceptanceTransition.accept(fresh, uid, now)
             } else {

@@ -3,9 +3,13 @@ package com.coparently.app.presentation.calendar
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.usecase.RecurrenceExpander
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.YearMonth
 
 /**
@@ -98,13 +102,13 @@ data class MiniMonthModel(
             familyEvents: List<Event>,
             custodyFor: (LocalDate) -> String?
         ): MiniMonthModel {
-            val start = event.startDateTime.toLocalDate()
+            val start = event.startDateTime.date.toJavaLocalDate()
             val month = YearMonth.from(start)
             val dates = MiniMonthGrid.weeks(month).flatten()
             val shown = RecurrenceExpander.expandAll(
                 CalendarVisibility.visible(familyEvents),
-                dates.first().atStartOfDay(),
-                dates.last().atTime(LocalTime.MAX)
+                startOf(dates.first()),
+                endOf(dates.last())
             )
             return build(month, custodyFor, shown, mapOf(start to MiniMonthMark.NEW_EVENT))
         }
@@ -128,8 +132,8 @@ fun swapMiniMonths(
         val dates = MiniMonthGrid.weeks(month).flatten()
         val shown = RecurrenceExpander.expandAll(
             CalendarVisibility.visible(familyEvents),
-            dates.first().atStartOfDay(),
-            dates.last().atTime(LocalTime.MAX)
+            startOf(dates.first()),
+            endOf(dates.last())
         )
         MiniMonthModel.build(
             month = month,
@@ -139,6 +143,17 @@ fun swapMiniMonths(
             marks = days.keys.filter { it in dates }.associateWith { MiniMonthMark.SWAP_DAY }
         )
     }
+
+/**
+ * 00:00 of a grid [day], where an expansion window opens. The grid's days are `java.time`, as the
+ * calendar's library hands them out; an event's times are kotlinx-datetime (MON-24).
+ */
+private fun startOf(day: LocalDate): LocalDateTime = day.toKotlinLocalDate().atTime(0, 0)
+
+/** The last instant of a grid [day] (`java.time.LocalTime.MAX`), where an expansion window closes. */
+private fun endOf(day: LocalDate): LocalDateTime = day.toKotlinLocalDate().atTime(LAST_INSTANT_OF_DAY)
+
+private val LAST_INSTANT_OF_DAY = LocalTime(23, 59, 59, 999_999_999)
 
 /** The mini month's layout: whole weeks, Monday first, as `MonthView` lays out its grid. */
 object MiniMonthGrid {

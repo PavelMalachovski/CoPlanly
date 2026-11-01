@@ -52,8 +52,12 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toJavaLocalTime
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -162,18 +166,24 @@ private fun RequestChangeForm(
     val dateFormatter = localizedDate("yMMMEEEd")
     val timeFormatter = shortTime()
 
-    // Saveable, so a rotation keeps what the parent proposed and wrote (D-11's rule).
-    var proposedDate by rememberSaveable { mutableStateOf(event.startDateTime.toLocalDate()) }
-    var proposedStartTime by rememberSaveable { mutableStateOf(event.startDateTime.toLocalTime()) }
+    // Saveable, so a rotation keeps what the parent proposed and wrote (D-11's rule). The fields are
+    // java.time, which a saved-state Bundle holds; the event's own times are kotlinx-datetime.
+    var proposedDate by rememberSaveable { mutableStateOf(event.startDateTime.date.toJavaLocalDate()) }
+    var proposedStartTime by rememberSaveable { mutableStateOf(event.startDateTime.time.toJavaLocalTime()) }
     var proposedEndTime by rememberSaveable {
-        mutableStateOf(event.endDateTime?.toLocalTime())
+        mutableStateOf(event.endDateTime?.time?.toJavaLocalTime())
     }
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     // The cap follows the proposed time, so it is worked out when that changes and not per frame.
     val proposedStart = LocalDateTime.of(proposedDate, proposedStartTime)
     val cap = remember(event.startDateTime, proposedStart) {
-        RequestCap.forChange(event.startDateTime, proposedStart, System.currentTimeMillis(), ZoneId.systemDefault())
+        RequestCap.forChange(
+            event.startDateTime.toJavaLocalDateTime(),
+            proposedStart,
+            System.currentTimeMillis(),
+            ZoneId.systemDefault()
+        )
     }
 
     var showDatePicker by remember { mutableStateOf(false) }

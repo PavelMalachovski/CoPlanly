@@ -11,6 +11,8 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.rememberParentNames
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -110,12 +112,12 @@ object ScreenshotFixtures {
     ) = Event(
         id = id,
         title = title,
-        startDateTime = start,
-        endDateTime = start.plusMinutes(durationMinutes),
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = start.plusMinutes(durationMinutes).toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = owner,
-        createdAt = stamp,
-        updatedAt = stamp
+        createdAt = stamp.toKotlinLocalDateTime(),
+        updatedAt = stamp.toKotlinLocalDateTime()
     )
 
     /** Today's three events, one of them long enough to wrap at 1.5× text. */
@@ -132,7 +134,7 @@ object ScreenshotFixtures {
         event("m3", "Football", MONTH.atDay(19).atTime(16, 0), SLOT_TWO),
         event("m4", "Birthday party", MONTH.atDay(23).atTime(14, 0), SLOT_ONE),
         event("m5", "Vet", MONTH.atDay(23).atTime(10, 0), SLOT_TWO)
-    ).plus(todayEvents).groupBy { it.startDateTime.toLocalDate() }
+    ).plus(todayEvents).groupBy { it.startDateTime.date.toJavaLocalDate() }
 
     /** The child and the pet an event can be about. */
     val members: List<FamilyMember> = listOf(

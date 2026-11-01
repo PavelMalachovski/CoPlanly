@@ -68,10 +68,10 @@ data class TodayWidgetModel(
             val windows = CustodyResolver.contactWindowsResolver(model, resolve)
             val agenda = HomeWeek.todayOf(
                 events = events,
-                today = today,
+                today = today.toKotlinLocalDate(),
                 userId = userId,
-                custodyFor = { day -> resolve(day.toKotlinLocalDate()) },
-                contactWindowsFor = { day -> windows(day.toKotlinLocalDate()) }
+                custodyFor = resolve,
+                contactWindowsFor = windows
             )
             return TodayWidgetModel(
                 signedIn = true,

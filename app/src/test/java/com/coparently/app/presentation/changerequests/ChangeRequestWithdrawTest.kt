@@ -51,6 +51,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -123,12 +124,12 @@ class ChangeRequestWithdrawTest {
     private val event = Event(
         id = "e1",
         title = "Swimming gala",
-        startDateTime = LocalDateTime.of(2026, 11, 7, 17, 0),
-        endDateTime = LocalDateTime.of(2026, 11, 7, 18, 0),
+        startDateTime = LocalDateTime.of(2026, 11, 7, 17, 0).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.of(2026, 11, 7, 18, 0).toKotlinLocalDateTime(),
         eventType = "activity",
         parentOwner = "dad",
-        createdAt = LocalDateTime.of(2026, 10, 20, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 10, 20, 9, 0),
+        createdAt = LocalDateTime.of(2026, 10, 20, 9, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 10, 20, 9, 0).toKotlinLocalDateTime(),
         lastModifiedBy = "u1"
     )
 

@@ -5,6 +5,7 @@ import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toJavaLocalDateTime
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -110,7 +111,8 @@ object HomeFeed {
 
     /** Whether [event]'s last write is the one this answer made. */
     private fun ActivityItem.answered(event: Event): Boolean =
-        eventId == event.id && Duration.between(timestamp, event.updatedAt).abs() <= ANSWER_EDIT_WINDOW
+        eventId == event.id &&
+            Duration.between(timestamp, event.updatedAt.toJavaLocalDateTime()).abs() <= ANSWER_EDIT_WINDOW
 
     private fun HistoryEntry.toActivityItem(): ActivityItem {
         val event = when (val about = subject) {
@@ -130,11 +132,14 @@ object HomeFeed {
     }
 
     private fun Event.toActivityItem(): ActivityItem {
+        // The feed's times stay java.time until the change requests move (MON-24, slice 3).
+        val updated = updatedAt.toJavaLocalDateTime()
+        val pickedUpAt = pickupConfirmedAt?.toJavaLocalDateTime()
         val kind = when {
-            pickupConfirmedBy != null && pickupConfirmedAt != null &&
-                Duration.between(pickupConfirmedAt, updatedAt).abs() <= NEAR_THRESHOLD ->
+            pickupConfirmedBy != null && pickedUpAt != null &&
+                Duration.between(pickedUpAt, updated).abs() <= NEAR_THRESHOLD ->
                 ActivityKind.PICKUP_CONFIRMED
-            Duration.between(createdAt, updatedAt).abs() <= NEAR_THRESHOLD ->
+            Duration.between(createdAt.toJavaLocalDateTime(), updated).abs() <= NEAR_THRESHOLD ->
                 ActivityKind.EVENT_CREATED
             else -> ActivityKind.EVENT_UPDATED
         }
@@ -142,7 +147,7 @@ object HomeFeed {
             id = "ev_${id}_$updatedAt",
             kind = kind,
             title = title,
-            timestamp = updatedAt,
+            timestamp = updated,
             eventId = id,
             isChangeRequest = false
         )

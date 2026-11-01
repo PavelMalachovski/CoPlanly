@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaLocalTime
 import java.time.Instant
 import java.time.LocalDate
@@ -48,6 +49,13 @@ fun kotlinx.datetime.LocalDate.format(formatter: DateTimeFormatter): String = to
 
 /** [this] kotlinx-datetime time formatted by [formatter], as the `java.time` time would be (MON-24). */
 fun kotlinx.datetime.LocalTime.format(formatter: DateTimeFormatter): String = toJavaLocalTime().format(formatter)
+
+/**
+ * [this] kotlinx-datetime date and time formatted by [formatter], as the `java.time` value would be
+ * (MON-24): an event's times are kotlinx-datetime, the platform's localized patterns are not.
+ */
+fun kotlinx.datetime.LocalDateTime.format(formatter: DateTimeFormatter): String =
+    toJavaLocalDateTime().format(formatter)
 
 /**
  * [pattern] with a stand-alone month (`L`) written in its format form (`M`) whenever the pattern

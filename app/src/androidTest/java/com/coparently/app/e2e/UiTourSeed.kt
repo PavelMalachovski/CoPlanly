@@ -49,7 +49,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -177,10 +179,10 @@ class UiTourSeed @Inject constructor(
                     eventTitle = dentist.title,
                     requestedBy = bob.uid,
                     requestedTo = aliceUid,
-                    currentStartDateTime = dentist.startDateTime,
-                    currentEndDateTime = dentist.endDateTime,
-                    proposedStartDateTime = dentist.startDateTime.plusDays(1),
-                    proposedEndDateTime = dentist.endDateTime?.plusDays(1),
+                    currentStartDateTime = dentist.startDateTime.toJavaLocalDateTime(),
+                    currentEndDateTime = dentist.endDateTime?.toJavaLocalDateTime(),
+                    proposedStartDateTime = dentist.startDateTime.toJavaLocalDateTime().plusDays(1),
+                    proposedEndDateTime = dentist.endDateTime?.toJavaLocalDateTime()?.plusDays(1),
                     note = content.changeRequestNote,
                     createdAt = LocalDateTime.now(),
                     familyId = family.id
@@ -207,10 +209,10 @@ class UiTourSeed @Inject constructor(
             eventTitle = meeting.title,
             requestedBy = family.alice,
             requestedTo = family.bob.uid,
-            currentStartDateTime = meeting.startDateTime,
-            currentEndDateTime = meeting.endDateTime,
-            proposedStartDateTime = meeting.startDateTime.plusHours(1),
-            proposedEndDateTime = meeting.endDateTime?.plusHours(1),
+            currentStartDateTime = meeting.startDateTime.toJavaLocalDateTime(),
+            currentEndDateTime = meeting.endDateTime?.toJavaLocalDateTime(),
+            proposedStartDateTime = meeting.startDateTime.toJavaLocalDateTime().plusHours(1),
+            proposedEndDateTime = meeting.endDateTime?.toJavaLocalDateTime()?.plusHours(1),
             note = family.content.changeRequestNote,
             createdAt = LocalDateTime.now(),
             familyId = family.id
@@ -236,12 +238,12 @@ class UiTourSeed @Inject constructor(
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(2),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(2).toKotlinLocalDateTime(),
             eventType = "other",
             parentOwner = dave.database.userDao().getUserById(dave.uid)?.role ?: ContactWindow.SLOT_ONE,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             friendParticipates = friendUid
         )
         dave.eventRepository.insertEvent(event)
@@ -362,7 +364,7 @@ class UiTourSeed @Inject constructor(
             event(family, titles.swimming, day(2, 17), minutes = 60, type = "sports", members = emma).copy(
                 isRecurring = true,
                 recurrencePattern = "weekly",
-                recurrenceEndDate = family.today.plusDays(RECURRENCE_DAYS)
+                recurrenceEndDate = family.today.plusDays(RECURRENCE_DAYS).toKotlinLocalDate()
             ),
             event(family, titles.therapy, day(4, 19), minutes = 50, type = "general").copy(isPrivate = true),
             event(family, titles.grandmaBirthday, day(5, 0), minutes = ALL_DAY_MINUTES, type = "birthday"),
@@ -396,12 +398,12 @@ class UiTourSeed @Inject constructor(
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusMinutes(minutes),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusMinutes(minutes).toKotlinLocalDateTime(),
             eventType = type,
             parentOwner = if (byBob) family.bobSlot else family.aliceSlot,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = if (byBob) family.bob.uid else family.alice,
             forMembers = members,
             familyId = family.id

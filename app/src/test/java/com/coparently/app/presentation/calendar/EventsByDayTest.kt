@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -23,12 +24,12 @@ class EventsByDayTest {
     ) = Event(
         id = id,
         title = id,
-        startDateTime = start,
-        endDateTime = end,
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = end?.toKotlinLocalDateTime(),
         eventType = "general",
         parentOwner = "mom",
-        createdAt = start,
-        updatedAt = start
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime()
     )
 
     private fun idsOn(events: List<Event>, date: LocalDate): List<String> =

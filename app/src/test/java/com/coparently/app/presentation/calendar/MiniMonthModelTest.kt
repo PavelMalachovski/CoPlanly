@@ -2,6 +2,7 @@ package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -30,14 +31,14 @@ class MiniMonthModelTest {
     ) = Event(
         id = id,
         title = id,
-        startDateTime = start,
-        endDateTime = end,
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = end?.toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = owner,
         isRecurring = recurrence != null,
         recurrencePattern = recurrence,
-        createdAt = start,
-        updatedAt = start,
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime(),
         acceptance = acceptance,
         friendParticipates = friend
     )

@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.atTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -87,8 +88,8 @@ class CalendarScenarioTest : QaOnScreenTest() {
         report.step("all_day", "Create an all-day event", "Saved over the whole day, and all day on Igor's phone") {
             createEvent(wholeDay) { tap(hasContentDescription(string(R.string.event_all_day)) and hasClickAction()) }
             val saved = mine(wholeDay)
-            val day = saved.startDateTime.toLocalDate()
-            check(saved.startDateTime == day.atStartOfDay() && saved.endDateTime == day.atTime(AllDayEvent.LAST_MINUTE)) {
+            val day = saved.startDateTime.date
+            check(saved.startDateTime == day.atTime(0, 0) && saved.endDateTime == day.atTime(AllDayEvent.LAST_MINUTE)) {
                 "the saved event runs ${saved.startDateTime}–${saved.endDateTime}, not the whole of $day"
             }
             val row = expectOnIgorsPhone(wholeDay)

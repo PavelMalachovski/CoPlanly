@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toJavaLocalDateTime
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -131,8 +132,9 @@ class RequestChangeViewModel @Inject constructor(
                         eventTitle = event.title,
                         requestedBy = user.id,
                         requestedTo = partnerId,
-                        currentStartDateTime = event.startDateTime,
-                        currentEndDateTime = event.endDateTime,
+                        // A change request's times are java.time until it moves (MON-24, slice 3).
+                        currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
+                        currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
                         proposedStartDateTime = proposedStart,
                         proposedEndDateTime = proposedEnd,
                         note = note?.takeIf { it.isNotBlank() },

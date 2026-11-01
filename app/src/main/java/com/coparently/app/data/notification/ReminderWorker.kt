@@ -18,10 +18,10 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.MainActivity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import java.time.LocalDateTime
 
 /**
  * Worker that fires a local reminder notification before an event starts.
@@ -150,7 +150,9 @@ class ReminderWorker @AssistedInject constructor(
          */
         internal fun shouldFire(stored: EventEntity?, scheduledStartAt: String?): Boolean {
             if (stored == null || stored.deletedAtMillis != null || stored.reminderMinutes == null) return false
-            val scheduled = scheduledStartAt?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+            // `IsoText.parseDateTime` reads what `LocalDateTime.parse` read, so work an older
+            // build enqueued (its `toString()`) is read as before.
+            val scheduled = scheduledStartAt?.let { runCatching { IsoText.parseDateTime(it) }.getOrNull() }
                 ?: return true
             return ReminderPlanner.isOccurrence(stored.toReminderEvent(), scheduled)
         }

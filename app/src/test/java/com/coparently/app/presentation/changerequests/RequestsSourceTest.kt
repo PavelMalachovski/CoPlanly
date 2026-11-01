@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -96,11 +97,11 @@ class RequestsSourceTest {
     private val bobsEvent = Event(
         id = "e1",
         title = "Dentist",
-        startDateTime = at.plusDays(3),
+        startDateTime = at.plusDays(3).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
-        createdAt = at,
-        updatedAt = at,
+        createdAt = at.toKotlinLocalDateTime(),
+        updatedAt = at.toKotlinLocalDateTime(),
         createdByFirebaseUid = "u2",
         familyId = "u1__u2",
         acceptance = EventAcceptance.PENDING

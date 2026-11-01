@@ -153,14 +153,14 @@ object MonthReviewCalculator {
     }
 
     private fun sharedEvents(month: YearMonth, events: List<Event>): Int {
-        val first = month.atDay(1)
-        val last = month.atEndOfMonth()
+        val first = month.atDay(1).toKotlinLocalDate()
+        val last = month.atEndOfMonth().toKotlinLocalDate()
         return events.asSequence()
             .filterNot { it.isPrivate }
             .filter { event ->
-                val start = event.startDateTime.toLocalDate()
-                val end = event.endDateTime?.toLocalDate() ?: start
-                !start.isAfter(last) && !end.isBefore(first)
+                val start = event.startDateTime.date
+                val end = event.endDateTime?.date ?: start
+                start <= last && end >= first
             }
             // Occurrences of one recurring event share its id, so the start tells them apart.
             .distinctBy { it.id to it.startDateTime }

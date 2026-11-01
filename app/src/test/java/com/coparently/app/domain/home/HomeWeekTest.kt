@@ -2,10 +2,14 @@ package com.coparently.app.domain.home
 
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.minus
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -19,7 +23,7 @@ import kotlin.test.assertTrue
  */
 class HomeWeekTest {
 
-    private val now: LocalDateTime = LocalDateTime.of(2026, 8, 21, 14, 0)
+    private val now: LocalDateTime = LocalDateTime(2026, 8, 21, 14, 0)
 
     @Test
     fun `the window is seven days from today, not the calendar week`() {
@@ -28,9 +32,9 @@ class HomeWeekTest {
         // to a parent opening the app on a Friday.
         val entries = HomeWeek.of(
             events = listOf(
-                event("today-later", now.plusHours(2)),
-                event("seventh-day", LocalDateTime.of(2026, 8, 27, 23, 30)),
-                event("eighth-day", LocalDateTime.of(2026, 8, 28, 0, 30))
+                event("today-later", now.plus(2, DateTimeUnit.HOUR)),
+                event("seventh-day", LocalDateTime(2026, 8, 27, 23, 30)),
+                event("eighth-day", LocalDateTime(2026, 8, 28, 0, 30))
             ),
             now = now,
             userId = "uid-mom",
@@ -44,8 +48,8 @@ class HomeWeekTest {
     fun `an event that already started today is behind the parent, not ahead of them`() {
         val entries = HomeWeek.of(
             events = listOf(
-                event("this-morning", now.minusHours(3)),
-                event("this-evening", now.plusHours(3))
+                event("this-morning", now.minus(3, DateTimeUnit.HOUR)),
+                event("this-evening", now.plus(3, DateTimeUnit.HOUR))
             ),
             now = now,
             userId = "uid-mom",
@@ -59,9 +63,9 @@ class HomeWeekTest {
     fun `two occurrences of one series get keys that do not collide`() {
         // Recurring occurrences share the master event's id — that is the contract
         // `RecurrenceExpander` works to, and it is why the id alone cannot be the list key.
-        val master = event("weekly-football", now.plusDays(1))
+        val master = event("weekly-football", now.plus(1, DateTimeUnit.DAY))
         val entries = HomeWeek.of(
-            events = listOf(master, master.copy(startDateTime = now.plusDays(3))),
+            events = listOf(master, master.copy(startDateTime = now.plus(3, DateTimeUnit.DAY))),
             now = now,
             userId = "uid-mom",
             custodyFor = { null }
@@ -76,8 +80,8 @@ class HomeWeekTest {
     fun `a private event of the co-parent's never appears`() {
         val entries = HomeWeek.of(
             events = listOf(
-                event("theirs", now.plusDays(1)).copy(isPrivate = true, createdByFirebaseUid = "uid-dad"),
-                event("mine", now.plusDays(1)).copy(isPrivate = true, createdByFirebaseUid = "uid-mom")
+                event("theirs", now.plus(1, DateTimeUnit.DAY)).copy(isPrivate = true, createdByFirebaseUid = "uid-dad"),
+                event("mine", now.plus(1, DateTimeUnit.DAY)).copy(isPrivate = true, createdByFirebaseUid = "uid-mom")
             ),
             now = now,
             userId = "uid-mom",
@@ -93,7 +97,7 @@ class HomeWeekTest {
         // row is on this device — hiding it would take a parent's own private event away from
         // their own week.
         val entries = HomeWeek.of(
-            events = listOf(event("unstamped", now.plusDays(1)).copy(isPrivate = true)),
+            events = listOf(event("unstamped", now.plus(1, DateTimeUnit.DAY)).copy(isPrivate = true)),
             now = now,
             userId = "uid-mom",
             custodyFor = { null }
@@ -104,7 +108,7 @@ class HomeWeekTest {
 
     @Test
     fun `each row carries the parent whose day it falls on, not the event's owner`() {
-        val tuesday = LocalDate.of(2026, 8, 25)
+        val tuesday = LocalDate(2026, 8, 25)
         val entries = HomeWeek.of(
             // The event belongs to slot 2, but it falls on a day slot 1 has the child.
             events = listOf(event("dentist", tuesday.atTime(9, 0)).copy(parentOwner = "dad")),
@@ -121,7 +125,7 @@ class HomeWeekTest {
         // Null rather than a guess: an unanswered day is not "the event owner's day", and
         // saying so would put a name on the row that nobody agreed to.
         val entries = HomeWeek.of(
-            events = listOf(event("dentist", now.plusDays(1)).copy(parentOwner = "dad")),
+            events = listOf(event("dentist", now.plus(1, DateTimeUnit.DAY)).copy(parentOwner = "dad")),
             now = now,
             userId = "uid-mom",
             custodyFor = { null }
@@ -134,9 +138,9 @@ class HomeWeekTest {
     fun `the week is ordered earliest first`() {
         val entries = HomeWeek.of(
             events = listOf(
-                event("thursday", now.plusDays(6)),
-                event("tomorrow", now.plusDays(1)),
-                event("sunday", now.plusDays(2))
+                event("thursday", now.plus(6, DateTimeUnit.DAY)),
+                event("tomorrow", now.plus(1, DateTimeUnit.DAY)),
+                event("sunday", now.plus(2, DateTimeUnit.DAY))
             ),
             now = now,
             userId = "uid-mom",
@@ -152,11 +156,11 @@ class HomeWeekTest {
         // and a 9:00 appointment does not stop having happened at 9:05.
         val agenda = HomeWeek.todayOf(
             events = listOf(
-                event("this-morning", now.minusHours(3)),
-                event("this-evening", now.plusHours(3)),
-                event("tomorrow", now.plusDays(1))
+                event("this-morning", now.minus(3, DateTimeUnit.HOUR)),
+                event("this-evening", now.plus(3, DateTimeUnit.HOUR)),
+                event("tomorrow", now.plus(1, DateTimeUnit.DAY))
             ),
-            today = now.toLocalDate(),
+            today = now.date,
             userId = "uid-mom",
             custodyFor = { null }
         )
@@ -169,10 +173,10 @@ class HomeWeekTest {
         // Overlap, not start date — the same rule the calendar's day queries follow.
         val agenda = HomeWeek.todayOf(
             events = listOf(
-                event("camp", now.minusDays(2)).copy(endDateTime = now.plusDays(1)),
-                event("last-week", now.minusDays(5)).copy(endDateTime = now.minusDays(4))
+                event("camp", now.minus(2, DateTimeUnit.DAY)).copy(endDateTime = now.plus(1, DateTimeUnit.DAY)),
+                event("last-week", now.minus(5, DateTimeUnit.DAY)).copy(endDateTime = now.minus(4, DateTimeUnit.DAY))
             ),
-            today = now.toLocalDate(),
+            today = now.date,
             userId = "uid-mom",
             custodyFor = { null }
         )
@@ -184,9 +188,9 @@ class HomeWeekTest {
     fun `today's agenda names the day's custody parent`() {
         val agenda = HomeWeek.todayOf(
             events = emptyList(),
-            today = now.toLocalDate(),
+            today = now.date,
             userId = "uid-mom",
-            custodyFor = { date -> if (date == now.toLocalDate()) "dad" else null }
+            custodyFor = { date -> if (date == now.date) "dad" else null }
         )
 
         assertEquals("dad", agenda.dayParent)
@@ -202,10 +206,10 @@ class HomeWeekTest {
         )
         val agenda = HomeWeek.todayOf(
             events = emptyList(),
-            today = now.toLocalDate(),
+            today = now.date,
             userId = "uid-mom",
             custodyFor = { ContactWindow.SLOT_ONE },
-            contactWindowsFor = { date -> if (date == now.toLocalDate()) listOf(window) else emptyList() }
+            contactWindowsFor = { date -> if (date == now.date) listOf(window) else emptyList() }
         )
 
         assertEquals(listOf(window), agenda.contactWindows)
@@ -215,7 +219,7 @@ class HomeWeekTest {
     fun `today's agenda has no contact windows when nothing supplies them`() {
         val agenda = HomeWeek.todayOf(
             events = emptyList(),
-            today = now.toLocalDate(),
+            today = now.date,
             userId = "uid-mom",
             custodyFor = { null }
         )
@@ -227,10 +231,10 @@ class HomeWeekTest {
     fun `a co-parent's private event never appears on today's agenda`() {
         val agenda = HomeWeek.todayOf(
             events = listOf(
-                event("theirs", now.plusHours(1))
+                event("theirs", now.plus(1, DateTimeUnit.HOUR))
                     .copy(isPrivate = true, createdByFirebaseUid = "uid-dad")
             ),
-            today = now.toLocalDate(),
+            today = now.date,
             userId = "uid-mom",
             custodyFor = { null }
         )

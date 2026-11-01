@@ -27,6 +27,7 @@ import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -70,11 +71,11 @@ class InboxItemsTest {
     private fun event(id: String, creator: String) = Event(
         id = id,
         title = id,
-        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0),
+        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0).toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = if (creator == "u1") "dad" else "mom",
-        createdAt = created,
-        updatedAt = created,
+        createdAt = created.toKotlinLocalDateTime(),
+        updatedAt = created.toKotlinLocalDateTime(),
         createdByFirebaseUid = creator,
         familyId = "u1__u2",
         acceptance = EventAcceptance.PENDING

@@ -7,6 +7,7 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -83,11 +84,11 @@ class EarlierFamiliesTest {
     private fun event(id: String, familyId: String?, createdBy: String, day: Int) = Event(
         id = id,
         title = id,
-        startDateTime = LocalDateTime.of(2026, 5, day, 10, 0),
+        startDateTime = LocalDateTime.of(2026, 5, day, 10, 0).toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 5, 1, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 5, 1, 9, 0),
+        createdAt = LocalDateTime.of(2026, 5, 1, 9, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 5, 1, 9, 0).toKotlinLocalDateTime(),
         createdByFirebaseUid = createdBy,
         familyId = familyId
     )

@@ -24,6 +24,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -124,11 +125,11 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
             Event(
                 id = UUID.randomUUID().toString(),
                 title = "$word dentist",
-                startDateTime = LocalDate.now().atTime(NOON, 0),
+                startDateTime = LocalDate.now().atTime(NOON, 0).toKotlinLocalDateTime(),
                 eventType = "medical",
                 parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-                createdAt = now,
-                updatedAt = now
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime()
             )
         )
         parent.expenseRepository.addExpense(

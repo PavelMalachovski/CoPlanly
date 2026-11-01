@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -55,11 +56,11 @@ class MultiFamilyTest : TwoParentTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = "Carol's parents' evening",
-            startDateTime = LocalDateTime.now().plusDays(2),
+            startDateTime = LocalDateTime.now().plusDays(2).toKotlinLocalDateTime(),
             eventType = "school",
             parentOwner = alice.database.userDao().getUserById(alice.uid)?.role ?: "mom",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         alice.eventRepository.insertEvent(event)
 
@@ -102,11 +103,11 @@ class MultiFamilyTest : TwoParentTest() {
         val carolsEvent = Event(
             id = UUID.randomUUID().toString(),
             title = "Carol's dentist, before linking",
-            startDateTime = LocalDateTime.now().plusDays(3),
+            startDateTime = LocalDateTime.now().plusDays(3).toKotlinLocalDateTime(),
             eventType = "medical",
             parentOwner = carol.database.userDao().getUserById(carol.uid)?.role ?: "mom",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         carol.eventRepository.insertEvent(carolsEvent)
 

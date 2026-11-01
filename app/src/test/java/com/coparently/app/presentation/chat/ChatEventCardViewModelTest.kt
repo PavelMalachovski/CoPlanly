@@ -281,12 +281,12 @@ class ChatEventCardViewModelTest {
         id = ID,
         title = "Dentist",
         description = "Bring the insurance card.",
-        startDateTime = AT,
-        endDateTime = AT.plusHours(1),
+        startDateTime = AT.toKotlinLocalDateTime(),
+        endDateTime = AT.plusHours(1).toKotlinLocalDateTime(),
         eventType = "doctor",
         parentOwner = "mom",
-        createdAt = AT,
-        updatedAt = AT,
+        createdAt = AT.toKotlinLocalDateTime(),
+        updatedAt = AT.toKotlinLocalDateTime(),
         createdByFirebaseUid = createdBy,
         acceptance = acceptance
     )

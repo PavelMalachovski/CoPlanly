@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -105,10 +106,10 @@ class ProfessionalCalendarViewModelTest {
             title = "Trip",
             eventType = "OTHER",
             parentOwner = "dad",
-            startDateTime = LocalDateTime.of(2026, 1, 12, 9, 0),
-            endDateTime = LocalDateTime.of(2026, 1, 13, 18, 0),
-            createdAt = created,
-            updatedAt = created
+            startDateTime = LocalDateTime.of(2026, 1, 12, 9, 0).toKotlinLocalDateTime(),
+            endDateTime = LocalDateTime.of(2026, 1, 13, 18, 0).toKotlinLocalDateTime(),
+            createdAt = created.toKotlinLocalDateTime(),
+            updatedAt = created.toKotlinLocalDateTime()
         )
 
         val days = ProfessionalAgenda.days(start, 14, listOf(trip), custody)

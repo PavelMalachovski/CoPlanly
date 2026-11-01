@@ -2,8 +2,14 @@ package com.coparently.app.domain.usecase
 
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.ValidationResult
-import java.time.LocalDateTime
+import com.coparently.app.domain.time.minus
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
+import kotlin.time.Clock
 
 /**
  * Validator for Event domain model.
@@ -23,7 +29,7 @@ class EventValidator @Inject constructor() {
             event.title.length > 100 ->
                 ValidationResult.Error("Event title is too long (max 100 characters)", "title")
 
-            event.endDateTime != null && event.startDateTime.isAfter(event.endDateTime) ->
+            event.endDateTime.let { end -> end != null && event.startDateTime > end } ->
                 ValidationResult.Error("End time must be after start time", "endDateTime")
 
             event.parentOwner.isBlank() ->
@@ -41,16 +47,19 @@ class EventValidator @Inject constructor() {
      */
     fun validateDateTime(startDateTime: LocalDateTime, endDateTime: LocalDateTime?): ValidationResult {
         return when {
-            endDateTime != null && startDateTime.isAfter(endDateTime) ->
+            endDateTime != null && startDateTime > endDateTime ->
                 ValidationResult.Error("End time must be after start time", "endDateTime")
 
-            startDateTime.isBefore(LocalDateTime.now().minusYears(1)) ->
+            startDateTime < now().minus(1, DateTimeUnit.YEAR) ->
                 ValidationResult.Error("Event date cannot be more than 1 year in the past", "startDateTime")
 
-            startDateTime.isAfter(LocalDateTime.now().plusYears(5)) ->
+            startDateTime > now().plus(5, DateTimeUnit.YEAR) ->
                 ValidationResult.Error("Event date cannot be more than 5 years in the future", "startDateTime")
 
             else -> ValidationResult.Success
         }
     }
+
+    /** This device's wall clock now, as `java.time.LocalDateTime.now()` reads it. */
+    private fun now(): LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 }

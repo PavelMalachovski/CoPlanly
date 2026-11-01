@@ -10,6 +10,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -249,12 +250,12 @@ class MonthReviewCalculatorTest {
     ) = Event(
         id = id,
         title = "Event $id",
-        startDateTime = start,
-        endDateTime = end,
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = end?.toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = start,
-        updatedAt = start,
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime(),
         isPrivate = hidden
     )
 

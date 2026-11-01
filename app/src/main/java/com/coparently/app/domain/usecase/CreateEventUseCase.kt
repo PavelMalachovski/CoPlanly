@@ -14,10 +14,13 @@ import com.coparently.app.domain.model.ValidationResult
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CancellationException
-import java.time.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toLocalDateTime
 import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Clock
 
 /**
  * Use case for creating a new event.
@@ -63,7 +66,7 @@ class CreateEventUseCase @Inject constructor(
             }
 
             // Set timestamps
-            val now = LocalDateTime.now()
+            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val finalEvent = eventWithId.copy(
                 createdAt = now,
                 updatedAt = now
@@ -149,7 +152,7 @@ private fun eventClock(stored: Event, answerBy: AnswerByPick): RequestStart? {
     val awaited = stored.awaitedAnswer() ?: return null
     val zone = ZoneId.systemDefault()
     val now = System.currentTimeMillis()
-    val cap = RequestCap.forEvent(stored.startDateTime, now, zone)
+    val cap = RequestCap.forEvent(stored.startDateTime.toJavaLocalDateTime(), now, zone)
     val deadline = AnswerBy.resolve(answerBy, now, cap, zone) ?: return null
     return RequestStart(
         kind = RequestKind.EVENT,

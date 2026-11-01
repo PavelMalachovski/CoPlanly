@@ -2,8 +2,11 @@ package com.coparently.app.domain.home
 
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.Event
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
 
 /**
  * One row of the child's week on the home screen.
@@ -84,7 +87,7 @@ object HomeWeek {
         userId: String,
         custodyFor: (LocalDate) -> String?
     ): List<WeekEntry> {
-        val end = now.toLocalDate().plusDays(DAYS).atStartOfDay()
+        val end = now.date.plus(DAYS, DateTimeUnit.DAY).atTime(0, 0)
         return events
             .filter { it.startDateTime >= now && it.startDateTime < end }
             .filter { it.isVisibleTo(userId) }
@@ -92,7 +95,7 @@ object HomeWeek {
             .map { event ->
                 WeekEntry(
                     event = event,
-                    dayParent = custodyFor(event.startDateTime.toLocalDate()),
+                    dayParent = custodyFor(event.startDateTime.date),
                     key = "${event.id}@${event.startDateTime}"
                 )
             }
@@ -130,9 +133,9 @@ object HomeWeek {
 
     /** Whether this event touches [day] — start and end dates inclusive. */
     private fun Event.covers(day: LocalDate): Boolean {
-        val start = startDateTime.toLocalDate()
-        val end = (endDateTime ?: startDateTime).toLocalDate()
-        return !day.isBefore(start) && !day.isAfter(end)
+        val start = startDateTime.date
+        val end = (endDateTime ?: startDateTime).date
+        return day >= start && day <= end
     }
 
     /**

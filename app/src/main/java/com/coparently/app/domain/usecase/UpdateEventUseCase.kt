@@ -5,8 +5,10 @@ import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.ValidationResult
 import com.coparently.app.domain.repository.EventRepository
-import java.time.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
+import kotlin.time.Clock
 
 /**
  * Use case for updating an existing event.
@@ -32,7 +34,9 @@ class UpdateEventUseCase @Inject constructor(
             }
 
             // Update timestamp
-            val updatedEvent = event.copy(updatedAt = LocalDateTime.now())
+            val updatedEvent = event.copy(
+                updatedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            )
 
             // Update event
             eventRepository.updateEvent(updatedEvent, announce)

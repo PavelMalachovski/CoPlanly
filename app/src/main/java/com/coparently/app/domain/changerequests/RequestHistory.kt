@@ -17,6 +17,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.IsoText
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.Instant
 import java.time.LocalDateTime
@@ -253,7 +254,7 @@ object RequestHistory {
         // Covered means one of the two parents created it, so the creator is known from here on.
         val creator = event.createdByFirebaseUid?.takeIf { scope.covers(event) } ?: return null
         val key = "ev_${event.id}"
-        val subject = RequestSubject.NewEvent(event.id, event.title, event.startDateTime)
+        val subject = RequestSubject.NewEvent(event.id, event.title, event.startDateTime.toJavaLocalDateTime())
         if (event.acceptance.isPending) {
             return UnansweredRows.ifOver(
                 key,
@@ -262,7 +263,8 @@ object RequestHistory {
             )
         }
         val outcome = event.acceptance.outcome()
-        val decidedAt = event.acceptedAt
+        // The history's times are java.time until the request records move (MON-24, slice 3).
+        val decidedAt = event.acceptedAt?.toJavaLocalDateTime()
         return if (outcome == null || decidedAt == null) {
             null
         } else {

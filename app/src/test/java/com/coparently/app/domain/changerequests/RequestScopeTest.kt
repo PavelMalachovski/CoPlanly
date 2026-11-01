@@ -2,6 +2,7 @@ package com.coparently.app.domain.changerequests
 
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
@@ -32,11 +33,11 @@ class RequestScopeTest {
     private fun event(creator: String?, familyId: String?) = Event(
         id = "e1",
         title = "Swimming",
-        startDateTime = at,
+        startDateTime = at.toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = at,
-        updatedAt = at,
+        createdAt = at.toKotlinLocalDateTime(),
+        updatedAt = at.toKotlinLocalDateTime(),
         createdByFirebaseUid = creator,
         familyId = familyId
     )

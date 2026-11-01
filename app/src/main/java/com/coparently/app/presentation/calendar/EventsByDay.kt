@@ -1,6 +1,11 @@
 package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /**
@@ -11,12 +16,16 @@ import java.time.LocalDate
  * index is held to: `EventsByDayTest` asserts the two agree on every day they touch, so the
  * agenda card under the grid can never disagree with the dots above it.
  *
+ * The days are `java.time`, as the grid's calendar library hands them out; an event's times are
+ * kotlinx-datetime (MON-24) and are compared on the event's side.
+ *
  * @param events Events already filtered by parent and type
  * @param date The day to collect
  */
 internal fun eventsOn(events: List<Event>, date: LocalDate): List<Event> {
-    val dayStart = date.atStartOfDay()
-    val dayEnd = date.plusDays(1).atStartOfDay()
+    val day = date.toKotlinLocalDate()
+    val dayStart = day.atTime(0, 0)
+    val dayEnd = day.plus(1, DateTimeUnit.DAY).atTime(0, 0)
     return events
         .filter { event ->
             val end = event.endDateTime ?: event.startDateTime
@@ -43,10 +52,10 @@ internal fun eventsOn(events: List<Event>, date: LocalDate): List<Event> {
 internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
     val buckets = mutableMapOf<LocalDate, MutableList<Event>>()
     for (event in events) {
-        val firstDay = event.startDateTime.toLocalDate()
+        val firstDay = event.startDateTime.date.toJavaLocalDate()
         // `eventsOn` keeps an event whose end lands exactly on a day's 00:00 (`end >= dayStart`),
         // so the last covered day is the end's own date, not the day before it.
-        val lastDay = (event.endDateTime ?: event.startDateTime).toLocalDate()
+        val lastDay = (event.endDateTime ?: event.startDateTime).date.toJavaLocalDate()
         var day = firstDay
         // An end before the start covers nothing, and this loop yields nothing for it — same
         // answer `eventsOn` gives such an event on every date.

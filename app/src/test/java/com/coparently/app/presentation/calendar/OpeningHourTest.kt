@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -16,12 +17,12 @@ class OpeningHourTest {
     private fun event(start: LocalDateTime, end: LocalDateTime? = start.plusHours(1)) = Event(
         id = start.toString(),
         title = "e",
-        startDateTime = start,
-        endDateTime = end,
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = end?.toKotlinLocalDateTime(),
         eventType = "general",
         parentOwner = "mom",
-        createdAt = start,
-        updatedAt = start
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime()
     )
 
     @Test

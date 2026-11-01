@@ -19,6 +19,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -59,12 +60,12 @@ class CreateEventUseCaseTest {
     private val newEvent = Event(
         id = "e-new",
         title = "Dentist",
-        startDateTime = start,
-        endDateTime = start.plusHours(1),
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "dad",
-        createdAt = LocalDateTime.now(),
-        updatedAt = LocalDateTime.now()
+        createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
     )
 
     /** What the repository stored: created by "a" in family "a__b", for the other parent, so waiting. */
@@ -159,7 +160,7 @@ class CreateEventUseCaseTest {
     @Test
     fun `an event that starts within two hours gets no clock`() = runTest {
         // Too soon for a deadline: it is created as a plain event waiting for an answer.
-        storing(stored.copy(startDateTime = LocalDateTime.now().plusMinutes(90)))
+        storing(stored.copy(startDateTime = LocalDateTime.now().plusMinutes(90).toKotlinLocalDateTime()))
 
         val result = useCase(newEvent, answerBy = AnswerByPick.DEFAULT)
 

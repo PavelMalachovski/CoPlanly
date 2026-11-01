@@ -9,12 +9,16 @@ import androidx.work.workDataOf
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toLocalDateTime
 import java.time.Duration
-import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
 
 /**
  * WorkManager-based implementation of [ReminderScheduler].
@@ -28,7 +32,7 @@ class EventReminderScheduler @Inject constructor(
 ) : ReminderScheduler {
 
     override fun schedule(event: Event) {
-        val now = LocalDateTime.now()
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val plan = ReminderPlanner.nextReminder(event, now)
         if (plan == null) {
             cancel(event.id)
@@ -36,7 +40,8 @@ class EventReminderScheduler @Inject constructor(
         }
 
         val request = OneTimeWorkRequestBuilder<ReminderWorker>()
-            .setInitialDelay(Duration.between(now, plan.remindAt))
+            // WorkManager takes a java.time delay; the wall-clock difference, as before.
+            .setInitialDelay(Duration.between(now.toJavaLocalDateTime(), plan.remindAt.toJavaLocalDateTime()))
             .addTag(WORK_TAG)
             .setInputData(
                 workDataOf(

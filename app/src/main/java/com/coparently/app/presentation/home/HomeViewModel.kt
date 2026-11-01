@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -239,7 +240,11 @@ class HomeViewModel @Inject constructor(
      * @param onMissing Called when there is no such event on this device, so the caller can fall
      *   back to the editor route, which reports that case itself.
      */
-    fun openPreview(eventId: String, occurrenceStart: LocalDateTime? = null, onMissing: () -> Unit) {
+    fun openPreview(
+        eventId: String,
+        occurrenceStart: kotlinx.datetime.LocalDateTime? = null,
+        onMissing: () -> Unit
+    ) {
         viewModelScope.launch {
             val dashboard = uiState.value as? HomeUiState.Dashboard
             val onDashboard = dashboard?.today?.events.orEmpty() +
@@ -412,8 +417,8 @@ class HomeViewModel @Inject constructor(
             // Start of today, not now: the today card covers the whole day (a 9:00
             // appointment does not stop having happened at 9:05), while HomeWeek.of still
             // opens the week's own window at `now` when it filters below.
-            LocalDate.now().atStartOfDay(),
-            LocalDateTime.now().plusDays(HomeWeek.DAYS)
+            LocalDate.now().atStartOfDay().toKotlinLocalDateTime(),
+            LocalDateTime.now().plusDays(HomeWeek.DAYS).toKotlinLocalDateTime()
         ),
         custody,
         _userId
@@ -425,22 +430,20 @@ class HomeViewModel @Inject constructor(
         // unknown, which the row renders as no parent rather than as a guess.
         val resolve = CustodyResolver.resolver(model, overrides, legacy = { null })
         val windows = CustodyResolver.contactWindowsResolver(model, resolve)
-        // `HomeWeek` reads the events' own `java.time` days until the events move (MON-24).
-        val custodyFor: (LocalDate) -> String? = { day -> resolve(day.toKotlinLocalDate()) }
         AgendaSections(
             today = HomeWeek.todayOf(
                 events = events,
-                today = LocalDate.now(),
+                today = LocalDate.now().toKotlinLocalDate(),
                 userId = userId,
-                custodyFor = custodyFor,
+                custodyFor = resolve,
                 // The same windows the calendar grid draws (MON-6b), through the same lookup.
-                contactWindowsFor = { day -> windows(day.toKotlinLocalDate()) }
+                contactWindowsFor = windows
             ),
             week = HomeWeek.of(
                 events = events,
-                now = LocalDateTime.now(),
+                now = LocalDateTime.now().toKotlinLocalDateTime(),
                 userId = userId,
-                custodyFor = custodyFor
+                custodyFor = resolve
             )
         )
     }.stateIn(
@@ -696,7 +699,7 @@ class HomeViewModel @Inject constructor(
     private companion object {
         /** Today's agenda before any repository has answered: today, empty, no custody. */
         val EMPTY_TODAY = TodayAgenda(
-            date = LocalDate.now(),
+            date = LocalDate.now().toKotlinLocalDate(),
             events = emptyList(),
             dayParent = null
         )

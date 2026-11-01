@@ -65,6 +65,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.dateWithTime
+import com.coparently.app.utils.format
 import kotlinx.coroutines.delay
 
 /**

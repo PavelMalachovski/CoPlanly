@@ -8,6 +8,8 @@ import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.google.gson.Gson
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -107,25 +109,25 @@ internal object EventWireContract : WireContract {
         id = "evt-current-1",
         title = "Dentist",
         description = "Bring the card",
-        startDateTime = LocalDateTime.of(2026, 5, 12, 9, 30),
-        endDateTime = LocalDateTime.of(2026, 5, 12, 10, 15),
+        startDateTime = LocalDateTime.of(2026, 5, 12, 9, 30).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.of(2026, 5, 12, 10, 15).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
         isRecurring = true,
         recurrencePattern = "WEEKLY",
-        recurrenceEndDate = LocalDate.of(2026, 6, 30),
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime.of(2026, 5, 2, 18, 45, 10),
+        recurrenceEndDate = LocalDate.of(2026, 6, 30).toKotlinLocalDate(),
+        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 5, 2, 18, 45, 10).toKotlinLocalDateTime(),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = BOB,
         pickupConfirmedBy = BOB,
-        pickupConfirmedAt = LocalDateTime.of(2026, 5, 12, 8, 55),
+        pickupConfirmedAt = LocalDateTime.of(2026, 5, 12, 8, 55).toKotlinLocalDateTime(),
         reminderMinutes = 30,
         imageUrl = "ph1|event_images/uidA__uidB/evt-current-1/c83d2e5f.jpg|image/jpeg|48213|" +
             "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
         acceptance = EventAcceptance.ACCEPTED,
         acceptedBy = BOB,
-        acceptedAt = LocalDateTime.of(2026, 5, 3, 7, 0),
+        acceptedAt = LocalDateTime.of(2026, 5, 3, 7, 0).toKotlinLocalDateTime(),
         isImportant = true,
         forMembers = listOf(
             FamilyMemberRef.Child("c1"),
@@ -139,11 +141,11 @@ internal object EventWireContract : WireContract {
     private fun minimalEvent() = Event(
         id = "evt-current-2",
         title = "Swim",
-        startDateTime = LocalDateTime.of(2026, 5, 14, 16, 0),
+        startDateTime = LocalDateTime.of(2026, 5, 14, 16, 0).toKotlinLocalDateTime(),
         eventType = "activity",
         parentOwner = "dad",
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime.of(2026, 5, 1, 8, 0)
+        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime()
     )
 
     private fun queuedRow() = EventEntity(

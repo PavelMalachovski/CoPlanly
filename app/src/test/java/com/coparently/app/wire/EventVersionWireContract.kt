@@ -4,7 +4,7 @@ import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.versions.EventVersionKind
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * `event_versions`: read by `EventVersionDocument.Parsed.from` (the export), written by
@@ -70,11 +70,11 @@ internal object EventVersionWireContract : WireContract {
                     Event(
                         id = "evt-current-1",
                         title = "Dentist",
-                        startDateTime = LocalDateTime.of(2026, 5, 12, 9, 30),
+                        startDateTime = LocalDateTime(2026, 5, 12, 9, 30),
                         eventType = "medical",
                         parentOwner = "mom",
-                        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
-                        updatedAt = LocalDateTime.of(2026, 5, 5, 16, 53, 20),
+                        createdAt = LocalDateTime(2026, 5, 1, 8, 0),
+                        updatedAt = LocalDateTime(2026, 5, 5, 16, 53, 20),
                         reminderMinutes = 15,
                         familyId = "uidA__uidB"
                     ),

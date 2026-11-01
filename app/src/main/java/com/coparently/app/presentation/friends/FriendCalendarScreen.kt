@@ -44,6 +44,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import com.coparently.app.presentation.professionals.WindowPager
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle

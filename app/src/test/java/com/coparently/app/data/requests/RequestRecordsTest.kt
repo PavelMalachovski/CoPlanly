@@ -36,6 +36,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -349,11 +350,11 @@ class RequestRecordsTest {
     private fun event(acceptance: EventAcceptance) = Event(
         id = "ev-1",
         title = "Swimming",
-        startDateTime = LocalDateTime.parse("2026-05-10T10:00:00"),
+        startDateTime = LocalDateTime.parse("2026-05-10T10:00:00").toKotlinLocalDateTime(),
         eventType = "activity",
         parentOwner = "dad",
-        createdAt = LocalDateTime.parse("2026-05-05T09:00:00"),
-        updatedAt = LocalDateTime.parse("2026-05-05T09:00:00"),
+        createdAt = LocalDateTime.parse("2026-05-05T09:00:00").toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.parse("2026-05-05T09:00:00").toKotlinLocalDateTime(),
         createdByFirebaseUid = ALICE,
         acceptance = acceptance
     )

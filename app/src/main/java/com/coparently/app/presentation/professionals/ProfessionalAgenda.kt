@@ -3,6 +3,7 @@ package com.coparently.app.presentation.professionals
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
@@ -49,8 +50,8 @@ object ProfessionalAgenda {
     }
 
     private fun Event.overlaps(date: LocalDate): Boolean {
-        val first = startDateTime.toLocalDate()
-        val last = (endDateTime ?: startDateTime).toLocalDate()
+        val first = startDateTime.date.toJavaLocalDate()
+        val last = (endDateTime ?: startDateTime).date.toJavaLocalDate()
         return !date.isBefore(first) && !date.isAfter(last)
     }
 }

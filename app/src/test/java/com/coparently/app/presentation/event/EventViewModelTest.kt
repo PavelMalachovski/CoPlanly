@@ -41,15 +41,18 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 /**
  * Unit tests for EventViewModel.
@@ -80,12 +83,12 @@ class EventViewModelTest {
     private val sampleEvent = Event(
         id = "e1",
         title = "Soccer",
-        startDateTime = LocalDateTime.of(2026, 7, 20, 16, 0),
-        endDateTime = LocalDateTime.of(2026, 7, 20, 17, 0),
+        startDateTime = LocalDateTime(2026, 7, 20, 16, 0),
+        endDateTime = LocalDateTime(2026, 7, 20, 17, 0),
         eventType = "sports",
         parentOwner = "mom",
-        createdAt = LocalDateTime.now(),
-        updatedAt = LocalDateTime.now()
+        createdAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
+        updatedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     )
 
     @Before
@@ -212,7 +215,7 @@ class EventViewModelTest {
     fun `undoPickupConfirmation clears confirmation`() = runTest {
         coEvery { getEvents.getById("e1") } returns sampleEvent.copy(
             pickupConfirmedBy = "dad",
-            pickupConfirmedAt = LocalDateTime.now()
+            pickupConfirmedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         )
         val saved = slot<Event>()
         coEvery { updateEvent.invoke(capture(saved)) } answers { Result.success(saved.captured) }
@@ -226,10 +229,10 @@ class EventViewModelTest {
 
     @Test
     fun `setting a new range cancels the previous collection`() = runTest {
-        val firstStart = LocalDateTime.of(2026, 8, 1, 0, 0)
-        val firstEnd = LocalDateTime.of(2026, 8, 31, 23, 59, 59)
-        val secondStart = LocalDateTime.of(2026, 11, 1, 0, 0)
-        val secondEnd = LocalDateTime.of(2026, 11, 30, 23, 59, 59)
+        val firstStart = LocalDateTime(2026, 8, 1, 0, 0)
+        val firstEnd = LocalDateTime(2026, 8, 31, 23, 59, 59)
+        val secondStart = LocalDateTime(2026, 11, 1, 0, 0)
+        val secondEnd = LocalDateTime(2026, 11, 30, 23, 59, 59)
 
         val firstRange = MutableSharedFlow<List<Event>>()
         val laterEvent = sampleEvent.copy(id = "e2", title = "Dentist")
@@ -256,8 +259,8 @@ class EventViewModelTest {
 
     @Test
     fun `re-requesting the same range does not restart the collection`() = runTest {
-        val start = LocalDateTime.of(2026, 8, 1, 0, 0)
-        val end = LocalDateTime.of(2026, 8, 31, 23, 59, 59)
+        val start = LocalDateTime(2026, 8, 1, 0, 0)
+        val end = LocalDateTime(2026, 8, 31, 23, 59, 59)
         val range = MutableSharedFlow<List<Event>>()
         every { getEvents.getByDateRange(start, end) } returns range
 
@@ -271,10 +274,10 @@ class EventViewModelTest {
 
     @Test
     fun `a failed range does not block a later different range`() = runTest {
-        val start = LocalDateTime.of(2026, 8, 1, 0, 0)
-        val end = LocalDateTime.of(2026, 8, 31, 23, 59, 59)
-        val secondStart = LocalDateTime.of(2026, 11, 1, 0, 0)
-        val secondEnd = LocalDateTime.of(2026, 11, 30, 23, 59, 59)
+        val start = LocalDateTime(2026, 8, 1, 0, 0)
+        val end = LocalDateTime(2026, 8, 31, 23, 59, 59)
+        val secondStart = LocalDateTime(2026, 11, 1, 0, 0)
+        val secondEnd = LocalDateTime(2026, 11, 30, 23, 59, 59)
         val laterEvent = sampleEvent.copy(id = "e2", title = "Dentist")
         val failure = RuntimeException("boom")
 
@@ -300,8 +303,8 @@ class EventViewModelTest {
 
     @Test
     fun `refresh restarts a failed range once it stops failing`() = runTest {
-        val start = LocalDateTime.of(2026, 8, 1, 0, 0)
-        val end = LocalDateTime.of(2026, 8, 31, 23, 59, 59)
+        val start = LocalDateTime(2026, 8, 1, 0, 0)
+        val end = LocalDateTime(2026, 8, 31, 23, 59, 59)
         val failure = RuntimeException("boom")
         var shouldFail = true
         val recovered = MutableSharedFlow<List<Event>>()
@@ -338,7 +341,7 @@ class EventViewModelTest {
         val saved = slot<Event>()
         coEvery { updateEvent.invoke(capture(saved)) } answers { Result.success(saved.captured) }
 
-        viewModel.moveEvent("e1", LocalDate.of(2026, 7, 22))
+        viewModel.moveEvent("e1", LocalDate(2026, 7, 22))
         runCurrent()
 
         assertEquals(EventUiState.OperationSuccess(EventOperation.RESCHEDULED), viewModel.uiState.value)
@@ -349,19 +352,19 @@ class EventViewModelTest {
     fun `undo of a move restores the exact start and end, minutes included`() = runTest {
         advanceUntilIdle()
         val halfPast = sampleEvent.copy(
-            startDateTime = LocalDateTime.of(2026, 7, 20, 9, 30),
-            endDateTime = LocalDateTime.of(2026, 7, 20, 10, 45)
+            startDateTime = LocalDateTime(2026, 7, 20, 9, 30),
+            endDateTime = LocalDateTime(2026, 7, 20, 10, 45)
         )
         coEvery { getEvents.getById("e1") } returns halfPast
         val saved = mutableListOf<Event>()
         coEvery { updateEvent.invoke(capture(saved)) } answers { Result.success(saved.last()) }
 
-        viewModel.moveEvent("e1", LocalDate.of(2026, 7, 22), 14 * 60 + 15)
+        viewModel.moveEvent("e1", LocalDate(2026, 7, 22), 14 * 60 + 15)
         advanceUntilIdle()
         viewModel.undoLastMove()
         advanceUntilIdle()
 
-        assertEquals(LocalDateTime.of(2026, 7, 22, 14, 15), saved[0].startDateTime)
+        assertEquals(LocalDateTime(2026, 7, 22, 14, 15), saved[0].startDateTime)
         assertEquals(halfPast.startDateTime, saved[1].startDateTime)
         assertEquals(halfPast.endDateTime, saved[1].endDateTime)
     }
@@ -371,8 +374,8 @@ class EventViewModelTest {
         advanceUntilIdle()
         coEvery { getEvents.getById("e1") } returns sampleEvent.copy(isRecurring = true)
 
-        viewModel.moveEvent("e1", LocalDate.of(2026, 7, 22), 10 * 60)
-        viewModel.resizeEvent("e1", newEndTime = LocalDateTime.of(2026, 7, 20, 18, 0))
+        viewModel.moveEvent("e1", LocalDate(2026, 7, 22), 10 * 60)
+        viewModel.resizeEvent("e1", newEndTime = LocalDateTime(2026, 7, 20, 18, 0))
         advanceUntilIdle()
 
         coVerify(exactly = 0) { updateEvent.invoke(any()) }

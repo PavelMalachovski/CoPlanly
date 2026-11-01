@@ -14,6 +14,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDateTime
@@ -60,11 +61,11 @@ class RequestInboxTest {
         Event(
             id = id,
             title = id,
-            startDateTime = start,
+            startDateTime = start.toKotlinLocalDateTime(),
             eventType = "other",
             parentOwner = if (creator == "u1") "dad" else "mom",
-            createdAt = created,
-            updatedAt = created,
+            createdAt = created.toKotlinLocalDateTime(),
+            updatedAt = created.toKotlinLocalDateTime(),
             createdByFirebaseUid = creator,
             familyId = "u1__u2",
             acceptance = EventAcceptance.PENDING

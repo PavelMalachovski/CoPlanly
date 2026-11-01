@@ -2,6 +2,7 @@ package com.coparently.app.domain.school
 
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -47,8 +48,8 @@ class SchoolImportPlannerTest {
         assertTrue(event.id.startsWith("school-"))
         assertEquals("school-".length + 32, event.id.length)
         assertEquals("Trip to the zoo", event.title)
-        assertEquals(LocalDateTime.of(2026, 10, 7, 8, 0), event.startDateTime)
-        assertEquals(LocalDateTime.of(2026, 10, 7, 13, 0), event.endDateTime)
+        assertEquals(LocalDateTime.of(2026, 10, 7, 8, 0).toKotlinLocalDateTime(), event.startDateTime)
+        assertEquals(LocalDateTime.of(2026, 10, 7, 13, 0).toKotlinLocalDateTime(), event.endDateTime)
         assertEquals("school", event.eventType)
         assertEquals("mom", event.parentOwner)
         assertFalse(event.isPrivate)
@@ -88,10 +89,10 @@ class SchoolImportPlannerTest {
         val creates = plan(events = listOf(event)).creates.sortedBy { it.startDateTime }
 
         assertEquals(3, creates.map { it.id }.distinct().size)
-        assertEquals(LocalDate.of(2026, 10, 12).atStartOfDay(), creates[0].startDateTime)
+        assertEquals(LocalDate.of(2026, 10, 12).atStartOfDay().toKotlinLocalDateTime(), creates[0].startDateTime)
         assertNull(creates[0].endDateTime, "one all-day date has no end")
-        assertEquals(LocalDateTime.of(2026, 10, 13, 10, 45), creates[1].endDateTime)
-        assertEquals(LocalDate.of(2026, 10, 21).atStartOfDay(), creates[2].endDateTime)
+        assertEquals(LocalDateTime.of(2026, 10, 13, 10, 45).toKotlinLocalDateTime(), creates[1].endDateTime)
+        assertEquals(LocalDate.of(2026, 10, 21).atStartOfDay().toKotlinLocalDateTime(), creates[2].endDateTime)
     }
 
     @Test
@@ -137,7 +138,7 @@ class SchoolImportPlannerTest {
         val update = plan(events = listOf(moved), existing = live(stored), ledger = first.ledger).updates.single()
 
         assertEquals("Trip to the zoo (moved)", update.title)
-        assertEquals(LocalDateTime.of(2026, 10, 7, 15, 0), update.endDateTime)
+        assertEquals(LocalDateTime.of(2026, 10, 7, 15, 0).toKotlinLocalDateTime(), update.endDateTime)
         assertEquals(listOf("alice", "bob"), update.sharedWith)
         assertEquals(30, update.reminderMinutes)
         assertTrue(update.isImportant)
@@ -193,8 +194,8 @@ class SchoolImportPlannerTest {
         val event = plan(weeks = listOf(week(today, schoolDay(today)))).creates.single()
 
         assertEquals("Anna at school", event.title)
-        assertEquals(today.atTime(8, 0), event.startDateTime)
-        assertEquals(today.atTime(14, 20), event.endDateTime)
+        assertEquals(today.atTime(8, 0).toKotlinLocalDateTime(), event.startDateTime)
+        assertEquals(today.atTime(14, 20).toKotlinLocalDateTime(), event.endDateTime)
         assertEquals(SchoolImportPlanner.idOf(target, SchoolImportKind.HOURS, today.toString()), event.id)
     }
 
@@ -240,8 +241,8 @@ class SchoolImportPlannerTest {
             .sortedBy { it.startDateTime }
 
         assertEquals(2, creates.size)
-        assertEquals(friday.atStartOfDay(), creates[0].startDateTime)
-        assertEquals(nextMonday.atStartOfDay(), creates[0].endDateTime)
+        assertEquals(friday.atStartOfDay().toKotlinLocalDateTime(), creates[0].startDateTime)
+        assertEquals(nextMonday.atStartOfDay().toKotlinLocalDateTime(), creates[0].endDateTime)
         assertEquals(SchoolImportPlanner.idOf(target, SchoolImportKind.DAY_OFF, friday.toString()), creates[0].id)
         assertNull(creates[1].endDateTime)
     }
@@ -272,8 +273,8 @@ class SchoolImportPlannerTest {
         assertTrue(later.creates.isEmpty())
         val extended = later.updates.single()
         assertEquals(fridayEvent.id, extended.id)
-        assertEquals(friday.atStartOfDay(), extended.startDateTime)
-        assertEquals(nextMonday.plusDays(1).atStartOfDay(), extended.endDateTime)
+        assertEquals(friday.atStartOfDay().toKotlinLocalDateTime(), extended.startDateTime)
+        assertEquals(nextMonday.plusDays(1).atStartOfDay().toKotlinLocalDateTime(), extended.endDateTime)
     }
 
     @Test

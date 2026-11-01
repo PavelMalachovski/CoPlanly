@@ -1,6 +1,7 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.domain.events.EventAcceptance
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -99,7 +100,7 @@ class ProfessionalEventsTest {
         assertEquals("f1", event.friendParticipates)
         assertEquals(EventAcceptance.ACCEPTED, event.acceptance)
         assertEquals("b", event.acceptedBy)
-        assertEquals(LocalDateTime.of(2026, 9, 2, 8, 30), event.acceptedAt)
+        assertEquals(LocalDateTime.of(2026, 9, 2, 8, 30).toKotlinLocalDateTime(), event.acceptedAt)
         assertEquals("b", event.lastModifiedBy)
     }
 

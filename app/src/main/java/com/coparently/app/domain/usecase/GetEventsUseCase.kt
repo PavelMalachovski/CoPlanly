@@ -3,7 +3,7 @@ package com.coparently.app.domain.usecase
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 import javax.inject.Inject
 
 /**

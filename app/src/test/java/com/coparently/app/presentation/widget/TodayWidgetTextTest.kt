@@ -11,6 +11,7 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.ParentColorChoice
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -175,11 +176,11 @@ class TodayWidgetTextTest {
     private fun event(title: String, start: LocalDateTime, end: LocalDateTime?, owner: String) = Event(
         id = title,
         title = title,
-        startDateTime = start,
-        endDateTime = end,
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = end?.toKotlinLocalDateTime(),
         eventType = "general",
         parentOwner = owner,
-        createdAt = start,
-        updatedAt = start
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime()
     )
 }

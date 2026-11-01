@@ -1,9 +1,12 @@
 package com.coparently.app.domain.events
 
 import com.coparently.app.domain.model.Event
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -14,7 +17,7 @@ import kotlin.test.assertTrue
  */
 class AllDayEventTest {
 
-    private val day = LocalDate.of(2026, 9, 30)
+    private val day = LocalDate(2026, 9, 30)
 
     private fun event(start: LocalDateTime, end: LocalDateTime?) = Event(
         id = "e",
@@ -29,7 +32,7 @@ class AllDayEventTest {
 
     @Test
     fun `midnight to the last minute of the day is all day`() {
-        val birthday = event(day.atStartOfDay(), day.atTime(23, 59))
+        val birthday = event(day.atTime(0, 0), day.atTime(23, 59))
 
         assertTrue(AllDayEvent.isAllDay(birthday))
         assertEquals(day, AllDayEvent.lastDay(birthday))
@@ -37,7 +40,7 @@ class AllDayEventTest {
 
     @Test
     fun `midnight to the next midnight is one whole day`() {
-        val imported = event(day.atStartOfDay(), day.plusDays(1).atStartOfDay())
+        val imported = event(day.atTime(0, 0), day.plus(1, DateTimeUnit.DAY).atTime(0, 0))
 
         assertTrue(AllDayEvent.isAllDay(imported))
         assertEquals(day, AllDayEvent.lastDay(imported))
@@ -45,21 +48,21 @@ class AllDayEventTest {
 
     @Test
     fun `a midnight start with no end is all day`() {
-        assertTrue(AllDayEvent.isAllDay(event(day.atStartOfDay(), null)))
+        assertTrue(AllDayEvent.isAllDay(event(day.atTime(0, 0), null)))
     }
 
     @Test
     fun `a school holiday over several days ends on its last day`() {
-        val holiday = event(day.atStartOfDay(), day.plusDays(3).atStartOfDay())
+        val holiday = event(day.atTime(0, 0), day.plus(3, DateTimeUnit.DAY).atTime(0, 0))
 
         assertTrue(AllDayEvent.isAllDay(holiday))
-        assertEquals(day.plusDays(2), AllDayEvent.lastDay(holiday))
+        assertEquals(day.plus(2, DateTimeUnit.DAY), AllDayEvent.lastDay(holiday))
     }
 
     @Test
     fun `a timed event is not all day`() {
         assertFalse(AllDayEvent.isAllDay(event(day.atTime(17, 0), day.atTime(18, 0))))
-        assertFalse(AllDayEvent.isAllDay(event(day.atStartOfDay(), day.atTime(1, 30))))
+        assertFalse(AllDayEvent.isAllDay(event(day.atTime(0, 0), day.atTime(1, 30))))
         assertFalse(AllDayEvent.isAllDay(event(day.atTime(9, 0), null)))
     }
 }

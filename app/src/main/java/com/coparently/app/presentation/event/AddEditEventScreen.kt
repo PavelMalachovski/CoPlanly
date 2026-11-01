@@ -132,6 +132,10 @@ import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -445,14 +449,16 @@ fun AddEditEventScreen(
                     description = it.description ?: ""
                     parentOwner = it.parentOwner
                     eventType = it.eventType
-                    startDate = it.startDateTime.toLocalDate()
-                    startTime = it.startDateTime.toLocalTime()
-                    endTime = it.endDateTime?.toLocalTime() ?: startTime.plusHours(1)
+                    // The form's fields are java.time, which its saved state holds; the event's are
+                    // kotlinx-datetime (MON-24) and are converted here and on save.
+                    startDate = it.startDateTime.date.toJavaLocalDate()
+                    startTime = it.startDateTime.time.toJavaLocalTime()
+                    endTime = it.endDateTime?.time?.toJavaLocalTime() ?: startTime.plusHours(1)
                     endDaySpan = endDaySpanOf(it)
                     keepNoEnd = it.endDateTime == null
                     allDay = AllDayEvent.isAllDay(it)
                     recurrencePattern = if (it.isRecurring) it.recurrencePattern else null
-                    recurrenceEndDate = it.recurrenceEndDate
+                    recurrenceEndDate = it.recurrenceEndDate?.toJavaLocalDate()
                     reminderMinutes = it.reminderMinutes
                     isPrivate = it.isPrivate
                     isImportant = it.isImportant
@@ -628,29 +634,30 @@ fun AddEditEventScreen(
                     base ?: Event(
                         id = resolvedId,
                         title = "",
-                        startDateTime = LocalDateTime.now(),
+                        startDateTime = LocalDateTime.now().toKotlinLocalDateTime(),
                         eventType = "general",
                         parentOwner = ownerSlot,
-                        createdAt = LocalDateTime.now(),
-                        updatedAt = LocalDateTime.now()
+                        createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+                        updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
                     )
                     ).copy(
                     title = title,
                     description = description.ifEmpty { null },
-                    startDateTime = formStartDateTime(startDate, startTime, allDay),
-                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay),
+                    startDateTime = formStartDateTime(startDate, startTime, allDay).toKotlinLocalDateTime(),
+                    endDateTime = formEndDateTime(startDate, endTime, endDaySpan, keepNoEnd, allDay)
+                        ?.toKotlinLocalDateTime(),
                     eventType = eventType,
                     parentOwner = ownerSlot,
                     isRecurring = recurrencePattern != null,
                     recurrencePattern = recurrencePattern,
-                    recurrenceEndDate = recurrenceEndDate,
+                    recurrenceEndDate = recurrenceEndDate?.toKotlinLocalDate(),
                     reminderMinutes = reminderMinutes,
                     isPrivate = isPrivate,
                     isImportant = isImportant,
                     friendParticipates = friendParticipates,
                     forMembers = forMembers,
                     imageUrl = finalImageUrl,
-                    updatedAt = LocalDateTime.now()
+                    updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
                 )
 
                 if (eventId == null) {
@@ -1520,7 +1527,7 @@ fun AddEditEventScreen(
                                     viewModel.confirmPickup(eventId)
                                     existingEvent = existingEvent?.copy(
                                         pickupConfirmedBy = parentOwner,
-                                        pickupConfirmedAt = LocalDateTime.now()
+                                        pickupConfirmedAt = LocalDateTime.now().toKotlinLocalDateTime()
                                     )
                                 }
                             }
@@ -1710,7 +1717,7 @@ internal fun defaultStartTime(now: LocalTime): LocalTime =
 
 /** An hour after [start], or the day's last minute when that hour would wrap past midnight. */
 internal fun defaultEndTime(start: LocalTime): LocalTime =
-    if (start.hour == LAST_HOUR) AllDayEvent.LAST_MINUTE else start.plusHours(1)
+    if (start.hour == LAST_HOUR) AllDayEvent.LAST_MINUTE.toJavaLocalTime() else start.plusHours(1)
 
 /** The day's last hour, 11 PM. */
 private const val LAST_HOUR = 23
@@ -1739,7 +1746,7 @@ internal fun formEndDateTime(
     val endDate = startDate.plusDays(endDaySpan.toLong())
     return when {
         keepNoEnd -> null
-        allDay -> endDate.atTime(AllDayEvent.LAST_MINUTE)
+        allDay -> endDate.atTime(AllDayEvent.LAST_MINUTE.toJavaLocalTime())
         else -> LocalDateTime.of(endDate, endTime)
     }
 }
@@ -1751,11 +1758,11 @@ internal fun formEndDateTime(
  */
 internal fun endDaySpanOf(event: Event): Int {
     val lastDay = if (AllDayEvent.isAllDay(event)) {
-        AllDayEvent.lastDay(event)
+        AllDayEvent.lastDay(event).toJavaLocalDate()
     } else {
-        event.endDateTime?.toLocalDate() ?: return 0
+        event.endDateTime?.date?.toJavaLocalDate() ?: return 0
     }
-    return endDaySpanFor(event.startDateTime.toLocalDate(), lastDay).coerceAtLeast(0)
+    return endDaySpanFor(event.startDateTime.date.toJavaLocalDate(), lastDay).coerceAtLeast(0)
 }
 
 /**
@@ -1793,19 +1800,19 @@ private data class EventFields(
     /** The form's values for [event], as the edit mode prefills them. */
     companion object {
         fun of(event: Event): EventFields {
-            val start = event.startDateTime.toLocalTime()
+            val start = event.startDateTime.time.toJavaLocalTime()
             return EventFields(
                 title = event.title,
                 description = event.description ?: "",
                 parentOwner = event.parentOwner,
                 eventType = event.eventType,
-                startDate = event.startDateTime.toLocalDate(),
+                startDate = event.startDateTime.date.toJavaLocalDate(),
                 startTime = start,
-                endTime = event.endDateTime?.toLocalTime() ?: start.plusHours(1),
+                endTime = event.endDateTime?.time?.toJavaLocalTime() ?: start.plusHours(1),
                 endDaySpan = endDaySpanOf(event),
                 allDay = AllDayEvent.isAllDay(event),
                 recurrencePattern = if (event.isRecurring) event.recurrencePattern else null,
-                recurrenceEndDate = event.recurrenceEndDate,
+                recurrenceEndDate = event.recurrenceEndDate?.toJavaLocalDate(),
                 reminderMinutes = event.reminderMinutes,
                 isPrivate = event.isPrivate,
                 isImportant = event.isImportant,

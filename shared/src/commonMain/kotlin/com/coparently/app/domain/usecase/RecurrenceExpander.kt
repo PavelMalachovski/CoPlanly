@@ -1,9 +1,14 @@
 package com.coparently.app.domain.usecase
 
 import com.coparently.app.domain.model.Event
-import java.time.Duration
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
+import com.coparently.app.domain.time.durationUntil
+import com.coparently.app.domain.time.minus
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
+import kotlin.time.Duration
 
 /**
  * Expands recurring events into concrete occurrences within a date range.
@@ -53,8 +58,8 @@ object RecurrenceExpander {
         }
 
         val pattern = event.recurrencePattern
-        val duration = event.endDateTime?.let { Duration.between(event.startDateTime, it) }
-        val recurrenceEnd = event.recurrenceEndDate?.atTime(23, 59, 59)
+        val duration = event.endDateTime?.let { event.startDateTime.durationUntil(it) }
+        val recurrenceEnd = event.recurrenceEndDate?.atTime(LAST_SECOND)
 
         val occurrences = mutableListOf<Event>()
         var index = firstIndexEndingAtOrAfter(event.startDateTime, pattern, rangeStart, duration)
@@ -64,7 +69,7 @@ object RecurrenceExpander {
             if (start > rangeEnd) break
             if (recurrenceEnd != null && start > recurrenceEnd) break
 
-            val end = duration?.let { start.plus(it) }
+            val end = duration?.let { start + it }
             if ((end ?: start) >= rangeStart) {
                 occurrences.add(event.copy(startDateTime = start, endDateTime = end))
             }
@@ -93,10 +98,10 @@ object RecurrenceExpander {
      */
     private fun occurrenceAt(start: LocalDateTime, pattern: String, index: Long): LocalDateTime? =
         when (pattern) {
-            "daily" -> start.plusDays(index)
-            "weekly" -> start.plusWeeks(index)
-            "biweekly" -> start.plusWeeks(index * BIWEEKLY_WEEKS)
-            "monthly" -> start.plusMonths(index)
+            "daily" -> start.plus(index, DateTimeUnit.DAY)
+            "weekly" -> start.plus(index, DateTimeUnit.WEEK)
+            "biweekly" -> start.plus(index * BIWEEKLY_WEEKS, DateTimeUnit.WEEK)
+            "monthly" -> start.plus(index, DateTimeUnit.MONTH)
             else -> start.takeIf { index == 0L }
         }
 
@@ -120,23 +125,52 @@ object RecurrenceExpander {
         // it would move the target *later* and skip occurrences the emit loop would have kept, so
         // such an event is treated as instantaneous here and judged by the loop, as before.
         val target = duration
-            ?.takeUnless { it.isNegative }
-            ?.let { rangeStart.minus(it) }
+            ?.takeUnless { it.isNegative() }
+            ?.let { rangeStart - it }
             ?: rangeStart
         if (start >= target) return 0
 
-        // ChronoUnit.between truncates, so this lands on or just before the target — never past
-        // it. At most one correction is therefore needed, and it is the immediately next
-        // occurrence, so the first index at or after the target cannot be skipped.
+        // The number of whole intervals from start to target, truncated, so this lands on or just
+        // before the target — never past it. At most one correction is therefore needed, and it is
+        // the immediately next occurrence, so the first index at or after the target cannot be
+        // skipped. (An estimate one interval low, which is what the month count gives when the
+        // target falls on the clamped end of a short month, only costs one turn of the emit loop.)
         val estimate = when (pattern) {
-            "daily" -> ChronoUnit.DAYS.between(start, target)
-            "weekly" -> ChronoUnit.WEEKS.between(start, target)
-            "biweekly" -> ChronoUnit.WEEKS.between(start, target) / BIWEEKLY_WEEKS
-            "monthly" -> ChronoUnit.MONTHS.between(start, target)
+            "daily" -> wholeDays(start, target)
+            "weekly" -> wholeDays(start, target) / DAYS_PER_WEEK
+            "biweekly" -> wholeDays(start, target) / DAYS_PER_WEEK / BIWEEKLY_WEEKS
+            "monthly" -> wholeMonths(start, target)
             else -> return 0
         }.coerceAtLeast(0)
 
         val candidate = occurrenceAt(start, pattern, estimate) ?: return 0
         return if (candidate < target) estimate + 1 else estimate
     }
+
+    /**
+     * Complete days from [start] to [target] (`ChronoUnit.DAYS.between`), for a [target] after
+     * [start]: the calendar days between the two dates, less one when the time of day has not come
+     * round yet.
+     */
+    private fun wholeDays(start: LocalDateTime, target: LocalDateTime): Long {
+        val days = target.date.toEpochDays() - start.date.toEpochDays()
+        return if (target.time < start.time) days - 1 else days
+    }
+
+    /**
+     * Complete months from [start] to [target] (`ChronoUnit.MONTHS.between`), for a [target] after
+     * [start]: the months between the two dates, less one when the day of the month and time of day
+     * have not come round yet.
+     */
+    private fun wholeMonths(start: LocalDateTime, target: LocalDateTime): Long {
+        val months = (target.year - start.year) * MONTHS_PER_YEAR + (target.month.ordinal - start.month.ordinal)
+        val notYet = target.day < start.day || (target.day == start.day && target.time < start.time)
+        return if (notYet) months - 1L else months.toLong()
+    }
+
+    private const val DAYS_PER_WEEK = 7L
+    private const val MONTHS_PER_YEAR = 12
+
+    /** 23:59:59, the last second a recurrence end date still allows an occurrence to start. */
+    private val LAST_SECOND = LocalTime(23, 59, 59)
 }

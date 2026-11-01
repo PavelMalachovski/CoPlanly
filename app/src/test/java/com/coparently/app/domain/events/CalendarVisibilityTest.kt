@@ -1,8 +1,8 @@
 package com.coparently.app.domain.events
 
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 
 /**
@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
  */
 class CalendarVisibilityTest {
 
-    private val at = LocalDateTime.of(2026, 9, 1, 10, 0)
+    private val at = LocalDateTime(2026, 9, 1, 10, 0)
 
     private fun event(id: String, acceptance: EventAcceptance) = Event(
         id = id,

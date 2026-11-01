@@ -61,6 +61,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 
@@ -342,7 +343,7 @@ internal fun eventTimeLine(event: Event): String {
             append(" – ")
             // An overnight or multi-day event names its end day too; "22:00 – 07:00" under the
             // start date read as ending before it began.
-            if (end.toLocalDate() != event.startDateTime.toLocalDate()) {
+            if (end.date != event.startDateTime.date) {
                 append(end.format(dateFormat))
                 append(' ')
             }
@@ -355,7 +356,7 @@ internal fun eventTimeLine(event: Event): String {
     val lastDay = AllDayEvent.lastDay(event)
     return when {
         !AllDayEvent.isAllDay(event) -> "$dateText · $timeText"
-        lastDay != event.startDateTime.toLocalDate() -> "$dateText – ${lastDay.format(dateFormat)} · $allDayText"
+        lastDay != event.startDateTime.date -> "$dateText – ${lastDay.format(dateFormat)} · $allDayText"
         else -> "$dateText · $allDayText"
     }
 }

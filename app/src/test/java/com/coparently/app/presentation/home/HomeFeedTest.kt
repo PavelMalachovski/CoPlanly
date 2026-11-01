@@ -7,6 +7,7 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
@@ -31,11 +32,11 @@ class HomeFeedTest {
     ) = Event(
         id = id,
         title = id,
-        startDateTime = t0.plusDays(3),
+        startDateTime = t0.plusDays(3).toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = createdAt,
-        updatedAt = updatedAt,
+        createdAt = createdAt.toKotlinLocalDateTime(),
+        updatedAt = updatedAt.toKotlinLocalDateTime(),
         lastModifiedBy = lastModifiedBy
     )
 
@@ -120,7 +121,7 @@ class HomeFeedTest {
         )
 
         // An edit well after the answer is a change of its own and stays.
-        val editedLater = moved.copy(updatedAt = respondedAt.plusMinutes(5))
+        val editedLater = moved.copy(updatedAt = respondedAt.plusMinutes(5).toKotlinLocalDateTime())
         assertEquals(
             listOf("ev_e1_${editedLater.updatedAt}", "ans_cr_r1"),
             HomeFeed.items(listOf(editedLater), emptyList(), listOf(answer), partner, maxItems = 5).map { it.id }

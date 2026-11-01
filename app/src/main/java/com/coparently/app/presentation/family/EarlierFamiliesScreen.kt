@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 
 /** A record's day, in the reader's own order. */
@@ -174,7 +175,7 @@ private fun LazyListScope.records(family: EarlierFamily) {
     section("events", R.string.earlier_family_events, family.events) { event ->
         RecordRow(
             title = event.title,
-            supporting = event.startDateTime.toLocalDate().format(localizedDate(DATE_SKELETON)),
+            supporting = event.startDateTime.date.format(localizedDate(DATE_SKELETON)),
             iconRes = Icons.Default.Event
         )
     }

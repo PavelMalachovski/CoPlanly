@@ -22,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -354,12 +355,12 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = "Class photo",
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "activity",
             parentOwner = alice.database.userDao().getUserById(alice.uid)?.role ?: "mom",
-            createdAt = now(),
-            updatedAt = now()
+            createdAt = now().toKotlinLocalDateTime(),
+            updatedAt = now().toKotlinLocalDateTime()
         )
     }
 

@@ -1,7 +1,7 @@
 package com.coparently.app.domain.events
 
 import com.coparently.app.domain.model.Event
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Who may say yes to an event created for them, and when the question is asked at all.

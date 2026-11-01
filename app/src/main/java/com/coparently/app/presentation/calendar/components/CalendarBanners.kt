@@ -51,10 +51,13 @@ import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.previewParentNames
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
-import java.time.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.time.Clock
 
 /** Tint strength of the inline banners above the grid. */
 private const val BANNER_TINT_ALPHA = 0.14f
@@ -443,7 +446,7 @@ private fun agendaTime(event: Event, formatter: DateTimeFormatter): String {
 private fun DayAgendaCardPreview() {
     PreviewWrapper {
         DayAgendaCard(
-            date = LocalDate.now(),
+            date = Clock.System.todayIn(TimeZone.currentSystemDefault()),
             events = listOf(
                 createSampleEvent(title = "School pickup", parentOwner = "mom"),
                 createSampleEvent(title = "Dentist", parentOwner = "dad")
@@ -469,7 +472,7 @@ private fun DayAgendaCardPreview() {
 private fun DayAgendaCardEmptyPreview() {
     PreviewWrapper {
         DayAgendaCard(
-            date = LocalDate.now(),
+            date = Clock.System.todayIn(TimeZone.currentSystemDefault()),
             events = emptyList(),
             custody = "dad",
             parentNames = previewParentNames,
