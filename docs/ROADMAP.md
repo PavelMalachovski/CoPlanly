@@ -96,7 +96,7 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
-| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Planned, owner decision of 27 October 2026; starts after the Android release.** Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Phase 1 built** (the domain in the `:shared` module, wire unchanged; on its branch, merged after the Android release); left for phase 1: the Mac runner's first green run. Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
 | **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before its phase 2. Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
@@ -2630,7 +2630,7 @@ period or deletes them); no attachment of files to an entry; no backup — an en
 journal alone would be the way to add one, and it is a product decision, not a default. Needs
 `41.json` from the Regenerate workflow before its migration test can run.
 
-### MON-24 · **PLANNED** · P1 · L · CoPlanly for iPhone
+### MON-24 · **PHASE 1 BUILT** · P1 · L · CoPlanly for iPhone
 
 **Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
 jobs on the owner's Mac as a self-hosted runner; 💻 the iPhone, TestFlight and App Store review.
@@ -2644,6 +2644,110 @@ the Android app into `shared` without behaviour change (the wire fixtures are th
 iPhone shell, the platform substitutes (APNs with a Notification Service Extension, WidgetKit,
 iOS Data Protection instead of SQLCipher, Sign in with Apple on both platforms), and the order of
 work. Depends on MON-25 before its phase 2.
+
+**Phase 1 — the domain in a shared module: built** (November 2026, owner decision to build it now on
+an isolated branch and merge only after the Android release; plan
+`docs/superpowers/plans/2026-11-01-iphone-phase-1-shared-domain.md`). What it did:
+
+- **Toolchain** (Task 1): Kotlin 2.3.21, KSP 2.3.11, Roborazzi 1.76.0, coroutines 1.11.0; no
+  screenshot moved.
+- **The `:shared` module and its CI** (Task 2): Android, `iosArm64` and `iosSimulatorArm64`
+  targets, the `shared` job on Linux (JVM tests and the iOS klib) and `shared-ios` on the owner's
+  Mac (`docs/IOS-RUNNER.md`), skipped until `IOS_RUNNER_READY` is set.
+- **The domain moved** (Tasks 3–8), every package unchanged, by `git mv`: all but the 40 files
+  of the stay list below (the app had 186 domain files on 1 November); CLAUDE.md's architecture
+  map says where a `domain/…` path now lives. JVM-only calls became small seams (`Sha256`, `secureRandomBytes`, `canonicalDecomposition`, `Lzma1Raw`)
+  or pure Kotlin (`PercentCodec`, `Crc32`, `mod97`, `DecimalText`), each held to the JVM original
+  by a parity test; `java.time` became kotlinx-datetime in the moved code and in the app code that
+  touches it, with `java.time` left at Android edges (Room entities and converters, display
+  formatting, pickers, WorkManager, the calendar library's `YearMonth`). The holiday tables moved
+  with every date and name pinned by the same reference fixtures, now in `commonTest`.
+- **The wire did not move**: `CurrentWireFixturesTest` passed without a regeneration at every
+  step, and the `upgrade` job read and wrote each step's documents with the previous build.
+
+**Phase 1's stay list** — the domain files still under `app/src/main/java/com/coparently/app/domain/`,
+each with what keeps it there. Phase 2 moves them with Hilt's replacement and the data layer, or
+converts their dates.
+
+| File | Why it stays |
+| --- | --- |
+| `usecase/CreateEventUseCase.kt`, `UpdateEventUseCase.kt`, `DeleteEventUseCase.kt` | `@Inject`; analytics and Crashlytics (`data/`); `android.util.Log` |
+| `usecase/GetEventsUseCase.kt`, `EventValidator.kt` | `@Inject` |
+| `usecase/EventUseCases.kt` | bundles the four use cases above |
+| `error/ErrorHandler.kt` | `@Inject`; Crashlytics and `NetworkMonitor`; `java.io.IOException` |
+| `activity/ActivityAnnouncer.kt` | `@Inject`; `android.util.Log`; `java.util.UUID` |
+| `model/MessageTemplate.kt` | `@StringRes` and the app's `R` (strings move in phase 2) |
+| `repository/FamilyDocumentRepository.kt` | `java.io.File` in its signatures |
+| `review/MonthStatsWire.kt` | writes the AI summary's month as `java.time.YearMonth` text (kotlinx's JVM converter); moving it means pinning that text for every year |
+| `export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt` | `java.time` (`LocalDate`, `LocalDateTime`, `ZoneId`, a `DateTimeFormatter` parse in the builder) |
+| `export/RecordLayout.kt`, `RecordVerificationLayout.kt` | date-free, but they lay out `CommunicationRecord` |
+| `school/SchoolEvents.kt`, `SchoolTimetable.kt`, `SchoolImportPlanner.kt`, `SchoolImportItems.kt` | `java.time`; the Bakaláři parsers in `data/` hand them `java.time` values |
+| `payments/Payment.kt` | `java.time.YearMonth` |
+| `support/SupportAgreement.kt`, `SupportReminderRule.kt` | `java.time` (`LocalDate`, `YearMonth`) |
+| `changerequests/RequestInbox.kt`, `FamilyAgreements.kt` | date-free, but they read `SupportProposal` |
+| `guests/GuestGrantPolicy.kt`, `GuestAccessDuration.kt`, `friends/FriendAccessDuration.kt` | `java.time.Instant` and `Duration` |
+| `journal/JournalEntry.kt`, `repository/JournalRepository.kt` | `java.time.LocalDate` |
+| `receipts/ReceiptScan.kt`, `ReceiptParser.kt` | `java.time.LocalDate`; the parser also `java.text.Normalizer` (the `canonicalDecomposition` seam would replace it) |
+| `chat/MessageReport.kt` | `java.time.Instant` text in the report it writes |
+| `ai/AiAssist.kt` | `java.time.YearMonth` |
+| `repository/FriendRepository.kt`, `repository/ProfessionalRepository.kt` | `java.time.LocalDate` windows |
+
+`UnansweredRows` and `ClocksAt.governing` are public in `:shared` only for `RequestInbox` and
+`OtherFamiliesSignals`, and carry `@InternalSharedApi` (an error-level opt-in) until those move;
+then they become `internal` again and the marker goes.
+
+**Carried into phase 2** (found in phase 1's reviews; none changes what a parent sees, and the
+bytes are identical on Android):
+- **`java.time` beyond the edges** in app code, converting losslessly with kotlinx's own
+  converters: the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
+  `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at; the event, expense and
+  change-request forms, whose `rememberSaveable` state is Java-serialised (give each saved date a
+  `Saver` over epoch days or seconds, never a raw kotlinx value); `AnswerByField`'s picker,
+  `VaccinationListEditor` and the child-info `DatePickerDialog`; `RequestTime.zone()` (`ZoneId`),
+  `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
+  with the calendar's paging); `UnassignedRecord.date`.
+- **One idiom for "now"**: `java.time.LocalDateTime.now().toKotlinLocalDateTime()` in
+  `AddEditEventScreen`, `ChatViewModel`, `HomeViewModel` and `ChangeRequestViewModel`, beside
+  `wallClockNow()` elsewhere. They are equal; use `wallClockNow()`.
+- **Gson to kotlinx.serialization** (spec §5.1, moved to phase 2). Until then the date adapter
+  `UserRepositoryImpl` and `SyncService` register is defensive only: neither Gson meets a date.
+- **Tests to add**: a literal for the `conversations.createdAt` text (`ChatMappers`); commonTest
+  vectors for a preset landing in a DST gap and for the quiet hours' exact edges (the request-clock
+  parity test reaches them only by chance); an `isOccurrence` probe one minute off.
+- **Edge cases recorded, not changed**: `WallClock`'s arithmetic is exact within about ±146 years
+  (kotlin `Duration`); `AnswerBy`, `ReminderPlan` and `RequestCap` use `toEpochMilliseconds()`,
+  which saturates where `toEpochMilli()` threw; kotlinx's clock gives `createdAt`/`respondedAt`
+  more fraction digits than before, which every reader accepts; the custody codecs' `\d` became
+  `[0-9]`, so a layer or override whose numbers are written in non-ASCII digits, which Android's
+  ICU-backed `\d` used to read and no build writes, is now kept as unreadable (item 30's safe
+  direction); a seasonal layer's name decoding relies on each platform's strict UTF-8 decoder and,
+  for a short `%4` escape, on `substring`'s bounds check, which Kotlin/Native has and Kotlin/JS
+  does not — `SeasonalLayerTest` holds iOS to both once `shared-ios` runs.
+- **CI hygiene**: the `shared` job repeats the shared tests `build-test` already runs (for Kover);
+  a manual run skips `shared-ios`; androidTest runs kotlin-reflect 2.0.0 over 2.3-compiled classes
+  (raise it after merge); `ParentsSourceTest` can race a leaked `shareIn` collector (give
+  `ParentsSource` an injectable scope); cache Robolectric's `android-all` against Maven Central's
+  rate limit; the emulator jobs' crash-buffer step should time out when the device is gone.
+
+**Toolchain ahead of the iPhone.** Kotlin/Native pins Xcode: Kotlin 2.3.21 supports Xcode up to
+26.0, 2.4.21 up to 26.4, and Xcode 27 only from Kotlin 2.5.0, not stable yet. The owner's Mac has
+Xcode 27, so:
+1. **Now (💻):** install Xcode 26.0.1 beside it and give the runner `DEVELOPER_DIR` in its `.env`
+   file (`docs/IOS-RUNNER.md`, step 1), keeping Xcode 27 for everything else.
+2. **Before phase 3** (the iPhone shell, built in Xcode day to day): AGP 9, which Dagger 2.60 and
+   so Kotlin 2.4 wait for (CLAUDE.md, toolchain), then Kotlin 2.4 (Xcode up to 26.4).
+3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
+   App Store Connect will require by then.
+
+**Left for phase 1, all the owner's (💻):**
+1. Register the Mac runner (`docs/IOS-RUNNER.md`), with Xcode 26.0.1 as above, then set the
+   repository variable `IOS_RUNNER_READY` to `true`.
+2. Run `shared-ios` green once — "Shared tests (iOS simulator)" runs every `commonTest`, and
+   `:shared:linkDebugFrameworkIosSimulatorArm64` produces `Shared.framework`. Not yet run: the
+   Linux job compiles the iOS klib, and a JS build of `commonTest` was the stand-in in the cloud
+   sessions.
+3. Merge after the Android release and its first feedback round (spec §2), and only once step 2
+   is green.
 
 ### MON-25 · **PLANNED** · P1 · L · Request clocks decided on the server
 

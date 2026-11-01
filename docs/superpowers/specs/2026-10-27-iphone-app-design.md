@@ -108,10 +108,14 @@ pull request with the full CI. The order is chosen so that each step is small an
 1. **Toolchain.** Kotlin, KSP and Compose versions that Compose Multiplatform supports. A
    `shared` module (`commonMain`, `androidMain`, `iosMain`), and an iOS target that compiles
    empty. A CI job on a macOS runner builds the iOS framework.
-2. **Domain to `commonMain`.** `java.time` becomes `kotlinx-datetime`. Gson becomes
-   `kotlinx.serialization`. `WireContractTest`, `CurrentWireFixturesTest` and the `upgrade` job
-   must show **no fixture diff**. A diff means the wire format moved, and that is a bug, not a
-   regeneration. The R8 probe's Gson cases shrink as Gson leaves.
+2. **Domain to `commonMain`.** `java.time` becomes `kotlinx-datetime`. `WireContractTest`,
+   `CurrentWireFixturesTest` and the `upgrade` job must show **no fixture diff**. A diff means the
+   wire format moved, and that is a bug, not a regeneration. *(Corrected by the phase 1 plan,
+   `docs/superpowers/plans/2026-11-01-iphone-phase-1-shared-domain.md`: this step used to say
+   "Gson becomes `kotlinx.serialization`" too, but the domain imports no Gson — every Gson user is
+   in `data/`, `di/` and one ViewModel — so that change moves with the data layer to step 4, in
+   phase 2, and the R8 probe's Gson cases shrink then. Phase 1 also left a short list of domain
+   files in the app, each with its reason; ROADMAP MON-24 records it.)*
 3. **Dependency injection.** Hilt is Android-only. It is replaced by a multiplatform container.
    Koin is the default and kotlin-inject the alternative; the builder picks one, and the choice is
    recorded with its reason.
@@ -123,6 +127,8 @@ pull request with the full CI. The order is chosen so that each step is small an
    - OkHttp becomes Ktor (Bakaláři, Google Calendar).
    - `EncryptedPreferences` becomes Keystore on Android and Keychain on iOS, through one interface.
    - WorkManager stays on Android; iOS gets its own implementation (§5.4).
+   - Gson becomes `kotlinx.serialization` (moved here from step 2, see there). The stored and wire
+     bytes stay those of today's Gson, held by the same fixtures and the R8 probe.
 5. **Presentation to `commonMain`.**
    - Lifecycle ViewModel and Navigation come from their multiplatform artifacts.
    - Strings become Compose Multiplatform resources, all five locales;
@@ -196,6 +202,7 @@ background, label, secondary label, separator), and the CoPlanly indigo is the t
 | ML Kit receipt OCR, QR scanning (CameraX) | ML Kit's iOS SDK, or Apple Vision and AVFoundation. On the device either way (item 10). |
 | On-device dictation | `SFSpeechRecognizer` with `requiresOnDeviceRecognition`. No button where on-device recognition is unavailable (item 28). |
 | PDF export (`android.graphics.pdf`) | `UIGraphicsPDFRenderer`. `RecordLayout` is already pure Kotlin and stays shared. |
+| The settle-up payment codes (CLAUDE.md item 45): QR Platba, EPC, and PAY by square, whose raw LZMA1 comes from `org.tukaani:xz` | QR Platba and EPC are shared code and draw on the iPhone as on Android. **PAY by square draws no code on the iPhone until phase 4 ports an LZMA1 encoder:** the shared `Lzma1Raw` answers null on iOS, so the payer sees a Slovak account's IBAN to copy and no QR, as item 45 already shows an account in a currency it has no code for. No screen says otherwise. The port is held byte for byte to `PaymentQrTest`'s expectation. |
 | Google sign-in, Credential Manager | Google Sign-In for iOS, plus **Sign in with Apple** (App Store guideline 4.8). Firebase Auth links both to one account. |
 | Google Calendar import | The same read-only scope, through Google Sign-In for iOS (Legal item 10). |
 | Pairing link, Play install referrer | Universal Links on `/pair/` (`web/.well-known/apple-app-site-association`). iOS has no install referrer: a system paste button instead (§7). |

@@ -541,7 +541,11 @@ When touching the UI, keep these invariants:
    back**: KSP has been versioned apart from Kotlin since 2.3.0 and is
    KSP2 only; 2.3.12 and later need AGP 8.12. Dagger's Hilt plugin accepts AGP 8 up to 2.59 (2.59.1
    asks for AGP 9), and up to 2.59 its `hiltJavaCompile` step reads Kotlin metadata up to 2.3 only.
-   So Kotlin 2.4 waits for AGP 9 and Dagger 2.60. The `upgrade` job runs this branch's test APK on
+   So Kotlin 2.4 waits for AGP 9 and Dagger 2.60. **Kotlin/Native pins Xcode too**: 2.3.21 supports
+   Xcode up to 26.0 (2.4.21 up to 26.4; Xcode 27 needs Kotlin 2.5), so the Mac runner uses an
+   Xcode 26 beside any newer one through the runner's `DEVELOPER_DIR` (`docs/IOS-RUNNER.md`), AGP 9
+   with Kotlin 2.4 comes before the iPhone work's phase 3, and a stable Kotlin 2.5 before the App
+   Store (ROADMAP MON-24). The `upgrade` job runs this branch's test APK on
    the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
    Kotlin. Compiler options go through `kotlin { compilerOptions { … } }`;
    `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.4.0 with no `-ktx`
@@ -620,6 +624,7 @@ crash with "migration from 3 to 9 required but not found".
 ./gradlew :shared:testDebugUnitTest                # the shared module's commonTest on the JVM
 ./gradlew :shared:compileKotlinIosSimulatorArm64   # its iOS klib; any host, no Mac (Kotlin 2.2.20+)
 ./gradlew :shared:iosSimulatorArm64Test            # commonTest on an iOS simulator: a Mac with Xcode
+./gradlew :shared:linkDebugFrameworkIosSimulatorArm64  # Shared.framework for the iPhone app: the Mac too
 ```
 
 ```bash
@@ -1359,13 +1364,41 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 ## Architecture map
 
 ```
-shared/    — Kotlin Multiplatform module (MON-24): the domain the iPhone app will share, moving out
-             of app/ with its packages unchanged; commonMain/commonTest, Android and iOS targets
-domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
+shared/    — Kotlin Multiplatform module (MON-24): the domain both apps run, moved out of app/
+             with its packages unchanged; commonMain/commonTest, Android and iOS targets
+domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
+             except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Hilt modules (Database, Firebase, Google, UseCase, Notification, …)
 ```
+
+**Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
+to the shared module with every package unchanged, so a path this file writes as
+`domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
+and its test is under `shared/src/commonTest/` (or `shared/src/androidUnitTest/` when it compares
+with a JVM API or mocks). The rules and items that name those paths were not reworded; only the
+root changed. **The exceptions are the phase-1 stay list**, still under
+`app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
+file by file:
+- dependency injection, Android or the data layer — the event use cases and `EventValidator` in
+  `usecase/` (Hilt's `@Inject`, analytics and Crashlytics; `RecurrenceExpander` moved),
+  `error/ErrorHandler.kt`, `activity/ActivityAnnouncer.kt`, `model/MessageTemplate.kt`
+  (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`);
+- `java.time` not yet converted — the communication record's builder, CSV and layouts in
+  `export/` (`RecordLabels`, `RecordPlan`, `RecordTimeText` and `RecordVerification` moved), the
+  school import's `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems`,
+  `payments/Payment.kt` and `support/` (and so `changerequests/RequestInbox.kt` and
+  `FamilyAgreements.kt`, which read them), `guests/GuestGrantPolicy.kt` with
+  `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt`, `journal/JournalEntry.kt` with
+  `repository/JournalRepository.kt`, `receipts/`, `chat/MessageReport.kt`, `ai/AiAssist.kt`,
+  `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`;
+- `review/MonthStatsWire.kt`, which writes the AI summary's month as `java.time.YearMonth` text.
+
+A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
+nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
+still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
+opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 

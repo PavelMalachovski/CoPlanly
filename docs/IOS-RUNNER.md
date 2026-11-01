@@ -43,6 +43,25 @@ only when all three of these are true:
 
    Kotlin picks the simulator from what Xcode lists, so there is no device name to configure.
 
+   **Which Xcode.** Kotlin/Native builds against one Xcode and supports a range up to it. The
+   project's Kotlin 2.3.21 supports Xcode up to **26.0**; Kotlin 2.4.21 reaches 26.4, and Xcode 27
+   needs Kotlin 2.5.0, which is not stable yet (ROADMAP MON-24). If the Mac has Xcode 27 for your
+   own work, keep it, and install **Xcode 26.0.1 beside it** for the runner (from
+   developer.apple.com/download/all, unpacked as `/Applications/Xcode-26.0.1.app`). Run the four
+   commands above once with `DEVELOPER_DIR` pointing at it, so its simulator runtime is installed:
+
+   ```bash
+   export DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer
+   sudo xcodebuild -license accept && xcodebuild -runFirstLaunch && xcodebuild -downloadPlatform iOS
+   ```
+
+   Then give the runner that Xcode alone: after step 3, add the line
+   `DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer` to the `.env` file in the
+   runner's folder (`~/actions-runner-coplanly/.env`) and restart it (`./svc.sh stop`,
+   `./svc.sh start`). The runner passes that file's variables to every job, so `xcode-select` can
+   keep pointing at Xcode 27 for everything else. When the project moves to a Kotlin that supports
+   a newer Xcode, change this one line.
+
 2. **A JDK 17.** The job installs its own Temurin 17 through `actions/setup-java`, but Gradle
    from Terminal (for trying a command by hand) needs one too:
 
@@ -112,7 +131,8 @@ only when all three of these are true:
   modules before it runs an iOS task, and they look for an SDK). Delete any of these if the disk
   fills; the next run downloads them again.
 - **Updating Xcode.** After an update, run `xcodebuild -runFirstLaunch` again and check that
-  `xcrun simctl list devices available` still lists an iPhone.
+  `xcrun simctl list devices available` still lists an iPhone. An Xcode newer than the Kotlin
+  version supports (see "Which Xcode" in step 1) stays beside the runner's, not in its place.
 - **Updating the runner.** It updates itself. If GitHub shows it **Offline**, check
   `./svc.sh status` and the log in `~/Library/Logs/actions.runner.*`.
 - **Removing it.** `./svc.sh stop`, `./svc.sh uninstall`, then remove it on the Runners page (or
