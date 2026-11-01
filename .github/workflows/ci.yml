@@ -108,7 +108,7 @@ jobs:
       upgrade: ${{ steps.filter.outputs.upgrade }}
       # The `instrumented` job's matrix, as a JSON array of legs.
       matrix: ${{ steps.filter.outputs.matrix }}
-      # The `r8-runtime` job: Android changes that can reach Gson, R8's rules or the probe.
+      # The `r8-runtime` job: Android changes that can reach the stored JSON, R8's rules or the probe.
       r8runtime: ${{ steps.filter.outputs.r8runtime }}
       # The `web` job: anything but docs and the Android app — web/, web-tests/, functions/,
       # firebase.json, the Firebase CLI's lock file, the workflow, or a path the script does not know.
@@ -421,19 +421,21 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # A release build is the only place R8 runs, and R8 is what silently rewrote the field
-      # names Gson depends on. Building it here is what stops that class of defect from
-      # reaching a device again. No signing config exists yet, so this produces an unsigned
+      # names Gson depended on (the app's own JSON is StoredJson since MON-24, whose keys R8
+      # cannot rename; Google's calendar models still depend on theirs). Building it here is
+      # what stops that class of defect from reaching a device again. No signing config exists yet, so this produces an unsigned
       # bundle — which is exactly the part worth checking.
       - name: Assemble release (R8)
         run: ./gradlew :app:assembleRelease
 
-      # The comment above says building here is what stops the Gson/R8 defect reaching a device.
-      # Building alone does not: R8 rewriting a kept field raises nothing, emits well-formed
-      # JSON, and cannot happen in debug. This reads R8's own mapping and fails when a field a
-      # `-keepclassmembers ... { <fields>; }` rule names came out renamed. `check-invariants.js`
-      # separately checks that every Gson-reflected type *has* such a rule; this checks the rule
-      # worked, which a typo in a package name would otherwise hide.
-      - name: Verify R8 kept the Gson field names
+      # The comment above says building here is what stops the reflection/R8 defect reaching a
+      # device. Building alone does not: R8 rewriting a kept field raises nothing, emits
+      # well-formed JSON, and cannot happen in debug. This reads R8's own mapping and fails when a
+      # field a `-keepclassmembers ... { <fields>; }` or `-keep class X { *; }` rule names came
+      # out renamed — since MON-24 the Google Calendar models, which google-http-client fills by
+      # reflection; the app's own models needed such rules only while Gson wrote them. It checks
+      # the rule worked, which a typo in a package name would otherwise hide.
+      - name: Verify R8 kept the reflected field names
         run: node tools/check-r8-mapping.js
 
       # Week 8 of the release audit: the app ships a hand-written baseline profile
@@ -469,16 +471,16 @@ jobs:
 
   # REL-7 at runtime. The job above proves R8 ran and that the keep rules held for field *names*;
   # it cannot see the minified app *run*. R8 full mode also strips generic signatures (Gson's
-  # TypeToken then throws), drops constructors, merges and inlines classes — failures that raise
+  # TypeToken threw, while the app used Gson), drops constructors, merges and inlines classes — failures that raise
   # nothing at build time and only show when the code executes, which until now meant a person, a
   # phone and docs/DEVICE-CHECKLIST.md §4.1.
   #
   # `assembleR8Test` builds the `r8Test` build type: `release` exactly as R8 shrinks it, plus one
   # kept entry point, a self-targeting instrumentation (app/src/r8Test/), signed with the debug key.
   # tools/run-r8-probe.sh installs it on an API 30 emulator and runs `am instrument`, and the probe
-  # — inside the minified process — writes every model Gson reflects over through the app's own
-  # code (the repositories into Room, DayOverrideJson, the draft Gson, the chat and revision
-  # mappers, the calendar's @Key models) and reads it back. tools/check-r8-probe.js fails on any
+  # — inside the minified process — writes every stored model (StoredJson's, Gson's until MON-24)
+  # through the app's own code (the repositories into Room, DayOverrideJson, the event draft, the
+  # chat and revision mappers, the calendar's @Key models) and reads it back. tools/check-r8-probe.js fails on any
   # key that is not the source field name, any value that does not read back equal, a probe that
   # did not finish, and a model check-invariants.js finds with no case — each as an ::error::.
   #

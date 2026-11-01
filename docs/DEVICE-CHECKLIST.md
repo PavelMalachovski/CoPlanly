@@ -71,7 +71,7 @@ checks stay. A check marked **(screenshots)** only needs a glance on the phone, 
 
 **What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
 `fakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
-(the minified `r8Test` build, API 30) runs the `R8GsonProbe` row, and the `web` job (no Android
+(the minified `r8Test` build, API 30) runs the `R8JsonProbe` row, and the `web` job (no Android
 at all: Chromium and Node against the Functions emulator) runs the `web-tests/` row. A check they cover is
 marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
 a failure there points at something the emulator does not have — real Firebase, real data, a
@@ -85,7 +85,7 @@ Play install, a vendor skin.
 | `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart; every type posted to its channel and naming its screen (D-13). Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 | `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
-| `app/src/r8Test/.../R8GsonProbe` — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's Gson half: a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision `TypeToken`s, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
+| `app/src/r8Test/.../R8JsonProbe` (`R8GsonProbe` until MON-24) — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's stored-JSON half (Gson's until MON-24, `StoredJson`'s since, with the same bytes): a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision mappers, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
 | `web-tests/verify-page.spec.js`, `calendar-feed.spec.js` — not an `androidTest`: the **`web`** job runs them with Playwright and Node against the Auth, Firestore and Functions emulators | §6's **verification page** in Chromium: receipts reserved and registered through the real callables, then the exported file (a match, with registered time, period, format and size), a copy with one byte changed (no match), the file against another record ID, the ID typed as people retype it, an unknown ID and a mere reservation (not found), a rate limit, a hostile server value shown as text; English and Czech, following the browser and switched by hand; 375 px wide with nothing scrolling sideways; only the fingerprint leaves the browser, and no uid, family id, e-mail or name is on the page or in the answer. The **calendar feed** (§3.11 and §3.13's feed boxes) through Mozilla's `ical.js` plus an octet-level RFC 5545 check — CRLF, 75-octet folding never inside a UTF-8 character, TEXT escaping, UID/DTSTAMP/DTSTART on every event, DTEND after DTSTART, UNTIL matching a floating DTSTART, unique and stable UIDs, every title round-tripping — for `buildFeed` in all five languages and for the real `calendarFeed` endpoint behind a link `createCalendarFeed` minted | The page **hosted** over https at its real address, and `EXPORT_VERIFY_URL` printed on a file; a file that travelled (e-mail, Drive, a USB stick) checked on a real computer in Safari or Firefox; a real calendar app (Apple Calendar on an iPhone, Google Calendar) subscribing to the link, refreshing, and drawing it |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
@@ -1574,8 +1574,10 @@ phones and the deployed index.
 
 ### 4.1 REL-7: R8 and Gson on a device · 2P, fallback 1P
 
-A green `assembleRelease` proves R8 ran. It does not prove that Gson still finds its field names.
-That defect has shipped once before.
+A green `assembleRelease` proves R8 ran. It does not prove that the stored JSON still carries its
+field names. That defect has shipped once before, under Gson. Since MON-24 the app's JSON is
+`StoredJson` (kotlinx.serialization, writing the bytes Gson wrote), whose keys are literals R8
+cannot rename; the checks below are unchanged, because they test the result, not the library.
 
 **[CI] since September 2026, as far as one process can go.** The `r8-runtime` job runs the
 minified `r8Test` build (`release` plus the probe in `app/src/r8Test/`) on an emulator and writes
@@ -1583,7 +1585,7 @@ this section's child — the same medical profile, activity and emergency contac
 `ChildInfoRepositoryImpl` into Room, then checks the stored JSON carries `bloodType`,
 `intolerances`, `hereditaryConditions` and `vaccinations` and reads back complete; a pet, custody
 swaps, the event draft and the chat mappers the same way (CLAUDE.md, the `r8-runtime` job). The
-Firestore map is built from the same Gson call on the same instance, so a green job makes the
+Firestore map is built from the same `StoredJson` text as the Room column, so a green job makes the
 console check below a confirmation. What the job cannot do is below: it never signs in, so the
 document itself, the co-parent's phone and the telemetry check are still the phone's.
 
@@ -1595,13 +1597,13 @@ the same on B's phone if you have one.
       emergency contact. **[CI]** for the Room half (`r8-runtime`).
 - [ ] Firebase console → `child_info/{id}`: `medicalProfile` has **readable keys**
       (`bloodType`, `intolerances`, `hereditaryConditions`, `vaccinations`), not `a`, `b`, `c`.
-      Each list is non-empty. **[CI]** for the keys Gson writes; the document itself is the
-      phone's.
+      Each list is non-empty. **[CI]** for the keys `StoredJson` writes; the document itself is
+      the phone's.
 - [ ] **2P:** on B's phone (also on build C), the same child's medical profile is **complete and
       non-empty**.
 - [ ] **Fallback (1P):** run `adb shell pm clear app.coplanly`, sign in as A again, and let it
       sync. The medical profile comes back from Firestore complete. That covers both directions
-      of the Gson mapping on a release build.
+      of the JSON mapping on a release build.
 - [ ] A Google Calendar import on the release build works. It uses the `@Key` models. **[CI]** for
       parsing a page into them (`r8-runtime`); the OAuth sign-in and the network are the phone's.
 - [ ] **Telemetry end to end** (a release build has `ENABLE_ANALYTICS=true`):

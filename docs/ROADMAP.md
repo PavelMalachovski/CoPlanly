@@ -2728,8 +2728,10 @@ bytes are identical on Android):
 - **One idiom for "now"**: `java.time.LocalDateTime.now().toKotlinLocalDateTime()` in
   `AddEditEventScreen`, `ChatViewModel`, `HomeViewModel` and `ChangeRequestViewModel`, beside
   `wallClockNow()` elsewhere. They are equal; use `wallClockNow()`.
-- **Gson to kotlinx.serialization** (spec §5.1, moved to phase 2). Until then the date adapter
-  `UserRepositoryImpl` and `SyncService` register is defensive only: neither Gson meets a date.
+- ~~**Gson to kotlinx.serialization**~~ **Done (phase 2, Task 3, November 2026)**: `StoredJson`
+  (`shared/…/domain/serialization/`) writes every stored and sent JSON text byte for byte as Gson
+  did and reads what Gson read; `GsonParityTest` and `StoredJsonVectorsTest` hold it to Gson's
+  output. Gson stays only as a test oracle, and in Google's calendar client until Task 5 removes it.
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
   platforms would derive different `school-…` ids from the same school data. It must hash

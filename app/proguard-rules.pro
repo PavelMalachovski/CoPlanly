@@ -12,50 +12,24 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# ---- Gson reflects over these classes ------------------------------------
-# `ChildInfoRepositoryImpl` stores a child's medications, activities, emergency
-# contacts, school details and medical profile as Gson JSON in Room, and
-# `ChildInfoRepositoryImpl.toFirestoreMap()` puts the medical profile on the wire as a
-# map produced by `gson.fromJson(gson.toJson(profile), Map::class.java)`. Gson derives
-# every one of those keys from the Kotlin *field names* by reflection.
+# ---- Stored JSON: no field-name rules since MON-24 ---------------------------
+# Until MON-24 the app wrote a child's medications, contacts, school details and medical profile,
+# the day swaps (`DayOverride`) and the event draft as Gson JSON, and Gson derived every key from
+# the Kotlin *field name* by reflection. R8 renames fields it cannot see being read, so this file
+# kept the fields of `com.coparently.app.domain.model.**`, `EventDraft`, `DayOverride` and
+# `DayOverrideStatus` by name: left unkept, a release build once wrote `{"a":"penicillin"}`, the
+# co-parent's phone read an empty medical profile, and a row written by one version did not parse
+# in the next.
 #
-# R8 renames fields it cannot see being read. Left unkept, a release build writes
-# `{"a":"penicillin"}` where the model says `{"allergies":"penicillin"}` — and that is
-# not a cosmetic difference:
-#   * the co-parent's device reads the Firestore map by real key names and finds none,
-#     so a child's medical profile arrives empty on the other parent's phone;
-#   * the obfuscated names are not stable across builds, so a row written by version N
-#     no longer parses after the user updates to version N+1 — data already on the
-#     device silently reads back as blank.
-# Field names, not just the classes, therefore have to survive.
--keepclassmembers class com.coparently.app.domain.model.** {
-    <fields>;
-}
--keepclassmembers class com.coparently.app.presentation.event.EventDraft {
-    <fields>;
-}
-
-# `DayOverride` lives in `domain.custody`, not `domain.model`, so the wildcard above never
-# covered it — and `DayOverrideJson` stores a `Map<String, DayOverride>` as Gson JSON in
-# `custody_models.dayOverridesJson`. Its Firestore form is safe (`FirestoreCustodyDataSource`
-# maps it by hand with string literals, so the shared document is unaffected), which bounds the
-# damage but does not remove it: within one build encode and decode agree, so the swaps survive;
-# across an *update* the obfuscated names differ, the stored JSON no longer parses, and
-# `DayOverrideJson.decode` degrades to "no swaps" by design rather than throwing. The day swaps
-# then vanish from the calendar until the next mirror pass restores them from the document —
-# and until then, on a device that is offline, they are simply gone. Debug never reproduces it.
+# `StoredJson` (`:shared`) replaced Gson. Its serializers are generated at compile time and carry
+# each key as a string literal, so R8 renaming a field changes nothing that is written, and no
+# rule for the models is needed; the library's own consumer rules cover the generated serializers.
+# The R8 runtime probe (`app/src/r8Test/`, `R8JsonProbe`) still writes every stored model through
+# the minified app and checks its keys, which is what would catch a regression.
 #
-# The enum is kept for the same reason one step down: Gson writes a `DayOverrideStatus` as
-# `status.name`, which is the constant's field name.
--keepclassmembers class com.coparently.app.domain.custody.DayOverride {
-    <fields>;
-}
--keepclassmembers class com.coparently.app.domain.custody.DayOverrideStatus {
-    <fields>;
-}
-
-# Gson's own requirements for reflective (de)serialization: generic signatures for
-# `Array<T>`/`Map` targets, and the annotations it reads off members.
+# Kept from the Gson section because other code still relies on them: generic signatures and
+# runtime annotations (Google's calendar client below reads both, and brings its own Gson), and
+# the warning about `sun.misc`, which that Gson's `UnsafeAllocator` references.
 -keepattributes Signature
 -keepattributes *Annotation*
 -dontwarn sun.misc.**

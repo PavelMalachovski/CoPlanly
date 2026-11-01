@@ -540,7 +540,10 @@ When touching the UI, keep these invariants:
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
-   for a Compose BOM that has them), kotlinx-coroutines 1.11.0, predictive back on. **Kotlin, KSP
+   for a Compose BOM that has them), kotlinx-coroutines 1.11.0, **kotlinx-serialization-json 1.11.0**
+   with the `org.jetbrains.kotlin.plugin.serialization` plugin at the Kotlin version (MON-24, which
+   replaced Gson; 1.11.0 is built with Kotlin 2.3.20, 1.12.0 with 2.4, so it moves with Kotlin),
+   predictive back on. **Kotlin, KSP
    and Roborazzi move together, and AGP holds them back**: KSP has been versioned apart from Kotlin
    since 2.3.0 and is KSP2 only; 2.3.12 and later need AGP 8.12. Dagger used to be the second
    brake — 2.59, the last Dagger for AGP 8, reads Kotlin metadata only up to 2.3 — and it left with
@@ -652,7 +655,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   prove the ruleset *in this repository*; only a deploy settles what the live bucket enforces,
   which is exactly the gap the `pet_photos` entry below describes.
 - Windows dev machine; Gradle wrapper works from Git Bash and PowerShell.
-- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's Gson-after-R8, the
+- **What only a phone can prove** (SEC-2's conversion of real data, REL-7's stored JSON after R8, the
   dark cold start, cross-time-zone chat, …) is one ordered script: `docs/DEVICE-CHECKLIST.md`.
   Add a check there when you ship something CI cannot see.
 - `google-services.json` is required for the Google Services plugin, but the build
@@ -666,16 +669,19 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
-  fails if a field a keep rule names came out renamed) — plus the shared module's two, `shared` and
+  fails if a field a keep rule names came out renamed — since MON-24 that is the Google Calendar
+  models, which google-http-client fills by reflection) — plus the shared module's two, `shared` and
   `shared-ios` (below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
-  five locales, the four-way push-type agreement item 15 states, and the rule that every type
-  Gson reflects over is covered by a `-keepclassmembers ... { <fields>; }` rule *and* has a case
-  in the R8 runtime probe). The last two
-  are one defect from two sides — the source says a rule exists, the mapping says it worked, and
-  a typo in a package name passes the first and fails the second. A third side, the minified app
-  actually *running*, is `r8-runtime` (below). They run **in parallel**; the Android three were one sequential job until the August 2026 CI
+  five locales, the four-way push-type agreement item 15 states, that no production code imports
+  Gson (check 4), and that every `@Serializable` model — a model whose JSON `StoredJson` writes —
+  has a case in the R8 runtime probe (check 5)). Until MON-24 check 4 was "every type Gson reflects
+  over is covered by a `-keepclassmembers ... { <fields>; }` rule", and it and the mapping check
+  were one defect from two sides — the source said a rule existed, the mapping said it worked, and
+  a typo in a package name passed the first and failed the second. `StoredJson`'s generated
+  serializers carry their keys as literals, so the app's models need no such rule any more; the
+  side that still matters, the minified app actually *running*, is `r8-runtime` (below). They run **in parallel**; the Android three were one sequential job until the August 2026 CI
   pass, which is why a run took 13:22 for about 7 minutes of critical path. Two caveats, both
   deliberate. **detekt gates again** as of CQ-12 — do not add `continue-on-error` back to turn a
   red build green; fix the finding, or regenerate the baseline through the Regenerate workflow so
@@ -936,33 +942,37 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   After switching branches, prefer `clean` — stale KSP generated sources from another branch cause
   errors (with Hilt, before MON-24 phase 2, "Could not find class file for '…Application'").
 - **The `r8-runtime` job runs the minified app** ("Android — minified build at runtime (R8)",
-  REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names;
-  neither sees R8 full mode's runtime failures — a `TypeToken` whose generic signature was stripped
-  (Gson throws), a constructor or member removed, a class merged — nor that the JSON the app writes
-  reads back. The `r8Test` build type (`app/build.gradle.kts`) is `initWith(release)`: the same
+  REL-7, September 2026). `release` and the mapping check prove R8 ran and kept the field names a
+  rule names; neither sees R8 full mode's runtime failures — a generated serializer or a generic
+  signature stripped (under Gson, a `TypeToken` whose signature was stripped made Gson throw), a
+  constructor or member removed, a class merged — nor that the JSON the app writes reads back. The `r8Test` build type (`app/build.gradle.kts`) is `initWith(release)`: the same
   proguard files plus `app/proguard-r8test.pro`, which keeps **only** the probe's entry point;
   non-debuggable (AGP runs R8 in a weaker debug mode for a debuggable build), signed with the debug
   key, telemetry flags off, no `applicationIdSuffix` (so a local `google-services.json` still
   matches). Its own source set, `app/src/r8Test/`, adds `R8ProbeInstrumentation`, a
   **self-targeting `<instrumentation>`**: `am instrument` starts it inside the minified process, it
   skips `Application.onCreate` (whose Koin graph needs a default FirebaseApp, which CI has no
-  `google-services.json` for — and must not get one), and `R8GsonProbe` builds the production
+  `google-services.json` for — and must not get one), and `R8JsonProbe` (`R8GsonProbe` until
+  MON-24, with the same cases) builds the production
   classes by hand the way the e2e parents do: a child and a pet through `ChildInfoRepositoryImpl`/
   `PetRepositoryImpl` into an in-memory Room, signed out on a named `demo-coplanly` FirebaseApp, then
-  the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the draft Gson from
-  `provideGson()` (`di/koin/SerializationModule.kt`); the chat and revision mappers' `TypeToken`s; `Converters`; the calendar's
-  `@Key` models. `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
+  the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the event draft
+  through `StoredJson` as `EventViewModel` saves it; the chat and revision mappers; `Converters`;
+  the calendar's `@Key` models, which google-http-client still parses with its own Gson.
+  `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
   fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
-  a value that does not read back equal, a probe that did not finish, and a Gson model
+  a value that does not read back equal, a probe that did not finish, and a stored model
   `check-invariants.js` discovers with no case — and `invariants` already refuses that last one
-  (check 5), so **a new Gson model arrives with a probe case**: name its fully-qualified type as a
-  string literal in `R8GsonProbe` (a literal, because R8 renames the classes the report is about).
+  (check 5), so **a new `@Serializable` model arrives with a probe case**: name its fully-qualified
+  type as a string literal in `R8JsonProbe` (a literal, because R8 renames the classes the report
+  is about).
   Four things to know. **Never add an app keep rule to `proguard-r8test.pro`** — the probe would
   pass on a class the shipped build still breaks. **It is not byte-identical to `release`**: the
   probe adds callers, so R8 may inline differently; what it decides by rule (names, signatures) is
   the same, and that is what is checked. **It never reaches Firestore** — the documents' keys and a
   second phone reading them stay `docs/DEVICE-CHECKLIST.md` §4.1, argued for by the probe only as
-  far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
+  far as `toFirestoreMap()`'s medical profile is the same `StoredJson` text as the Room column it
+  checks.
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
 - **The shared module has two jobs of its own** (MON-24, November 2026), both gated on `changes`'
@@ -1473,6 +1483,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    (`SyncService`'s `set()` of a queued row — which dropped `reminderMinutes` until the wire contracts
    below caught it) and `toEntity`, the reader. `SyncService`'s conflict-branch `update()` map must stay
    in sync with them.
+   **Every JSON text the app stores goes through `StoredJson`** (`domain/serialization/`, MON-24) —
+   the Room columns that hold lists, maps and models, the event draft, the revision outbox, the
+   school connection and the medical profile's map in `toFirestoreMap()`. It replaced Gson and
+   writes **byte for byte** what Gson wrote (HTML escaping, nulls left out, defaults written, the
+   JVM's `Double.toString` layout on every platform), and reads what Gson read: unknown keys, a
+   quoted number, and a field Gson left at the JVM's default — a missing or null required property
+   reads as 0, false or an empty text, list or map instead of a null in a non-null type. Two
+   things not to undo. **The text is not kotlinx's own**: `GsonShapedText` prints it, because rows
+   already on phones are compared whole (`mirrorIntoRoom`) and read by older builds. **Gson stays
+   the oracle in the tests**: `GsonParityTest` (the app's and the shared module's JVM tests) compares
+   every model, and every wire-fixture value that went through Gson, with Gson 2.11 configured as
+   each call site was, and `StoredJsonVectorsTest` pins Gson's output as literals so the iPhone's
+   simulator is held to it too. A new stored model is `@Serializable`, gets a case in both and one
+   in the R8 probe (`R8JsonProbe`), and its JSON never goes through anything but `StoredJson`.
    **A wire-format change arrives with its fixture diff** (September 2026) — how "a co-parent on the
    previous build" is checked without a second phone. `app/src/test/resources/wire/` is the contract
    between builds: `wire/<collection>/` holds documents *other* builds write, by hand — older shapes
@@ -2370,7 +2394,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     removed before the first release (owner decision, September 2026); EduPage returns as a row
     only when its import exists). `data/school/bakalari/` is the client (`/api/login`
     with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
-    `sluzby.bakalari.cz`), parsed by hand over Gson's tree — no reflected DTO, so R8 has nothing to
+    `sluzby.bakalari.cz`), parsed by hand over a JSON tree (kotlinx.serialization's `JsonElement`
+    since MON-24, read as leniently as Gson's tree was) — no reflected DTO, so R8 has nothing to
     rename. `SchoolImportPlanner` is the pure decision. Six things not to undo.
     - **The password is used once and dropped.** A connection is one `EncryptedPreferences` key,
       `school_connection_<16 hex of sha256(uid|baseUrl|username)>`, holding the tokens, the child,

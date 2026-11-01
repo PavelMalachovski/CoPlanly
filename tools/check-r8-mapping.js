@@ -2,11 +2,17 @@
 /**
  * Proves, against R8's own output, that the field-keep rules actually held.
  *
- * `tools/check-invariants.js` checks the *intent* — that every type Gson reflects over is named
- * by a `-keepclassmembers ... { <fields>; }` rule. That is a reading of the source, and a rule
- * can be present and still not do what it says: a typo in a package name, a pattern that matches
- * nothing, an optimization pass that renames anyway. This check reads `mapping.txt` after
- * `assembleRelease` and confirms the fields came out carrying the names Gson will look for.
+ * A keep rule is a reading of the source, and a rule can be present and still not do what it
+ * says: a typo in a package name, a pattern that matches nothing, an optimization pass that renames
+ * anyway. This check reads `mapping.txt` after `assembleRelease` and confirms that every field a
+ * `-keepclassmembers ... { <fields>; }` or `-keep class X { *; }` rule names came out carrying its
+ * own name — the name a reflective JSON reader looks for.
+ *
+ * It was written for the app's Gson models (`tools/check-invariants.js` then checked that every
+ * type Gson reflected over had such a rule). Since MON-24 the app's own JSON is `StoredJson`, whose
+ * generated serializers carry their keys as literals and need no rule; what is left to check are
+ * the Google Calendar API models, which google-http-client still fills by reflection on their
+ * `@Key` field names (`app/proguard-rules.pro`), until that client goes.
  *
  * The failure it exists to catch is invisible in every other way: it cannot happen in debug,
  * which does not minify; it raises no exception; and the JSON it writes is well-formed — the
@@ -31,10 +37,14 @@ if (!fs.existsSync(mappingPath)) {
   process.exit(1);
 }
 
-/** The `-keepclassmembers class X { <fields>; }` patterns. */
+/**
+ * The `-keepclassmembers class X { <fields>; }` and `-keep class X { *; }` patterns. A rule for
+ * the subclasses of a type (`class * extends Y`) is not one: the mapping does not say which class
+ * extends what.
+ */
 function fieldKeepPatterns(proguard) {
   const patterns = [];
-  const re = /-keepclassmembers\s+class\s+([\w.$*]+)\s*\{([^}]*)\}/g;
+  const re = /-keep(?:classmembers)?\s+class\s+([\w.$*]+)\s*\{([^}]*)\}/g;
   for (let m; (m = re.exec(proguard)); ) {
     if (!/<fields>|\*\s*;/.test(m[2])) continue;
     patterns.push(m[1]);
@@ -90,9 +100,9 @@ for (const line of fs.readFileSync(mappingPath, 'utf8').split('\n')) {
   checkedFields++;
   if (original !== mapped) {
     problems.push(
-      current + '.' + original + ' was renamed to "' + mapped + '" — Gson derives its JSON key ' +
-        'from the field name, so a release build writes "' + mapped + '" where every reader ' +
-        'expects "' + original + '"'
+      current + '.' + original + ' was renamed to "' + mapped + '" — a reflective JSON reader ' +
+        'derives its key from the field name, so a release build reads "' + mapped + '" where the ' +
+        'JSON says "' + original + '"'
     );
   }
 }
