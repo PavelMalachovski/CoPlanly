@@ -265,11 +265,14 @@ function checkPushTypes() {
 
 const SOURCE_ROOT = 'app/src/main/java';
 /**
- * The shared module's production code (MON-24): the domain moved there with its package unchanged,
- * and its models are stored too (`DayOverride`, the child and pet records), so checks 4 and 5 read
- * it beside the app's. The platform source sets count: they ship as much as `commonMain` does.
+ * The shared modules' production code (MON-24): the domain moved to `shared/` with its package
+ * unchanged, and its models are stored too (`DayOverride`, the child and pet records), and the data
+ * layer follows into `shared-data/` from phase 2, so checks 4 and 5 read both beside the app's.
+ * The platform source sets count: they ship as much as `commonMain` does.
  */
-const SHARED_SOURCE_ROOTS = ['shared/src/commonMain/kotlin', 'shared/src/androidMain/kotlin', 'shared/src/iosMain/kotlin'];
+const SHARED_SOURCE_ROOTS = ['shared', 'shared-data'].flatMap((module) =>
+  ['commonMain', 'androidMain', 'iosMain'].map((set) => `${module}/src/${set}/kotlin`)
+);
 
 /** Every Kotlin file under the source root, recursively. */
 function kotlinFiles(dir = SOURCE_ROOT, out = []) {
@@ -291,9 +294,9 @@ function productionFiles() {
 /**
  * The production files that import Gson, as path -> the first import found.
  *
- * Google's calendar client still brings Gson for its own `GsonFactory`
- * (`com.google.api.client.json.gson`), which is not an import of `com.google.gson` and is not
- * counted; it goes with that client.
+ * Google's calendar client brought Gson for its own `GsonFactory`
+ * (`com.google.api.client.json.gson`), which was not an import of `com.google.gson` and was not
+ * counted; it left with that client in MON-24 phase 2.
  */
 function gsonImports(files = productionFiles()) {
   const found = new Map();

@@ -287,11 +287,27 @@ test('a shared-module change runs the shared jobs and every Android job, on ever
   assert.equal(d.web, false);
 });
 
+test('a shared-data change is decided as a shared change - every Android job and the shared jobs', () => {
+  // The data layer's module (MON-24 phase 2): the app compiles it, as it compiles `shared/`.
+  const d = decide(['shared-data/src/commonMain/kotlin/com/coparently/app/data/school/bakalari/BakalariClient.kt']);
+  assert.equal(d.shared, true);
+  assert.equal(d.android, true);
+  assert.equal(d.e2e, true);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.upgrade, true);
+  assert.equal(d.r8runtime, true);
+  assert.deepEqual(legs(d), [26, 30, 35]);
+  assert.equal(d.web, false);
+});
+
 test('the shared jobs run on the module, the root and module build files and the workflow', () => {
   for (const path of [
     'shared/build.gradle.kts',
     'shared/src/commonTest/kotlin/com/coparently/app/domain/files/HexDigestTest.kt',
     'shared/src/iosMain/kotlin/x.kt',
+    'shared-data/build.gradle.kts',
+    'shared-data/src/commonTest/kotlin/com/coparently/app/data/http/WebAddressVectorsTest.kt',
+    'shared-data/src/iosMain/kotlin/com/coparently/app/data/http/HttpClients.ios.kt',
     'build.gradle.kts',
     'settings.gradle.kts',
     'gradle.properties',

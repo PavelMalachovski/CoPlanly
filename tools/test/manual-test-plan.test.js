@@ -173,3 +173,19 @@ test('the shared module is mapped as the app domain it came from (MON-24)', () =
   const unclaimed = 'shared/src/commonMain/kotlin/com/coparently/app/domain/zzz/Unclaimed.kt';
   assert.deepEqual(plan.planFor([unclaimed], CHECKLIST).unmapped, [unclaimed]);
 });
+
+test('the shared-data module is mapped as the app data layer it came from (MON-24 phase 2)', () => {
+  const D = 'shared-data/src/commonMain/kotlin/com/coparently/app/';
+  assert.deepEqual(
+    sectionsFor([D + 'data/school/bakalari/BakalariClient.kt']),
+    sectionsFor([K + 'data/school/bakalari/BakalariClient.kt'])
+  );
+  assert.ok(sectionsFor([D + 'data/school/bakalari/BakalariClient.kt']).includes('3.18'));
+  assert.ok(sectionsFor([D + 'data/remote/google/GoogleCalendarApi.kt']).includes('3.9'));
+  // The HTTP client both imports call through needs both imports checked.
+  const http = sectionsFor(['shared-data/src/androidMain/kotlin/com/coparently/app/data/http/HttpClients.android.kt']);
+  assert.ok(http.includes('3.18') && http.includes('3.9'), http.join(','));
+  const tests = plan.planFor(['shared-data/src/commonTest/kotlin/com/coparently/app/data/http/WebAddressVectorsTest.kt'], CHECKLIST);
+  assert.deepEqual(tests.items, []);
+  assert.deepEqual(tests.unmapped, []);
+});

@@ -12,7 +12,7 @@
  * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`),
  * `r8runtime` (the minified build run on an emulator, `r8-runtime`), `web` (the verification
  * page in a browser and the calendar feed through an RFC 5545 parser, `web`) and `shared` (the
- * Kotlin Multiplatform module's own tests, `shared` on Linux and `shared-ios` on the Mac). With
+ * Kotlin Multiplatform modules' own tests, `shared` on Linux and `shared-ios` on macOS). With
  * `--all` it
  * prints the answer for "run everything", which is what a push to `main`, a manual run, or a diff
  * that could not be computed gets.
@@ -41,15 +41,17 @@ const UI_ONLY = /^(app\/src\/main\/java\/com\/coparently\/app\/presentation\/(?!
 const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|app\/build\.gradle\.kts$|app\/proguard|\.github\/workflows\/)/;
 
 /**
- * The Kotlin Multiplatform module (MON-24), its build file and its sources in every source set.
- * The app compiles it, so a path here is an Android path for every other output too, and it is
- * treated as the build is: every Android job, every emulator leg. Its commonMain holds the domain
- * the app's screens render, its stored models reach `StoredJson` and R8, and its Android target is held to
- * minSdk 26, which is what the API 26 leg confirms at runtime. The `shared` output is true for
- * this and for [BUILD], whose root and module build files and workflow can change what the module
- * compiles against.
+ * The Kotlin Multiplatform modules (MON-24), `shared/` (the domain) and `shared-data/` (the data
+ * layer, from phase 2: the school import's and Google Calendar's HTTP clients first), their build
+ * files and their sources in every source set. The app compiles both, so a path here is an Android
+ * path for every other output too, and it is treated as the build is: every Android job, every
+ * emulator leg. Their commonMain holds the domain the app's screens render and the clients the
+ * imports call, their stored models reach `StoredJson` and R8, and their Android targets are held
+ * to minSdk 26, which is what the API 26 leg confirms at runtime. The `shared` output, which runs
+ * both modules' jobs, is true for this and for [BUILD], whose root and module build files and
+ * workflow can change what the modules compile against.
  */
-const SHARED = /^shared\//;
+const SHARED = /^shared(-data)?\//;
 
 /**
  * What the screenshot job renders, what renders it, and what it compares against: the committed
@@ -108,7 +110,7 @@ const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/andro
  * `firestore-tests/` (whose lock file pins the Firebase CLI it starts the emulators with), the
  * workflow, and any path this file does not know.
  */
-const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
+const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared(-data)?\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
 
 /**
  * Paths no CI job reads: the UI tour's request file, its workflow and its scripts. The tour is a
@@ -206,7 +208,7 @@ function decide(paths) {
   const changed = all.filter((p) => !UI_TOUR_ONLY.test(p) && !VIRTUAL_TESTER_ONLY.test(p));
   if (changed.length === 0) return nothing();
 
-  // A change to the shared module is decided as a change to the build is (see [SHARED]).
+  // A change to a shared module is decided as a change to the build is (see [SHARED]).
   const build = changed.some((p) => BUILD.test(p) || SHARED.test(p));
   const android = changed.some((p) => !NON_ANDROID.test(p));
   const e2e = build || changed.some((p) => !NON_E2E.test(p) && !UI_ONLY.test(p));
