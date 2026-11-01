@@ -2,9 +2,10 @@ package com.coparently.app.domain.changerequests
 
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toKotlinLocalDateTime
-import org.junit.Test
-import java.time.LocalDateTime
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDateTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -16,7 +17,7 @@ import kotlin.test.assertTrue
  */
 class RequestScopeTest {
 
-    private val at = LocalDateTime.of(2026, 10, 14, 9, 0)
+    private val at = LocalDateTime(2026, 10, 14, 9, 0)
     private val scope = RequestScope(myUid = "u1", coParentUid = "u2", familyId = "u1__u2", soleFamily = false)
 
     private fun request(from: String, to: String) = ChangeRequest(
@@ -26,18 +27,18 @@ class RequestScopeTest {
         requestedBy = from,
         requestedTo = to,
         currentStartDateTime = at,
-        proposedStartDateTime = at.plusDays(1),
+        proposedStartDateTime = at.plus(1, DateTimeUnit.DAY),
         createdAt = at
     )
 
     private fun event(creator: String?, familyId: String?) = Event(
         id = "e1",
         title = "Swimming",
-        startDateTime = at.toKotlinLocalDateTime(),
+        startDateTime = at,
         eventType = "other",
         parentOwner = "mom",
-        createdAt = at.toKotlinLocalDateTime(),
-        updatedAt = at.toKotlinLocalDateTime(),
+        createdAt = at,
+        updatedAt = at,
         createdByFirebaseUid = creator,
         familyId = familyId
     )

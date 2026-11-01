@@ -328,7 +328,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
                     responderUid = bob.uid,
                     answerByMillis = System.currentTimeMillis() + SHORT_DEADLINE_MILLIS,
                     capMillis = day.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                    firstDate = day.toJavaLocalDate(),
+                    firstDate = day,
                     dayCount = 1
                 )
             )

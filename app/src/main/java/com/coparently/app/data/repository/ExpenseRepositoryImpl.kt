@@ -23,16 +23,19 @@ import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,8 +52,6 @@ class ExpenseRepositoryImpl @Inject constructor(
 ) : ExpenseRepository {
 
     private val gson = Gson()
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-    private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     /**
      * The family on screen's expenses. A parent in two families sees one family's money at a
@@ -69,7 +70,7 @@ class ExpenseRepositoryImpl @Inject constructor(
         expenseDao.getAllExpenses().map { entities -> entities.map { it.toDomain() } }
 
     override fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>> {
-        return expenseDao.getExpensesForPeriod(start, end).map { entities ->
+        return expenseDao.getExpensesForPeriod(start.toJavaLocalDate(), end.toJavaLocalDate()).map { entities ->
             entities.map { it.toDomain() }
         }.inFamilyOnScreen(
             firebaseAuthService,
@@ -173,10 +174,10 @@ class ExpenseRepositoryImpl @Inject constructor(
         "createdByFirebaseUid" to ownerUid,
         "paidBy" to expense.paidBy,
         "splitBetween" to expense.splitBetween,
-        "date" to expense.date.format(dateFormatter),
+        "date" to IsoText.date(expense.date),
         "receiptUrl" to (expense.receiptUrl ?: ""),
         "notes" to (expense.notes ?: ""),
-        "createdAt" to expense.createdAt.format(dateTimeFormatter),
+        "createdAt" to IsoText.dateTime(expense.createdAt),
         // The share this expense was priced at, so both phones agree on a settled month even
         // after the family renegotiates. -1 rather than an omitted key: the read below narrows
         // through `Number` and a negative value is not a share, which is how "recorded before
@@ -349,7 +350,7 @@ class ExpenseRepositoryImpl @Inject constructor(
                 entityType = ActivityEntityType.EXPENSE,
                 entityId = expense.id,
                 title = expense.title,
-                whenIso = expense.date.format(dateFormatter),
+                whenIso = IsoText.date(expense.date),
                 amount = "${expense.amount} ${expense.currency}",
                 currency = expense.currency
             ),
@@ -425,10 +426,10 @@ class ExpenseRepositoryImpl @Inject constructor(
         paidBy = data["paidBy"] as String,
         splitBetween = (data["splitBetween"] as? List<*>)
             ?.filterIsInstance<String>() ?: emptyList(),
-        date = LocalDate.parse(data["date"] as String, dateFormatter),
+        date = IsoText.parseDate(data["date"] as String),
         receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
         notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
-        createdAt = LocalDateTime.parse(data["createdAt"] as String, dateTimeFormatter),
+        createdAt = IsoText.parseDateTime(data["createdAt"] as String),
         syncedToFirestore = true,
         createdByFirebaseUid =
         (data["createdByFirebaseUid"] as? String)?.takeIf { it.isNotEmpty() },
@@ -452,10 +453,10 @@ class ExpenseRepositoryImpl @Inject constructor(
             category = ExpenseCategory.valueOf(category),
             paidBy = paidBy,
             splitBetween = splitBetween,
-            date = date,
+            date = date.toKotlinLocalDate(),
             receiptUrl = receiptUrl,
             notes = notes,
-            createdAt = createdAt,
+            createdAt = createdAt.toKotlinLocalDateTime(),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             splitBasisPoints = splitBasisPoints
@@ -475,10 +476,10 @@ class ExpenseRepositoryImpl @Inject constructor(
             category = category.name,
             paidBy = paidBy,
             splitBetweenJson = gson.toJson(splitBetween),
-            date = date,
+            date = date.toJavaLocalDate(),
             receiptUrl = receiptUrl,
             notes = notes,
-            createdAt = createdAt,
+            createdAt = createdAt.toJavaLocalDateTime(),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             splitBasisPoints = splitBasisPoints

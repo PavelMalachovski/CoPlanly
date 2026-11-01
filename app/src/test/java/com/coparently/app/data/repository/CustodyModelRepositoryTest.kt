@@ -1295,7 +1295,7 @@ class CustodyModelRepositoryTest {
                 requestDeadlines.start(
                     match {
                         it.kind == RequestKind.SWAP && it.ref == GROUP_ID && it.dayCount == 1 &&
-                            it.firstDate == date.toJavaLocalDate()
+                            it.firstDate == date
                     }
                 )
                 fcmService.queueNotificationForUser(
@@ -1328,7 +1328,7 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 1) { requestDeadlines.start(any()) }
         coVerify(exactly = 1) {
             requestDeadlines.start(
-                match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first.toJavaLocalDate() }
+                match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first }
             )
         }
         // One day landed, so the co-parent is asked about one day, with its deadline.
@@ -1367,7 +1367,7 @@ class CustodyModelRepositoryTest {
         coVerify(exactly = 1) { requestDeadlines.start(any()) }
         coVerify(exactly = 1) {
             requestDeadlines.start(
-                match { it.ref == GROUP_ID && it.dayCount == 3 && it.firstDate == first.toJavaLocalDate() }
+                match { it.ref == GROUP_ID && it.dayCount == 3 && it.firstDate == first }
             )
         }
         coVerify(exactly = 1) { fcmService.queueNotificationForUser(any(), any()) }
@@ -1866,7 +1866,7 @@ class CustodyModelRepositoryTest {
         assertEquals(listOf(ActivityKind.DAY_SWAP_OFFERED), posted)
         coVerify(exactly = 1) {
             requestDeadlines.start(
-                match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first.toJavaLocalDate() }
+                match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first }
             )
         }
         coVerify(exactly = 1) {

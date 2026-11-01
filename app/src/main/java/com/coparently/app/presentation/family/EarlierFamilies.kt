@@ -94,7 +94,7 @@ object EarlierFamilies {
     private fun lastDayOf(family: EarlierFamily): LocalDate? =
         listOfNotNull(
             family.events.maxOfOrNull { it.startDateTime.date.toJavaLocalDate() },
-            family.expenses.maxOfOrNull { it.date },
+            family.expenses.maxOfOrNull { it.date.toJavaLocalDate() },
             family.journal.maxOfOrNull { it.entryDate }
         ).maxOrNull()
 }

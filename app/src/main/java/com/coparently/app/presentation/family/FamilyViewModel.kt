@@ -6,6 +6,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.home.MonthMoney
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import java.time.LocalDate
 import javax.inject.Inject
 
 /** How long the Family tab keeps its sources after the screen stops collecting. */
@@ -59,7 +59,7 @@ class FamilyViewModel @Inject constructor(
         // joins when the profiles load, rather than the whole card waiting on them.
         parentsSource.observe().onStart { emit(Parents()) }
     ) { expenses, view, currency, uid, parents ->
-        MonthMoney.of(expenses, view, LocalDate.now(), currency, uid, parents.roleByUid)
+        MonthMoney.of(expenses, view, wallClockNow().date, currency, uid, parents.roleByUid)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     /** Whether the family on screen has a child record; the children row asks for one until then. */

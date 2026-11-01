@@ -6,8 +6,8 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import io.mockk.mockk
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * `expenses`: read by `ExpenseRepositoryImpl.expenseFromDocument` (the listener), stored through
@@ -77,11 +77,11 @@ internal object ExpenseWireContract : WireContract {
         category = ExpenseCategory.ACTIVITIES,
         paidBy = "uidA",
         splitBetween = listOf("uidA", "uidB"),
-        date = LocalDate.of(2026, 5, 10),
+        date = LocalDate(2026, 5, 10),
         receiptUrl = "ph1|receipts/uidA__uidB/exp-current-1/7a1c9b04.jpg|image/jpeg|48213|" +
             "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
         notes = "Spring term",
-        createdAt = LocalDateTime.of(2026, 5, 10, 12, 0),
+        createdAt = LocalDateTime(2026, 5, 10, 12, 0),
         createdByFirebaseUid = "uidA",
         splitBasisPoints = 6000,
         familyId = "uidA__uidB"

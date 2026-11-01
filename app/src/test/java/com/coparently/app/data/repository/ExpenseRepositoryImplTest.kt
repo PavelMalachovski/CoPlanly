@@ -376,8 +376,8 @@ class ExpenseRepositoryImplTest {
         currency = "CZK",
         category = ExpenseCategory.EDUCATION,
         paidBy = "mom",
-        date = LocalDate.of(2026, 8, 1),
-        createdAt = LocalDateTime.of(2026, 8, 1, 9, 0)
+        date = kotlinx.datetime.LocalDate(2026, 8, 1),
+        createdAt = kotlinx.datetime.LocalDateTime(2026, 8, 1, 9, 0)
     )
 
     private fun userEntity(id: String, partnerId: String?) = UserEntity(

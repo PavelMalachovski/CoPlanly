@@ -119,7 +119,6 @@ import com.coparently.app.utils.previewParentNames
 import com.coparently.app.utils.shortTime
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.util.Currency
@@ -1089,7 +1088,7 @@ private fun ActivityGroup(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = item.timestamp.toKotlinLocalDateTime().dateAndTime("dMMM"),
+                        text = item.timestamp.dateAndTime("dMMM"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

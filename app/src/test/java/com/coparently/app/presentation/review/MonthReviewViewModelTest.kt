@@ -39,7 +39,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.onDay
+import kotlinx.datetime.toJavaYearMonth
+import kotlinx.datetime.toKotlinYearMonth
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -58,9 +61,9 @@ import kotlin.test.assertTrue
 class MonthReviewViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
-    private val today = YearMonth.now()
+    private val today = YearMonth.now().toKotlinYearMonth()
     private val model = MutableStateFlow<CustodyModel?>(
-        CustodyModel.weekOnWeekOff(id = "m1", startDate = today.atDay(1).toKotlinLocalDate())
+        CustodyModel.weekOnWeekOff(id = "m1", startDate = today.firstDay)
     )
 
     private val custodyRepository = mockk<CustodyModelRepository> {
@@ -81,7 +84,7 @@ class MonthReviewViewModelTest {
                     category = ExpenseCategory.CLOTHING,
                     paidBy = ALICE,
                     splitBetween = listOf(ALICE, BOB),
-                    date = today.atDay(2)
+                    date = today.onDay(2)
                 )
             )
         )
@@ -178,7 +181,7 @@ class MonthReviewViewModelTest {
         category = ExpenseCategory.CLOTHING,
         paidBy = ALICE,
         splitBetween = listOf(ALICE, BOB),
-        date = today.atDay(2),
+        date = today.onDay(2),
         createdByFirebaseUid = ALICE,
         familyId = familyId
     )
@@ -193,7 +196,7 @@ class MonthReviewViewModelTest {
         assertEquals(today, state.month)
         assertFalse(state.canGoForward)
         val review = assertNotNull(state.review)
-        assertEquals(today.lengthOfMonth(), review.daysBySlot.values.sum())
+        assertEquals(today.numberOfDays, review.daysBySlot.values.sum())
         assertEquals(80.0, review.money.single().total)
 
         vm.nextMonth()
@@ -208,7 +211,7 @@ class MonthReviewViewModelTest {
 
         vm.previousMonth()
         advanceUntilIdle()
-        assertEquals(today.minusMonths(1), vm.state.value.month)
+        assertEquals(today.minusMonth(), vm.state.value.month)
         assertTrue(vm.state.value.canGoForward)
         // The expense is dated this month, so the month before has none.
         assertTrue(assertNotNull(vm.state.value.review).money.isEmpty())
@@ -233,8 +236,8 @@ class MonthReviewViewModelTest {
         advanceUntilIdle()
 
         assertEquals("A calm month.", vm.summary.value)
-        coVerify { repository.summarizeMonth(today, "cs", any()) }
-        assertEquals(today.toString(), stats.captured["month"])
+        coVerify { repository.summarizeMonth(today.toJavaYearMonth(), "cs", any()) }
+        assertEquals(today.toJavaYearMonth().toString(), stats.captured["month"])
         val days = stats.captured["daysWithParent"] as List<*>
         assertTrue(days.all { (it as Map<*, *>)["name"] in setOf("Alice", "Bob") })
     }

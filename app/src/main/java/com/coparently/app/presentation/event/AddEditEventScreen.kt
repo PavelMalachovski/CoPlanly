@@ -132,6 +132,7 @@ import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlinx.datetime.toKotlinLocalDate
@@ -139,7 +140,6 @@ import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -1698,7 +1698,9 @@ private fun EventDeadline(
     selected: AnswerByPick,
     onSelect: (AnswerByPick) -> Unit
 ) {
-    val cap = remember(start) { RequestCap.forEvent(start, System.currentTimeMillis(), ZoneId.systemDefault()) }
+    val cap = remember(start) {
+        RequestCap.forEvent(start.toKotlinLocalDateTime(), System.currentTimeMillis(), TimeZone.currentSystemDefault())
+    }
     AnswerByField(
         offer = rememberAnswerByOffer(cap),
         selected = selected,

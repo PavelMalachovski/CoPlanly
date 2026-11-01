@@ -341,10 +341,10 @@ class RequestRecordsTest {
         eventTitle = "Dentist",
         requestedBy = ALICE,
         requestedTo = BOB,
-        currentStartDateTime = LocalDateTime.parse("2026-05-10T10:00:00"),
-        proposedStartDateTime = LocalDateTime.parse("2026-05-11T10:00:00"),
+        currentStartDateTime = LocalDateTime.parse("2026-05-10T10:00:00").toKotlinLocalDateTime(),
+        proposedStartDateTime = LocalDateTime.parse("2026-05-11T10:00:00").toKotlinLocalDateTime(),
         status = status,
-        createdAt = LocalDateTime.parse("2026-05-05T09:00:00")
+        createdAt = LocalDateTime.parse("2026-05-05T09:00:00").toKotlinLocalDateTime()
     )
 
     private fun event(acceptance: EventAcceptance) = Event(

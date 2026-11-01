@@ -6,6 +6,7 @@ import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.presentation.common.UiText
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -26,19 +27,23 @@ class RequestsRowTextTest {
     private val now = LocalDateTime.of(2026, 10, 14, 12, 0)
     private val today = now.toLocalDate()
 
+    /** [now] as the row reads it. */
+    private val rowNow = now.toKotlinLocalDateTime()
+
     private fun answer(
         outcome: RequestOutcome,
         decidedAt: LocalDateTime,
         askedBy: String = "u1",
         decidedBy: String = "u2",
-        subject: RequestSubject = RequestSubject.NewTime("e1", "Swimming", LocalDateTime.of(2026, 10, 16, 18, 30))
+        subject: RequestSubject =
+            RequestSubject.NewTime("e1", "Swimming", LocalDateTime.of(2026, 10, 16, 18, 30).toKotlinLocalDateTime())
     ) = HistoryEntry(
         key = "cr_$decidedAt",
         subject = subject,
         outcome = outcome,
         askedBy = askedBy,
         decidedBy = decidedBy,
-        decidedAt = decidedAt
+        decidedAt = decidedAt.toKotlinLocalDateTime()
     )
 
     @Test
@@ -96,8 +101,8 @@ class RequestsRowTextTest {
         val edge = answer(RequestOutcome.DECLINED, now.minusDays(7))
         val older = answer(RequestOutcome.DECLINED, now.minusDays(7).minusMinutes(1))
 
-        assertEquals(edge, RequestsRowText.latestAnswer(listOf(edge), scope, now))
-        assertNull(RequestsRowText.latestAnswer(listOf(older), scope, now))
+        assertEquals(edge, RequestsRowText.latestAnswer(listOf(edge), scope, rowNow))
+        assertNull(RequestsRowText.latestAnswer(listOf(older), scope, rowNow))
     }
 
     @Test
@@ -113,10 +118,10 @@ class RequestsRowTextTest {
             RequestsRowText.latestAnswer(
                 listOf(myAnswerToTheirs, withdrawal, custody, olderAnswer, theirAnswer),
                 scope,
-                now
+                rowNow
             )
         )
-        assertNull(RequestsRowText.latestAnswer(listOf(myAnswerToTheirs, withdrawal, custody), scope, now))
+        assertNull(RequestsRowText.latestAnswer(listOf(myAnswerToTheirs, withdrawal, custody), scope, rowNow))
     }
 
     @Test
@@ -125,8 +130,8 @@ class RequestsRowTextTest {
         val unanswered = answer(RequestOutcome.NO_ANSWER, now.minusHours(1))
         val theirAnswer = answer(RequestOutcome.DECLINED, now.minusDays(2))
 
-        assertEquals(theirAnswer, RequestsRowText.latestAnswer(listOf(unanswered, theirAnswer), scope, now))
-        assertNull(RequestsRowText.latestAnswer(listOf(unanswered), scope, now))
+        assertEquals(theirAnswer, RequestsRowText.latestAnswer(listOf(unanswered, theirAnswer), scope, rowNow))
+        assertNull(RequestsRowText.latestAnswer(listOf(unanswered), scope, rowNow))
     }
 
     @Test

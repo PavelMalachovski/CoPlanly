@@ -7,10 +7,11 @@ import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.model.CustodyModel
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
-import kotlinx.datetime.toJavaLocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.toInstant
 
 /**
  * The first moment a request would change something (phase 3a, spec §4.2): the cap that its deadline,
@@ -34,7 +35,7 @@ object RequestCap {
      * An offer that includes today has a cap that is already behind, which [AnswerBy] reads as too
      * soon for a deadline; the offer goes out as a plain request. Null for no dates.
      */
-    fun forSwap(dates: Collection<LocalDate>, zone: ZoneId): Long? =
+    fun forSwap(dates: Collection<LocalDate>, zone: TimeZone): Long? =
         dates.minOrNull()?.let { startOfDay(it, zone) }
 
     /**
@@ -45,14 +46,14 @@ object RequestCap {
      * the time it moves to. A change to a recurring series stores the series' first occurrence as
      * its start, which is long past, so only the proposed start is left.
      */
-    fun forChange(currentStart: LocalDateTime, proposedStart: LocalDateTime, nowMillis: Long, zone: ZoneId): Long? =
+    fun forChange(currentStart: LocalDateTime, proposedStart: LocalDateTime, nowMillis: Long, zone: TimeZone): Long? =
         listOf(currentStart, proposedStart).map { millisOf(it, zone) }.filter { it > nowMillis }.minOrNull()
 
     /**
      * The cap of an event waiting for the other parent's acceptance: its [start] until it begins,
      * and null once it has.
      */
-    fun forEvent(start: LocalDateTime, nowMillis: Long, zone: ZoneId): Long? =
+    fun forEvent(start: LocalDateTime, nowMillis: Long, zone: TimeZone): Long? =
         millisOf(start, zone).takeIf { it > nowMillis }
 
     /**
@@ -78,7 +79,7 @@ object RequestCap {
      * [PROPOSAL_SCAN_DAYS], and when either schedule has no cycle to reduce a date into (a
      * document synced unvalidated from the other phone), which cannot be compared.
      */
-    fun forProposal(agreed: CustodyModel?, proposal: CustodyModel, today: LocalDate, zone: ZoneId): Long? {
+    fun forProposal(agreed: CustodyModel?, proposal: CustodyModel, today: LocalDate, zone: TimeZone): Long? {
         if (agreed == null || agreed.patternDays < 1 || proposal.patternDays < 1) return null
         // What accepting today would make of it: the days before it takes effect keep the agreed
         // pattern (`CustodyHistory`), so they are not changes, however the pattern repeats backwards.
@@ -109,10 +110,9 @@ object RequestCap {
         )
     }
 
-    private fun millisOf(local: LocalDateTime, zone: ZoneId): Long = local.atZone(zone).toInstant().toEpochMilli()
+    private fun millisOf(local: LocalDateTime, zone: TimeZone): Long = local.toInstant(zone).toEpochMilliseconds()
 
-    private fun startOfDay(day: LocalDate, zone: ZoneId): Long =
-        day.toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+    private fun startOfDay(day: LocalDate, zone: TimeZone): Long = day.atStartOfDayIn(zone).toEpochMilliseconds()
 }
 
 /**

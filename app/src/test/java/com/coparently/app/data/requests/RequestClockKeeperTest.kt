@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinTimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -66,11 +67,11 @@ class RequestClockKeeperTest {
 
         keeper().sweep(BOB, setOf(ALICE))
 
-        val plan = ReminderPlan.plan(SENT, ANSWER_BY, now, PRAGUE)
+        val plan = ReminderPlan.plan(SENT, ANSWER_BY, now, PRAGUE.toKotlinTimeZone())
         assertEquals("three reminders over three days", 3, plan.size)
         assertNotEquals(
             "Prague's evening is Kiritimati's night: the zone decides",
-            ReminderPlan.plan(SENT, ANSWER_BY, now, ZoneId.of("Pacific/Kiritimati")),
+            ReminderPlan.plan(SENT, ANSWER_BY, now, ZoneId.of("Pacific/Kiritimati").toKotlinTimeZone()),
             plan
         )
         coVerify(exactly = 1) { repository.markDelivered(clock, now, plan) }

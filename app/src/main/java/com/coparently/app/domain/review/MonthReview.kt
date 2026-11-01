@@ -9,10 +9,10 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.time.IsoText
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.onDay
 import kotlinx.datetime.plus
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.YearMonth
+import kotlinx.datetime.yearMonth
 import kotlin.math.abs
 
 /**
@@ -117,12 +117,12 @@ object MonthReviewCalculator {
         currentUserId: String,
         roleByUid: Map<String, String>
     ): MonthReview {
-        val days = (1..month.lengthOfMonth()).map { month.atDay(it).toKotlinLocalDate() }
+        val days = (1..month.numberOfDays).map { month.onDay(it) }
         val lookup: (LocalDate) -> String? = if (hasSchedule) custodyFor else { _ -> null }
         val bySlot = days.mapNotNull(lookup).groupingBy { it }.eachCount()
         val specialDates = specialDates(month, fairness)
         val swapDays = overrides.mapNotNull { (iso, override) -> parseDate(iso)?.let { it to override } }
-            .filter { (date, _) -> YearMonth.from(date.toJavaLocalDate()) == month }
+            .filter { (date, _) -> date.yearMonth == month }
         return MonthReview(
             month = month,
             hasSchedule = hasSchedule,
@@ -140,8 +140,8 @@ object MonthReviewCalculator {
 
     /** Holidays, vacation days and birthdays inside [month], each date once. */
     private fun specialDates(month: YearMonth, fairness: HolidayFairness?): List<LocalDate> {
-        val first = month.atDay(1).toKotlinLocalDate()
-        val last = month.atEndOfMonth().toKotlinLocalDate()
+        val first = month.firstDay
+        val last = month.lastDay
         return fairness?.rows.orEmpty()
             .flatMap { row ->
                 val from = maxOf(row.dates.start, first)
@@ -153,8 +153,8 @@ object MonthReviewCalculator {
     }
 
     private fun sharedEvents(month: YearMonth, events: List<Event>): Int {
-        val first = month.atDay(1).toKotlinLocalDate()
-        val last = month.atEndOfMonth().toKotlinLocalDate()
+        val first = month.firstDay
+        val last = month.lastDay
         return events.asSequence()
             .filterNot { it.isPrivate }
             .filter { event ->
@@ -174,7 +174,7 @@ object MonthReviewCalculator {
         roleByUid: Map<String, String>
     ): List<MonthMoney> {
         val coParentUid = roleByUid.keys.firstOrNull { it != currentUserId }
-        return expenses.filter { YearMonth.from(it.date) == month }
+        return expenses.filter { it.date.yearMonth == month }
             .groupBy { it.currency }
             .map { (currency, inCurrency) ->
                 val balance = calculateExpenseBalance(inCurrency, currentUserId, roleByUid)

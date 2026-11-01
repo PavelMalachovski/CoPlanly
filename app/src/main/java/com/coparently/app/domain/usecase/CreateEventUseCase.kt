@@ -15,9 +15,7 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
-import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.Clock
@@ -150,9 +148,9 @@ private fun Event.awaitedAnswer(): AwaitedAnswer? {
  */
 private fun eventClock(stored: Event, answerBy: AnswerByPick): RequestStart? {
     val awaited = stored.awaitedAnswer() ?: return null
-    val zone = ZoneId.systemDefault()
+    val zone = TimeZone.currentSystemDefault()
     val now = System.currentTimeMillis()
-    val cap = RequestCap.forEvent(stored.startDateTime.toJavaLocalDateTime(), now, zone)
+    val cap = RequestCap.forEvent(stored.startDateTime, now, zone)
     val deadline = AnswerBy.resolve(answerBy, now, cap, zone) ?: return null
     return RequestStart(
         kind = RequestKind.EVENT,

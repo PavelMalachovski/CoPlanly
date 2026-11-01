@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,7 +56,7 @@ class ExpenseViewModelMonthNavigationTest {
         amount = 15.0,
         category = ExpenseCategory.OTHER,
         paidBy = "u1",
-        date = LocalDate.now()
+        date = LocalDate.now().toKotlinLocalDate()
     )
     private val lastMonthExpense = Expense(
         id = "past",
@@ -63,7 +64,7 @@ class ExpenseViewModelMonthNavigationTest {
         amount = 749.0,
         category = ExpenseCategory.OTHER,
         paidBy = "u1",
-        date = LocalDate.now().minusMonths(1)
+        date = LocalDate.now().minusMonths(1).toKotlinLocalDate()
     )
 
     @Before

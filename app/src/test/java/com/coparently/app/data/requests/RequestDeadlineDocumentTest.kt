@@ -6,11 +6,11 @@ import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestStart
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * [RequestDeadlineDocument]: the wire form of a request's clock, both ways (phase 3a, spec §5.1).
@@ -27,7 +27,7 @@ class RequestDeadlineDocumentTest {
         responderUid = "uidA",
         answerByMillis = 1_778_616_000_000L,
         capMillis = 1_778_889_600_000L,
-        firstDate = LocalDate.of(2026, 5, 16),
+        firstDate = LocalDate(2026, 5, 16),
         dayCount = 2
     )
 
@@ -108,7 +108,7 @@ class RequestDeadlineDocumentTest {
             answerByMillis = 1_500_000_000L,
             capMillis = 1_900_000_000L,
             createdAtMillis = 1_000_000_000L,
-            firstDate = LocalDate.of(2026, 5, 16),
+            firstDate = LocalDate(2026, 5, 16),
             dayCount = 2,
             deliveredAtMillis = 1_010_000_000L,
             remindersPlanned = 3,

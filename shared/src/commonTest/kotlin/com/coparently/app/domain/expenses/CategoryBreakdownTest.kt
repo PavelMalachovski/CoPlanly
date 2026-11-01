@@ -2,9 +2,9 @@ package com.coparently.app.domain.expenses
 
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import kotlin.math.abs
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -202,7 +202,7 @@ class CategoryBreakdownTest {
         currency = currency,
         category = category,
         paidBy = paidBy,
-        date = LocalDate.of(2026, 8, 21)
+        date = LocalDate(2026, 8, 21)
     )
 
     private companion object {

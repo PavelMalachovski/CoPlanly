@@ -38,6 +38,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -132,7 +133,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         val money = MonthMoney.of(
             expenses = month,
             view = FamilyView(me = ScreenshotFixtures.MY_UID, onScreen = FAMILY_ID, others = emptySet()),
-            today = ScreenshotFixtures.TODAY,
+            today = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
             fallbackCurrency = SupportedCurrency.CZK,
             userId = ScreenshotFixtures.MY_UID,
             roleByUid = mapOf(ScreenshotFixtures.MY_UID to "mom", ScreenshotFixtures.CO_PARENT_UID to "dad")
@@ -234,7 +235,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         category = ExpenseCategory.CLOTHING,
         paidBy = ScreenshotFixtures.MY_UID,
         splitBetween = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID),
-        date = ScreenshotFixtures.TODAY,
+        date = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
         createdByFirebaseUid = ScreenshotFixtures.MY_UID,
         familyId = FAMILY_ID
     )

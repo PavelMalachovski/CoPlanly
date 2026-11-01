@@ -94,7 +94,7 @@ class CommunicationRecordSource @Inject constructor(
                 .map { it.toCurrentInput() },
             messages = threadMessages?.first.orEmpty(),
             expenses = expenseRepository.getAllExpensesInEveryFamily().first()
-                .filter { !it.date.isBefore(from) && !it.date.isAfter(to) },
+                .filter { it.date.toJavaLocalDate() in from..to },
             serverReached = remoteRevisions != null && threadMessages?.second != false
         )
     }

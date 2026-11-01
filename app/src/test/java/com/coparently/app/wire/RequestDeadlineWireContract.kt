@@ -3,7 +3,7 @@ package com.coparently.app.wire
 import com.coparently.app.data.requests.RequestDeadlineDocument
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestStart
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * `request_deadlines`: read by `FirestoreRequestDeadlineDataSource` through
@@ -80,7 +80,7 @@ internal object RequestDeadlineWireContract : WireContract {
                     // 2026-05-12T20:00:00Z, and the first swapped day, 2026-05-16T00:00:00Z, as its cap.
                     answerByMillis = 1_778_616_000_000L,
                     capMillis = 1_778_889_600_000L,
-                    firstDate = LocalDate.of(2026, 5, 16),
+                    firstDate = LocalDate(2026, 5, 16),
                     dayCount = 2
                 ),
                 proposerUid = "uidA"

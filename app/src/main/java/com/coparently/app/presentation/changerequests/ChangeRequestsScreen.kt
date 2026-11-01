@@ -79,6 +79,7 @@ import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.utils.dateWithTime
+import com.coparently.app.utils.format
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toKotlinLocalDate
 

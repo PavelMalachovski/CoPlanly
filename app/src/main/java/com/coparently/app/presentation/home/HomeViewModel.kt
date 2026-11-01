@@ -29,6 +29,7 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.changerequests.RequestsState
 import com.coparently.app.presentation.common.CoParentOnScreen
@@ -464,7 +465,7 @@ class HomeViewModel @Inject constructor(
     private val monthExpenses = combine(
         monthSpendDependencies.expenseRepository.getAllExpenses(),
         monthSpendDependencies.familyViewSource.observe()
-    ) { expenses, view -> MonthMoney.thisMonthCounted(expenses, view, LocalDate.now()) }
+    ) { expenses, view -> MonthMoney.thisMonthCounted(expenses, view, wallClockNow().date) }
 
     /**
      * Signed-in parent and paired co-parent, for resolving a slot to a name — the handover
@@ -595,7 +596,7 @@ class HomeViewModel @Inject constructor(
             RequestsRowState(
                 waitingOnMe = ready.inbox.waitingOnMe.count,
                 waitingOnThem = ready.inbox.waitingOnThem.count,
-                latestAnswer = RequestsRowText.latestAnswer(ready.inbox.history, ready.scope, LocalDateTime.now())
+                latestAnswer = RequestsRowText.latestAnswer(ready.inbox.history, ready.scope, wallClockNow())
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), RequestsRowState())

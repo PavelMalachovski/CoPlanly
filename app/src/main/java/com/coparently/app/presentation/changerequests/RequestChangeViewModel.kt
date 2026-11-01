@@ -17,6 +17,7 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
@@ -29,8 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.toJavaLocalDateTime
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
 
@@ -132,13 +132,12 @@ class RequestChangeViewModel @Inject constructor(
                         eventTitle = event.title,
                         requestedBy = user.id,
                         requestedTo = partnerId,
-                        // A change request's times are java.time until it moves (MON-24, slice 3).
-                        currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
-                        currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
+                        currentStartDateTime = event.startDateTime,
+                        currentEndDateTime = event.endDateTime,
                         proposedStartDateTime = proposedStart,
                         proposedEndDateTime = proposedEnd,
                         note = note?.takeIf { it.isNotBlank() },
-                        createdAt = LocalDateTime.now()
+                        createdAt = wallClockNow()
                     ),
                     answerBy = answerBy
                 )

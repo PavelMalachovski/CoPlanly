@@ -57,8 +57,9 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.todayIn
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -66,6 +67,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
 
 /**
  * Repository for managing custody model configurations.
@@ -1535,7 +1537,7 @@ private fun swapClock(
     val responder = pair.partnerUid()
     if (answerBy == null || groupId == null || responder == null) return null
     val days = dates.mapNotNull { runCatching { IsoText.parseDate(it) }.getOrNull() }
-    val zone = ZoneId.systemDefault()
+    val zone = TimeZone.currentSystemDefault()
     val cap = RequestCap.forSwap(days, zone)
     val deadline = cap?.let { AnswerBy.resolve(answerBy, System.currentTimeMillis(), it, zone) } ?: return null
     return RequestStart(
@@ -1545,7 +1547,7 @@ private fun swapClock(
         responderUid = responder,
         answerByMillis = deadline,
         capMillis = cap,
-        firstDate = days.minOrNull()?.toJavaLocalDate(),
+        firstDate = days.minOrNull(),
         dayCount = dates.size
     )
 }
@@ -1567,8 +1569,8 @@ private fun proposalClock(
     val proposal = proposed.proposal
     val responder = pair.partnerUid()
     if (answerBy == null || proposal == null || responder == null) return null
-    val zone = ZoneId.systemDefault()
-    val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
+    val zone = TimeZone.currentSystemDefault()
+    val today = Clock.System.todayIn(zone)
     val cap = RequestCap.forProposal(agreed, proposal.model, today, zone)
     val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), cap, zone) ?: return null
     return RequestStart(

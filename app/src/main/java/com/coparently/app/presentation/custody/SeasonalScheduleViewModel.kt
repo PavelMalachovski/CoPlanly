@@ -46,11 +46,13 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.todayIn
 import java.time.LocalDate
-import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Clock
 
 /** Keeps the flows warm across a configuration change. */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -258,8 +260,8 @@ class SeasonalScheduleViewModel @Inject constructor(
     fun answerByCap(draft: SeasonalLayerDraft, editingId: String?): Long? {
         val active = activeModel.value ?: return null
         val layers = layersWith(active.seasonalLayers, draft, editingId, editingId ?: PREVIEW_LAYER_ID) ?: return null
-        val zone = ZoneId.systemDefault()
-        val todayInZone = LocalDate.now(zone).toKotlinLocalDate()
+        val zone = TimeZone.currentSystemDefault()
+        val todayInZone = Clock.System.todayIn(zone)
         return RequestCap.forProposal(active, active.copy(seasonalLayers = layers), todayInZone, zone)
     }
 

@@ -1,8 +1,12 @@
 package com.coparently.app.domain.model
 
 import com.coparently.app.domain.family.FamilyMemberRef
-import java.time.LocalDate
-import java.time.LocalDateTime
+import com.coparently.app.domain.time.wallClockNow
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * Domain model representing an expense for a child.
@@ -19,11 +23,11 @@ import java.time.LocalDateTime
  * @property category Category of the expense
  * @property paidBy Firebase UID of the parent who paid
  * @property splitBetween List of Firebase UIDs to split the expense between
- * @property date Date of the expense
+ * @property date Date of the expense; by default today on the device's clock
  * @property receiptUrl `RecordPhotoCodec` reference to the receipt photo, or null (L-4). The
  *   name is older than the format; it is never a download URL.
  * @property notes Optional notes about the expense
- * @property createdAt Timestamp when the expense was created
+ * @property createdAt Timestamp when the expense was created, on the device's wall clock
  * @property syncedToFirestore Whether the expense has been synced to Firestore
  * @property createdByFirebaseUid Who created this expense — the uid edits are gated on. Null on
  *   rows recorded before the field existed, which read as "editable by both", exactly what they
@@ -40,10 +44,10 @@ data class Expense(
     val category: ExpenseCategory,
     val paidBy: String,
     val splitBetween: List<String> = emptyList(),
-    val date: LocalDate = LocalDate.now(),
+    val date: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
     val receiptUrl: String? = null,
     val notes: String? = null,
-    val createdAt: LocalDateTime = LocalDateTime.now(),
+    val createdAt: LocalDateTime = wallClockNow(),
     val syncedToFirestore: Boolean = false,
     val createdByFirebaseUid: String? = null,
     /**

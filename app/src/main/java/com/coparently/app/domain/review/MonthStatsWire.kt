@@ -1,5 +1,6 @@
 package com.coparently.app.domain.review
 
+import kotlinx.datetime.toJavaYearMonth
 import kotlin.math.roundToLong
 
 /**
@@ -48,7 +49,8 @@ object MonthStatsWire {
         nameForSlot: (String) -> String,
         nameForUid: (String) -> String
     ): Map<String, Any> = buildMap<String, Any> {
-        put("month", review.month.toString())
+        // `java.time.YearMonth`'s own text, as before the month moved to kotlinx-datetime (MON-24).
+        put("month", review.month.toJavaYearMonth().toString())
         put("daysWithParent", review.daysBySlot.named(nameForSlot))
         put("handovers", review.handovers)
         put("swapsProposed", review.swapDaysOffered)

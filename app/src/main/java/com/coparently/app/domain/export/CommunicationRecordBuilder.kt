@@ -6,6 +6,7 @@ import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.parentingplan.PlanCitationCodec
 import com.coparently.app.domain.versions.EventVersionKind
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -276,12 +277,13 @@ object CommunicationRecordBuilder {
 
     private fun expenses(expenses: List<Expense>, scope: RecordScope): List<RecordExpense> = expenses
         .filter { scope.admits(it.familyId, it.createdByFirebaseUid ?: it.paidBy) }
-        .filter { !it.date.isBefore(scope.from) && !it.date.isAfter(scope.to) }
+        // The record's dates are java.time until the export moves; an expense's are kotlinx-datetime.
+        .filter { it.date.toJavaLocalDate() in scope.from..scope.to }
         .sortedWith(compareBy<Expense> { it.date }.thenBy { it.id })
         .map {
             RecordExpense(
                 expenseId = it.id,
-                date = it.date,
+                date = it.date.toJavaLocalDate(),
                 title = it.title,
                 amount = it.amount,
                 currency = it.currency,

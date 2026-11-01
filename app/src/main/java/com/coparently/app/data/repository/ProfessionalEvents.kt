@@ -5,8 +5,8 @@ import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.LAST_INSTANT_OF_DAY
 import com.coparently.app.domain.usecase.RecurrenceExpander
-import kotlinx.datetime.LocalTime
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -47,9 +47,6 @@ object ProfessionalEvents {
             to.toKotlinLocalDate().atTime(LAST_INSTANT_OF_DAY)
         )
     }
-
-    /** 23:59:59.999999999, `java.time.LocalTime.MAX`: the window's last day is whole. */
-    private val LAST_INSTANT_OF_DAY = LocalTime(23, 59, 59, 999_999_999)
 
     private fun toEvent(data: Map<String, Any?>): Event {
         val row = EventDocument.toEntity(data)

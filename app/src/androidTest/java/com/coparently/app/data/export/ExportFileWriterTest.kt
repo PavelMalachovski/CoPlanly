@@ -30,6 +30,7 @@ import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.versions.EventVersionKind
 import com.coparently.app.presentation.export.recordShareIntent
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -190,7 +191,7 @@ class ExportFileWriterTest {
                     currency = "CZK",
                     category = ExpenseCategory.FOOD,
                     paidBy = ALICE,
-                    date = LocalDate.of(2026, 3, 14),
+                    date = LocalDate.of(2026, 3, 14).toKotlinLocalDate(),
                     createdByFirebaseUid = ALICE,
                     familyId = FAMILY
                 )

@@ -101,6 +101,8 @@ import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
@@ -159,7 +161,7 @@ fun AddExpenseScreen(
                     amount = expense.amount.toString()
                     category = expense.category
                     notes = expense.notes.orEmpty()
-                    date = expense.date
+                    date = expense.date.toJavaLocalDate()
                     currency = SupportedCurrency.fromCode(expense.currency)
                     forMembers = expense.forMembers
                     // A legacy download URL (before L-4) is not a receipt this build shows; the
@@ -271,7 +273,7 @@ fun AddExpenseScreen(
                 category = category,
                 currency = effectiveCurrency.code,
                 forMembers = forMembers,
-                date = date,
+                date = date.toKotlinLocalDate(),
                 notes = notes.takeIf { it.isNotBlank() },
                 receiptImageUri = receiptUri?.toString(),
                 shared = shared,
@@ -285,7 +287,7 @@ fun AddExpenseScreen(
                 amount = requireNotNull(amountValue),
                 category = category,
                 currency = effectiveCurrency.code,
-                date = date,
+                date = date.toKotlinLocalDate(),
                 notes = notes.takeIf { it.isNotBlank() },
                 receiptImageUri = receiptUri?.toString(),
                 forMembers = forMembers
@@ -1075,7 +1077,7 @@ private data class ExpenseFields(
             amount = expense.amount.toString(),
             category = expense.category,
             notes = expense.notes.orEmpty(),
-            date = expense.date,
+            date = expense.date.toJavaLocalDate(),
             currency = SupportedCurrency.fromCode(expense.currency),
             forMembers = expense.forMembers,
             receipt = expense.receiptUrl?.takeIf { RecordPhotoCodec.isReference(it) }

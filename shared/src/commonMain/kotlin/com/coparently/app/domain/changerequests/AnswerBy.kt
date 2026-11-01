@@ -1,9 +1,17 @@
 package com.coparently.app.domain.changerequests
 
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.offsetAt
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * The ready-made deadlines a proposer can pick (phase 3a, spec §4.2).
@@ -57,14 +65,14 @@ sealed interface AnswerByPick {
         /** [pick] as text: `TOMORROW`, `THREE_DAYS`, `WEEK`, or `DATE:` and an ISO date. */
         fun encode(pick: AnswerByPick): String = when (pick) {
             is Preset -> pick.preset.name
-            is OnDate -> DATE_PREFIX + pick.date
+            is OnDate -> DATE_PREFIX + IsoText.date(pick.date)
         }
 
         /** The pick [text] names; [DEFAULT] for a missing one and for anything this cannot read. */
         fun decode(text: String?): AnswerByPick {
             val preset = AnswerByPreset.entries.firstOrNull { it.name == text }
             val date = if (text != null && text.startsWith(DATE_PREFIX)) {
-                runCatching { LocalDate.parse(text.removePrefix(DATE_PREFIX)) }.getOrNull()
+                runCatching { IsoText.parseDate(text.removePrefix(DATE_PREFIX)) }.getOrNull()
             } else {
                 null
             }
@@ -174,7 +182,7 @@ object AnswerBy {
      * @param zone The zone of the device the proposer holds: it decides the wall-clock day a preset
      *   adds and the quarter hour a time is rounded to.
      */
-    fun offer(nowMillis: Long, capMillis: Long?, zone: ZoneId): AnswerByOffer = when {
+    fun offer(nowMillis: Long, capMillis: Long?, zone: TimeZone): AnswerByOffer = when {
         capMillis == null -> choices(nowMillis, null, zone)
         capMillis - nowMillis < NO_DEADLINE_UNDER_MILLIS -> AnswerByOffer(AnswerByBand.TOO_SOON, nowMillis)
         capMillis - nowMillis < FULL_CHOICE_FROM_MILLIS -> AnswerByOffer(
@@ -197,7 +205,7 @@ object AnswerBy {
      *   pickable until two hours before its 20:00, and a date that has gone by is always too near),
      *   and one past the latest time reads that.
      */
-    fun resolve(pick: AnswerByPick, nowMillis: Long, capMillis: Long?, zone: ZoneId): Long? =
+    fun resolve(pick: AnswerByPick, nowMillis: Long, capMillis: Long?, zone: TimeZone): Long? =
         resolve(pick, offer(nowMillis, capMillis, zone), zone)
 
     /**
@@ -205,7 +213,7 @@ object AnswerBy {
      * A form that holds the offer it displays asks this, so what it reads under the chips is exactly
      * what the offer's moment gives, whichever preset was merged into which chip.
      */
-    fun resolve(pick: AnswerByPick, offer: AnswerByOffer, zone: ZoneId): Long? {
+    fun resolve(pick: AnswerByPick, offer: AnswerByOffer, zone: TimeZone): Long? {
         val nowMillis = offer.nowMillis
         return when (offer.band) {
             AnswerByBand.TOO_SOON -> null
@@ -214,7 +222,7 @@ object AnswerBy {
         }
     }
 
-    private fun choices(nowMillis: Long, capMillis: Long?, zone: ZoneId): AnswerByOffer {
+    private fun choices(nowMillis: Long, capMillis: Long?, zone: TimeZone): AnswerByOffer {
         val latest = latestMillis(nowMillis, capMillis, zone)
         val chips = AnswerByPreset.entries
             .map { preset ->
@@ -229,16 +237,16 @@ object AnswerBy {
      * The latest a deadline may read: a day before the cap, so a last chance still fits, and never
      * past [MAX_AHEAD_MILLIS]. Both are rounded down to a quarter hour, so that neither is passed.
      */
-    private fun latestMillis(nowMillis: Long, capMillis: Long?, zone: ZoneId): Long {
+    private fun latestMillis(nowMillis: Long, capMillis: Long?, zone: TimeZone): Long {
         val farthest = quarterDown(nowMillis + MAX_AHEAD_MILLIS, zone)
         if (capMillis == null) return farthest
         return minOf(quarterDown(capMillis - LAST_CHANCE_RESERVE_MILLIS, zone), farthest)
     }
 
-    private fun pickMillis(pick: AnswerByPick, nowMillis: Long, latest: Long, zone: ZoneId): Long = when (pick) {
+    private fun pickMillis(pick: AnswerByPick, nowMillis: Long, latest: Long, zone: TimeZone): Long = when (pick) {
         is AnswerByPick.Preset -> minOf(presetMillis(pick.preset, nowMillis, zone), latest)
         is AnswerByPick.OnDate -> {
-            val evening = pick.date.atTime(PICKED_DATE_HOUR, 0).atZone(zone).toInstant().toEpochMilli()
+            val evening = LocalDateTime(pick.date, LocalTime(PICKED_DATE_HOUR, 0)).toInstant(zone).toEpochMilliseconds()
             val chosen = if (evening - nowMillis < NO_DEADLINE_UNDER_MILLIS) {
                 presetMillis(AnswerByPreset.TOMORROW, nowMillis, zone)
             } else {
@@ -249,14 +257,13 @@ object AnswerBy {
     }
 
     /** [preset] counted from [nowMillis] in wall-clock days of [zone], then rounded up (ruling 15). */
-    private fun presetMillis(preset: AnswerByPreset, nowMillis: Long, zone: ZoneId): Long {
+    private fun presetMillis(preset: AnswerByPreset, nowMillis: Long, zone: TimeZone): Long {
         val days = when (preset) {
             AnswerByPreset.TOMORROW -> 1L
             AnswerByPreset.THREE_DAYS -> SHORT_PRESET_DAYS
             AnswerByPreset.WEEK -> LONG_PRESET_DAYS
         }
-        val later = Instant.ofEpochMilli(nowMillis).atZone(zone).plusDays(days).toInstant().toEpochMilli()
-        return quarterUp(later, zone)
+        return quarterUp(plusWallClockDays(nowMillis, days, zone), zone)
     }
 
     /**
@@ -264,17 +271,32 @@ object AnswerBy {
      * a quarter is unchanged. Working on the zone's offset at [millis] keeps this monotonic across a
      * clock change: the result is never before [millis].
      */
-    private fun quarterUp(millis: Long, zone: ZoneId): Long {
+    private fun quarterUp(millis: Long, zone: TimeZone): Long {
         val offset = offsetMillis(millis, zone)
         return (millis + offset + QUARTER_HOUR_MILLIS - 1).floorDiv(QUARTER_HOUR_MILLIS) * QUARTER_HOUR_MILLIS - offset
     }
 
     /** [millis] rounded down to the last moment [zone]'s clock read a quarter hour; the mirror of [quarterUp]. */
-    private fun quarterDown(millis: Long, zone: ZoneId): Long {
+    private fun quarterDown(millis: Long, zone: TimeZone): Long {
         val offset = offsetMillis(millis, zone)
         return (millis + offset).floorDiv(QUARTER_HOUR_MILLIS) * QUARTER_HOUR_MILLIS - offset
     }
 
-    private fun offsetMillis(millis: Long, zone: ZoneId): Long =
-        zone.rules.getOffset(Instant.ofEpochMilli(millis)).totalSeconds.seconds.inWholeMilliseconds
+    private fun offsetMillis(millis: Long, zone: TimeZone): Long =
+        zone.offsetAt(Instant.fromEpochMilliseconds(millis)).totalSeconds.seconds.inWholeMilliseconds
+}
+
+/**
+ * [millis] moved by [days] calendar days of [zone]'s clock, as `ZonedDateTime.plusDays` moves it:
+ * the date moves and the time of day stays; the zone's offset at [millis] is kept when it is still
+ * valid there (the later of two readings of an autumn hour stays the later one), and otherwise the
+ * zone decides as it does for any local time, a spring gap pushing the time forward by its length.
+ */
+private fun plusWallClockDays(millis: Long, days: Long, zone: TimeZone): Long {
+    val instant = Instant.fromEpochMilliseconds(millis)
+    val local = instant.toLocalDateTime(zone)
+    val moved = LocalDateTime(local.date.plus(days, DateTimeUnit.DAY), local.time)
+    val kept = moved.toInstant(zone.offsetAt(instant))
+    val resolved = if (kept.toLocalDateTime(zone) == moved) kept else moved.toInstant(zone)
+    return resolved.toEpochMilliseconds()
 }

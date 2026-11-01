@@ -32,6 +32,7 @@ import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
+import com.coparently.app.utils.format
 import kotlinx.datetime.toKotlinLocalDate
 
 /**

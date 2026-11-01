@@ -2,7 +2,7 @@ package com.coparently.app.domain.repository
 
 import com.coparently.app.domain.model.Expense
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Repository interface for managing expenses.

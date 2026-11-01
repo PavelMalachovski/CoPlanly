@@ -57,8 +57,9 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
 /**
  * Settings → Family → *Month in review*: whose days the month's were, the handovers, the swaps,
@@ -165,7 +166,7 @@ private fun MonthSwitcher(month: YearMonth, canGoForward: Boolean, onPrevious: (
             )
         }
         Text(
-            text = month.atDay(1).format(formatter).replaceFirstChar { it.uppercase(locale) },
+            text = month.firstDay.format(formatter).replaceFirstChar { it.uppercase(locale) },
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
             modifier = Modifier

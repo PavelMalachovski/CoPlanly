@@ -10,10 +10,10 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
-import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -28,7 +28,7 @@ class MonthReviewCalculatorTest {
     // Week on, week off from Monday 2026-09-07; slot 1 ("mom") has the first week. September 2026:
     // 1–6 slot 2, 7–13 slot 1, 14–20 slot 2, 21–27 slot 1, 28–30 slot 2 → 14 and 16 days.
     private val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
-    private val september = YearMonth.of(2026, 9)
+    private val september = YearMonth(2026, 9)
     private val roles = mapOf(ME to "mom", CO_PARENT to "dad")
 
     // One default per fact of the month, so each test names only the one it is about.
@@ -130,7 +130,7 @@ class MonthReviewCalculatorTest {
                 expense(paidBy = ME, amount = 300.0, currency = "CZK"),
                 expense(paidBy = CO_PARENT, amount = 100.0, currency = "CZK"),
                 expense(paidBy = CO_PARENT, amount = 40.0, currency = "EUR"),
-                expense(paidBy = ME, amount = 999.0, currency = "CZK", date = java.time.LocalDate.of(2026, 8, 31))
+                expense(paidBy = ME, amount = 999.0, currency = "CZK", date = LocalDate(2026, 8, 31))
             )
         )
 
@@ -263,7 +263,7 @@ class MonthReviewCalculatorTest {
         paidBy: String,
         amount: Double,
         currency: String,
-        date: java.time.LocalDate = java.time.LocalDate.of(2026, 9, 12),
+        date: LocalDate = LocalDate(2026, 9, 12),
         splitBetween: List<String> = listOf(ME, CO_PARENT)
     ) = Expense(
         id = "$paidBy-$amount-$currency-$date",

@@ -4,8 +4,10 @@ import com.coparently.app.data.family.FamilyView
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 
 /**
@@ -14,7 +16,7 @@ import kotlin.test.assertEquals
  */
 class MonthMoneyTest {
 
-    private val today = LocalDate.of(2026, 10, 24)
+    private val today = LocalDate(2026, 10, 24)
     private val bobFamily = FamilyView(me = "u1", onScreen = "u1__u2", others = setOf("u1__u3"))
 
     private fun spend(
@@ -41,7 +43,7 @@ class MonthMoneyTest {
         val expenses = listOf(
             spend("a", 1_000.0),
             spend("other family", 500.0, familyId = "u1__u3"),
-            spend("last month", 700.0, date = today.minusMonths(1))
+            spend("last month", 700.0, date = today.minus(1, DateTimeUnit.MONTH))
         )
 
         val roles = mapOf("u1" to "mom", "u2" to "dad")

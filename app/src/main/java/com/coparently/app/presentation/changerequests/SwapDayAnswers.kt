@@ -24,6 +24,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
@@ -62,7 +63,7 @@ internal fun SwapDayAnswers(
             style = MaterialTheme.typography.labelLarge
         )
         waiting.forEach { swap ->
-            val iso = swap.date.toString()
+            val iso = IsoText.date(swap.date)
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
                 val day = swapDateList(listOf(swap.date), locale)
                 Text(

@@ -13,16 +13,18 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.junit.Test
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /**
  * The inbox's three sections (phase 2, spec §6.2): what waits on this parent, what waits on the
@@ -36,7 +38,7 @@ class RequestInboxTest {
     /** The same family on Bob's phone. */
     private val bobsScope = RequestScope(myUid = "u2", coParentUid = "u1", familyId = "u1__u2", soleFamily = false)
     private val today = LocalDate(2026, 10, 14)
-    private val created = LocalDateTime.of(2026, 10, 10, 9, 0)
+    private val created = LocalDateTime(2026, 10, 10, 9, 0)
 
     private fun request(
         id: String,
@@ -50,22 +52,22 @@ class RequestInboxTest {
         eventTitle = "Swimming",
         requestedBy = from,
         requestedTo = to,
-        currentStartDateTime = LocalDateTime.of(2026, 10, 15, 17, 0),
-        proposedStartDateTime = LocalDateTime.of(2026, 10, 16, 18, 30),
+        currentStartDateTime = LocalDateTime(2026, 10, 15, 17, 0),
+        proposedStartDateTime = LocalDateTime(2026, 10, 16, 18, 30),
         status = status,
         createdAt = createdAt,
-        respondedAt = created.plusDays(1).takeIf { status != ChangeRequestStatus.PENDING }
+        respondedAt = created.plus(1, DateTimeUnit.DAY).takeIf { status != ChangeRequestStatus.PENDING }
     )
 
-    private fun event(id: String, creator: String, start: LocalDateTime = LocalDateTime.of(2026, 10, 21, 16, 0)) =
+    private fun event(id: String, creator: String, start: LocalDateTime = LocalDateTime(2026, 10, 21, 16, 0)) =
         Event(
             id = id,
             title = id,
-            startDateTime = start.toKotlinLocalDateTime(),
+            startDateTime = start,
             eventType = "other",
             parentOwner = if (creator == "u1") "dad" else "mom",
-            createdAt = created.toKotlinLocalDateTime(),
-            updatedAt = created.toKotlinLocalDateTime(),
+            createdAt = created,
+            updatedAt = created,
             createdByFirebaseUid = creator,
             familyId = "u1__u2",
             acceptance = EventAcceptance.PENDING
@@ -207,12 +209,12 @@ class RequestInboxTest {
         val inbox = RequestInbox.build(
             scope,
             changeRequests = listOf(
-                request("later", from = "u2", to = "u1", createdAt = created.plusHours(2)),
+                request("later", from = "u2", to = "u1", createdAt = created.plus(2, DateTimeUnit.HOUR)),
                 request("earlier", from = "u2", to = "u1", createdAt = created)
             ),
             events = listOf(
-                event("second", creator = "u2", start = LocalDateTime.of(2026, 10, 25, 9, 0)),
-                event("first", creator = "u2", start = LocalDateTime.of(2026, 10, 18, 9, 0))
+                event("second", creator = "u2", start = LocalDateTime(2026, 10, 25, 9, 0)),
+                event("first", creator = "u2", start = LocalDateTime(2026, 10, 18, 9, 0))
             ),
             overrides = emptyMap(),
             shared = null,
@@ -396,7 +398,7 @@ class RequestInboxTest {
                 proposerUid = "u1",
                 responderUid = "u3",
                 answerByMillis = DEADLINE,
-                firstDate = java.time.LocalDate.of(2026, 10, 20),
+                firstDate = LocalDate(2026, 10, 20),
                 dayCount = 1,
                 outcome = RequestClockOutcome.NO_ANSWER
             ),
@@ -607,7 +609,7 @@ class RequestInboxTest {
 
     /** The device's local time at [millis]: how History dates a split. */
     private fun localOf(millis: Long): LocalDateTime =
-        Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
+        Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
 
     private companion object {
         const val FAMILY = "u1__u2"

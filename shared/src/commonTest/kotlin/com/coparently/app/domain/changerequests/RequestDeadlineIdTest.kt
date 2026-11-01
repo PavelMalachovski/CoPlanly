@@ -9,12 +9,12 @@ import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.plus
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.plus
-import kotlinx.datetime.toKotlinLocalDateTime
-import org.junit.Test
-import java.time.LocalDateTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -25,7 +25,7 @@ import kotlin.test.assertNull
 class RequestDeadlineIdTest {
 
     private val family = "uA__uB"
-    private val at = LocalDateTime.of(2026, 10, 15, 10, 0)
+    private val at = LocalDateTime(2026, 10, 15, 10, 0)
 
     /** An offer by uA covering [days] days, all under [groupId]. */
     private fun swapOffer(groupId: String?, days: Int = 1) = DaySwapGroup(
@@ -48,19 +48,19 @@ class RequestDeadlineIdTest {
         eventTitle = "Swimming",
         requestedBy = "uA",
         requestedTo = "uB",
-        currentStartDateTime = at.plusDays(5),
-        proposedStartDateTime = at.plusDays(6),
+        currentStartDateTime = at.plus(5, DateTimeUnit.DAY),
+        proposedStartDateTime = at.plus(6, DateTimeUnit.DAY),
         createdAt = at
     )
 
     private fun event(creator: String?) = Event(
         id = "ev-1",
         title = "Swimming",
-        startDateTime = at.plusDays(5).toKotlinLocalDateTime(),
+        startDateTime = at.plus(5, DateTimeUnit.DAY),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = at.toKotlinLocalDateTime(),
-        updatedAt = at.toKotlinLocalDateTime(),
+        createdAt = at,
+        updatedAt = at,
         createdByFirebaseUid = creator
     )
 

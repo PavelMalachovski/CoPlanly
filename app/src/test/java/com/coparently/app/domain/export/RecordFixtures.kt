@@ -4,6 +4,7 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.versions.EventVersionKind
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -177,7 +178,7 @@ internal object RecordFixtures {
         currency = "CZK",
         category = ExpenseCategory.entries.first(),
         paidBy = BOB,
-        date = date,
+        date = date.toKotlinLocalDate(),
         createdByFirebaseUid = BOB,
         familyId = familyId
     )

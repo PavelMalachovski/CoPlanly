@@ -17,11 +17,10 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.IsoText
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /** How a request ended. */
 enum class RequestOutcome {
@@ -254,7 +253,7 @@ object RequestHistory {
         // Covered means one of the two parents created it, so the creator is known from here on.
         val creator = event.createdByFirebaseUid?.takeIf { scope.covers(event) } ?: return null
         val key = "ev_${event.id}"
-        val subject = RequestSubject.NewEvent(event.id, event.title, event.startDateTime.toJavaLocalDateTime())
+        val subject = RequestSubject.NewEvent(event.id, event.title, event.startDateTime)
         if (event.acceptance.isPending) {
             return UnansweredRows.ifOver(
                 key,
@@ -263,8 +262,7 @@ object RequestHistory {
             )
         }
         val outcome = event.acceptance.outcome()
-        // The history's times are java.time until the request records move (MON-24, slice 3).
-        val decidedAt = event.acceptedAt?.toJavaLocalDateTime()
+        val decidedAt = event.acceptedAt
         return if (outcome == null || decidedAt == null) {
             null
         } else {
@@ -322,15 +320,17 @@ object RequestHistory {
     }
 
     private fun parse(iso: String?): LocalDateTime? =
-        iso?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+        iso?.let { runCatching { IsoText.parseDateTime(it) }.getOrNull() }
 }
 
 /**
  * The rows of requests nobody answered in time (phase 3a, spec §4.4, §6.6), each from its clock:
  * asked by the clock's proposer, left unanswered by its responder, and dated by the clock's closure
  * — or by its end while nobody has closed it — on this device's clock.
+ *
+ * Public because `RequestInbox`, still in the app module (MON-24), adds the pending proposals' rows.
  */
-internal object UnansweredRows {
+object UnansweredRows {
 
     /**
      * The "No answer" row keyed [key] about [subject] when the clock [timed] says its request is
@@ -410,7 +410,7 @@ internal object UnansweredRows {
 
     /** The row of a replaced offer, from what its clock says it covered; null for a clock that does not say. */
     private fun replacedOffer(clock: RequestDeadline): HistoryEntry? {
-        val firstDate = clock.firstDate?.toKotlinLocalDate() ?: return null
+        val firstDate = clock.firstDate ?: return null
         val dayCount = clock.dayCount ?: return null
         return row("swap_${clock.ref}", RequestSubject.DaySwap(firstDate, dayCount), clock)
     }
@@ -421,9 +421,7 @@ internal object UnansweredRows {
         outcome = RequestOutcome.NO_ANSWER,
         askedBy = clock.proposerUid,
         decidedBy = clock.responderUid,
-        decidedAt = Instant.ofEpochMilli(clock.closedAtMillis ?: RequestClock.endMillis(clock))
-            .atZone(ZoneId.systemDefault())
-            .toLocalDateTime(),
+        decidedAt = onThisDevice(clock.closedAtMillis ?: RequestClock.endMillis(clock)),
         clock = clock
     )
 }
@@ -433,8 +431,10 @@ internal object UnansweredRows {
  * [scope]'s family: it is that family's clock, and it names the author as its proposer and the
  * other parent as its responder ([RequestClock.governs]). Null otherwise — no id, no such clock, or
  * one this phone must ignore — and the request is then placed as if it had none.
+ *
+ * Public because `RequestInbox`, still in the app module (MON-24), places its waiting requests by it.
  */
-internal fun ClocksAt.governing(scope: RequestScope, clockId: String?, authorUid: String?): TimedRequest? {
+fun ClocksAt.governing(scope: RequestScope, clockId: String?, authorUid: String?): TimedRequest? {
     val timed = timed(clockId) ?: return null
     val author = authorUid?.takeIf { scope.isPair(it) } ?: return null
     val governs = timed.clock.familyId == scope.familyId &&
@@ -463,9 +463,13 @@ private fun splitDecisionRow(scope: RequestScope, decision: SplitRatioDecision):
             // pair the one who asked is the other parent.
             askedBy = scope.otherOf(decision.by),
             decidedBy = decision.by,
-            decidedAt = Instant.ofEpochMilli(decision.atMillis).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            decidedAt = onThisDevice(decision.atMillis)
         )
     }
+
+/** [millis] on this device's wall clock, in its current zone. */
+private fun onThisDevice(millis: Long): LocalDateTime =
+    Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
 
 /** The history's order: newest first, and equal times by key, so the order never flickers. */
 private val NEWEST_FIRST: Comparator<HistoryEntry> =

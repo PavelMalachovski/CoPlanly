@@ -5,7 +5,7 @@ import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.calculateExpenseBalancesByCurrency
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.money.SupportedCurrency
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * This month's money in the family on screen: what was spent per currency and who owes whom.

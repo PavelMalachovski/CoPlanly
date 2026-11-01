@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -201,7 +203,7 @@ class ChangeRequestRepositoryImplTest {
             assertEquals(true, syncedWhenStarted)
             // The clock names the pair's family, and its cap is the moment the event would change: here
             // the event's current start. The deadline leaves a day for a last chance, and is ahead.
-            val cap = millisOf(request.currentStartDateTime)
+            val cap = millisOf(request.currentStartDateTime.toJavaLocalDateTime())
             assertEquals(FAMILY_ID, started.captured.familyId)
             assertEquals(cap, started.captured.capMillis)
             assertTrue(started.captured.answerByMillis <= cap - AnswerBy.LAST_CHANCE_RESERVE_MILLIS)
@@ -463,9 +465,9 @@ class ChangeRequestRepositoryImplTest {
         eventTitle = "Dentist",
         requestedBy = MY_UID,
         requestedTo = CO_PARENT_UID,
-        currentStartDateTime = currentStart,
-        proposedStartDateTime = proposedStart,
-        createdAt = LocalDateTime.now()
+        currentStartDateTime = currentStart.toKotlinLocalDateTime(),
+        proposedStartDateTime = proposedStart.toKotlinLocalDateTime(),
+        createdAt = LocalDateTime.now().toKotlinLocalDateTime()
     )
 
     /**

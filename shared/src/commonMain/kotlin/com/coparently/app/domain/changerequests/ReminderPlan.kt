@@ -1,9 +1,15 @@
 package com.coparently.app.domain.changerequests
 
-import java.time.Instant
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /**
  * When the answering parent's phone reminds them of a request that waits on their answer (phase 3a,
@@ -29,19 +35,19 @@ object ReminderPlan {
      * Where the night begins on the answering parent's clock: 21:00. A reminder at exactly this time is
      * already at night.
      */
-    val QUIET_FROM: LocalTime = LocalTime.of(21, 0)
+    val QUIET_FROM: LocalTime = LocalTime(21, 0)
 
     /**
      * Where the night ends on the answering parent's clock: 08:00. A reminder at exactly this time is
      * not at night, and a reminder that is moved out of the night goes here.
      */
-    val QUIET_UNTIL: LocalTime = LocalTime.of(8, 0)
+    val QUIET_UNTIL: LocalTime = LocalTime(8, 0)
 
     /**
      * Where a reminder goes when the next [QUIET_UNTIL] would be at or after the deadline: this time of
      * day, on the evening before that morning. 20:30.
      */
-    val EVENING_BEFORE: LocalTime = LocalTime.of(20, 30)
+    val EVENING_BEFORE: LocalTime = LocalTime(20, 30)
 
     /** The most reminders a request gets. */
     private const val MAX_REMINDERS = 3
@@ -88,7 +94,7 @@ object ReminderPlan {
      *   not planned, since the phone must not remind late (ruling 6).
      * @param zone The answering parent's own time zone, which decides what is night.
      */
-    fun plan(sentAtMillis: Long, answerByMillis: Long, notBeforeMillis: Long, zone: ZoneId): List<Long> =
+    fun plan(sentAtMillis: Long, answerByMillis: Long, notBeforeMillis: Long, zone: TimeZone): List<Long> =
         placed(sentAtMillis, answerByMillis)
             .map { outOfTheNight(it, answerByMillis, zone) }
             .filter { it > sentAtMillis }
@@ -116,32 +122,41 @@ object ReminderPlan {
      * [millis] where it is when it is outside the quiet hours of [zone]; otherwise the next
      * [QUIET_UNTIL], or, if that is at or after [answerByMillis], the evening before it.
      */
-    private fun outOfTheNight(millis: Long, answerByMillis: Long, zone: ZoneId): Long {
-        val local = Instant.ofEpochMilli(millis).atZone(zone)
-        if (!isNight(local.toLocalTime())) return millis
-        val morning = nextMorning(local)
-        val beforeDeadline = morning.toInstant().toEpochMilli() < answerByMillis
-        return (if (beforeDeadline) morning else theEveningBefore(morning)).toInstant().toEpochMilli()
+    private fun outOfTheNight(millis: Long, answerByMillis: Long, zone: TimeZone): Long {
+        val local = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)
+        if (!isNight(local.time)) return millis
+        val morning = nextMorning(local, zone)
+        val beforeDeadline = morning.toEpochMilliseconds() < answerByMillis
+        return (if (beforeDeadline) morning else theEveningBefore(morning, zone)).toEpochMilliseconds()
     }
 
     /**
      * Whether [millis] falls in the quiet hours of [zone]'s clock. The reminder step asks it again
      * when its job fires, because Doze can hold a job planned outside the night until it is inside.
      */
-    fun isQuietAt(millis: Long, zone: ZoneId): Boolean =
-        isNight(Instant.ofEpochMilli(millis).atZone(zone).toLocalTime())
+    fun isQuietAt(millis: Long, zone: TimeZone): Boolean =
+        isNight(Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).time)
 
     /** Whether [time] is in the quiet hours: from [QUIET_FROM] through midnight up to [QUIET_UNTIL]. */
     private fun isNight(time: LocalTime): Boolean = time >= QUIET_FROM || time < QUIET_UNTIL
 
-    /** The next [QUIET_UNTIL] on the calendar of [from]'s zone: its own day's if still ahead, else the next day's. */
-    private fun nextMorning(from: ZonedDateTime): ZonedDateTime {
-        val today = from.toLocalDate()
-        val day = if (from.toLocalTime() < QUIET_UNTIL) today else today.plusDays(1)
-        return day.atTime(QUIET_UNTIL).atZone(from.zone)
+    /**
+     * The next [QUIET_UNTIL] on [zone]'s calendar after the local time [from]: its own day's if still
+     * ahead, else the next day's. A morning that falls in a clock change is placed as the zone places
+     * any local time.
+     */
+    private fun nextMorning(from: LocalDateTime, zone: TimeZone): Instant {
+        val day = if (from.time < QUIET_UNTIL) from.date else from.date.plus(1, DateTimeUnit.DAY)
+        return atZone(day, QUIET_UNTIL, zone)
     }
 
-    /** [EVENING_BEFORE] on the calendar day before [morning]. */
-    private fun theEveningBefore(morning: ZonedDateTime): ZonedDateTime =
-        morning.toLocalDate().minusDays(1).atTime(EVENING_BEFORE).atZone(morning.zone)
+    /**
+     * [EVENING_BEFORE] on the calendar day before [morning], read on [zone]'s clock where [morning]
+     * actually landed.
+     */
+    private fun theEveningBefore(morning: Instant, zone: TimeZone): Instant =
+        atZone(morning.toLocalDateTime(zone).date.minus(1, DateTimeUnit.DAY), EVENING_BEFORE, zone)
+
+    private fun atZone(day: LocalDate, time: LocalTime, zone: TimeZone): Instant =
+        LocalDateTime(day, time).toInstant(zone)
 }

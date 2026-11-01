@@ -75,8 +75,12 @@ internal fun swapPush(
         )
     }
     if (status == DayOverrideStatus.PENDING && sides != null) {
-        if (sides.toOther.isNotEmpty()) push[PushPayload.DATES_TO_YOU] = sides.toOther.joinToString(",")
-        if (sides.toOfferer.isNotEmpty()) push[PushPayload.DATES_TO_SENDER] = sides.toOfferer.joinToString(",")
+        if (sides.toOther.isNotEmpty()) {
+            push[PushPayload.DATES_TO_YOU] = sides.toOther.joinToString(",", transform = IsoText::date)
+        }
+        if (sides.toOfferer.isNotEmpty()) {
+            push[PushPayload.DATES_TO_SENDER] = sides.toOfferer.joinToString(",", transform = IsoText::date)
+        }
     }
     actorName?.takeIf { it.isNotBlank() }?.let { push[PushPayload.ACTOR] = it.take(ACTOR_MAX_LENGTH) }
     return push

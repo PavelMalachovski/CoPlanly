@@ -38,8 +38,8 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
-import java.time.ZoneId
 
 /**
  * What the review sheet offers: the chosen days split by way, whom they are offered to, and the
@@ -195,7 +195,7 @@ private fun SwapDeadline(
     selected: AnswerByPick,
     onSelect: (AnswerByPick) -> Unit
 ) {
-    val cap = remember(offerable) { RequestCap.forSwap(offerable, ZoneId.systemDefault()) }
+    val cap = remember(offerable) { RequestCap.forSwap(offerable, TimeZone.currentSystemDefault()) }
     AnswerByField(
         offer = rememberAnswerByOffer(cap),
         selected = selected,

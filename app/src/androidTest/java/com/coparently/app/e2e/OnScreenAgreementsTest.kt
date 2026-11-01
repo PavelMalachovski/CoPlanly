@@ -109,7 +109,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         runBlocking {
             awaitRequestOnBobsPhone(request.id, ChangeRequestStatus.ACCEPTED)
             withTimeout(EmulatorParent.WAIT_MS) {
-                val proposed = request.proposedStartDateTime.toKotlinLocalDateTime()
+                val proposed = request.proposedStartDateTime
                 while (bob.eventRepository.fetchRemoteEvent(event.id)?.startDateTime != proposed) {
                     delay(POLL_MS)
                 }
@@ -268,12 +268,12 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
             eventTitle = event.title,
             requestedBy = bob.uid,
             requestedTo = aliceUid,
-            currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
-            currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
-            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2),
-            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2),
+            currentStartDateTime = event.startDateTime,
+            currentEndDateTime = event.endDateTime,
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2).toKotlinLocalDateTime(),
+            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2)?.toKotlinLocalDateTime(),
             note = "Could we move it?",
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         bob.changeRequestRepository.createChangeRequest(request)
         return request

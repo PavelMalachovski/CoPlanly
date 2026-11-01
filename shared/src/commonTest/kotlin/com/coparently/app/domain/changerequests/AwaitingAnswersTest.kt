@@ -6,7 +6,7 @@ import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

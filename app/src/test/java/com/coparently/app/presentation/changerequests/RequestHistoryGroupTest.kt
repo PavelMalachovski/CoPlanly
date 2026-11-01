@@ -20,6 +20,7 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.CoPlanlyTheme
+import kotlinx.datetime.LocalDateTime
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -27,7 +28,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.time.LocalDateTime
 
 /**
  * Where a history row puts its outcome chip: beside the title at the default size, under it from
@@ -137,17 +137,17 @@ class RequestHistoryGroupTest {
             outcome = RequestOutcome.ACCEPTED,
             askedBy = CO_PARENT_UID,
             decidedBy = MY_UID,
-            decidedAt = LocalDateTime.of(2026, 5, 11, 9, 0)
+            decidedAt = LocalDateTime(2026, 5, 11, 9, 0)
         )
 
         /** This parent's new time for an event, which the co-parent never answered (phase 3a). */
         val unanswered = HistoryEntry(
             key = "cr_r1",
-            subject = RequestSubject.NewTime("e1", "Swimming", LocalDateTime.of(2026, 5, 14, 17, 0)),
+            subject = RequestSubject.NewTime("e1", "Swimming", LocalDateTime(2026, 5, 14, 17, 0)),
             outcome = RequestOutcome.NO_ANSWER,
             askedBy = MY_UID,
             decidedBy = CO_PARENT_UID,
-            decidedAt = LocalDateTime.of(2026, 5, 11, 21, 0)
+            decidedAt = LocalDateTime(2026, 5, 11, 21, 0)
         )
     }
 }

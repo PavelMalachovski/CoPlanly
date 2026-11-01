@@ -5,9 +5,11 @@ import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toJavaLocalDateTime
-import java.time.Duration
-import java.time.LocalDateTime
+import com.coparently.app.domain.time.durationUntil
+import kotlinx.datetime.LocalDateTime
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Kind of change surfaced on the home dashboard.
@@ -51,13 +53,13 @@ data class ActivityItem(
 object HomeFeed {
 
     /** How close two timestamps must be to read as one write. */
-    internal val NEAR_THRESHOLD: Duration = Duration.ofSeconds(2)
+    internal val NEAR_THRESHOLD: Duration = 2.seconds
 
     /**
      * How close an event's last write may be to an answer about it and still be that answer's own
      * write: accepting a change request moves the event a moment before it marks the request.
      */
-    private val ANSWER_EDIT_WINDOW: Duration = Duration.ofMinutes(1)
+    private val ANSWER_EDIT_WINDOW: Duration = 1.minutes
 
     /**
      * Up to [maxItems] of what [partnerId] did, newest first.
@@ -112,7 +114,7 @@ object HomeFeed {
     /** Whether [event]'s last write is the one this answer made. */
     private fun ActivityItem.answered(event: Event): Boolean =
         eventId == event.id &&
-            Duration.between(timestamp, event.updatedAt.toJavaLocalDateTime()).abs() <= ANSWER_EDIT_WINDOW
+            timestamp.durationUntil(event.updatedAt).absoluteValue <= ANSWER_EDIT_WINDOW
 
     private fun HistoryEntry.toActivityItem(): ActivityItem {
         val event = when (val about = subject) {
@@ -132,14 +134,13 @@ object HomeFeed {
     }
 
     private fun Event.toActivityItem(): ActivityItem {
-        // The feed's times stay java.time until the change requests move (MON-24, slice 3).
-        val updated = updatedAt.toJavaLocalDateTime()
-        val pickedUpAt = pickupConfirmedAt?.toJavaLocalDateTime()
+        val updated = updatedAt
+        val pickedUpAt = pickupConfirmedAt
         val kind = when {
             pickupConfirmedBy != null && pickedUpAt != null &&
-                Duration.between(pickedUpAt, updated).abs() <= NEAR_THRESHOLD ->
+                pickedUpAt.durationUntil(updated).absoluteValue <= NEAR_THRESHOLD ->
                 ActivityKind.PICKUP_CONFIRMED
-            Duration.between(createdAt.toJavaLocalDateTime(), updated).abs() <= NEAR_THRESHOLD ->
+            createdAt.durationUntil(updated).absoluteValue <= NEAR_THRESHOLD ->
                 ActivityKind.EVENT_CREATED
             else -> ActivityKind.EVENT_UPDATED
         }

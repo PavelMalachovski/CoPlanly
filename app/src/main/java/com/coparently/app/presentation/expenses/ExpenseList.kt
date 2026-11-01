@@ -65,6 +65,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import java.util.Locale
 

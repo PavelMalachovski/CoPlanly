@@ -32,6 +32,10 @@ import com.coparently.app.domain.changerequests.ReminderPlan
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.utils.answerByText
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinTimeZone
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -58,11 +62,11 @@ val AnswerByPickSaver: Saver<AnswerByPick, String> = Saver(
 @Composable
 fun rememberAnswerByOffer(capMillis: Long?): AnswerByOffer {
     val first = remember(capMillis) {
-        AnswerBy.offer(System.currentTimeMillis(), capMillis, ZoneId.systemDefault())
+        AnswerBy.offer(System.currentTimeMillis(), capMillis, TimeZone.currentSystemDefault())
     }
     val offer by produceState(first, capMillis) {
         minuteTicks().collect {
-            value = AnswerBy.offer(System.currentTimeMillis(), capMillis, ZoneId.systemDefault())
+            value = AnswerBy.offer(System.currentTimeMillis(), capMillis, TimeZone.currentSystemDefault())
         }
     }
     return offer
@@ -97,7 +101,7 @@ fun AnswerByField(
     modifier: Modifier = Modifier
 ) {
     val zone = ZoneId.systemDefault()
-    val selectedMillis = AnswerBy.resolve(selected, offer, zone)
+    val selectedMillis = AnswerBy.resolve(selected, offer, zone.toKotlinTimeZone())
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         if (selectedMillis == null) {
             // Too soon for a deadline: the offer gives none, whatever the pick.
@@ -159,10 +163,11 @@ private fun AnswerByChoices(
     }
     if (picking) {
         LocalDatePickerDialog(
-            initialDate = (selected as? AnswerByPick.OnDate)?.date ?: LocalDate.now(zone).plusDays(PICKER_START_DAYS),
+            initialDate = (selected as? AnswerByPick.OnDate)?.date?.toJavaLocalDate()
+                ?: LocalDate.now(zone).plusDays(PICKER_START_DAYS),
             confirmLabel = stringResource(R.string.answer_by_picker_ok),
             dismissLabel = stringResource(R.string.answer_by_picker_cancel),
-            onConfirm = { onSelect(AnswerByPick.OnDate(it)) },
+            onConfirm = { onSelect(AnswerByPick.OnDate(it.toKotlinLocalDate())) },
             onDismiss = { picking = false }
         )
     }

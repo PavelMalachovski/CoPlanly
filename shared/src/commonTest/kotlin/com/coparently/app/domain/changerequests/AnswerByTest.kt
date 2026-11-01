@@ -2,19 +2,20 @@ package com.coparently.app.domain.changerequests
 
 import com.coparently.app.domain.changerequests.AnswerByPick.OnDate
 import com.coparently.app.domain.changerequests.AnswerByPick.Preset
-import org.junit.Test
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
-private val ZONE: ZoneId = ZoneId.of("Europe/Prague")
+private val ZONE: TimeZone = TimeZone.of("Europe/Prague")
 
 /** [text], a local date-time in Prague, as epoch millis. */
-private fun at(text: String): Long = LocalDateTime.parse(text).atZone(ZONE).toInstant().toEpochMilli()
+private fun at(text: String): Long = IsoText.parseDateTime(text).toInstant(ZONE).toEpochMilliseconds()
 
 /** Saturday 10 October 2026, 10:07, still on summer time: the clocks go back on 25 October. */
 private val NOW = at("2026-10-10T10:07")
@@ -28,7 +29,7 @@ private const val HOUR = 3_600_000L
  */
 class AnswerByTest {
 
-    private fun date(month: Int, day: Int): LocalDate = LocalDate.of(2026, month, day)
+    private fun date(month: Int, day: Int): LocalDate = LocalDate(2026, month, day)
 
     @Test
     fun `with no cap the presets are tomorrow, three days and a week, rounded up to the quarter hour`() {
@@ -93,9 +94,9 @@ class AnswerByTest {
 
         // A latest time in the hour the clocks repeat stays in its pass: 24 hours before 01:40 UTC on the 26th
         // is 01:40 UTC on the 25th, which reads 02:40 on winter time and rounds down to 02:30 (01:30 UTC).
-        val capInTheRepeat = Instant.parse("2026-10-26T01:40:00Z").toEpochMilli()
+        val capInTheRepeat = Instant.parse("2026-10-26T01:40:00Z").toEpochMilliseconds()
         assertEquals(
-            Instant.parse("2026-10-25T01:30:00Z").toEpochMilli(),
+            Instant.parse("2026-10-25T01:30:00Z").toEpochMilliseconds(),
             AnswerBy.offer(NOW, capInTheRepeat, ZONE).latestMillis
         )
     }
@@ -155,10 +156,10 @@ class AnswerByTest {
         // The hour from 02:00 to 03:00 on 25 October is lived twice, and halfway can land in the second.
         // 01:50 UTC reads 02:50 on winter time; rounded down it is 02:45 winter time, which is 01:45 UTC.
         // Rounding the local reading and converting it back would pick summer time and land an hour early.
-        val beforeTheRepeat = Instant.parse("2026-10-25T00:10:00Z").toEpochMilli()
-        val capAfterIt = Instant.parse("2026-10-25T03:30:00Z").toEpochMilli()
+        val beforeTheRepeat = Instant.parse("2026-10-25T00:10:00Z").toEpochMilliseconds()
+        val capAfterIt = Instant.parse("2026-10-25T03:30:00Z").toEpochMilliseconds()
         assertEquals(
-            Instant.parse("2026-10-25T01:45:00Z").toEpochMilli(),
+            Instant.parse("2026-10-25T01:45:00Z").toEpochMilliseconds(),
             AnswerBy.offer(beforeTheRepeat, capAfterIt, ZONE).fixedMillis
         )
     }
@@ -211,7 +212,7 @@ class AnswerByTest {
         // A cap further away than that does not lift the bound.
         val farCap = at("2027-01-31T00:00")
         assertEquals(farthest, AnswerBy.offer(NOW, farCap, ZONE).latestMillis)
-        assertEquals(farthest, AnswerBy.resolve(OnDate(LocalDate.of(2027, 1, 30)), NOW, farCap, ZONE))
+        assertEquals(farthest, AnswerBy.resolve(OnDate(LocalDate(2027, 1, 30)), NOW, farCap, ZONE))
     }
 
     @Test

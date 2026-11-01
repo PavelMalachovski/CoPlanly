@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -173,6 +174,6 @@ class ExpenseViewModelMemberFilterTest {
         amount = 10.0,
         category = ExpenseCategory.OTHER,
         paidBy = "u1",
-        date = LocalDate.now()
+        date = LocalDate.now().toKotlinLocalDate()
     )
 }

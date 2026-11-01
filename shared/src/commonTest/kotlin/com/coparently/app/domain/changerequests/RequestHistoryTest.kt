@@ -11,14 +11,17 @@ import com.coparently.app.domain.expenses.SplitRatioOutcome
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import org.junit.Test
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /**
  * The inbox's history (phase 2, spec §6.2): every request answered or withdrawn, derived from the
@@ -28,7 +31,7 @@ import kotlin.test.assertTrue
 class RequestHistoryTest {
 
     private val scope = RequestScope(myUid = "u1", coParentUid = "u2", familyId = "u1__u2", soleFamily = false)
-    private val created = LocalDateTime.of(2026, 10, 1, 9, 0)
+    private val created = LocalDateTime(2026, 10, 1, 9, 0)
 
     @Suppress("LongParameterList") // one request's fields, all defaulted
     private fun request(
@@ -44,8 +47,8 @@ class RequestHistoryTest {
         eventTitle = "Swimming",
         requestedBy = from,
         requestedTo = to,
-        currentStartDateTime = LocalDateTime.of(2026, 10, 15, 17, 0),
-        proposedStartDateTime = LocalDateTime.of(2026, 10, 16, 18, 30),
+        currentStartDateTime = LocalDateTime(2026, 10, 15, 17, 0),
+        proposedStartDateTime = LocalDateTime(2026, 10, 16, 18, 30),
         status = status,
         createdAt = created,
         respondedAt = respondedAt,
@@ -76,16 +79,16 @@ class RequestHistoryTest {
     ) = Event(
         id = id,
         title = "Dentist",
-        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0).toKotlinLocalDateTime(),
+        startDateTime = LocalDateTime(2026, 10, 21, 16, 0),
         eventType = "medical",
         parentOwner = "dad",
-        createdAt = created.toKotlinLocalDateTime(),
-        updatedAt = created.toKotlinLocalDateTime(),
+        createdAt = created,
+        updatedAt = created,
         createdByFirebaseUid = "u1",
         familyId = familyId,
         acceptance = acceptance,
         acceptedBy = "u2".takeIf { acceptedAt != null },
-        acceptedAt = acceptedAt?.toKotlinLocalDateTime()
+        acceptedAt = acceptedAt
     )
 
     private fun history(
@@ -97,11 +100,12 @@ class RequestHistoryTest {
     ) = RequestHistory.build(scope, changeRequests, events, overrides, decision, clocks)
 
     /** [time] on this device's clock as epoch millis — the zone the history reads a clock's times in. */
-    private fun millisOf(time: LocalDateTime): Long = time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    private fun millisOf(time: LocalDateTime): Long =
+        time.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds()
 
     /** The device's local time at [millis]. */
     private fun localOf(millis: Long): LocalDateTime =
-        Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
+        Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
 
     /**
      * The clock of the request [ref] names, written by its author [from] for the other parent, due at
@@ -126,7 +130,7 @@ class RequestHistoryTest {
 
     @Test
     fun `my request the co-parent accepted is answered by them at respondedAt`() {
-        val answered = LocalDateTime.of(2026, 10, 2, 8, 15)
+        val answered = LocalDateTime(2026, 10, 2, 8, 15)
 
         val entries = history(listOf(request("r1", status = ChangeRequestStatus.ACCEPTED, respondedAt = answered)))
 
@@ -134,7 +138,7 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "cr_r1",
-                    subject = RequestSubject.NewTime("e-r1", "Swimming", LocalDateTime.of(2026, 10, 16, 18, 30)),
+                    subject = RequestSubject.NewTime("e-r1", "Swimming", LocalDateTime(2026, 10, 16, 18, 30)),
                     outcome = RequestOutcome.ACCEPTED,
                     askedBy = "u1",
                     decidedBy = "u2",
@@ -175,7 +179,7 @@ class RequestHistoryTest {
                     outcome = RequestOutcome.ACCEPTED,
                     askedBy = "u1",
                     decidedBy = "u2",
-                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0),
+                    decidedAt = LocalDateTime(2026, 9, 2, 20, 0),
                     swapDays = (1..3).associate { LocalDate(2026, 9, it) to "dad" }
                 )
             ),
@@ -233,7 +237,7 @@ class RequestHistoryTest {
                     outcome = RequestOutcome.WITHDRAWN,
                     askedBy = "u1",
                     decidedBy = "u1",
-                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0)
+                    decidedAt = LocalDateTime(2026, 9, 2, 20, 0)
                 )
             ),
             entries
@@ -248,13 +252,13 @@ class RequestHistoryTest {
         val entries = history(overrides = mapOf("2026-09-05" to missing, "2026-09-06" to garbage))
 
         assertEquals(2, entries.size)
-        assertTrue(entries.all { it.decidedAt == LocalDateTime.of(2026, 8, 30, 10, 0) })
+        assertTrue(entries.all { it.decidedAt == LocalDateTime(2026, 8, 30, 10, 0) })
         assertTrue(entries.all { it.outcome == RequestOutcome.DECLINED })
     }
 
     @Test
     fun `an event the co-parent declined is history and a pending one is not`() {
-        val answered = LocalDateTime.of(2026, 10, 3, 19, 0)
+        val answered = LocalDateTime(2026, 10, 3, 19, 0)
 
         val entries = history(
             events = listOf(
@@ -267,7 +271,7 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "ev_declined",
-                    subject = RequestSubject.NewEvent("declined", "Dentist", LocalDateTime.of(2026, 10, 21, 16, 0)),
+                    subject = RequestSubject.NewEvent("declined", "Dentist", LocalDateTime(2026, 10, 21, 16, 0)),
                     outcome = RequestOutcome.DECLINED,
                     askedBy = "u1",
                     decidedBy = "u2",
@@ -296,7 +300,7 @@ class RequestHistoryTest {
                     outcome = RequestOutcome.DECLINED,
                     askedBy = "u1",
                     decidedBy = "u2",
-                    decidedAt = LocalDateTime.of(2026, 10, 4, 12, 30)
+                    decidedAt = LocalDateTime(2026, 10, 4, 12, 30)
                 )
             ),
             history(decision = decision)
@@ -323,15 +327,15 @@ class RequestHistoryTest {
                 request(
                     "older",
                     status = ChangeRequestStatus.ACCEPTED,
-                    respondedAt = LocalDateTime.of(2026, 10, 2, 8, 0)
+                    respondedAt = LocalDateTime(2026, 10, 2, 8, 0)
                 ),
                 request(
                     "newer",
                     status = ChangeRequestStatus.DECLINED,
-                    respondedAt = LocalDateTime.of(2026, 10, 5, 8, 0)
+                    respondedAt = LocalDateTime(2026, 10, 5, 8, 0)
                 )
             ),
-            events = listOf(event("middle", EventAcceptance.ACCEPTED, acceptedAt = LocalDateTime.of(2026, 10, 3, 8, 0)))
+            events = listOf(event("middle", EventAcceptance.ACCEPTED, acceptedAt = LocalDateTime(2026, 10, 3, 8, 0)))
         )
 
         assertEquals(listOf("cr_newer", "ev_middle", "cr_older"), entries.map { it.key })
@@ -358,7 +362,7 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "cr_r1",
-                    subject = RequestSubject.NewTime("e-r1", "Swimming", LocalDateTime.of(2026, 10, 16, 18, 30)),
+                    subject = RequestSubject.NewTime("e-r1", "Swimming", LocalDateTime(2026, 10, 16, 18, 30)),
                     outcome = RequestOutcome.NO_ANSWER,
                     askedBy = "u1",
                     decidedBy = "u2",
@@ -375,13 +379,13 @@ class RequestHistoryTest {
         val entry = history(listOf(pending), clocks = seenLater(unclosed)).single()
         assertEquals(RequestOutcome.NO_ANSWER, entry.outcome)
         assertEquals(localOf(RequestClock.endMillis(unclosed)), entry.decidedAt)
-        assertTrue(entry.decidedAt.isAfter(DEADLINE))
+        assertTrue(entry.decidedAt > DEADLINE)
     }
 
     @Test
     fun `a late answer shows as the answer, not as "No answer"`() {
         // Each was closed as "No answer" first, then answered from a co-parent's older build.
-        val answeredAt = CLOSED_AT.plusHours(10)
+        val answeredAt = CLOSED_AT.plus(10, DateTimeUnit.HOUR)
         val entries = history(
             changeRequests = listOf(request("r1", status = ChangeRequestStatus.DECLINED, respondedAt = answeredAt)),
             events = listOf(event("e1", EventAcceptance.ACCEPTED, acceptedAt = answeredAt)),
@@ -397,7 +401,7 @@ class RequestHistoryTest {
                 closed(RequestKind.CHANGE, "r1"),
                 closed(RequestKind.EVENT, "e1"),
                 // A swap's clock names its offer's days, as every one this build writes does.
-                closed(RequestKind.SWAP, "g1").copy(firstDate = java.time.LocalDate.of(2026, 10, 20), dayCount = 1),
+                closed(RequestKind.SWAP, "g1").copy(firstDate = LocalDate(2026, 10, 20), dayCount = 1),
                 closed(RequestKind.PROPOSAL, PROPOSED_AT)
             )
         )
@@ -450,7 +454,7 @@ class RequestHistoryTest {
         // replaced the old one's entries and left its closed clock with nothing to point at.
         val again = swap(DayOverrideStatus.PENDING, groupId = "g-again")
         val oldOffer = closed(RequestKind.SWAP, "g-old")
-            .copy(firstDate = java.time.LocalDate.of(2026, 10, 20), dayCount = 2)
+            .copy(firstDate = LocalDate(2026, 10, 20), dayCount = 2)
 
         val entries = history(
             overrides = mapOf("2026-10-20" to again, "2026-10-21" to again),
@@ -479,7 +483,7 @@ class RequestHistoryTest {
         // its author corrected — or one answered before a later decision took the answer's place.
         val again = swap(DayOverrideStatus.PENDING, groupId = "g-again")
         val replacedOffer = clock(RequestKind.SWAP, "g-old")
-            .copy(firstDate = java.time.LocalDate.of(2026, 10, 20), dayCount = 1)
+            .copy(firstDate = LocalDate(2026, 10, 20), dayCount = 1)
         val supersededProposal = clock(RequestKind.PROPOSAL, PROPOSED_AT, from = "u2")
         val later = millisOf(LATER)
         assertEquals(ClockState.NO_ANSWER, RequestClock.stateOf(replacedOffer, later))
@@ -524,7 +528,7 @@ class RequestHistoryTest {
                     outcome = RequestOutcome.DECLINED,
                     askedBy = "u1",
                     decidedBy = "u2",
-                    decidedAt = LocalDateTime.of(2026, 9, 5, 8, 0)
+                    decidedAt = LocalDateTime(2026, 9, 5, 8, 0)
                 ),
                 HistoryEntry(
                     key = "swap_earlier_g1@2026-09-02T20:00:00",
@@ -532,7 +536,7 @@ class RequestHistoryTest {
                     outcome = RequestOutcome.ACCEPTED,
                     askedBy = "u2",
                     decidedBy = "u1",
-                    decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0)
+                    decidedAt = LocalDateTime(2026, 9, 2, 20, 0)
                 )
             ),
             entries
@@ -631,15 +635,15 @@ class RequestHistoryTest {
         const val SPLIT_AT = 1_791_100_000_000L
 
         /** When the co-parent answered the split, on this device's clock. */
-        val DECIDED_AT: LocalDateTime = LocalDateTime.of(2026, 10, 6, 18, 30)
+        val DECIDED_AT: LocalDateTime = LocalDateTime(2026, 10, 6, 18, 30)
 
         /** The deadline of every clock here. */
-        val DEADLINE: LocalDateTime = LocalDateTime.of(2026, 10, 4, 20, 0)
+        val DEADLINE: LocalDateTime = LocalDateTime(2026, 10, 4, 20, 0)
 
         /** When the proposer's phone closed a clock: an hour after its end, the last chance unused. */
-        val CLOSED_AT: LocalDateTime = LocalDateTime.of(2026, 10, 5, 21, 0)
+        val CLOSED_AT: LocalDateTime = LocalDateTime(2026, 10, 5, 21, 0)
 
         /** Well past every clock's end. */
-        val LATER: LocalDateTime = LocalDateTime.of(2026, 10, 10, 9, 0)
+        val LATER: LocalDateTime = LocalDateTime(2026, 10, 10, 9, 0)
     }
 }

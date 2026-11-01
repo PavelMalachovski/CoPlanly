@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -646,7 +646,8 @@ private class SplitTelling(
 private fun splitClock(pair: CustodyPair, proposal: SplitRatioProposal, answerBy: AnswerByPick?): RequestStart? {
     val responder = pair.otherParent()
     if (answerBy == null || responder == null) return null
-    val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), null, ZoneId.systemDefault()) ?: return null
+    val zone = TimeZone.currentSystemDefault()
+    val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), null, zone) ?: return null
     return RequestStart(
         kind = RequestKind.SPLIT,
         ref = proposal.proposedAtMillis.toString(),

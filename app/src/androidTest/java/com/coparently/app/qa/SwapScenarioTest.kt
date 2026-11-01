@@ -260,7 +260,7 @@ class SwapScenarioTest : QaOnScreenTest() {
                 responderUid = bob.uid,
                 answerByMillis = System.currentTimeMillis() + SHORT_DEADLINE_MS,
                 capMillis = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                firstDate = day,
+                firstDate = day.toKotlinLocalDate(),
                 dayCount = 1
             )
         ) ?: error("the rules refused the clock")

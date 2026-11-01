@@ -61,11 +61,11 @@ class InboxItemsTest {
             eventTitle = "Swimming",
             requestedBy = from,
             requestedTo = to,
-            currentStartDateTime = LocalDateTime.of(2026, 10, 15, 17, 0),
-            proposedStartDateTime = LocalDateTime.of(2026, 10, 16, 18, 30),
+            currentStartDateTime = LocalDateTime.of(2026, 10, 15, 17, 0).toKotlinLocalDateTime(),
+            proposedStartDateTime = LocalDateTime.of(2026, 10, 16, 18, 30).toKotlinLocalDateTime(),
             status = status,
-            createdAt = created,
-            respondedAt = created.plusDays(1).takeIf { status != ChangeRequestStatus.PENDING }
+            createdAt = created.toKotlinLocalDateTime(),
+            respondedAt = created.plusDays(1).toKotlinLocalDateTime().takeIf { status != ChangeRequestStatus.PENDING }
         )
 
     private fun event(id: String, creator: String) = Event(

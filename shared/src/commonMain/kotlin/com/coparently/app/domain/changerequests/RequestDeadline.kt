@@ -5,7 +5,7 @@ import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.Event
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The kinds of request that get a clock (phase 3a, spec §5.1).

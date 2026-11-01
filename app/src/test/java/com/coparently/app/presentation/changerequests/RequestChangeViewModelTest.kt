@@ -40,7 +40,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
@@ -85,7 +84,7 @@ class RequestChangeViewModelTest {
         updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0).toKotlinLocalDateTime(),
         familyId = FamilyKey.of("u1", "u2")
     )
-    private val proposedStart = LocalDateTime.of(2026, 9, 11, 9, 0)
+    private val proposedStart = LocalDateTime.of(2026, 9, 11, 9, 0).toKotlinLocalDateTime()
 
     private fun viewModel() =
         RequestChangeViewModel(eventRepository, changeRequestRepository, userRepository, announcer, parentsSource)
@@ -178,7 +177,7 @@ class RequestChangeViewModelTest {
         assertEquals(RequestChangeUiState.Saved, vm.uiState.value)
         assertEquals("u1", request.captured.requestedBy)
         assertEquals("u2", request.captured.requestedTo)
-        assertEquals(event.startDateTime.toJavaLocalDateTime(), request.captured.currentStartDateTime)
+        assertEquals(event.startDateTime, request.captured.currentStartDateTime)
         assertEquals(proposedStart, request.captured.proposedStartDateTime)
         assertNull(request.captured.note)
         assertEquals(ActivityKind.CHANGE_REQUESTED, announcement.captured.kind)

@@ -55,11 +55,11 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
-import java.time.ZoneId
 
 /**
  * Form for proposing a new date/time for [eventId] to the co-parent.
@@ -160,7 +160,7 @@ private fun RequestChangeForm(
     event: Event,
     isSending: Boolean,
     coParentName: String,
-    onSubmit: (LocalDateTime, LocalDateTime?, String?, AnswerByPick) -> Unit,
+    onSubmit: (kotlinx.datetime.LocalDateTime, kotlinx.datetime.LocalDateTime?, String?, AnswerByPick) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = localizedDate("yMMMEEEd")
@@ -179,10 +179,10 @@ private fun RequestChangeForm(
     val proposedStart = LocalDateTime.of(proposedDate, proposedStartTime)
     val cap = remember(event.startDateTime, proposedStart) {
         RequestCap.forChange(
-            event.startDateTime.toJavaLocalDateTime(),
-            proposedStart,
+            event.startDateTime,
+            proposedStart.toKotlinLocalDateTime(),
             System.currentTimeMillis(),
-            ZoneId.systemDefault()
+            TimeZone.currentSystemDefault()
         )
     }
 
@@ -285,7 +285,7 @@ private fun RequestChangeForm(
         Button(
             onClick = {
                 val end = proposedEndTime?.let { LocalDateTime.of(proposedDate, it) }
-                onSubmit(proposedStart, end, note, answerBy)
+                onSubmit(proposedStart.toKotlinLocalDateTime(), end?.toKotlinLocalDateTime(), note, answerBy)
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isSending

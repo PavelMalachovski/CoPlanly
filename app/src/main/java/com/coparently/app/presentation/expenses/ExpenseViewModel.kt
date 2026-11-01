@@ -28,6 +28,7 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.FamilyMembersSource
 import com.coparently.app.presentation.common.Loadable
@@ -52,8 +53,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDate
 import java.time.YearMonth
 import java.util.UUID
 import javax.inject.Inject
@@ -428,7 +429,8 @@ class ExpenseViewModel @Inject constructor(
         roleByUid,
         memberFilter
     ) { (all, view), month, userId, roles, members ->
-        val ofMonth = all.filter { YearMonth.from(it.date) == month }
+        // The screen pages java.time months (the calendar's paging); an expense's date is kotlinx.
+        val ofMonth = all.filter { YearMonth.from(it.date.toJavaLocalDate()) == month }
             .filter { view.shows(it.familyId, it.createdByFirebaseUid) }
             // An untagged expense appears only in the unfiltered month. Reading "names nobody"
             // as "names everybody" would put the family's whole grocery bill under every child's
@@ -569,7 +571,7 @@ class ExpenseViewModel @Inject constructor(
         category: ExpenseCategory,
         currency: String,
         forMembers: List<FamilyMemberRef> = emptyList(),
-        date: LocalDate = LocalDate.now(),
+        date: LocalDate = wallClockNow().date,
         notes: String? = null,
         receiptImageUri: String? = null,
         shared: Boolean = true,
@@ -618,7 +620,7 @@ class ExpenseViewModel @Inject constructor(
                 date = date,
                 receiptUrl = receiptUrl,
                 notes = notes,
-                createdAt = LocalDateTime.now(),
+                createdAt = wallClockNow(),
                 // Snapshotted, never looked up when the balance is read: a renegotiated split
                 // must not re-price a month the two parents have already settled. The agreement
                 // of this expense's own family, never another family's.

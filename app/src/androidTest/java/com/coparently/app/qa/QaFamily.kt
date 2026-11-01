@@ -13,6 +13,7 @@ import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.e2e.EmulatorParent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -76,7 +77,7 @@ internal object QaFamily {
             category = category,
             paidBy = by.uid,
             splitBetween = listOf(by.uid, partnerUid),
-            date = LocalDate.now(),
+            date = LocalDate.now().toKotlinLocalDate(),
             createdByFirebaseUid = by.uid,
             splitBasisPoints = HALF_BASIS_POINTS,
             familyId = FamilyKey.of(by.uid, partnerUid)

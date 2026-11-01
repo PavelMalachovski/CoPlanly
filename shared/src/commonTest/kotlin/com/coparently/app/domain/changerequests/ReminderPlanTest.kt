@@ -1,26 +1,28 @@
 package com.coparently.app.domain.changerequests
 
-import org.junit.Test
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZoneOffset
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
-private val ZONE: ZoneId = ZoneId.of("Europe/Prague")
-private val NEW_YORK: ZoneId = ZoneId.of("America/New_York")
+private val ZONE: TimeZone = TimeZone.of("Europe/Prague")
+private val NEW_YORK: TimeZone = TimeZone.of("America/New_York")
 
 /** [text], a local date-time in Prague, as epoch millis. */
-private fun at(text: String): Long = LocalDateTime.parse(text).atZone(ZONE).toInstant().toEpochMilli()
+private fun at(text: String): Long = IsoText.parseDateTime(text).toInstant(ZONE).toEpochMilliseconds()
 
 /** [text], a date-time in UTC, as epoch millis. */
-private fun utc(text: String): Long = LocalDateTime.parse(text).toInstant(ZoneOffset.UTC).toEpochMilli()
+private fun utc(text: String): Long = IsoText.parseDateTime(text).toInstant(TimeZone.UTC).toEpochMilliseconds()
 
 /** The time of day [millis] reads in [zone]. */
-private fun timeIn(zone: ZoneId, millis: Long): LocalTime = Instant.ofEpochMilli(millis).atZone(zone).toLocalTime()
+private fun timeIn(zone: TimeZone, millis: Long): LocalTime =
+    Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).time
 
 private const val HOUR = 3_600_000L
 private const val MINUTE = 60_000L
@@ -67,9 +69,9 @@ class ReminderPlanTest {
     @Test
     fun `a reminder at night moves to eight in the morning`() {
         // Night is 21:00 up to 08:00 on the answering parent's own clock; the evening before is 20:30.
-        assertEquals(LocalTime.of(21, 0), ReminderPlan.QUIET_FROM)
-        assertEquals(LocalTime.of(8, 0), ReminderPlan.QUIET_UNTIL)
-        assertEquals(LocalTime.of(20, 30), ReminderPlan.EVENING_BEFORE)
+        assertEquals(LocalTime(21, 0), ReminderPlan.QUIET_FROM)
+        assertEquals(LocalTime(8, 0), ReminderPlan.QUIET_UNTIL)
+        assertEquals(LocalTime(20, 30), ReminderPlan.EVENING_BEFORE)
 
         // 24 hours: a third is 02:00 on the 11th, two thirds 10:00, and two hours before is 16:00.
         val sent = at("2026-10-10T18:00")
@@ -143,7 +145,7 @@ class ReminderPlanTest {
         assertEquals(listOf(utc("2026-10-10T20:00"), utc("2026-10-11T00:30")), plan)
         plan.forEach { millis ->
             val time = timeIn(NEW_YORK, millis)
-            assertTrue(time >= LocalTime.of(8, 0) && time < LocalTime.of(21, 0), "$time")
+            assertTrue(time >= LocalTime(8, 0) && time < LocalTime(21, 0), "$time")
         }
 
         // The same two instants on a Prague phone are a different plan: there 20:00Z is 22:00, night.

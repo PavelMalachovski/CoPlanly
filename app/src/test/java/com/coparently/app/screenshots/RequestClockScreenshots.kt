@@ -26,6 +26,8 @@ import com.coparently.app.presentation.changerequests.RequestHistoryGroup
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toKotlinTimeZone
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -75,25 +77,25 @@ class RequestClockScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(var
     /** No cap: the three presets and "Pick a date…", three days selected. */
     @Test
     fun answerByChoices() = snap("requests_answer_by_choices") {
-        Block(AnswerBy.offer(NOW, null, ZONE))
+        Block(AnswerBy.offer(NOW, null, ZONE.toKotlinTimeZone()))
     }
 
     /** A cap three days ahead: "A week" is shortened to the latest time, so it reads "By <time>". */
     @Test
     fun answerByCompressed() = snap("requests_answer_by_compressed") {
-        Block(AnswerBy.offer(NOW, NOW + TimeUnit.DAYS.toMillis(3), ZONE))
+        Block(AnswerBy.offer(NOW, NOW + TimeUnit.DAYS.toMillis(3), ZONE.toKotlinTimeZone()))
     }
 
     /** A cap twenty hours ahead: no choice, one deadline halfway there. */
     @Test
     fun answerByFixed() = snap("requests_answer_by_fixed") {
-        Block(AnswerBy.offer(NOW, NOW + TimeUnit.HOURS.toMillis(20), ZONE))
+        Block(AnswerBy.offer(NOW, NOW + TimeUnit.HOURS.toMillis(20), ZONE.toKotlinTimeZone()))
     }
 
     /** A cap an hour ahead: no deadline, and the request goes out as a plain one. */
     @Test
     fun answerByTooSoon() = snap("requests_answer_by_too_soon") {
-        Block(AnswerBy.offer(NOW, NOW + TimeUnit.HOURS.toMillis(1), ZONE))
+        Block(AnswerBy.offer(NOW, NOW + TimeUnit.HOURS.toMillis(1), ZONE.toKotlinTimeZone()))
     }
 
     /** The answering parent's card, open: "Answer by <time> · <left>". */
@@ -153,11 +155,15 @@ class RequestClockScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(var
             entries = listOf(
                 HistoryEntry(
                     key = "cr_r1",
-                    subject = RequestSubject.NewTime("e1", "Football", LocalDateTime.of(2026, 5, 16, 17, 30)),
+                    subject = RequestSubject.NewTime(
+                        "e1",
+                        "Football",
+                        LocalDateTime.of(2026, 5, 16, 17, 30).toKotlinLocalDateTime()
+                    ),
                     outcome = RequestOutcome.NO_ANSWER,
                     askedBy = ScreenshotFixtures.MY_UID,
                     decidedBy = ScreenshotFixtures.CO_PARENT_UID,
-                    decidedAt = LocalDateTime.of(2026, 5, 13, 6, 0),
+                    decidedAt = LocalDateTime.of(2026, 5, 13, 6, 0).toKotlinLocalDateTime(),
                     clock = closed
                 )
             ),

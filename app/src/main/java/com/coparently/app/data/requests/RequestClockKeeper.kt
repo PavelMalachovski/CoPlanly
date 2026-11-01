@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.toKotlinTimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -138,7 +139,7 @@ class RequestClockKeeper internal constructor(
      */
     private suspend fun deliver(clock: RequestDeadline, now: Long) {
         val sentAt = clock.createdAtMillis
-        val times = ReminderPlan.plan(sentAt ?: now, clock.answerByMillis, now, time.zone())
+        val times = ReminderPlan.plan(sentAt ?: now, clock.answerByMillis, now, time.zone().toKotlinTimeZone())
         val deliveredAt = sentAt?.let { maxOf(now, it) } ?: now
         if (repository.markDelivered(clock, deliveredAt, times)) {
             times.forEach { scheduler.scheduleReminder(clock.id, it) }

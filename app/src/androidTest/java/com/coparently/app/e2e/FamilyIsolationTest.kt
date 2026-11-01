@@ -479,10 +479,10 @@ class FamilyIsolationTest : TwoParentTest() {
             eventTitle = event.title,
             requestedBy = from.uid,
             requestedTo = to.uid,
-            currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
-            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusDays(1),
+            currentStartDateTime = event.startDateTime,
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusDays(1).toKotlinLocalDateTime(),
             note = note,
-            createdAt = now()
+            createdAt = now().toKotlinLocalDateTime()
         )
         from.changeRequestRepository.createChangeRequest(request, answerBy = null)
         awaitOnServer("change_requests/${request.id}")

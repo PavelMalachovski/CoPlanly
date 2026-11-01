@@ -437,7 +437,7 @@ class HomeViewModelTest {
             category = com.coparently.app.domain.model.ExpenseCategory.CLOTHING,
             paidBy = createdBy,
             splitBetween = listOf("u1", "u3"),
-            date = date,
+            date = date.toKotlinLocalDate(),
             createdByFirebaseUid = createdBy,
             familyId = familyId
         )
@@ -512,9 +512,9 @@ class HomeViewModelTest {
             eventTitle = "Swimming",
             requestedBy = from,
             requestedTo = to,
-            currentStartDateTime = at.plusDays(1),
-            proposedStartDateTime = at.plusDays(2),
-            createdAt = at
+            currentStartDateTime = at.plusDays(1).toKotlinLocalDateTime(),
+            proposedStartDateTime = at.plusDays(2).toKotlinLocalDateTime(),
+            createdAt = at.toKotlinLocalDateTime()
         )
         every { changeRequestRepository.getAllChangeRequests() } returns flowOf(
             listOf(

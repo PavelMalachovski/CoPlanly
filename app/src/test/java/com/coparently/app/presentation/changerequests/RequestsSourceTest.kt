@@ -87,11 +87,11 @@ class RequestsSourceTest {
         eventTitle = "Swimming",
         requestedBy = "u2",
         requestedTo = "u1",
-        currentStartDateTime = at,
-        proposedStartDateTime = at.plusDays(1),
+        currentStartDateTime = at.toKotlinLocalDateTime(),
+        proposedStartDateTime = at.plusDays(1).toKotlinLocalDateTime(),
         status = status,
-        createdAt = at,
-        respondedAt = at.plusHours(1).takeIf { status != ChangeRequestStatus.PENDING }
+        createdAt = at.toKotlinLocalDateTime(),
+        respondedAt = at.plusHours(1).toKotlinLocalDateTime().takeIf { status != ChangeRequestStatus.PENDING }
     )
 
     private val bobsEvent = Event(

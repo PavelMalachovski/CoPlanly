@@ -44,12 +44,14 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
+import com.coparently.app.domain.time.plus
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalTime
-import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.io.File
@@ -164,7 +166,7 @@ class UiTourSeed @Inject constructor(
                         responderUid = aliceUid,
                         answerByMillis = now + CLOCK_DAYS * DAY_MILLIS,
                         capMillis = LocalDate.parse(date).atStartOfDay(zone).toInstant().toEpochMilli(),
-                        firstDate = LocalDate.parse(date),
+                        firstDate = LocalDate.parse(date).toKotlinLocalDate(),
                         dayCount = 1
                     )
                 )
@@ -179,12 +181,12 @@ class UiTourSeed @Inject constructor(
                     eventTitle = dentist.title,
                     requestedBy = bob.uid,
                     requestedTo = aliceUid,
-                    currentStartDateTime = dentist.startDateTime.toJavaLocalDateTime(),
-                    currentEndDateTime = dentist.endDateTime?.toJavaLocalDateTime(),
-                    proposedStartDateTime = dentist.startDateTime.toJavaLocalDateTime().plusDays(1),
-                    proposedEndDateTime = dentist.endDateTime?.toJavaLocalDateTime()?.plusDays(1),
+                    currentStartDateTime = dentist.startDateTime,
+                    currentEndDateTime = dentist.endDateTime,
+                    proposedStartDateTime = dentist.startDateTime.plus(1, DateTimeUnit.DAY),
+                    proposedEndDateTime = dentist.endDateTime?.plus(1, DateTimeUnit.DAY),
                     note = content.changeRequestNote,
-                    createdAt = LocalDateTime.now(),
+                    createdAt = wallClockNow(),
                     familyId = family.id
                 )
             )
@@ -209,12 +211,12 @@ class UiTourSeed @Inject constructor(
             eventTitle = meeting.title,
             requestedBy = family.alice,
             requestedTo = family.bob.uid,
-            currentStartDateTime = meeting.startDateTime.toJavaLocalDateTime(),
-            currentEndDateTime = meeting.endDateTime?.toJavaLocalDateTime(),
-            proposedStartDateTime = meeting.startDateTime.toJavaLocalDateTime().plusHours(1),
-            proposedEndDateTime = meeting.endDateTime?.toJavaLocalDateTime()?.plusHours(1),
+            currentStartDateTime = meeting.startDateTime,
+            currentEndDateTime = meeting.endDateTime,
+            proposedStartDateTime = meeting.startDateTime.plus(1, DateTimeUnit.HOUR),
+            proposedEndDateTime = meeting.endDateTime?.plus(1, DateTimeUnit.HOUR),
             note = family.content.changeRequestNote,
-            createdAt = LocalDateTime.now(),
+            createdAt = wallClockNow(),
             familyId = family.id
         )
         changeRequests.createChangeRequest(request, AnswerByPick.DEFAULT)
@@ -432,7 +434,7 @@ class UiTourSeed @Inject constructor(
                 category = category,
                 paidBy = family.alice,
                 splitBetween = both,
-                date = maxOf(family.today.minusDays(daysAgo), family.today.withDayOfMonth(1)),
+                date = maxOf(family.today.minusDays(daysAgo), family.today.withDayOfMonth(1)).toKotlinLocalDate(),
                 createdByFirebaseUid = family.alice,
                 splitBasisPoints = SPLIT_BASIS_POINTS,
                 familyId = family.id

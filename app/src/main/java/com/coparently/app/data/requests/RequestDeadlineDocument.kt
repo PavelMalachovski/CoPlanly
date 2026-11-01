@@ -4,8 +4,8 @@ import com.coparently.app.domain.changerequests.RequestClockOutcome
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestStart
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
 
 /**
  * What a request's clock looks like on the wire, defined once (phase 3a, spec §5.1).
@@ -127,7 +127,7 @@ object RequestDeadlineDocument {
         put(PARTICIPANTS, listOf(proposerUid, start.responderUid).sorted())
         put(ANSWER_BY_MILLIS, start.answerByMillis)
         start.capMillis?.let { put(CAP_MILLIS, it) }
-        start.firstDate?.let { put(FIRST_DATE, DateTimeFormatter.ISO_LOCAL_DATE.format(it)) }
+        start.firstDate?.let { put(FIRST_DATE, IsoText.date(it)) }
         start.dayCount?.let { put(DAY_COUNT, it) }
     }
 
@@ -215,5 +215,5 @@ object RequestDeadlineDocument {
 
     /** [key] as an ISO date; null when it is absent or does not parse. */
     private fun Map<String, Any?>.date(key: String): LocalDate? =
-        text(key)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        text(key)?.let { runCatching { IsoText.parseDate(it) }.getOrNull() }
 }

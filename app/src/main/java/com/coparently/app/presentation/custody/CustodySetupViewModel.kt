@@ -45,11 +45,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.previousOrSame
 import kotlinx.datetime.toKotlinLocalDate
-import java.time.ZoneId
+import kotlinx.datetime.todayIn
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Clock
 
 /** Keeps the parents flow warm across brief unsubscriptions (config changes). */
 private const val PARENTS_STOP_TIMEOUT_MS = 5_000L
@@ -129,8 +131,8 @@ class CustodySetupViewModel @Inject constructor(
     }
         .distinctUntilChanged()
         .map { (candidate, active) ->
-            val zone = ZoneId.systemDefault()
-            val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
+            val zone = TimeZone.currentSystemDefault()
+            val today = Clock.System.todayIn(zone)
             candidate?.let { RequestCap.forProposal(active, it, today, zone) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), null)

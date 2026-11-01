@@ -9,6 +9,7 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toKotlinTimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -71,7 +72,7 @@ class RequestClockSteps @Inject constructor(
         val now = time.nowMillis()
         val due = clock.responderUid == repository.signedInUid() &&
             now - plannedAtMillis <= LATE_REMINDER_MILLIS &&
-            !ReminderPlan.isQuietAt(now, time.zone()) &&
+            !ReminderPlan.isQuietAt(now, time.zone().toKotlinTimeZone()) &&
             RequestClock.stateOf(clock, now) == ClockState.OPEN
         if (!due) return StepResult.DONE
         return when (records.look(clock).status) {

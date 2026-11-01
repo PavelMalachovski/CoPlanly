@@ -37,6 +37,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -281,7 +282,7 @@ class ExpenseViewModelFamilyTest {
         category = ExpenseCategory.CLOTHING,
         paidBy = createdBy,
         splitBetween = listOf(ZUZANA, CAROL),
-        date = date,
+        date = date.toKotlinLocalDate(),
         createdByFirebaseUid = createdBy,
         familyId = familyId
     )

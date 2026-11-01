@@ -9,7 +9,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull

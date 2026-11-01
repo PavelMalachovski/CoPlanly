@@ -3,18 +3,20 @@ package com.coparently.app.domain.changerequests
 import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.time.IsoText
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
-import org.junit.Test
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-private val ZONE: ZoneId = ZoneId.of("Europe/Prague")
+private val ZONE: TimeZone = TimeZone.of("Europe/Prague")
 
 /** [text], a local date-time in Prague, as epoch millis. */
-private fun at(text: String): Long = LocalDateTime.parse(text).atZone(ZONE).toInstant().toEpochMilli()
+private fun at(text: String): Long = IsoText.parseDateTime(text).toInstant(ZONE).toEpochMilliseconds()
 
 /** Saturday 10 October 2026, 10:07. */
 private val NOW = at("2026-10-10T10:07")
@@ -29,7 +31,7 @@ class RequestCapTest {
 
     private fun date(month: Int, day: Int): LocalDate = LocalDate(2026, month, day)
 
-    private fun local(text: String): LocalDateTime = LocalDateTime.parse(text)
+    private fun local(text: String): LocalDateTime = IsoText.parseDateTime(text)
 
     /** Monday 5 October is day 0: the first week is slot 1's, the second the other parent's. */
     private val agreed = CustodyModel.weekOnWeekOff("agreed", date(10, 5))

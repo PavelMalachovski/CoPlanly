@@ -5,11 +5,14 @@ import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.changerequests.RequestSubject
+import com.coparently.app.domain.time.minus
 import com.coparently.app.presentation.common.UiText
-import java.time.Duration
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 /**
  * What Home's Requests row says (phase 2, spec §6.1).
@@ -35,7 +38,7 @@ data class RequestsRowState(
 object RequestsRowText {
 
     /** How far back the row mentions the co-parent's latest answer. */
-    private val ANSWER_WINDOW: Duration = Duration.ofDays(7)
+    private val ANSWER_WINDOW: Duration = 7.days
 
     /** The last day named by a weekday rather than a date. */
     private const val WEEKDAY_DAYS = 6L
@@ -55,7 +58,7 @@ object RequestsRowText {
                     entry.outcome.isAnswer &&
                     entry.subject != RequestSubject.CustodySchedule &&
                     entry.subject != RequestSubject.SplitRatio &&
-                    !entry.decidedAt.isBefore(since)
+                    entry.decidedAt >= since
             }
             .maxByOrNull { it.decidedAt }
     }
@@ -86,7 +89,8 @@ object RequestsRowText {
                 } else {
                     R.string.home_requests_answer_declined
                 }
-                add(UiText.Res(words, listOf(relativeDay(answer.decidedAt.toLocalDate(), today), coParentName)))
+                val day = relativeDay(answer.decidedAt.date.toJavaLocalDate(), today)
+                add(UiText.Res(words, listOf(day, coParentName)))
             }
         }
         return parts.ifEmpty { listOf(UiText.Res(R.string.home_requests_none)) }

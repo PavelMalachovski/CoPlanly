@@ -23,6 +23,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -30,7 +31,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * [RequestDeadlineRepositoryImpl]: what a request's clock does between the app and Firestore
@@ -58,7 +58,7 @@ class RequestDeadlineRepositoryImplTest {
         responderUid = "uidB",
         answerByMillis = ANSWER_BY,
         capMillis = CAP,
-        firstDate = LocalDate.of(2026, 5, 16),
+        firstDate = LocalDate(2026, 5, 16),
         dayCount = 2
     )
 
@@ -94,7 +94,7 @@ class RequestDeadlineRepositoryImplTest {
                 answerByMillis = ANSWER_BY,
                 capMillis = CAP,
                 createdAtMillis = null,
-                firstDate = LocalDate.of(2026, 5, 16),
+                firstDate = LocalDate(2026, 5, 16),
                 dayCount = 2
             ),
             clock

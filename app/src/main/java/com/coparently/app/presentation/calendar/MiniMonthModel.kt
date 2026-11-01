@@ -2,9 +2,9 @@ package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.LAST_INSTANT_OF_DAY
 import com.coparently.app.domain.usecase.RecurrenceExpander
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.LocalTime
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
@@ -152,8 +152,6 @@ private fun startOf(day: LocalDate): LocalDateTime = day.toKotlinLocalDate().atT
 
 /** The last instant of a grid [day] (`java.time.LocalTime.MAX`), where an expansion window closes. */
 private fun endOf(day: LocalDate): LocalDateTime = day.toKotlinLocalDate().atTime(LAST_INSTANT_OF_DAY)
-
-private val LAST_INSTANT_OF_DAY = LocalTime(23, 59, 59, 999_999_999)
 
 /** The mini month's layout: whole weeks, Monday first, as `MonthView` lays out its grid. */
 object MiniMonthGrid {

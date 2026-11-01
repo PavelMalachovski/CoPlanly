@@ -17,15 +17,17 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
+import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.wallClockNow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,8 +39,6 @@ class ChangeRequestRepositoryImpl @Inject constructor(
     private val fcmService: FcmService,
     private val requestDeadlines: RequestDeadlineRepository
 ) : ChangeRequestRepository {
-
-    private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     override fun getAllChangeRequests(): Flow<List<ChangeRequest>> {
         return changeRequestDao.getAllChangeRequests().map { entities ->
@@ -77,7 +77,7 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         // Not sent until [publish] says so. The row being answered is almost always the mirror's
         // copy of the co-parent's request, which is synced; copied as it was, an answer given
         // offline read as sent at once, and the History never said "Queued" (CQ-20).
-        val updated = request.copy(status = status, respondedAt = LocalDateTime.now(), syncedToFirestore = false)
+        val updated = request.copy(status = status, respondedAt = wallClockNow(), syncedToFirestore = false)
         changeRequestDao.insertChangeRequest(updated.toEntity())
 
         if (firebaseAuthService.getCurrentUser() == null) return
@@ -238,14 +238,14 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         "eventTitle" to eventTitle,
         "requestedBy" to requestedBy,
         "requestedTo" to requestedTo,
-        "currentStartDateTime" to currentStartDateTime.format(dateTimeFormatter),
-        "currentEndDateTime" to (currentEndDateTime?.format(dateTimeFormatter) ?: ""),
-        "proposedStartDateTime" to proposedStartDateTime.format(dateTimeFormatter),
-        "proposedEndDateTime" to (proposedEndDateTime?.format(dateTimeFormatter) ?: ""),
+        "currentStartDateTime" to IsoText.dateTime(currentStartDateTime),
+        "currentEndDateTime" to (currentEndDateTime?.let(IsoText::dateTime) ?: ""),
+        "proposedStartDateTime" to IsoText.dateTime(proposedStartDateTime),
+        "proposedEndDateTime" to (proposedEndDateTime?.let(IsoText::dateTime) ?: ""),
         "note" to (note ?: ""),
         "status" to status.name,
-        "createdAt" to createdAt.format(dateTimeFormatter),
-        "respondedAt" to (respondedAt?.format(dateTimeFormatter) ?: ""),
+        "createdAt" to IsoText.dateTime(createdAt),
+        "respondedAt" to (respondedAt?.let(IsoText::dateTime) ?: ""),
         "familyId" to (familyId ?: "")
     )
 
@@ -255,20 +255,20 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         eventTitle = this["eventTitle"] as? String ?: "",
         requestedBy = this["requestedBy"] as String,
         requestedTo = this["requestedTo"] as String,
-        currentStartDateTime = LocalDateTime.parse(this["currentStartDateTime"] as String, dateTimeFormatter),
+        currentStartDateTime = IsoText.parseDateTime(this["currentStartDateTime"] as String),
         currentEndDateTime = (this["currentEndDateTime"] as? String)
             ?.takeIf { it.isNotEmpty() }
-            ?.let { LocalDateTime.parse(it, dateTimeFormatter) },
-        proposedStartDateTime = LocalDateTime.parse(this["proposedStartDateTime"] as String, dateTimeFormatter),
+            ?.let(IsoText::parseDateTime),
+        proposedStartDateTime = IsoText.parseDateTime(this["proposedStartDateTime"] as String),
         proposedEndDateTime = (this["proposedEndDateTime"] as? String)
             ?.takeIf { it.isNotEmpty() }
-            ?.let { LocalDateTime.parse(it, dateTimeFormatter) },
+            ?.let(IsoText::parseDateTime),
         note = (this["note"] as? String)?.takeIf { it.isNotEmpty() },
         status = ChangeRequestStatus.valueOf(this["status"] as String),
-        createdAt = LocalDateTime.parse(this["createdAt"] as String, dateTimeFormatter),
+        createdAt = IsoText.parseDateTime(this["createdAt"] as String),
         respondedAt = (this["respondedAt"] as? String)
             ?.takeIf { it.isNotEmpty() }
-            ?.let { LocalDateTime.parse(it, dateTimeFormatter) },
+            ?.let(IsoText::parseDateTime),
         // Derived when absent, which is what a document written before the field existed looks
         // like. Safe here and nowhere else: the pair is recorded in the document itself, so
         // this reconstructs the stamp rather than guessing it from current pairing state.
@@ -282,14 +282,14 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         eventTitle = eventTitle,
         requestedBy = requestedBy,
         requestedTo = requestedTo,
-        currentStartDateTime = currentStartDateTime,
-        currentEndDateTime = currentEndDateTime,
-        proposedStartDateTime = proposedStartDateTime,
-        proposedEndDateTime = proposedEndDateTime,
+        currentStartDateTime = currentStartDateTime.toKotlinLocalDateTime(),
+        currentEndDateTime = currentEndDateTime?.toKotlinLocalDateTime(),
+        proposedStartDateTime = proposedStartDateTime.toKotlinLocalDateTime(),
+        proposedEndDateTime = proposedEndDateTime?.toKotlinLocalDateTime(),
         note = note,
         status = ChangeRequestStatus.valueOf(status),
-        createdAt = createdAt,
-        respondedAt = respondedAt,
+        createdAt = createdAt.toKotlinLocalDateTime(),
+        respondedAt = respondedAt?.toKotlinLocalDateTime(),
         syncedToFirestore = syncedToFirestore,
         familyId = familyId
     )
@@ -300,14 +300,14 @@ class ChangeRequestRepositoryImpl @Inject constructor(
         eventTitle = eventTitle,
         requestedBy = requestedBy,
         requestedTo = requestedTo,
-        currentStartDateTime = currentStartDateTime,
-        currentEndDateTime = currentEndDateTime,
-        proposedStartDateTime = proposedStartDateTime,
-        proposedEndDateTime = proposedEndDateTime,
+        currentStartDateTime = currentStartDateTime.toJavaLocalDateTime(),
+        currentEndDateTime = currentEndDateTime?.toJavaLocalDateTime(),
+        proposedStartDateTime = proposedStartDateTime.toJavaLocalDateTime(),
+        proposedEndDateTime = proposedEndDateTime?.toJavaLocalDateTime(),
         note = note,
         status = status.name,
-        createdAt = createdAt,
-        respondedAt = respondedAt,
+        createdAt = createdAt.toJavaLocalDateTime(),
+        respondedAt = respondedAt?.toJavaLocalDateTime(),
         syncedToFirestore = syncedToFirestore,
         familyId = familyId
     )
@@ -332,7 +332,7 @@ class ChangeRequestRepositoryImpl @Inject constructor(
 private fun changeClock(request: ChangeRequest, answerBy: AnswerByPick?): RequestStart? {
     val familyId = request.familyId
     if (answerBy == null || familyId == null) return null
-    val zone = ZoneId.systemDefault()
+    val zone = TimeZone.currentSystemDefault()
     val now = System.currentTimeMillis()
     val cap = RequestCap.forChange(request.currentStartDateTime, request.proposedStartDateTime, now, zone)
     val deadline = AnswerBy.resolve(answerBy, now, cap, zone) ?: return null

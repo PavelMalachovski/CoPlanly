@@ -22,6 +22,7 @@ import com.coparently.app.presentation.changerequests.RequestHistoryGroup
 import com.coparently.app.presentation.changerequests.SupportRequestRow
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -155,7 +156,8 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
 
         private val monthEvents = ScreenshotFixtures.monthEvents.values.flatten()
 
-        private fun at(day: Int, hour: Int, minute: Int = 0) = ScreenshotFixtures.MONTH.atDay(day).atTime(hour, minute)
+        private fun at(day: Int, hour: Int, minute: Int = 0) =
+            ScreenshotFixtures.MONTH.atDay(day).atTime(hour, minute).toKotlinLocalDateTime()
 
         /** Newest first, as the inbox lists them. */
         private val historyEntries = listOf(

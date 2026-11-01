@@ -22,6 +22,7 @@ import com.coparently.app.domain.holidays.HolidayLocation
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -366,7 +367,7 @@ class CalendarViewModel @Inject constructor(
                 _swapError.value = SwapError.NotReady
                 return@launch
             }
-            val iso = date.toString()
+            val iso = IsoText.date(date)
             val groupId = UUID.randomUUID().toString()
             custodyModelRepository.applyDayOverrides(
                 date = iso,
@@ -419,7 +420,7 @@ class CalendarViewModel @Inject constructor(
                 return@launch
             }
             val targets = dates.distinct().sorted()
-                .mapNotNull { date -> toParentFor(date)?.let { date.toString() to it } }
+                .mapNotNull { date -> toParentFor(date)?.let { IsoText.date(date) to it } }
                 .toMap()
             if (targets.isEmpty()) {
                 _swapError.value = SwapError.Refused

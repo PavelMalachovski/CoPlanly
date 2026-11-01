@@ -60,7 +60,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
@@ -150,11 +149,11 @@ class ChangeRequestViewModelTest {
         eventTitle = "Dentist",
         requestedBy = "u2",
         requestedTo = "u1",
-        currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
-        currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
-        proposedStartDateTime = LocalDateTime.of(2026, 9, 11, 14, 0),
-        proposedEndDateTime = LocalDateTime.of(2026, 9, 11, 15, 0),
-        createdAt = LocalDateTime.of(2026, 9, 2, 9, 0)
+        currentStartDateTime = event.startDateTime,
+        currentEndDateTime = event.endDateTime,
+        proposedStartDateTime = LocalDateTime.of(2026, 9, 11, 14, 0).toKotlinLocalDateTime(),
+        proposedEndDateTime = LocalDateTime.of(2026, 9, 11, 15, 0).toKotlinLocalDateTime(),
+        createdAt = LocalDateTime.of(2026, 9, 2, 9, 0).toKotlinLocalDateTime()
     )
 
     private fun viewModel(parents: ParentsSource = testParentsSource()) = ChangeRequestViewModel(
@@ -232,8 +231,8 @@ class ChangeRequestViewModelTest {
         vm.accept("r1")
         advanceUntilIdle()
 
-        assertEquals(request.proposedStartDateTime.toKotlinLocalDateTime(), moved.captured.startDateTime)
-        assertEquals(request.proposedEndDateTime?.toKotlinLocalDateTime(), moved.captured.endDateTime)
+        assertEquals(request.proposedStartDateTime, moved.captured.startDateTime)
+        assertEquals(request.proposedEndDateTime, moved.captured.endDateTime)
         assertEquals("u1", moved.captured.lastModifiedBy)
         coVerify(exactly = 1) { changeRequestRepository.updateStatus("r1", ChangeRequestStatus.ACCEPTED) }
     }

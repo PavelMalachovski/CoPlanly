@@ -38,6 +38,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.toKotlinTimeZone
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -78,7 +79,7 @@ class SupportReminderWorker @AssistedInject constructor(
             return Result.success()
         }
         val zone = ZoneId.systemDefault()
-        if (ReminderPlan.isQuietAt(System.currentTimeMillis(), zone)) return Result.success()
+        if (ReminderPlan.isQuietAt(System.currentTimeMillis(), zone.toKotlinTimeZone())) return Result.success()
         val today = LocalDate.now(zone)
         families.forEach { family ->
             try {

@@ -7,6 +7,7 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -100,7 +101,7 @@ class EarlierFamiliesTest {
         currency = "CZK",
         category = ExpenseCategory.entries.first(),
         paidBy = createdBy,
-        date = LocalDate.of(2026, 5, 1),
+        date = LocalDate.of(2026, 5, 1).toKotlinLocalDate(),
         createdByFirebaseUid = createdBy,
         familyId = familyId
     )

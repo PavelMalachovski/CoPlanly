@@ -22,6 +22,8 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.review.MonthReview
 import com.coparently.app.domain.review.MonthReviewCalculator
 import com.coparently.app.domain.review.MonthStatsWire
+import com.coparently.app.domain.time.LAST_INSTANT_OF_DAY
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.ai.AiAssistSession
 import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.common.ParentNames
@@ -40,10 +42,13 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.atTime
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.plusMonth
+import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalTime
-import java.time.YearMonth
+import kotlinx.datetime.yearMonth
 import javax.inject.Inject
 
 /** Keeps the flows warm across a configuration change. */
@@ -119,7 +124,7 @@ class MonthReviewViewModel @Inject constructor(
     /** Whether the summary button is drawn at all. */
     val aiAvailable: Boolean = assist.availability.enabled
 
-    private val currentMonth: YearMonth = YearMonth.now()
+    private val currentMonth: YearMonth = wallClockNow().date.yearMonth
     private val selectedMonth = MutableStateFlow(currentMonth)
 
     /** Both parents, for naming slots and payers. */
@@ -158,8 +163,8 @@ class MonthReviewViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val events: Flow<List<Event>> = selectedMonth.flatMapLatest { month ->
         sources.eventRepository.getEventsByDateRange(
-            month.atDay(1).atStartOfDay().toKotlinLocalDateTime(),
-            month.atEndOfMonth().atTime(LocalTime.MAX).toKotlinLocalDateTime()
+            month.firstDay.atTime(0, 0),
+            month.lastDay.atTime(LAST_INSTANT_OF_DAY)
         ).onStart { emit(emptyList()) }
     }
 
@@ -214,11 +219,11 @@ class MonthReviewViewModel @Inject constructor(
     val summaryState: StateFlow<AiAssistState> = session.state
 
     /** Shows the month before. */
-    fun previousMonth() = showMonth(selectedMonth.value.minusMonths(1))
+    fun previousMonth() = showMonth(selectedMonth.value.minusMonth())
 
     /** Shows the month after, never past the current one. */
     fun nextMonth() {
-        if (selectedMonth.value < currentMonth) showMonth(selectedMonth.value.plusMonths(1))
+        if (selectedMonth.value < currentMonth) showMonth(selectedMonth.value.plusMonth())
     }
 
     /**
@@ -229,7 +234,7 @@ class MonthReviewViewModel @Inject constructor(
         if (!aiAvailable) return
         val review = state.value.review?.takeIf { MonthStatsWire.canSend(it) } ?: return
         val stats = MonthStatsWire.of(review, names::labelFor, names::labelForUid)
-        session.request { repository.summarizeMonth(review.month, locale, stats) }
+        session.request { repository.summarizeMonth(review.month.toJavaYearMonth(), locale, stats) }
     }
 
     /** "I agree" on the consent dialog. */

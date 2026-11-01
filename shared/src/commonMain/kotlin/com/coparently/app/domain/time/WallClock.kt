@@ -2,10 +2,12 @@ package com.coparently.app.domain.time
 
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 import kotlin.time.Duration
 
 /*
@@ -56,3 +58,17 @@ operator fun LocalDateTime.minus(duration: Duration): LocalDateTime =
  */
 fun LocalDateTime.durationUntil(other: LocalDateTime): Duration =
     other.toInstant(TimeZone.UTC) - toInstant(TimeZone.UTC)
+
+/**
+ * The wall-clock time now in [zone], by default the device's current zone: what
+ * `java.time.LocalDateTime.now()` reads. One function, so every record stamped "now" reads the clock
+ * the same way.
+ */
+fun wallClockNow(zone: TimeZone = TimeZone.currentSystemDefault()): LocalDateTime =
+    Clock.System.now().toLocalDateTime(zone)
+
+/**
+ * The last moment of a day, 23:59:59.999999999: `java.time.LocalTime.MAX`, which ends the day in a
+ * query that runs to the end of a date.
+ */
+val LAST_INSTANT_OF_DAY: LocalTime = LocalTime(23, 59, 59, 999_999_999)

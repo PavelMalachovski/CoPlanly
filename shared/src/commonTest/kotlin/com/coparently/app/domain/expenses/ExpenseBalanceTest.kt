@@ -2,8 +2,8 @@ package com.coparently.app.domain.expenses
 
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -31,7 +31,7 @@ class ExpenseBalanceTest {
         category = ExpenseCategory.OTHER,
         paidBy = paidBy,
         splitBetween = splitBetween,
-        date = LocalDate.of(2026, 7, 9)
+        date = LocalDate(2026, 7, 9)
     )
 
     @Test

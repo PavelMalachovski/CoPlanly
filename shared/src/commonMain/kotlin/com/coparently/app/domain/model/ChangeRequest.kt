@@ -1,6 +1,6 @@
 package com.coparently.app.domain.model
 
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Domain model for a proposed change to an event, sent by one parent to the other.

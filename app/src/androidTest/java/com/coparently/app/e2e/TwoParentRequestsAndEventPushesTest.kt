@@ -226,12 +226,12 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
             eventTitle = event.title,
             requestedBy = me.id,
             requestedTo = partnerId,
-            currentStartDateTime = event.startDateTime.toJavaLocalDateTime(),
-            currentEndDateTime = event.endDateTime?.toJavaLocalDateTime(),
-            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2),
-            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2),
+            currentStartDateTime = event.startDateTime,
+            currentEndDateTime = event.endDateTime,
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2).toKotlinLocalDateTime(),
+            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2)?.toKotlinLocalDateTime(),
             note = "Could we move it?",
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         alice.changeRequestRepository.createChangeRequest(request)
         return request
