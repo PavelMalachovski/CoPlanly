@@ -5,6 +5,7 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventVersionOutboxEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
+import com.coparently.app.domain.versions.EventVersionKind
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify

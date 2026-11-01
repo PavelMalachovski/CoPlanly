@@ -4,12 +4,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.versions.EventVersionKind
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay

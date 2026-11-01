@@ -8,13 +8,13 @@ import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.versions.EventVersionKind
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
 import io.mockk.coEvery

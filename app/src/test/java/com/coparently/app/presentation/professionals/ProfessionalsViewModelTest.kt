@@ -1,10 +1,10 @@
 package com.coparently.app.presentation.professionals
 
 import com.coparently.app.R
-import com.coparently.app.data.remote.firebase.AcceptProfessionalResult
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.PairingError
+import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository

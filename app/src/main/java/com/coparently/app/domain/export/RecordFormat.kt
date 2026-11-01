@@ -1,7 +1,7 @@
 package com.coparently.app.domain.export
 
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.chat.ChatAttachment
+import com.coparently.app.domain.versions.EventVersionKind
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant

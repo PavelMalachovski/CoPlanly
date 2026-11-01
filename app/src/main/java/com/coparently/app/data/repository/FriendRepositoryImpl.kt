@@ -2,11 +2,11 @@ package com.coparently.app.data.repository
 
 import android.util.Log
 import com.coparently.app.data.family.SelectedFamilySource
-import com.coparently.app.data.remote.firebase.AcceptCalendarFriendResult
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.friends.AcceptCalendarFriendResult
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.CalendarFriendPolicy
 import com.coparently.app.domain.friends.FriendCalendarRead

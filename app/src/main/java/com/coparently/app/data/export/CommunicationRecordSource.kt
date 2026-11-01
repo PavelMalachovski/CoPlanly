@@ -7,7 +7,6 @@ import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.repository.toDomain
 import com.coparently.app.data.repository.toMessageOrNull
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.chat.ChatAttachmentCodec
@@ -22,6 +21,7 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate

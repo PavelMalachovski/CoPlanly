@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.friends
 
 import com.coparently.app.R
-import com.coparently.app.data.remote.firebase.AcceptCalendarFriendResult
 import com.coparently.app.data.remote.firebase.PairingException
+import com.coparently.app.domain.friends.AcceptCalendarFriendResult
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole

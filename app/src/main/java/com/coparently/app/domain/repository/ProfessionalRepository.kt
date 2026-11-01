@@ -1,10 +1,10 @@
 package com.coparently.app.domain.repository
 
-import com.coparently.app.data.remote.firebase.AcceptProfessionalResult
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import kotlinx.coroutines.flow.Flow

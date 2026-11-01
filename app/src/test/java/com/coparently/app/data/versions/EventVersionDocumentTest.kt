@@ -1,5 +1,6 @@
 package com.coparently.app.data.versions
 
+import com.coparently.app.domain.versions.EventVersionKind
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

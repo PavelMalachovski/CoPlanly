@@ -1,6 +1,7 @@
 package com.coparently.app.data.versions
 
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.versions.EventVersionKind
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.google.gson.reflect.TypeToken
@@ -177,22 +178,5 @@ object EventVersionDocument {
                 )
             }
         }
-    }
-}
-
-/**
- * What a revision records: the event's creation, an edit, or its deletion.
- *
- * @property wire The value stored in the document; `firestore.rules` accepts exactly these three.
- */
-enum class EventVersionKind(val wire: String) {
-    CREATED("created"),
-    UPDATED("updated"),
-    DELETED("deleted");
-
-    companion object {
-
-        /** The kind stored as [wire], or null for a value this build does not know. */
-        fun fromWire(wire: String?): EventVersionKind? = entries.firstOrNull { it.wire == wire }
     }
 }

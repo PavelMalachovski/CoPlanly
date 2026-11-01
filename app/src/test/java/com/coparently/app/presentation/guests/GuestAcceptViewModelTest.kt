@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.guests
 
 import com.coparently.app.R
-import com.coparently.app.data.remote.firebase.AcceptGuestResult
 import com.coparently.app.data.remote.firebase.PairingException
+import com.coparently.app.domain.guests.AcceptGuestResult
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.GuestRepository
 import io.mockk.coEvery

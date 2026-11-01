@@ -1,9 +1,9 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.remote.firebase.AcceptGuestResult
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.domain.guests.AcceptGuestResult
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.pairing.InviteCodeGenerator

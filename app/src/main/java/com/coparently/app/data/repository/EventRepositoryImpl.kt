@@ -13,7 +13,6 @@ import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -29,6 +28,7 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.versions.EventVersionKind
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow

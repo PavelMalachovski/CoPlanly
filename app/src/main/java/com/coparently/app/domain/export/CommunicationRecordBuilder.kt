@@ -1,11 +1,11 @@
 package com.coparently.app.domain.export
 
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.parentingplan.PlanCitationCodec
+import com.coparently.app.domain.versions.EventVersionKind
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId

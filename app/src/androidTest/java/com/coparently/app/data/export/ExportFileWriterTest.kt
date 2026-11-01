@@ -9,7 +9,6 @@ import androidx.core.content.IntentCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.coparently.app.R
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.CommunicationRecordBuilder
 import com.coparently.app.domain.export.CommunicationRecordCsv
@@ -28,6 +27,7 @@ import com.coparently.app.domain.export.RecordSources
 import com.coparently.app.domain.export.VerificationLabels
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.versions.EventVersionKind
 import com.coparently.app.presentation.export.recordShareIntent
 import kotlinx.coroutines.runBlocking
 import org.junit.After

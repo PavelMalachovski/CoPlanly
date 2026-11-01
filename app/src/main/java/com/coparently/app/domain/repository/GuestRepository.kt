@@ -1,6 +1,6 @@
 package com.coparently.app.domain.repository
 
-import com.coparently.app.data.remote.firebase.AcceptGuestResult
+import com.coparently.app.domain.guests.AcceptGuestResult
 import com.coparently.app.domain.guests.GuestInvite
 
 /**

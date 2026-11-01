@@ -1,6 +1,5 @@
 package com.coparently.app.domain.export
 
-import com.coparently.app.data.versions.EventVersionKind
 import com.coparently.app.domain.export.RecordFixtures.ALICE
 import com.coparently.app.domain.export.RecordFixtures.BOB
 import com.coparently.app.domain.export.RecordFixtures.MARCH_10_0900
@@ -9,6 +8,7 @@ import com.coparently.app.domain.export.RecordFixtures.labels
 import com.coparently.app.domain.export.RecordFixtures.revision
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
+import com.coparently.app.domain.versions.EventVersionKind
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals

@@ -1,8 +1,11 @@
 package com.coparently.app.data.remote.firebase
 
 import android.util.Log
+import com.coparently.app.domain.friends.AcceptCalendarFriendResult
+import com.coparently.app.domain.guests.AcceptGuestResult
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
+import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
@@ -315,38 +318,3 @@ class PairingException(val error: PairingError, cause: Throwable? = null) :
  *   not that pairing failed.
  */
 data class AcceptInvitationResult(val partnerId: String, val role: String?)
-
-/**
- * What [PairingFunctions.acceptGuestInvitation] returns on success.
- *
- * @property childInfoId The one child record the caller may now read. Exactly one: a guest is
- *   invited to a child, not to a family.
- * @property expiresAtMillis When that access ends, as epoch milliseconds. Required, unlike
- *   [AcceptInvitationResult.role]: a missing `role` costs a best-effort local migration,
- *   while a missing expiry would be shown to the guest as access that never ends.
- */
-data class AcceptGuestResult(val childInfoId: String, val expiresAtMillis: Long)
-
-/**
- * What `acceptCalendarFriendInvitation` returns: the pair whose calendar the caller may now
- * read, and the instant that access ends.
- *
- * @property familyParents Exactly two UIDs — the friend queries events by them.
- * @property expiresAtMillis Epoch millis, always positive; see [CalendarFriendPolicy].
- */
-data class AcceptCalendarFriendResult(
-    val familyParents: List<String>,
-    val expiresAtMillis: Long
-)
-
-/**
- * What `acceptProfessionalInvitation` returns (MON-18).
- *
- * @property grantId The grant's document id, `{familyId}__{proUid}`.
- * @property expiresAtMillis When the access ends, epoch millis, always positive. The access has
- *   not begun: it opens only once both parents have consented.
- */
-data class AcceptProfessionalResult(
-    val grantId: String,
-    val expiresAtMillis: Long
-)

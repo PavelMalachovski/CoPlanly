@@ -1,6 +1,6 @@
 package com.coparently.app.domain.repository
 
-import com.coparently.app.data.remote.firebase.AcceptCalendarFriendResult
+import com.coparently.app.domain.friends.AcceptCalendarFriendResult
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendCalendarRead
 import com.coparently.app.domain.friends.FriendProfile

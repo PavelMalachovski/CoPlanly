@@ -2,7 +2,6 @@ package com.coparently.app.data.repository
 
 import android.util.Log
 import com.coparently.app.data.family.SelectedFamilySource
-import com.coparently.app.data.remote.firebase.AcceptProfessionalResult
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
@@ -14,6 +13,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
+import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository
