@@ -165,8 +165,9 @@ object HolidayFairnessCalculator {
         return provider.schoolVacations(year)
             .distinctBy { it.first.start to it.first.endInclusive }
             .map { (range, names) ->
-                val clipped = maxOf(range.start.toKotlinLocalDate(), first)..
-                    minOf(range.endInclusive.toKotlinLocalDate(), last)
+                val clippedStart = maxOf(range.start.toKotlinLocalDate(), first)
+                val clippedEnd = minOf(range.endInclusive.toKotlinLocalDate(), last)
+                val clipped = clippedStart..clippedEnd
                 FairnessOccasion.SchoolVacation(names.first, names.second, provider.localLanguage) to clipped
             }
     }
