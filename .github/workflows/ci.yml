@@ -1954,8 +1954,12 @@ jobs:
       # Gradle configures every project before it runs a task, and `:app` and `:shared` both apply
       # the Android plugin, which fails configuration with "SDK location not found" when no
       # ANDROID_HOME or local.properties names one, even when only iOS tasks were asked for.
+      # The action's default package list includes the long-retired `tools`, which the current
+      # sdkmanager refuses ("Failed to find package 'tools'"), so name only what exists.
       - name: Set up the Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Xcode
         run: xcodebuild -version
