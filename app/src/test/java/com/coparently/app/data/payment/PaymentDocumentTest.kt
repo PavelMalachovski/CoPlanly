@@ -6,7 +6,6 @@ import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.YearMonth
 import java.util.Date
 
@@ -19,7 +18,7 @@ class PaymentDocumentTest {
         kind = PaymentKind.EXPENSES,
         month = YearMonth.of(2026, 10),
         currency = "CZK",
-        amount = BigDecimal("450"),
+        amountMinor = 45_000L,
         payerUid = "bob",
         payeeUid = "alice"
     )
@@ -40,7 +39,7 @@ class PaymentDocumentTest {
         val stored = PaymentDocument.paid(payment, Timestamp(Date(1_000L))) +
             PaymentDocument.confirmed("alice", Timestamp(Date(2_000L)))
         val read = PaymentDocument.read(payment.id, stored)
-        val expected = payment.copy(amount = BigDecimal("450.00"), paidAtMillis = 1_000L, confirmedAtMillis = 2_000L)
+        val expected = payment.copy(amountMinor = 45_000L, paidAtMillis = 1_000L, confirmedAtMillis = 2_000L)
         assertEquals(expected, read)
     }
 

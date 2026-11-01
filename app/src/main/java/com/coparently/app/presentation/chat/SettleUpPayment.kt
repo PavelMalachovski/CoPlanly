@@ -38,6 +38,7 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.data.payment.PaymentAccounts
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -227,7 +228,7 @@ private fun SettleUpPaymentBlock(
     steps: PaymentSteps
 ) {
     val card = message.activity?.takeIf { it.kind.readerPays(mine) } ?: return
-    val amount = card.amount?.toBigDecimalOrNull()
+    val amount = MinorUnits.fromText(card.amount)
     val currency = card.currency
     if (payee == null || amount == null || currency == null) return
     // Once the payer said they paid, the code is not offered again (25 October 2026).

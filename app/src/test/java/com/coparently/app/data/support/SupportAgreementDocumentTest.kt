@@ -5,13 +5,12 @@ import com.coparently.app.domain.support.SupportTerms
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.YearMonth
 
 /** `support_agreements/{familyId}` as the rules bound it (25 October 2026). */
 class SupportAgreementDocumentTest {
 
-    private val terms = SupportTerms(BigDecimal("5000"), "CZK", 5, "bob", YearMonth.of(2026, 10))
+    private val terms = SupportTerms(500_000L, "CZK", 5, "bob", YearMonth.of(2026, 10))
 
     @Test
     fun `the terms are written as the rules bound them`() {
@@ -29,7 +28,7 @@ class SupportAgreementDocumentTest {
 
     @Test
     fun `an agreement and a proposal read back as they were written`() {
-        val proposal = SupportProposal(terms.copy(amount = BigDecimal("6000.00")), "alice", 7L)
+        val proposal = SupportProposal(terms.copy(amountMinor = 600_000L), "alice", 7L)
         val read = SupportAgreementDocument.read(
             "alice__bob",
             mapOf(
@@ -39,11 +38,11 @@ class SupportAgreementDocumentTest {
                 "lastModifiedBy" to "alice"
             )
         )
-        assertEquals(BigDecimal("5000.00"), read?.agreement?.amount)
+        assertEquals(500_000L, read?.agreement?.amountMinor)
         assertEquals(5, read?.agreement?.dayOfMonth)
         assertEquals(YearMonth.of(2026, 10), read?.agreement?.fromMonth)
         assertEquals("alice", read?.proposal?.proposedBy)
-        assertEquals(BigDecimal("6000.00"), read?.proposal?.terms?.amount)
+        assertEquals(600_000L, read?.proposal?.terms?.amountMinor)
     }
 
     @Test

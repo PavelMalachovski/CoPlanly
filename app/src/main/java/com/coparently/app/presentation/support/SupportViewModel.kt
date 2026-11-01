@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
 import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.support.SupportAgreementStore
@@ -32,7 +33,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -152,7 +152,7 @@ class SupportViewModel @Inject constructor(
 
     /** Records that this parent paid [month]'s child support under [terms]. */
     fun markPaid(state: SupportUiState.Loaded, terms: SupportTerms, month: YearMonth) =
-        write { payments.markPaid(state.familyId, PaymentKind.SUPPORT, month, terms.currency, terms.amount) }
+        write { payments.markPaid(state.familyId, PaymentKind.SUPPORT, month, terms.currency, terms.amountMinor) }
 
     /** Records that [payment]'s money arrived. */
     fun confirm(payment: Payment) = write { payments.confirm(payment) }
@@ -186,10 +186,11 @@ class SupportViewModel @Inject constructor(
 
         /**
          * [text] as an amount — digits with an optional decimal comma or dot, at most two places,
-         * above zero — or null when it is not one.
+         * above zero — in minor units (45000 is 450.00), or null when it is not one.
          */
-        fun parseAmount(text: String): BigDecimal? =
+        fun parseAmount(text: String): Long? =
             text.trim().replace(" ", "").replace(',', '.').toBigDecimalOrNull()
                 ?.takeIf { it.signum() > 0 && it.scale() <= 2 }
+                ?.let(MinorUnits::fromDecimal)
     }
 }

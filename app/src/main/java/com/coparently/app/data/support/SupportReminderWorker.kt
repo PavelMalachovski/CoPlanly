@@ -18,6 +18,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.coparently.app.R
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushChannel
@@ -127,7 +128,7 @@ class SupportReminderWorker @AssistedInject constructor(
         }
         PushNotifier(context).createChannels()
         val due = terms.dueDate(month).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
-        val amount = currencyFormat(terms.currency).format(terms.amount)
+        val amount = currencyFormat(terms.currency).format(MinorUnits.toDecimal(terms.amountMinor))
         val title = context.getString(R.string.support_reminder_title, due)
         val body = context.getString(R.string.support_reminder_body, amount, payeeName)
         val key = listOf("support", familyId).hashCode()

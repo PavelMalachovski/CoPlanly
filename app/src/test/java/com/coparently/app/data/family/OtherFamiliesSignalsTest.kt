@@ -45,7 +45,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.test.assertEquals
@@ -480,7 +479,7 @@ class OtherFamiliesSignalsTest {
             familyId = CAROL_FAMILY.familyId,
             participants = listOf(ALICE, CAROL),
             proposal = SupportProposal(
-                SupportTerms(BigDecimal("3000"), "CZK", 15, CAROL, YearMonth.of(2026, 11)),
+                SupportTerms(300_000L, "CZK", 15, CAROL, YearMonth.of(2026, 11)),
                 proposedBy = uid,
                 proposedAtMillis = 1L
             )

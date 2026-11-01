@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -12,7 +11,7 @@ import java.time.YearMonth
 class SupportTermsTest {
 
     private val terms = SupportTerms(
-        amount = BigDecimal("5000.00"),
+        amountMinor = 500_000L,
         currency = "CZK",
         dayOfMonth = 10,
         payerUid = "bob",

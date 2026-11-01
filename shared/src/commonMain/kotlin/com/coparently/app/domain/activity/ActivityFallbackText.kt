@@ -2,7 +2,7 @@ package com.coparently.app.domain.activity
 
 import com.coparently.app.domain.expenses.FULL_SHARE_BASIS_POINTS
 import com.coparently.app.domain.expenses.SplitRatio
-import java.math.BigDecimal
+import com.coparently.app.domain.money.DecimalText
 
 /**
  * The plain-text sentence an announcement carries in `Message.content`.
@@ -102,7 +102,7 @@ object ActivityFallbackText {
 
     /** [basisPoints] as a percent in the base locale: `35 %`, or `33.33 %` for a share that is not whole. */
     private fun percentOf(basisPoints: Int): String =
-        BigDecimal.valueOf(basisPoints.toLong(), PERCENT_SCALE).stripTrailingZeros().toPlainString() + " %"
+        DecimalText.plainStripped(basisPoints.toLong(), PERCENT_SCALE) + " %"
 
     /** A settle-up card in the sender's first person, as a message from them reads. */
     private fun settleUp(announcement: ActivityAnnouncement): String? {

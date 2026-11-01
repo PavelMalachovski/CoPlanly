@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -68,9 +67,9 @@ class PaymentsViewModel @Inject constructor(
     fun paymentFor(payments: List<Payment>, kind: PaymentKind, month: YearMonth, currency: String): Payment? =
         payments.firstOrNull { it.kind == kind && it.month == month && it.currency == currency }
 
-    /** Records that this parent paid [amount] of [currency] for [month] in [familyId]. */
-    fun markPaid(familyId: String, kind: PaymentKind, month: YearMonth, currency: String, amount: BigDecimal) =
-        write { store.markPaid(familyId, kind, month, currency, amount) }
+    /** Records that this parent paid [amountMinor] (minor units) of [currency] for [month] in [familyId]. */
+    fun markPaid(familyId: String, kind: PaymentKind, month: YearMonth, currency: String, amountMinor: Long) =
+        write { store.markPaid(familyId, kind, month, currency, amountMinor) }
 
     /** Records that [payment]'s money arrived. */
     fun confirm(payment: Payment) = write { store.confirm(payment) }

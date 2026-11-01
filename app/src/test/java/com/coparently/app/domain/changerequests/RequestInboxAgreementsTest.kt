@@ -9,7 +9,6 @@ import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -29,7 +28,7 @@ class RequestInboxAgreementsTest {
     private val scope = RequestScope(myUid = me, coParentUid = co, familyId = family, soleFamily = false)
     private val now = 1_000L
 
-    private val terms = SupportTerms(BigDecimal("3000"), "CZK", 15, co, YearMonth.of(2026, 11))
+    private val terms = SupportTerms(300_000L, "CZK", 15, co, YearMonth.of(2026, 11))
 
     private fun support(by: String, familyId: String = family) =
         SupportAgreement(familyId, listOf(me, co), proposal = SupportProposal(terms, by, 1L))

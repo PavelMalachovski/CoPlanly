@@ -5,9 +5,9 @@ import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.family.FamilyKey
+import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.repository.UserRepository
-import java.math.BigDecimal
 import java.time.YearMonth
 import javax.inject.Inject
 import kotlin.math.abs
@@ -67,7 +67,7 @@ class SettleUpMessages @Inject constructor(
             entityId = "settle_${month}_$currency",
             title = month.toString(),
             whenIso = month.atDay(1).toString(),
-            amount = PaymentQr.amountText(BigDecimal.valueOf(abs(netForMe))),
+            amount = DecimalText.halfUp(abs(netForMe), PaymentQr.MONEY_SCALE),
             currency = currency
         )
     }

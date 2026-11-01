@@ -188,7 +188,7 @@ class SupportAgreementStore @Inject constructor(
             entityType = ActivityEntityType.SUPPORT_AGREEMENT,
             entityId = familyId,
             title = terms.dayOfMonth.toString(),
-            amount = PaymentQr.amountText(terms.amount),
+            amount = PaymentQr.amountText(terms.amountMinor),
             currency = terms.currency
         )
     }

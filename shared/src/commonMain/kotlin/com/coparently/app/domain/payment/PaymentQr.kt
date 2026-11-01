@@ -1,23 +1,22 @@
 package com.coparently.app.domain.payment
 
+import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.platform.Lzma1Raw
 import com.coparently.app.domain.platform.canonicalDecomposition
 import com.coparently.app.domain.text.Crc32
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 /**
  * One payment a parent is asked to make: to whom, how much, and what the bank shows as the note.
  *
  * @property iban The receiving account, already [Iban.normalize]d.
- * @property amount What to pay, never negative.
+ * @property amountMinor What to pay, in minor units at two decimals (45000 is 450.00), never negative.
  * @property currency ISO 4217 code.
  * @property beneficiary The receiving parent's name.
  * @property note The payment's message, e.g. "CoPlanly 2026-10".
  */
 data class PaymentRequest(
     val iban: String,
-    val amount: BigDecimal,
+    val amountMinor: Long,
     val currency: String,
     val beneficiary: String,
     val note: String
@@ -67,8 +66,14 @@ object PaymentQr {
         null -> null
     }
 
-    /** The amount as every one of the three writes it: two decimals, a point, no grouping. */
-    fun amountText(amount: BigDecimal): String = amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
+    /**
+     * The amount as every one of the three writes it, and the money documents store it: two
+     * decimals, a point, no grouping. [amountMinor] is in minor units, so 45000 is "450.00".
+     */
+    fun amountText(amountMinor: Long): String = DecimalText.plain(amountMinor, MONEY_SCALE)
+
+    /** Decimals of every amount: minor units are hundredths. */
+    const val MONEY_SCALE = 2
 
     /**
      * QR Platba: `SPD*1.0*ACC:…*AM:…*CC:…*MSG:…*RN:…`. A value may not hold `*`, and banks read
@@ -78,7 +83,7 @@ object PaymentQr {
         "SPD",
         "1.0",
         "ACC:${request.iban}",
-        "AM:${amountText(request.amount)}",
+        "AM:${amountText(request.amountMinor)}",
         "CC:${request.currency}",
         "MSG:${ascii(request.note).take(SPAYD_MESSAGE_MAX)}",
         "RN:${ascii(request.beneficiary).take(SPAYD_NAME_MAX)}"
@@ -93,7 +98,7 @@ object PaymentQr {
         "",
         ascii(request.beneficiary).take(EPC_NAME_MAX),
         request.iban,
-        "EUR${amountText(request.amount)}",
+        "EUR${amountText(request.amountMinor)}",
         "",
         "",
         ascii(request.note).take(EPC_TEXT_MAX)
@@ -136,7 +141,7 @@ object PaymentQr {
             "", // invoice id
             "1", // one payment
             "1", // a payment order
-            amountText(request.amount),
+            amountText(request.amountMinor),
             request.currency,
             "", // due date
             "", // variable symbol

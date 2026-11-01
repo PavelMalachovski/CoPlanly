@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
@@ -86,7 +87,6 @@ import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -448,14 +448,15 @@ fun ExpenseScreen(
                                             enabled = !paymentBusy,
                                             onMarkPaid = {
                                                 shownMonth.familyId?.let { family ->
+                                                    val owed = MinorUnits.fromDouble(
+                                                        abs(currencyBalance.balance.netForCurrentUser)
+                                                    ) ?: return@let
                                                     paymentsViewModel.markPaid(
                                                         family,
                                                         PaymentKind.EXPENSES,
                                                         shownMonth.month,
                                                         currencyBalance.currency,
-                                                        BigDecimal.valueOf(
-                                                            abs(currencyBalance.balance.netForCurrentUser)
-                                                        )
+                                                        owed
                                                     )
                                                 }
                                             },
@@ -841,7 +842,7 @@ internal fun paymentStripFor(
     val state = PaymentState.of(recorded, myUid)
     return PaymentStrip(
         state = state,
-        amount = recorded?.amount,
+        amount = recorded?.amountMinor?.let(MinorUnits::toDecimal),
         onMarkPaid = onMarkPaid.takeIf { enabled && state == PaymentState.NONE && owed < 0 },
         onConfirm = onConfirm.takeIf { enabled && state == PaymentState.PAID_TO_ME }
     )

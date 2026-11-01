@@ -26,7 +26,6 @@ import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.math.BigDecimal
 import java.time.YearMonth
 
 /**
@@ -119,7 +118,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
      */
     @Test
     fun agreementRows() = snap("requests_agreements") {
-        val terms = SupportTerms(BigDecimal("3500"), "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth.of(2026, 6))
+        val terms = SupportTerms(350_000L, "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth.of(2026, 6))
         val parents = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID)
         fun grant(consentBy: String) = ProfessionalGrant(
             id = "family__pro",

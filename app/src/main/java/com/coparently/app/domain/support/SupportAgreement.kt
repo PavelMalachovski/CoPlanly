@@ -1,6 +1,5 @@
 package com.coparently.app.domain.support
 
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -8,11 +7,13 @@ import java.time.YearMonth
  * What a child support agreement says (25 October 2026, owner decision: "a fixed amount once a
  * month"): how much, in which currency, on which day of the month, who pays, and from which month.
  *
+ * @property amountMinor The monthly amount, in minor units at two decimals: 500000 is the wire's
+ *   "5000.00".
  * @property dayOfMonth 1–28, so every month has the day.
  * @property fromMonth The first month the agreement covers; earlier months are not listed.
  */
 data class SupportTerms(
-    val amount: BigDecimal,
+    val amountMinor: Long,
     val currency: String,
     val dayOfMonth: Int,
     val payerUid: String,

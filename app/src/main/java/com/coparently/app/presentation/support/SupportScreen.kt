@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.payments.Payment
@@ -379,7 +380,9 @@ private fun ProposeSupportDialog(
     onConfirm: (SupportTerms) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var amountText by rememberSaveable { mutableStateOf(current?.amount?.toPlainString().orEmpty()) }
+    var amountText by rememberSaveable {
+        mutableStateOf(current?.amountMinor?.let { MinorUnits.toDecimal(it).toPlainString() }.orEmpty())
+    }
     var currency by rememberSaveable { mutableStateOf(current?.currency ?: defaultCurrency) }
     var dayText by rememberSaveable { mutableStateOf((current?.dayOfMonth ?: DEFAULT_DAY).toString()) }
     var payer by rememberSaveable {
@@ -457,7 +460,8 @@ private fun ProposeSupportDialog(
 }
 
 /** [terms]' monthly amount in the reader's conventions. */
-internal fun supportAmount(terms: SupportTerms): String = currencyFormat(terms.currency).format(terms.amount)
+internal fun supportAmount(terms: SupportTerms): String =
+    currencyFormat(terms.currency).format(MinorUnits.toDecimal(terms.amountMinor))
 
 /** [month] as the reader's language names it: "October 2026". */
 internal fun supportMonth(month: YearMonth): String =

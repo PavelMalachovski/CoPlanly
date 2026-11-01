@@ -1,10 +1,10 @@
 package com.coparently.app.data.payment
 
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.google.firebase.Timestamp
-import java.math.BigDecimal
 import java.time.YearMonth
 
 /**
@@ -24,7 +24,7 @@ object PaymentDocument {
         "kind" to payment.kind.wire,
         "month" to payment.month.toString(),
         "currency" to payment.currency,
-        "amount" to amountText(payment.amount),
+        "amount" to amountText(payment.amountMinor),
         "payerUid" to payment.payerUid,
         "payeeUid" to payment.payeeUid,
         "paidBy" to payment.payerUid,
@@ -40,14 +40,14 @@ object PaymentDocument {
     fun read(id: String, data: Map<String, Any?>): Payment? {
         val kind = PaymentKind.fromWire(data["kind"] as? String) ?: return null
         val month = (data["month"] as? String)?.let { runCatching { YearMonth.parse(it) }.getOrNull() } ?: return null
-        val amount = (data["amount"] as? String)?.toBigDecimalOrNull() ?: return null
+        val amount = MinorUnits.fromText(data["amount"] as? String) ?: return null
         return Payment(
             id = id,
             familyId = data["familyId"] as? String ?: return null,
             kind = kind,
             month = month,
             currency = data["currency"] as? String ?: return null,
-            amount = amount,
+            amountMinor = amount,
             payerUid = data["payerUid"] as? String ?: return null,
             payeeUid = data["payeeUid"] as? String ?: return null,
             paidAtMillis = (data["paidAt"] as? Timestamp)?.toDate()?.time,
@@ -55,6 +55,6 @@ object PaymentDocument {
         )
     }
 
-    /** [amount] as the wire carries it: two decimal places, no grouping, a dot — the card's form. */
-    fun amountText(amount: BigDecimal): String = PaymentQr.amountText(amount)
+    /** [amountMinor] as the wire carries it: two decimal places, no grouping, a dot — the card's form. */
+    fun amountText(amountMinor: Long): String = PaymentQr.amountText(amountMinor)
 }

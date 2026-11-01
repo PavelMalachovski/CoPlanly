@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
-import java.math.BigDecimal
 import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -84,8 +83,8 @@ class PaymentStore @Inject constructor(
     }
 
     /**
-     * Records that the signed-in parent paid [amount] of [currency] for [month] to the other parent
-     * of [familyId], and posts the card.
+     * Records that the signed-in parent paid [amountMinor] (minor units: 45000 is 450.00) of
+     * [currency] for [month] to the other parent of [familyId], and posts the card.
      *
      * @return Whether the payment was stored.
      */
@@ -94,7 +93,7 @@ class PaymentStore @Inject constructor(
         kind: PaymentKind,
         month: YearMonth,
         currency: String,
-        amount: BigDecimal
+        amountMinor: Long
     ): Boolean {
         val me = signedInUid() ?: return false
         val payee = FamilyKey.membersOf(familyId)?.toList()?.singleOrNull { it != me } ?: return false
@@ -104,7 +103,7 @@ class PaymentStore @Inject constructor(
             kind = kind,
             month = month,
             currency = currency,
-            amount = amount,
+            amountMinor = amountMinor,
             payerUid = me,
             payeeUid = payee
         )
@@ -178,7 +177,7 @@ class PaymentStore @Inject constructor(
             entityId = payment.id,
             title = payment.month.toString(),
             whenIso = payment.month.atDay(1).toString(),
-            amount = PaymentDocument.amountText(payment.amount),
+            amount = PaymentDocument.amountText(payment.amountMinor),
             currency = payment.currency
         )
     }

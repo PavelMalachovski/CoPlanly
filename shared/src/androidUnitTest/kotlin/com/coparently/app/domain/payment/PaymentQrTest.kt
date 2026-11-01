@@ -1,8 +1,8 @@
 package com.coparently.app.domain.payment
 
+import com.coparently.app.domain.money.DecimalText
 import org.junit.Test
 import org.tukaani.xz.LZMAInputStream
-import java.math.BigDecimal
 import java.util.zip.CRC32
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -16,7 +16,7 @@ class PaymentQrTest {
 
     private fun request(iban: String, currency: String, amount: String = "450") = PaymentRequest(
         iban = iban,
-        amount = BigDecimal(amount),
+        amountMinor = DecimalText.parse(amount, PaymentQr.MONEY_SCALE)!!,
         currency = currency,
         beneficiary = "Zuzana Nová",
         note = "CoPlanly 2026-10"

@@ -53,7 +53,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -372,7 +371,7 @@ class ChangeRequestWithdrawTest {
         familyId = "u1__u2",
         participants = listOf("u1", "u2"),
         proposal = SupportProposal(
-            SupportTerms(BigDecimal("3000"), "CZK", 15, "u2", YearMonth.of(2026, 11)),
+            SupportTerms(300_000L, "CZK", 15, "u2", YearMonth.of(2026, 11)),
             proposedBy = uid,
             proposedAtMillis = 1L
         )

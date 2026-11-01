@@ -2,7 +2,6 @@ package com.coparently.app.domain.payments
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.YearMonth
 
 /** "I paid" and "Money arrived" (25 October 2026): the id the rules rebuild, and each reader's state. */
@@ -14,7 +13,7 @@ class PaymentTest {
         kind = PaymentKind.EXPENSES,
         month = YearMonth.of(2026, 10),
         currency = "CZK",
-        amount = BigDecimal("450.00"),
+        amountMinor = 45_000L,
         payerUid = BOB,
         payeeUid = ALICE
     )

@@ -1,6 +1,5 @@
 package com.coparently.app.domain.payments
 
-import java.math.BigDecimal
 import java.time.YearMonth
 
 /**
@@ -29,6 +28,7 @@ enum class PaymentKind(val wire: String) {
  * Two steps, each written by the parent it is about: nobody can say the other paid, and nobody
  * can say money arrived to the other.
  *
+ * @property amountMinor What was paid, in minor units at two decimals: 45000 is the wire's "450.00".
  * @property paidAtMillis When the server stored the payer's word, or null until it has.
  * @property confirmedAtMillis When the parent paid confirmed it, or null while they have not.
  */
@@ -38,7 +38,7 @@ data class Payment(
     val kind: PaymentKind,
     val month: YearMonth,
     val currency: String,
-    val amount: BigDecimal,
+    val amountMinor: Long,
     val payerUid: String,
     val payeeUid: String,
     val paidAtMillis: Long? = null,

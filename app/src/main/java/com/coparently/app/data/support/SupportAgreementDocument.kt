@@ -1,5 +1,6 @@
 package com.coparently.app.data.support
 
+import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportProposal
@@ -15,7 +16,7 @@ object SupportAgreementDocument {
 
     /** [terms] as the agreement map: what an acceptance copies from the proposal, field for field. */
     fun termsMap(terms: SupportTerms): Map<String, Any> = mapOf(
-        "amount" to PaymentQr.amountText(terms.amount),
+        "amount" to PaymentQr.amountText(terms.amountMinor),
         "currency" to terms.currency,
         "dayOfMonth" to terms.dayOfMonth,
         "payerUid" to terms.payerUid,
@@ -49,7 +50,7 @@ object SupportAgreementDocument {
             ?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
             ?: return null
         return SupportTerms(
-            amount = (map["amount"] as? String)?.toBigDecimalOrNull() ?: return null,
+            amountMinor = MinorUnits.fromText(map["amount"] as? String) ?: return null,
             currency = map["currency"] as? String ?: return null,
             dayOfMonth = (map["dayOfMonth"] as? Number)?.toInt() ?: return null,
             payerUid = map["payerUid"] as? String ?: return null,

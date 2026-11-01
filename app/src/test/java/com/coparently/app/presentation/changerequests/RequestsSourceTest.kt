@@ -46,7 +46,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -226,7 +225,7 @@ class RequestsSourceTest {
         familyId = "u1__u2",
         participants = listOf("u1", "u2"),
         proposal = SupportProposal(
-            SupportTerms(BigDecimal("3000"), "CZK", 15, "u2", YearMonth.of(2026, 11)),
+            SupportTerms(300_000L, "CZK", 15, "u2", YearMonth.of(2026, 11)),
             proposedBy = "u2",
             proposedAtMillis = 1L
         )
