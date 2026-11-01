@@ -2,6 +2,7 @@ package com.coparently.app.domain.parentingplan
 
 import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.platform.Sha256
+import com.coparently.app.domain.text.Utf8
 
 /**
  * Which agreed parenting-plan answer a custody proposal was built from (MON-21).
@@ -92,7 +93,7 @@ object PlanCitationCodec {
 
     /** The truncated SHA-256 of [text], as [PlanCitation.answerHash] stores it. */
     fun hashOf(text: String): String {
-        val digest = Sha256.digest(text.encodeToByteArray())
+        val digest = Sha256.digest(Utf8.encode(text))
         return digest.toHex().take(HASH_HEX_CHARS)
     }
 }

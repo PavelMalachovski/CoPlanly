@@ -4,6 +4,7 @@ import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.platform.Lzma1Raw
 import com.coparently.app.domain.platform.canonicalDecomposition
 import com.coparently.app.domain.text.Crc32
+import com.coparently.app.domain.text.Utf8
 
 /**
  * One payment a parent is asked to make: to whom, how much, and what the bank shows as the note.
@@ -128,7 +129,7 @@ object PaymentQr {
         private const val CHAR_MASK = 31
 
         fun encode(request: PaymentRequest): String? {
-            val payload = document(request).encodeToByteArray()
+            val payload = Utf8.encode(document(request))
             val crc = Crc32.of(payload)
             val withCrc = littleEndian(crc, Int.SIZE_BYTES) + payload
             val compressed = Lzma1Raw.encode(withCrc) ?: return null
