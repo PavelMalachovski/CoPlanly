@@ -20,6 +20,7 @@ import io.ktor.http.headersOf
  * mock engine in place of OkHttp or NSURLSession.
  */
 internal class RecordingServer(
+    timeouts: HttpTimeouts = HttpTimeouts.SCHOOL,
     private val respond: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData =
         { answer("") }
 ) {
@@ -32,7 +33,7 @@ internal class RecordingServer(
             requests += request
             respond(request)
         }
-    ) { sharedConfiguration() }
+    ) { sharedConfiguration(timeouts) }
 
     /** The [index]th request's body as text. */
     suspend fun bodyOf(index: Int): String = requests[index].body.toByteArray().decodeToString()

@@ -966,7 +966,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the event draft
   through `StoredJson` as `EventViewModel` saves it; the chat and revision mappers; `Converters`.
   The calendar's `@Key` models had a case while google-http-client parsed them with its own Gson;
-  it left in MON-24 phase 2, and the import now reads Google's JSON by hand on Ktor.
+  it left in MON-24 phase 2, and the import now reads Google's JSON by hand on Ktor; `HttpImportProbe`
+  runs both imports' clients and parsers (a recorded `events.list` page, a Bakaláři sign-in and
+  events) through the whole minified Ktor pipeline on an in-memory engine, and
+  `tools/check-r8-probe.js` requires its two cases as it requires every stored model.
   `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
   fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
   a value that does not read back equal, a probe that did not finish, and a stored model
@@ -1464,8 +1467,8 @@ file by file:
 moves to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`
 is `shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.kt` (its test under
 `shared-data/src/commonTest/`). Moved so far (Task 5, the HTTP clients on Ktor): `data/http/` (new:
-`httpClient()`, OkHttp on Android and Darwin on iOS, and the address and form encodings the old
-clients wrote); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
+`httpClient(HttpTimeouts)`, OkHttp on Android and Darwin on iOS, and the address and form encodings,
+the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
 `BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and
 `BakalariAuthorizer` stay in the app; and in `data/remote/google/`, `GoogleCalendarApi`,
 `CalendarPaging` and the new `GoogleCalendarEvents` — `GoogleCalendarAccess`, `CredentialProvider`
@@ -2434,7 +2437,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     Ktor in `shared-data/` since MON-24 phase 2** (OkHttp before; the parsers and the authorizer
     stay in the app — see "Where a `data/…` path lives"), and send what OkHttp 4.12 sent, form
     encoding and address included: `BakalariRequestShapeTest` and `WebAddressVectorsTest` hold the
-    bytes, because the event ids below hash the address `BakalariUrls.normalize` writes. Don't hand
+    bytes, because the event ids below hash the address `BakalariUrls.normalize` writes. It also
+    waits and follows redirects as OkHttp did (`HttpTimeouts.SCHOOL`, `Redirects.OKHTTP_4`: a sign-in
+    answered 307 or 308 is posted again; `BakalariRedirectsTest`), because Ktor's own redirect plugin
+    follows GET only. Don't hand
     an address or a form to Ktor's own encoders, and don't let a logging plugin near the client (the
     form carries the password). Six things not to undo.
     - **The password is used once and dropped.** A connection is one `EncryptedPreferences` key,
@@ -3187,7 +3193,9 @@ below hold what it fixed in place.
     Its create, update and delete had no caller and went with the full `calendar` scope. Since
     MON-24 phase 2 it is a Ktor call to Calendar API v3 `events.list` in `shared-data/` (it was
     google-api-client's), sending the request that library sent (`GoogleCalendarRequestShapeTest`)
-    with the access token alone (`GoogleCredential`), and reading the page by hand.
+    with the access token alone (`GoogleCredential`), with its timeouts and redirects, and reading
+    the page by hand as strictly as its parser did: a page or a time it could not read still fails
+    the import (`GoogleCalendarApiTest`, `GoogleDateTimeTest`).
     `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
     easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
     an event shared. **The import runs on its own while the switch is on** (owner request, 28 October

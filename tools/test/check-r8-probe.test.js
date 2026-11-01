@@ -5,7 +5,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parse, problemsOf, junit } = require('../check-r8-probe.js');
+const { parse, problemsOf, junit, REQUIRED_CALL_SITES } = require('../check-r8-probe.js');
+const fs = require('fs');
+const path = require('path');
 
 const MED = 'com.coparently.app.domain.model.Medication';
 const VAC = 'com.coparently.app.domain.model.Vaccination';
@@ -96,4 +98,15 @@ test('the real discovery requires the models the probe names', () => {
 test('production code imports no Gson', () => {
   const { gsonImports } = require('../check-invariants.js');
   assert.deepEqual([...gsonImports().keys()], []);
+});
+
+test('every required call site is a label the probe reports', () => {
+  // The labels are literals in two languages; a renamed one would make the requirement unmeetable.
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', '..', 'app/src/r8Test/java/com/coparently/app/r8probe/HttpImportProbe.kt'),
+    'utf8'
+  );
+  for (const label of REQUIRED_CALL_SITES) {
+    assert.ok(source.includes(`"${label}"`), `HttpImportProbe.kt does not report "${label}"`);
+  }
 });

@@ -127,6 +127,16 @@ function junit(run, required) {
   );
 }
 
+/**
+ * Probe cases that are not stored models but call sites the minified build must run, each a label
+ * `HttpImportProbe` reports (MON-24 fix round): both imports' HTTP clients and parsers. Required
+ * like a stored model, so a case that stops running fails here rather than vanishing.
+ */
+const REQUIRED_CALL_SITES = [
+  'Google Calendar events.list page through GoogleCalendarApi',
+  'Bakalari sign-in and events through BakalariClient',
+];
+
 if (require.main === module) {
   const args = process.argv.slice(2);
   const junitAt = args.indexOf('--junit');
@@ -139,7 +149,7 @@ if (require.main === module) {
   }
 
   const run = parse(fs.readFileSync(input, 'utf8'));
-  const required = [...require('./check-invariants.js').storedJsonModels().keys()];
+  const required = [...require('./check-invariants.js').storedJsonModels().keys(), ...REQUIRED_CALL_SITES];
   const problems = problemsOf(run, required);
 
   for (const c of run.cases) {
@@ -153,7 +163,7 @@ if (require.main === module) {
   }
 
   const passed = run.cases.filter((c) => c.ok === 'true').length;
-  console.log(`\nr8 probe: ${passed} of ${run.cases.length} case(s) passed; ${required.length} stored model(s) required`);
+  console.log(`\nr8 probe: ${passed} of ${run.cases.length} case(s) passed; ${required.length} type(s) and call site(s) required`);
   if (problems.length) {
     const annotate = process.env.GITHUB_ACTIONS === 'true' ? '::error::' : '';
     console.error(`\n${problems.length} problem(s) in the minified build:`);
@@ -163,4 +173,4 @@ if (require.main === module) {
   console.log('Every stored model wrote its source field names and read back equal in the minified build.');
 }
 
-module.exports = { parse, problemsOf, junit };
+module.exports = { parse, problemsOf, junit, REQUIRED_CALL_SITES };

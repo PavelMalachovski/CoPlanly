@@ -1,12 +1,13 @@
 package com.coparently.app.data.remote.google
 
+import com.coparently.app.data.http.Answer
+import com.coparently.app.data.http.Outgoing
 import com.coparently.app.data.http.PercentEncoding
+import com.coparently.app.data.http.Redirects
+import com.coparently.app.data.http.send
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -30,7 +31,8 @@ class GoogleCredential(val accessToken: String) {
 /**
  * Google Calendar, read and only read: one call, Calendar API v3 `events.list`, made on Ktor since
  * MON-24. It replaced google-api-client's `Calendar.events().list(…)`, which it calls exactly as
- * that did (`GoogleCalendarRequestShapeTest`).
+ * that did (`GoogleCalendarRequestShapeTest`), with the same timeouts (`HttpTimeouts.GOOGLE_CALENDAR`)
+ * and the same redirects (`Redirects.GOOGLE_HTTP_CLIENT`).
  *
  * [listEvents] is the one call the app makes to Google Calendar, under the read-only scope the
  * app's `GoogleCalendarAccess.SCOPE` names. There is no create, update or delete here on purpose:
@@ -60,7 +62,10 @@ class GoogleCalendarApi internal constructor(
      *
      * @param limit Most events to return. Reaching it sets [CalendarEvents.truncated].
      * @throws GoogleCalendarHttpException when Google answers with an error status.
-     * @throws kotlinx.io.IOException when Google cannot be reached.
+     * @throws kotlinx.io.IOException when Google cannot be reached, or answers with something that is
+     *   not JSON (`GoogleCalendarJson`).
+     * @throws IllegalArgumentException when a page cannot be read as a page of events, as
+     *   google-api-client's parser threw.
      */
     suspend fun listEvents(
         credential: GoogleCredential,
@@ -81,7 +86,9 @@ class GoogleCalendarApi internal constructor(
             val query = "maxResults=$PAGE_SIZE&orderBy=startTime" +
                 pageToken?.let { "&pageToken=" + PercentEncoding.googleQuery(it) }.orEmpty() +
                 "&singleEvents=true" + window
-            page(http.get("$pagePath?$query") { header(HttpHeaders.Authorization, "Bearer ${credential.accessToken}") })
+            val authorization = HttpHeaders.Authorization to "Bearer ${credential.accessToken}"
+            val outgoing = Outgoing(HttpMethod.Get, "$pagePath?$query", listOf(authorization))
+            page(http.send(outgoing, Redirects.GOOGLE_HTTP_CLIENT))
         }
 
         return CalendarEvents(
@@ -92,16 +99,15 @@ class GoogleCalendarApi internal constructor(
         )
     }
 
-    private suspend fun page(response: HttpResponse): PageOf<GoogleCalendarEvent> {
-        val body = response.bodyAsText()
-        if (response.status.value !in HTTP_SUCCESS) {
+    private fun page(answer: Answer): PageOf<GoogleCalendarEvent> {
+        if (answer.status !in HTTP_SUCCESS) {
             throw GoogleCalendarHttpException.of(
-                statusCode = response.status.value,
-                body = body,
-                authenticate = response.headers[HttpHeaders.WWWAuthenticate]
+                statusCode = answer.status,
+                body = answer.body,
+                authenticate = answer.headers[HttpHeaders.WWWAuthenticate]
             )
         }
-        return GoogleCalendarJson.page(body)
+        return GoogleCalendarJson.page(answer.body)
     }
 
     /**

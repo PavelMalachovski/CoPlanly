@@ -2,15 +2,16 @@
 
 package com.coparently.app.data.school.bakalari
 
+import com.coparently.app.data.http.Outgoing
+import com.coparently.app.data.http.Redirects
 import com.coparently.app.data.http.WebAddress
+import com.coparently.app.data.http.send
 import com.coparently.app.data.school.bakalari.BakalariJson.objects
 import com.coparently.app.data.school.bakalari.BakalariJson.text
 import com.coparently.app.domain.InternalSharedApi
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import kotlinx.io.IOException
 import kotlinx.serialization.json.JsonObject
 
@@ -67,8 +68,9 @@ class BakalariSchoolDirectory(private val http: HttpClient) {
 
     private suspend fun fetch(url: String): String {
         val (status, body) = try {
-            val response = http.get(url) { header(HttpHeaders.Accept, "application/json") }
-            response.status.value to response.bodyAsText().removePrefix(BYTE_ORDER_MARK)
+            val outgoing = Outgoing(HttpMethod.Get, url, listOf(HttpHeaders.Accept to "application/json"))
+            val answer = http.send(outgoing, Redirects.OKHTTP_4)
+            answer.status to answer.body.removePrefix(BYTE_ORDER_MARK)
         } catch (e: IOException) {
             throw BakalariException.Network(e)
         }

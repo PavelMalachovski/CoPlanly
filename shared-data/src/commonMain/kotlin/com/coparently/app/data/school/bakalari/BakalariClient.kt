@@ -2,21 +2,16 @@
 
 package com.coparently.app.data.school.bakalari
 
+import com.coparently.app.data.http.Outgoing
 import com.coparently.app.data.http.PercentEncoding
+import com.coparently.app.data.http.Redirects
 import com.coparently.app.data.http.WebAddress
+import com.coparently.app.data.http.send
 import com.coparently.app.data.school.bakalari.BakalariJson.text
 import com.coparently.app.domain.InternalSharedApi
 import io.ktor.client.HttpClient
-import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.header
-import io.ktor.client.request.request
-import io.ktor.client.request.setBody
-import io.ktor.client.request.url
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
-import io.ktor.http.content.TextContent
 import kotlinx.datetime.LocalDate
 import kotlinx.io.IOException
 import kotlinx.serialization.json.JsonObject
@@ -50,7 +45,8 @@ data class BakalariTokens(
  * account out of what the school answers is the app's school import's (its parsers build the
  * `java.time` school domain, which has not moved yet). Each request is the one the OkHttp client
  * made before MON-24, method, address, headers and form body alike; `BakalariRequestShapeTest`
- * holds them.
+ * holds them. Redirects are followed as OkHttp 4.12 followed them ([Redirects.OKHTTP_4]): a school
+ * whose server answers the sign-in with a 307 or 308 gets the form again, as it did.
  */
 class BakalariClient internal constructor(
     private val http: HttpClient,
@@ -68,7 +64,7 @@ class BakalariClient internal constructor(
      * @throws BakalariException.NotBakalari when it answers with anything else.
      */
     suspend fun checkServer(baseUrl: String) {
-        val (status, body) = execute(HttpMethod.Get, urlOf(baseUrl, "api"))
+        val (status, body) = execute(Outgoing(HttpMethod.Get, urlOf(baseUrl, "api")))
         val versioned = status == HTTP_OK && runCatching {
             BakalariJson.arrayOf(body).any { element ->
                 element is JsonObject && !element.text("ApiVersion").isNullOrBlank()
@@ -134,9 +130,7 @@ class BakalariClient internal constructor(
         val form = fields.joinToString("&") { (name, value) ->
             PercentEncoding.formField(name) + "=" + PercentEncoding.formField(value)
         }
-        val (status, body) = execute(HttpMethod.Post, urlOf(baseUrl, "api/login")) {
-            setBody(TextContent(form, ContentType.Application.FormUrlEncoded))
-        }
+        val (status, body) = execute(Outgoing(HttpMethod.Post, urlOf(baseUrl, "api/login"), form = form))
         if (status == HTTP_BAD_REQUEST || status == HTTP_UNAUTHORIZED) {
             // Matched on `error`, never on `error_description`, which is Czech free text.
             val error = runCatching { BakalariJson.objectOf(body).text("error") }.getOrNull()
@@ -159,10 +153,11 @@ class BakalariClient internal constructor(
     }
 
     private suspend fun get(url: String, accessToken: String): String {
-        val (status, body) = execute(HttpMethod.Get, url) {
-            header(HttpHeaders.Authorization, "Bearer $accessToken")
-            header(HttpHeaders.Accept, "application/json")
-        }
+        val headers = listOf(
+            HttpHeaders.Authorization to "Bearer $accessToken",
+            HttpHeaders.Accept to "application/json"
+        )
+        val (status, body) = execute(Outgoing(HttpMethod.Get, url, headers))
         if (status == HTTP_OK) return body
         throw when (status) {
             HTTP_UNAUTHORIZED -> BakalariException.Unauthorized()
@@ -171,18 +166,10 @@ class BakalariClient internal constructor(
         }
     }
 
-    private suspend fun execute(
-        method: HttpMethod,
-        address: String,
-        configure: HttpRequestBuilder.() -> Unit = {}
-    ): Pair<Int, String> = try {
-        val response = http.request {
-            this.method = method
-            url(address)
-            configure()
-        }
+    private suspend fun execute(outgoing: Outgoing): Pair<Int, String> = try {
+        val answer = http.send(outgoing, Redirects.OKHTTP_4)
         // OkHttp's `string()` dropped a UTF-8 byte order mark, which an ASP.NET server may write.
-        response.status.value to response.bodyAsText().removePrefix(BYTE_ORDER_MARK)
+        answer.status to answer.body.removePrefix(BYTE_ORDER_MARK)
     } catch (e: IOException) {
         throw BakalariException.Network(e)
     }

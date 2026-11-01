@@ -1,5 +1,6 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.data.http.HttpTimeouts
 import com.coparently.app.data.http.httpClient
 import com.coparently.app.data.school.SchoolImportScheduler
 import com.coparently.app.data.school.WorkManagerSchoolImportScheduler
@@ -9,7 +10,8 @@ import org.koin.dsl.module
 
 /**
  * The HTTP client the school import (MON-8) talks to school servers and Bakaláři's directory with,
- * on Ktor since MON-24 (`shared-data`'s `httpClient()`: OkHttp on Android, 20-second timeouts).
+ * on Ktor since MON-24 (`shared-data`'s `httpClient`: OkHttp on Android, with the timeouts the
+ * school's OkHttp client had, `HttpTimeouts.SCHOOL`).
  *
  * Qualified so it can never be picked up by something else by accident: it carries no logging,
  * no cache and no cookies, and the requests it makes carry a child's school credentials. The name
@@ -23,5 +25,5 @@ val schoolModule = module {
     single<SchoolImportScheduler> { get<WorkManagerSchoolImportScheduler>() }
 
     // The client for school servers and Bakaláři's directory.
-    single<HttpClient>(SCHOOL_HTTP_CLIENT) { httpClient() }
+    single<HttpClient>(SCHOOL_HTTP_CLIENT) { httpClient(HttpTimeouts.SCHOOL) }
 }

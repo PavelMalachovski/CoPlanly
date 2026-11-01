@@ -32,7 +32,8 @@ import org.json.JSONObject
  * carries them as literals, so R8 renaming a field must change nothing), that R8 left each
  * generated serializer whole, and that what is written reads back equal. Google's calendar models,
  * which google-http-client filled by reflection through its own Gson, had a case until that client
- * left in MON-24 phase 2. It is compiled only into the `r8Test` build type, which is `release` plus this
+ * left in MON-24 phase 2; `HttpImportProbe` now runs both imports' clients and parsers instead. It
+ * is compiled only into the `r8Test` build type, which is `release` plus this
  * package, a keep rule for its entry point (`app/proguard-r8test.pro`) and the debug signing key.
  *
  * **Production paths, not copies of them.** A child and a pet go through `ChildInfoRepositoryImpl`
@@ -72,7 +73,7 @@ internal class R8JsonProbe(private val context: Context) {
                 database.close()
             }
         }
-        return setup + cases + dayOverrideCases() + eventDraftCases() + libraryTypeCases()
+        return setup + cases + dayOverrideCases() + eventDraftCases() + libraryTypeCases() + HttpImportProbe.run()
     }
 
     private fun firebaseApp(): FirebaseApp =

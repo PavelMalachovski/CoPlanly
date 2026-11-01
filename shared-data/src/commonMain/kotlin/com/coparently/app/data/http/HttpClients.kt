@@ -12,24 +12,52 @@ import io.ktor.client.plugins.HttpTimeout
  * Each caller owns the client it is handed, so the school's requests, which carry a child's school
  * credentials, never share a client with anything else. It logs nothing — no `Logging` plugin is
  * installed — because a request body carries the school password and the headers carry the OAuth
- * and Bakaláři tokens. It does not throw on an HTTP error status: each client reads the status
- * itself, as it did on OkHttp.
+ * and Bakaláři tokens. It does not throw on an HTTP error status, and it does not follow a
+ * redirect: each client reads the status itself and follows redirects as the library it replaced
+ * did ([send], [Redirects]).
+ *
+ * @param timeouts The timeouts of the library the client replaced.
  */
-expect fun httpClient(): HttpClient
+expect fun httpClient(timeouts: HttpTimeouts): HttpClient
 
 /**
- * What every platform's client is configured with: the timeouts the school import's OkHttp client
- * had (20 seconds to connect and between two reads or writes, 40 for the whole call), which are
- * also google-http-client's 20-second connect and read defaults the Calendar import ran with.
+ * How long a client waits, as the library it replaced waited (MON-24).
+ *
+ * @property connectMillis To open a connection.
+ * @property socketMillis Between two reads or two writes.
+ * @property callMillis For the whole call, redirects included, or null for no limit.
  */
-internal fun HttpClientConfig<*>.sharedConfiguration() {
-    expectSuccess = false
-    install(HttpTimeout) {
-        connectTimeoutMillis = TIMEOUT_MILLIS
-        socketTimeoutMillis = TIMEOUT_MILLIS
-        requestTimeoutMillis = TIMEOUT_MILLIS * 2
+class HttpTimeouts private constructor(
+    val connectMillis: Long,
+    val socketMillis: Long,
+    val callMillis: Long?
+) {
+    companion object {
+        private const val TWENTY_SECONDS = 20_000L
+        private const val FORTY_SECONDS = 40_000L
+
+        /**
+         * The school import's OkHttp client before MON-24 (`SchoolModule`): 20 seconds to connect,
+         * to read and to write, and 40 for the whole call (`callTimeout`).
+         */
+        val SCHOOL = HttpTimeouts(TWENTY_SECONDS, TWENTY_SECONDS, FORTY_SECONDS)
+
+        /**
+         * google-http-client 1.42.3's `HttpRequest` defaults, which the Calendar import never
+         * changed: 20 seconds to connect and to read, no limit on writing (the GET writes no body)
+         * and none on the whole call.
+         */
+        val GOOGLE_CALENDAR = HttpTimeouts(TWENTY_SECONDS, TWENTY_SECONDS, null)
     }
 }
 
-/** A server that has not answered in this long is treated as unreachable. */
-private const val TIMEOUT_MILLIS = 20_000L
+/** What every platform's client is configured with, for [timeouts]. */
+internal fun HttpClientConfig<*>.sharedConfiguration(timeouts: HttpTimeouts) {
+    expectSuccess = false
+    followRedirects = false
+    install(HttpTimeout) {
+        connectTimeoutMillis = timeouts.connectMillis
+        socketTimeoutMillis = timeouts.socketMillis
+        requestTimeoutMillis = timeouts.callMillis
+    }
+}

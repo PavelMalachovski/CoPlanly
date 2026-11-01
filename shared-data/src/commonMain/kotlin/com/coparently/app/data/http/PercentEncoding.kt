@@ -27,6 +27,9 @@ internal object PercentEncoding {
     /** What OkHttp dropped from a path it read: tabs and line breaks. */
     private const val LINE_CHARACTERS = "\t\n\u000c\r"
 
+    /** OkHttp's `QUERY_ENCODE_SET`: what a query read from an address percent-encodes. */
+    private const val QUERY_ENCODE_SET = " \"'<>#"
+
     /** OkHttp's `PATH_SEGMENT_ENCODE_SET`: what a path segment percent-encodes. */
     private const val PATH_SEGMENT_ENCODE_SET = " \"<>^`{}|/\\?#"
 
@@ -50,6 +53,15 @@ internal object PercentEncoding {
         return encode(dropped) { c ->
             c >= FIRST_PRINTABLE && c < DELETE && c !in PATH_SEGMENT_ENCODE_SET && (c != '%' || alreadyEncoded)
         }
+    }
+
+    /**
+     * [text] as the query of an address read from text (a redirect's `Location`), as OkHttp's
+     * `canonicalize` kept it: escapes and `+` as they are, tabs and line breaks dropped, and
+     * control characters, non-ASCII and the query set's characters percent-encoded as UTF-8.
+     */
+    fun query(text: String): String = encode(text.filterNot { it in LINE_CHARACTERS }) { c ->
+        c >= FIRST_PRINTABLE && c < DELETE && c !in QUERY_ENCODE_SET
     }
 
     /** [value] with every character [keep] refuses written as its UTF-8 bytes, each `%XX`. */

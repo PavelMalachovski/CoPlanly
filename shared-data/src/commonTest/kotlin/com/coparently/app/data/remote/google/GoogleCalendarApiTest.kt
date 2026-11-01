@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.google
 
+import com.coparently.app.data.http.HttpTimeouts
 import com.coparently.app.data.http.RecordingServer
 import com.coparently.app.data.http.answer
 import io.ktor.http.HttpHeaders
@@ -28,6 +29,10 @@ class GoogleCalendarApiTest {
     private val from = LocalDateTime(2026, 11, 1, 0, 0)
 
     private fun api(server: RecordingServer) = GoogleCalendarApi(server.client, { TimeZone.UTC }, Clock.System)
+
+    private fun serving(body: String) = RecordingServer(HttpTimeouts.GOOGLE_CALENDAR) { answer(body) }
+
+    private suspend fun eventsIn(body: String) = api(serving(body)).listEvents(credential, timeMin = from).events
 
     @Test
     fun `a page's events are read as the Calendar models read them`() = runTest {
@@ -75,10 +80,114 @@ class GoogleCalendarApiTest {
     }
 
     @Test
-    fun `a page with no items is an empty page`() = runTest {
-        val server = RecordingServer { answer("""{"kind":"calendar#events"}""") }
+    fun `a page with no items is an empty page - and so is null`() = runTest {
+        assertTrue(eventsIn("""{"kind":"calendar#events"}""").isEmpty())
+        assertTrue(eventsIn("null").isEmpty())
+    }
 
-        assertTrue(api(server).listEvents(credential, timeMin = from).events.isEmpty())
+    // What google-api-client threw for a page it could not read, so the import fails as it failed
+    // (`CalendarSyncRepository`: an IOException is "network", anything else "unknown"). Each was
+    // printed by running google-api-client 2.2.0 over the same body.
+
+    @Test
+    fun `a page that is not JSON fails as the network - as Gson's MalformedJsonException did`() = runTest {
+        for (body in listOf("<html><body>Sign in to the Wi-Fi</body></html>", "{'items':[]}", "{\"items\":[],}")) {
+            assertFailsWith<IOException>("for [$body]") { eventsIn(body) }
+        }
+    }
+
+    @Test
+    fun `an empty or cut-short page or one of the wrong shape fails the import`() = runTest {
+        val bodies = listOf(
+            "",
+            "[]",
+            """{"items":[{"id":"e1"""",
+            """{"items":{"id":"e1"}}""",
+            """{"items":[{"id":5}]}""",
+            """{"items":[{"id":"e1","start":"x"}]}""",
+            """{"items":[{"id":"e1","recurrence":"RRULE"}]}""",
+            """{"items":[],"nextPageToken":5}"""
+        )
+        for (body in bodies) {
+            assertFailsWith<IllegalArgumentException>("for [$body]") { eventsIn(body) }
+        }
+    }
+
+    @Test
+    fun `a time that does not parse fails the whole page - not just its event`() = runTest {
+        val times = listOf(
+            """{"dateTime":"garbage"}""",
+            """{"dateTime":"2026-05-04T16:00:00+0200"}""",
+            """{"date":"2026-5-4"}"""
+        )
+        for (time in times) {
+            val body = """{"items":[{"id":"fine","summary":"Fine"},{"id":"e1","start":$time}]}"""
+            assertFailsWith<IllegalArgumentException>("for $time") { eventsIn(body) }
+        }
+    }
+
+    @Test
+    fun `explicit nulls read as google-api-client read them`() = runTest {
+        val body = """{"items":[null,""" +
+            """{"id":null,"summary":null,"start":null,"end":{"dateTime":null},"recurrence":null}]}"""
+
+        val (unset, nulls) = eventsIn(body)
+
+        assertEquals(GoogleCalendarEvent(null, null, null, null, null, null), unset)
+        assertEquals("", nulls.id)
+        assertEquals("", nulls.summary)
+        assertNull(nulls.start?.dateTime)
+        assertEquals(0L, nulls.end?.dateTime?.toEpochMilliseconds())
+        assertEquals(emptyList(), nulls.recurrence)
+    }
+
+    @Test
+    fun `a date read from a date-time is its UTC date - as google-api-client gave it`() = runTest {
+        val body = """{"items":[{"id":"e1","start":{"date":"2026-05-04T23:30:00-05:00"},""" +
+            """"end":{"dateTime":"2026-05-04"}}]}"""
+
+        val event = eventsIn(body).single()
+
+        assertEquals(LocalDate(2026, 5, 5), event.start?.date)
+        assertEquals(1_777_852_800_000L, event.end?.dateTime?.toEpochMilliseconds())
+    }
+
+    // Redirects as google-http-client 1.42.3's `handleRedirect` followed them (run with
+    // MockWebServer and NetHttpTransport): 301 to 308, the bearer token sent on, 10 at most.
+
+    @Test
+    fun `a redirect is followed with the bearer token - even to another host`() = runTest {
+        for (status in listOf(301, 302, 303, 307, 308)) {
+            val server = RecordingServer(HttpTimeouts.GOOGLE_CALENDAR) { request ->
+                if (request.url.host == "www.googleapis.com") {
+                    answer("", status, headersOf(HttpHeaders.Location, "https://other.example/next?q=1"))
+                } else {
+                    answer("""{"items":[{"id":"moved"}]}""")
+                }
+            }
+
+            val read = api(server).listEvents(credential, timeMin = from)
+
+            assertEquals("moved", read.events.single().id, "after $status")
+            assertEquals("https://other.example/next?q=1", server.requests[1].url.toString())
+            assertEquals("GET", server.requests[1].method.value)
+            assertEquals("Bearer ya29.token", server.requests[1].headers[HttpHeaders.Authorization])
+        }
+    }
+
+    @Test
+    fun `a 300 is not followed - and the eleventh redirect is the answer`() = runTest {
+        val multiple = RecordingServer(HttpTimeouts.GOOGLE_CALENDAR) {
+            answer("", status = 300, headers = headersOf(HttpHeaders.Location, "/elsewhere"))
+        }
+        assertEquals(300, refusalOf(multiple).statusCode)
+        assertEquals(1, multiple.requests.size)
+
+        val loop = RecordingServer(HttpTimeouts.GOOGLE_CALENDAR) {
+            answer("", status = 302, headers = headersOf(HttpHeaders.Location, "/calendar/v3/loop"))
+        }
+        assertEquals(302, refusalOf(loop).statusCode)
+        assertEquals(11, loop.requests.size)
     }
 
     @Test

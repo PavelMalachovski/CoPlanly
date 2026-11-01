@@ -1069,8 +1069,8 @@ is the first time the import meets a real server. Needs a parent (or student) Ba
 - [ ] Two children at the same school: connect each with its own Bakaláři login (Bakaláři issues
       one per child); each child's events carry that child.
 - **Since MON-24 phase 2** the client talks to the school through Ktor's OkHttp engine (OkHttp
-  5.5.1, from 4.12), from `shared-data/`. The requests are pinned to what OkHttp 4.12 sent
-  (`BakalariRequestShapeTest`), but no real school has answered the new client yet: this section,
+  5.5.1, from 4.12), from `shared-data/`. The requests, the timeouts and the redirects are pinned
+  to what OkHttp 4.12 did (`BakalariRequestShapeTest`, `BakalariRedirectsTest`), but no real school has answered the new client yet: this section,
   run once on that build, is its acceptance.
 - **If it fails:** `data/school/bakalari/` (parsers and the authorizer in the app, the client and
   the directory in `shared-data/`), `data/http/` (`shared-data/`: the Ktor client, the addresses as
@@ -1616,7 +1616,9 @@ the same on B's phone if you have one.
       of the JSON mapping on a release build.
 - [ ] A Google Calendar import on the release build works. It used google-api-client's `@Key`
       models, which R8 could break, until MON-24 phase 2; it now reads Google's JSON by hand on Ktor
-      (`shared-data/`), with nothing R8 can rename, and Ktor ships its own R8 rules. The release
+      (`shared-data/`), with nothing R8 can rename, and Ktor ships its own R8 rules. **[CI]** for the
+      client and the parser on a recorded page in the minified build (`HttpImportProbe`,
+      `r8-runtime`); the OkHttp engine is the phone's. The release
       build is still where R8 would refuse a class Ktor references (`app/proguard-rules.pro`), so
       the import on it is worth one run; the OAuth sign-in and the network are the phone's.
 - [ ] **Telemetry end to end** (a release build has `ENABLE_ANALYTICS=true`):

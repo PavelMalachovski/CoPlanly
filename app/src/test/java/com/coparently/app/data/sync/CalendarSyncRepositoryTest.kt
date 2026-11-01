@@ -216,6 +216,25 @@ class CalendarSyncRepositoryTest {
     }
 
     @Test
+    fun `a page that cannot be read fails the import as google-api-client's did`() = runTest {
+        // `GoogleCalendarJson` throws what google-api-client threw (MON-24 fix round): an
+        // IOException for a body that is not JSON, which reads as the network, and an
+        // IllegalArgumentException for an unreadable page or time, which reads as unknown.
+        signedIn()
+
+        coEvery { googleCalendarApi.listEvents(any(), any(), any(), any(), any()) } throws
+            java.io.IOException("not JSON")
+        val notJson = repository().syncFromGoogle().toList().last()
+        coEvery { googleCalendarApi.listEvents(any(), any(), any(), any(), any()) } throws
+            IllegalArgumentException("key dateTime")
+        val badTime = repository().syncFromGoogle().toList().last()
+
+        assertEquals(SyncResult.Error(SyncFailure.NETWORK), notJson)
+        assertEquals(SyncResult.Error(SyncFailure.UNKNOWN), badTime)
+        coVerify(exactly = 0) { eventDao.insertEvents(any()) }
+    }
+
+    @Test
     fun `a renewal that could not reach Google is told apart from no connection at all`() = runTest {
         signedIn()
 

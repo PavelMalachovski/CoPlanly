@@ -44,7 +44,7 @@ import org.koin.test.verify.verify
  *  * [CustodyModelRepository]'s public primary constructor takes the `CoroutineScope` the tests
  *    hand in; the graph calls its secondary constructor, which supplies the scope itself.
  *  * [AiAssistAvailability] is built from `BuildConfig` in its definition, not resolved.
- *  * Ktor's `HttpClient` is built by `shared-data`'s `httpClient()`, which hands its public
+ *  * Ktor's `HttpClient` is built by `shared-data`'s `httpClient`, which hands its public
  *    constructor the [HttpClientEngine] (OkHttp) itself; nothing resolves an engine.
  */
 @OptIn(KoinExperimentalAPI::class, KoinInternalApi::class)
