@@ -3,7 +3,7 @@ package com.coparently.app.domain.changerequests
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The ready-made deadlines a proposer can pick (phase 3a, spec §4.2).
@@ -276,5 +276,5 @@ object AnswerBy {
     }
 
     private fun offsetMillis(millis: Long, zone: ZoneId): Long =
-        TimeUnit.SECONDS.toMillis(zone.rules.getOffset(Instant.ofEpochMilli(millis)).totalSeconds.toLong())
+        zone.rules.getOffset(Instant.ofEpochMilli(millis)).totalSeconds.seconds.inWholeMilliseconds
 }
