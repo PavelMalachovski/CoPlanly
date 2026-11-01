@@ -1,7 +1,6 @@
 package com.coparently.app.domain.school
 
 import java.time.LocalDateTime
-import java.util.Locale
 
 /**
  * One event from a school's calendar (MON-8): a trip, a parents' evening, a sports day.
@@ -97,5 +96,5 @@ object SchoolEventAudience {
     }
 
     private fun normalise(name: String): String =
-        name.trim().split(Regex("\\s+")).joinToString(" ").lowercase(Locale.ROOT)
+        name.trim().split(Regex("\\s+")).joinToString(" ").lowercase()
 }
