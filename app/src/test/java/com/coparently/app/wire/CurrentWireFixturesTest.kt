@@ -18,7 +18,7 @@ import java.util.TimeZone
  * build's `WireContractTest` over the new files: the previous build reading what this one writes.
  *
  * To regenerate after an intended format change, run
- * `UPDATE_WIRE_FIXTURES=1 ./gradlew testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
+ * `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
  * and review the diff. A missing file is written on any run (and the run fails, so it gets
  * committed). A key an older build will drop when it writes the document back goes in
  * [CurrentWrite.olderBuildsMayDrop], with the reason — the previous build's check fails on any
@@ -59,7 +59,7 @@ class CurrentWireFixturesTest {
         if (problems.isNotEmpty()) {
             fail(
                 problems.joinToString("\n", postfix = "\n") +
-                    "If the change is intended, run: ${WireFixtures.UPDATE_ENV}=1 ./gradlew testDebugUnitTest " +
+                    "If the change is intended, run: ${WireFixtures.UPDATE_ENV}=1 ./gradlew :app:testDebugUnitTest " +
                     "--tests '*CurrentWireFixturesTest*' --rerun, then review and commit the diff under " +
                     "app/src/test/resources/wire/current/."
             )

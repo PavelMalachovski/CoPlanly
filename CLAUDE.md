@@ -1393,7 +1393,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    unreadable codec entry, an unknown member or a proposal's citation that stops surviving turns it
    red, and so does a loss that was fixed but is still declared. `CurrentWireFixturesTest` fails when a
    writer's output no longer matches `wire/current/`: regenerate with
-   `UPDATE_WIRE_FIXTURES=1 ./gradlew testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
+   `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
    and review the diff like a screenshot baseline. **The other direction runs in the `upgrade` job**:
    it copies this branch's `wire/current/` into the base checkout and runs the *base's own*
    `WireContractTest` over it, so the previous build's code reads what this one writes and writes it
