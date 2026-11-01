@@ -1,8 +1,7 @@
 package com.coparently.app.domain.pairing
 
-import java.security.SecureRandom
+import com.coparently.app.domain.platform.secureRandomBytes
 import kotlin.random.Random
-import kotlin.random.asKotlinRandom
 
 /**
  * Generates and validates the short codes a parent reads out or types to pair.
@@ -26,14 +25,29 @@ object InviteCodeGenerator {
      * congruential-style PRNG whose internal state is recoverable from a handful of
      * observed outputs, which would let an attacker who has seen a few codes predict
      * others and undo the entropy the 31^6 alphabet is supposed to provide.
-     * [SecureRandom] has no such structure.
+     * The platform's secure generator ([secureRandomBytes]: `SecureRandom` on Android) has no
+     * such structure.
      */
-    private val secureRandom: Random by lazy { SecureRandom().asKotlinRandom() }
+    private val secureRandom: Random = SecureBitsRandom
+
+    /** A [Random] whose every bit comes from [secureRandomBytes]. */
+    private object SecureBitsRandom : Random() {
+        private const val BYTE_MASK = 0xFF
+
+        override fun nextBits(bitCount: Int): Int {
+            var bits = 0
+            for (byte in secureRandomBytes(Int.SIZE_BYTES)) {
+                bits = (bits shl Byte.SIZE_BITS) or (byte.toInt() and BYTE_MASK)
+            }
+            // The upper [bitCount] bits, as Random.nextBits promises; none for a count of zero.
+            return if (bitCount == 0) 0 else bits ushr (Int.SIZE_BITS - bitCount)
+        }
+    }
 
     /**
      * Returns a new random code.
      *
-     * @param random Source of randomness; defaults to a [SecureRandom]-backed source and is
+     * @param random Source of randomness; defaults to a [secureRandomBytes]-backed source and is
      *   injectable so tests can seed it deterministically.
      */
     fun generate(random: Random = secureRandom): String =

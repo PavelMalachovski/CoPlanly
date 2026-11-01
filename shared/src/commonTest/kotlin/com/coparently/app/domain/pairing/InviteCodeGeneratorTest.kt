@@ -1,10 +1,10 @@
 package com.coparently.app.domain.pairing
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class InviteCodeGeneratorTest {
 
@@ -21,8 +21,8 @@ class InviteCodeGeneratorTest {
         repeat(2_000) {
             val code = InviteCodeGenerator.generate()
             assertTrue(
-                "code $code contains a forbidden character",
-                code.none { it in forbidden }
+                code.none { it in forbidden },
+                "code $code contains a forbidden character"
             )
         }
     }
@@ -46,9 +46,9 @@ class InviteCodeGeneratorTest {
     @Test
     fun `isValid accepts a well formed code and rejects everything else`() {
         assertTrue(InviteCodeGenerator.isValid("4F7K2M"))
-        assertFalse("wrong length", InviteCodeGenerator.isValid("4F7K2"))
-        assertFalse("lowercase", InviteCodeGenerator.isValid("4f7k2m"))
-        assertFalse("ambiguous char", InviteCodeGenerator.isValid("4F7K2O"))
-        assertFalse("empty", InviteCodeGenerator.isValid(""))
+        assertFalse(InviteCodeGenerator.isValid("4F7K2"), "wrong length")
+        assertFalse(InviteCodeGenerator.isValid("4f7k2m"), "lowercase")
+        assertFalse(InviteCodeGenerator.isValid("4F7K2O"), "ambiguous char")
+        assertFalse(InviteCodeGenerator.isValid(""), "empty")
     }
 }
