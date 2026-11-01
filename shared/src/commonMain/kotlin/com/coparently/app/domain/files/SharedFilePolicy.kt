@@ -1,7 +1,5 @@
 package com.coparently.app.domain.files
 
-import java.util.Locale
-
 /**
  * What a file shared between the two parents may be — the vault's documents and chat
  * attachments alike (MON-23).
@@ -60,9 +58,9 @@ object SharedFilePolicy {
      * `application/octet-stream` for a perfectly ordinary PDF.
      */
     fun resolveContentType(reported: String?, fileName: String): String? {
-        val normalized = reported?.lowercase(Locale.ROOT)?.substringBefore(';')?.trim()
+        val normalized = reported?.lowercase()?.substringBefore(';')?.trim()
         if (normalized != null && normalized in CONTENT_TYPES) return normalized
-        val extension = fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+        val extension = fileName.substringAfterLast('.', "").lowercase()
         return EXTENSIONS[extension]
     }
 
