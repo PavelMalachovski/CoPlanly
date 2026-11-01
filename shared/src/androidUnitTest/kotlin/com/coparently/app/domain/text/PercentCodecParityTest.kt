@@ -18,8 +18,9 @@ import kotlin.test.assertTrue
  * port answers null, and everything else, U+FFFD replacements included, is the same text. The class
  * left out is a surrogate written as UTF-8 (an escaped run holding ED followed by A0..BF): the JDK
  * writes one U+FFFD for up to three of those bytes, while the port follows the Unicode Standard
- * (§3.9, "U+FFFD Substitution of Maximal Subparts") and writes one per maximal subpart — ruling R11
- * of MON-24. Those inputs are held to Unicode's count instead ([assertDecodesAsTheJdk]).
+ * (§3.9, "U+FFFD Substitution of Maximal Subparts") and writes one per maximal subpart — a decision
+ * ROADMAP MON-24 records ("a surrogate written as UTF-8 follows Unicode"). Those inputs are held
+ * to Unicode's count instead ([assertDecodesAsTheJdk]).
  */
 class PercentCodecParityTest {
 
@@ -69,7 +70,7 @@ class PercentCodecParityTest {
 
     @Test
     fun aSurrogateWrittenAsUtf8IsOneReplacementPerMaximalSubpart() {
-        // Ruling R11: Unicode's count, not the JDK's single U+FFFD. ED alone is a maximal subpart
+        // Unicode's count, not the JDK's single U+FFFD (ROADMAP MON-24). ED alone is a maximal subpart
         // (its second byte ends at 9F), and every continuation byte after it is one more.
         assertEquals("\uFFFD\uFFFD\uFFFD", PercentCodec.decode("%ED%A0%80"))
         assertEquals("\uFFFD\uFFFD\uFFFD\uFFFD", PercentCodec.decode("%ED%A0%80%80"))
@@ -101,12 +102,12 @@ class PercentCodecParityTest {
 
     /**
      * [text] decodes as `URLDecoder` decodes it — except for a surrogate written as UTF-8, which
-     * ruling R11 takes out of the comparison and holds to the Unicode Standard's count of one U+FFFD
-     * per maximal subpart instead ([unicodeDecode]). Nothing else is excluded.
+     * ROADMAP MON-24's decision takes out of the comparison and holds to the Unicode Standard's
+     * count of one U+FFFD per maximal subpart instead ([unicodeDecode]). Nothing else is excluded.
      */
     private fun assertDecodesAsTheJdk(text: String) {
         if (writesASurrogate(text)) {
-            assertEquals(unicodeDecode(text), PercentCodec.decode(text), "decode(${describe(text)}), R11")
+            assertEquals(unicodeDecode(text), PercentCodec.decode(text), "decode(${describe(text)}), Unicode's count")
         } else {
             assertEquals(urlDecode(text), PercentCodec.decode(text), "decode(${describe(text)})")
         }

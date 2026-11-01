@@ -8,8 +8,9 @@ import kotlin.test.assertNull
  * [PercentCodec] is `URLEncoder`/`URLDecoder` in UTF-8, as the install referrer and the message
  * report write and read it today. These vectors run on the JVM and on iOS, so the iPhone is held to
  * the JDK's answers (computed with JDK 21's `URLDecoder`) — except for a surrogate written as
- * UTF-8, where decoding follows the Unicode Standard's replacement of each maximal subpart (ruling
- * R11); `PercentCodecParityTest` holds the JVM side to the JDK itself.
+ * UTF-8, where decoding follows the Unicode Standard's replacement of each maximal subpart (ROADMAP
+ * MON-24, "a surrogate written as UTF-8 follows Unicode"); `PercentCodecParityTest` holds the JVM
+ * side to the JDK itself.
  */
 class PercentCodecTest {
 
@@ -116,7 +117,7 @@ class PercentCodecTest {
         assertEquals("\uFFFD", PercentCodec.decode("%E2%82"))
         assertEquals("\uFFFD", PercentCodec.decode("%F0%9F%98"))
         // A surrogate written as UTF-8 is three maximal subparts, so three replacements: Unicode's
-        // practice, where the JDK writes one (ruling R11 of MON-24 follows Unicode).
+        // practice, where the JDK writes one (ROADMAP MON-24 records the decision).
         assertEquals("\uFFFD\uFFFD\uFFFD", PercentCodec.decode("%ED%A0%80"))
         assertEquals("\uFFFD\uFFFDA", PercentCodec.decode("%ED%A0%41"))
         assertEquals("\uD7FF", PercentCodec.decode("%ED%9F%BF"))

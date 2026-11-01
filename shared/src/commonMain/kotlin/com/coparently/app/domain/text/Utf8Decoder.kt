@@ -12,7 +12,8 @@ package com.coparently.app.domain.text
  * Subparts"). So `C4` alone is one U+FFFD, `E2 82` cut short is one, `C0 80` (an overlong NUL) is
  * two, and `ED A0 80` (a surrogate written as UTF-8, which Table 3-7 excludes by ending ED's second
  * byte at 9F) is three. The JVM's own decoder writes one U+FFFD for that last case; this one
- * follows Unicode there by decision (ruling R11 of MON-24).
+ * follows Unicode there by decision (ROADMAP MON-24, "a surrogate written as UTF-8 follows
+ * Unicode").
  */
 internal object Utf8Decoder {
 

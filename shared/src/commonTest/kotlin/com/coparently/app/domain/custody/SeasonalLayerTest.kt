@@ -72,7 +72,10 @@ class SeasonalLayerTest {
         fun entry(name: String) = "L1;s;0;2026-07-01;2026-07-31;2026-07-01;1;0;;$name"
 
         assertEquals("€ and ü", SeasonalLayerCodec.decode(entry("%e2%82%AC%20and%20%C3%BC"))?.name)
-        listOf("%C3%28", "%C0%AF", "%ED%A0%80", "%C3", "%F4%90%80%80", "%G1", "%4", "a b", "ü").forEach { name ->
+        val malformed = listOf(
+            "%C3%28", "%C0%AF", "%ED%A0%80", "%C3", "%F4%90%80%80", "%G1", "%4", "Summer%2", "%", "a b", "ü"
+        )
+        malformed.forEach { name ->
             assertNull(SeasonalLayerCodec.decode(entry(name)), name)
             assertEquals(listOf(entry(name)), SeasonalLayerCodec.decodeAll(listOf(entry(name))).unreadable)
         }

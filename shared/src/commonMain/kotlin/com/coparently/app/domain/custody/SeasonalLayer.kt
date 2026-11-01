@@ -323,6 +323,9 @@ object SeasonalLayerCodec {
         while (i < value.length) {
             val c = value[i]
             if (c == ESCAPE) {
+                // Checked here, not left to `substring`: Kotlin/JS does not bounds-check it, so a
+                // short escape at the end would read as one hex digit there.
+                require(i + ESCAPE_LENGTH <= value.length)
                 val hex = value.substring(i + 1, i + ESCAPE_LENGTH)
                 require(hex.all { it in HEX_DIGITS })
                 bytes.add(hex.toInt(HEX_RADIX).toByte())
@@ -334,7 +337,8 @@ object SeasonalLayerCodec {
             }
         }
         // Strict: a malformed or overlong sequence, or an encoded surrogate, throws rather than
-        // decoding to U+FFFD, so an entry that is not valid UTF-8 stays unreadable (ruling R9).
+        // decoding to U+FFFD, so an entry that is not valid UTF-8 stays unreadable (ROADMAP MON-24,
+        // "the seasonal layer's name codec").
         bytes.toByteArray().decodeToString(throwOnInvalidSequence = true)
     }.getOrNull()
 }
