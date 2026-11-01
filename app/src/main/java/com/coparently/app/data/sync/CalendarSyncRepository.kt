@@ -7,6 +7,8 @@ import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleAccessException
 import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.remote.google.GoogleCalendarApi
+import com.coparently.app.data.remote.google.GoogleCalendarEvent
+import com.coparently.app.data.remote.google.GoogleCalendarHttpException
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
@@ -15,12 +17,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
-import com.google.api.services.calendar.model.Event as GoogleEvent
 
 /**
  * Repository for synchronizing events between local database and Google Calendar.
@@ -66,14 +69,15 @@ class CalendarSyncRepository(
 
             // The credential comes with the call: `withCredential` renews an expired token first,
             // renews a refused one once, and ends a connection Google refuses for good - each
-            // failure arriving as a `GoogleAccessException` below. The API call itself runs on the
-            // IO dispatcher to avoid NetworkOnMainThreadException.
+            // failure arriving as a `GoogleAccessException` below. The call runs on the IO
+            // dispatcher: the request suspends on Ktor's engine, but reading up to 2,000 events out
+            // of the pages' JSON is work the main thread should not do.
             val imported = credentialProvider.withCredential { credential ->
                 withContext(Dispatchers.IO) {
                     googleCalendarApi.listEvents(
                         credential = credential,
-                        timeMin = startDate,
-                        timeMax = endDate
+                        timeMin = startDate?.toKotlinLocalDateTime(),
+                        timeMax = endDate?.toKotlinLocalDateTime()
                     )
                 }
             }
@@ -93,8 +97,8 @@ class CalendarSyncRepository(
             emit(
                 SyncResult.Success(
                     synced = eventsToInsert.size,
-                    from = imported.from.toLocalDate(),
-                    until = imported.until.toLocalDate(),
+                    from = imported.from.date.toJavaLocalDate(),
+                    until = imported.until.date.toJavaLocalDate(),
                     truncated = imported.truncated
                 )
             )
@@ -111,16 +115,12 @@ class CalendarSyncRepository(
         } catch (e: android.os.NetworkOnMainThreadException) {
             android.util.Log.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
             emit(SyncResult.Error(SyncFailure.UNKNOWN))
-        } catch (e: com.google.api.client.googleapis.json.GoogleJsonResponseException) {
-            // Google API specific errors
-            android.util.Log.e("CalendarSync", "Google API error: ${e.statusCode} - ${e.message}", e)
-            emit(SyncResult.Error(SyncFailure.forStatus(e.statusCode)))
-        } catch (e: com.google.api.client.http.HttpResponseException) {
-            // HTTP response errors. This MUST precede the IOException branch below —
-            // HttpResponseException extends IOException, so the reverse order (which shipped)
-            // made every 401/403/404/500 here unreachable and surfaced as a generic
-            // "Network error". Kotlin does not flag an unreachable catch the way Java does.
-            android.util.Log.e("CalendarSync", "HTTP error: ${e.statusCode} - ${e.message}", e)
+        } catch (e: GoogleCalendarHttpException) {
+            // Google refused the call. Kept before the IOException branch below: the exception
+            // google-api-client threw before MON-24 extended IOException, and the reverse order
+            // (which shipped once) made every 401/403/404/500 read as a generic "Network error".
+            // Kotlin does not flag an unreachable catch the way Java does.
+            android.util.Log.e("CalendarSync", "Google API error: ${e.statusCode}", e)
             emit(SyncResult.Error(SyncFailure.forStatus(e.statusCode)))
         } catch (e: java.io.IOException) {
             android.util.Log.e("CalendarSync", "Network error: ${e.message}", e)
@@ -202,25 +202,25 @@ class CalendarSyncRepository(
      *   `createdByFirebaseUid` on one: a field written only on the sync path stays null forever
      *   on exactly the rows that never take it.
      */
-    private fun GoogleEvent.toEventEntity(
+    private fun GoogleCalendarEvent.toEventEntity(
         ownerSlot: String,
         ownerUid: String,
         ownerFamilyId: String?
     ): EventEntity {
         // An all-day event carries its date in `date`, not `dateTime`. Reading only `dateTime`
         // and falling back to now() stamped a birthday, a school holiday or an all-day custody
-        // note onto today's cell and lost its real date. `date` is a date-only value at UTC
-        // midnight, so it is read in UTC (not the system zone, which could shift the day).
-        val startDateTime = start?.dateTime?.value?.let { epochMillisToLocal(it) }
-            ?: start?.date?.value?.let { utcMillisToLocalDate(it) }
+        // note onto today's cell and lost its real date. `date` is a calendar date, read as it is
+        // written (google-api-client gave it as UTC midnight, read back in UTC: the same day).
+        val startDateTime = start?.dateTime?.let { epochMillisToLocal(it.toEpochMilliseconds()) }
+            ?: start?.date?.let { it.toJavaLocalDate().atStartOfDay() }
             ?: LocalDateTime.now()
 
         // A date-only end is *exclusive* in Google's model: a one-day event on the 14th ends on
         // the 15th. Stored as the 15th at 00:00 it overlapped the 15th in every day query and was
         // drawn a day too long. It is stored as the last minute of the day before instead, which
         // is how `AllDayEvent` reads a day's close (and how the school import writes one).
-        val endDateTime = end?.dateTime?.value?.let { epochMillisToLocal(it) }
-            ?: end?.date?.value?.let { lastMinuteBefore(utcMillisToLocalDate(it), startDateTime) }
+        val endDateTime = end?.dateTime?.let { epochMillisToLocal(it.toEpochMilliseconds()) }
+            ?: end?.date?.let { lastMinuteBefore(it.toJavaLocalDate().atStartOfDay(), startDateTime) }
 
         val importedAtMillis = System.currentTimeMillis()
         return EventEntity(
@@ -232,7 +232,7 @@ class CalendarSyncRepository(
             eventType = "google",
             parentOwner = ownerSlot,
             isRecurring = recurrence != null,
-            recurrencePattern = recurrence?.firstOrNull()?.toString(),
+            recurrencePattern = recurrence?.firstOrNull(),
             createdAt = LocalDateTime.now(),
             updatedAt = EventTimestamp.toWallClock(importedAtMillis).toJavaLocalDateTime(),
             updatedAtMillis = importedAtMillis,
@@ -272,13 +272,6 @@ class CalendarSyncRepository(
         val startDayClose = start.toLocalDate().atTime(LAST_MINUTE_OF_DAY)
         return if (last.isBefore(startDayClose)) startDayClose else last
     }
-
-    /** An all-day event's UTC-midnight millis as the start of that calendar day. */
-    private fun utcMillisToLocalDate(millis: Long): LocalDateTime =
-        java.time.Instant.ofEpochMilli(millis)
-            .atZone(java.time.ZoneOffset.UTC)
-            .toLocalDate()
-            .atStartOfDay()
 
     private companion object {
         /** Where an imported all-day event's last day closes; `AllDayEvent` reads it as such. */

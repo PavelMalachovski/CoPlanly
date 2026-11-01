@@ -4,6 +4,8 @@ import android.util.Log
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariException
+import com.coparently.app.data.school.bakalari.events
+import com.coparently.app.data.school.bakalari.timetable
 import com.coparently.app.data.school.bakalari.withStatus
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey

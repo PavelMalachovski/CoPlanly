@@ -1,7 +1,6 @@
 package com.coparently.app.data.remote.google
 
-import java.time.LocalDateTime
-import com.google.api.services.calendar.model.Event as GoogleCalendarEvent
+import kotlinx.datetime.LocalDateTime
 
 /**
  * What one import of a Google calendar actually took, and the two bounds it stopped at.
@@ -25,7 +24,7 @@ data class CalendarEvents(
     val until: LocalDateTime
 )
 
-/** One page as the Google client returns it: the items, and the token for the next page if any. */
+/** One page as `events.list` returns it: the items, and the token for the next page if any. */
 internal data class PageOf<T>(val items: List<T>, val nextPageToken: String?)
 
 /** Everything [collectPages] gathered, and whether a limit cut it short. */
@@ -37,16 +36,17 @@ internal data class Paged<T>(val items: List<T>, val truncated: Boolean)
  *
  * Separate from [GoogleCalendarApi] on purpose: paging is where the truncation bug lived, and
  * every interesting case (a limit landing mid-page, a last page with no token, a server that
- * keeps handing back tokens) is testable here without a Google client, a credential or a network.
+ * keeps handing back tokens) is testable here without an HTTP client, a credential or a network.
  *
  * [maxPages] is not a product limit — it is the guard that stops a server returning a
  * non-advancing token from hanging an import. Hitting it reports [Paged.truncated], the same as
  * hitting [limit], because in both cases the caller holds less than the window contains.
  */
-internal fun <T> collectPages(
+@Suppress("ReturnCount") // One return for each way a fetch ends: the cap, no next page, a full list.
+internal suspend fun <T> collectPages(
     limit: Int,
     maxPages: Int,
-    fetch: (pageToken: String?) -> PageOf<T>
+    fetch: suspend (pageToken: String?) -> PageOf<T>
 ): Paged<T> {
     val collected = mutableListOf<T>()
     var pageToken: String? = null

@@ -12,7 +12,9 @@ package com.coparently.app.domain
  *
  * Remove the marker, and make the declaration `internal` again, once its last `:app` caller moves.
  * Today: `UnansweredRows` and `ClocksAt.governing`, for `RequestInbox` (it reads the payments'
- * `SupportProposal`, still `java.time`) and `OtherFamiliesSignals` (data layer, phase 2).
+ * `SupportProposal`, still `java.time`) and `OtherFamiliesSignals` (data layer, phase 2); and, in
+ * `:shared-data`, `BakalariJson`, for the school import's three parsers, which build the
+ * `java.time` school domain.
  */
 @RequiresOptIn(
     message = "Public only for a caller still in the app module (MON-24); not API for new callers.",

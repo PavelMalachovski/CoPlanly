@@ -178,7 +178,6 @@
     <ID>NoWildcardImports:SchoolInfoEditor.kt$import androidx.compose.material3.*</ID>
     <ID>NoWildcardImports:SchoolInfoEditor.kt$import androidx.compose.runtime.*</ID>
     <ID>ReturnCount:ActivityAnnouncement.kt$ActivityAnnouncement.Companion$fun fromMap(map: Map&lt;*, *&gt;?): ActivityAnnouncement?</ID>
-    <ID>ReturnCount:CalendarPaging.kt$internal fun &lt;T&gt; collectPages( limit: Int, maxPages: Int, fetch: (pageToken: String?) -&gt; PageOf&lt;T&gt; ): Paged&lt;T&gt;</ID>
     <ID>ReturnCount:CustodyDiffText.kt$@Composable fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames): String?</ID>
     <ID>ReturnCount:CustodyModelRepository.kt$CustodyModelRepository$private suspend fun decideProposal( transform: (SharedCustody, String, String, Long) -&gt; Result&lt;SharedCustody&gt; ): Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:CustodyModelRepository.kt$CustodyModelRepository$private suspend fun writeSwap( pair: CustodyPair, date: String, transform: (Map&lt;String, DayOverride&gt;) -&gt; Result&lt;Map&lt;String, DayOverride&gt;&gt; ): Result&lt;SwapWrite&gt;</ID>

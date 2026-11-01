@@ -151,14 +151,4 @@ internal object ProbeFixtures {
         "sharedWith" to listOf("uid-a", "uid-b"),
         "isPrivate" to false
     )
-
-    /** A Google Calendar API page, as `Calendar.Events.list` returns it (the `@Key` models). */
-    val calendarPage = """
-        {"items":[{"id":"r8-probe-event","summary":"Swimming",
-        "start":{"dateTime":"2026-05-04T16:00:00.000+02:00"},
-        "end":{"dateTime":"2026-05-04T17:00:00.000+02:00"}}]}
-    """.trimIndent()
-
-    /** [calendarPage]'s start, as `DateTime.toStringRfc3339` prints it back. */
-    const val CALENDAR_START = "2026-05-04T16:00:00.000+02:00"
 }

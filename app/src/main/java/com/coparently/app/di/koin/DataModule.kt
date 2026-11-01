@@ -130,7 +130,7 @@ import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
-import okhttp3.OkHttpClient
+import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -209,7 +209,7 @@ val dataModule = module {
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)
     singleOf(::CredentialProviderImpl)
-    singleOf(::GoogleCalendarApi)
+    single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     singleOf(::CalendarFeedRepositoryImpl)
     singleOf(::ChangeRequestRepositoryImpl)
     singleOf(::ChatSearchRepositoryImpl)
@@ -274,8 +274,8 @@ val dataModule = module {
     factory { SchoolImporter.Collaborators(get(), get(), get(), get()) }
     singleOf(::WorkManagerSchoolImportScheduler)
     single { BakalariAuthorizer(get<BakalariClient>(), get<SchoolConnectionStore>()) }
-    single { BakalariClient(get<OkHttpClient>(SCHOOL_HTTP_CLIENT)) }
-    single { BakalariSchoolDirectory(get<OkHttpClient>(SCHOOL_HTTP_CLIENT)) }
+    single { BakalariClient(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
+    single { BakalariSchoolDirectory(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     singleOf(::AccountDeletionService)
     singleOf(::AccountSwitchGuard)
     singleOf(::DeviceTraces)

@@ -1,6 +1,6 @@
 package com.coparently.app.data.school.bakalari
 
-import java.io.IOException
+import kotlinx.io.IOException
 
 /**
  * Why a call to a Bakaláři server failed (MON-8), as far as the app acts on it.
@@ -26,7 +26,10 @@ sealed class BakalariException(message: String, cause: Throwable? = null) : Exce
     /** Another HTTP status. */
     class Http(val status: Int) : BakalariException("HTTP $status")
 
-    /** No network, a timeout, or a TLS failure. */
+    /**
+     * No network, a timeout, or a TLS failure: what the HTTP engine throws, `java.io.IOException`
+     * on Android and an NSURLSession error on iOS, both `kotlinx.io.IOException`.
+     */
     class Network(cause: IOException) : BakalariException("Network failure", cause)
 
     /** The server answered with something that is not the JSON it documents. */

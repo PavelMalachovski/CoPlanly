@@ -1,19 +1,26 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.school.bakalari
 
+import com.coparently.app.data.http.PercentEncoding
+import com.coparently.app.data.http.WebAddress
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import com.coparently.app.domain.school.SchoolEvent
-import com.coparently.app.domain.school.SchoolWeek
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.coparently.app.domain.InternalSharedApi
+import io.ktor.client.HttpClient
+import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.header
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.content.TextContent
+import kotlinx.datetime.LocalDate
+import kotlinx.io.IOException
 import kotlinx.serialization.json.JsonObject
-import okhttp3.FormBody
-import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.IOException
-import java.time.LocalDate
+import kotlin.time.Clock
 
 /**
  * A signed-in session's two tokens (MON-8).
@@ -31,25 +38,28 @@ data class BakalariTokens(
 )
 
 /**
- * The phone's direct line to one school's Bakaláři server (MON-8, API v3).
+ * The phone's direct line to one school's Bakaláři server (MON-8, API v3), on Ktor since MON-24.
  *
  * Every request goes from the phone to the school; nothing passes through CoPlanly's servers.
  * The password is sent once, to [signIn], and returned nowhere. `https://` only: a Bakaláři
  * server is reached with the parent's credentials, and an address that is not encrypted is
  * refused before anything is sent to it.
  *
- * Stateless. Refreshing, the rotation of the refresh token and writing it down before it is used
- * are [BakalariAuthorizer]'s job.
+ * Stateless, and it only fetches: refreshing, the rotation of the refresh token and writing it down
+ * before it is used are `BakalariAuthorizer`'s job, and reading the timetable, the events and the
+ * account out of what the school answers is the app's school import's (its parsers build the
+ * `java.time` school domain, which has not moved yet). Each request is the one the OkHttp client
+ * made before MON-24, method, address, headers and form body alike; `BakalariRequestShapeTest`
+ * holds them.
  */
 class BakalariClient internal constructor(
-    private val http: OkHttpClient,
+    private val http: HttpClient,
     private val requireHttps: Boolean,
-    private val io: CoroutineDispatcher,
     private val now: () -> Long
 ) {
 
-    /** The production client: https only, on the IO dispatcher, on the wall clock. */
-    constructor(http: OkHttpClient) : this(http, true, Dispatchers.IO, System::currentTimeMillis)
+    /** The production client: https only, on the wall clock. */
+    constructor(http: HttpClient) : this(http, true, { Clock.System.now().toEpochMilliseconds() })
 
     /**
      * Whether [baseUrl] answers as a Bakaláři server: `GET {base}/api`, which needs no sign-in and
@@ -58,7 +68,7 @@ class BakalariClient internal constructor(
      * @throws BakalariException.NotBakalari when it answers with anything else.
      */
     suspend fun checkServer(baseUrl: String) {
-        val (status, body) = execute(Request.Builder().url(urlOf(baseUrl, "api")).get().build())
+        val (status, body) = execute(HttpMethod.Get, urlOf(baseUrl, "api"))
         val versioned = status == HTTP_OK && runCatching {
             BakalariJson.arrayOf(body).any { element ->
                 element is JsonObject && !element.text("ApiVersion").isNullOrBlank()
@@ -75,12 +85,12 @@ class BakalariClient internal constructor(
     suspend fun signIn(baseUrl: String, username: String, password: String): BakalariTokens =
         token(
             baseUrl,
-            FormBody.Builder()
-                .add("client_id", CLIENT_ID)
-                .add("grant_type", "password")
-                .add("username", username)
-                .add("password", password)
-                .build(),
+            listOf(
+                "client_id" to CLIENT_ID,
+                "grant_type" to "password",
+                "username" to username,
+                "password" to password
+            ),
             previousRefreshToken = null
         )
 
@@ -92,37 +102,41 @@ class BakalariClient internal constructor(
     suspend fun refresh(baseUrl: String, refreshToken: String): BakalariTokens =
         token(
             baseUrl,
-            FormBody.Builder()
-                .add("client_id", CLIENT_ID)
-                .add("grant_type", "refresh_token")
-                .add("refresh_token", refreshToken)
-                .build(),
+            listOf(
+                "client_id" to CLIENT_ID,
+                "grant_type" to "refresh_token",
+                "refresh_token" to refreshToken
+            ),
             previousRefreshToken = refreshToken
         )
 
-    /** Who the login belongs to: `GET /api/3/user`. */
-    suspend fun user(baseUrl: String, accessToken: String): BakalariAccount =
-        BakalariAccount.parse(get(urlOf(baseUrl, "api/3/user"), accessToken))
+    /** Who the login belongs to, as the server writes it: `GET /api/3/user`. */
+    suspend fun userJson(baseUrl: String, accessToken: String): String =
+        get(urlOf(baseUrl, "api/3/user"), accessToken)
 
-    /** The actual timetable of the week holding [date]: `GET /api/3/timetable/actual?date=`. */
-    suspend fun timetable(baseUrl: String, accessToken: String, date: LocalDate): SchoolWeek {
-        val url = urlOf(baseUrl, "api/3/timetable/actual").newBuilder()
-            .addQueryParameter("date", date.toString())
-            .build()
-        return BakalariTimetableParser.parse(get(url, accessToken), date)
-    }
+    /**
+     * The actual timetable of the week holding [date], as the server writes it:
+     * `GET /api/3/timetable/actual?date=`.
+     */
+    suspend fun timetableJson(baseUrl: String, accessToken: String, date: LocalDate): String =
+        get(urlOf(baseUrl, "api/3/timetable/actual") + "?date=$date", accessToken)
 
-    /** Every event visible to the account from [from] on: `GET /api/3/events?from=`. */
-    suspend fun events(baseUrl: String, accessToken: String, from: LocalDate): List<SchoolEvent> {
-        val url = urlOf(baseUrl, "api/3/events").newBuilder()
-            .addQueryParameter("from", from.toString())
-            .build()
-        return BakalariEventsParser.parse(get(url, accessToken))
-    }
+    /** Every event visible to the account from [from] on, as the server writes it: `GET /api/3/events?from=`. */
+    suspend fun eventsJson(baseUrl: String, accessToken: String, from: LocalDate): String =
+        get(urlOf(baseUrl, "api/3/events") + "?from=$from", accessToken)
 
-    private suspend fun token(baseUrl: String, form: FormBody, previousRefreshToken: String?): BakalariTokens {
-        val request = Request.Builder().url(urlOf(baseUrl, "api/login")).post(form).build()
-        val (status, body) = execute(request)
+    private suspend fun token(
+        baseUrl: String,
+        fields: List<Pair<String, String>>,
+        previousRefreshToken: String?
+    ): BakalariTokens {
+        // Encoded as OkHttp's `FormBody` encoded it, and sent as its type with no charset, as it was.
+        val form = fields.joinToString("&") { (name, value) ->
+            PercentEncoding.formField(name) + "=" + PercentEncoding.formField(value)
+        }
+        val (status, body) = execute(HttpMethod.Post, urlOf(baseUrl, "api/login")) {
+            setBody(TextContent(form, ContentType.Application.FormUrlEncoded))
+        }
         if (status == HTTP_BAD_REQUEST || status == HTTP_UNAUTHORIZED) {
             // Matched on `error`, never on `error_description`, which is Czech free text.
             val error = runCatching { BakalariJson.objectOf(body).text("error") }.getOrNull()
@@ -144,14 +158,11 @@ class BakalariClient internal constructor(
         return BakalariTokens(access, refresh, now() + lifetimeSeconds * MILLIS_PER_SECOND)
     }
 
-    private suspend fun get(url: HttpUrl, accessToken: String): String {
-        val request = Request.Builder()
-            .url(url)
-            .header("Authorization", "Bearer $accessToken")
-            .header("Accept", "application/json")
-            .get()
-            .build()
-        val (status, body) = execute(request)
+    private suspend fun get(url: String, accessToken: String): String {
+        val (status, body) = execute(HttpMethod.Get, url) {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            header(HttpHeaders.Accept, "application/json")
+        }
         if (status == HTTP_OK) return body
         throw when (status) {
             HTTP_UNAUTHORIZED -> BakalariException.Unauthorized()
@@ -160,18 +171,27 @@ class BakalariClient internal constructor(
         }
     }
 
-    private suspend fun execute(request: Request): Pair<Int, String> = withContext(io) {
-        try {
-            http.newCall(request).execute().use { response -> response.code to response.body?.string().orEmpty() }
-        } catch (e: IOException) {
-            throw BakalariException.Network(e)
+    private suspend fun execute(
+        method: HttpMethod,
+        address: String,
+        configure: HttpRequestBuilder.() -> Unit = {}
+    ): Pair<Int, String> = try {
+        val response = http.request {
+            this.method = method
+            url(address)
+            configure()
         }
+        // OkHttp's `string()` dropped a UTF-8 byte order mark, which an ASP.NET server may write.
+        response.status.value to response.bodyAsText().removePrefix(BYTE_ORDER_MARK)
+    } catch (e: IOException) {
+        throw BakalariException.Network(e)
     }
 
-    private fun urlOf(baseUrl: String, path: String): HttpUrl {
-        val base = baseUrl.toHttpUrlOrNull() ?: throw BakalariException.NotBakalari("Unreadable address")
+    /** `{base}/{path}`, written as OkHttp's `HttpUrl.Builder.addPathSegments` wrote it. */
+    private fun urlOf(baseUrl: String, path: String): String {
+        val base = WebAddress.parse(baseUrl) ?: throw BakalariException.NotBakalari("Unreadable address")
         if (requireHttps && !base.isHttps) throw BakalariException.InsecureUrl()
-        return base.newBuilder().addPathSegments(path).build()
+        return base.withPathSegments(path)
     }
 
     private companion object {
@@ -183,5 +203,6 @@ class BakalariClient internal constructor(
         const val HTTP_FORBIDDEN = 403
         const val DEFAULT_LIFETIME_SECONDS = 599L
         const val MILLIS_PER_SECOND = 1000L
+        const val BYTE_ORDER_MARK = "\uFEFF"
     }
 }

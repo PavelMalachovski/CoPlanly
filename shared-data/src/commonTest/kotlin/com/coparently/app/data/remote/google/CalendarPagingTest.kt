@@ -1,6 +1,7 @@
 package com.coparently.app.data.remote.google
 
-import org.junit.Test
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -34,7 +35,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a single page with no token is the whole answer`() {
+    fun `a single page with no token is the whole answer`() = runTest {
         val source = FakePages(listOf(listOf("a", "b", "c")))
 
         val result = collectPages(noLimitInSight, plentyOfPages, source::fetch)
@@ -45,7 +46,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `every page is followed, in order`() {
+    fun `every page is followed - in order`() = runTest {
         val source = FakePages(listOf(listOf("a", "b"), listOf("c", "d"), listOf("e")))
 
         val result = collectPages(noLimitInSight, plentyOfPages, source::fetch)
@@ -56,7 +57,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a limit landing mid-page keeps exactly the limit and says there is more`() {
+    fun `a limit landing mid-page keeps exactly the limit and says there is more`() = runTest {
         val source = FakePages(listOf(listOf("a", "b"), listOf("c", "d"), listOf("e")))
 
         val result = collectPages(limit = 3, maxPages = plentyOfPages, fetch = source::fetch)
@@ -66,7 +67,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a limit landing on a page boundary still says there is more when a token follows`() {
+    fun `a limit landing on a page boundary still says there is more when a token follows`() = runTest {
         // The case a naive `if (collected.size > limit)` misses: the page fitted exactly, so
         // nothing was dropped here — but the token proves the window holds more.
         val source = FakePages(listOf(listOf("a", "b"), listOf("c", "d")))
@@ -78,7 +79,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a limit landing on the last page is not truncation`() {
+    fun `a limit landing on the last page is not truncation`() = runTest {
         val source = FakePages(listOf(listOf("a", "b")))
 
         val result = collectPages(limit = 2, maxPages = plentyOfPages, fetch = source::fetch)
@@ -88,7 +89,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a blank token is treated as no token`() {
+    fun `a blank token is treated as no token`() = runTest {
         val result = collectPages(noLimitInSight, plentyOfPages) { PageOf(listOf("a"), "") }
 
         assertEquals(listOf("a"), result.items)
@@ -96,7 +97,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a token that never advances stops at the page cap instead of hanging`() {
+    fun `a token that never advances stops at the page cap instead of hanging`() = runTest {
         var calls = 0
 
         val result = collectPages(noLimitInSight, maxPages = 5) {
@@ -110,7 +111,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `an empty first page is a complete, empty answer`() {
+    fun `an empty first page is a complete - empty answer`() = runTest {
         val result = collectPages(noLimitInSight, plentyOfPages) { PageOf<String>(emptyList(), null) }
 
         assertTrue(result.items.isEmpty())
@@ -118,7 +119,7 @@ class CalendarPagingTest {
     }
 
     @Test
-    fun `a zero limit fetches once and reports that everything was left behind`() {
+    fun `a zero limit fetches once and reports that everything was left behind`() = runTest {
         val result = collectPages(limit = 0, maxPages = plentyOfPages) { PageOf(listOf("a"), null) }
 
         assertTrue(result.items.isEmpty())

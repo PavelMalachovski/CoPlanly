@@ -27,9 +27,11 @@
 # The R8 runtime probe (`app/src/r8Test/`, `R8JsonProbe`) still writes every stored model through
 # the minified app and checks its keys, which is what would catch a regression.
 #
-# Kept from the Gson section because other code still relies on them: generic signatures and
-# runtime annotations (Google's calendar client below reads both, and brings its own Gson), and
-# the warning about `sun.misc`, which that Gson's `UnsafeAllocator` references.
+# Kept from the Gson section: generic signatures and runtime annotations, which libraries read
+# reflectively (Google's calendar client read both, and brought its own Gson, until it left in
+# MON-24 phase 2), and the warning about `sun.misc`, which Gson's `UnsafeAllocator` references.
+# Removing them is a change of its own, made only with an `r8-runtime` run to show nothing else
+# relied on them.
 -keepattributes Signature
 -keepattributes *Annotation*
 -dontwarn sun.misc.**
@@ -76,21 +78,17 @@
 }
 -dontwarn net.zetetic.database.**
 
-# ---- Google Calendar API models (REL-7) ------------------------------------
-# `GoogleCalendarApi` parses a page of events with `GsonFactory` into
-# `com.google.api.services.calendar.model.*`. google-http-client builds those models by
-# reflection: it instantiates each class through its no-argument constructor and fills the
-# fields annotated `@Key`, reading the fields' generic types for lists and nested models.
-# Nothing in the app calls those constructors, so R8 made the classes abstract and dropped
-# the constructors, and the release build failed the first page with "unable to create new
-# instance of class … because it is abstract". The `r8-runtime` CI job found it; its probe
-# case for `Events` is the regression test.
--keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
--keepclassmembers class * {
-    @com.google.api.client.util.Key <fields>;
-}
--keep class * extends com.google.api.client.json.GenericJson {
-    <init>();
-    <fields>;
-}
--keep class com.google.api.services.calendar.model.** { *; }
+# ---- Ktor (MON-24 phase 2) -------------------------------------------------
+# The school import and the Google Calendar import call out through Ktor (`:shared-data`), whose
+# own consumer rules keep what it needs. Its JVM utilities reference `java.lang.management`, which
+# Android does not have, to ask whether a debugger is attached; R8 would fail the build on the
+# missing classes. Nothing on Android reaches that code.
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
+
+# The Google Calendar API models' rules (REL-7) left with google-api-client in MON-24 phase 2:
+# `-keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault`, a
+# `-keepclassmembers` rule for `@com.google.api.client.util.Key` fields, a `-keep` of every
+# `GenericJson` subclass's constructor and fields, and `-keep class
+# com.google.api.services.calendar.model.** { *; }`. The import now reads a page by hand over a
+# JSON tree (`GoogleCalendarJson`), which reflects over nothing.

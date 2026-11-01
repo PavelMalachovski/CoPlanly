@@ -10,9 +10,11 @@
  *
  * It was written for the app's Gson models (`tools/check-invariants.js` then checked that every
  * type Gson reflected over had such a rule). Since MON-24 the app's own JSON is `StoredJson`, whose
- * generated serializers carry their keys as literals and need no rule; what is left to check are
- * the Google Calendar API models, which google-http-client still fills by reflection on their
- * `@Key` field names (`app/proguard-rules.pro`), until that client goes.
+ * generated serializers carry their keys as literals and need no rule, and the Google Calendar API
+ * models, which google-http-client filled by reflection on their `@Key` field names, left with
+ * that client in MON-24 phase 2 (the import reads Google's JSON by hand on Ktor). So
+ * `app/proguard-rules.pro` declares no field-keep rule today, and this check says so and passes:
+ * it stays to hold the next reflective reader's rule, should one be added.
  *
  * The failure it exists to catch is invisible in every other way: it cannot happen in debug,
  * which does not minify; it raises no exception; and the JSON it writes is well-formed — the
@@ -68,8 +70,10 @@ function keepMatches(pattern, fqcn) {
 
 const patterns = fieldKeepPatterns(fs.readFileSync(PROGUARD, 'utf8'));
 if (!patterns.length) {
-  console.error(PROGUARD + ' declares no field-keep rule; nothing to verify.');
-  process.exit(1);
+  // Nothing in the app reflects over field names since MON-24 phase 2. A rule added later is
+  // verified below, and one that matches no class in the mapping still fails as vacuous.
+  console.log('r8 mapping: ' + path.relative(ROOT, PROGUARD) + ' declares no field-keep rule; nothing to verify.');
+  process.exit(0);
 }
 
 // mapping.txt is line-oriented: a class line `orig -> obfuscated:` followed by indented member

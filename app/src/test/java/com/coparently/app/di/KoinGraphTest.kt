@@ -15,6 +15,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
+import io.ktor.client.engine.HttpClientEngine
 import kotlinx.coroutines.CoroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -43,6 +44,8 @@ import org.koin.test.verify.verify
  *  * [CustodyModelRepository]'s public primary constructor takes the `CoroutineScope` the tests
  *    hand in; the graph calls its secondary constructor, which supplies the scope itself.
  *  * [AiAssistAvailability] is built from `BuildConfig` in its definition, not resolved.
+ *  * Ktor's `HttpClient` is built by `shared-data`'s `httpClient()`, which hands its public
+ *    constructor the [HttpClientEngine] (OkHttp) itself; nothing resolves an engine.
  */
 @OptIn(KoinExperimentalAPI::class, KoinInternalApi::class)
 class KoinGraphTest {
@@ -62,7 +65,7 @@ class KoinGraphTest {
     fun everyDefinitionResolves() {
         module { includes(appModules.filterNot { it === firebaseModule }) }.verify(
             extraTypes = listOf(Context::class, SavedStateHandle::class, WorkerParameters::class) +
-                firebaseSdkTypes,
+                firebaseSdkTypes + HttpClientEngine::class,
             injections = injectedParameters(
                 definition<CustodyModelRepository>(CoroutineScope::class),
                 definition<AiAssistAvailability>(Boolean::class)

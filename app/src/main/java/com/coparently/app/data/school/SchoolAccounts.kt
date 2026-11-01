@@ -4,6 +4,7 @@ import com.coparently.app.data.school.bakalari.BakalariAccount
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariException
 import com.coparently.app.data.school.bakalari.BakalariTokens
+import com.coparently.app.data.school.bakalari.user
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolConnectionStatus

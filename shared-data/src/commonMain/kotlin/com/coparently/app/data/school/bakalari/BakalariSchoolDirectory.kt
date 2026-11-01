@@ -1,16 +1,18 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.school.bakalari
 
+import com.coparently.app.data.http.WebAddress
 import com.coparently.app.data.school.bakalari.BakalariJson.objects
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.coparently.app.domain.InternalSharedApi
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import kotlinx.io.IOException
 import kotlinx.serialization.json.JsonObject
-import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.IOException
 
 /**
  * A town in Bakaláři's school directory.
@@ -37,18 +39,11 @@ data class DirectorySchool(val name: String, val baseUrl: String)
  * is why the connect flow also takes an address typed by hand. Nothing here is cached; a third
  * party's mirror of the list is deliberately not used.
  */
-class BakalariSchoolDirectory internal constructor(
-    private val http: OkHttpClient,
-    private val directoryUrl: HttpUrl,
-    private val io: CoroutineDispatcher
-) {
-
-    /** The production directory. */
-    constructor(http: OkHttpClient) : this(http, DIRECTORY.toHttpUrl(), Dispatchers.IO)
+class BakalariSchoolDirectory(private val http: HttpClient) {
 
     /** Every town with at least one school, in the directory's order. The unnamed bucket is skipped. */
     suspend fun towns(): List<SchoolTown> =
-        BakalariJson.arrayOf(fetch(directoryUrl)).mapNotNull { element ->
+        BakalariJson.arrayOf(fetch(DIRECTORY)).mapNotNull { element ->
             val town = element as? JsonObject ?: return@mapNotNull null
             val name = town.text("name")?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             SchoolTown(name, town.text("schoolCount")?.toIntOrNull() ?: 0)
@@ -61,7 +56,8 @@ class BakalariSchoolDirectory internal constructor(
      * ("Ostrava-Mar.Hory" → "Ostrava-Mar"), which the directory's own documentation describes.
      */
     suspend fun schools(town: String): List<DirectorySchool> {
-        val url = directoryUrl.newBuilder().addPathSegment(town.substringBefore('.').trim()).build()
+        // One path segment, encoded as OkHttp's `addPathSegment` encoded it ("Ústí nad Labem").
+        val url = checkNotNull(WebAddress.parse(DIRECTORY)).withPathSegment(town.substringBefore('.').trim())
         return BakalariJson.objectOf(fetch(url)).objects("schools").mapNotNull { school ->
             val name = school.text("name")?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             val baseUrl = BakalariUrls.normalize(school.text("schoolUrl")) ?: return@mapNotNull null
@@ -69,20 +65,21 @@ class BakalariSchoolDirectory internal constructor(
         }
     }
 
-    private suspend fun fetch(url: HttpUrl): String = withContext(io) {
-        val request = Request.Builder().url(url).header("Accept", "application/json").get().build()
+    private suspend fun fetch(url: String): String {
         val (status, body) = try {
-            http.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
+            val response = http.get(url) { header(HttpHeaders.Accept, "application/json") }
+            response.status.value to response.bodyAsText().removePrefix(BYTE_ORDER_MARK)
         } catch (e: IOException) {
             throw BakalariException.Network(e)
         }
         if (status != HTTP_OK) throw BakalariException.Http(status)
-        body
+        return body
     }
 
     private companion object {
         const val DIRECTORY = "https://sluzby.bakalari.cz/api/v1/municipality"
         const val HTTP_OK = 200
+        const val BYTE_ORDER_MARK = "\uFEFF"
     }
 }
 
@@ -98,11 +95,14 @@ object BakalariUrls {
      * "https://www.example.com:444/login", "https://skola.cz/bakaweb/next/login.aspx/"). An address
      * with no scheme is read as https; `http://` is refused rather than upgraded, because the
      * parent should know their school's page was not encrypted.
+     *
+     * The text is OkHttp's reading of the address, byte for byte (`WebAddress`), because the event
+     * ids hash it: a school connected on an older build and on this one must hash the same.
      */
     fun normalize(input: String?): String? {
         val text = input?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val withScheme = if ("://" in text) text else "https://$text"
-        val url = runCatching { withScheme.toHttpUrl() }.getOrNull()?.takeIf { it.isHttps } ?: return null
+        val url = WebAddress.parse(withScheme)?.takeIf { it.isHttps } ?: return null
         val segments = url.encodedPathSegments.filter { it.isNotEmpty() }.toMutableList()
         while (segments.lastOrNull()?.lowercase()?.let { it in LOGIN_SEGMENTS } == true) {
             segments.removeAt(segments.lastIndex)

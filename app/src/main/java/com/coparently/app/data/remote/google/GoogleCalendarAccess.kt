@@ -13,9 +13,9 @@ package com.coparently.app.data.remote.google
  * owns, which the primary calendar always is. `calendar.events.readonly` would also reach every
  * calendar shared with them.
  *
- * The scope is a literal because the Calendar client library in the build (v3-rev20220715)
- * predates it; the Calendar API's discovery document lists it among the scopes `events.list`
- * accepts.
+ * The scope is a literal: the Calendar client library the app used until MON-24 (v3-rev20220715)
+ * predated it, and the Ktor call that replaced it (`GoogleCalendarApi`, `:shared-data`) names no
+ * scope. The Calendar API's discovery document lists it among the scopes `events.list` accepts.
  *
  * The privacy policy ("Google Calendar, if you connect it"), the home page (`web/index.html`) and
  * the consent screen's Data access name this scope too. A feature that writes to Google, or reads a

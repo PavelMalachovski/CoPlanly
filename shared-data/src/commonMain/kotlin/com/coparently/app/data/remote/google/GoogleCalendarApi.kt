@@ -1,28 +1,135 @@
 package com.coparently.app.data.remote.google
 
-import com.google.api.client.auth.oauth2.Credential
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.gson.GsonFactory
-import com.google.api.client.util.DateTime
-import com.google.api.services.calendar.Calendar
-import com.google.api.services.calendar.model.Events
-import java.io.IOException
-import java.time.LocalDateTime
-import java.time.ZoneId
+import com.coparently.app.data.http.PercentEncoding
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.offsetAt
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.math.absoluteValue
+import kotlin.time.Clock
 
 /**
- * Google Calendar API wrapper for Android: it reads, and only reads.
+ * The access token a Calendar call is made with: sent as `Authorization: Bearer`, and nothing
+ * else. Its `toString` never prints the token.
  *
- * [listEvents] is the one call the app makes to Google Calendar, under the read-only scope
- * [GoogleCalendarAccess.SCOPE]. There is no create, update or delete here on purpose: the app
- * writes nothing to Google, and `GoogleCalendarAccessTest` fails if a public method is added, so
- * the scope, the privacy policy and the consent screen are looked at again first.
+ * @property accessToken Google's OAuth access token.
  */
-class GoogleCalendarApi {
+class GoogleCredential(val accessToken: String) {
+    override fun toString(): String = "GoogleCredential(…)"
+}
+
+/**
+ * Google Calendar, read and only read: one call, Calendar API v3 `events.list`, made on Ktor since
+ * MON-24. It replaced google-api-client's `Calendar.events().list(…)`, which it calls exactly as
+ * that did (`GoogleCalendarRequestShapeTest`).
+ *
+ * [listEvents] is the one call the app makes to Google Calendar, under the read-only scope the
+ * app's `GoogleCalendarAccess.SCOPE` names. There is no create, update or delete here on purpose:
+ * the app writes nothing to Google, and `GoogleCalendarAccessTest` fails if a public method is
+ * added, so the scope, the privacy policy and the consent screen are looked at again first.
+ */
+class GoogleCalendarApi internal constructor(
+    private val http: HttpClient,
+    private val zone: () -> TimeZone,
+    private val clock: Clock
+) {
+
+    /** The production API: the device's time zone and the wall clock. */
+    constructor(http: HttpClient) : this(http, { TimeZone.currentSystemDefault() }, Clock.System)
+
+    /**
+     * Lists events from Google Calendar, following every page.
+     *
+     * The previous version asked for one page of 50 and returned it, while its only caller passed
+     * no bounds at all — so an import of a real calendar stopped at the 50th event and reported
+     * "Found 50 events", which is what a complete import also looks like. Nothing said otherwise.
+     *
+     * Two bounds now exist and both are reported rather than assumed: the window
+     * ([CalendarEvents.from]/[CalendarEvents.until], defaulting to the next [HORIZON_MONTHS]
+     * months) and the event cap ([IMPORT_LIMIT], surfaced as [CalendarEvents.truncated]). The
+     * window's ends are wall-clock times in the device's zone, as they were.
+     *
+     * @param limit Most events to return. Reaching it sets [CalendarEvents.truncated].
+     * @throws GoogleCalendarHttpException when Google answers with an error status.
+     * @throws kotlinx.io.IOException when Google cannot be reached.
+     */
+    suspend fun listEvents(
+        credential: GoogleCredential,
+        calendarId: String = "primary",
+        timeMin: LocalDateTime? = null,
+        timeMax: LocalDateTime? = null,
+        limit: Int = IMPORT_LIMIT
+    ): CalendarEvents {
+        val zone = zone()
+        val from = timeMin ?: clock.now().toLocalDateTime(zone)
+        val until = timeMax ?: LocalDateTime(from.date.plus(HORIZON_MONTHS, DateTimeUnit.MONTH), from.time)
+        val window = "&timeMax=" + PercentEncoding.googleQuery(rfc3339(until, zone)) +
+            "&timeMin=" + PercentEncoding.googleQuery(rfc3339(from, zone))
+        val pagePath = "$EVENTS_LIST/calendars/" + PercentEncoding.googlePath(calendarId) + "/events"
+
+        val paged = collectPages(limit, MAX_PAGES) { pageToken ->
+            // The parameters in the order google-api-client wrote them: alphabetical.
+            val query = "maxResults=$PAGE_SIZE&orderBy=startTime" +
+                pageToken?.let { "&pageToken=" + PercentEncoding.googleQuery(it) }.orEmpty() +
+                "&singleEvents=true" + window
+            page(http.get("$pagePath?$query") { header(HttpHeaders.Authorization, "Bearer ${credential.accessToken}") })
+        }
+
+        return CalendarEvents(
+            events = paged.items,
+            truncated = paged.truncated,
+            from = from,
+            until = until
+        )
+    }
+
+    private suspend fun page(response: HttpResponse): PageOf<GoogleCalendarEvent> {
+        val body = response.bodyAsText()
+        if (response.status.value !in HTTP_SUCCESS) {
+            throw GoogleCalendarHttpException.of(
+                statusCode = response.status.value,
+                body = body,
+                authenticate = response.headers[HttpHeaders.WWWAuthenticate]
+            )
+        }
+        return GoogleCalendarJson.page(body)
+    }
+
+    /**
+     * [local] in [zone] as google-http-client's `DateTime(epochMillis).toStringRfc3339()` wrote it:
+     * the instant's wall clock in [zone] to the millisecond, then `Z` or the offset in minutes.
+     * A wall-clock time in a daylight-saving gap is moved later by the gap, as `atZone` moved it.
+     */
+    private fun rfc3339(local: LocalDateTime, zone: TimeZone): String {
+        val instant = local.toInstant(zone)
+        val shown = instant.toLocalDateTime(zone)
+        val offsetMinutes = zone.offsetAt(instant).totalSeconds / SECONDS_PER_MINUTE
+        val offset = if (offsetMinutes == 0) {
+            "Z"
+        } else {
+            (if (offsetMinutes > 0) "+" else "-") +
+                pad(offsetMinutes.absoluteValue / MINUTES_PER_HOUR, 2) + ":" +
+                pad(offsetMinutes.absoluteValue % MINUTES_PER_HOUR, 2)
+        }
+        return pad(shown.year, YEAR_DIGITS) + "-" + pad(shown.month.ordinal + 1, 2) + "-" + pad(shown.day, 2) +
+            "T" + pad(shown.hour, 2) + ":" + pad(shown.minute, 2) + ":" + pad(shown.second, 2) +
+            "." + pad(shown.nanosecond / NANOS_PER_MILLI, MILLI_DIGITS) + offset
+    }
+
+    private fun pad(value: Int, digits: Int): String = value.toString().padStart(digits, '0')
+
     companion object {
-        private const val APPLICATION_NAME = "CoPlanly"
-        private val JSON_FACTORY = GsonFactory.getDefaultInstance()
-        private val HTTP_TRANSPORT = NetHttpTransport()
+        /** Calendar API v3, as google-api-services-calendar's root URL and service path name it. */
+        private const val EVENTS_LIST = "https://www.googleapis.com/calendar/v3"
 
         /** Google's own per-page ceiling is 2500; 250 keeps any single request small. */
         private const val PAGE_SIZE = 250
@@ -36,107 +143,22 @@ class GoogleCalendarApi {
         /**
          * How far ahead an import reaches when the caller names no end.
          *
-         * A horizon is not a nicety here. `setSingleEvents(true)` expands recurrences into
+         * A horizon is not a nicety here. `singleEvents=true` expands recurrences into
          * instances, so "everything from now on" is not a finite request at all — a single
          * open-ended weekly event generates instances forever, and without an end date the
          * event cap alone would silently decide where the calendar stopped. One year is a
          * co-parenting horizon: school years, holidays and custody rotations all fit inside it.
          */
-        private const val HORIZON_MONTHS = 12L
+        private const val HORIZON_MONTHS = 12
 
         /** Refuses to page forever if a server ever returns a token that does not advance. */
         private const val MAX_PAGES = 64
+
+        private val HTTP_SUCCESS = 200..299
+        private const val SECONDS_PER_MINUTE = 60
+        private const val MINUTES_PER_HOUR = 60
+        private const val NANOS_PER_MILLI = 1_000_000
+        private const val YEAR_DIGITS = 4
+        private const val MILLI_DIGITS = 3
     }
-
-    /**
-     * Gets Google Calendar service instance.
-     */
-    fun getCalendarService(credential: Credential): Calendar {
-        return Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-            .setApplicationName(APPLICATION_NAME)
-            .build()
-    }
-
-    /**
-     * Lists events from Google Calendar, following every page.
-     *
-     * The previous version asked for one page of 50 and returned it, while its only caller passed
-     * no bounds at all — so an import of a real calendar stopped at the 50th event and reported
-     * "Found 50 events", which is what a complete import also looks like. Nothing said otherwise.
-     *
-     * Two bounds now exist and both are reported rather than assumed: the window
-     * ([CalendarEvents.from]/[CalendarEvents.until], defaulting to the next [HORIZON_MONTHS]
-     * months) and the event cap ([IMPORT_LIMIT], surfaced as [CalendarEvents.truncated]).
-     *
-     * @param limit Most events to return. Reaching it sets [CalendarEvents.truncated].
-     */
-    @Throws(IOException::class)
-    fun listEvents(
-        credential: Credential,
-        calendarId: String = "primary",
-        timeMin: LocalDateTime? = null,
-        timeMax: LocalDateTime? = null,
-        limit: Int = IMPORT_LIMIT
-    ): CalendarEvents {
-        val calendar = getCalendarService(credential)
-        val from = timeMin ?: LocalDateTime.now()
-        val until = timeMax ?: from.plusMonths(HORIZON_MONTHS)
-
-        val paged = collectPages(limit, MAX_PAGES) { pageToken ->
-            val response: Events = calendar.events().list(calendarId)
-                .setTimeMin(from.toGoogleDateTime())
-                .setTimeMax(until.toGoogleDateTime())
-                .setMaxResults(PAGE_SIZE)
-                .setOrderBy("startTime")
-                .setSingleEvents(true)
-                .setPageToken(pageToken)
-                .execute()
-            PageOf(response.items.orEmpty(), response.nextPageToken)
-        }
-
-        return CalendarEvents(
-            events = paged.items,
-            truncated = paged.truncated,
-            from = from,
-            until = until
-        )
-    }
-
-    private fun LocalDateTime.toGoogleDateTime(): DateTime =
-        DateTime(atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
-}
-
-/**
- * Provides the Google credential for the Calendar API, and answers Google's refusals of it.
- */
-interface CredentialProvider {
-    /**
-     * The Google credential for this device, refreshing the access token if it has expired.
-     *
-     * `suspend` because obtaining one can perform a **network** refresh. It used to be a plain
-     * function whose implementation wrapped that refresh in `runBlocking`, and
-     * `CalendarSyncRepository` called it from `viewModelScope` — on the main thread — before
-     * entering its own `withContext(Dispatchers.IO)` a few lines later. Enabling Google
-     * Calendar sync on a slow connection therefore blocked the UI thread for the length of an
-     * OAuth round-trip.
-     *
-     * @param forceRefresh Renew the token even though its stored expiry says it is still good —
-     *   what [withCredential] does once after Google refused it.
-     * @throws GoogleAccessException when there is no credential to be had, saying why: not
-     *   connected, a connection Google ended, or Google out of reach for now. It used to return
-     *   null for all three, so an import could only ever say "not connected".
-     */
-    suspend fun getCredential(forceRefresh: Boolean = false): Credential
-
-    /**
-     * Runs [call] with this device's credential, answering Google's refusals the one way each
-     * allows: a 401 renews the token once and runs [call] again, because a token its stored expiry
-     * still calls good can have been revoked or cut short; a 401 on the renewed token, or a 403
-     * for the Calendar permission the account never granted, ends the connection — its tokens are
-     * dropped and it reads as one to reconnect.
-     *
-     * @throws GoogleAccessException when there is no credential, or the connection was just ended.
-     *   Anything else [call] throws comes through unchanged.
-     */
-    suspend fun <T> withCredential(call: suspend (Credential) -> T): T
 }

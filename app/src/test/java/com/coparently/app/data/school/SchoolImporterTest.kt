@@ -13,18 +13,16 @@ import com.coparently.app.domain.school.SchoolImportPlan
 import com.coparently.app.domain.school.SchoolImportWording
 import com.coparently.app.domain.school.SchoolSyncFailure
 import com.coparently.app.domain.school.SchoolSyncResult
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpStatusCode
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
-import okhttp3.OkHttpClient
-import okhttp3.mockwebserver.Dispatcher
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,13 +36,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * One school update end to end on the JVM (MON-8): a real client and authorizer against a local
- * server, the real store, and the calendar side mocked — what it fetches, what it records, and
- * how it marks the connection.
+ * One school update end to end on the JVM (MON-8): a real client and authorizer against an
+ * in-memory server (Ktor's mock engine since MON-24, OkHttp's MockWebServer before), the real
+ * store, and the calendar side mocked — what it fetches, what it records, and how it marks the
+ * connection.
  */
 class SchoolImporterTest {
 
-    private val server = MockWebServer()
+    /** What the school answers a path with: a status and a body. */
+    private var school: (String) -> Pair<Int, String> = { 404 to "" }
     private lateinit var dir: File
     private lateinit var store: SchoolConnectionStore
     private val clock = Clock.fixed(Instant.parse("2020-03-02T06:00:00Z"), ZoneOffset.UTC)
@@ -56,10 +56,9 @@ class SchoolImporterTest {
 
     @Before
     fun setUp() {
-        server.start()
         dir = Files.createTempDirectory("school-importer").toFile()
         store = SchoolConnectionStore(SchoolTestSupport.preferences(dir))
-        store.put(SchoolTestSupport.stored(baseUrl = server.url("/").toString().trimEnd('/')))
+        store.put(SchoolTestSupport.stored(baseUrl = BASE))
         coEvery { users.getCurrentUserId() } returns "alice"
         coEvery { users.getUserById("alice") } returns
             User(id = "alice", email = "alice@example.com", name = "Alice", role = "mom", colorCode = "")
@@ -72,13 +71,12 @@ class SchoolImporterTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
         dir.deleteRecursively()
     }
 
     @Test
     fun `an update fetches four weeks and the events, records what it made and marks the connection`() = runTest {
-        server.dispatcher = serving(eventsStatus = 403)
+        school = serving(eventsStatus = 403)
         val plan = slot<SchoolImportPlan>()
         coEvery { writer.apply(capture(plan)) } answers {
             val failed = plan.captured.creates.first().id
@@ -111,7 +109,7 @@ class SchoolImporterTest {
     @Test
     fun `a connection of no family takes the parent's only family, and keeps it`() = runTest {
         connectedWithoutFamily(coParents = listOf("bob"), childFamily = null)
-        server.dispatcher = serving(eventsStatus = 403)
+        school = serving(eventsStatus = 403)
         val plan = slot<SchoolImportPlan>()
         coEvery { writer.apply(capture(plan)) } answers { SchoolImportCounts(plan.captured.creates.size, 0, 0) }
 
@@ -127,7 +125,7 @@ class SchoolImporterTest {
         runTest {
             // Carol's family is on screen; the child is Bob's family's.
             connectedWithoutFamily(coParents = listOf("bob", "carol"), onScreen = "carol", childFamily = "alice__bob")
-            server.dispatcher = serving(eventsStatus = 403)
+            school = serving(eventsStatus = 403)
             val plan = slot<SchoolImportPlan>()
             coEvery { writer.apply(capture(plan)) } answers { SchoolImportCounts(plan.captured.creates.size, 0, 0) }
 
@@ -145,7 +143,7 @@ class SchoolImporterTest {
         val result = importer().sync("conn1")
 
         assertEquals(SchoolSyncResult.NeedsFamily, result)
-        assertEquals(0, server.requestCount)
+        assertEquals(0, requested.size)
         coVerify(exactly = 0) { writer.apply(any()) }
         assertEquals(null, store.get("alice", "conn1")?.connection?.familyId)
     }
@@ -153,7 +151,7 @@ class SchoolImporterTest {
     @Test
     fun `without a co-parent a connection of no family imports into no family`() = runTest {
         connectedWithoutFamily(coParents = emptyList(), childFamily = null)
-        server.dispatcher = serving(eventsStatus = 403)
+        school = serving(eventsStatus = 403)
         val plan = slot<SchoolImportPlan>()
         coEvery { writer.apply(capture(plan)) } answers { SchoolImportCounts(plan.captured.creates.size, 0, 0) }
 
@@ -172,7 +170,7 @@ class SchoolImporterTest {
         onScreen: String? = coParents.firstOrNull(),
         childFamily: String?
     ) {
-        store.put(SchoolTestSupport.stored(baseUrl = server.url("/").toString().trimEnd('/'), familyId = null))
+        store.put(SchoolTestSupport.stored(baseUrl = BASE, familyId = null))
         coEvery { users.getUserById("alice") } returns User(
             id = "alice",
             email = "alice@example.com",
@@ -195,7 +193,7 @@ class SchoolImporterTest {
 
     @Test
     fun `a server error marks the connection and changes nothing in the calendar`() = runTest {
-        server.dispatcher = serving(timetableStatus = 500)
+        school = serving(timetableStatus = 500)
 
         val result = importer().sync("conn1")
 
@@ -210,11 +208,19 @@ class SchoolImporterTest {
         }
 
         assertEquals(SchoolSyncResult.NeedsPassword, importer().sync("conn1"))
-        assertEquals(0, server.requestCount)
+        assertEquals(0, requested.size)
     }
 
     private fun importer(): SchoolImporter {
-        val client = BakalariClient(OkHttpClient(), requireHttps = false, io = Dispatchers.IO, now = clock::millis)
+        val http = HttpClient(
+            MockEngine { request ->
+                val path = request.url.encodedPathAndQuery
+                synchronized(requested) { requested += path }
+                val (status, body) = school(path)
+                respond(body, HttpStatusCode.fromValue(status))
+            }
+        )
+        val client = BakalariClient(http)
         return SchoolImporter(
             authorizer = BakalariAuthorizer(client, store, clock::millis),
             client = client,
@@ -225,17 +231,15 @@ class SchoolImporterTest {
         )
     }
 
-    private fun serving(timetableStatus: Int = 200, eventsStatus: Int = 200) = object : Dispatcher() {
-        override fun dispatch(request: RecordedRequest): MockResponse {
-            val path = request.path.orEmpty()
-            synchronized(requested) { requested += path }
-            return when {
-                path.startsWith("/api/3/timetable/actual") ->
-                    MockResponse().setResponseCode(timetableStatus).setBody(SchoolTestSupport.fixture("bezny.json"))
-                path.startsWith("/api/3/events") ->
-                    MockResponse().setResponseCode(eventsStatus).setBody(SchoolTestSupport.fixture("events.json"))
-                else -> MockResponse().setResponseCode(404)
-            }
+    private fun serving(timetableStatus: Int = 200, eventsStatus: Int = 200): (String) -> Pair<Int, String> = { path ->
+        when {
+            path.startsWith("/api/3/timetable/actual") -> timetableStatus to SchoolTestSupport.fixture("bezny.json")
+            path.startsWith("/api/3/events") -> eventsStatus to SchoolTestSupport.fixture("events.json")
+            else -> 404 to ""
         }
+    }
+
+    private companion object {
+        const val BASE = "https://skola.example.cz"
     }
 }

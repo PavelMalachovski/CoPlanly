@@ -238,8 +238,9 @@ android {
 
         // REL-7's runtime proof: `release` as R8 builds it, plus the probe in `src/r8Test/`, run on
         // an emulator by the `r8-runtime` CI job (`tools/run-r8-probe.sh`). `check-r8-mapping.js`
-        // shows R8 kept the Gson field names; this shows the minified app still *writes and reads*
-        // them — generic signatures, constructors and all. Nothing here changes `debug` or `release`.
+        // shows R8 kept the field names a keep rule names (none since MON-24 phase 2); this shows
+        // the minified app still *writes and reads* its stored JSON — generated serializers,
+        // constructors and all. Nothing here changes `debug` or `release`.
         create("r8Test") {
             initWith(getByName("release"))
             // Installable without the release key, which CI must never hold. Signing is applied
@@ -341,6 +342,11 @@ dependencies {
     // runs `:shared`'s debug tests too), so the one figure in the PR comment still covers the
     // domain after it moves.
     kover(project(":shared"))
+    // The data layer both apps share (MON-24 phase 2): so far the school import's and Google
+    // Calendar's HTTP clients, on Ktor. Packages unchanged, as for `:shared`; its tests' coverage
+    // joins the same report.
+    implementation(project(":shared-data"))
+    kover(project(":shared-data"))
 
     // Core Android - Updated to latest stable versions
     implementation("androidx.core:core-ktx:1.13.1")
@@ -435,9 +441,9 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
-    // Google Calendar API
-    implementation("com.google.api-client:google-api-client-android:2.2.0")
-    implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
+    // Google Calendar's one call, `events.list`, is made on Ktor from `:shared-data` since MON-24
+    // phase 2; google-api-client-android and google-api-services-calendar left with it, and so did
+    // the Gson they brought and the keep rules their `@Key` models needed.
 
     // Read-only since SEC-5: EncryptedPreferences now seals its own file with the Keystore key
     // EncryptionManager holds, and uses this library once, to read the pre-SEC-5 store on the first
@@ -450,13 +456,6 @@ dependencies {
     // same version as the shared module's, declared here because the app's own models
     // (`EventDraft`) and the school import's tree reads use it directly.
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    // Not a dependency: Google's calendar client (`google-api-client` -> `google-http-client-gson`)
-    // still brings Gson for `GsonFactory`, asking for 2.10. This keeps it at 2.11.0, the version
-    // the app declared and ran until MON-24, so removing the app's own use of Gson does not move
-    // the calendar's. It goes with that client (Task 5 of the iPhone work's phase 2).
-    constraints {
-        implementation("com.google.code.gson:gson:2.11.0")
-    }
 
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
@@ -483,11 +482,11 @@ dependencies {
     // Removed with the AI subsystem (MON-7): `generativeai`, `retrofit`, `converter-gson`,
     // `okhttp` and `logging-interceptor`. All five were declared for it and, after it went,
     // had no consumer left in `app/src` at all — retrofit already had none before.
-    // OkHttp is declared again for the school import (MON-8), which talks to each school's
-    // Bakaláři server directly from the phone. Declared rather than borrowed from Coil's
-    // transitive copy, so a Coil upgrade cannot move or drop the client the import depends on;
-    // the version is the one Coil already brings, so the graph does not change.
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // OkHttp was declared again for the school import (MON-8) and left the app's own dependencies
+    // in MON-24 phase 2, when the import moved to Ktor in `:shared-data`. Its OkHttp engine brings
+    // OkHttp 5.5.1, which Coil 2.7 (built against 4.12) now runs on too: Coil uses only OkHttp's
+    // public API (calls, requests, responses, headers, cache control), which 5.x keeps
+    // binary-compatible, and nothing in the app calls OkHttp itself any more.
 
     // Firebase BoM 34 (audit L-2). 34.0.0 removed the `-ktx` modules; their Kotlin extensions
     // (`Firebase`, `logEvent`, `storageMetadata`, …) have lived in the main modules under the
@@ -521,7 +520,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // The oracle `GsonParityTest` compares `StoredJson` with, and the wire contracts' fixture
     // printer: the Gson the app shipped until MON-24, at the version it shipped. Tests only — the
-    // app itself has no Gson since then (Google's calendar client still brings one of its own).
+    // app itself has no Gson since then, and none comes with a library since Google's calendar
+    // client left (MON-24 phase 2).
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test"))
     // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
@@ -559,9 +559,10 @@ dependencies {
     // Turbine for Flow testing
     testImplementation("app.cash.turbine:turbine:1.2.0")
 
-    // A local HTTP server for the Bakaláři client's tests (MON-8): sign-in, token rotation and
-    // the refresh-and-retry on a 401, against real HTTP rather than a mocked OkHttp.
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    // Ktor's in-memory server for the school import's tests (MON-8): token rotation and the
+    // refresh-and-retry on a 401, through the real client. It replaced OkHttp's MockWebServer when
+    // the client moved to Ktor (MON-24); the version is `:shared-data`'s Ktor.
+    testImplementation("io.ktor:ktor-client-mock:3.6.1")
 
     // ArchCore Testing for LiveData and ViewModel
     testImplementation("androidx.arch.core:core-testing:2.2.0")
@@ -644,14 +645,16 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
-// One baseline for two modules (MON-24): `:shared:detekt` reads this module's baseline file, and
-// detekt's `detektBaseline` *replaces* a file's findings with the ones it found in its own run. So
-// the shared module's own baseline task is switched off (shared/build.gradle.kts) and this one
-// also reads the shared sources, which makes `./gradlew detektBaseline` (the Regenerate workflow)
-// write one file holding both modules' accepted findings. An entry names a file and a signature,
-// never a directory, so a file moved into `shared/` keeps the entry it had.
+// One baseline for every module (MON-24): `:shared:detekt` and `:shared-data:detekt` read this
+// module's baseline file, and detekt's `detektBaseline` *replaces* a file's findings with the ones
+// it found in its own run. So the other modules' baseline tasks are switched off (their build
+// files) and this one also reads their sources, which makes `./gradlew detektBaseline` (the
+// Regenerate workflow) write one file holding every module's accepted findings. An entry names a
+// file and a signature, never a directory, so a file moved into `shared/` or `shared-data/` keeps
+// the entry it had.
 tasks.named<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>("detektBaseline") {
     source(rootProject.layout.projectDirectory.dir("shared/src"))
+    source(rootProject.layout.projectDirectory.dir("shared-data/src"))
 }
 
 // Screenshots are recorded into, and verified against, the committed baselines in

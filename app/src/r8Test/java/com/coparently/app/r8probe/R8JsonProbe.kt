@@ -15,8 +15,6 @@ import com.coparently.app.data.repository.toEntity
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.presentation.event.EventDraft
-import com.google.api.client.json.gson.GsonFactory
-import com.google.api.services.calendar.model.Events
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
@@ -33,8 +31,8 @@ import org.json.JSONObject
  * that the minified code *runs*: that the JSON keys are the source names (a generated serializer
  * carries them as literals, so R8 renaming a field must change nothing), that R8 left each
  * generated serializer whole, and that what is written reads back equal. Google's calendar models,
- * which google-http-client still fills by reflection through its own Gson, keep their case until
- * that client goes. It is compiled only into the `r8Test` build type, which is `release` plus this
+ * which google-http-client filled by reflection through its own Gson, had a case until that client
+ * left in MON-24 phase 2. It is compiled only into the `r8Test` build type, which is `release` plus this
  * package, a keep rule for its entry point (`app/proguard-r8test.pro`) and the debug signing key.
  *
  * **Production paths, not copies of them.** A child and a pet go through `ChildInfoRepositoryImpl`
@@ -74,7 +72,7 @@ internal class R8JsonProbe(private val context: Context) {
                 database.close()
             }
         }
-        return setup + cases + dayOverrideCases() + eventDraftCases() + calendarCases() + libraryTypeCases()
+        return setup + cases + dayOverrideCases() + eventDraftCases() + libraryTypeCases()
     }
 
     private fun firebaseApp(): FirebaseApp =
@@ -189,18 +187,6 @@ internal class R8JsonProbe(private val context: Context) {
         }
     }
 
-    private fun calendarCases(): List<ProbeCase> {
-        val via = "GsonFactory and the @Key models, as GoogleCalendarApi reads a page"
-        return guarded(listOf(CALENDAR_EVENTS), via) {
-            val factory = GsonFactory.getDefaultInstance()
-            val page = factory.fromString(ProbeFixtures.calendarPage, Events::class.java)
-            val event = checkNotNull(page.items?.singleOrNull()) { "the page parsed with no items" }
-            val parsed = event.summary == "Swimming" &&
-                event.start?.dateTime?.toStringRfc3339() == ProbeFixtures.CALENDAR_START
-            keys(CALENDAR_EVENTS, factory.toString(event), CALENDAR_EVENT_KEYS, parsed)
-        }
-    }
-
     /**
      * The serializers over library types — lists and maps of texts and numbers, and the untyped
      * values `StoredJson.encodeValue` writes — in the files that were Gson's `TypeToken`s. Nothing
@@ -251,10 +237,9 @@ internal class R8JsonProbe(private val context: Context) {
         const val DAY_OVERRIDE_STATUS = "com.coparently.app.domain.custody.DayOverrideStatus"
         const val EVENT_DRAFT = "com.coparently.app.presentation.event.EventDraft"
 
-        // Whole records, a library model and library-type tokens: checked, not discovered.
+        // Whole records and library-type tokens: checked, not discovered.
         const val CHILD_INFO = "com.coparently.app.domain.model.ChildInfo"
         const val PET = "com.coparently.app.domain.model.Pet"
-        const val CALENDAR_EVENTS = "com.google.api.services.calendar.model.Events"
         const val TOKEN_CONVERTERS = "List<String> in Converters"
         const val TOKEN_CHAT = "Lists, mark maps and activity maps in ChatMappers"
         const val TOKEN_EVENT_VERSIONS = "Snapshots and audiences in EventVersionDocument"
@@ -297,6 +282,5 @@ internal class R8JsonProbe(private val context: Context) {
             "endDaySpan",
             "allDay"
         )
-        private val CALENDAR_EVENT_KEYS = setOf("id", "summary", "start", "end")
     }
 }

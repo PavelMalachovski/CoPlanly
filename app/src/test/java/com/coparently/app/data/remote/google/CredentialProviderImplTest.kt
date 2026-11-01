@@ -4,10 +4,6 @@ import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.FRESH
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.HOUR
 import com.coparently.app.data.remote.google.GoogleCredentialsFixture.Companion.REFRESH
-import com.google.api.client.googleapis.json.GoogleJsonError
-import com.google.api.client.googleapis.json.GoogleJsonResponseException
-import com.google.api.client.http.HttpHeaders
-import com.google.api.client.http.HttpResponseException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import kotlinx.coroutines.test.runTest
@@ -33,7 +29,7 @@ import kotlin.test.assertTrue
 class CredentialProviderImplTest {
 
     private val google = GoogleCredentialsFixture()
-    private val provider = CredentialProviderImpl(google.service, google.preferences)
+    private val provider = CredentialProviderImpl(google.service)
 
     @After
     fun tearDown() {
@@ -146,7 +142,7 @@ class CredentialProviderImplTest {
         google.connect()
         val rateLimited = forbidden(reason = "rateLimitExceeded")
 
-        val thrown = assertFailsWith<GoogleJsonResponseException> {
+        val thrown = assertFailsWith<GoogleCalendarHttpException> {
             provider.withCredential<String> { throw rateLimited }
         }
 
@@ -157,31 +153,22 @@ class CredentialProviderImplTest {
 
     @Test
     fun `a missing permission is read from the WWW-Authenticate header too`() {
-        val headerOnly = HttpResponseException.Builder(
+        val headerOnly = GoogleCalendarHttpException(
             HTTP_FORBIDDEN,
-            "Forbidden",
-            HttpHeaders().setAuthenticate("Bearer realm=\"https://accounts.google.com/\", error=\"insufficient_scope\"")
-        ).build()
+            reasons = emptyList(),
+            authenticate = "Bearer realm=\"https://accounts.google.com/\", error=\"insufficient_scope\""
+        )
 
         assertTrue(CredentialProviderImpl.lacksCalendarScope(headerOnly))
         assertFalse(CredentialProviderImpl.lacksCalendarScope(refused(HTTP_UNAUTHORIZED)))
         assertFalse(CredentialProviderImpl.lacksCalendarScope(forbidden(reason = "rateLimitExceeded")))
     }
 
-    private fun refused(status: Int): HttpResponseException =
-        HttpResponseException.Builder(status, "Unauthorized", HttpHeaders()).build()
+    private fun refused(status: Int) = GoogleCalendarHttpException(status, reasons = emptyList(), authenticate = null)
 
     /** A 403 as the Calendar API sends it, naming [reason] in its error details. */
-    private fun forbidden(reason: String): GoogleJsonResponseException {
-        val details = GoogleJsonError().apply {
-            code = HTTP_FORBIDDEN
-            errors = listOf(GoogleJsonError.ErrorInfo().apply { this.reason = reason })
-        }
-        return GoogleJsonResponseException(
-            HttpResponseException.Builder(HTTP_FORBIDDEN, "Forbidden", HttpHeaders()),
-            details
-        )
-    }
+    private fun forbidden(reason: String) =
+        GoogleCalendarHttpException(HTTP_FORBIDDEN, reasons = listOf(reason), authenticate = null)
 
     private companion object {
         const val HTTP_UNAUTHORIZED = 401
