@@ -20,6 +20,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
@@ -215,7 +216,7 @@ constructor(
         val days = custody.dayOverrides.filterValues { it.groupId == clock.ref && it.requestedBy == clock.proposerUid }
         val firstDay = days.keys.minOrNull() ?: return GONE_LOOK
         val status = if (days.values.any { it.isPending }) RecordStatus.PENDING else RecordStatus.ANSWERED
-        val date = clock.firstDate?.toString() ?: firstDay
+        val date = clock.firstDate?.let(IsoText::date) ?: firstDay
         return RecordLook(status, CardSubject(ActivityEntityType.DAY_SWAP, date, date))
     }
 
