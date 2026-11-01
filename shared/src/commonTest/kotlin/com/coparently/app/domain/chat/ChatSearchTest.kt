@@ -1,7 +1,7 @@
 package com.coparently.app.domain.chat
 
 import com.coparently.app.domain.model.Message
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -205,7 +205,7 @@ class ChatSearchTest {
 
         val snippet = snippetFor(text, "abc")
 
-        assertFalse(Character.isLowSurrogate(snippet.text[1]), "the text after the ellipsis starts mid-emoji")
+        assertFalse(snippet.text[1].isLowSurrogate(), "the text after the ellipsis starts mid-emoji")
         assertEquals("abc", snippet.text.substring(snippet.matchStart, snippet.matchEnd))
     }
 

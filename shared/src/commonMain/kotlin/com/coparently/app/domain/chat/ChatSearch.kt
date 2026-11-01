@@ -166,9 +166,9 @@ object ChatSearch {
 
     /** This index, moved back one if it would split a surrogate pair. */
     private fun Int.alignedBackward(text: String): Int =
-        if (this > 0 && Character.isLowSurrogate(text[this])) this - 1 else this
+        if (this > 0 && text[this].isLowSurrogate()) this - 1 else this
 
     /** This end index, moved forward one if it would split a surrogate pair. */
     private fun Int.alignedForward(text: String): Int =
-        if (this < text.length && Character.isLowSurrogate(text[this])) this + 1 else this
+        if (this < text.length && text[this].isLowSurrogate()) this + 1 else this
 }

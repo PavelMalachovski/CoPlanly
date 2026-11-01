@@ -1,7 +1,7 @@
 package com.coparently.app.domain.onboarding
 
 import com.coparently.app.domain.model.User
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 

@@ -2,7 +2,7 @@ package com.coparently.app.domain.events
 
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**

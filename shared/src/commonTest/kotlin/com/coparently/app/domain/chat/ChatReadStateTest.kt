@@ -2,10 +2,10 @@ package com.coparently.app.domain.chat
 
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ChatReadStateTest {
 

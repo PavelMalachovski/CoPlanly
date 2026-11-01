@@ -4,7 +4,7 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.domain.model.Pet
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
