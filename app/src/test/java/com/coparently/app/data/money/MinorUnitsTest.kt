@@ -2,7 +2,9 @@ package com.coparently.app.data.money
 
 import org.junit.Test
 import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 /**
@@ -19,6 +21,25 @@ class MinorUnitsTest {
         assertEquals(500_000L, MinorUnits.fromText("5000.00"))
         assertEquals(1L, MinorUnits.fromText("0.01"))
         assertEquals(0L, MinorUnits.fromText("0.00"))
+        assertEquals(10L, MinorUnits.fromText("0.10"))
+        assertEquals(-1_234L, MinorUnits.fromText("-12.34"))
+    }
+
+    @Test
+    fun `only an overflow is no amount, never an error`() {
+        // The first version caught everything, and on API 26–30 BigInteger.longValueExact (API 31)
+        // threw NoSuchMethodError, which read every stored amount as missing. A JVM test cannot
+        // run at that API level; it can hold the catch to the overflow alone.
+        val broken = object : BigDecimal("450.00") {
+            override fun setScale(newScale: Int, roundingMode: RoundingMode): BigDecimal =
+                throw NoSuchMethodError("simulated: a call this API level does not have")
+
+            // Kotlin's Number declares these two abstract; BigDecimal leaves them to Number.
+            override fun toByte(): Byte = toInt().toByte()
+            override fun toShort(): Short = toInt().toShort()
+        }
+        assertFailsWith<NoSuchMethodError> { MinorUnits.fromDecimal(broken) }
+        assertNull(MinorUnits.fromDecimal(BigDecimal("1E30")))
     }
 
     @Test
@@ -37,7 +58,7 @@ class MinorUnitsTest {
         assertEquals(1_230L, MinorUnits.fromText("12.300"))
         assertEquals(-1_235L, MinorUnits.fromText("-12.345"))
         assertEquals(
-            BigDecimal("12.345").setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+            BigDecimal("12.345").setScale(2, RoundingMode.HALF_UP).toPlainString(),
             BigDecimal.valueOf(MinorUnits.fromText("12.345")!!, 2).toPlainString()
         )
     }

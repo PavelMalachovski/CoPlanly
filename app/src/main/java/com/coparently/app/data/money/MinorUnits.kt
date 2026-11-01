@@ -22,10 +22,20 @@ object MinorUnits {
      */
     fun fromText(text: String?): Long? = text?.toBigDecimalOrNull()?.let(::fromDecimal)
 
-    /** [value] in minor units rounded half up, or null when it does not fit a Long. */
-    fun fromDecimal(value: BigDecimal): Long? =
-        runCatching { value.setScale(PaymentQr.MONEY_SCALE, RoundingMode.HALF_UP).unscaledValue().longValueExact() }
-            .getOrNull()
+    /**
+     * [value] in minor units rounded half up, or null when it does not fit a Long.
+     *
+     * `BigDecimal.longValueExact` (API 1), never `BigInteger.longValueExact`, which is API 31: on
+     * API 26–30 it throws `NoSuchMethodError`. Only the overflow is caught, so an error is never
+     * read as "no amount".
+     */
+    fun fromDecimal(value: BigDecimal): Long? = try {
+        value.setScale(PaymentQr.MONEY_SCALE, RoundingMode.HALF_UP)
+            .movePointRight(PaymentQr.MONEY_SCALE)
+            .longValueExact()
+    } catch (overflow: ArithmeticException) {
+        null
+    }
 
     /** [value] in minor units, read as `BigDecimal.valueOf(value)` and rounded half up. */
     fun fromDouble(value: Double): Long? = fromDecimal(BigDecimal.valueOf(value))
