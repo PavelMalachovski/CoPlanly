@@ -2,7 +2,7 @@ package com.coparently.app.domain.chat
 
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageType
-import java.net.URLEncoder
+import com.coparently.app.domain.text.PercentCodec
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -51,7 +51,7 @@ object MessageReport {
         "mailto:$address?subject=${encode(subject)}&body=${encode(body)}"
 
     private fun encode(text: String): String =
-        URLEncoder.encode(text, Charsets.UTF_8.name())
+        PercentCodec.encode(text)
             .replace("+", "%20")
             .replace("*", "%2A")
             .replace("%7E", "~")

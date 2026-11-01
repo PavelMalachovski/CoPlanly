@@ -1,7 +1,6 @@
 package com.coparently.app.domain.pairing
 
-import java.net.URLDecoder
-import java.net.URLEncoder
+import com.coparently.app.domain.text.PercentCodec
 
 /**
  * The pairing code an invitation's Google Play link carries through the install.
@@ -30,8 +29,7 @@ object InstallReferrer {
      */
     fun pairingCode(referrer: String?): String? {
         if (referrer.isNullOrBlank()) return null
-        val decoded = runCatching { URLDecoder.decode(referrer, Charsets.UTF_8.name()) }
-            .getOrDefault(referrer)
+        val decoded = PercentCodec.decode(referrer) ?: referrer
         return decoded.split('&')
             .map { it.substringBefore('=') to it.substringAfter('=', "") }
             .firstOrNull { (key, _) -> key.trim() == PAIR_KEY }
@@ -50,7 +48,7 @@ object InstallReferrer {
         fromReferrer != null && consumed == fromReferrer
 
     /** The value of Play's `referrer` parameter for [code], percent-encoded for a URL. */
-    fun encode(code: String): String = URLEncoder.encode("$PAIR_KEY=$code", Charsets.UTF_8.name())
+    fun encode(code: String): String = PercentCodec.encode("$PAIR_KEY=$code")
 }
 
 /**
