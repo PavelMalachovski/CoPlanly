@@ -43,7 +43,8 @@ class ChildInfoMedicalProfileMappingTest {
     fun `a vaccination date is written as an ISO string, not as an object`() {
         val json = StoredJson.encode(Vaccination.serializer(), Vaccination("MMR", LocalDate(2024, 3, 12)))
 
-        assertEquals("""{"name":"MMR","date":"2024-03-12"}""", json)
+        // The keys in the device's order, by field name (`GsonFieldOrder`): what Gson wrote on ART.
+        assertEquals("""{"date":"2024-03-12","name":"MMR"}""", json)
     }
 
     @Test
