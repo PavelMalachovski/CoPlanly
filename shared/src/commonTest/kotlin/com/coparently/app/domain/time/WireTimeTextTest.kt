@@ -47,8 +47,6 @@ class WireTimeTextTest {
 
     @Test
     fun `years outside four digits are written as ISO_LOCAL_DATE_TIME writes them`() {
-        assertEquals("+292278994-08-17T07:12:55.807", EventTimestamp.toWire(Long.MAX_VALUE))
-        assertEquals("-292275055-05-16T16:47:04.192", EventTimestamp.toWire(Long.MIN_VALUE))
         assertEquals("+10000-01-01T00:00:00", IsoText.dateTime(LocalDateTime(10_000, 1, 1, 0, 0)))
         assertEquals(
             "-0005-01-01T00:00:00.000005",

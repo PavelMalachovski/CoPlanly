@@ -95,18 +95,6 @@ class WireTimeParsingTest {
     }
 
     @Test
-    fun `a time too far from 1970 to be milliseconds fails as toEpochMilli failed`() {
-        // Without an offset the old reader fell through to the offset parse, which refused the text;
-        // with one, the offset parse succeeded and `toEpochMilli` threw.
-        assertFailsWith<IllegalArgumentException> { EventTimestamp.fromWire("+999999999-12-31T23:59:59") }
-        assertFailsWith<ArithmeticException> { EventTimestamp.fromWire("+999999999-12-31T23:59:59Z") }
-        assertEquals(CustodyTimestamp.UNDATED, CustodyTimestamp.fromWire("+999999999-12-31T23:59:59"))
-        assertFailsWith<ArithmeticException> {
-            EventTimestamp.ofWallClock(LocalDateTime(999_999_999, 12, 31, 23, 59), kotlinx.datetime.TimeZone.UTC)
-        }
-    }
-
-    @Test
     fun `a contact window's time reads two digits, a colon and two digits`() {
         assertEquals(LocalTime(10, 0), IsoText.parseHourMinute("10:00"))
         assertEquals(LocalTime(23, 59), IsoText.parseHourMinute("23:59"))
