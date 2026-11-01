@@ -96,6 +96,8 @@ invocation is yours.
 | **MON-20** | **Built** (read-only card in custody settings, pure calculator); left: a look on a phone | P2 | — |
 | **MON-21** | **Built** (a proposal from an agreed plan answer, citing it; rules and rules tests); left: the rules deploy and a look on two phones — see the 👁 table | P2 | — |
 | **MON-22** | **Built** (schema 41, PR #101): a local-only journal and an opt-in export section; left: the device check (DEVICE-CHECKLIST §6) | P2 | — |
+| **MON-24** | The iPhone app: one Kotlin codebase (Compose Multiplatform), iOS-adapted on the iPhone, full parity. **Planned, owner decision of 27 October 2026; starts after the Android release.** Design: `docs/superpowers/specs/2026-10-27-iphone-app-design.md` | P1 | L |
+| **MON-25** | Request clocks' on-time steps (deadline notice, end) move to a scheduled Cloud Function, for both platforms; needed by MON-24 before its phase 2. Needs its own design pass | P1 | L |
 | **REL-4 (drafting)** | Done as far as the code can answer: every placeholder left is a fact only the owner has, listed at the top of each document. The deletion page and the privacy link in the app are written | P0 | S |
 | **L-4 (photos)** | **Built** (family-keyed Storage paths, no download URLs, pre-pairing photos moved by the server, legacy purge callable; rules, functions, unit and e2e tests); left: `firebase deploy --only storage`, the functions deploy, `purgeLegacyPhotoPaths` once, and DEVICE-CHECKLIST §3.10 on two phones | P0 | S |
 
@@ -2269,8 +2271,9 @@ after the fact (it would print a server time that is not when the file was made)
 
 **Where:** ☁️ cloud (functions); 📱 subscribing from an iPhone.
 
-**Answers:** the iOS gap, the one that outweighs any single feature. A native iOS app is an owner
-decision and not planned. A read-only **ICS subscription** lets an iPhone parent see the custody
+**Answers:** the iOS gap, the one that outweighs any single feature. An iPhone app was not planned
+when this was written; it is now (MON-24, owner decision of 27 October 2026), after the Android
+release, and this feed stays for Apple Calendar. A read-only **ICS subscription** lets an iPhone parent see the custody
 days and shared events in Apple Calendar today. It is not a substitute for the app (no chat, no
 changes), and the settings text must say exactly that (design item 8).
 
@@ -2626,6 +2629,31 @@ the co-parent: a journal about the other parent that syncs to them is a differen
 period or deletes them); no attachment of files to an entry; no backup — an encrypted export of the
 journal alone would be the way to add one, and it is a product decision, not a default. Needs
 `41.json` from the Regenerate workflow before its migration test can run.
+
+### MON-24 · **PLANNED** · P1 · L · CoPlanly for iPhone
+
+**Where:** ☁️ cloud for the shared Kotlin and the job definitions; ⚙️ the iOS build and simulator
+jobs on the owner's Mac as a self-hosted runner; 💻 the iPhone, TestFlight and App Store review.
+
+**Answers:** the iPhone parent, until now served only by the read-only feed (MON-17). Owner
+decisions of 27 October 2026: one Kotlin codebase on Compose Multiplatform; on the iPhone, Apple's
+navigation, tab bar, sheets, pickers, SF Symbols and SF type through a small set of adaptive
+controls; full parity in the first iPhone release; work starts **after the Android release**.
+The plan of record is `docs/superpowers/specs/2026-10-27-iphone-app-design.md`: the migration of
+the Android app into `shared` without behaviour change (the wire fixtures are the gate), the
+iPhone shell, the platform substitutes (APNs with a Notification Service Extension, WidgetKit,
+iOS Data Protection instead of SQLCipher, Sign in with Apple on both platforms), and the order of
+work. Depends on MON-25 before its phase 2.
+
+### MON-25 · **PLANNED** · P1 · L · Request clocks decided on the server
+
+**Where:** ☁️ cloud (functions, rules, client), 👁 two phones.
+
+**Answers:** iOS does not run background work at a given time, so a request's deadline notice and
+its "No answer" end (CLAUDE.md item 42) cannot stay on the proposer's phone once there is an
+iPhone. Owner decision of 27 October 2026: a scheduled Cloud Function decides them for both
+platforms. Needs its own design pass first: the clock document's server-only fields, the rules'
+update shapes, the proposal withdrawal at the end, the silent chat cards, and the DPIA (R22).
 
 ## 8. [FAM] More than one child, more than one pet
 
