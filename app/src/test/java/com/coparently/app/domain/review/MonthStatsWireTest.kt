@@ -10,20 +10,22 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.YearMonth
-import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The month in review: custody counted through the calendar's own lookup (swaps included),
- * special days counted once, private events left out, and money per currency with the transfer
- * that evens it out — never a single cross-currency total.
+ * The month in review as the AI summary's callable receives it ([MonthStatsWire]): the exact key
+ * set the server validates, names in place of slots, and nothing sent for a month without a
+ * schedule.
+ *
+ * Split from `MonthReviewCalculatorTest` when the calculator moved to `:shared` (MON-24):
+ * [MonthStatsWire] stays in the app, because it writes the month through `java.time.YearMonth`'s
+ * own text, so its tests stay here with the same month the calculator's tests use.
  */
-class MonthReviewCalculatorTest {
+class MonthStatsWireTest {
 
     // Week on, week off from Monday 2026-09-07; slot 1 ("mom") has the first week. September 2026:
     // 1–6 slot 2, 7–13 slot 1, 14–20 slot 2, 21–27 slot 1, 28–30 slot 2 → 14 and 16 days.
@@ -56,120 +58,13 @@ class MonthReviewCalculatorTest {
     }
 
     @Test
-    fun `days and handovers follow the pattern`() {
-        val result = review()
-
-        assertEquals(mapOf("mom" to 14, "dad" to 16), result.daysBySlot)
-        assertEquals(0, result.daysWithoutSchedule)
-        // Mornings of 7, 14, 21 and 28 September.
-        assertEquals(4, result.handovers)
-    }
-
-    @Test
-    fun `an accepted swap moves a day and adds its handovers, a pending one only counts as offered`() {
-        val result = review(
-            overrides = mapOf(
-                "2026-09-08" to swap("dad", DayOverrideStatus.ACCEPTED),
-                "2026-09-15" to swap("mom", DayOverrideStatus.PENDING),
-                "2026-10-02" to swap("mom", DayOverrideStatus.ACCEPTED)
-            )
-        )
-
-        assertEquals(mapOf("mom" to 13, "dad" to 17), result.daysBySlot)
-        // 7, 8 and 9 September now each change hands, plus 14, 21 and 28.
-        assertEquals(6, result.handovers)
-        assertEquals(2, result.swapDaysOffered)
-        assertEquals(1, result.swapDaysAgreed)
-    }
-
-    @Test
-    fun `without a schedule no day is anybody's`() {
-        val result = review(hasSchedule = false)
-
-        assertTrue(result.daysBySlot.isEmpty())
-        assertEquals(30, result.daysWithoutSchedule)
-        assertEquals(0, result.handovers)
-        assertTrue(result.specialDaysBySlot.isEmpty())
-    }
-
-    @Test
-    fun `special days are the month's holidays and birthdays, each date once`() {
-        // 28 September is Czech Statehood Day, a slot-2 day; the birthday on the 10th is slot 1's,
-        // and a second birthday on the holiday itself adds no date.
-        val result = review(
-            birthdays = listOf(
-                "Emma" to LocalDate(2018, 9, 10),
-                "Leo" to LocalDate(2020, 9, 28)
-            )
-        )
-
-        assertEquals(2, result.specialDays)
-        assertEquals(mapOf("mom" to 1, "dad" to 1), result.specialDaysBySlot)
-    }
-
-    @Test
-    fun `shared events count occurrences in the month and leave private ones out`() {
-        val events = listOf(
-            event("a", LocalDateTime.of(2026, 9, 3, 10, 0)),
-            // Two occurrences of one recurring event share its id.
-            event("weekly", LocalDateTime.of(2026, 9, 4, 17, 0)),
-            event("weekly", LocalDateTime.of(2026, 9, 11, 17, 0)),
-            // Started in August, still running on 1 September.
-            event("trip", LocalDateTime.of(2026, 8, 30, 9, 0), end = LocalDateTime.of(2026, 9, 1, 18, 0)),
-            event("mine", LocalDateTime.of(2026, 9, 5, 9, 0), hidden = true),
-            event("october", LocalDateTime.of(2026, 10, 1, 9, 0))
-        )
-
-        assertEquals(4, review(events = events).sharedEvents)
-    }
-
-    @Test
-    fun `money is summarised per currency with the transfer that evens it out`() {
-        val result = review(
-            expenses = listOf(
-                expense(paidBy = ME, amount = 300.0, currency = "CZK"),
-                expense(paidBy = CO_PARENT, amount = 100.0, currency = "CZK"),
-                expense(paidBy = CO_PARENT, amount = 40.0, currency = "EUR"),
-                expense(paidBy = ME, amount = 999.0, currency = "CZK", date = LocalDate(2026, 8, 31))
-            )
-        )
-
-        assertEquals(listOf("CZK", "EUR"), result.money.map { it.currency })
-        val czk = result.money.first { it.currency == "CZK" }
-        assertEquals(400.0, czk.total, DELTA)
-        assertEquals(mapOf(ME to 300.0, CO_PARENT to 100.0), czk.paidByUid)
-        // Half each: I paid 300 and owe 200, so the co-parent's 100 evens it out.
-        assertEquals(Settlement(fromUid = CO_PARENT, toUid = ME, amount = 100.0), czk.settlement)
-        val eur = result.money.first { it.currency == "EUR" }
-        assertEquals(Settlement(fromUid = ME, toUid = CO_PARENT, amount = 20.0), eur.settlement)
-    }
-
-    @Test
-    fun `an even month and an unpaired account carry no transfer`() {
-        val even = review(
-            expenses = listOf(
-                expense(paidBy = ME, amount = 50.0, currency = "CZK"),
-                expense(paidBy = CO_PARENT, amount = 50.0, currency = "CZK")
-            )
-        )
-        assertNull(even.money.single().settlement)
-
-        val unpaired = review(
-            expenses = listOf(expense(paidBy = ME, amount = 50.0, currency = "CZK", splitBetween = listOf(ME))),
-            roleByUid = mapOf(ME to "mom")
-        )
-        assertNull(unpaired.money.single().settlement)
-        assertEquals(mapOf(ME to 50.0), unpaired.money.single().paidByUid)
-    }
-
-    @Test
     fun `the wire form is exactly the shape the server validates`() {
         val result = review(
             overrides = mapOf(
                 "2026-09-08" to swap("dad", DayOverrideStatus.ACCEPTED),
                 "2026-09-15" to swap("mom", DayOverrideStatus.PENDING)
             ),
-            events = listOf(event("a", LocalDateTime.of(2026, 9, 3, 10, 0))),
+            events = listOf(event("a", LocalDateTime(2026, 9, 3, 10, 0))),
             expenses = listOf(
                 expense(paidBy = ME, amount = 10.0, currency = "CZK"),
                 expense(paidBy = ME, amount = 3.0, currency = "EUR"),
@@ -250,12 +145,12 @@ class MonthReviewCalculatorTest {
     ) = Event(
         id = id,
         title = "Event $id",
-        startDateTime = start.toKotlinLocalDateTime(),
-        endDateTime = end?.toKotlinLocalDateTime(),
+        startDateTime = start,
+        endDateTime = end,
         eventType = "other",
         parentOwner = "mom",
-        createdAt = start.toKotlinLocalDateTime(),
-        updatedAt = start.toKotlinLocalDateTime(),
+        createdAt = start,
+        updatedAt = start,
         isPrivate = hidden
     )
 
@@ -279,6 +174,5 @@ class MonthReviewCalculatorTest {
     private companion object {
         const val ME = "uid-alice"
         const val CO_PARENT = "uid-bob"
-        const val DELTA = 0.0001
     }
 }

@@ -1,7 +1,7 @@
 package com.coparently.app.domain.holidays
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -137,7 +137,7 @@ class HolidayCountryTest {
     @Test
     fun `the Czech provider still answers through the shared interface`() {
         val holidays = HolidayCountry.CZECHIA.provider!!
-            .holidaysInRange(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 26))
+            .holidaysInRange(LocalDate(2026, 12, 24), LocalDate(2026, 12, 26))
 
         assertEquals(3, holidays.size)
         assertEquals("cs", holidays.values.first().localLanguage)
@@ -216,7 +216,7 @@ class HolidayCountryTest {
         // 24-26 December are both, and a parent looking at the grid wants to be told it is
         // Christmas rather than that school is out. The precedence lives on the interface now,
         // so no future provider can get it subtly different.
-        val christmas = HolidayCountry.CZECHIA.provider!!.holidayFor(LocalDate.of(2026, 12, 25))
+        val christmas = HolidayCountry.CZECHIA.provider!!.holidayFor(LocalDate(2026, 12, 25))
 
         assertNotNull(christmas)
         assertEquals(false, christmas.isSchoolVacation)

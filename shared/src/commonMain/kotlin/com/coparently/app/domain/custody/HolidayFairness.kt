@@ -7,7 +7,6 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 import kotlinx.datetime.plus
-import kotlinx.datetime.toKotlinLocalDate
 
 /**
  * What one row of the fairness summary is about (MON-20). Data, not text: the screen words the
@@ -122,7 +121,7 @@ object HolidayFairnessCalculator {
     }
 
     private fun fixedRows(year: Int): List<Dated> {
-        val easter = gregorianEasterSunday(year).toKotlinLocalDate()
+        val easter = gregorianEasterSunday(year)
         val eve = LocalDate(year, CHRISTMAS_MONTH, CHRISTMAS_EVE_DAY)
         val christmas = LocalDate(year, CHRISTMAS_MONTH, CHRISTMAS_DAY)
         val newYear = LocalDate(year, 1, 1)
@@ -138,10 +137,10 @@ object HolidayFairnessCalculator {
     private fun publicHolidayRows(year: Int, provider: HolidayProvider?): List<Dated> {
         val covered = fixedRows(year).flatMap { (_, dates) -> listOf(dates.start, dates.endInclusive) }.toSet()
         return provider?.publicHolidays(year).orEmpty()
-            .filter { it.date.toKotlinLocalDate() !in covered }
+            .filter { it.date !in covered }
             .distinctBy { it.date }
             .map { holiday ->
-                val date = holiday.date.toKotlinLocalDate()
+                val date = holiday.date
                 FairnessOccasion.PublicHoliday(holiday) to date..date
             }
     }
@@ -165,8 +164,8 @@ object HolidayFairnessCalculator {
         return provider.schoolVacations(year)
             .distinctBy { it.first.start to it.first.endInclusive }
             .map { (range, names) ->
-                val clippedStart = maxOf(range.start.toKotlinLocalDate(), first)
-                val clippedEnd = minOf(range.endInclusive.toKotlinLocalDate(), last)
+                val clippedStart = maxOf(range.start, first)
+                val clippedEnd = minOf(range.endInclusive, last)
                 val clipped = clippedStart..clippedEnd
                 FairnessOccasion.SchoolVacation(names.first, names.second, provider.localLanguage) to clipped
             }

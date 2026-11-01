@@ -1,6 +1,6 @@
 package com.coparently.app.domain.holidays
 
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Russian public holidays — the non-working days of Labour Code art. 112, **and not the days the

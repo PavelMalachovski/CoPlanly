@@ -1,6 +1,6 @@
 package com.coparently.app.domain.holidays
 
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * German public holidays — **the nine that are nationwide, and no others.**

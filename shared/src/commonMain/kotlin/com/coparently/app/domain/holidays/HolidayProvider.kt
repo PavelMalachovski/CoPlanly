@@ -1,6 +1,8 @@
 package com.coparently.app.domain.holidays
 
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 
 /**
  * A public holiday or school vacation day shown in the calendar.
@@ -124,9 +126,9 @@ interface HolidayProvider {
     fun holidaysInRange(start: LocalDate, end: LocalDate): Map<LocalDate, Holiday> {
         val result = mutableMapOf<LocalDate, Holiday>()
         var date = start
-        while (!date.isAfter(end)) {
+        while (date <= end) {
             holidayFor(date)?.let { result[date] = it }
-            date = date.plusDays(1)
+            date = date.plus(1, DateTimeUnit.DAY)
         }
         return result
     }
@@ -144,10 +146,10 @@ interface HolidayProvider {
         val periods = (start.year..end.year).flatMap { schoolVacations(it) }.map { it.first }
         val result = mutableSetOf<LocalDate>()
         var date = start
-        while (!date.isAfter(end)) {
+        while (date <= end) {
             val day = date
             if (periods.any { day in it }) result += day
-            date = date.plusDays(1)
+            date = date.plus(1, DateTimeUnit.DAY)
         }
         return result
     }
@@ -185,5 +187,5 @@ fun gregorianEasterSunday(year: Int): LocalDate {
     val m = (a + 11 * h + 22 * l) / 451
     val month = (h + l - 7 * m + 114) / 31
     val day = ((h + l - 7 * m + 114) % 31) + 1
-    return LocalDate.of(year, month, day)
+    return LocalDate(year, month, day)
 }

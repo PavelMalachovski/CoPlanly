@@ -24,6 +24,8 @@ import com.coparently.app.domain.school.SchoolWeek
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -225,9 +227,11 @@ class SchoolImporter internal constructor(
      */
     private fun drawnHolidays(user: User, today: LocalDate): Set<LocalDate> {
         val provider = HolidayLocation.of(user.countryCode, user.regionCode).provider ?: return emptySet()
-        val from = SchoolWeek.mondayOf(today)
-        val to = today.plusDays(SchoolImportPlanner.EVENT_WINDOW_DAYS)
-        return provider.holidaysInRange(from, to).keys + provider.schoolVacationDaysInRange(from, to)
+        // The tables are kotlinx-datetime in `:shared` (MON-24); the school import is java.time.
+        val from = SchoolWeek.mondayOf(today).toKotlinLocalDate()
+        val to = today.plusDays(SchoolImportPlanner.EVENT_WINDOW_DAYS).toKotlinLocalDate()
+        return (provider.holidaysInRange(from, to).keys + provider.schoolVacationDaysInRange(from, to))
+            .mapTo(mutableSetOf()) { it.toJavaLocalDate() }
     }
 
     private fun failure(uid: String, connectionId: String, error: BakalariException): SchoolSyncResult {

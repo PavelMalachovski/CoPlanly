@@ -4,7 +4,7 @@ import com.coparently.app.domain.holidays.SchoolBreak.JESENNE_PRAZDNINY
 import com.coparently.app.domain.holidays.SchoolBreak.LETNE_PRAZDNINY
 import com.coparently.app.domain.holidays.SchoolBreak.VELKONOCNE_PRAZDNINY
 import com.coparently.app.domain.holidays.SchoolBreak.VIANOCNE_PRAZDNINY
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Slovak public holidays — the days off under Act 241/1993, as amended.

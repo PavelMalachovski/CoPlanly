@@ -1,7 +1,10 @@
 package com.coparently.app.domain.holidays
 
-import java.time.DayOfWeek
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 /**
  * A school vacation offered as the dates of a seasonal layer (MON-14, "Fill from school
@@ -66,7 +69,7 @@ object SchoolVacationSuggestions {
         ranges.forEach { (range, names) ->
             val last = joined.lastOrNull()
             if (last != null && last.nameEn == names.first &&
-                !range.start.isAfter(last.dates.endInclusive.plusDays(1))
+                range.start <= last.dates.endInclusive.plus(1, DateTimeUnit.DAY)
             ) {
                 val end = maxOf(last.dates.endInclusive, range.endInclusive)
                 joined[joined.lastIndex] = last.copy(dates = last.dates.start..end)
@@ -76,16 +79,22 @@ object SchoolVacationSuggestions {
         }
         return joined
             .map { it.copy(dates = widen(provider, it.dates)) }
-            .filter { !it.dates.endInclusive.isBefore(today) }
-            .filter { it.dates.start.plusDays(MIN_DAYS - 1) <= it.dates.endInclusive }
+            .filter { it.dates.endInclusive >= today }
+            .filter { it.dates.start.plus(MIN_DAYS - 1, DateTimeUnit.DAY) <= it.dates.endInclusive }
             .take(limit)
     }
 
     private fun widen(provider: HolidayProvider, dates: ClosedRange<LocalDate>): ClosedRange<LocalDate> {
         var start = dates.start
         var end = dates.endInclusive
-        repeat(MAX_WIDEN_DAYS) { if (isDayOff(provider, start.minusDays(1))) start = start.minusDays(1) }
-        repeat(MAX_WIDEN_DAYS) { if (isDayOff(provider, end.plusDays(1))) end = end.plusDays(1) }
+        repeat(MAX_WIDEN_DAYS) {
+            val before = start.minus(1, DateTimeUnit.DAY)
+            if (isDayOff(provider, before)) start = before
+        }
+        repeat(MAX_WIDEN_DAYS) {
+            val after = end.plus(1, DateTimeUnit.DAY)
+            if (isDayOff(provider, after)) end = after
+        }
         return start..end
     }
 

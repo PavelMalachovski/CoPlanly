@@ -5,7 +5,7 @@ import com.coparently.app.domain.holidays.SchoolBreak.HERBSTFERIEN
 import com.coparently.app.domain.holidays.SchoolBreak.OSTERFERIEN
 import com.coparently.app.domain.holidays.SchoolBreak.PFINGSTFERIEN
 import com.coparently.app.domain.holidays.SchoolBreak.WEIHNACHTSFERIEN
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Austrian public holidays — the thirteen of the Holiday Rest Act (Feiertagsruhegesetz 1957),

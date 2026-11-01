@@ -12,6 +12,7 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.rememberParentNames
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -82,9 +83,9 @@ object ScreenshotFixtures {
 
     /** May's two Czech public holidays, as `CzechHolidays` would produce them. */
     val holidays: Map<LocalDate, Holiday> = listOf(
-        Holiday(MONTH.atDay(1), "Labour Day", "Svátek práce", "cs"),
-        Holiday(MONTH.atDay(8), "Liberation Day", "Den vítězství", "cs")
-    ).associateBy { it.date }
+        Holiday(MONTH.atDay(1).toKotlinLocalDate(), "Labour Day", "Svátek práce", "cs"),
+        Holiday(MONTH.atDay(8).toKotlinLocalDate(), "Liberation Day", "Den vítězství", "cs")
+    ).associateBy { it.date.toJavaLocalDate() }
 
     /**
      * A school vacation that runs off the end of the month: Baden-Württemberg's Whitsun break,

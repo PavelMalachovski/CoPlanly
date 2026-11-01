@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.todayIn
 import java.time.LocalDate
 import java.util.UUID
@@ -164,7 +165,7 @@ class SeasonalScheduleViewModel @Inject constructor(
             layers = model?.seasonalLayers.orEmpty().filterNot { it.isHistory },
             coParentProposalPending = CustodyProposalTransition.pendingFromCoParent(remote, uid),
             ownProposalPending = proposer != null && proposer == uid,
-            suggestions = SchoolVacationSuggestions.upcoming(location.provider, today)
+            suggestions = SchoolVacationSuggestions.upcoming(location.provider, today.toKotlinLocalDate())
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeasonalLayersUiState())
 

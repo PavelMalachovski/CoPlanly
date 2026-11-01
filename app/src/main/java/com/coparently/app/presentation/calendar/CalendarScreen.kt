@@ -480,7 +480,9 @@ fun CalendarScreen(
             emptyMap()
         } else {
             val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
-            provider.holidaysInRange(start.toLocalDate(), end.toLocalDate())
+            // The tables are kotlinx-datetime in `:shared` (MON-24); the grid's days are java.time.
+            provider.holidaysInRange(start.toLocalDate().toKotlinLocalDate(), end.toLocalDate().toKotlinLocalDate())
+                .mapKeys { (date, _) -> date.toJavaLocalDate() }
         }
     }
 
@@ -498,7 +500,11 @@ fun CalendarScreen(
             emptySet()
         } else {
             val (start, end) = queryRangeFor(viewMode, queryAnchorDate)
-            provider.schoolVacationDaysInRange(start.toLocalDate(), end.toLocalDate())
+            provider.schoolVacationDaysInRange(
+                start.toLocalDate().toKotlinLocalDate(),
+                end.toLocalDate().toKotlinLocalDate()
+            )
+                .mapTo(mutableSetOf()) { it.toJavaLocalDate() }
         }
     }
 

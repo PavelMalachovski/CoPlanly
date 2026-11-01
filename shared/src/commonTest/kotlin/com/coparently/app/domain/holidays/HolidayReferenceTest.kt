@@ -1,7 +1,7 @@
 package com.coparently.app.domain.holidays
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -117,13 +117,13 @@ class HolidayReferenceTest {
         fun daysOff(region: String) =
             GermanHolidays.forRegion(region).publicHolidays(2026).map { it.date }.toSet()
 
-        assertTrue(LocalDate.of(2026, 1, 6) in daysOff("BY"))
-        assertTrue(LocalDate.of(2026, 6, 4) in daysOff("BY"))
-        assertTrue(LocalDate.of(2026, 1, 6) !in daysOff("BE"))
-        assertTrue(LocalDate.of(2026, 3, 8) in daysOff("BE"))
+        assertTrue(LocalDate(2026, 1, 6) in daysOff("BY"))
+        assertTrue(LocalDate(2026, 6, 4) in daysOff("BY"))
+        assertTrue(LocalDate(2026, 1, 6) !in daysOff("BE"))
+        assertTrue(LocalDate(2026, 3, 8) in daysOff("BE"))
         // Assumption Day in Bavaria is a Catholic-municipality holiday and deliberately absent.
-        assertTrue(LocalDate.of(2026, 8, 15) !in daysOff("BY"))
-        assertTrue(LocalDate.of(2026, 8, 15) in daysOff("SL"))
+        assertTrue(LocalDate(2026, 8, 15) !in daysOff("BY"))
+        assertTrue(LocalDate(2026, 8, 15) in daysOff("SL"))
     }
 
     @Test
@@ -150,14 +150,14 @@ class HolidayReferenceTest {
         // 1 Sep off until 2023, 17 Nov off until 2024, and 8 May / 15 Sep working in 2026 only.
         fun daysOff(year: Int) = SlovakHolidays.publicHolidays(year).map { it.date }.toSet()
 
-        assertTrue(LocalDate.of(2023, 9, 1) in daysOff(2023))
-        assertTrue(LocalDate.of(2024, 9, 1) !in daysOff(2024))
-        assertTrue(LocalDate.of(2024, 11, 17) in daysOff(2024))
-        assertTrue(LocalDate.of(2025, 11, 17) !in daysOff(2025))
-        assertTrue(LocalDate.of(2026, 5, 8) !in daysOff(2026))
-        assertTrue(LocalDate.of(2026, 9, 15) !in daysOff(2026))
-        assertTrue(LocalDate.of(2027, 5, 8) in daysOff(2027))
-        assertTrue(LocalDate.of(2027, 9, 15) in daysOff(2027))
+        assertTrue(LocalDate(2023, 9, 1) in daysOff(2023))
+        assertTrue(LocalDate(2024, 9, 1) !in daysOff(2024))
+        assertTrue(LocalDate(2024, 11, 17) in daysOff(2024))
+        assertTrue(LocalDate(2025, 11, 17) !in daysOff(2025))
+        assertTrue(LocalDate(2026, 5, 8) !in daysOff(2026))
+        assertTrue(LocalDate(2026, 9, 15) !in daysOff(2026))
+        assertTrue(LocalDate(2027, 5, 8) in daysOff(2027))
+        assertTrue(LocalDate(2027, 9, 15) in daysOff(2027))
     }
 
     @Test
@@ -167,16 +167,16 @@ class HolidayReferenceTest {
         val days2025 = RussianHolidays.publicHolidays(2025).map { it.date }.toSet()
 
         assertEquals(14, days2025.size)
-        assertTrue(LocalDate.of(2025, 5, 8) !in days2025)
-        assertTrue(LocalDate.of(2025, 12, 31) !in days2025)
-        assertTrue(LocalDate.of(2025, 1, 7) in days2025)
+        assertTrue(LocalDate(2025, 5, 8) !in days2025)
+        assertTrue(LocalDate(2025, 12, 31) !in days2025)
+        assertTrue(LocalDate(2025, 1, 7) in days2025)
     }
 
     @Test
     fun `a public holiday is found through the shared lookup`() {
-        val germanUnity = GermanHolidays.holidayFor(LocalDate.of(2026, 10, 3))
+        val germanUnity = GermanHolidays.holidayFor(LocalDate(2026, 10, 3))
 
         assertEquals("Tag der Deutschen Einheit", germanUnity?.nameLocal)
-        assertEquals(null, GermanHolidays.holidayFor(LocalDate.of(2026, 10, 5)))
+        assertEquals(null, GermanHolidays.holidayFor(LocalDate(2026, 10, 5)))
     }
 }

@@ -1,7 +1,7 @@
 package com.coparently.app.domain.holidays
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -82,7 +82,7 @@ class SchoolVacationReferenceTest {
         val firstDay = LocalDate.parse(SCHOOL_VACATION_REFERENCE_FIRST_DAY)
         schoolVacationReference.keys.forEach { key ->
             periodsOf(calendarFor(key)).forEach {
-                assertFalse(LocalDate.parse(it.first).isBefore(firstDay), "$key ${it.first}")
+                assertFalse(LocalDate.parse(it.first) < firstDay, "$key ${it.first}")
             }
         }
     }
@@ -99,21 +99,21 @@ class SchoolVacationReferenceTest {
         val bavaria = GermanHolidays.forRegion("BY")
         val berlin = GermanHolidays.forRegion("BE")
 
-        assertEquals("Herbstferien", bavaria.holidayFor(LocalDate.of(2025, 11, 5))?.nameLocal)
-        assertEquals("Buß- und Bettag", bavaria.holidayFor(LocalDate.of(2025, 11, 19))?.nameLocal)
-        assertEquals("Sommerferien", bavaria.holidayFor(LocalDate.of(2026, 9, 14))?.nameLocal)
-        assertEquals(null, berlin.holidayFor(LocalDate.of(2026, 9, 14)))
+        assertEquals("Herbstferien", bavaria.holidayFor(LocalDate(2025, 11, 5))?.nameLocal)
+        assertEquals("Buß- und Bettag", bavaria.holidayFor(LocalDate(2025, 11, 19))?.nameLocal)
+        assertEquals("Sommerferien", bavaria.holidayFor(LocalDate(2026, 9, 14))?.nameLocal)
+        assertEquals(null, berlin.holidayFor(LocalDate(2026, 9, 14)))
     }
 
     @Test
     fun `a public holiday inside a vacation is still the public holiday`() {
         // The precedence `HolidayProvider.holidayFor` documents, across the new tables.
-        val christmas = LocalDate.of(2025, 12, 25)
+        val christmas = LocalDate(2025, 12, 25)
         listOf(GermanHolidays.forRegion("BY"), AustrianHolidays, SlovakHolidays).forEach { provider ->
             val holiday = provider.holidayFor(christmas)
             assertEquals(false, holiday?.isSchoolVacation, provider.localLanguage)
         }
-        val dayBeforeChristmasEve = LocalDate.of(2025, 12, 23)
+        val dayBeforeChristmasEve = LocalDate(2025, 12, 23)
         assertEquals(true, SlovakHolidays.holidayFor(dayBeforeChristmasEve)?.isSchoolVacation)
         assertEquals("sk", SlovakHolidays.holidayFor(dayBeforeChristmasEve)?.localLanguage)
     }
@@ -124,8 +124,8 @@ class SchoolVacationReferenceTest {
         val bratislava = SlovakHolidays.forRegion("BL")
         val zilina = SlovakHolidays.forRegion("ZI")
         val kosice = SlovakHolidays.forRegion("KI")
-        val westWeek = LocalDate.of(2026, 2, 18)
-        val eastWeek = LocalDate.of(2026, 3, 4)
+        val westWeek = LocalDate(2026, 2, 18)
+        val eastWeek = LocalDate(2026, 3, 4)
 
         assertEquals("Jarné prázdniny", bratislava.holidayFor(westWeek)?.nameLocal)
         assertEquals("sk", bratislava.holidayFor(westWeek)?.localLanguage)
@@ -134,7 +134,7 @@ class SchoolVacationReferenceTest {
         assertEquals(null, kosice.holidayFor(westWeek))
         assertEquals("Jarné prázdniny", kosice.holidayFor(eastWeek)?.nameLocal)
         assertEquals(null, bratislava.holidayFor(eastWeek))
-        assertEquals("Spring vacation", zilina.holidayFor(LocalDate.of(2026, 2, 25))?.nameEn)
+        assertEquals("Spring vacation", zilina.holidayFor(LocalDate(2026, 2, 25))?.nameEn)
     }
 
     @Test
@@ -160,10 +160,10 @@ class SchoolVacationReferenceTest {
     fun `regional breaks are not drawn where no region is chosen or modelled`() {
         // Slovakia's spring holidays (by kraj) are drawn only with a kraj, and Austria's
         // semester and summer breaks (by Land) are left out rather than drawn for the wrong Land.
-        assertEquals(null, SlovakHolidays.holidayFor(LocalDate.of(2026, 2, 18)))
-        assertEquals(null, SlovakHolidays.holidayFor(LocalDate.of(2026, 3, 4)))
-        assertEquals(null, AustrianHolidays.holidayFor(LocalDate.of(2026, 2, 4)))
-        assertEquals(null, AustrianHolidays.holidayFor(LocalDate.of(2026, 7, 20)))
+        assertEquals(null, SlovakHolidays.holidayFor(LocalDate(2026, 2, 18)))
+        assertEquals(null, SlovakHolidays.holidayFor(LocalDate(2026, 3, 4)))
+        assertEquals(null, AustrianHolidays.holidayFor(LocalDate(2026, 2, 4)))
+        assertEquals(null, AustrianHolidays.holidayFor(LocalDate(2026, 7, 20)))
         assertTrue(AustrianHolidays.regions.isEmpty())
     }
 }

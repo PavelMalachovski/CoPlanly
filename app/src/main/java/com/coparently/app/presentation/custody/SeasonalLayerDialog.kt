@@ -189,8 +189,8 @@ private fun LayerEditorBody(
             LayerSuggestions(suggestions) { suggestion, name ->
                 onChange(
                     draft.copy(
-                        from = suggestion.dates.start.toKotlinLocalDate(),
-                        to = suggestion.dates.endInclusive.toKotlinLocalDate(),
+                        from = suggestion.dates.start,
+                        to = suggestion.dates.endInclusive,
                         name = draft.name.ifBlank { name }
                     )
                 )

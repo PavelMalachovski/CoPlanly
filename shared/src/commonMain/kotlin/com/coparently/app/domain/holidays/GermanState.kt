@@ -1,9 +1,10 @@
 package com.coparently.app.domain.holidays
 
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.MonthDay
-import java.time.temporal.TemporalAdjusters
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
 
 /**
  * The sixteen German Länder and the public holidays each adds to the nine nationwide ones
@@ -98,7 +99,7 @@ private const val BERLIN_LIBERATION_80_YEAR = 2025
 private const val BERLIN_UPRISING_75_YEAR = 2028
 
 /** The Day of Repentance and Prayer is the last Wednesday on or before this date. */
-private val REPENTANCE_DAY_LATEST: MonthDay = MonthDay.parse("--11-22")
+private val REPENTANCE_DAY_LATEST: IsoMonthDay = IsoMonthDay.parse("--11-22")
 
 private fun epiphany() = HolidayRule("Epiphany", "Heilige Drei Könige", fixed("--01-06"))
 
@@ -144,8 +145,14 @@ private fun repentanceDay() = HolidayRule(
     inYear = { year -> year >= REPENTANCE_DAY_SINCE }
 )
 
-private fun repentanceDayIn(year: Int): LocalDate =
-    REPENTANCE_DAY_LATEST.atYear(year).with(TemporalAdjusters.previousOrSame(DayOfWeek.WEDNESDAY))
+private fun repentanceDayIn(year: Int): LocalDate {
+    val latest = REPENTANCE_DAY_LATEST.atYear(year)
+    val daysBack = (latest.dayOfWeek.isoDayNumber - DayOfWeek.WEDNESDAY.isoDayNumber + DAYS_PER_WEEK) % DAYS_PER_WEEK
+    return latest.minus(daysBack, DateTimeUnit.DAY)
+}
+
+/** Days in a week, for walking back to the Wednesday on or before a date. */
+private const val DAYS_PER_WEEK = 7
 
 /** Berlin's one-off public holidays, each passed by the Abgeordnetenhaus for its year alone. */
 private fun berlinAnniversaries() = listOf(

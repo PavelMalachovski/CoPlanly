@@ -4,10 +4,10 @@ Generates the reference fixture the MON-13 school-vacation tables are tested aga
 
 School vacations outside Czechia are not computable: each German Land, Austria and Slovakia
 publish them per school year. So the Kotlin tables in
-`app/src/main/java/com/coparently/app/domain/holidays/` (`SlovakHolidays`, `AustrianHolidays`,
-`GermanSchoolVacations`) are *data*, and what keeps them from being dates typed from memory is
-this script and `SchoolVacationReferenceTest`, which compares every period and both names the
-providers return with the fixture written here.
+`shared/src/commonMain/kotlin/com/coparently/app/domain/holidays/` (`SlovakHolidays`,
+`AustrianHolidays`, `GermanSchoolVacations`) are *data*, and what keeps them from being dates
+typed from memory is this script and `SchoolVacationReferenceTest`, which compares every period
+and both names the providers return with the fixture written here.
 
 ## Source
 
@@ -32,7 +32,7 @@ read the diff: a changed line is either a ministry's new decision (update the ta
 correction in the dataset (check it against the ministry, then update the table).
 
     python3 tools/generate-school-vacation-fixture.py \\
-        > app/src/test/java/com/coparently/app/domain/holidays/SchoolVacationReferenceFixture.kt
+        > shared/src/commonTest/kotlin/com/coparently/app/domain/holidays/SchoolVacationReferenceFixture.kt
 
 `--source DIR` reads a local checkout of the repository instead of fetching; `--commit SHA`
 overrides the pinned commit (then update `PINNED_COMMIT` below in the same change).

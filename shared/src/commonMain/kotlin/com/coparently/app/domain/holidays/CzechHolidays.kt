@@ -1,7 +1,9 @@
 package com.coparently.app.domain.holidays
 
-import java.time.LocalDate
-import java.time.MonthDay
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 /**
  * Czech public holidays and nationwide school vacations.
@@ -28,8 +30,8 @@ object CzechHolidays : HolidayProvider {
         val easterSunday = gregorianEasterSunday(year)
         return listOf(
             cs(on(year, "--01-01"), "New Year's Day", "Nový rok"),
-            cs(easterSunday.minusDays(2), "Good Friday", "Velký pátek"),
-            cs(easterSunday.plusDays(1), "Easter Monday", "Velikonoční pondělí"),
+            cs(easterSunday.minus(2, DateTimeUnit.DAY), "Good Friday", "Velký pátek"),
+            cs(easterSunday.plus(1, DateTimeUnit.DAY), "Easter Monday", "Velikonoční pondělí"),
             cs(on(year, "--05-01"), "Labour Day", "Svátek práce"),
             cs(on(year, "--05-08"), "Victory Day", "Den vítězství"),
             cs(
@@ -60,7 +62,7 @@ object CzechHolidays : HolidayProvider {
     ): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> {
         val easterSunday = gregorianEasterSunday(year)
         // Easter school vacation: the Thursday before Good Friday
-        val easterVacationStart = easterSunday.minusDays(EASTER_VACATION_DAYS_BEFORE_SUNDAY)
+        val easterVacationStart = easterSunday.minus(EASTER_VACATION_DAYS_BEFORE_SUNDAY, DateTimeUnit.DAY)
 
         return listOf(
             // Summer vacation (1 July – 31 August, fixed every year)
@@ -88,5 +90,5 @@ object CzechHolidays : HolidayProvider {
     private const val EASTER_VACATION_DAYS_BEFORE_SUNDAY = 3L
 
     /** [isoMonthDay] (ISO `--MM-DD`, as [fixed] takes it) in [year]. */
-    private fun on(year: Int, isoMonthDay: String): LocalDate = MonthDay.parse(isoMonthDay).atYear(year)
+    private fun on(year: Int, isoMonthDay: String): LocalDate = IsoMonthDay.parse(isoMonthDay).atYear(year)
 }

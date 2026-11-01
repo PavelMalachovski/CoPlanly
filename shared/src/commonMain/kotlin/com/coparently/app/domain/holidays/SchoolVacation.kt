@@ -1,6 +1,7 @@
 package com.coparently.app.domain.holidays
 
-import java.time.LocalDate
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
 
 /**
  * One published school vacation: its first and last day, inclusive, and what it is called.
@@ -23,7 +24,7 @@ internal data class SchoolVacation(
 
 /** A vacation of this kind from [first] to [last] inclusive (ISO dates); one day when [last] is omitted. */
 internal fun SchoolBreak.on(first: String, last: String = first): SchoolVacation =
-    SchoolVacation(LocalDate.parse(first)..LocalDate.parse(last), this)
+    SchoolVacation(IsoText.parseDate(first)..IsoText.parseDate(last), this)
 
 /**
  * The periods overlapping [year], in the shape [HolidayProvider.schoolVacations] returns.
@@ -34,11 +35,17 @@ internal fun SchoolBreak.on(first: String, last: String = first): SchoolVacation
 internal fun List<SchoolVacation>.overlapping(
     year: Int
 ): List<Pair<ClosedRange<LocalDate>, Pair<String, String>>> {
-    val first = LocalDate.of(year, 1, 1)
-    val last = first.withDayOfYear(first.lengthOfYear())
+    val first = LocalDate(year, 1, 1)
+    val last = LocalDate(year, DECEMBER, LAST_DAY_OF_DECEMBER)
     return filter { it.dates.start <= last && it.dates.endInclusive >= first }
         .map { it.dates to (it.kind.nameEn to it.kind.nameLocal) }
 }
+
+/** December, the month [overlapping]'s year ends in. */
+private const val DECEMBER = 12
+
+/** 31 December. */
+private const val LAST_DAY_OF_DECEMBER = 31
 
 /**
  * What a published school vacation is called, in English and in its country's language.
