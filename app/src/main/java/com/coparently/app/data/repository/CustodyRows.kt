@@ -4,7 +4,7 @@ import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
-import java.time.LocalDate
+import com.coparently.app.domain.time.IsoText
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -27,7 +27,7 @@ internal fun CustodyModelEntity.toDomainModel(): CustodyModel {
         modelType = CustodyModelType.fromString(modelType),
         patternDays = patternDays,
         momDayIndices = momDays,
-        startDate = LocalDate.parse(startDate),
+        startDate = IsoText.parseDate(startDate),
         isActive = isActive,
         contactWindows = ContactWindowJson.decode(contactWindowsJson),
         seasonalLayers = layers.layers,
@@ -59,7 +59,7 @@ internal fun CustodyModel.toEntity(
         modelType = CustodyModelType.toString(modelType),
         patternDays = patternDays,
         momDaysPattern = momDaysJson,
-        startDate = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+        startDate = IsoText.date(startDate),
         isActive = isActive,
         repeatYearly = true,
         createdAt = createdAt,

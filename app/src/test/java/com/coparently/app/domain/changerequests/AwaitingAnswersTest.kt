@@ -4,8 +4,8 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  */
 class AwaitingAnswersTest {
 
-    private val today = LocalDate.of(2026, 9, 25)
+    private val today = LocalDate(2026, 9, 25)
     private val me = "uid-alice"
     private val coParent = "uid-bob"
 
@@ -48,7 +48,7 @@ class AwaitingAnswersTest {
     @Test
     fun `a swap offered for several days counts once, as the inbox shows one card`() {
         val week = (1..3).associate { day ->
-            LocalDate.of(2026, 10, day).toString() to swap(groupId = "g1")
+            LocalDate(2026, 10, day).toString() to swap(groupId = "g1")
         }
 
         assertEquals(1, AwaitingAnswers.swapOffers(week, me, today).size)
@@ -91,7 +91,7 @@ class AwaitingAnswersTest {
         )
 
         assertEquals(
-            listOf(LocalDate.of(2026, 10, 4)),
+            listOf(LocalDate(2026, 10, 4)),
             AwaitingAnswers.swapOffers(overrides, me, today).map { it.firstDate }
         )
     }

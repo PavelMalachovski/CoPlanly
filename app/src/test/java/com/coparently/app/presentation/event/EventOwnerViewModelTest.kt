@@ -25,7 +25,7 @@ class EventOwnerViewModelTest {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 10, 19)
+        startDate = kotlinx.datetime.LocalDate(2026, 10, 19)
     )
     private val repository = mockk<CustodyModelRepository>()
 

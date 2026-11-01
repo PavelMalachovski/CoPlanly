@@ -3,9 +3,9 @@ package com.coparently.app.domain.custody
 import com.coparently.app.domain.holidays.CzechHolidays
 import com.coparently.app.domain.holidays.SchoolVacationSuggestions
 import com.coparently.app.domain.model.CustodyModel
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -18,9 +18,12 @@ import kotlin.test.assertTrue
 class HolidayFairnessTest {
 
     // Week on, week off from Monday 2026-09-07: slot 1 has the first week.
-    private val base = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+    private val base = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
 
     private fun date(iso: String) = LocalDate.parse(iso)
+
+    /** A day of the holiday tables, which are still `java.time` (MON-24). */
+    private fun holidayDate(iso: String) = java.time.LocalDate.parse(iso)
 
     private fun fairness(
         model: CustodyModel,
@@ -82,7 +85,7 @@ class HolidayFairnessTest {
 
     @Test
     fun `contact windows are not nights`() {
-        val windows = (0 until 14).map { ContactWindow(it, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad") }
+        val windows = (0 until 14).map { ContactWindow(it, LocalTime(15, 0), LocalTime(19, 0), "dad") }
         assertEquals(
             fairness(base).nightsBySlot,
             fairness(base.copy(contactWindows = windows)).nightsBySlot
@@ -104,8 +107,9 @@ class HolidayFairnessTest {
     fun `other public holidays are listed once, and the fixed dates are not repeated`() {
         val holidays = fairness(base).rows.mapNotNull { it.occasion as? FairnessOccasion.PublicHoliday }
 
-        assertTrue(holidays.none { it.holiday.date == date("2026-12-24") || it.holiday.date == date("2026-01-01") })
-        assertTrue(holidays.any { it.holiday.date == date("2026-10-28") })
+        val fixed = setOf(holidayDate("2026-12-24"), holidayDate("2026-01-01"))
+        assertTrue(holidays.none { it.holiday.date in fixed })
+        assertTrue(holidays.any { it.holiday.date == holidayDate("2026-10-28") })
     }
 
     @Test
@@ -120,14 +124,14 @@ class HolidayFairnessTest {
 
     @Test
     fun `the Czech breaks come widened over weekends and holidays, soonest first`() {
-        val upcoming = SchoolVacationSuggestions.upcoming(CzechHolidays, date("2026-09-23"))
+        val upcoming = SchoolVacationSuggestions.upcoming(CzechHolidays, holidayDate("2026-09-23"))
 
         assertEquals(
             listOf(
-                date("2026-10-28")..date("2026-11-01"),
-                date("2026-12-23")..date("2027-01-03"),
-                date("2027-03-25")..date("2027-03-29"),
-                date("2027-07-01")..date("2027-08-31")
+                holidayDate("2026-10-28")..holidayDate("2026-11-01"),
+                holidayDate("2026-12-23")..holidayDate("2027-01-03"),
+                holidayDate("2027-03-25")..holidayDate("2027-03-29"),
+                holidayDate("2027-07-01")..holidayDate("2027-08-31")
             ),
             upcoming.take(4).map { it.dates }
         )
@@ -136,6 +140,6 @@ class HolidayFairnessTest {
 
     @Test
     fun `a calendar without school vacations suggests nothing`() {
-        assertTrue(SchoolVacationSuggestions.upcoming(null, date("2026-09-23")).isEmpty())
+        assertTrue(SchoolVacationSuggestions.upcoming(null, holidayDate("2026-09-23")).isEmpty())
     }
 }

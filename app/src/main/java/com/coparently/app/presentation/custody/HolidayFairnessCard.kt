@@ -34,6 +34,7 @@ import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.holidayDisplayName
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 

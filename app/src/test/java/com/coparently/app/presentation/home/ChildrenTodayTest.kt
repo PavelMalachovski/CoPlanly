@@ -6,8 +6,10 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.FamilyMember
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -18,8 +20,8 @@ import kotlin.test.assertTrue
  */
 class ChildrenTodayTest {
 
-    private val start = LocalDate.of(2026, 9, 7) // a Monday
-    private val slotTwoWeek = start.plusDays(7)
+    private val start = LocalDate(2026, 9, 7) // a Monday
+    private val slotTwoWeek = start.plus(7, DateTimeUnit.DAY)
     private val baby = ChildScheduleOverride("baby", patternDays = 1, momDayIndices = setOf(0), startDate = start)
     private val family = CustodyModel.weekOnWeekOff(id = "m1", startDate = start).copy(childOverrides = listOf(baby))
     private val members = listOf(

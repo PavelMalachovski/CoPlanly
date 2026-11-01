@@ -30,10 +30,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -347,7 +347,7 @@ class CalendarViewModelCustodyChangeTest {
             modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
             patternDays = 14,
             momDayIndices = (0..6).toSet(),
-            startDate = LocalDate.of(2026, 1, 1)
+            startDate = LocalDate(2026, 1, 1)
         ),
         lastModifiedBy = lastModifiedBy,
         lastModifiedAtMillis = lastModifiedAtMillis,

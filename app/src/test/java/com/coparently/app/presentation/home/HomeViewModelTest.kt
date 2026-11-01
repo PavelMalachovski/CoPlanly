@@ -41,6 +41,8 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,7 +50,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalTime
 
 /**
  * [HomeViewModel.uiState] is fed by the one realtime repository in this class (the rest are
@@ -256,7 +257,7 @@ class HomeViewModelTest {
             // MON-6b. Today is index 0 of a week-on/week-off cycle, so it is slot 1's day. The
             // slot-2 afternoon is news; the slot-1 morning names the parent who already has the
             // day, and the calendar grid does not draw it — so neither may the today card.
-            val today = LocalDate.now()
+            val today = LocalDate.now().toKotlinLocalDate()
             val afternoon = ContactWindow(
                 dayIndex = 0,
                 start = LocalTime.parse("15:00"),
@@ -582,7 +583,7 @@ class HomeViewModelTest {
     fun `a day swap in the family's own document pops up`() = runTest(dispatcher) {
         every { custodyModelRepository.observeSharedOf("u1__u2") } returns flowOf(
             SharedCustody(
-                model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7)),
+                model = CustodyModel.weekOnWeekOff(id = "m1", startDate = kotlinx.datetime.LocalDate(2026, 9, 7)),
                 lastModifiedBy = "u2",
                 lastModifiedAtMillis = 1L,
                 createdAt = "",

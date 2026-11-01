@@ -11,9 +11,9 @@ import com.coparently.app.domain.expenses.SplitRatioOutcome
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalDate
 import org.junit.Test
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
@@ -170,12 +170,12 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "swap_g1",
-                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 1), 3),
+                    subject = RequestSubject.DaySwap(LocalDate(2026, 9, 1), 3),
                     outcome = RequestOutcome.ACCEPTED,
                     askedBy = "u1",
                     decidedBy = "u2",
                     decidedAt = LocalDateTime.of(2026, 9, 2, 20, 0),
-                    swapDays = (1..3).associate { LocalDate.of(2026, 9, it) to "dad" }
+                    swapDays = (1..3).associate { LocalDate(2026, 9, it) to "dad" }
                 )
             ),
             entries
@@ -196,13 +196,13 @@ class RequestHistoryTest {
         val byOutcome = entries.associateBy { it.outcome }
         assertEquals(setOf(RequestOutcome.ACCEPTED, RequestOutcome.DECLINED), byOutcome.keys)
         val accepted = byOutcome.getValue(RequestOutcome.ACCEPTED)
-        assertEquals(RequestSubject.DaySwap(LocalDate.of(2026, 9, 1), 2), accepted.subject)
+        assertEquals(RequestSubject.DaySwap(LocalDate(2026, 9, 1), 2), accepted.subject)
         assertEquals(
-            mapOf(LocalDate.of(2026, 9, 1) to "dad", LocalDate.of(2026, 9, 3) to "dad"),
+            mapOf(LocalDate(2026, 9, 1) to "dad", LocalDate(2026, 9, 3) to "dad"),
             accepted.swapDays
         )
         val declined = byOutcome.getValue(RequestOutcome.DECLINED)
-        assertEquals(RequestSubject.DaySwap(LocalDate.of(2026, 9, 2), 1), declined.subject)
+        assertEquals(RequestSubject.DaySwap(LocalDate(2026, 9, 2), 1), declined.subject)
         assertEquals(2, entries.map { it.key }.toSet().size)
     }
 
@@ -228,7 +228,7 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "swap_g1",
-                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 1), 2),
+                    subject = RequestSubject.DaySwap(LocalDate(2026, 9, 1), 2),
                     outcome = RequestOutcome.WITHDRAWN,
                     askedBy = "u1",
                     decidedBy = "u1",
@@ -396,7 +396,7 @@ class RequestHistoryTest {
                 closed(RequestKind.CHANGE, "r1"),
                 closed(RequestKind.EVENT, "e1"),
                 // A swap's clock names its offer's days, as every one this build writes does.
-                closed(RequestKind.SWAP, "g1").copy(firstDate = LocalDate.of(2026, 10, 20), dayCount = 1),
+                closed(RequestKind.SWAP, "g1").copy(firstDate = java.time.LocalDate.of(2026, 10, 20), dayCount = 1),
                 closed(RequestKind.PROPOSAL, PROPOSED_AT)
             )
         )
@@ -448,7 +448,8 @@ class RequestHistoryTest {
         // Alice offered two days, Bob never answered, and she offered them again: the new offer
         // replaced the old one's entries and left its closed clock with nothing to point at.
         val again = swap(DayOverrideStatus.PENDING, groupId = "g-again")
-        val oldOffer = closed(RequestKind.SWAP, "g-old").copy(firstDate = LocalDate.of(2026, 10, 20), dayCount = 2)
+        val oldOffer = closed(RequestKind.SWAP, "g-old")
+            .copy(firstDate = java.time.LocalDate.of(2026, 10, 20), dayCount = 2)
 
         val entries = history(
             overrides = mapOf("2026-10-20" to again, "2026-10-21" to again),
@@ -459,7 +460,7 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "swap_g-old",
-                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 10, 20), 2),
+                    subject = RequestSubject.DaySwap(LocalDate(2026, 10, 20), 2),
                     outcome = RequestOutcome.NO_ANSWER,
                     askedBy = "u1",
                     decidedBy = "u2",
@@ -476,7 +477,8 @@ class RequestHistoryTest {
         // Long past their ends but never closed, so superseded: an offer made again, and a proposal
         // its author corrected — or one answered before a later decision took the answer's place.
         val again = swap(DayOverrideStatus.PENDING, groupId = "g-again")
-        val replacedOffer = clock(RequestKind.SWAP, "g-old").copy(firstDate = LocalDate.of(2026, 10, 20), dayCount = 1)
+        val replacedOffer = clock(RequestKind.SWAP, "g-old")
+            .copy(firstDate = java.time.LocalDate.of(2026, 10, 20), dayCount = 1)
         val supersededProposal = clock(RequestKind.PROPOSAL, PROPOSED_AT, from = "u2")
         val later = millisOf(LATER)
         assertEquals(ClockState.NO_ANSWER, RequestClock.stateOf(replacedOffer, later))
@@ -517,7 +519,7 @@ class RequestHistoryTest {
             listOf(
                 HistoryEntry(
                     key = "swap_g2",
-                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 7), 2),
+                    subject = RequestSubject.DaySwap(LocalDate(2026, 9, 7), 2),
                     outcome = RequestOutcome.DECLINED,
                     askedBy = "u1",
                     decidedBy = "u2",
@@ -525,7 +527,7 @@ class RequestHistoryTest {
                 ),
                 HistoryEntry(
                     key = "swap_earlier_g1@2026-09-02T20:00:00",
-                    subject = RequestSubject.DaySwap(LocalDate.of(2026, 9, 7), 2),
+                    subject = RequestSubject.DaySwap(LocalDate(2026, 9, 7), 2),
                     outcome = RequestOutcome.ACCEPTED,
                     askedBy = "u2",
                     decidedBy = "u1",

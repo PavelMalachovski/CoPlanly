@@ -1,7 +1,9 @@
 package com.coparently.app.domain.custody
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -16,7 +18,7 @@ import kotlin.test.assertTrue
  */
 class DaySwapInboxTest {
 
-    private val today = LocalDate.of(2026, 9, 1)
+    private val today = LocalDate(2026, 9, 1)
     private val mom = "uid-mom"
     private val dad = "uid-dad"
 
@@ -39,7 +41,7 @@ class DaySwapInboxTest {
             today
         )
 
-        assertEquals(listOf(LocalDate.of(2026, 9, 5), LocalDate.of(2026, 9, 20)), visible.map { it.date })
+        assertEquals(listOf(LocalDate(2026, 9, 5), LocalDate(2026, 9, 20)), visible.map { it.date })
     }
 
     @Test
@@ -87,7 +89,7 @@ class DaySwapInboxTest {
 
     @Test
     fun `only the parent who did not offer is asked to answer`() {
-        val pending = DaySwap(LocalDate.of(2026, 9, 5), swap(DayOverrideStatus.PENDING))
+        val pending = DaySwap(LocalDate(2026, 9, 5), swap(DayOverrideStatus.PENDING))
 
         assertTrue(DaySwapInbox.awaitsAnswerFrom(pending, dad))
         assertFalse(DaySwapInbox.awaitsAnswerFrom(pending, mom))
@@ -95,7 +97,7 @@ class DaySwapInboxTest {
 
     @Test
     fun `an answered swap asks nobody`() {
-        val accepted = DaySwap(LocalDate.of(2026, 9, 5), swap(DayOverrideStatus.ACCEPTED))
+        val accepted = DaySwap(LocalDate(2026, 9, 5), swap(DayOverrideStatus.ACCEPTED))
 
         assertFalse(DaySwapInbox.awaitsAnswerFrom(accepted, dad))
     }
@@ -123,8 +125,8 @@ class DaySwapInboxTest {
 
         assertEquals(1, groups.size)
         assertEquals(3, groups.first().dayCount)
-        assertEquals(LocalDate.of(2026, 9, 2), groups.first().firstDate)
-        assertEquals(LocalDate.of(2026, 9, 4), groups.first().lastDate)
+        assertEquals(LocalDate(2026, 9, 2), groups.first().firstDate)
+        assertEquals(LocalDate(2026, 9, 4), groups.first().lastDate)
         assertEquals(listOf("2026-09-02", "2026-09-03", "2026-09-04"), groups.first().dates)
     }
 
@@ -155,7 +157,7 @@ class DaySwapInboxTest {
             today
         )
 
-        assertEquals(listOf(LocalDate.of(2026, 9, 3), LocalDate.of(2026, 9, 10)), groups.map { it.firstDate })
+        assertEquals(listOf(LocalDate(2026, 9, 3), LocalDate(2026, 9, 10)), groups.map { it.firstDate })
     }
 
     @Test
@@ -192,7 +194,10 @@ class DaySwapInboxTest {
     fun `an offer says whether it gives days, asks for them, or does both`() {
         fun group(vararg toParents: String) = DaySwapGroup(
             toParents.mapIndexed { i, slot ->
-                DaySwap(today.plusDays(i + 1L), DayOverride(toParent = slot, requestedBy = dad, requestedAt = "t"))
+                DaySwap(
+                    today.plus(i + 1L, DateTimeUnit.DAY),
+                    DayOverride(toParent = slot, requestedBy = dad, requestedAt = "t")
+                )
             }
         )
 
@@ -216,7 +221,12 @@ class DaySwapInboxTest {
         // UX audit H1: the card read "offering you" whenever the offerer's slot was missing, while
         // Home's dialog, reading the day's own slot, said the offerer gets the day.
         val asks = DaySwapGroup(
-            listOf(DaySwap(today.plusDays(1), DayOverride(toParent = "dad", requestedBy = dad, requestedAt = "t")))
+            listOf(
+                DaySwap(
+                    today.plus(1, DateTimeUnit.DAY),
+                    DayOverride(toParent = "dad", requestedBy = dad, requestedAt = "t")
+                )
+            )
         )
         fun asked(reader: String?, coParent: String?, byReader: Boolean = false) =
             asks.direction(offeredByReader = byReader, readerSlot = reader, coParentSlot = coParent)
@@ -240,7 +250,7 @@ class DaySwapInboxTest {
         )
 
         assertEquals(1, groups.single().dayCount)
-        assertEquals(LocalDate.of(2026, 9, 2), groups.single().firstDate)
+        assertEquals(LocalDate(2026, 9, 2), groups.single().firstDate)
     }
 
     @Test
@@ -256,7 +266,7 @@ class DaySwapInboxTest {
         )
 
         assertEquals(
-            listOf(LocalDate.of(2026, 8, 20) to 2, LocalDate.of(2026, 9, 3) to 1),
+            listOf(LocalDate(2026, 8, 20) to 2, LocalDate(2026, 9, 3) to 1),
             groups.map { it.firstDate to it.dayCount }
         )
         assertEquals(listOf("week", "single:2026-09-03"), groups.map { it.key })

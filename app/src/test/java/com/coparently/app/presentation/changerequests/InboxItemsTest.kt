@@ -26,8 +26,8 @@ import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import kotlin.test.assertEquals
@@ -45,7 +45,7 @@ import kotlin.test.assertTrue
 class InboxItemsTest {
 
     private val scope = RequestScope(myUid = "u1", coParentUid = "u2", familyId = "u1__u2", soleFamily = false)
-    private val today = LocalDate.of(2026, 10, 14)
+    private val today = LocalDate(2026, 10, 14)
     private val created = LocalDateTime.of(2026, 10, 10, 9, 0)
 
     private fun request(
@@ -88,7 +88,7 @@ class InboxItemsTest {
     )
 
     private fun proposalBy(uid: String): SharedCustody {
-        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
         return SharedCustody(
             model = model,
             lastModifiedBy = uid,
@@ -250,7 +250,7 @@ class InboxItemsTest {
     @Test
     fun `every key is unique`() {
         val proposal = proposalBy("u2").proposal!!
-        val group = DaySwapGroup(listOf(DaySwap(LocalDate.of(2026, 10, 20), swap(requestedBy = "u2", groupId = "g1"))))
+        val group = DaySwapGroup(listOf(DaySwap(LocalDate(2026, 10, 20), swap(requestedBy = "u2", groupId = "g1"))))
         val items = listOf(
             InboxItem.Header(InboxSection.WAITING_ON_ME),
             InboxItem.Header(InboxSection.WAITING_ON_THEM),

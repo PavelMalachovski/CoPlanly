@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -157,7 +158,7 @@ class RequestsSource @Inject constructor(
                 swaps,
                 custody,
                 // Read per emission rather than once: this flow outlives midnight.
-                LocalDate.now(),
+                LocalDate.now().toKotlinLocalDate(),
                 clocks,
                 settings = settings
             ).withAgreements(scope, agreements, System.currentTimeMillis()),

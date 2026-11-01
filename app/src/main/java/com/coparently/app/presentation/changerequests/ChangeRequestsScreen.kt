@@ -79,7 +79,8 @@ import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.utils.dateWithTime
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
 
 /**
  * The requests inbox of the family on screen (phase 2, spec §6.2), in three sections: what waits
@@ -222,7 +223,7 @@ private fun SwapChangeSheet(
 ) {
     val entry = changing.value ?: return
     val onDismiss = { changing.value = null }
-    val today = rememberToday().value
+    val today = rememberToday().value.toKotlinLocalDate()
     val ahead = remember(entry, today) { entry.swapDays.keys.filter { it >= today }.sorted() }
     if (ahead.isEmpty()) {
         // The last day passed while the sheet was open: nothing is left to change.

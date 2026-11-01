@@ -10,10 +10,10 @@ import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.rememberParentNames
+import kotlinx.datetime.LocalTime
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.YearMonth
 import java.time.temporal.IsoFields
 
@@ -69,8 +69,8 @@ object ScreenshotFixtures {
             listOf(
                 ContactWindow(
                     dayIndex = 2,
-                    start = LocalTime.of(15, 0),
-                    end = LocalTime.of(19, 0),
+                    start = LocalTime(15, 0),
+                    end = LocalTime(19, 0),
                     parent = other
                 )
             )

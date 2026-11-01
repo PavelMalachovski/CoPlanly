@@ -33,10 +33,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -263,7 +263,7 @@ class ParentingPlanViewModelTest {
     )
 
     private fun pendingProposalFrom(uid: String): SharedCustody {
-        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
         return SharedCustody(
             model = model,
             lastModifiedBy = uid,

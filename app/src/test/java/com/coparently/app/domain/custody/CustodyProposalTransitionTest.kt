@@ -7,9 +7,9 @@ import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -29,7 +29,7 @@ class CustodyProposalTransitionTest {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 8, 3)
+        startDate = LocalDate(2026, 8, 3)
     )
     private val wanted = agreed.copy(id = "wanted", momDayIndices = (7..13).toSet())
     private val current = SharedCustody(
@@ -95,7 +95,7 @@ class CustodyProposalTransitionTest {
     fun `a proposal carries its contact windows, and accepting makes them the agreed ones`() {
         // MON-6b. A proposal always says what the windows become, "none" included, so a
         // co-parent's build can tell it from a proposal an older build wrote without the key.
-        val window = ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), DAD_SLOT)
+        val window = ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), DAD_SLOT)
         val withWindow = wanted.copy(contactWindows = listOf(window))
 
         val pending = CustodyProposalTransition
@@ -127,15 +127,15 @@ class CustodyProposalTransitionTest {
     fun `accepting keeps the days before the start date with the old pattern`() {
         // Proposed on the 9th to start on the 10th, accepted on the 9th: everything before the
         // 10th stays as the agreed pattern drew it (owner decision, 24 October 2026).
-        val later = wanted.copy(momDayIndices = setOf(0), startDate = LocalDate.of(2026, 8, 10))
+        val later = wanted.copy(momDayIndices = setOf(0), startDate = LocalDate(2026, 8, 10))
         val pending = CustodyProposalTransition.propose(current, later, true, DAD, NOW).getOrThrow()
 
         val next = CustodyProposalTransition.accept(pending, MOM, LATER, LATER_MILLIS, ACCEPTED_ON).getOrThrow()
 
-        val before = LocalDate.of(2026, 8, 5)
+        val before = LocalDate(2026, 8, 5)
         assertEquals(agreed.getCustodyFor(before), next.model.getCustodyFor(before))
         assertTrue(agreed.getCustodyFor(before) != later.getCustodyFor(before))
-        val from = LocalDate.of(2026, 8, 10)
+        val from = LocalDate(2026, 8, 10)
         assertEquals(later.getCustodyFor(from), next.model.getCustodyFor(from))
         assertTrue(next.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-20260803;") })
     }
@@ -301,6 +301,6 @@ class CustodyProposalTransitionTest {
         const val HALF_HOUR_MILLIS = 1_800_000L
 
         /** The accepter's own date when [LATER] happens. */
-        val ACCEPTED_ON: LocalDate = LocalDate.of(2026, 8, 9)
+        val ACCEPTED_ON: LocalDate = LocalDate(2026, 8, 9)
     }
 }

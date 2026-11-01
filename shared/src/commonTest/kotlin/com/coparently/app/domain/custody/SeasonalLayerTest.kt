@@ -1,9 +1,9 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  */
 class SeasonalLayerTest {
 
-    private val start = LocalDate.of(2026, 9, 7)
+    private val start = LocalDate(2026, 9, 7)
     private val base = CustodyModel.weekOnWeekOff(id = "m1", startDate = start)
 
     private fun decoded(vararg wire: String) = SeasonalLayerCodec.decodeAll(wire.toList())
@@ -44,7 +44,7 @@ class SeasonalLayerTest {
             toDate = date("2026-08-31"),
             patternDays = 14,
             momDayIndices = (0..6).toSet(),
-            contactWindows = listOf(ContactWindow(9, LocalTime.of(15, 0), LocalTime.of(19, 0), "mom")),
+            contactWindows = listOf(ContactWindow(9, LocalTime(15, 0), LocalTime(19, 0), "mom")),
             priority = -3
         )
         val wire = SeasonalLayerCodec.encode(layer)
@@ -52,6 +52,30 @@ class SeasonalLayerTest {
         assertEquals(10, wire.split(';').size, "a name can never add a field")
         assertTrue(wire.endsWith(";Letn%C3%AD%3B%2050%2F50%2C%20l%C3%A9to"))
         assertEquals(layer, SeasonalLayerCodec.decode(wire))
+    }
+
+    @Test
+    fun `a name is written as the Android build wrote it, an unpaired surrogate included`() {
+        fun nameWire(name: String) = SeasonalLayerCodec.encode(
+            SeasonalLayer("s", name, date("2026-07-01"), date("2026-07-31"), 1, setOf(0))
+        ).substringAfterLast(';')
+
+        assertEquals("%F0%9F%8C%9E%20Summer", nameWire("🌞 Summer"))
+        // `String.toByteArray(UTF_8)` on the JVM writes `?` for an unpaired surrogate; every
+        // platform must, or one name would be two different layers on the two phones.
+        assertEquals("a%3Fb%3F", nameWire("a\uD83Cb\uDF1E"))
+        assertEquals("A-z_0.9~", nameWire("A-z_0.9~"))
+    }
+
+    @Test
+    fun `a name that is not strict percent-encoded UTF-8 leaves the entry unreadable`() {
+        fun entry(name: String) = "L1;s;0;2026-07-01;2026-07-31;2026-07-01;1;0;;$name"
+
+        assertEquals("€ and ü", SeasonalLayerCodec.decode(entry("%e2%82%AC%20and%20%C3%BC"))?.name)
+        listOf("%C3%28", "%C0%AF", "%ED%A0%80", "%C3", "%F4%90%80%80", "%G1", "%4", "a b", "ü").forEach { name ->
+            assertNull(SeasonalLayerCodec.decode(entry(name)), name)
+            assertEquals(listOf(entry(name)), SeasonalLayerCodec.decodeAll(listOf(entry(name))).unreadable)
+        }
     }
 
     @Test
@@ -129,13 +153,13 @@ class SeasonalLayerTest {
 
     @Test
     fun `a day's contact windows come from the layer that decides it`() {
-        val baseWindows = (0..6).map { ContactWindow(it, LocalTime.of(10, 0), LocalTime.of(12, 0), "dad") }
+        val baseWindows = (0..6).map { ContactWindow(it, LocalTime(10, 0), LocalTime(12, 0), "dad") }
         val layers = decoded("L1;aug-26;0;2026-08-01;2026-08-31;2026-08-01;1;0;0|15:00|19:00|dad;August")
         val model = base.copy(contactWindows = baseWindows, seasonalLayers = layers.layers)
         val windowsFor = windowsOf(model)
 
-        assertEquals(listOf(LocalTime.of(15, 0)), windowsFor(date("2026-08-10")).map { it.start })
-        assertEquals(listOf(LocalTime.of(10, 0)), windowsFor(date("2026-09-07")).map { it.start })
+        assertEquals(listOf(LocalTime(15, 0)), windowsFor(date("2026-08-10")).map { it.start })
+        assertEquals(listOf(LocalTime(10, 0)), windowsFor(date("2026-09-07")).map { it.start })
     }
 
     @Test

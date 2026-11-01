@@ -22,6 +22,7 @@ import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 
 /**

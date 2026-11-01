@@ -4,9 +4,9 @@ import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
@@ -16,8 +16,8 @@ import kotlin.test.assertSame
  */
 class ChildScheduleFormTest {
 
-    private val start = LocalDate.of(2026, 9, 7)
-    private val afternoon = ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad")
+    private val start = LocalDate(2026, 9, 7)
+    private val afternoon = ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad")
     private val family = CustodyModel.weekOnWeekOff(id = "m1", startDate = start)
 
     @Test

@@ -2,9 +2,11 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -27,10 +29,10 @@ class CustodyResolverTest {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 8, 31) // a Monday
+        startDate = LocalDate(2026, 8, 31) // a Monday
     )
 
-    private val momDay: LocalDate = LocalDate.of(2026, 9, 2) // index 2 -> mom
+    private val momDay: LocalDate = LocalDate(2026, 9, 2) // index 2 -> mom
     private val noLegacy: (LocalDate) -> String? = { null }
 
     private fun override(
@@ -90,7 +92,7 @@ class CustodyResolverTest {
     @Test
     fun `an override for another date leaves this one alone`() {
         val overrides = mapOf(
-            momDay.plusDays(3).toString() to override("dad", DayOverrideStatus.ACCEPTED)
+            momDay.plus(3, DateTimeUnit.DAY).toString() to override("dad", DayOverrideStatus.ACCEPTED)
         )
 
         assertEquals("mom", custodyFor(overrides)(momDay))
@@ -119,10 +121,10 @@ class CustodyResolverTest {
     @Test
     fun `a handover day is one whose custody differs from the day before`() {
         // The cycle starts on 31 August, so 7 September is the first day slot 2 holds.
-        val switchDay = LocalDate.of(2026, 9, 7)
+        val switchDay = LocalDate(2026, 9, 7)
 
         assertTrue(CustodyResolver.isHandoverDay(custodyFor(), switchDay))
-        assertFalse(CustodyResolver.isHandoverDay(custodyFor(), switchDay.plusDays(1)))
+        assertFalse(CustodyResolver.isHandoverDay(custodyFor(), switchDay.plus(1, DateTimeUnit.DAY)))
     }
 
     @Test
@@ -136,15 +138,15 @@ class CustodyResolverTest {
     fun `nextHandoverFrom finds a handover created by an accepted swap`() {
         // 2 September is mom's and so is the 3rd, so without a swap the next handover is the 7th.
         val plain = HandoverCalculator.nextHandoverFrom(model, momDay)
-        assertEquals(LocalDate.of(2026, 9, 7), plain?.date)
+        assertEquals(LocalDate(2026, 9, 7), plain?.date)
 
         val swapped = HandoverCalculator.nextHandoverFrom(
             model,
             momDay,
-            mapOf(momDay.plusDays(1).toString() to override("dad", DayOverrideStatus.ACCEPTED))
+            mapOf(momDay.plus(1, DateTimeUnit.DAY).toString() to override("dad", DayOverrideStatus.ACCEPTED))
         )
 
-        assertEquals(LocalDate.of(2026, 9, 3), swapped?.date)
+        assertEquals(LocalDate(2026, 9, 3), swapped?.date)
         assertEquals("mom", swapped?.fromParent)
         assertEquals("dad", swapped?.toParent)
     }
@@ -156,10 +158,10 @@ class CustodyResolverTest {
         val swapped = HandoverCalculator.nextHandoverFrom(
             model,
             momDay,
-            mapOf(LocalDate.of(2026, 9, 7).toString() to override("mom", DayOverrideStatus.ACCEPTED))
+            mapOf(LocalDate(2026, 9, 7).toString() to override("mom", DayOverrideStatus.ACCEPTED))
         )
 
-        assertEquals(LocalDate.of(2026, 9, 8), swapped?.date)
+        assertEquals(LocalDate(2026, 9, 8), swapped?.date)
     }
 
     @Test
@@ -167,10 +169,10 @@ class CustodyResolverTest {
         val pending = HandoverCalculator.nextHandoverFrom(
             model,
             momDay,
-            mapOf(momDay.plusDays(1).toString() to override("dad", DayOverrideStatus.PENDING))
+            mapOf(momDay.plus(1, DateTimeUnit.DAY).toString() to override("dad", DayOverrideStatus.PENDING))
         )
 
-        assertEquals(LocalDate.of(2026, 9, 7), pending?.date)
+        assertEquals(LocalDate(2026, 9, 7), pending?.date)
     }
 
     @Test
@@ -182,7 +184,7 @@ class CustodyResolverTest {
         val windowsFor = CustodyResolver.contactWindowsResolver(withWindows, custodyFor(activeModel = withWindows))
 
         assertEquals(listOf(afternoon), windowsFor(momDay))
-        assertTrue(windowsFor(momDay.plusDays(1)).isEmpty())
+        assertTrue(windowsFor(momDay.plus(1, DateTimeUnit.DAY)).isEmpty())
     }
 
     @Test

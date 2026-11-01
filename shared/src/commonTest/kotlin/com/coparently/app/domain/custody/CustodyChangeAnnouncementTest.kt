@@ -2,8 +2,8 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -201,7 +201,7 @@ class CustodyChangeAnnouncementTest {
             modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
             patternDays = 14,
             momDayIndices = (0..6).toSet(),
-            startDate = LocalDate.of(2026, 1, 1)
+            startDate = LocalDate(2026, 1, 1)
         ),
         lastModifiedBy = lastModifiedBy,
         lastModifiedAtMillis = lastModifiedAtMillis,

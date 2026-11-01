@@ -3,6 +3,7 @@ package com.coparently.app.presentation.professionals
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /**
@@ -41,7 +42,7 @@ object ProfessionalAgenda {
             val date = start.plusDays(offset.toLong())
             ProfessionalDay(
                 date = date,
-                custodySlot = CustodyResolver.custodyFor(model, overrides, { null }, date),
+                custodySlot = CustodyResolver.custodyFor(model, overrides, { null }, date.toKotlinLocalDate()),
                 events = events.filter { it.overlaps(date) }.sortedBy { it.startDateTime }
             )
         }

@@ -2,11 +2,13 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * What the co-parent is told a proposal would change.
@@ -16,7 +18,7 @@ import java.time.LocalDate
  */
 class CustodyPatternDiffTest {
 
-    private val monday: LocalDate = LocalDate.of(2026, 9, 7)
+    private val monday: LocalDate = LocalDate(2026, 9, 7)
 
     private fun model(momDays: Set<Int>, days: Int = 14, start: LocalDate = monday) = CustodyModel(
         id = "m",
@@ -48,11 +50,11 @@ class CustodyPatternDiffTest {
         // days until then (CustodyHistory), so only the days from its start move — and keeping the
         // past is not a change to the seasonal schedules.
         val agreed = model((0..6).toSet())
-        val proposed = model(emptySet(), days = 1, start = monday.plusDays(3))
+        val proposed = model(emptySet(), days = 1, start = monday.plus(3, DateTimeUnit.DAY))
 
         val diff = CustodyPatternDiff.of(agreed, proposed, monday)
 
-        assertTrue(diff.movedDays.all { !it.date.isBefore(monday.plusDays(3)) })
+        assertTrue(diff.movedDays.all { it.date >= monday.plus(3, DateTimeUnit.DAY) })
         assertTrue(diff.movedDayCount > 0)
         assertFalse(diff.seasonalLayersChanged)
     }
@@ -74,7 +76,7 @@ class CustodyPatternDiffTest {
     fun `a proposal that assigns the same days is identical, not an empty change list`() {
         val agreed = model((0..6).toSet())
         // Same schedule expressed a cycle later: every day still lands on the same parent.
-        val proposed = model((0..6).toSet(), start = monday.plusDays(14))
+        val proposed = model((0..6).toSet(), start = monday.plus(14, DateTimeUnit.DAY))
 
         val diff = CustodyPatternDiff.of(agreed, proposed, monday)
 
@@ -98,7 +100,7 @@ class CustodyPatternDiffTest {
 
         val diff = CustodyPatternDiff.of(agreed, nonsense, monday)
 
-        assertFalse("a zero-length cycle must not read as 'nothing changes'", diff.identical)
+        assertFalse(diff.identical, "a zero-length cycle must not read as 'nothing changes'")
         assertFalse(diff.comparable)
     }
 

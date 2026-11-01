@@ -13,9 +13,9 @@ import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalDate
 import org.junit.Test
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
@@ -34,7 +34,7 @@ class RequestInboxTest {
 
     /** The same family on Bob's phone. */
     private val bobsScope = RequestScope(myUid = "u2", coParentUid = "u1", familyId = "u1__u2", soleFamily = false)
-    private val today = LocalDate.of(2026, 10, 14)
+    private val today = LocalDate(2026, 10, 14)
     private val created = LocalDateTime.of(2026, 10, 10, 9, 0)
 
     private fun request(
@@ -78,7 +78,7 @@ class RequestInboxTest {
     )
 
     private fun proposalBy(uid: String): SharedCustody {
-        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
         return SharedCustody(
             model = model,
             lastModifiedBy = uid,
@@ -138,7 +138,7 @@ class RequestInboxTest {
 
         assertEquals("u2", inbox.waitingOnMe.proposal?.proposedBy)
         assertEquals(listOf("for-me"), inbox.waitingOnMe.events.map { it.id })
-        assertEquals(listOf(LocalDate.of(2026, 10, 20)), inbox.waitingOnMe.swaps.map { it.firstDate })
+        assertEquals(listOf(LocalDate(2026, 10, 20)), inbox.waitingOnMe.swaps.map { it.firstDate })
         assertEquals(listOf("theirs"), inbox.waitingOnMe.changeRequests.map { it.id })
         assertNull(inbox.waitingOnThem.proposal)
     }
@@ -149,7 +149,7 @@ class RequestInboxTest {
 
         assertEquals("u1", inbox.waitingOnThem.proposal?.proposedBy)
         assertEquals(listOf("for-them"), inbox.waitingOnThem.events.map { it.id })
-        assertEquals(listOf(LocalDate.of(2026, 10, 22)), inbox.waitingOnThem.swaps.map { it.firstDate })
+        assertEquals(listOf(LocalDate(2026, 10, 22)), inbox.waitingOnThem.swaps.map { it.firstDate })
         assertEquals(listOf("mine"), inbox.waitingOnThem.changeRequests.map { it.id })
         assertNull(inbox.waitingOnMe.proposal)
     }
@@ -262,7 +262,7 @@ class RequestInboxTest {
             assertEquals("u2", past.waitingOnThem.proposal?.proposedBy)
             assertEquals(listOf("for-me", "for-them"), past.waitingOnThem.events.map { it.id })
             assertEquals(
-                listOf(LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 22)),
+                listOf(LocalDate(2026, 10, 20), LocalDate(2026, 10, 22)),
                 past.waitingOnThem.swaps.map { it.firstDate }
             )
             assertEquals(listOf("theirs", "mine"), past.waitingOnThem.changeRequests.map { it.id })
@@ -336,7 +336,7 @@ class RequestInboxTest {
 
         assertEquals(plain, late)
         assertEquals(
-            listOf(LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 24)),
+            listOf(LocalDate(2026, 10, 20), LocalDate(2026, 10, 24)),
             late.waitingOnMe.swaps.map { it.firstDate }
         )
         assertEquals(emptyMap(), late.timed)
@@ -395,7 +395,7 @@ class RequestInboxTest {
                 proposerUid = "u1",
                 responderUid = "u3",
                 answerByMillis = DEADLINE,
-                firstDate = LocalDate.of(2026, 10, 20),
+                firstDate = java.time.LocalDate.of(2026, 10, 20),
                 dayCount = 1,
                 outcome = RequestClockOutcome.NO_ANSWER
             ),
@@ -433,7 +433,7 @@ class RequestInboxTest {
             val inbox = RequestInbox.build(viewer, emptyList(), emptyList(), offers, null, today, clocks)
 
             assertEquals(
-                setOf(LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 21), LocalDate.of(2026, 10, 22)),
+                setOf(LocalDate(2026, 10, 20), LocalDate(2026, 10, 21), LocalDate(2026, 10, 22)),
                 inbox.unansweredSwapDates
             )
         }

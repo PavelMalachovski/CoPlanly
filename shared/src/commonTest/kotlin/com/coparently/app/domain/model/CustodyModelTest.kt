@@ -1,7 +1,7 @@
 package com.coparently.app.domain.model
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class CustodyModelTest {
@@ -9,7 +9,7 @@ class CustodyModelTest {
     private fun model(
         patternDays: Int,
         momDays: Set<Int>,
-        start: LocalDate = LocalDate.of(2026, 8, 3),
+        start: LocalDate = LocalDate(2026, 8, 3),
         id: String = "m"
     ) = CustodyModel(
         id = id,
@@ -46,15 +46,15 @@ class CustodyModelTest {
 
     @Test
     fun `a start date shifted by a whole cycle describes the same schedule`() {
-        val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate.of(2026, 8, 3))
-        val b = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate.of(2026, 8, 17))
+        val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 3))
+        val b = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 17))
         assert(a.isEquivalentTo(b)) { "14 days later in a 14-day cycle is the same pattern" }
     }
 
     @Test
     fun `a start date shifted by part of a cycle describes a different schedule`() {
-        val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate.of(2026, 8, 3))
-        val b = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate.of(2026, 8, 10))
+        val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 3))
+        val b = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 10))
         assert(!a.isEquivalentTo(b))
     }
 
@@ -68,8 +68,8 @@ class CustodyModelTest {
     fun `cycles of different lengths are compared over their least common multiple`() {
         // A 14-day and a 21-day pattern can agree for the first 14 days and diverge after.
         // Comparing over a fixed window would call these equivalent.
-        val fortnight = model(14, (0..6).toSet(), LocalDate.of(2026, 8, 3))
-        val threeWeeks = model(21, (0..6).toSet(), LocalDate.of(2026, 8, 3))
+        val fortnight = model(14, (0..6).toSet(), LocalDate(2026, 8, 3))
+        val threeWeeks = model(21, (0..6).toSet(), LocalDate(2026, 8, 3))
         assert(!fortnight.isEquivalentTo(threeWeeks))
     }
 

@@ -38,6 +38,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -574,7 +575,7 @@ class TwoParentAccessTest : TwoParentTest() {
         )
         val onServer = alice.parentingPlanRepository.serverHalves(familyId)[alice.uid]
         assertEquals("Alice's half did not reach the server", PLAN_ANSWER, onServer?.answerTo(PLAN_QUESTION))
-        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now())
+        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now().toKotlinLocalDate())
         assertTrue(
             "the schedule did not reach the server",
             alice.custodyRepository.readShared() is SharedCustodyRead.Found

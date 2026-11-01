@@ -59,10 +59,10 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import kotlin.test.assertEquals
@@ -297,7 +297,7 @@ class ChangeRequestViewModelTest {
         advanceUntilIdle()
         assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
         vm.clearError()
-        vm.proposeSwapChange(listOf(LocalDate.of(2026, 10, 23)), note = null, answerBy = null)
+        vm.proposeSwapChange(listOf(LocalDate(2026, 10, 23)), note = null, answerBy = null)
         advanceUntilIdle()
 
         assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
@@ -359,7 +359,7 @@ class ChangeRequestViewModelTest {
             every { eventRepository.getAllEvents() } returns flowOf(listOf(waitingInOctober))
             // Room's one active model is another family's: this family has no document of its own.
             every { custodyModelRepository.getActiveModel() } returns
-                flowOf(CustodyModel.weekOnWeekOff(id = "elsewhere", startDate = LocalDate.of(2026, 9, 7)))
+                flowOf(CustodyModel.weekOnWeekOff(id = "elsewhere", startDate = LocalDate(2026, 9, 7)))
             val vm = viewModel()
             backgroundScope.launch { vm.miniMonths.collect {} }
             advanceUntilIdle()
@@ -386,7 +386,7 @@ class ChangeRequestViewModelTest {
     }
 
     private fun sharedWithProposal(by: String, citation: String?): SharedCustody {
-        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+        val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
         return SharedCustody(
             model = model,
             lastModifiedBy = by,
@@ -659,7 +659,7 @@ class ChangeRequestViewModelTest {
         val vm = viewModel()
         advanceUntilIdle()
 
-        vm.proposeSwapChange(listOf(LocalDate.of(2026, 10, 24), LocalDate.of(2026, 10, 23)), "Ill", answerBy = null)
+        vm.proposeSwapChange(listOf(LocalDate(2026, 10, 24), LocalDate(2026, 10, 23)), "Ill", answerBy = null)
         advanceUntilIdle()
 
         coVerify {

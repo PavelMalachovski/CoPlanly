@@ -45,8 +45,8 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneOffset
@@ -108,7 +108,7 @@ class RequestsSourceTest {
 
     /** Bob's offer to swap a day five days from now, still waiting for Alice. */
     private val bobsSwap = mapOf(
-        LocalDate.now().plusDays(5).toString() to DayOverride(
+        java.time.LocalDate.now().plusDays(5).toString() to DayOverride(
             toParent = "dad",
             requestedBy = "u2",
             requestedAt = "2026-10-10T09:00:00"
@@ -122,7 +122,7 @@ class RequestsSourceTest {
             modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
             patternDays = 14,
             momDayIndices = (0..6).toSet(),
-            startDate = LocalDate.of(2026, 8, 3)
+            startDate = LocalDate(2026, 8, 3)
         ),
         lastModifiedBy = "u2",
         lastModifiedAtMillis = 1L,

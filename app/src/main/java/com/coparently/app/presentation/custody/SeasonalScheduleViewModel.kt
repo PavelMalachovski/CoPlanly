@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
@@ -183,7 +184,7 @@ class SeasonalScheduleViewModel @Inject constructor(
                     custodyFor = CustodyResolver.resolver(it, overrides) { null },
                     provider = location.provider,
                     birthdays = children.mapNotNull { child ->
-                        child.dateOfBirth?.let { born -> child.childName to born.toLocalDate() }
+                        child.dateOfBirth?.let { born -> child.childName to born.toLocalDate().toKotlinLocalDate() }
                     }
                 )
             }
@@ -258,7 +259,8 @@ class SeasonalScheduleViewModel @Inject constructor(
         val active = activeModel.value ?: return null
         val layers = layersWith(active.seasonalLayers, draft, editingId, editingId ?: PREVIEW_LAYER_ID) ?: return null
         val zone = ZoneId.systemDefault()
-        return RequestCap.forProposal(active, active.copy(seasonalLayers = layers), LocalDate.now(zone), zone)
+        val todayInZone = LocalDate.now(zone).toKotlinLocalDate()
+        return RequestCap.forProposal(active, active.copy(seasonalLayers = layers), todayInZone, zone)
     }
 
     /**

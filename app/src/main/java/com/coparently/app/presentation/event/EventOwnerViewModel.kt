@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.custody.CustodyResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -26,6 +27,6 @@ class EventOwnerViewModel @Inject constructor(
      */
     suspend fun custodyParentOn(date: LocalDate): String? {
         val (model, swaps) = custodyModelRepository.storedCustody()
-        return CustodyResolver.custodyFor(model, swaps, legacy = { null }, date = date)
+        return CustodyResolver.custodyFor(model, swaps, legacy = { null }, date = date.toKotlinLocalDate())
     }
 }

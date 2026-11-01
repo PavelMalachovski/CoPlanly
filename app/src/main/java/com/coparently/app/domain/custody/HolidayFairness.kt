@@ -3,9 +3,11 @@ package com.coparently.app.domain.custody
 import com.coparently.app.domain.holidays.Holiday
 import com.coparently.app.domain.holidays.HolidayProvider
 import com.coparently.app.domain.holidays.gregorianEasterSunday
-import java.time.LocalDate
-import java.time.MonthDay
-import java.time.Year
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Month
+import kotlinx.datetime.plus
+import kotlinx.datetime.toKotlinLocalDate
 
 /**
  * What one row of the fairness summary is about (MON-20). Data, not text: the screen words the
@@ -84,9 +86,11 @@ object HolidayFairnessCalculator {
     private const val CHRISTMAS_MONTH = 12
     private const val CHRISTMAS_EVE_DAY = 24
     private const val CHRISTMAS_DAY = 25
-    private const val FEBRUARY = 2
     private const val LEAP_DAY = 29
     private const val FEBRUARY_LAST_COMMON_DAY = 28
+    private const val DECEMBER = 12
+    private const val LAST_DAY_OF_YEAR = 31
+    private const val DAYS_IN_LEAP_YEAR = 366
 
     /**
      * The summary for [year].
@@ -102,10 +106,10 @@ object HolidayFairnessCalculator {
         provider: HolidayProvider?,
         birthdays: List<Pair<String, LocalDate>>
     ): HolidayFairness {
-        val first = LocalDate.of(year, 1, 1)
+        val first = LocalDate(year, 1, 1)
         val nights = mutableMapOf<String, Int>()
-        for (offset in 0 until Year.of(year).length()) {
-            custodyFor(first.plusDays(offset.toLong()))?.let { nights[it] = (nights[it] ?: 0) + 1 }
+        for (offset in 0 until LocalDate(year, DECEMBER, LAST_DAY_OF_YEAR).dayOfYear) {
+            custodyFor(first.plus(offset, DateTimeUnit.DAY))?.let { nights[it] = (nights[it] ?: 0) + 1 }
         }
         val rows = fixedRows(year) + publicHolidayRows(year, provider) + birthdayRows(year, birthdays) +
             vacationRows(year, provider)
@@ -118,13 +122,13 @@ object HolidayFairnessCalculator {
     }
 
     private fun fixedRows(year: Int): List<Dated> {
-        val easter = gregorianEasterSunday(year)
-        val eve = LocalDate.of(year, CHRISTMAS_MONTH, CHRISTMAS_EVE_DAY)
-        val christmas = LocalDate.of(year, CHRISTMAS_MONTH, CHRISTMAS_DAY)
-        val newYear = LocalDate.of(year, 1, 1)
+        val easter = gregorianEasterSunday(year).toKotlinLocalDate()
+        val eve = LocalDate(year, CHRISTMAS_MONTH, CHRISTMAS_EVE_DAY)
+        val christmas = LocalDate(year, CHRISTMAS_MONTH, CHRISTMAS_DAY)
+        val newYear = LocalDate(year, 1, 1)
         return listOf(
             FairnessOccasion.NewYearsDay to newYear..newYear,
-            FairnessOccasion.Easter to easter..easter.plusDays(1),
+            FairnessOccasion.Easter to easter..easter.plus(1, DateTimeUnit.DAY),
             FairnessOccasion.ChristmasEve to eve..eve,
             FairnessOccasion.ChristmasDay to christmas..christmas
         )
@@ -134,18 +138,21 @@ object HolidayFairnessCalculator {
     private fun publicHolidayRows(year: Int, provider: HolidayProvider?): List<Dated> {
         val covered = fixedRows(year).flatMap { (_, dates) -> listOf(dates.start, dates.endInclusive) }.toSet()
         return provider?.publicHolidays(year).orEmpty()
-            .filter { it.date !in covered }
+            .filter { it.date.toKotlinLocalDate() !in covered }
             .distinctBy { it.date }
-            .map { FairnessOccasion.PublicHoliday(it) to it.date..it.date }
+            .map { holiday ->
+                val date = holiday.date.toKotlinLocalDate()
+                FairnessOccasion.PublicHoliday(holiday) to date..date
+            }
     }
 
     private fun birthdayRows(year: Int, birthdays: List<Pair<String, LocalDate>>) =
         birthdays.map { (name, born) ->
-            val leapDay = born.monthValue == FEBRUARY && born.dayOfMonth == LEAP_DAY
-            val day = if (leapDay && !Year.isLeap(year.toLong())) {
-                LocalDate.of(year, FEBRUARY, FEBRUARY_LAST_COMMON_DAY)
+            val leapDay = born.month == Month.FEBRUARY && born.day == LEAP_DAY
+            val day = if (leapDay && !isLeap(year)) {
+                LocalDate(year, Month.FEBRUARY, FEBRUARY_LAST_COMMON_DAY)
             } else {
-                MonthDay.from(born).atYear(year)
+                LocalDate(year, born.month, born.day)
             }
             FairnessOccasion.Birthday(name) to day..day
         }
@@ -153,12 +160,13 @@ object HolidayFairnessCalculator {
     /** Each school vacation, clipped to the year so a Christmas break is not counted twice. */
     private fun vacationRows(year: Int, provider: HolidayProvider?): List<Dated> {
         if (provider == null || !provider.hasSchoolVacations) return emptyList()
-        val first = LocalDate.of(year, 1, 1)
-        val last = first.withDayOfYear(first.lengthOfYear())
+        val first = LocalDate(year, 1, 1)
+        val last = LocalDate(year, DECEMBER, LAST_DAY_OF_YEAR)
         return provider.schoolVacations(year)
             .distinctBy { it.first.start to it.first.endInclusive }
             .map { (range, names) ->
-                val clipped = maxOf(range.start, first)..minOf(range.endInclusive, last)
+                val clipped = maxOf(range.start.toKotlinLocalDate(), first)..
+                    minOf(range.endInclusive.toKotlinLocalDate(), last)
                 FairnessOccasion.SchoolVacation(names.first, names.second, provider.localLanguage) to clipped
             }
     }
@@ -166,10 +174,14 @@ object HolidayFairnessCalculator {
     private fun count(dates: ClosedRange<LocalDate>, custodyFor: (LocalDate) -> String?): Map<String, Int> {
         val result = mutableMapOf<String, Int>()
         var day = dates.start
-        while (!day.isAfter(dates.endInclusive)) {
+        while (day <= dates.endInclusive) {
             custodyFor(day)?.let { result[it] = (result[it] ?: 0) + 1 }
-            day = day.plusDays(1)
+            day = day.plus(1, DateTimeUnit.DAY)
         }
         return result
     }
+
+    /** Whether [year] has a 29 February: its last day is then the 366th. */
+    private fun isLeap(year: Int): Boolean =
+        LocalDate(year, DECEMBER, LAST_DAY_OF_YEAR).dayOfYear == DAYS_IN_LEAP_YEAR
 }

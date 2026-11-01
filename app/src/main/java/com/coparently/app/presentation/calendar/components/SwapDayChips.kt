@@ -19,7 +19,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.utils.swapDateList
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * One side of a day swap under its own label — "You give Lana", "You take", "You", "Lana" — with a

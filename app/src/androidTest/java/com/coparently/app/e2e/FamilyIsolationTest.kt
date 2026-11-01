@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -142,7 +143,7 @@ class FamilyIsolationTest : TwoParentTest() {
                 updatedAtMillis = System.currentTimeMillis()
             )
         )
-        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now())
+        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now().toKotlinLocalDate())
         val request = requestChange(alice, bob, event, "$canaryA could we swap")
         val bobsEvent = insertEvent(bob, "$canaryA Bob's dentist")
         bob.expenseRepository.addExpense(newExpense(bob, "$canaryA Bob's shoes", listOf(alice.uid, bob.uid)))

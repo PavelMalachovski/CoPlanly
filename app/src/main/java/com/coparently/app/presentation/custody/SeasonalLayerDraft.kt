@@ -2,8 +2,7 @@ package com.coparently.app.presentation.custody
 
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.SeasonalLayer
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.LocalDate
 
 /**
  * The shapes a seasonal layer can be given from the editor (MON-14). The editor offers presets
@@ -42,12 +41,12 @@ data class SeasonalLayerDraft(
     val firstSlot: String = ContactWindow.SLOT_ONE
 ) {
     /** Days covered, both ends included. */
-    val spanDays: Long get() = ChronoUnit.DAYS.between(from, to) + 1
+    val spanDays: Long get() = to.toEpochDays() - from.toEpochDays() + 1
 
     /** Whether the draft can become a layer: a name, a forward range, at most a year. */
     val isValid: Boolean
         get() = name.isNotBlank() && name.trim().length <= SeasonalLayer.MAX_NAME_LENGTH &&
-            !to.isBefore(from) && spanDays <= SeasonalLayer.MAX_LAYER_DAYS
+            to >= from && spanDays <= SeasonalLayer.MAX_LAYER_DAYS
 
     /**
      * The layer this draft describes, under [id]. [existing] supplies the pattern for

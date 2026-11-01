@@ -9,8 +9,10 @@ import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -28,7 +30,7 @@ class RequestDeadlineIdTest {
     private fun swapOffer(groupId: String?, days: Int = 1) = DaySwapGroup(
         (0 until days).map { offset ->
             DaySwap(
-                date = LocalDate.of(2026, 10, 20).plusDays(offset.toLong()),
+                date = LocalDate(2026, 10, 20).plus(offset, DateTimeUnit.DAY),
                 override = DayOverride(
                     toParent = "mom",
                     requestedBy = "uA",
@@ -62,7 +64,7 @@ class RequestDeadlineIdTest {
     )
 
     private val proposal = CustodyProposal(
-        model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7)),
+        model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7)),
         repeatYearly = true,
         proposedBy = "uA",
         proposedAt = "2026-10-15T10:00:00"

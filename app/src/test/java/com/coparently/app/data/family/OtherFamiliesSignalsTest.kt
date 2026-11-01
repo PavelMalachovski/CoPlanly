@@ -44,8 +44,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 import org.junit.Test
-import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -155,7 +157,7 @@ class OtherFamiliesSignalsTest {
         assertTrue(hasSwap(TODAY to offered))
         assertFalse(hasSwap(TODAY to swap(requestedBy = ALICE)))
         assertFalse(hasSwap(TODAY to offered.copy(status = DayOverrideStatus.ACCEPTED)))
-        assertFalse(hasSwap(TODAY.minusDays(1) to offered))
+        assertFalse(hasSwap(TODAY.minus(1, DateTimeUnit.DAY) to offered))
     }
 
     // ---- the stream -------------------------------------------------------------------
@@ -553,7 +555,7 @@ class OtherFamiliesSignalsTest {
         const val NOW = 1_800_000_000_000L
         const val DAY = 86_400_000L
 
-        val TODAY: LocalDate = LocalDate.of(2026, 9, 23)
+        val TODAY: LocalDate = LocalDate(2026, 9, 23)
         val BOB_FAMILY = FamilyOption("alice-uid__bob-uid", BOB)
         val CAROL_FAMILY = FamilyOption("alice-uid__carol-uid", CAROL)
     }

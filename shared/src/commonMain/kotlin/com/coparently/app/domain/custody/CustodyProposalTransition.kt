@@ -1,7 +1,7 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The four things that can happen to a custody proposal, as pure functions over [SharedCustody] —

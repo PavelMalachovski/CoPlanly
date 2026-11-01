@@ -1,7 +1,7 @@
 package com.coparently.app.domain.custody
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -11,9 +11,9 @@ import kotlin.test.assertNull
  */
 class DaySwapGroupWaitingTest {
 
-    private val nov6 = LocalDate.of(2026, 11, 6)
-    private val nov7 = LocalDate.of(2026, 11, 7)
-    private val nov8 = LocalDate.of(2026, 11, 8)
+    private val nov6 = LocalDate(2026, 11, 6)
+    private val nov7 = LocalDate(2026, 11, 7)
+    private val nov8 = LocalDate(2026, 11, 8)
 
     private fun day(date: LocalDate, status: DayOverrideStatus = DayOverrideStatus.PENDING, by: String = "lana") =
         DaySwap(

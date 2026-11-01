@@ -5,8 +5,10 @@ import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.custody.SeasonalLayerCodec
-import java.time.DayOfWeek
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 
 /**
  * Domain model for custody configuration.
@@ -73,7 +75,7 @@ data class CustodyModel(
 
     /** The base pattern's answer for [date], ignoring every layer. */
     fun baseCustodyFor(date: LocalDate): String {
-        val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(startDate, date).toInt()
+        val daysSinceStart = (date.toEpochDays() - startDate.toEpochDays()).toInt()
         // Handle negative days (dates before start)
         val adjustedDays = ((daysSinceStart % patternDays) + patternDays) % patternDays
         return if (momDayIndices.contains(adjustedDays)) "mom" else "dad"
@@ -109,8 +111,8 @@ data class CustodyModel(
     fun contactWindowsOn(date: LocalDate): List<ContactWindow> {
         layerOn(date)?.let { return it.contactWindowsOn(date) }
         if (patternDays <= 0 || contactWindows.isEmpty()) return emptyList()
-        val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(startDate, date)
-        val index = Math.floorMod(daysSinceStart, patternDays.toLong()).toInt()
+        val daysSinceStart = date.toEpochDays() - startDate.toEpochDays()
+        val index = daysSinceStart.mod(patternDays.toLong()).toInt()
         return contactWindows.filter { it.dayIndex == index }.sortedBy { it.start }
     }
 
@@ -174,7 +176,7 @@ data class CustodyModel(
         val window = lcm(patternDays, other.patternDays)
         val from = minOf(startDate, other.startDate)
         val basesAgree = (0 until window).all { offset ->
-            val date = from.plusDays(offset)
+            val date = from.plus(offset, DateTimeUnit.DAY)
             baseCustodyFor(date) == other.baseCustodyFor(date) &&
                 sameContactWindows(baseWindowsOn(date), other.baseWindowsOn(date))
         }
@@ -193,7 +195,7 @@ data class CustodyModel(
     private fun layersAgree(other: CustodyModel): Boolean {
         if (unreadableLayers.toSet() != other.unreadableLayers.toSet()) return false
         val dates = (seasonalLayers + other.seasonalLayers).flatMap { layer ->
-            (0 until layer.spanDays).map { layer.fromDate.plusDays(it) }
+            (0 until layer.spanDays).map { layer.fromDate.plus(it, DateTimeUnit.DAY) }
         }.toSet()
         return dates.all { date ->
             getCustodyFor(date) == other.getCustodyFor(date) &&

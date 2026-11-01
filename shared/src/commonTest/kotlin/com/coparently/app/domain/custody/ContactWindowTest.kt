@@ -1,9 +1,12 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -61,10 +64,10 @@ class ContactWindowTest {
     @Test
     fun `a window that does not end after it starts cannot be built`() {
         assertFailsWith<IllegalArgumentException> {
-            ContactWindow(2, LocalTime.of(19, 0), LocalTime.of(19, 0), "dad")
+            ContactWindow(2, LocalTime(19, 0), LocalTime(19, 0), "dad")
         }
         assertFailsWith<IllegalArgumentException> {
-            ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "friend")
+            ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "friend")
         }
     }
 
@@ -73,15 +76,15 @@ class ContactWindowTest {
     @Test
     fun `a window repeats with the cycle and changes nobody's day`() {
         val model = everyOtherWeekend().copy(contactWindows = listOf(WEDNESDAY))
-        val firstWednesday = START.plusDays(2)
+        val firstWednesday = START.plus(2, DateTimeUnit.DAY)
 
         assertEquals(listOf(WEDNESDAY), model.contactWindowsOn(firstWednesday))
         // A fortnight later: the same cycle day.
-        assertEquals(listOf(WEDNESDAY), model.contactWindowsOn(firstWednesday.plusDays(14)))
+        assertEquals(listOf(WEDNESDAY), model.contactWindowsOn(firstWednesday.plus(14, DateTimeUnit.DAY)))
         // Before the anchor too, like `getCustodyFor`.
-        assertEquals(listOf(WEDNESDAY), model.contactWindowsOn(firstWednesday.minusDays(14)))
+        assertEquals(listOf(WEDNESDAY), model.contactWindowsOn(firstWednesday.minus(14, DateTimeUnit.DAY)))
         // The second week's Wednesday has none of its own.
-        assertEquals(emptyList(), model.contactWindowsOn(firstWednesday.plusDays(7)))
+        assertEquals(emptyList(), model.contactWindowsOn(firstWednesday.plus(7, DateTimeUnit.DAY)))
         // Whose day it is does not move for an afternoon.
         assertEquals("mom", model.getCustodyFor(firstWednesday))
         assertEquals(everyOtherWeekend().getCustodyFor(firstWednesday), model.getCustodyFor(firstWednesday))
@@ -89,10 +92,10 @@ class ContactWindowTest {
 
     @Test
     fun `windows on one day come back earliest first`() {
-        val morning = WEDNESDAY.copy(start = LocalTime.of(8, 0), end = LocalTime.of(9, 0))
+        val morning = WEDNESDAY.copy(start = LocalTime(8, 0), end = LocalTime(9, 0))
         val model = everyOtherWeekend().copy(contactWindows = listOf(WEDNESDAY, morning))
 
-        assertEquals(listOf(morning, WEDNESDAY), model.contactWindowsOn(START.plusDays(2)))
+        assertEquals(listOf(morning, WEDNESDAY), model.contactWindowsOn(START.plus(2, DateTimeUnit.DAY)))
     }
 
     @Test
@@ -127,7 +130,7 @@ class ContactWindowTest {
         // The same Wednesday afternoon, written from a start date one week later: every index
         // moves by seven, and the schedule is the same.
         val a = everyOtherWeekend().copy(contactWindows = listOf(WEDNESDAY, WEDNESDAY.copy(dayIndex = 9)))
-        val b = CustodyModel.everyOtherWeekend("b", START.plusDays(7))
+        val b = CustodyModel.everyOtherWeekend("b", START.plus(7, DateTimeUnit.DAY))
             .copy(momDayIndices = a.momDayIndices.map { (it + 7) % 14 }.toSet())
             .copy(contactWindows = listOf(WEDNESDAY.copy(dayIndex = 9), WEDNESDAY))
 
@@ -152,8 +155,8 @@ class ContactWindowTest {
 
     private companion object {
         /** A Monday, so day 2 of the cycle is a Wednesday. */
-        val START: LocalDate = LocalDate.of(2026, 8, 3)
+        val START: LocalDate = LocalDate(2026, 8, 3)
 
-        val WEDNESDAY = ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad")
+        val WEDNESDAY = ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad")
     }
 }

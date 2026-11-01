@@ -38,6 +38,10 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.utils.format
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -119,8 +123,9 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = hiltViewModel
 
 /** A new layer's editor, opening on the next fortnight; [fromPlan] for one opened from the plan. */
 private fun newLayerTarget(fromPlan: Boolean = false): EditorTarget {
-    val start = LocalDate.now()
-    return EditorTarget(null, SeasonalLayerDraft(from = start, to = start.plusDays(DEFAULT_LAYER_DAYS)), fromPlan)
+    val start = LocalDate.now().toKotlinLocalDate()
+    val draft = SeasonalLayerDraft(from = start, to = start.plus(DEFAULT_LAYER_DAYS, DateTimeUnit.DAY))
+    return EditorTarget(null, draft, fromPlan)
 }
 
 /**
@@ -230,7 +235,7 @@ private fun LayerDot(layer: SeasonalLayer) {
 @Composable
 private fun layerSummary(layer: SeasonalLayer, parentNames: ParentNames): String {
     val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    val counts = (0 until layer.spanDays).map { layer.custodyFor(layer.fromDate.plusDays(it)) }
+    val counts = (0 until layer.spanDays).map { layer.custodyFor(layer.fromDate.plus(it, DateTimeUnit.DAY)) }
         .groupingBy { it }
         .eachCount()
     val shares = listOf("mom", "dad").mapNotNull { slot ->

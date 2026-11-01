@@ -63,6 +63,7 @@ import com.coparently.app.domain.custody.SwapSides
 import com.coparently.app.domain.custody.receiverOf
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.holidays.Holiday
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.calendar.components.CalendarHeader
 import com.coparently.app.presentation.calendar.components.ChangeRequestBanner
 import com.coparently.app.presentation.calendar.components.CustodyChangedBanner
@@ -91,6 +92,8 @@ import com.coparently.app.presentation.parentingplan.planCitationShortLine
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.dimensions
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -321,13 +324,18 @@ fun CalendarScreen(
     // Setup), then the legacy CustodyScheduleEntity rows. Views must use this — reading only the
     // legacy schedules left model-based custody invisible, and the precedence between a swap and
     // the pattern lives in exactly one place, `CustodyResolver`, for the same reason.
+    // The custody domain reads kotlinx-datetime days and the grid hands it `java.time` ones from
+    // the calendar library and the events, so this lookup and the two below convert at the call
+    // (MON-24), until the events move too.
     val getCustody: (LocalDate) -> String? =
         remember(custodyModel, dayOverrides, custodySchedules) {
-            CustodyResolver.resolver(
+            val resolve = CustodyResolver.resolver(
                 model = custodyModel,
                 overrides = dayOverrides,
-                legacy = { date -> CustodyHelper.getCustodyForDate(date, custodySchedules) }
+                legacy = { date -> CustodyHelper.getCustodyForDate(date.toJavaLocalDate(), custodySchedules) }
             )
+            val lookup: (LocalDate) -> String? = { date -> resolve(date.toKotlinLocalDate()) }
+            lookup
         }
 
     // What a pending proposal would make of a day, or null when nothing is pending. Deliberately
@@ -341,9 +349,9 @@ fun CalendarScreen(
         if (proposed == null) {
             { _ -> null }
         } else {
-            val from = CustodyHistory.effectiveFrom(proposed, LocalDate.now())
+            val from = CustodyHistory.effectiveFrom(proposed, LocalDate.now().toKotlinLocalDate()).toJavaLocalDate()
             val preview: (LocalDate) -> String? = { date ->
-                if (date.isBefore(from)) null else proposed.getCustodyFor(date)
+                if (date.isBefore(from)) null else proposed.getCustodyFor(date.toKotlinLocalDate())
             }
             preview
         }
@@ -357,7 +365,9 @@ fun CalendarScreen(
     // parent's tint. The rule lives in `CustodyResolver.contactWindowsResolver`, which Home's
     // today card reads too, so the two surfaces cannot disagree about the same afternoon.
     val getContactWindows: (LocalDate) -> List<ContactWindow> = remember(custodyModel, getCustody) {
-        CustodyResolver.contactWindowsResolver(custodyModel, getCustody)
+        val windows = CustodyResolver.contactWindowsResolver(custodyModel) { day -> getCustody(day.toJavaLocalDate()) }
+        val lookup: (LocalDate) -> List<ContactWindow> = { date -> windows(date.toKotlinLocalDate()) }
+        lookup
     }
 
     // FAM-4: the band follows one child's own schedule only while the member filter narrows to
@@ -397,7 +407,7 @@ fun CalendarScreen(
             .mapNotNull { (iso, offer) ->
                 runCatching { LocalDate.parse(iso) }.getOrNull()?.let { it to offer.toParent }
             }
-            .toMap() - unansweredSwapDates
+            .toMap() - unansweredSwapDates.map { it.toJavaLocalDate() }.toSet()
     }
     // Whom each chosen or waiting day would go to, drawn on the grid (`SwapMark`).
     // A child's own band (FAM-4) is not the schedule a swap moves, and its cells take no swap tap:
@@ -875,7 +885,7 @@ fun CalendarScreen(
                     // be invisible.
                     if (selectingSwap && viewMode == CalendarViewMode.MONTH) {
                         DaySwapSelectionBar(
-                            sides = SwapSides.of(swapSelection, getCustody, parents.me?.slot.orEmpty()),
+                            sides = swapSidesOf(swapSelection, getCustody, parents.me?.slot.orEmpty()),
                             parentNames = parentNames,
                             onNext = { swapSheetOpen = true },
                             onCancel = ::endSwapSelection,
@@ -892,7 +902,9 @@ fun CalendarScreen(
                     if (viewMode == CalendarViewMode.DAY && offerDayFromDayView != null) {
                         val stripOverride = dayOverrides[anchorDate.toString()]
                         DaySwapStripState.of(stripOverride, parents.me?.uid, anchorDate, today)?.let { strip ->
-                            val day = DaySwapGroup(listOfNotNull(stripOverride?.let { DaySwap(anchorDate, it) }))
+                            val day = DaySwapGroup(
+                                listOfNotNull(stripOverride?.let { DaySwap(anchorDate.toKotlinLocalDate(), it) })
+                            )
                             val iso = anchorDate.toString()
                             DaySwapStrip(
                                 state = strip,
@@ -1071,10 +1083,13 @@ fun CalendarScreen(
 
     // Day-swap sheet (board SW-3): the chosen days split by way, and the months they fall in.
     if (swapSheetOpen && swapSelection.isNotEmpty()) {
-        val sides = SwapSides.of(swapSelection, getCustody, parents.me?.slot.orEmpty())
+        val sides = swapSidesOf(swapSelection, getCustody, parents.me?.slot.orEmpty())
         val months = remember(sides) {
             swapMiniMonths(
-                days = sides.offerable.mapNotNull { day -> receiverOf(getCustody(day))?.let { day to it } }.toMap(),
+                days = sides.offerable.mapNotNull { offered ->
+                    val day = offered.toJavaLocalDate()
+                    receiverOf(getCustody(day))?.let { day to it }
+                }.toMap(),
                 familyEvents = emptyList(),
                 custodyFor = getCustody
             )
@@ -1094,13 +1109,13 @@ fun CalendarScreen(
                         // One day keeps the single write, the single chat card and the single
                         // push type an older co-parent build already understands.
                         val date = offered.first()
-                        receiverOf(getCustody(date))?.let { toParent ->
+                        receiverOf(getCustody(date.toJavaLocalDate()))?.let { toParent ->
                             calendarViewModel.offerDaySwap(date, toParent, note, answerBy)
                         }
                     } else {
                         calendarViewModel.offerDaySwapForDates(
                             dates = offered,
-                            toParentFor = { day -> receiverOf(getCustody(day)) },
+                            toParentFor = { day -> receiverOf(getCustody(day.toJavaLocalDate())) },
                             note = note,
                             answerBy = answerBy
                         )
@@ -1156,7 +1171,7 @@ fun CalendarScreen(
         if (result == SnackbarResult.ActionPerformed) {
             val sentDays = dayOverrides.mapNotNull { (iso, offer) ->
                 if (offer.groupId != sent.groupId || !offer.isPending) return@mapNotNull null
-                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, offer) }
+                runCatching { IsoText.parseDate(iso) }.getOrNull()?.let { DaySwap(it, offer) }
             }.sortedBy { it.date }
             if (sentDays.isNotEmpty()) changeRequestViewModel.withdrawSwapGroup(DaySwapGroup(sentDays))
         }
@@ -1183,3 +1198,14 @@ fun CalendarScreen(
         )
     }
 }
+
+/**
+ * The sides of [selection], which the grid holds as `java.time` days, worked out by the swap domain on
+ * its kotlinx-datetime days ([SwapSides.of]) through the grid's own lookup [holderOf] (MON-24).
+ */
+private fun swapSidesOf(
+    selection: Set<LocalDate>,
+    holderOf: (LocalDate) -> String?,
+    offererSlot: String
+): SwapSides =
+    SwapSides.of(selection.map { it.toKotlinLocalDate() }, { day -> holderOf(day.toJavaLocalDate()) }, offererSlot)

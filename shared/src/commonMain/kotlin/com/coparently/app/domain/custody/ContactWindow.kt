@@ -1,9 +1,7 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.time.IsoText
-import kotlinx.datetime.toJavaLocalTime
-import kotlinx.datetime.toKotlinLocalTime
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 /**
  * Part of one cycle day that the child spends with a parent who does not have that day (MON-6b):
@@ -85,8 +83,8 @@ object ContactWindowCodec {
     /** [window] as its wire string. */
     fun encode(window: ContactWindow): String = listOf(
         window.dayIndex.toString(),
-        IsoText.hourMinute(window.start.toKotlinLocalTime()),
-        IsoText.hourMinute(window.end.toKotlinLocalTime()),
+        IsoText.hourMinute(window.start),
+        IsoText.hourMinute(window.end),
         window.parent
     ).joinToString(SEPARATOR.toString())
 
@@ -99,8 +97,8 @@ object ContactWindowCodec {
         return runCatching {
             ContactWindow(
                 dayIndex = index.toInt(),
-                start = IsoText.parseHourMinute(start).toJavaLocalTime(),
-                end = IsoText.parseHourMinute(end).toJavaLocalTime(),
+                start = IsoText.parseHourMinute(start),
+                end = IsoText.parseHourMinute(end),
                 parent = parent
             )
         }.getOrNull()

@@ -2,6 +2,7 @@ package com.coparently.app.presentation.calendar
 
 import com.coparently.app.data.local.entity.CustodyScheduleEntity
 import com.coparently.app.domain.model.CustodyModel
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -23,7 +24,7 @@ object CustodyHelper {
      * @return "mom" or "dad"
      */
     fun getCustodyForDate(date: LocalDate, model: CustodyModel): String {
-        return model.getCustodyFor(date)
+        return model.getCustodyFor(date.toKotlinLocalDate())
     }
 
     /**

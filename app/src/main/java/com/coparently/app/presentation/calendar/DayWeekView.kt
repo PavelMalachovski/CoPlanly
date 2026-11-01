@@ -114,9 +114,11 @@ import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.hourGutterWidthFor
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.ClockFormat
+import com.coparently.app.utils.format
 import com.coparently.app.utils.hourLabel
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.toJavaLocalTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -705,9 +707,9 @@ private fun DayWeekPage(
                                     window = window,
                                     bounds = Rect(
                                         left = dayColumnX,
-                                        top = yOffsetFor(date.atTime(window.start)),
+                                        top = yOffsetFor(date.atTime(window.start.toJavaLocalTime())),
                                         right = dayColumnX + columnWidth,
-                                        bottom = yOffsetFor(date.atTime(window.end))
+                                        bottom = yOffsetFor(date.atTime(window.end.toJavaLocalTime()))
                                     ),
                                     baseColor = bandBase,
                                     parentName = parentNames.labelFor(window.parent),

@@ -46,6 +46,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -290,7 +291,8 @@ private fun FortnightPreview(model: CustodyModel) {
             Row(horizontalArrangement = Arrangement.spacedBy(DAY_CELL_GAP)) {
                 repeat(DAYS_PER_ROW) { dayInRow ->
                     val date = today.plusDays((week * DAYS_PER_ROW + dayInRow).toLong())
-                    DayCell(date = date, slot = model.getCustodyFor(date), modifier = Modifier.weight(1f))
+                    val slot = model.getCustodyFor(date.toKotlinLocalDate())
+                    DayCell(date = date, slot = slot, modifier = Modifier.weight(1f))
                 }
             }
         }

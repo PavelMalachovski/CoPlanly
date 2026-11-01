@@ -9,6 +9,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.ParentColorChoice
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,7 +22,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 
 /**
  * What the widget says, with the app's real string resources.
@@ -54,8 +55,13 @@ class TodayWidgetTextTest {
         signedIn = true,
         today = today,
         dayParent = "mom",
-        contactWindows = listOf(ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad")),
-        handover = HandoverInfo(date = today.plusDays(5), daysUntil = 5, fromParent = "mom", toParent = "dad"),
+        contactWindows = listOf(ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad")),
+        handover = HandoverInfo(
+            date = today.plusDays(5).toKotlinLocalDate(),
+            daysUntil = 5,
+            fromParent = "mom",
+            toParent = "dad"
+        ),
         events = listOf(
             event("Dentist", today.atTime(9, 0), today.atTime(10, 0), owner = "mom"),
             event("Football", today.atTime(17, 30), null, owner = "dad")
@@ -118,7 +124,7 @@ class TodayWidgetTextTest {
     fun `tomorrow's handover is worded as the hero words it`() {
         val lines = TodayWidgetText.lines(
             context,
-            day.copy(handover = HandoverInfo(today.plusDays(1), 1, "mom", "dad")),
+            day.copy(handover = HandoverInfo(today.plusDays(1).toKotlinLocalDate(), 1, "mom", "dad")),
             parents,
             maxEvents = 4
         )
@@ -130,7 +136,7 @@ class TodayWidgetTextTest {
     fun `a handover to the reader says you, as Home does`() {
         val lines = TodayWidgetText.lines(
             context,
-            day.copy(handover = HandoverInfo(today.plusDays(1), 1, "dad", "mom")),
+            day.copy(handover = HandoverInfo(today.plusDays(1).toKotlinLocalDate(), 1, "dad", "mom")),
             parents,
             maxEvents = 4
         )

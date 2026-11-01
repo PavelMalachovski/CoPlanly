@@ -844,7 +844,7 @@ class PairingViewModelTest {
         modelType = CustodyModelType.CUSTOM,
         patternDays = 14,
         momDayIndices = momDays,
-        startDate = java.time.LocalDate.of(2026, 8, 3)
+        startDate = kotlinx.datetime.LocalDate(2026, 8, 3)
     )
 
     private fun found(model: CustodyModel) = SharedCustodyRead.Found(

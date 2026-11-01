@@ -99,10 +99,13 @@ class CalendarViewModelTest {
         clearAllMocks()
     }
 
+    /** [day] November 2026, as the swap offers take it: a kotlinx-datetime day (MON-24). */
+    private fun swapDay(day: Int) = kotlinx.datetime.LocalDate(2026, 11, day)
+
     @Test
     fun `a single-day offer is its own group and passes the deadline on`() = runTest {
         val pick = AnswerByPick.Preset(AnswerByPreset.WEEK)
-        val date = LocalDate.of(2026, 11, 20)
+        val date = swapDay(20)
         val transform = slot<(Map<String, DayOverride>) -> Result<Map<String, DayOverride>>>()
         coEvery { custodyModelRepository.applyDayOverrides(any(), capture(transform), any(), any()) } returns
             Result.success(emptyMap())
@@ -130,9 +133,9 @@ class CalendarViewModelTest {
         val signedIn = calendarViewModel(testParentsSource(me = alice))
         backgroundScope.launch { signedIn.parents.collect {} }
         signedIn.parents.first { it.me != null }
-        val first = LocalDate.of(2026, 11, 20)
+        val first = swapDay(20)
 
-        signedIn.offerDaySwapForDates(listOf(first, first.plusDays(1)), toParentFor = { "dad" }, answerBy = pick)
+        signedIn.offerDaySwapForDates(listOf(first, swapDay(21)), toParentFor = { "dad" }, answerBy = pick)
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
@@ -148,9 +151,9 @@ class CalendarViewModelTest {
         val signedIn = calendarViewModel(testParentsSource(me = alice))
         backgroundScope.launch { signedIn.parents.collect {} }
         signedIn.parents.first { it.me != null }
-        val first = LocalDate.of(2026, 11, 20)
+        val first = swapDay(20)
 
-        signedIn.offerDaySwapForDates(listOf(first, first.plusDays(1), first.plusDays(2)), toParentFor = { "dad" })
+        signedIn.offerDaySwapForDates(listOf(first, swapDay(21), swapDay(22)), toParentFor = { "dad" })
         advanceUntilIdle()
 
         assertEquals(SwapOfferer(slot = "mom", name = "Alice"), offerer.captured)
@@ -168,7 +171,7 @@ class CalendarViewModelTest {
         backgroundScope.launch { signedIn.parents.collect {} }
         signedIn.parents.first { it.me != null }
 
-        signedIn.offerDaySwap(LocalDate.of(2026, 11, 20), toParent = "dad")
+        signedIn.offerDaySwap(swapDay(20), toParent = "dad")
         advanceUntilIdle()
 
         assertNull(signedIn.swapSent.value)

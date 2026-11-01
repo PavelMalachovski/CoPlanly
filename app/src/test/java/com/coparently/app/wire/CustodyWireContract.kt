@@ -25,8 +25,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 
 /**
  * `custody_models`: read and written by `FirestoreCustodyDataSource` itself — `getCustody` and
@@ -176,7 +176,7 @@ internal object CustodyWireContract : WireContract {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 5, 4),
+        startDate = LocalDate(2026, 5, 4),
         contactWindows = windows,
         seasonalLayers = layers,
         childOverrides = children
@@ -185,11 +185,11 @@ internal object CustodyWireContract : WireContract {
     private fun summer() = SeasonalLayer(
         id = "summer",
         name = "Summer 2026",
-        fromDate = LocalDate.of(2026, 7, 1),
-        toDate = LocalDate.of(2026, 8, 31),
+        fromDate = LocalDate(2026, 7, 1),
+        toDate = LocalDate(2026, 8, 31),
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 7, 1),
+        startDate = LocalDate(2026, 7, 1),
         contactWindows = emptyList(),
         priority = 0
     )
@@ -198,13 +198,13 @@ internal object CustodyWireContract : WireContract {
         childId = "c1",
         patternDays = 7,
         momDayIndices = setOf(0, 1, 2),
-        startDate = LocalDate.of(2026, 5, 4),
+        startDate = LocalDate(2026, 5, 4),
         contactWindows = emptyList()
     )
 
     private fun patternWrite(): SharedCustody {
         val model = baseModel(
-            windows = listOf(ContactWindow(9, LocalTime.of(15, 0), LocalTime.of(19, 0), parent = "dad")),
+            windows = listOf(ContactWindow(9, LocalTime(15, 0), LocalTime(19, 0), parent = "dad")),
             layers = listOf(summer()),
             children = listOf(anyaOverride())
         )

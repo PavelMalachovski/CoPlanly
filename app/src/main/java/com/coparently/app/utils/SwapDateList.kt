@@ -1,5 +1,6 @@
 package com.coparently.app.utils
 
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
 import java.util.Locale
 
@@ -12,6 +13,11 @@ fun swapDateList(dates: List<LocalDate>, locale: Locale): String {
     val format = localizedDate(SWAP_DAY_SKELETON, locale)
     return dates.joinToString(", ") { it.format(format) }
 }
+
+/** [swapDateList] for the custody domain's kotlinx-datetime days (MON-24); the same text. */
+@JvmName("swapDateListOfDays")
+fun swapDateList(dates: List<kotlinx.datetime.LocalDate>, locale: Locale): String =
+    swapDateList(dates.map { it.toJavaLocalDate() }, locale)
 
 /** A swapped day: weekday, day of month and short month. */
 const val SWAP_DAY_SKELETON = "EEEdMMM"

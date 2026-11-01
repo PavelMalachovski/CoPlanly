@@ -17,6 +17,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -52,7 +53,7 @@ class CustodyScenarioTest : QaOnScreenTest() {
         }
         report.step("proposal_popup", "Igor proposes \"Vánoce v Praze\": 24 and 25 December with him", "Zuzana's Home asks her, naming Igor; her calendar is unchanged until she answers") {
             runBlocking {
-                val layer = SeasonalLayer.allWith(LAYER_ID, LAYER_NAME, eve..eve.plusDays(1), slots.second)
+                val layer = SeasonalLayer.allWith(LAYER_ID, LAYER_NAME, eve.toKotlinLocalDate()..eve.plusDays(1).toKotlinLocalDate(), slots.second)
                 val submitted = bob.custodyRepository.submitSeasonalLayers(listOf(layer))
                 check(submitted == PatternSubmission.PROPOSED) { "the layer was $submitted, not proposed" }
                 val before = checkNotNull(custodyRepository.getActiveModelSync())
@@ -65,8 +66,8 @@ class CustodyScenarioTest : QaOnScreenTest() {
             val mine = runBlocking { awaitPattern(custodyRepository) { model -> model.seasonalLayers.any { it.id == LAYER_ID } } }
             val theirs = runBlocking { awaitPattern(bob.custodyRepository) { model -> model.seasonalLayers.any { it.id == LAYER_ID } } }
             listOf("Zuzana" to mine, "Igor" to theirs).forEach { (who, model) ->
-                check(model.getCustodyFor(eve) == slots.second) { "$who's phone gives 24 December to ${model.getCustodyFor(eve)}" }
-                check(model.getCustodyFor(boxingDay) == slots.first) { "$who's phone gives 26 December to ${model.getCustodyFor(boxingDay)}" }
+                check(model.getCustodyFor(eve.toKotlinLocalDate()) == slots.second) { "$who's phone gives 24 December to ${model.getCustodyFor(eve.toKotlinLocalDate())}" }
+                check(model.getCustodyFor(boxingDay.toKotlinLocalDate()) == slots.first) { "$who's phone gives 26 December to ${model.getCustodyFor(boxingDay.toKotlinLocalDate())}" }
             }
             openTab(BottomNavDestination.CALENDAR)
             repeat(ChronoUnit.MONTHS.between(LocalDate.now().withDayOfMonth(1), eve.withDayOfMonth(1)).toInt()) {
@@ -85,7 +86,7 @@ class CustodyScenarioTest : QaOnScreenTest() {
         }
         report.step("proposal_popup", "$coParentName proposes 2-2-3", "Igor's Home asks him, naming $coParentName") {
             runBlocking {
-                val submitted = bob.custodyRepository.createTwoTwoThree(LocalDate.now(), momStartsFirst = true)
+                val submitted = bob.custodyRepository.createTwoTwoThree(LocalDate.now().toKotlinLocalDate(), momStartsFirst = true)
                 check(submitted == PatternSubmission.PROPOSED) { "the pattern was $submitted, not proposed" }
             }
             awaitDelivered(this, "the proposal pop-up", proposalDialog(), expectsListener = true)
@@ -114,7 +115,7 @@ class CustodyScenarioTest : QaOnScreenTest() {
         val (mine, _) = slots()
         val onScreenFirst = if (onScreenName == ZUZANA) zuzanaFirst else !zuzanaFirst
         val submission = bob.custodyRepository.createWeekOnWeekOff(
-            LocalDate.now(),
+            LocalDate.now().toKotlinLocalDate(),
             momFirst = (mine == ContactWindow.SLOT_ONE) == onScreenFirst
         )
         check(submission == PatternSubmission.ACTIVATED) { "the first pattern was $submission" }

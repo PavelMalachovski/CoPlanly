@@ -3,10 +3,10 @@ package com.coparently.app.domain.changerequests
 import com.coparently.app.domain.custody.ChildScheduleOverride
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.model.CustodyModel
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -19,7 +19,7 @@ private fun at(text: String): Long = LocalDateTime.parse(text).atZone(ZONE).toIn
 /** Saturday 10 October 2026, 10:07. */
 private val NOW = at("2026-10-10T10:07")
 
-private val TODAY: LocalDate = LocalDate.of(2026, 10, 10)
+private val TODAY: LocalDate = LocalDate(2026, 10, 10)
 
 /**
  * The first moment a request would change something (phase 3a, spec §4.2): what a deadline and its
@@ -27,7 +27,7 @@ private val TODAY: LocalDate = LocalDate.of(2026, 10, 10)
  */
 class RequestCapTest {
 
-    private fun date(month: Int, day: Int): LocalDate = LocalDate.of(2026, month, day)
+    private fun date(month: Int, day: Int): LocalDate = LocalDate(2026, month, day)
 
     private fun local(text: String): LocalDateTime = LocalDateTime.parse(text)
 
@@ -119,7 +119,7 @@ class RequestCapTest {
     @Test
     fun `a change to an afternoon or to a child's own days caps a proposal too`() {
         // A contact window on cycle day 4: Friday 9 October is behind us, so the first one is 23 October.
-        val afternoon = ContactWindow(4, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad")
+        val afternoon = ContactWindow(4, LocalTime(15, 0), LocalTime(19, 0), "dad")
         val withWindow = agreed.copy(contactWindows = listOf(afternoon))
         assertEquals(agreed.getCustodyFor(date(10, 23)), withWindow.getCustodyFor(date(10, 23)))
         assertEquals(at("2026-10-23T00:00"), RequestCap.forProposal(agreed, withWindow, TODAY, ZONE))
@@ -182,5 +182,5 @@ class RequestCapTest {
 
     /** 15:00 to 19:00 on cycle day [dayIndex], with [parent]. */
     private fun afternoon(dayIndex: Int, parent: String) =
-        ContactWindow(dayIndex, LocalTime.of(15, 0), LocalTime.of(19, 0), parent)
+        ContactWindow(dayIndex, LocalTime(15, 0), LocalTime(19, 0), parent)
 }

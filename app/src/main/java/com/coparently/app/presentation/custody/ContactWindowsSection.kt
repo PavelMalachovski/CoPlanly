@@ -44,18 +44,24 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaDayOfWeek
+import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalTime
 import java.time.format.TextStyle
 import java.util.Locale
 
 /** Where a new window's times start, before the parent picks: the classic after-school afternoon. */
-private val DEFAULT_WINDOW_START: LocalTime = LocalTime.of(15, 0)
+private val DEFAULT_WINDOW_START: LocalTime = LocalTime(15, 0)
 
 /** See [DEFAULT_WINDOW_START]. */
-private val DEFAULT_WINDOW_END: LocalTime = LocalTime.of(19, 0)
+private val DEFAULT_WINDOW_END: LocalTime = LocalTime(19, 0)
 
 /** How a window's times are written on screen: 24-hour, as the time picker uses. */
 
@@ -183,7 +189,8 @@ private fun ContactWindowRow(
 private fun cycleDayLabel(startDate: LocalDate, dayIndex: Int): String = stringResource(
     R.string.custody_window_day_label,
     dayIndex / ContactWindowDraft.DAYS_PER_WEEK + 1,
-    startDate.plusDays(dayIndex.toLong()).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+    startDate.plus(dayIndex, DateTimeUnit.DAY).dayOfWeek.toJavaDayOfWeek()
+        .getDisplayName(TextStyle.SHORT, Locale.getDefault())
 )
 
 /**
@@ -235,13 +242,13 @@ private fun ContactWindowDialog(
 
     when (picking) {
         TimeField.START -> TimePickerDialog(
-            initialTime = start,
-            onTimeSelected = { start = it },
+            initialTime = start.toJavaLocalTime(),
+            onTimeSelected = { start = it.toKotlinLocalTime() },
             onDismiss = { picking = null }
         )
         TimeField.END -> TimePickerDialog(
-            initialTime = end,
-            onTimeSelected = { end = it },
+            initialTime = end.toJavaLocalTime(),
+            onTimeSelected = { end = it.toKotlinLocalTime() },
             onDismiss = { picking = null }
         )
         null -> Unit
@@ -257,7 +264,7 @@ private fun WeekdayChips(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
             FilterChip(
                 selected = selected == day,
                 onClick = { onSelect(day) },
-                label = { Text(day.getDisplayName(TextStyle.SHORT, Locale.getDefault())) }
+                label = { Text(day.toJavaDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.getDefault())) }
             )
         }
     }

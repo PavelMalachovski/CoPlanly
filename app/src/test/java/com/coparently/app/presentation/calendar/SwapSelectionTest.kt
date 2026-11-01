@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.calendar
 
 import com.coparently.app.presentation.calendar.components.isConsecutive
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -57,7 +58,7 @@ class SwapSelectionTest {
 
     @Test
     fun `the sheet names a run by its ends and days picked apart one by one`() {
-        assertTrue(isConsecutive(listOf(day(0), day(1), day(2))))
-        assertFalse(isConsecutive(listOf(day(0), day(2))))
+        assertTrue(isConsecutive(listOf(day(0), day(1), day(2)).map { it.toKotlinLocalDate() }))
+        assertFalse(isConsecutive(listOf(day(0), day(2)).map { it.toKotlinLocalDate() }))
     }
 }

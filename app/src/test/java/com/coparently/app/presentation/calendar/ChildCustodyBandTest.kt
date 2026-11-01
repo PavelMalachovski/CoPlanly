@@ -5,9 +5,10 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -20,21 +21,24 @@ import kotlin.test.assertTrue
  */
 class ChildCustodyBandTest {
 
+    // The grid's days are `java.time`, the custody domain's kotlinx-datetime (MON-24).
     private val start = LocalDate.of(2026, 9, 7) // a Monday
     private val slotTwoWeek = start.plusDays(7)
     private val baby = ChildScheduleOverride(
         childId = "baby",
         patternDays = 1,
         momDayIndices = setOf(0),
-        startDate = start,
-        contactWindows = listOf(ContactWindow(0, LocalTime.of(15, 0), LocalTime.of(17, 0), "dad"))
+        startDate = start.toKotlinLocalDate(),
+        contactWindows = listOf(ContactWindow(0, LocalTime(15, 0), LocalTime(17, 0), "dad"))
     )
-    private val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = start).copy(childOverrides = listOf(baby))
+    private val model = CustodyModel.weekOnWeekOff(id = "m1", startDate = start.toKotlinLocalDate())
+        .copy(childOverrides = listOf(baby))
     private val familyCustody = CustodyResolver.resolver(model, emptyMap()) { null }
+    private val familyWindows = CustodyResolver.contactWindowsResolver(model, familyCustody)
     private val family = GridCustody(
-        custody = familyCustody,
+        custody = { date -> familyCustody(date.toKotlinLocalDate()) },
         proposed = { null },
-        windows = CustodyResolver.contactWindowsResolver(model, familyCustody)
+        windows = { date -> familyWindows(date.toKotlinLocalDate()) }
     )
 
     @Test

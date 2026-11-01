@@ -1,7 +1,7 @@
 package com.coparently.app.domain.custody
 
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -12,12 +12,12 @@ import kotlin.test.assertTrue
  */
 class SwapSidesTest {
 
-    private val nov6 = LocalDate.of(2026, 11, 6)
-    private val nov7 = LocalDate.of(2026, 11, 7)
-    private val nov8 = LocalDate.of(2026, 11, 8)
-    private val nov14 = LocalDate.of(2026, 11, 14)
-    private val nov30 = LocalDate.of(2026, 11, 30)
-    private val dec2 = LocalDate.of(2026, 12, 2)
+    private val nov6 = LocalDate(2026, 11, 6)
+    private val nov7 = LocalDate(2026, 11, 7)
+    private val nov8 = LocalDate(2026, 11, 8)
+    private val nov14 = LocalDate(2026, 11, 14)
+    private val nov30 = LocalDate(2026, 11, 30)
+    private val dec2 = LocalDate(2026, 12, 2)
 
     @Test
     fun `a day the offerer holds goes to the other parent and theirs comes back`() {

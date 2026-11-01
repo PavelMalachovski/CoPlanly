@@ -40,6 +40,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -351,7 +353,12 @@ class CalendarViewModel @Inject constructor(
      * @param answerBy The deadline the parent chose in the sheet, or null for none: the offer then
      *   goes without a clock, as it did before.
      */
-    fun offerDaySwap(date: LocalDate, toParent: String, note: String? = null, answerBy: AnswerByPick? = null) {
+    fun offerDaySwap(
+        date: kotlinx.datetime.LocalDate,
+        toParent: String,
+        note: String? = null,
+        answerBy: AnswerByPick? = null
+    ) {
         viewModelScope.launch {
             val me = parents.value.me
             val myUid = me?.uid
@@ -399,8 +406,8 @@ class CalendarViewModel @Inject constructor(
      *   the whole group.
      */
     fun offerDaySwapForDates(
-        dates: Collection<LocalDate>,
-        toParentFor: (LocalDate) -> String?,
+        dates: Collection<kotlinx.datetime.LocalDate>,
+        toParentFor: (kotlinx.datetime.LocalDate) -> String?,
         note: String? = null,
         answerBy: AnswerByPick? = null
     ) {
@@ -520,8 +527,8 @@ class CalendarViewModel @Inject constructor(
     fun getCustodyForDate(date: LocalDate): String? = CustodyResolver.custodyFor(
         model = _custodyModel.value,
         overrides = dayOverrides.value,
-        legacy = { day -> CustodyHelper.getCustodyForDate(day, custodySchedules.value) },
-        date = date
+        legacy = { day -> CustodyHelper.getCustodyForDate(day.toJavaLocalDate(), custodySchedules.value) },
+        date = date.toKotlinLocalDate()
     )
 
     /**

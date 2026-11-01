@@ -1,8 +1,10 @@
 package com.coparently.app.domain.model
 
-import org.junit.Test
-import java.time.DayOfWeek
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -20,7 +22,7 @@ import kotlin.test.assertTrue
 class EveryOtherWeekendTest {
 
     /** A Monday. The anchor every fourteen-day preset in this file assumes. */
-    private val monday = LocalDate.of(2026, 8, 3)
+    private val monday = LocalDate(2026, 8, 3)
 
     private fun pattern(momIsResident: Boolean = true) =
         CustodyModel.everyOtherWeekend(id = "t", startDate = monday, momIsResident = momIsResident)
@@ -44,11 +46,11 @@ class EveryOtherWeekendTest {
         val model = pattern(momIsResident = true)
 
         val contactDays = (0 until 14)
-            .map { monday.plusDays(it.toLong()) }
+            .map { monday.plus(it.toLong(), DateTimeUnit.DAY) }
             .filter { model.getCustodyFor(it) == "dad" }
 
         assertEquals(
-            listOf(LocalDate.of(2026, 8, 8), LocalDate.of(2026, 8, 9)),
+            listOf(LocalDate(2026, 8, 8), LocalDate(2026, 8, 9)),
             contactDays,
             "contact is the first weekend of the fortnight and nothing else"
         )
@@ -60,8 +62,8 @@ class EveryOtherWeekendTest {
         // The half that makes it *every other* weekend rather than every weekend.
         val model = pattern(momIsResident = true)
 
-        assertEquals("mom", model.getCustodyFor(LocalDate.of(2026, 8, 15)))
-        assertEquals("mom", model.getCustodyFor(LocalDate.of(2026, 8, 16)))
+        assertEquals("mom", model.getCustodyFor(LocalDate(2026, 8, 15)))
+        assertEquals("mom", model.getCustodyFor(LocalDate(2026, 8, 16)))
     }
 
     @Test
@@ -69,7 +71,7 @@ class EveryOtherWeekendTest {
         val model = pattern(momIsResident = true)
 
         val schoolDays = (0 until 14)
-            .map { monday.plusDays(it.toLong()) }
+            .map { monday.plus(it.toLong(), DateTimeUnit.DAY) }
             .filter { it.dayOfWeek !in setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY) }
 
         assertTrue(
@@ -101,10 +103,10 @@ class EveryOtherWeekendTest {
         val model = pattern(momIsResident = true)
 
         // 8 Aug is contact; 22 Aug is fourteen days later.
-        assertEquals("dad", model.getCustodyFor(LocalDate.of(2026, 8, 22)))
-        assertEquals("dad", model.getCustodyFor(LocalDate.of(2026, 8, 23)))
+        assertEquals("dad", model.getCustodyFor(LocalDate(2026, 8, 22)))
+        assertEquals("dad", model.getCustodyFor(LocalDate(2026, 8, 23)))
         // And the one in between is not.
-        assertEquals("mom", model.getCustodyFor(LocalDate.of(2026, 8, 15)))
+        assertEquals("mom", model.getCustodyFor(LocalDate(2026, 8, 15)))
     }
 
     @Test
@@ -113,9 +115,9 @@ class EveryOtherWeekendTest {
         // would show the wrong parent on every day already in the calendar.
         val model = pattern(momIsResident = true)
 
-        assertEquals("dad", model.getCustodyFor(LocalDate.of(2026, 7, 25)))
-        assertEquals("dad", model.getCustodyFor(LocalDate.of(2026, 7, 26)))
-        assertEquals("mom", model.getCustodyFor(LocalDate.of(2026, 7, 27)))
+        assertEquals("dad", model.getCustodyFor(LocalDate(2026, 7, 25)))
+        assertEquals("dad", model.getCustodyFor(LocalDate(2026, 7, 26)))
+        assertEquals("mom", model.getCustodyFor(LocalDate(2026, 7, 27)))
     }
 
     @Test

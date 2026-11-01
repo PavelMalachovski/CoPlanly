@@ -15,8 +15,10 @@ import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -227,7 +229,7 @@ object RequestHistory {
     private fun earlierSwapAnswers(scope: RequestScope, overrides: Map<String, DayOverride>): List<HistoryEntry> =
         overrides.entries
             .flatMap { (iso, override) ->
-                val date = runCatching { LocalDate.parse(iso) }.getOrNull() ?: return@flatMap emptyList()
+                val date = runCatching { IsoText.parseDate(iso) }.getOrNull() ?: return@flatMap emptyList()
                 override.earlierDecisions.map { date to it }
             }
             .filter { (_, decision) -> scope.isPair(decision.requestedBy) }
@@ -406,7 +408,7 @@ internal object UnansweredRows {
 
     /** The row of a replaced offer, from what its clock says it covered; null for a clock that does not say. */
     private fun replacedOffer(clock: RequestDeadline): HistoryEntry? {
-        val firstDate = clock.firstDate ?: return null
+        val firstDate = clock.firstDate?.toKotlinLocalDate() ?: return null
         val dayCount = clock.dayCount ?: return null
         return row("swap_${clock.ref}", RequestSubject.DaySwap(firstDate, dayCount), clock)
     }

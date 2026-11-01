@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -92,7 +93,7 @@ class ProfessionalCalendarViewModelTest {
                 modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
                 patternDays = 14,
                 momDayIndices = (0..6).toSet(),
-                startDate = start
+                startDate = start.toKotlinLocalDate()
             ),
             lastModifiedBy = "a",
             lastModifiedAtMillis = 1L,

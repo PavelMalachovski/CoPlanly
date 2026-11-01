@@ -31,7 +31,7 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.swapDateList
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The bar under the grid while days are being chosen for a swap (day swap design, board SW-2).

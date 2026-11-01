@@ -40,11 +40,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -112,13 +116,13 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     @Test
     fun bobsCustodyProposalPopsUpOnAlicesHomeAndHerAnswersReachHim() {
-        runBlocking { bobSetsTheFirstPattern(LocalDate.now(), aliceHasTheFirstWeek = true) }
+        runBlocking { bobSetsTheFirstPattern(currentDay(), aliceHasTheFirstWeek = true) }
 
         step("proposal: Bob proposes a 2-2-3")
         runBlocking {
             assertEquals(
                 PatternSubmission.PROPOSED,
-                bob.custodyRepository.createTwoTwoThree(LocalDate.now(), momStartsFirst = true)
+                bob.custodyRepository.createTwoTwoThree(currentDay(), momStartsFirst = true)
             )
         }
         waitFor("Bob's proposal on Alice's Home, naming him", proposalDialogNaming(bob.name))
@@ -135,7 +139,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         runBlocking {
             assertEquals(
                 PatternSubmission.PROPOSED,
-                bob.custodyRepository.createWeekOnWeekOff(LocalDate.now(), momFirst = false)
+                bob.custodyRepository.createWeekOnWeekOff(currentDay(), momFirst = false)
             )
         }
         waitFor("Bob's second proposal on Alice's Home", proposalDialogNaming(bob.name))
@@ -180,9 +184,9 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     @Test
     fun bobsDaySwapPopsUpOnAlicesHomeAndHerAnswersReachHim() {
-        val agreed = runBlocking { bobSetsTheFirstPattern(LocalDate.now(), aliceHasTheFirstWeek = true) }
-        val firstDay = LocalDate.now().plusDays(FIRST_SWAP_OFFSET)
-        val secondDay = LocalDate.now().plusDays(SECOND_SWAP_OFFSET)
+        val agreed = runBlocking { bobSetsTheFirstPattern(currentDay(), aliceHasTheFirstWeek = true) }
+        val firstDay = currentDay().plus(FIRST_SWAP_OFFSET, DateTimeUnit.DAY)
+        val secondDay = currentDay().plus(SECOND_SWAP_OFFSET, DateTimeUnit.DAY)
 
         step("swap: Bob offers a day, Alice accepts on Home")
         runBlocking { bobOffers(agreed, firstDay) }
@@ -205,7 +209,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     @Test
     fun aSeasonalLayerAliceAcceptsNamesBobOnTodaysCell() {
-        val today = LocalDate.now()
+        val today = currentDay()
         val (aliceSlot, bobSlot) = runBlocking { slots() }
         val base = runBlocking { bobSetsTheFirstPattern(today, aliceHasTheFirstWeek = true) }
         assertEquals("the base pattern gives today to Alice", aliceSlot, base.getCustodyFor(today))
@@ -226,7 +230,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         step("layer: today's cell on the month grid")
         openTab(BottomNavDestination.CALENDAR)
         val todayCell = hasContentDescription(
-            "${today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))}, " +
+            "${today.toJavaLocalDate().format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))}, " +
                 string(R.string.calendar_day_desc_today),
             substring = true
         )
@@ -405,6 +409,9 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     private companion object {
         const val START_HOUR = 10
         const val POLL_MS = 250L
+
+        /** Today on this phone, as the custody domain's kotlinx-datetime day (MON-24). */
+        fun currentDay(): LocalDate = java.time.LocalDate.now().toKotlinLocalDate()
 
         /** Both inside the agreed pattern's first fortnight, and after today so the inbox shows them. */
         const val FIRST_SWAP_OFFSET = 2L

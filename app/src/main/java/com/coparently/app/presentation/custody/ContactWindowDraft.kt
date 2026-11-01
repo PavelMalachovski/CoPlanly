@@ -1,9 +1,11 @@
 package com.coparently.app.presentation.custody
 
 import com.coparently.app.domain.custody.ContactWindow
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
 
 /**
  * What the contact-window editor asks for, turned into the cycle-day windows the pattern stores
@@ -39,7 +41,7 @@ data class ContactWindowDraft(
         if (!isValid) return emptyList()
         return (0 until cycleDays)
             .filter { index ->
-                startDate.plusDays(index.toLong()).dayOfWeek == weekday &&
+                startDate.plus(index, DateTimeUnit.DAY).dayOfWeek == weekday &&
                     (week == null || index / DAYS_PER_WEEK == week)
             }
             .map { index -> ContactWindow(index, start, end, parent) }

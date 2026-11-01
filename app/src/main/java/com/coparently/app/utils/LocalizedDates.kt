@@ -3,6 +3,8 @@ package com.coparently.app.utils
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalTime
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -36,6 +38,16 @@ fun localizedDate(skeleton: String, locale: Locale = Locale.getDefault()): DateT
     runCatching {
         DateTimeFormatter.ofPattern(monthInFormatForm(DateFormat.getBestDateTimePattern(locale, skeleton)), locale)
     }.getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+
+/**
+ * [this] kotlinx-datetime date formatted by [formatter] — one of [localizedDate]'s — exactly as the
+ * same `java.time` date would be (MON-24). The domain's custody dates are kotlinx-datetime; the
+ * platform's localized patterns stay `java.time` formatters, so this converts at the edge.
+ */
+fun kotlinx.datetime.LocalDate.format(formatter: DateTimeFormatter): String = toJavaLocalDate().format(formatter)
+
+/** [this] kotlinx-datetime time formatted by [formatter], as the `java.time` time would be (MON-24). */
+fun kotlinx.datetime.LocalTime.format(formatter: DateTimeFormatter): String = toJavaLocalTime().format(formatter)
 
 /**
  * [pattern] with a stand-alone month (`L`) written in its format form (`M`) whenever the pattern

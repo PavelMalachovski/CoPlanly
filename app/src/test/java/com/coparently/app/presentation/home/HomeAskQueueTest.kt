@@ -7,8 +7,8 @@ import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.CustodyModel
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -24,7 +24,7 @@ class HomeAskQueueTest {
 
     private val proposal = ProposalAsk(
         proposal = CustodyProposal(
-            model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7)),
+            model = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7)),
             repeatYearly = true,
             proposedBy = "u2",
             proposedAt = "2026-10-12T08:00:00"
@@ -40,7 +40,7 @@ class HomeAskQueueTest {
     private val swap = DaySwapGroup(
         listOf(
             DaySwap(
-                LocalDate.of(2026, 10, 20),
+                LocalDate(2026, 10, 20),
                 DayOverride(toParent = "dad", requestedBy = "u2", requestedAt = "2026-10-13T10:00:00", groupId = "g1")
             )
         )

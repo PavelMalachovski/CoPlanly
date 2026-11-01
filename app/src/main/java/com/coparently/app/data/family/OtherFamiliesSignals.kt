@@ -42,7 +42,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -182,7 +183,9 @@ constructor(
         val schedule = combine(
             custodyDataSource.observeCustody(family.familyId),
             clocksOf(myUid, family)
-        ) { custody, clocks -> hasPendingSchedule(custody, myUid, LocalDate.now(), clocks) }
+        ) { custody, clocks ->
+            hasPendingSchedule(custody, myUid, java.time.LocalDate.now().toKotlinLocalDate(), clocks)
+        }
             .bounded(FamilySignal.SCHEDULE)
         val split = combine(
             familySettingsDataSource.observeSettings(family.familyId),

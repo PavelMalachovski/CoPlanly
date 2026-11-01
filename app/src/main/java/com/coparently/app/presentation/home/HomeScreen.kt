@@ -113,9 +113,11 @@ import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.previewParentNames
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.toKotlinLocalDate
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -1255,7 +1257,7 @@ private fun HandoverHeroPreview() {
     PreviewWrapper {
         HandoverHero(
             info = HandoverInfo(
-                date = LocalDate.now().plusDays(1),
+                date = LocalDate.now().plusDays(1).toKotlinLocalDate(),
                 daysUntil = 1L,
                 fromParent = "mom",
                 toParent = "dad"

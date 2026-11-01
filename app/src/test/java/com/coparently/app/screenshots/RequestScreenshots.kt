@@ -21,6 +21,7 @@ import com.coparently.app.presentation.changerequests.ProfessionalRequestRow
 import com.coparently.app.presentation.changerequests.RequestHistoryGroup
 import com.coparently.app.presentation.changerequests.SupportRequestRow
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -177,7 +178,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
             ),
             HistoryEntry(
                 key = "swap_g1",
-                subject = RequestSubject.DaySwap(ScreenshotFixtures.MONTH.atDay(8), 3),
+                subject = RequestSubject.DaySwap(ScreenshotFixtures.MONTH.atDay(8).toKotlinLocalDate(), 3),
                 outcome = RequestOutcome.DECLINED,
                 askedBy = ScreenshotFixtures.MY_UID,
                 decidedBy = ScreenshotFixtures.CO_PARENT_UID,

@@ -43,10 +43,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.DayOfWeek
-import java.time.LocalDate
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.previousOrSame
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.ZoneId
-import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 import javax.inject.Inject
 
@@ -129,7 +130,8 @@ class CustodySetupViewModel @Inject constructor(
         .distinctUntilChanged()
         .map { (candidate, active) ->
             val zone = ZoneId.systemDefault()
-            candidate?.let { RequestCap.forProposal(active, it, LocalDate.now(zone), zone) }
+            val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
+            candidate?.let { RequestCap.forProposal(active, it, today, zone) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(PARENTS_STOP_TIMEOUT_MS), null)
 
@@ -510,7 +512,7 @@ private fun CustodySetupUiState.withMidweekFrom(model: CustodyModel): CustodySet
         model.momDayIndices
     }
     val midweekIndices = contactDays - setOf(CONTACT_SATURDAY, CONTACT_SUNDAY)
-    val day = midweekIndices.minOrNull()?.let { DayOfWeek.of((it % DAYS_PER_WEEK) + 1) }
+    val day = midweekIndices.minOrNull()?.let { DayOfWeek((it % DAYS_PER_WEEK) + 1) }
         ?: return copy(midweekEnabled = false)
     return copy(
         midweekEnabled = true,
@@ -546,7 +548,7 @@ private fun CustodyModel.isResidentSlotOne(): Boolean =
 internal fun anchorFor(type: CustodyModelType, date: LocalDate): LocalDate = when (type) {
     CustodyModelType.TWO_TWO_THREE,
     CustodyModelType.THREE_FOUR_FOUR_THREE,
-    CustodyModelType.EVERY_OTHER_WEEKEND -> date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    CustodyModelType.EVERY_OTHER_WEEKEND -> date.previousOrSame(DayOfWeek.MONDAY)
     CustodyModelType.WEEK_ON_WEEK_OFF, CustodyModelType.CUSTOM -> date
 }
 
@@ -560,7 +562,7 @@ data class CustodySetupUiState(
      * put a Saturday handover in front of a parent who never chose one, and the weekend read as the
      * other parent's.
      */
-    val startDate: LocalDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+    val startDate: LocalDate = java.time.LocalDate.now().toKotlinLocalDate().previousOrSame(DayOfWeek.MONDAY),
     val momFirst: Boolean = true,
     val customPatternDays: Int = 14,
     val customMomDays: Set<Int> = emptySet(),

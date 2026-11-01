@@ -2,9 +2,9 @@ package com.coparently.app.presentation.pairing
 
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The decision behind the pairing conflict screen.
@@ -19,7 +19,7 @@ class CustodyConflictResolverTest {
     private fun model(
         patternDays: Int,
         momDays: Set<Int>,
-        start: LocalDate = LocalDate.of(2026, 8, 3),
+        start: LocalDate = LocalDate(2026, 8, 3),
         id: String = "m"
     ) = CustodyModel(
         id = id,
@@ -35,7 +35,7 @@ class CustodyConflictResolverTest {
         // in startDate; compared by outcome they assign every day identically, which is the
         // only comparison that means anything to a parent.
         val mine = model(14, (0..6).toSet(), id = "mine")
-        val theirs = model(14, (0..6).toSet(), start = LocalDate.of(2026, 8, 17), id = "theirs")
+        val theirs = model(14, (0..6).toSet(), start = LocalDate(2026, 8, 17), id = "theirs")
 
         assertEquals(
             CustodyConflict.NoConflict(theirs),

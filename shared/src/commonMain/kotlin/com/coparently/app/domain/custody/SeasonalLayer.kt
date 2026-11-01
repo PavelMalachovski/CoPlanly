@@ -1,13 +1,8 @@
 package com.coparently.app.domain.custody
 
+import com.coparently.app.domain.text.Utf8
 import com.coparently.app.domain.time.IsoText
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.LocalDate
 
 /**
  * A stretch of dates on which a different pattern replaces the base one (MON-14): "the summer
@@ -54,7 +49,7 @@ data class SeasonalLayer(
     init {
         require(ID.matches(id)) { "Not a layer id: $id" }
         require(name.length <= MAX_NAME_LENGTH) { "A layer name is at most $MAX_NAME_LENGTH characters" }
-        require(!toDate.isBefore(fromDate)) { "A layer ends on or after it starts: $fromDate-$toDate" }
+        require(toDate >= fromDate) { "A layer ends on or after it starts: $fromDate-$toDate" }
         require(spanDays <= MAX_LAYER_DAYS) { "A layer covers at most $MAX_LAYER_DAYS days" }
         require(patternDays in 1..MAX_LAYER_DAYS) { "A layer's cycle is 1..$MAX_LAYER_DAYS days" }
         require(momDayIndices.all { it in 0 until patternDays }) { "A day index is outside the cycle" }
@@ -63,10 +58,10 @@ data class SeasonalLayer(
     }
 
     /** How many days the layer covers, both ends included. */
-    val spanDays: Long get() = ChronoUnit.DAYS.between(fromDate, toDate) + 1
+    val spanDays: Long get() = toDate.toEpochDays() - fromDate.toEpochDays() + 1
 
     /** Whether [date] falls inside the layer. */
-    operator fun contains(date: LocalDate): Boolean = !date.isBefore(fromDate) && !date.isAfter(toDate)
+    operator fun contains(date: LocalDate): Boolean = date >= fromDate && date <= toDate
 
     /**
      * Whose day [date] is under this layer's own cycle — `"mom"` or `"dad"`. Meaningful only for
@@ -89,7 +84,7 @@ data class SeasonalLayer(
     )
 
     private fun cycleIndex(date: LocalDate): Int =
-        Math.floorMod(ChronoUnit.DAYS.between(startDate, date), patternDays.toLong()).toInt()
+        (date.toEpochDays() - startDate.toEpochDays()).mod(patternDays.toLong()).toInt()
 
     companion object {
         /** No layer is longer than a year, and neither is its cycle (the base pattern's bound). */
@@ -150,7 +145,7 @@ data class SeasonalLayer(
          * "two blocks" summer. An odd number of days gives the extra day to [firstSlot].
          */
         fun splitInHalf(id: String, name: String, range: ClosedRange<LocalDate>, firstSlot: String): SeasonalLayer {
-            val span = (ChronoUnit.DAYS.between(range.start, range.endInclusive) + 1).toInt()
+            val span = (range.endInclusive.toEpochDays() - range.start.toEpochDays() + 1).toInt()
                 .coerceIn(1, MAX_LAYER_DAYS)
             val firstHalf = (0 until (span + 1) / 2).toSet()
             return SeasonalLayer(
@@ -222,9 +217,9 @@ object SeasonalLayerCodec {
     private const val ASCII_LIMIT = 128
     private val UNRESERVED = setOf('-', '_', '.', '~')
     private const val HEX_DIGITS = "0123456789ABCDEFabcdef"
-    private val INTEGER = Regex("-?\\d+")
-    private val COUNT = Regex("\\d+")
-    private val ISO_DATE = Regex("\\d{4}-\\d{2}-\\d{2}")
+    private val INTEGER = Regex("-?[0-9]+")
+    private val COUNT = Regex("[0-9]+")
+    private val ISO_DATE = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
     /**
      * How many layers a document may carry before the rest are treated as unreadable. Far above
@@ -248,9 +243,9 @@ object SeasonalLayerCodec {
         VERSION,
         layer.id,
         layer.priority.toString(),
-        IsoText.date(layer.fromDate.toKotlinLocalDate()),
-        IsoText.date(layer.toDate.toKotlinLocalDate()),
-        IsoText.date(layer.startDate.toKotlinLocalDate()),
+        IsoText.date(layer.fromDate),
+        IsoText.date(layer.toDate),
+        IsoText.date(layer.startDate),
         layer.patternDays.toString(),
         layer.momDayIndices.sorted().joinToString(LIST_SEPARATOR.toString()),
         ContactWindowCodec.encodeAll(layer.contactWindows).joinToString(LIST_SEPARATOR.toString()),
@@ -271,11 +266,11 @@ object SeasonalLayerCodec {
             SeasonalLayer(
                 id = parts[IDX_ID],
                 name = requireNotNull(percentDecode(parts[IDX_NAME])),
-                fromDate = IsoText.parseDate(parts[IDX_FROM]).toJavaLocalDate(),
-                toDate = IsoText.parseDate(parts[IDX_TO]).toJavaLocalDate(),
+                fromDate = IsoText.parseDate(parts[IDX_FROM]),
+                toDate = IsoText.parseDate(parts[IDX_TO]),
                 patternDays = parts[IDX_CYCLE].toInt(),
                 momDayIndices = parts[IDX_DAYS].splitList().map { it.toInt() }.toSet(),
-                startDate = IsoText.parseDate(parts[IDX_ANCHOR]).toJavaLocalDate(),
+                startDate = IsoText.parseDate(parts[IDX_ANCHOR]),
                 contactWindows = ContactWindowCodec.canonical(windows),
                 priority = parts[IDX_PRIORITY].toInt()
             )
@@ -310,7 +305,7 @@ object SeasonalLayerCodec {
 
     /** `encodeURIComponent`, minus the few marks it also leaves alone, so JS decodes it as is. */
     private fun percentEncode(text: String): String = buildString {
-        text.toByteArray(StandardCharsets.UTF_8).forEach { byte ->
+        Utf8.encode(text).forEach { byte ->
             val c = (byte.toInt() and BYTE_MASK).toChar()
             if (c.isLetterOrDigit() && c.code < ASCII_LIMIT || c in UNRESERVED) {
                 append(c)
@@ -323,21 +318,23 @@ object SeasonalLayerCodec {
 
     /** The text [value] percent-encodes, or null when it is not valid percent-encoded UTF-8. */
     private fun percentDecode(value: String): String? = runCatching {
-        val bytes = ByteArrayOutputStream()
+        val bytes = ArrayList<Byte>(value.length)
         var i = 0
         while (i < value.length) {
             val c = value[i]
             if (c == ESCAPE) {
                 val hex = value.substring(i + 1, i + ESCAPE_LENGTH)
                 require(hex.all { it in HEX_DIGITS })
-                bytes.write(hex.toInt(HEX_RADIX))
+                bytes.add(hex.toInt(HEX_RADIX).toByte())
                 i += ESCAPE_LENGTH
             } else {
                 require(c.code < ASCII_LIMIT && (c.isLetterOrDigit() || c in UNRESERVED))
-                bytes.write(c.code)
+                bytes.add(c.code.toByte())
                 i++
             }
         }
-        StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes.toByteArray())).toString()
+        // Strict: a malformed or overlong sequence, or an encoded surrogate, throws rather than
+        // decoding to U+FFFD, so an entry that is not valid UTF-8 stays unreadable (ruling R9).
+        bytes.toByteArray().decodeToString(throwOnInvalidSequence = true)
     }.getOrNull()
 }

@@ -1,10 +1,12 @@
 package com.coparently.app.presentation.custody
 
 import com.coparently.app.domain.custody.ContactWindow
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
 import org.junit.Test
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -30,7 +32,7 @@ class ContactWindowDraftTest {
     @Test
     fun `the weekday is read from the start date, not assumed to be Monday`() {
         // A cycle anchored on a Wednesday has its Wednesdays at 0 and 7.
-        val wednesday = MONDAY.plusDays(2)
+        val wednesday = MONDAY.plus(2, DateTimeUnit.DAY)
 
         assertEquals(listOf(0, 7), draft(week = null).toWindows(wednesday, 14).map { it.dayIndex })
     }
@@ -58,8 +60,8 @@ class ContactWindowDraftTest {
     )
 
     private companion object {
-        val MONDAY: LocalDate = LocalDate.of(2026, 8, 3)
-        val FROM: LocalTime = LocalTime.of(15, 0)
-        val TO: LocalTime = LocalTime.of(19, 0)
+        val MONDAY: LocalDate = LocalDate(2026, 8, 3)
+        val FROM: LocalTime = LocalTime(15, 0)
+        val TO: LocalTime = LocalTime(19, 0)
     }
 }

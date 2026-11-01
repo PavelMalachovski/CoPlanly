@@ -27,10 +27,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -105,7 +105,7 @@ class FamilyViewModelTest {
             advanceUntilIdle()
             assertNull(vm.schedule.value)
 
-            activeSchedule.value = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 10, 19))
+            activeSchedule.value = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 10, 19))
             advanceUntilIdle()
 
             assertEquals(CustodyModelType.WEEK_ON_WEEK_OFF, vm.schedule.value)

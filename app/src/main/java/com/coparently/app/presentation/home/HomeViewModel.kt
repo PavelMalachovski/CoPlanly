@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -375,7 +376,7 @@ class HomeViewModel @Inject constructor(
      */
     private val nextHandover: StateFlow<HandoverInfo?> = custody
         .map { (model, overrides) ->
-            model?.let { HandoverCalculator.nextHandoverFrom(it, LocalDate.now(), overrides) }
+            model?.let { HandoverCalculator.nextHandoverFrom(it, LocalDate.now().toKotlinLocalDate(), overrides) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
@@ -387,7 +388,7 @@ class HomeViewModel @Inject constructor(
         custody,
         homeIdentityDependencies.familyMembersSource.observe()
     ) { (model, overrides), members ->
-        ChildrenToday.of(LocalDate.now(), model, overrides, members)
+        ChildrenToday.of(LocalDate.now().toKotlinLocalDate(), model, overrides, members)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**
@@ -422,7 +423,10 @@ class HomeViewModel @Inject constructor(
         // here to answer for accounts that never migrated off `custody_schedules` would put
         // a second custody lookup on the screen. An unanswered day leaves the row's parent
         // unknown, which the row renders as no parent rather than as a guess.
-        val custodyFor = CustodyResolver.resolver(model, overrides, legacy = { null })
+        val resolve = CustodyResolver.resolver(model, overrides, legacy = { null })
+        val windows = CustodyResolver.contactWindowsResolver(model, resolve)
+        // `HomeWeek` reads the events' own `java.time` days until the events move (MON-24).
+        val custodyFor: (LocalDate) -> String? = { day -> resolve(day.toKotlinLocalDate()) }
         AgendaSections(
             today = HomeWeek.todayOf(
                 events = events,
@@ -430,7 +434,7 @@ class HomeViewModel @Inject constructor(
                 userId = userId,
                 custodyFor = custodyFor,
                 // The same windows the calendar grid draws (MON-6b), through the same lookup.
-                contactWindowsFor = CustodyResolver.contactWindowsResolver(model, custodyFor)
+                contactWindowsFor = { day -> windows(day.toKotlinLocalDate()) }
             ),
             week = HomeWeek.of(
                 events = events,

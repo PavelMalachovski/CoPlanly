@@ -39,6 +39,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -59,7 +60,7 @@ class MonthReviewViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val today = YearMonth.now()
     private val model = MutableStateFlow<CustodyModel?>(
-        CustodyModel.weekOnWeekOff(id = "m1", startDate = today.atDay(1))
+        CustodyModel.weekOnWeekOff(id = "m1", startDate = today.atDay(1).toKotlinLocalDate())
     )
 
     private val custodyRepository = mockk<CustodyModelRepository> {

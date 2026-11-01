@@ -43,12 +43,16 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -64,7 +68,7 @@ import kotlin.test.assertTrue
 class CustodySetupViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val start = LocalDate.of(2026, 9, 7)
+    private val start = LocalDate(2026, 9, 7)
     private val repository = mockk<CustodyModelRepository>()
 
     private val planReferences = mockk<PlanReferenceSource>()
@@ -146,14 +150,14 @@ class CustodySetupViewModelTest {
     fun `a new schedule starts on this week's Monday, not on today`() {
         // A Saturday start put the handover on the weekend and read as "weekends with Bob".
         assertEquals(DayOfWeek.MONDAY, CustodySetupUiState().startDate.dayOfWeek)
-        assertFalse(CustodySetupUiState().startDate.isAfter(LocalDate.now()))
+        assertFalse(CustodySetupUiState().startDate > java.time.LocalDate.now().toKotlinLocalDate())
     }
 
     @Test
     fun `a pattern named by weekdays starts on the Monday of the chosen week`() = runTest(dispatcher) {
         val vm = viewModel()
         advanceUntilIdle()
-        val thursday = start.plusDays(3)
+        val thursday = start.plus(3, DateTimeUnit.DAY)
 
         vm.selectModelType(CustodyModelType.TWO_TWO_THREE)
         vm.setStartDate(thursday)
@@ -166,7 +170,7 @@ class CustodySetupViewModelTest {
     fun `switching to a pattern named by weekdays moves the start to its Monday`() = runTest(dispatcher) {
         val vm = viewModel()
         advanceUntilIdle()
-        val thursday = start.plusDays(3)
+        val thursday = start.plus(3, DateTimeUnit.DAY)
         vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
         vm.setStartDate(thursday)
 
@@ -179,7 +183,7 @@ class CustodySetupViewModelTest {
     fun `week on week off keeps the handover day the parent chose`() = runTest(dispatcher) {
         val vm = viewModel()
         advanceUntilIdle()
-        val friday = start.plusDays(4)
+        val friday = start.plus(4, DateTimeUnit.DAY)
 
         vm.selectModelType(CustodyModelType.WEEK_ON_WEEK_OFF)
         vm.setStartDate(friday)
@@ -323,7 +327,7 @@ class CustodySetupViewModelTest {
     fun `a linked parent's first schedule says so, and keeps the stored contact windows`() = runTest(dispatcher) {
         // Onboarding's form hides the windows section, so a save that dropped them would erase
         // afternoons the parent never saw; and the link step's answer reaches the repository.
-        val window = ContactWindow(dayIndex = 2, start = LocalTime.of(15, 0), end = LocalTime.of(19, 0), parent = "dad")
+        val window = ContactWindow(dayIndex = 2, start = LocalTime(15, 0), end = LocalTime(19, 0), parent = "dad")
         coEvery { repository.activateFirstSchedule(any(), any()) } returns FirstSchedule.Activated
         val vm = viewModel(
             active = CustodyModel.weekOnWeekOff(id = "stored", startDate = start).copy(contactWindows = listOf(window))
@@ -637,7 +641,7 @@ class CustodySetupViewModelTest {
     @Test
     fun `the cap preview is the first day the edited pattern changes`() = runTest(dispatcher) {
         val zone = ZoneId.systemDefault()
-        val today = LocalDate.now(zone)
+        val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
         // Anchored today, so day 10 of the cycle is ten days from now.
         val vm = viewModel(active = CustodyModel.custom("m1", today, patternDays = 14, momDayIndices = (0..6).toSet()))
         backgroundScope.launch { vm.answerByCap.collect {} }
@@ -648,13 +652,14 @@ class CustodySetupViewModelTest {
         vm.toggleCustomMomDay(10)
         advanceUntilIdle()
 
-        assertEquals(today.plusDays(10).atStartOfDay(zone).toInstant().toEpochMilli(), vm.answerByCap.value)
+        val cap = today.plus(10, DateTimeUnit.DAY).toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+        assertEquals(cap, vm.answerByCap.value)
     }
 
     @Test
     fun `a child's schedule's cap is the first day that child's days change`() = runTest(dispatcher) {
         val zone = ZoneId.systemDefault()
-        val today = LocalDate.now(zone)
+        val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
         val vm = viewModel(active = CustodyModel.custom("m1", today, patternDays = 14, momDayIndices = (0..6).toSet()))
         backgroundScope.launch { vm.answerByCap.collect {} }
         advanceUntilIdle()
@@ -667,7 +672,8 @@ class CustodySetupViewModelTest {
         vm.toggleCustomMomDay(12)
         advanceUntilIdle()
 
-        assertEquals(today.plusDays(12).atStartOfDay(zone).toInstant().toEpochMilli(), vm.answerByCap.value)
+        val cap = today.plus(12, DateTimeUnit.DAY).toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+        assertEquals(cap, vm.answerByCap.value)
     }
 
     @Test

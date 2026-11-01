@@ -7,10 +7,10 @@ import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.MidweekContact
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Test
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -20,14 +20,14 @@ import kotlin.test.assertNull
  */
 class CandidateModelTest {
 
-    private val start = LocalDate.of(2026, 9, 7)
+    private val start = LocalDate(2026, 9, 7)
 
     /** Out of order, one twice, and one past a fortnight: a save sends them canonical and in the cycle. */
     private val windows = listOf(
-        ContactWindow(9, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad"),
-        ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad"),
-        ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad"),
-        ContactWindow(20, LocalTime.of(16, 0), LocalTime.of(18, 0), "dad")
+        ContactWindow(9, LocalTime(15, 0), LocalTime(19, 0), "dad"),
+        ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad"),
+        ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad"),
+        ContactWindow(20, LocalTime(16, 0), LocalTime(18, 0), "dad")
     )
 
     /** Two children with schedules of their own: with slot 1 every day, and with slot 2 every day. */
@@ -37,7 +37,7 @@ class CandidateModelTest {
     /** The agreed schedule, with everything a save carries over from it. */
     private val active = CustodyModel.weekOnWeekOff("agreed", start).copy(
         seasonalLayers = listOf(
-            SeasonalLayer.allWith("summer", "Summer", LocalDate.of(2027, 7, 1)..LocalDate.of(2027, 7, 31), "mom")
+            SeasonalLayer.allWith("summer", "Summer", LocalDate(2027, 7, 1)..LocalDate(2027, 7, 31), "mom")
         ),
         unreadableLayers = listOf("L2;written-by-a-newer-build"),
         childOverrides = listOf(ema, tomas),

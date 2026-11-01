@@ -4,7 +4,7 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.model.Event
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The rules for what waits in the change-request inbox for one parent's answer.

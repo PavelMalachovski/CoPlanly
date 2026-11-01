@@ -2,8 +2,10 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.time.IsoText
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 /** Whether this layer is a stretch of an earlier schedule kept by [CustodyHistory], not one the parents made. */
 val SeasonalLayer.isHistory: Boolean
@@ -56,7 +58,7 @@ object CustodyHistory {
         maxOf(proposed.startDate, acceptedOn)
 
     /** The stored name of a history layer ending on [until]. Stored data, never translated. */
-    fun layerName(until: LocalDate): String = "Earlier schedule until ${IsoText.date(until.toKotlinLocalDate())}"
+    fun layerName(until: LocalDate): String = "Earlier schedule until ${IsoText.date(until)}"
 
     /**
      * [incoming] with the days before its effective date kept as [outgoing] drew them.
@@ -69,22 +71,22 @@ object CustodyHistory {
         if (outgoing.patternDays !in 1..SeasonalLayer.MAX_LAYER_DAYS) return incoming
         if (baseOf(outgoing).isEquivalentTo(baseOf(incoming))) return incoming
         val effective = effectiveFrom(incoming, acceptedOn)
-        val lastDay = effective.minusDays(1)
+        val lastDay = effective.minus(1, DateTimeUnit.DAY)
 
         val kept = (outgoing.seasonalLayers + incoming.seasonalLayers)
             .filter { it.isHistory }
             .distinctBy { it.id }
             .mapNotNull { layer -> cutAt(layer, lastDay) }
         val from = maxOf(
-            kept.maxOfOrNull { it.toDate }?.plusDays(1) ?: outgoing.startDate,
+            kept.maxOfOrNull { it.toDate }?.plus(1, DateTimeUnit.DAY) ?: outgoing.startDate,
             outgoing.startDate,
-            effective.minusYears(MAX_YEARS_BACK)
+            effective.minus(MAX_YEARS_BACK, DateTimeUnit.YEAR)
         )
         val added = chunks(from, lastDay).map { range ->
             SeasonalLayer(
                 // Named by its own first day: history never overlaps, so no two stretches share
                 // it, while two changes may share an effective date (one cut short by a sooner one).
-                id = "$ID_PREFIX${IsoText.basicDate(range.start.toKotlinLocalDate())}",
+                id = "$ID_PREFIX${IsoText.basicDate(range.start)}",
                 name = layerName(lastDay),
                 fromDate = range.start,
                 toDate = range.endInclusive,
@@ -111,8 +113,8 @@ object CustodyHistory {
 
     /** [layer] ending no later than [lastDay], or null when it starts after it. */
     private fun cutAt(layer: SeasonalLayer, lastDay: LocalDate): SeasonalLayer? = when {
-        layer.fromDate.isAfter(lastDay) -> null
-        layer.toDate.isAfter(lastDay) -> layer.copy(toDate = lastDay)
+        layer.fromDate > lastDay -> null
+        layer.toDate > lastDay -> layer.copy(toDate = lastDay)
         else -> layer
     }
 
@@ -123,10 +125,10 @@ object CustodyHistory {
     private fun chunks(from: LocalDate, to: LocalDate): List<ClosedRange<LocalDate>> {
         val out = mutableListOf<ClosedRange<LocalDate>>()
         var start = from
-        while (!start.isAfter(to)) {
-            val end = minOf(start.plusDays(SeasonalLayer.MAX_LAYER_DAYS - 1L), to)
+        while (start <= to) {
+            val end = minOf(start.plus(SeasonalLayer.MAX_LAYER_DAYS - 1L, DateTimeUnit.DAY), to)
             out += start..end
-            start = end.plusDays(1)
+            start = end.plus(1, DateTimeUnit.DAY)
         }
         return out
     }

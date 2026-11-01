@@ -58,6 +58,13 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -67,8 +74,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertIs
@@ -1278,7 +1283,7 @@ class CustodyModelRepositoryTest {
         runTest(dispatcher) {
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
             val zone = ZoneId.systemDefault()
-            val date = LocalDate.now(zone).plusDays(10)
+            val date = today(zone).plus(10, DateTimeUnit.DAY)
             val started = slot<RequestStart>()
             coEvery { requestDeadlines.start(capture(started)) } answers { clockFor(firstArg()) }
 
@@ -1289,7 +1294,8 @@ class CustodyModelRepositoryTest {
                 firestoreCustodyDataSource.setCustody(DOCUMENT_ID, PARTICIPANTS, any())
                 requestDeadlines.start(
                     match {
-                        it.kind == RequestKind.SWAP && it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == date
+                        it.kind == RequestKind.SWAP && it.ref == GROUP_ID && it.dayCount == 1 &&
+                            it.firstDate == date.toJavaLocalDate()
                     }
                 )
                 fcmService.queueNotificationForUser(
@@ -1299,7 +1305,7 @@ class CustodyModelRepositoryTest {
             }
             // The clock names the family the offer was made in and the parent who must answer, and
             // it ends before the offer's first day with a day to spare for a last chance.
-            val cap = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            val cap = date.toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
             assertEquals(DOCUMENT_ID, started.captured.familyId)
             assertEquals(PARTNER_UID, started.captured.responderUid)
             assertEquals(cap, started.captured.capMillis)
@@ -1313,15 +1319,17 @@ class CustodyModelRepositoryTest {
         // The first day lands; the second is refused, which ends the run there.
         coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } returns Unit andThenThrows
             permissionDenied()
-        val first = LocalDate.now().plusDays(10)
-        val dates = (0L..2L).map { first.plusDays(it).toString() }
+        val first = today().plus(10, DateTimeUnit.DAY)
+        val dates = (0L..2L).map { first.plus(it, DateTimeUnit.DAY).toString() }
 
         val result = repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT)
 
         assertEquals(1, (result.exceptionOrNull() as PartialSwapRun).written)
         coVerify(exactly = 1) { requestDeadlines.start(any()) }
         coVerify(exactly = 1) {
-            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first })
+            requestDeadlines.start(
+                match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first.toJavaLocalDate() }
+            )
         }
         // One day landed, so the co-parent is asked about one day, with its deadline.
         coVerify(exactly = 1) {
@@ -1341,8 +1349,8 @@ class CustodyModelRepositoryTest {
         var stored = remoteCustody()
         coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
         coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) } answers { stored = thirdArg() }
-        val first = LocalDate.now().plusDays(10)
-        val dates = (0L..2L).map { first.plusDays(it).toString() }
+        val first = today().plus(10, DateTimeUnit.DAY)
+        val dates = (0L..2L).map { first.plus(it, DateTimeUnit.DAY).toString() }
 
         assertTrue(repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT).isSuccess)
 
@@ -1358,7 +1366,9 @@ class CustodyModelRepositoryTest {
         }
         coVerify(exactly = 1) { requestDeadlines.start(any()) }
         coVerify(exactly = 1) {
-            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 3 && it.firstDate == first })
+            requestDeadlines.start(
+                match { it.ref == GROUP_ID && it.dayCount == 3 && it.firstDate == first.toJavaLocalDate() }
+            )
         }
         coVerify(exactly = 1) { fcmService.queueNotificationForUser(any(), any()) }
         coVerify(exactly = 1) {
@@ -1377,9 +1387,9 @@ class CustodyModelRepositoryTest {
     @Test
     fun `an offer for today goes out without a clock`() = runTest(dispatcher) {
         coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
-        val today = LocalDate.now().toString()
+        val todayIso = today().toString()
 
-        val result = repository.applyDayOverrides(today, offerOf(today), AnswerByPick.DEFAULT)
+        val result = repository.applyDayOverrides(todayIso, offerOf(todayIso), AnswerByPick.DEFAULT)
 
         // Today's cap is already behind: too soon for a deadline, so the offer goes out as a plain one.
         assertTrue(result.isSuccess)
@@ -1394,7 +1404,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `answering a swap starts no clock`() = runTest(dispatcher) {
-        val date = LocalDate.now().plusDays(10).toString()
+        val date = today().plus(10, DateTimeUnit.DAY).toString()
         val theirs = DayOverride(
             toParent = "mom",
             requestedBy = PARTNER_UID,
@@ -1429,7 +1439,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `withdrawing a run posts one withdrawn card and no push, and starts no clock`() = runTest(dispatcher) {
-        val dates = listOf(LocalDate.now().plusDays(10).toString(), LocalDate.now().plusDays(11).toString())
+        val dates = listOf(today().plus(10, DateTimeUnit.DAY).toString(), today().plus(11, DateTimeUnit.DAY).toString())
         val mine = DayOverride(
             toParent = "dad",
             requestedBy = MY_UID,
@@ -1468,7 +1478,7 @@ class CustodyModelRepositoryTest {
     fun `a refused clock still sends the offer, without answerBy`() = runTest(dispatcher) {
         coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
         coEvery { requestDeadlines.start(any()) } returns null
-        val date = LocalDate.now().plusDays(10).toString()
+        val date = today().plus(10, DateTimeUnit.DAY).toString()
 
         val result = repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT)
 
@@ -1494,8 +1504,8 @@ class CustodyModelRepositoryTest {
         // Every day with slot 2, and a proposed trip that gives slot 1 ten days from now onwards:
         // nothing changes before that day, whatever today is.
         val agreed = localModel().copy(id = REMOTE_MODEL_ID, patternDays = 7, momDayIndices = emptySet())
-        val changes = LocalDate.now(zone).plusDays(10)
-        val trip = SeasonalLayer.allWith("trip", "Trip", changes..changes.plusDays(3), "mom")
+        val changes = today(zone).plus(10, DateTimeUnit.DAY)
+        val trip = SeasonalLayer.allWith("trip", "Trip", changes..changes.plus(3, DateTimeUnit.DAY), "mom")
         coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody().copy(model = agreed)
         val written = slot<SharedCustody>()
         coEvery { firestoreCustodyDataSource.setCustody(any(), any(), capture(written)) } returns Unit
@@ -1507,7 +1517,7 @@ class CustodyModelRepositoryTest {
         val result = repository.submitPattern(proposed, answerBy = AnswerByPick.DEFAULT)
 
         assertEquals(PatternSubmission.PROPOSED, result)
-        val cap = changes.atStartOfDay(zone).toInstant().toEpochMilli()
+        val cap = changes.toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
         assertEquals(RequestKind.PROPOSAL, started.captured.kind)
         assertEquals(requireNotNull(written.captured.proposal).proposedAt, started.captured.ref)
         assertEquals(DOCUMENT_ID, started.captured.familyId)
@@ -1607,11 +1617,11 @@ class CustodyModelRepositoryTest {
             var stored = remoteCustody()
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } answers { stored }
             coEvery { firestoreCustodyDataSource.setCustody(DOCUMENT_ID, any(), any()) } answers { stored = thirdArg() }
-            val first = LocalDate.now().plusDays(10)
+            val first = today().plus(10, DateTimeUnit.DAY)
 
             repository.applyDayOverrides(first.toString(), offerOf(first.toString()), AnswerByPick.DEFAULT)
             onScreen.value = PARTNER_UID
-            val run = listOf(first.plusDays(1).toString(), first.plusDays(2).toString())
+            val run = listOf(first.plus(1, DateTimeUnit.DAY).toString(), first.plus(2, DateTimeUnit.DAY).toString())
             repository.applyDayOverridesForDates(run, ::offerOfRun, AnswerByPick.DEFAULT)
 
             // Both times uidC's family was on screen by the time the card was posted.
@@ -1638,8 +1648,8 @@ class CustodyModelRepositoryTest {
             val onScreen = switchesFamilyWhileAClockIsWritten()
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
             // A trip ten days from now: far enough ahead for the proposal to get a clock.
-            val from = LocalDate.now().plusDays(10)
-            val trip = SeasonalLayer.allWith("trip", "Trip", from..from.plusDays(3), "dad")
+            val from = today().plus(10, DateTimeUnit.DAY)
+            val trip = SeasonalLayer.allWith("trip", "Trip", from..from.plus(3, DateTimeUnit.DAY), "dad")
 
             val result = repository.submitPattern(
                 remoteCustody().model.copy(seasonalLayers = listOf(trip)),
@@ -1669,7 +1679,7 @@ class CustodyModelRepositoryTest {
             switchableBetweenTwoFamilies()
             // From today, every day of the cycle but one given to the other parent.
             val proposal = proposalBy(PARTNER_UID, PROPOSED_AT).let {
-                it.copy(model = it.model.copy(momDayIndices = setOf(0), startDate = LocalDate.now()))
+                it.copy(model = it.model.copy(momDayIndices = setOf(0), startDate = today()))
             }
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns
                 remoteCustody().copy(proposal = proposal)
@@ -1681,9 +1691,9 @@ class CustodyModelRepositoryTest {
             val history = written.captured.model.seasonalLayers.filter { it.isHistory }
             assertTrue(history.isNotEmpty())
             // From the old anchor, or three years back once that is further (CustodyHistory.MAX_YEARS_BACK).
-            val earliest = maxOf(START_DATE, LocalDate.now().minusYears(CustodyHistory.MAX_YEARS_BACK))
+            val earliest = maxOf(START_DATE, today().minus(CustodyHistory.MAX_YEARS_BACK, DateTimeUnit.YEAR))
             assertEquals(earliest, history.minOf { it.fromDate })
-            assertEquals(LocalDate.now().minusDays(1), history.maxOf { it.toDate })
+            assertEquals(today().minus(1, DateTimeUnit.DAY), history.maxOf { it.toDate })
             assertTrue(written.captured.seasonalLayersWire.orEmpty().any { it.startsWith("L1;hist-") })
         }
 
@@ -1805,7 +1815,7 @@ class CustodyModelRepositoryTest {
                 clockFor(firstArg())
             }
             val posted = postsLikeTheRealAnnouncer()
-            val date = LocalDate.now().plusDays(10).toString()
+            val date = today().plus(10, DateTimeUnit.DAY).toString()
 
             val offering = launch { repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT) }
             clockWrite.reached.await()
@@ -1840,8 +1850,8 @@ class CustodyModelRepositoryTest {
             stored = thirdArg()
         }
         val posted = postsLikeTheRealAnnouncer()
-        val first = LocalDate.now().plusDays(10)
-        val dates = (0L..2L).map { first.plusDays(it).toString() }
+        val first = today().plus(10, DateTimeUnit.DAY)
+        val dates = (0L..2L).map { first.plus(it, DateTimeUnit.DAY).toString() }
 
         val offering = launch { repository.applyDayOverridesForDates(dates, ::offerOfRun, AnswerByPick.DEFAULT) }
         secondWrite.reached.await()
@@ -1855,7 +1865,9 @@ class CustodyModelRepositoryTest {
         assertEquals(2, writes.get())
         assertEquals(listOf(ActivityKind.DAY_SWAP_OFFERED), posted)
         coVerify(exactly = 1) {
-            requestDeadlines.start(match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first })
+            requestDeadlines.start(
+                match { it.ref == GROUP_ID && it.dayCount == 1 && it.firstDate == first.toJavaLocalDate() }
+            )
         }
         coVerify(exactly = 1) {
             fcmService.queueNotificationForUser(
@@ -1931,7 +1943,7 @@ class CustodyModelRepositoryTest {
             coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID) } returns remoteCustody()
             val swapWrite = HeldCall()
             coEvery { firestoreCustodyDataSource.setCustody(any(), any(), any()) } coAnswers { swapWrite.hold() }
-            val date = LocalDate.now().plusDays(10).toString()
+            val date = today().plus(10, DateTimeUnit.DAY).toString()
 
             val offering = launch { repository.applyDayOverrides(date, offerOf(date), AnswerByPick.DEFAULT) }
             swapWrite.reached.await()
@@ -2002,9 +2014,9 @@ class CustodyModelRepositoryTest {
 
     /** [remoteCustody]'s pattern with a trip ten days ahead: far enough for its clock to get a deadline. */
     private fun withTripTenDaysOut(): CustodyModel {
-        val from = LocalDate.now().plusDays(10)
+        val from = today().plus(10, DateTimeUnit.DAY)
         return remoteCustody().model.copy(
-            seasonalLayers = listOf(SeasonalLayer.allWith("trip", "Trip", from..from.plusDays(3), "dad"))
+            seasonalLayers = listOf(SeasonalLayer.allWith("trip", "Trip", from..from.plus(3, DateTimeUnit.DAY), "dad"))
         )
     }
 
@@ -2140,7 +2152,7 @@ class CustodyModelRepositoryTest {
         val SUMMER = SeasonalLayer.allWith(
             "summer-26",
             "Summer",
-            LocalDate.of(2026, 7, 1)..LocalDate.of(2026, 7, 31),
+            LocalDate(2026, 7, 1)..LocalDate(2026, 7, 31),
             "mom"
         )
         const val SUMMER_WIRE = "L1;summer-26;0;2026-07-01;2026-07-31;2026-07-01;1;0;;Summer"
@@ -2192,9 +2204,12 @@ class CustodyModelRepositoryTest {
         /** `RETRY_BASE_MS shl 0`, the repository's first backoff step. */
         const val FIRST_BACKOFF_MS = 1_000L
 
-        val START_DATE: LocalDate = LocalDate.of(2026, 8, 3)
+        val START_DATE: LocalDate = LocalDate(2026, 8, 3)
+
+        /** Today in [zone], as the custody domain's kotlinx-datetime day (MON-24). */
+        fun today(zone: ZoneId = ZoneId.systemDefault()): LocalDate = java.time.LocalDate.now(zone).toKotlinLocalDate()
 
         /** Wednesday of the first week (day 0 is Monday 3 August), 15:00-19:00 with slot 2. */
-        val WEDNESDAY_WINDOW = ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "dad")
+        val WEDNESDAY_WINDOW = ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "dad")
     }
 }

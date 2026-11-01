@@ -36,7 +36,9 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleLargeEmphasized
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import java.time.ZoneId
 
 /**
@@ -204,4 +206,4 @@ private fun SwapDeadline(
 
 /** Whether [dates], soonest first, are one run of consecutive days. */
 internal fun isConsecutive(dates: List<LocalDate>): Boolean =
-    dates.zipWithNext().all { (a, b) -> b == a.plusDays(1) }
+    dates.zipWithNext().all { (a, b) -> b == a.plus(1, DateTimeUnit.DAY) }

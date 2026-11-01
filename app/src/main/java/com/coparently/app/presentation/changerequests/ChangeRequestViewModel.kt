@@ -56,7 +56,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -150,11 +152,12 @@ class ChangeRequestViewModel @Inject constructor(
             val ready = state as? RequestsState.Ready ?: return@mapLatest emptyMap()
             withContext(Dispatchers.Default) {
                 val custody = ready.custody
-                val custodyFor = CustodyResolver.resolver(
+                val resolve = CustodyResolver.resolver(
                     custody?.model,
                     custody?.dayOverrides.orEmpty(),
                     legacy = { null }
                 )
+                val custodyFor: (java.time.LocalDate) -> String? = { day -> resolve(day.toKotlinLocalDate()) }
                 (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
                     event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
                 }
@@ -172,14 +175,16 @@ class ChangeRequestViewModel @Inject constructor(
             val ready = state as? RequestsState.Ready ?: return@mapLatest emptyMap()
             withContext(Dispatchers.Default) {
                 val custody = ready.custody
-                val agreed = CustodyResolver.resolver(
+                val resolve = CustodyResolver.resolver(
                     custody?.model,
                     custody?.dayOverrides.orEmpty(),
                     legacy = { null }
                 )
+                val agreed: (java.time.LocalDate) -> String? = { day -> resolve(day.toKotlinLocalDate()) }
                 (ready.inbox.waitingOnMe.swaps + ready.inbox.waitingOnThem.swaps).associate { group ->
                     // Only the days still waiting: an answered one no longer moves (final review #3).
-                    group.key to swapMiniMonths(group.pendingDays, ready.events, agreed)
+                    val days = group.pendingDays.mapKeys { (day, _) -> day.toJavaLocalDate() }
+                    group.key to swapMiniMonths(days, ready.events, agreed)
                 }
             }
         }
@@ -516,7 +521,7 @@ class ChangeRequestViewModel @Inject constructor(
         CustodyPatternDiff.of(
             agreed = shared.model,
             proposed = proposal.model,
-            from = LocalDate.now()
+            from = java.time.LocalDate.now().toKotlinLocalDate()
         )
     }.stateIn(
         scope = viewModelScope,

@@ -3,8 +3,8 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.remote.firebase.PushPayload
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.SwapSides
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -15,9 +15,9 @@ import kotlin.test.assertFalse
  */
 class SwapPushTest {
 
-    private val nov6 = LocalDate.of(2026, 11, 6)
-    private val nov7 = LocalDate.of(2026, 11, 7)
-    private val nov14 = LocalDate.of(2026, 11, 14)
+    private val nov6 = LocalDate(2026, 11, 6)
+    private val nov7 = LocalDate(2026, 11, 7)
+    private val nov14 = LocalDate(2026, 11, 14)
 
     @Test
     fun `an offer carries the days each way and its sender`() {

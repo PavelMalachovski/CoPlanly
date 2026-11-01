@@ -1,6 +1,7 @@
 package com.coparently.app.domain.custody
 
-import java.time.LocalDate
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
 
 /**
  * One day swap, with its date resolved.
@@ -37,9 +38,9 @@ object DaySwapInbox {
     fun visible(overrides: Map<String, DayOverride>, today: LocalDate): List<DaySwap> =
         overrides.entries
             .mapNotNull { (iso, override) ->
-                val date = runCatching { LocalDate.parse(iso) }.getOrNull()
+                val date = runCatching { IsoText.parseDate(iso) }.getOrNull()
                     ?: return@mapNotNull null
-                DaySwap(date, override).takeIf { !date.isBefore(today) }
+                DaySwap(date, override).takeIf { date >= today }
             }
             .sortedBy { it.date }
 
@@ -79,7 +80,7 @@ object DaySwapInbox {
     fun allGroups(overrides: Map<String, DayOverride>): List<DaySwapGroup> =
         group(
             overrides.entries.mapNotNull { (iso, override) ->
-                runCatching { LocalDate.parse(iso) }.getOrNull()?.let { DaySwap(it, override) }
+                runCatching { IsoText.parseDate(iso) }.getOrNull()?.let { DaySwap(it, override) }
             }
         )
 
@@ -88,7 +89,7 @@ object DaySwapInbox {
         // A null id must not collapse every ungrouped swap into one card, so each such day keys
         // on its own date instead.
         swaps
-            .groupBy { it.override.groupId ?: "single:${it.date}" }
+            .groupBy { it.override.groupId ?: "single:${IsoText.date(it.date)}" }
             .values
             .map { DaySwapGroup(it.sortedBy { swap -> swap.date }) }
             .sortedBy { it.firstDate }
@@ -116,7 +117,7 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
      * The group id when there is one, else the single date — so a dismissed card does not come
      * back under a new key on the next recomposition.
      */
-    val key: String get() = swaps.first().override.groupId ?: "single:$firstDate"
+    val key: String get() = swaps.first().override.groupId ?: "single:${IsoText.date(firstDate)}"
 
     /**
      * [key] plus what the offer says — each day, who it moves to, and when it was asked — so a
@@ -125,11 +126,11 @@ data class DaySwapGroup(val swaps: List<DaySwap>) {
      */
     val revision: String
         get() = key + "@" + swaps.joinToString(",") {
-            "${it.date}:${it.override.toParent}:${it.override.requestedAt}"
+            "${IsoText.date(it.date)}:${it.override.toParent}:${it.override.requestedAt}"
         }
 
     /** The ISO dates the offer covers, which is what a group answer is applied to. */
-    val dates: List<String> get() = swaps.map { it.date.toString() }
+    val dates: List<String> get() = swaps.map { IsoText.date(it.date) }
 
     /** Whether [uid] is the one being asked. True when any day of the offer is waiting on them. */
     fun awaitsAnswerFrom(uid: String): Boolean =

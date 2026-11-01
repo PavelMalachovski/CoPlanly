@@ -37,12 +37,12 @@ import com.coparently.app.presentation.settings.ParentColorPicker
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.datetime.LocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -260,7 +260,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val FAMILY_ID = "u1__u2"
 
         /** A Monday far enough ahead that the preview never draws today's month. */
-        private val PREVIEW_START = LocalDate.of(2030, 5, 6)
+        private val PREVIEW_START = LocalDate(2030, 5, 6)
         private const val MOM_PAID = 3_120.0
         private const val DAD_PAID = 1_480.0
         private const val OWED_TO_ME = 820.0

@@ -1,7 +1,10 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
-import java.time.LocalDate
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 
 /**
  * The single answer to "whose day is this?".
@@ -41,7 +44,7 @@ object CustodyResolver {
         legacy: (LocalDate) -> String?,
         date: LocalDate
     ): String? {
-        overrides[date.toString()]
+        overrides[IsoText.date(date)]
             ?.agreedToParent
             ?.let { return it }
 
@@ -98,7 +101,7 @@ object CustodyResolver {
      */
     fun isHandoverDay(custodyFor: (LocalDate) -> String?, date: LocalDate): Boolean {
         val today = custodyFor(date) ?: return false
-        val yesterday = custodyFor(date.minusDays(1)) ?: return false
+        val yesterday = custodyFor(date.minus(1, DateTimeUnit.DAY)) ?: return false
         return today != yesterday
     }
 }

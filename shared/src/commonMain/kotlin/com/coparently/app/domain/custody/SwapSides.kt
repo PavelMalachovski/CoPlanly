@@ -1,6 +1,6 @@
 package com.coparently.app.domain.custody
 
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Which way each day of a day swap goes (day swap design, 28 October 2026): the days the offering

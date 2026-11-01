@@ -9,6 +9,7 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.theme.ParentColor
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import java.time.format.DateTimeFormatter

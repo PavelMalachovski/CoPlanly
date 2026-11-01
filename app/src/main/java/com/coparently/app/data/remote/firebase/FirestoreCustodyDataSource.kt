@@ -16,14 +16,13 @@ import com.coparently.app.domain.custody.SeasonalLayerCodec
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -162,7 +161,7 @@ class FirestoreCustodyDataSource @Inject constructor(
             put("modelType", CustodyModelType.toString(model.modelType))
             put("patternDays", model.patternDays)
             put("momDayIndices", model.momDayIndices.sorted())
-            put("startDate", model.startDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+            put("startDate", IsoText.date(model.startDate))
             put("repeatYearly", repeatYearly)
             put("createdAt", createdAt)
             // Still an ISO string under the same key, and deliberately so — the type and the
@@ -235,7 +234,7 @@ class FirestoreCustodyDataSource @Inject constructor(
         put("modelType", CustodyModelType.toString(model.modelType))
         put("patternDays", model.patternDays)
         put("momDayIndices", model.momDayIndices.sorted())
-        put("startDate", model.startDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+        put("startDate", IsoText.date(model.startDate))
         put("repeatYearly", repeatYearly)
         put("proposedBy", proposedBy)
         put("proposedAt", proposedAt)
@@ -269,7 +268,7 @@ class FirestoreCustodyDataSource @Inject constructor(
      */
     private fun Map<String, Any>.toSharedCustody(documentId: String): SharedCustody? {
         val startDate = (this["startDate"] as? String)?.let { iso ->
-            runCatching { LocalDate.parse(iso) }.getOrNull()
+            runCatching { IsoText.parseDate(iso) }.getOrNull()
         }
         val patternDays = (this["patternDays"] as? Number)?.toInt()
         if (startDate == null || patternDays == null) return null
@@ -376,7 +375,7 @@ class FirestoreCustodyDataSource @Inject constructor(
      */
     private fun Map<*, *>.toProposal(documentId: String, agreed: AgreedExtras): CustodyProposal? {
         val startDate = (this["startDate"] as? String)?.let { iso ->
-            runCatching { LocalDate.parse(iso) }.getOrNull()
+            runCatching { IsoText.parseDate(iso) }.getOrNull()
         }
         val patternDays = (this["patternDays"] as? Number)?.toInt()
         val proposedBy = (this["proposedBy"] as? String)?.takeIf { it.isNotBlank() }

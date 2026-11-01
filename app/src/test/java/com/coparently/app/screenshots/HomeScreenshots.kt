@@ -13,6 +13,7 @@ import com.coparently.app.presentation.home.HandoverHero
 import com.coparently.app.presentation.home.MonthSpend
 import com.coparently.app.presentation.home.StatTiles
 import com.coparently.app.presentation.home.TimelineRow
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -35,7 +36,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     fun handoverHero() = snap("home_handover_hero") {
         HandoverHero(
             info = HandoverInfo(
-                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS),
+                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS).toKotlinLocalDate(),
                 daysUntil = HANDOVER_IN_DAYS,
                 fromParent = "mom",
                 toParent = "dad"
@@ -52,7 +53,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     fun handoverHeroChildrenApart() = snap("home_handover_hero_children_apart") {
         HandoverHero(
             info = HandoverInfo(
-                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS),
+                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS).toKotlinLocalDate(),
                 daysUntil = HANDOVER_IN_DAYS,
                 fromParent = "dad",
                 toParent = "mom"

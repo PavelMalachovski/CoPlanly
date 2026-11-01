@@ -47,11 +47,12 @@ import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import com.coparently.app.utils.createSampleEvent
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.previewParentNames
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.LocalTime
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 

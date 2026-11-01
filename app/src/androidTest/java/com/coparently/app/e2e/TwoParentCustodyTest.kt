@@ -20,12 +20,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -86,8 +88,8 @@ class TwoParentCustodyTest : TwoParentTest() {
     @Test
     fun aSingleDaySwapIsOfferedOnOnePhoneAndAnsweredOnTheOther() = runBlocking<Unit> {
         val agreed = agreeFirstPattern()
-        val aliceDay = START.plusDays(ALICE_OFFER_OFFSET).toString()
-        val bobDay = START.plusDays(BOB_OFFER_OFFSET).toString()
+        val aliceDay = START.plus(ALICE_OFFER_OFFSET, DateTimeUnit.DAY).toString()
+        val bobDay = START.plus(BOB_OFFER_OFFSET, DateTimeUnit.DAY).toString()
 
         EmulatorEnvironment.step("swap: Alice offers one day")
         offerDays(alice, mapOf(aliceDay to otherSlotOn(agreed, aliceDay))).getOrThrow()
@@ -122,7 +124,7 @@ class TwoParentCustodyTest : TwoParentTest() {
     @Test
     fun anOfferIsWithdrawnByItsAuthorAndTheAgreementItWouldChangeStands() = runBlocking<Unit> {
         val agreed = agreeFirstPattern()
-        val day = START.plusDays(ALICE_OFFER_OFFSET).toString()
+        val day = START.plus(ALICE_OFFER_OFFSET, DateTimeUnit.DAY).toString()
         val swappedTo = otherSlotOn(agreed, day)
 
         EmulatorEnvironment.step("withdraw: Alice offers a day and Bob accepts it")
@@ -148,8 +150,8 @@ class TwoParentCustodyTest : TwoParentTest() {
     @Test
     fun aGroupSwapIsOfferedAndAnsweredAsOneAgreement() = runBlocking<Unit> {
         val agreed = agreeFirstPattern()
-        val aliceRun = (0 until ALICE_RUN_DAYS).map { START.plusDays(ALICE_OFFER_OFFSET + it).toString() }
-        val bobRun = (0 until BOB_RUN_DAYS).map { START.plusDays(BOB_OFFER_OFFSET + it).toString() }
+        val aliceRun = (0 until ALICE_RUN_DAYS).map { START.plus(ALICE_OFFER_OFFSET + it, DateTimeUnit.DAY).toString() }
+        val bobRun = (0 until BOB_RUN_DAYS).map { START.plus(BOB_OFFER_OFFSET + it, DateTimeUnit.DAY).toString() }
 
         EmulatorEnvironment.step("group: Alice offers a run, Bob declines it")
         offerDays(alice, aliceRun.associateWith { otherSlotOn(agreed, it) }).getOrThrow()
@@ -463,7 +465,7 @@ class TwoParentCustodyTest : TwoParentTest() {
 
     private companion object {
         /** A Monday; the pattern's anchor. */
-        val START: LocalDate = LocalDate.of(2026, 10, 5)
+        val START: LocalDate = LocalDate(2026, 10, 5)
 
         /** Alice's offers start on the third day of her first week. */
         const val ALICE_OFFER_OFFSET = 2L

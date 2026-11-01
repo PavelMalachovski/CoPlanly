@@ -90,8 +90,12 @@ import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import java.time.DayOfWeek
-import java.time.LocalDate
+import com.coparently.app.utils.format
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaDayOfWeek
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
@@ -648,10 +652,10 @@ internal fun CustodyPatternForm(
 
     if (showDatePicker) {
         LocalDatePickerDialog(
-            initialDate = uiState.startDate,
+            initialDate = uiState.startDate.toJavaLocalDate(),
             confirmLabel = stringResource(R.string.custody_ok),
             dismissLabel = stringResource(R.string.custody_cancel),
-            onConfirm = actions.setStartDate,
+            onConfirm = { actions.setStartDate(it.toKotlinLocalDate()) },
             onDismiss = { showDatePicker = false }
         )
     }
@@ -833,7 +837,7 @@ private fun MidweekContactSection(
                             Text(
                                 // The device (or app) language decides the name, never a
                                 // hardcoded array — the Localization rule in CLAUDE.md.
-                                day.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                                day.toJavaDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.getDefault())
                             )
                         }
                     )
@@ -963,7 +967,7 @@ internal fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: Paren
                     },
                     first,
                     second,
-                    midweek.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                    midweek.dayOfWeek.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, Locale.getDefault())
                 )
             }
         }

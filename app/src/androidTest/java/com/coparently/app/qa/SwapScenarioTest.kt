@@ -32,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -218,7 +219,7 @@ class SwapScenarioTest : QaOnScreenTest() {
     /** The co-parent's first pattern, week on, week off from this week, the first week on screen's. */
     private suspend fun coParentSetsFirstPattern(): CustodyModel {
         val (mine, _) = slots()
-        val submission = bob.custodyRepository.createWeekOnWeekOff(LocalDate.now(), momFirst = mine == ContactWindow.SLOT_ONE)
+        val submission = bob.custodyRepository.createWeekOnWeekOff(LocalDate.now().toKotlinLocalDate(), momFirst = mine == ContactWindow.SLOT_ONE)
         check(submission == PatternSubmission.ACTIVATED) { "the first pattern was $submission" }
         val model = checkNotNull(bob.custodyRepository.getActiveModelSync())
         withTimeout(EmulatorParent.WAIT_MS) {
@@ -229,7 +230,7 @@ class SwapScenarioTest : QaOnScreenTest() {
 
     private suspend fun coParentOffers(agreed: CustodyModel, date: LocalDate, answerBy: AnswerByPick?) {
         val iso = date.toString()
-        val toSlot = if (agreed.getCustodyFor(date) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
+        val toSlot = if (agreed.getCustodyFor(date.toKotlinLocalDate()) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
         val groupId = UUID.randomUUID().toString()
         val at = LocalDateTime.now().toString()
         bob.custodyRepository.applyDayOverrides(
@@ -243,7 +244,7 @@ class SwapScenarioTest : QaOnScreenTest() {
     private suspend fun offerWithShortClock(day: LocalDate): String {
         val agreed = coParentSetsFirstPattern()
         val iso = day.toString()
-        val toSlot = if (agreed.getCustodyFor(day) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
+        val toSlot = if (agreed.getCustodyFor(day.toKotlinLocalDate()) == ContactWindow.SLOT_ONE) ContactWindow.SLOT_TWO else ContactWindow.SLOT_ONE
         val groupId = UUID.randomUUID().toString()
         val at = LocalDateTime.now().toString()
         custodyRepository.applyDayOverrides(

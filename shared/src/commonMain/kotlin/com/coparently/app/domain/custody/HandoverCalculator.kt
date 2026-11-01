@@ -1,8 +1,9 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 
 /**
  * The next custody handover computed from an active custody model.
@@ -56,12 +57,12 @@ object HandoverCalculator {
         val maxDays = model.patternDays * 2 + 1
         var day = today
         repeat(maxDays) {
-            val next = day.plusDays(1)
+            val next = day.plus(1, DateTimeUnit.DAY)
             val nextParent = custodyFor(next) ?: return null
             if (nextParent != current) {
                 return HandoverInfo(
                     date = next,
-                    daysUntil = ChronoUnit.DAYS.between(today, next),
+                    daysUntil = next.toEpochDays() - today.toEpochDays(),
                     fromParent = current,
                     toParent = nextParent
                 )

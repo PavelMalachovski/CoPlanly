@@ -50,10 +50,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import kotlin.test.assertEquals
@@ -182,7 +182,7 @@ class ChangeRequestWithdrawTest {
     )
 
     private fun groupOf(vararg days: Pair<Int, DayOverride>) =
-        DaySwapGroup(days.map { (day, override) -> DaySwap(LocalDate.of(2026, 10, day), override) })
+        DaySwapGroup(days.map { (day, override) -> DaySwap(LocalDate(2026, 10, day), override) })
 
     @Before
     fun setUp() {

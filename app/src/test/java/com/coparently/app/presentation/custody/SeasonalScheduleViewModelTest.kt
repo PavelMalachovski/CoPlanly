@@ -38,10 +38,14 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import java.time.Year
 import java.time.ZoneId
 import kotlin.test.assertEquals
@@ -61,15 +65,15 @@ class SeasonalScheduleViewModelTest {
     private val repository = mockk<CustodyModelRepository>(relaxed = true)
     private val users = mockk<UserRepository>(relaxed = true)
     private val children = mockk<ChildInfoRepository>()
-    private val base = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate.of(2026, 9, 7))
+    private val base = CustodyModel.weekOnWeekOff(id = "m1", startDate = LocalDate(2026, 9, 7))
     private val summer =
-        SeasonalLayer.allWith("summer", "Summer", LocalDate.of(2027, 7, 1)..LocalDate.of(2027, 8, 31), "mom")
+        SeasonalLayer.allWith("summer", "Summer", LocalDate(2027, 7, 1)..LocalDate(2027, 8, 31), "mom")
 
     /** A stretch of an earlier schedule kept by `CustodyHistory`: never listed, never dropped. */
     private val history = SeasonalLayer.allWith(
         "${CustodyHistory.ID_PREFIX}20260801-0",
-        CustodyHistory.layerName(LocalDate.of(2026, 7, 31)),
-        LocalDate.of(2026, 1, 1)..LocalDate.of(2026, 7, 31),
+        CustodyHistory.layerName(LocalDate(2026, 7, 31)),
+        LocalDate(2026, 1, 1)..LocalDate(2026, 7, 31),
         "dad"
     ).copy(priority = CustodyHistory.PRIORITY)
 
@@ -276,7 +280,7 @@ class SeasonalScheduleViewModelTest {
         val zone = ZoneId.systemDefault()
         val vm = viewModel()
         advanceUntilIdle()
-        val first = LocalDate.now(zone).plusDays(10)
+        val first = java.time.LocalDate.now(zone).toKotlinLocalDate().plus(10, DateTimeUnit.DAY)
         val whose = base.getCustodyFor(first)
         val other = if (whose == "mom") "dad" else "mom"
 
@@ -284,11 +288,12 @@ class SeasonalScheduleViewModelTest {
         val moves = SeasonalLayerDraft(
             name = "Trip",
             from = first,
-            to = first.plusDays(2),
+            to = first.plus(2, DateTimeUnit.DAY),
             shape = LayerShape.ALL_WITH,
             firstSlot = other
         )
-        assertEquals(first.atStartOfDay(zone).toInstant().toEpochMilli(), vm.answerByCap(moves, editingId = null))
+        val cap = first.toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+        assertEquals(cap, vm.answerByCap(moves, editingId = null))
 
         // One that gives the day to whoever has it already changes nothing.
         val keeps = SeasonalLayerDraft("Same", from = first, to = first, shape = LayerShape.ALL_WITH, firstSlot = whose)

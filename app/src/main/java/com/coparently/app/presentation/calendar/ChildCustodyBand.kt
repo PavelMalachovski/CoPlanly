@@ -4,6 +4,8 @@ import com.coparently.app.domain.custody.ChildCustody
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /**
@@ -49,15 +51,20 @@ internal object ChildCustodyBand {
     ): GridCustody {
         val override = ChildCustody.overrideForFilter(filter, model?.childOverrides.orEmpty()) ?: return family
         // A proposal that drops this child's override previews the family pattern it proposes.
+        // The grid's days are `java.time`; the custody domain's are kotlinx-datetime (MON-24).
         val proposed: (LocalDate) -> String? = if (proposal == null) {
             { _ -> null }
         } else {
-            ChildCustody.resolver(proposal.childOverrideFor(override.childId)) { date -> proposal.getCustodyFor(date) }
+            val resolve = ChildCustody.resolver(proposal.childOverrideFor(override.childId), proposal::getCustodyFor)
+            val lookup: (LocalDate) -> String? = { date -> resolve(date.toKotlinLocalDate()) }
+            lookup
         }
+        val custody = ChildCustody.resolver(override) { date -> family.custody(date.toJavaLocalDate()) }
+        val windows = ChildCustody.contactWindowsResolver(override)
         return GridCustody(
-            custody = ChildCustody.resolver(override, family.custody),
+            custody = { date -> custody(date.toKotlinLocalDate()) },
             proposed = proposed,
-            windows = ChildCustody.contactWindowsResolver(override),
+            windows = { date -> windows(date.toKotlinLocalDate()) },
             followsFamily = false
         )
     }

@@ -1,7 +1,9 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 
 /** How many days ahead a diff looks when it cannot use the two cycles' least common multiple. */
 private const val DEFAULT_WINDOW_DAYS = 28
@@ -112,14 +114,14 @@ data class CustodyPatternDiff(
             val accepted = CustodyHistory.freeze(agreed, proposed, from)
             val window = windowFor(agreed.patternDays, proposed.patternDays, maxWindowDays)
             val moved = (0 until window).mapNotNull { offset ->
-                val date = from.plusDays(offset.toLong())
+                val date = from.plus(offset, DateTimeUnit.DAY)
                 val before = agreed.getCustodyFor(date)
                 val after = accepted.getCustodyFor(date)
                 if (before == after) null else MovedDay(date, before, after)
             }
 
             val windowsChanged = (0 until window).any { offset ->
-                val date = from.plusDays(offset.toLong())
+                val date = from.plus(offset, DateTimeUnit.DAY)
                 !CustodyModel.sameContactWindows(agreed.contactWindowsOn(date), accepted.contactWindowsOn(date))
             }
 

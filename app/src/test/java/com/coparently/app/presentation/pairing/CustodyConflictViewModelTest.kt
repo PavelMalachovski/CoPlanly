@@ -14,10 +14,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
 class CustodyConflictViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val start = LocalDate.of(2026, 9, 7)
+    private val start = LocalDate(2026, 9, 7)
     private val mine = CustodyModel.weekOnWeekOff(id = "mine", startDate = start, momFirst = true)
     private val theirs = CustodyModel.weekOnWeekOff(id = "theirs", startDate = start, momFirst = false)
     private val repository = mockk<CustodyModelRepository>(relaxed = true)

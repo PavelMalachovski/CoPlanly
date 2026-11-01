@@ -2,10 +2,7 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.time.IsoText
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.LocalDate
 
 /**
  * One child's own custody pattern, overriding the family's (FAM-4): "the baby stays with Mum",
@@ -77,7 +74,7 @@ data class ChildScheduleOverride(
     )
 
     private fun cycleIndex(date: LocalDate): Int =
-        Math.floorMod(ChronoUnit.DAYS.between(startDate, date), patternDays.toLong()).toInt()
+        (date.toEpochDays() - startDate.toEpochDays()).mod(patternDays.toLong()).toInt()
 
     companion object {
         /** No child's cycle is longer than a year — the base pattern's and a layer's bound. */
@@ -137,8 +134,8 @@ object ChildOverrideCodec {
     private const val IDX_CYCLE = 3
     private const val IDX_DAYS = 4
     private const val IDX_WINDOWS = 5
-    private val COUNT = Regex("\\d+")
-    private val ISO_DATE = Regex("\\d{4}-\\d{2}-\\d{2}")
+    private val COUNT = Regex("[0-9]+")
+    private val ISO_DATE = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
     /**
      * How many overrides a document may carry before the rest are treated as unreadable. Far
@@ -150,7 +147,7 @@ object ChildOverrideCodec {
     fun encode(override: ChildScheduleOverride): String = listOf(
         VERSION,
         override.member.stored,
-        IsoText.date(override.startDate.toKotlinLocalDate()),
+        IsoText.date(override.startDate),
         override.patternDays.toString(),
         override.momDayIndices.sorted().joinToString(LIST_SEPARATOR.toString()),
         ContactWindowCodec.encodeAll(override.contactWindows).joinToString(LIST_SEPARATOR.toString())
@@ -169,7 +166,7 @@ object ChildOverrideCodec {
                 childId = child.id,
                 patternDays = parts[IDX_CYCLE].toInt(),
                 momDayIndices = parts[IDX_DAYS].splitList().map { it.toInt() }.toSet(),
-                startDate = IsoText.parseDate(parts[IDX_ANCHOR]).toJavaLocalDate(),
+                startDate = IsoText.parseDate(parts[IDX_ANCHOR]),
                 contactWindows = ContactWindowCodec.canonical(windows)
             )
         }.getOrNull()

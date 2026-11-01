@@ -28,6 +28,7 @@ import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.swapDateList
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle

@@ -6,8 +6,8 @@ import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -70,7 +70,7 @@ class HomeFeedTest {
         )
         val declined = answer(
             "swap_g1",
-            RequestSubject.DaySwap(LocalDate.of(2026, 10, 20), 2),
+            RequestSubject.DaySwap(LocalDate(2026, 10, 20), 2),
             RequestOutcome.DECLINED,
             decidedAt = t0.plusHours(2)
         )

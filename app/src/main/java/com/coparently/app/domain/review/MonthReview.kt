@@ -6,7 +6,12 @@ import com.coparently.app.domain.custody.HolidayFairness
 import com.coparently.app.domain.expenses.calculateExpenseBalance
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
-import java.time.LocalDate
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.YearMonth
 import kotlin.math.abs
 
@@ -112,12 +117,12 @@ object MonthReviewCalculator {
         currentUserId: String,
         roleByUid: Map<String, String>
     ): MonthReview {
-        val days = (1..month.lengthOfMonth()).map { month.atDay(it) }
+        val days = (1..month.lengthOfMonth()).map { month.atDay(it).toKotlinLocalDate() }
         val lookup: (LocalDate) -> String? = if (hasSchedule) custodyFor else { _ -> null }
         val bySlot = days.mapNotNull(lookup).groupingBy { it }.eachCount()
         val specialDates = specialDates(month, fairness)
         val swapDays = overrides.mapNotNull { (iso, override) -> parseDate(iso)?.let { it to override } }
-            .filter { (date, _) -> YearMonth.from(date) == month }
+            .filter { (date, _) -> YearMonth.from(date.toJavaLocalDate()) == month }
         return MonthReview(
             month = month,
             hasSchedule = hasSchedule,
@@ -135,13 +140,13 @@ object MonthReviewCalculator {
 
     /** Holidays, vacation days and birthdays inside [month], each date once. */
     private fun specialDates(month: YearMonth, fairness: HolidayFairness?): List<LocalDate> {
-        val first = month.atDay(1)
-        val last = month.atEndOfMonth()
+        val first = month.atDay(1).toKotlinLocalDate()
+        val last = month.atEndOfMonth().toKotlinLocalDate()
         return fairness?.rows.orEmpty()
             .flatMap { row ->
                 val from = maxOf(row.dates.start, first)
                 val to = minOf(row.dates.endInclusive, last)
-                generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toList()
+                generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }.takeWhile { it <= to }.toList()
             }
             .distinct()
             .sorted()
@@ -191,5 +196,5 @@ object MonthReviewCalculator {
             .sortedByDescending { it.total }
     }
 
-    private fun parseDate(iso: String): LocalDate? = runCatching { LocalDate.parse(iso) }.getOrNull()
+    private fun parseDate(iso: String): LocalDate? = runCatching { IsoText.parseDate(iso) }.getOrNull()
 }

@@ -5,7 +5,10 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.custody.CustodyHistory
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.model.CustodyModel
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -84,7 +87,7 @@ object RequestCap {
         val before = children.map { childView(agreed, it) }
         val after = children.map { childView(proposed, it) }
         val firstChange = (0..PROPOSAL_SCAN_DAYS).asSequence()
-            .map { today.plusDays(it.toLong()) }
+            .map { today.plus(it, DateTimeUnit.DAY) }
             .firstOrNull { day ->
                 agreed.getCustodyFor(day) != proposed.getCustodyFor(day) ||
                     !CustodyModel.sameContactWindows(agreed.contactWindowsOn(day), proposed.contactWindowsOn(day)) ||
@@ -108,7 +111,8 @@ object RequestCap {
 
     private fun millisOf(local: LocalDateTime, zone: ZoneId): Long = local.atZone(zone).toInstant().toEpochMilli()
 
-    private fun startOfDay(day: LocalDate, zone: ZoneId): Long = day.atStartOfDay(zone).toInstant().toEpochMilli()
+    private fun startOfDay(day: LocalDate, zone: ZoneId): Long =
+        day.toJavaLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
 }
 
 /**

@@ -15,10 +15,10 @@ import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -276,6 +276,6 @@ class ParentSlotMigratorTest {
         modelType = CustodyModelType.CUSTOM,
         patternDays = 7,
         momDayIndices = momDays,
-        startDate = LocalDate.of(2026, 8, 1)
+        startDate = LocalDate(2026, 8, 1)
     )
 }

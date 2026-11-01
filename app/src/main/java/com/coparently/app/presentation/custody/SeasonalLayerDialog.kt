@@ -37,6 +37,9 @@ import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -121,10 +124,11 @@ fun SeasonalLayerDialog(
 
     picking?.let { end ->
         LocalDatePickerDialog(
-            initialDate = if (end == RangeEnd.FROM) draft.from else draft.to,
+            initialDate = (if (end == RangeEnd.FROM) draft.from else draft.to).toJavaLocalDate(),
             confirmLabel = stringResource(R.string.seasonal_ok),
             dismissLabel = stringResource(R.string.seasonal_cancel),
-            onConfirm = { date ->
+            onConfirm = { picked ->
+                val date = picked.toKotlinLocalDate()
                 draft = if (end == RangeEnd.FROM) draft.copy(from = date) else draft.copy(to = date)
             },
             onDismiss = { picking = null }
@@ -185,8 +189,8 @@ private fun LayerEditorBody(
             LayerSuggestions(suggestions) { suggestion, name ->
                 onChange(
                     draft.copy(
-                        from = suggestion.dates.start,
-                        to = suggestion.dates.endInclusive,
+                        from = suggestion.dates.start.toKotlinLocalDate(),
+                        to = suggestion.dates.endInclusive.toKotlinLocalDate(),
                         name = draft.name.ifBlank { name }
                     )
                 )

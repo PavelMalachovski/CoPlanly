@@ -12,7 +12,7 @@ import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.support.SupportProposal
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * What waits on one parent: a custody proposal, an expense split proposal, events created for their

@@ -19,13 +19,13 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The wire mapping in [FirestoreCustodyDataSource], which the repository's own tests mock away.
@@ -441,7 +441,7 @@ class FirestoreCustodyDataSourceTest {
             modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
             patternDays = 14,
             momDayIndices = (0..6).toSet(),
-            startDate = LocalDate.of(2026, 8, 3)
+            startDate = LocalDate(2026, 8, 3)
         ),
         lastModifiedBy = LATER_UID,
         lastModifiedAtMillis = CustodyTimestamp.fromWire("2026-08-04T18:30:00"),
@@ -459,7 +459,7 @@ class FirestoreCustodyDataSourceTest {
             modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
             patternDays = 14,
             momDayIndices = (7..13).toSet(),
-            startDate = LocalDate.of(2026, 8, 3),
+            startDate = LocalDate(2026, 8, 3),
             isActive = false
         ),
         repeatYearly = true,

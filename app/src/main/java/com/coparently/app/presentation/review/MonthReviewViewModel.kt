@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import javax.inject.Inject
@@ -146,7 +147,7 @@ class MonthReviewViewModel @Inject constructor(
                     custodyFor = CustodyResolver.resolver(it, overrides) { null },
                     provider = location.provider,
                     birthdays = children.mapNotNull { child ->
-                        child.dateOfBirth?.let { born -> child.childName to born.toLocalDate() }
+                        child.dateOfBirth?.let { born -> child.childName to born.toLocalDate().toKotlinLocalDate() }
                     }
                 )
             }

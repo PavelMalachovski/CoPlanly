@@ -2,11 +2,13 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * A schedule change after pairing applies from its start date forward (owner decision,
@@ -19,12 +21,12 @@ class CustodyHistoryTest {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 8, 3)
+        startDate = LocalDate(2026, 8, 3)
     )
 
     private fun new(start: LocalDate) = old.copy(id = "new", momDayIndices = (7..13).toSet(), startDate = start)
 
-    private fun day(month: Int, dayOfMonth: Int, year: Int = 2026) = LocalDate.of(year, month, dayOfMonth)
+    private fun day(month: Int, dayOfMonth: Int, year: Int = 2026) = LocalDate(year, month, dayOfMonth)
 
     @Test
     fun `accepted after its start date, the new schedule starts on the acceptance day`() {
@@ -59,14 +61,14 @@ class CustodyHistoryTest {
 
     @Test
     fun `history reaches back to the old anchor and no further than three years`() {
-        val ancient = old.copy(startDate = LocalDate.of(2020, 1, 6))
+        val ancient = old.copy(startDate = LocalDate(2020, 1, 6))
         val frozen = CustodyHistory.freeze(ancient, new(day(10, 10)), day(10, 10))
         val history = frozen.seasonalLayers.filter { it.isHistory }.sortedBy { it.fromDate }
 
-        assertEquals(LocalDate.of(2023, 10, 10), history.first().fromDate)
+        assertEquals(LocalDate(2023, 10, 10), history.first().fromDate)
         assertEquals(day(10, 9), history.last().toDate)
         history.forEach { assertTrue(it.spanDays <= SeasonalLayer.MAX_LAYER_DAYS) }
-        history.zipWithNext().forEach { (a, b) -> assertEquals(a.toDate.plusDays(1), b.fromDate) }
+        history.zipWithNext().forEach { (a, b) -> assertEquals(a.toDate.plus(1, DateTimeUnit.DAY), b.fromDate) }
     }
 
     @Test
@@ -107,7 +109,7 @@ class CustodyHistoryTest {
         assertEquals(old.getCustodyFor(day(10, 19)), frozen.getCustodyFor(day(10, 19)))
         (20..31).forEach { d ->
             val expected = sooner.copy(seasonalLayers = emptyList()).getCustodyFor(day(10, d))
-            assertEquals("Oct $d", expected, frozen.getCustodyFor(day(10, d)))
+            assertEquals(expected, frozen.getCustodyFor(day(10, d)), "Oct $d")
         }
         assertTrue(frozen.seasonalLayers.filter { it.isHistory }.all { it.toDate < day(10, 20) })
     }
@@ -131,7 +133,7 @@ class CustodyHistoryTest {
 
         val bBase = b.copy(seasonalLayers = emptyList())
         (20..31).forEach { dd ->
-            assertEquals("Oct $dd", bBase.getCustodyFor(day(10, dd)), afterD.getCustodyFor(day(10, dd)))
+            assertEquals(bBase.getCustodyFor(day(10, dd)), afterD.getCustodyFor(day(10, dd)), "Oct $dd")
         }
         val ids = afterD.seasonalLayers.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
@@ -140,7 +142,7 @@ class CustodyHistoryTest {
     @Test
     fun `a real layer on a past date still decides it`() {
         val july = SeasonalLayer.allWith("summer", "Summer", day(7, 1)..day(8, 31), ContactWindow.SLOT_TWO)
-        val outgoing = old.copy(startDate = LocalDate.of(2026, 1, 5), seasonalLayers = listOf(july))
+        val outgoing = old.copy(startDate = LocalDate(2026, 1, 5), seasonalLayers = listOf(july))
         val incoming = new(day(10, 10)).copy(seasonalLayers = listOf(july))
         val frozen = CustodyHistory.freeze(outgoing, incoming, day(10, 10))
 
@@ -150,7 +152,7 @@ class CustodyHistoryTest {
 
     @Test
     fun `the frozen past keeps its contact windows`() {
-        val window = ContactWindow(dayIndex = 9, start = LocalTime.of(15, 0), end = LocalTime.of(19, 0), parent = "dad")
+        val window = ContactWindow(dayIndex = 9, start = LocalTime(15, 0), end = LocalTime(19, 0), parent = "dad")
         val outgoing = old.copy(contactWindows = listOf(window))
         val frozen = CustodyHistory.freeze(outgoing, new(day(10, 10)), day(10, 10))
         // 2026-08-12 is index 9 of the old cycle anchored on 2026-08-03.
@@ -162,7 +164,7 @@ class CustodyHistoryTest {
         val reals = (1..30).map { d ->
             SeasonalLayer.allWith("real-$d", "Day $d", day(1, d, 2027)..day(1, d, 2027), ContactWindow.SLOT_ONE)
         }
-        val ancient = old.copy(startDate = LocalDate.of(2020, 1, 6))
+        val ancient = old.copy(startDate = LocalDate(2020, 1, 6))
         val frozen = CustodyHistory.freeze(ancient, new(day(10, 10)).copy(seasonalLayers = reals), day(10, 10))
 
         assertTrue(frozen.seasonalLayers.containsAll(reals))

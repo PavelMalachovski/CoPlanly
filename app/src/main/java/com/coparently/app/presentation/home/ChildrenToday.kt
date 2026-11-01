@@ -6,7 +6,7 @@ import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.FamilyMember
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * One child, named with the parent they are with today (FAM-4).

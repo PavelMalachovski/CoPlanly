@@ -6,7 +6,7 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwap
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.SwapSides
-import java.time.LocalDate
+import com.coparently.app.domain.time.IsoText
 
 /**
  * The parent making a day-swap offer, as the offering phone knows them (day swap design, 28
@@ -19,7 +19,7 @@ data class SwapOfferer(val slot: String, val name: String) {
     /** The days of [map] named by [dates], split by which way each goes. */
     internal fun sidesOf(map: Map<String, DayOverride>?, dates: List<String>): SwapOffer {
         val swaps = dates.mapNotNull { iso ->
-            val day = runCatching { LocalDate.parse(iso) }.getOrNull()
+            val day = runCatching { IsoText.parseDate(iso) }.getOrNull()
             val entry = map?.get(iso)
             if (day != null && entry != null) DaySwap(day, entry) else null
         }

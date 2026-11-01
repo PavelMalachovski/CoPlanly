@@ -33,6 +33,7 @@ import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -55,8 +56,10 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -529,6 +532,7 @@ constructor(
     suspend fun acceptProposal(): Result<Unit> = decideProposal { current, uid, now, nowMillis ->
         // The accepter's own date: the day the past stops and the proposal begins, at the latest.
         val acceptedOn = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+            .toKotlinLocalDate()
         CustodyProposalTransition.accept(current, uid, now, nowMillis, acceptedOn)
     }
 
@@ -1530,7 +1534,7 @@ private fun swapClock(
     val groupId = entry.groupId?.takeIf { entry.isPending }
     val responder = pair.partnerUid()
     if (answerBy == null || groupId == null || responder == null) return null
-    val days = dates.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val days = dates.mapNotNull { runCatching { IsoText.parseDate(it) }.getOrNull() }
     val zone = ZoneId.systemDefault()
     val cap = RequestCap.forSwap(days, zone)
     val deadline = cap?.let { AnswerBy.resolve(answerBy, System.currentTimeMillis(), it, zone) } ?: return null
@@ -1541,7 +1545,7 @@ private fun swapClock(
         responderUid = responder,
         answerByMillis = deadline,
         capMillis = cap,
-        firstDate = days.minOrNull(),
+        firstDate = days.minOrNull()?.toJavaLocalDate(),
         dayCount = dates.size
     )
 }
@@ -1564,7 +1568,8 @@ private fun proposalClock(
     val responder = pair.partnerUid()
     if (answerBy == null || proposal == null || responder == null) return null
     val zone = ZoneId.systemDefault()
-    val cap = RequestCap.forProposal(agreed, proposal.model, LocalDate.now(zone), zone)
+    val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
+    val cap = RequestCap.forProposal(agreed, proposal.model, today, zone)
     val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), cap, zone) ?: return null
     return RequestStart(
         kind = RequestKind.PROPOSAL,

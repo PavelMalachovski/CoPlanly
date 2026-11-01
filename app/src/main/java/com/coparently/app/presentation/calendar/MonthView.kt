@@ -75,6 +75,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelSmallEmphasized
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import com.coparently.app.utils.shortTime
 import com.kizitonwose.calendar.compose.CalendarState

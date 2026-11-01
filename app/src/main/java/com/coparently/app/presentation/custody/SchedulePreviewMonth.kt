@@ -13,6 +13,8 @@ import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.YearMonth
 
 /**
@@ -36,11 +38,11 @@ internal fun SchedulePreviewMonth(
     modifier: Modifier = Modifier
 ) {
     val today = rememberToday().value
-    val from = maxOf(today, model.startDate)
+    val from = maxOf(today, model.startDate.toJavaLocalDate())
     val month = remember(model, from) {
         MiniMonthModel.build(
             month = YearMonth.from(from),
-            custodyFor = model::getCustodyFor,
+            custodyFor = { date -> model.getCustodyFor(date.toKotlinLocalDate()) },
             events = emptyList(),
             marks = emptyMap()
         )

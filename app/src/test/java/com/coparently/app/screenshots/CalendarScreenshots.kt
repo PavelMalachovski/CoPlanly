@@ -21,6 +21,7 @@ import com.coparently.app.presentation.calendar.components.SwapSheetActions
 import com.coparently.app.presentation.calendar.components.SwapSheetOffer
 import com.coparently.app.presentation.calendar.components.VacationBanner
 import com.coparently.app.presentation.calendar.swapMiniMonths
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -75,9 +76,9 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
         val month = ScreenshotFixtures.MONTH
         DaySwapSelectionBar(
             sides = SwapSides(
-                toOther = listOf(month.atDay(SWAP_GIVE_DAY), month.atDay(SWAP_GIVE_DAY + 1)),
-                toOfferer = listOf(month.atDay(SWAP_TAKE_DAY)),
-                unknown = listOf(month.atDay(SWAP_TAKE_DAY + 1))
+                toOther = listOf(SWAP_GIVE_DAY, SWAP_GIVE_DAY + 1).map { month.atDay(it).toKotlinLocalDate() },
+                toOfferer = listOf(month.atDay(SWAP_TAKE_DAY).toKotlinLocalDate()),
+                unknown = listOf(month.atDay(SWAP_TAKE_DAY + 1).toKotlinLocalDate())
             ),
             parentNames = ScreenshotFixtures.parentNames,
             onNext = {},
@@ -93,7 +94,10 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
         val take = listOf(month.atDay(SWAP_TAKE_DAY))
         DaySwapSheetContent(
             offer = SwapSheetOffer(
-                sides = SwapSides(toOther = give, toOfferer = take),
+                sides = SwapSides(
+                    toOther = give.map { it.toKotlinLocalDate() },
+                    toOfferer = take.map { it.toKotlinLocalDate() }
+                ),
                 coParentName = "Bob",
                 months = swapMiniMonths(
                     days = give.associateWith { "dad" } + take.associateWith { "mom" },

@@ -5,8 +5,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.RequestSubject
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The dates a day swap covers, as the inbox and Home's feed name them: the day itself, or the

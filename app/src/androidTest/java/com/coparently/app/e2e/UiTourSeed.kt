@@ -48,11 +48,12 @@ import com.coparently.app.e2e.EmulatorEnvironment.step
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDate
 import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.UUID
@@ -134,7 +135,7 @@ class UiTourSeed @Inject constructor(
         attempt("swap") {
             val agreed = checkNotNull(bob.custodyRepository.getActiveModelSync()) { "Bob has no pattern" }
             val date = family.today.plusDays(SWAP_OFFSET).toString()
-            val toSlot = if (agreed.getCustodyFor(LocalDate.parse(date)) == family.aliceSlot) {
+            val toSlot = if (agreed.getCustodyFor(LocalDate.parse(date).toKotlinLocalDate()) == family.aliceSlot) {
                 family.bobSlot
             } else {
                 family.aliceSlot
@@ -260,27 +261,27 @@ class UiTourSeed @Inject constructor(
         val monday = family.today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val base = CustodyModel.weekOnWeekOff(
             id = UUID.randomUUID().toString(),
-            startDate = monday,
+            startDate = monday.toKotlinLocalDate(),
             momFirst = family.aliceSlot == ContactWindow.SLOT_ONE
         )
         val autumn = family.today.plusDays(LAYER_START_OFFSET)
         val model = base.copy(
             contactWindows = listOf(
-                ContactWindow(WEDNESDAY, LocalTime.of(15, 0), LocalTime.of(19, 0), family.bobSlot),
-                ContactWindow(WEDNESDAY + WEEK, LocalTime.of(16, 0), LocalTime.of(18, 30), family.aliceSlot)
+                ContactWindow(WEDNESDAY, LocalTime(15, 0), LocalTime(19, 0), family.bobSlot),
+                ContactWindow(WEDNESDAY + WEEK, LocalTime(16, 0), LocalTime(18, 30), family.aliceSlot)
             ),
             seasonalLayers = listOf(
                 SeasonalLayer.allWith(
                     LAYER_ID,
                     family.content.layerName,
-                    autumn..autumn.plusDays(LAYER_DAYS),
+                    autumn.toKotlinLocalDate()..autumn.plusDays(LAYER_DAYS).toKotlinLocalDate(),
                     family.bobSlot
                 )
             )
         )
         family.bob.custodyRepository.submitPattern(model)
         withTimeout(WAIT_MS) {
-            custody.getActiveModel().first { it != null && it.startDate == monday }
+            custody.getActiveModel().first { it != null && it.startDate == monday.toKotlinLocalDate() }
         }
     }
 

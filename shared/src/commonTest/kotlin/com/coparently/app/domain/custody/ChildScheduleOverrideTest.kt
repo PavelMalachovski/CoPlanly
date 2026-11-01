@@ -2,9 +2,9 @@ package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.CustodyModel
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  */
 class ChildScheduleOverrideTest {
 
-    private val start = LocalDate.of(2026, 9, 7) // a Monday
+    private val start = LocalDate(2026, 9, 7) // a Monday
     private val family = CustodyModel.weekOnWeekOff(id = "m1", startDate = start)
     private val familyResolver = CustodyResolver.resolver(family, emptyMap()) { null }
 
@@ -33,7 +33,7 @@ class ChildScheduleOverrideTest {
             patternDays = 14,
             momDayIndices = (7..13).toSet(),
             startDate = start,
-            contactWindows = listOf(ContactWindow(2, LocalTime.of(15, 0), LocalTime.of(19, 0), "mom"))
+            contactWindows = listOf(ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), "mom"))
         )
         val wire = ChildOverrideCodec.encode(override)
 

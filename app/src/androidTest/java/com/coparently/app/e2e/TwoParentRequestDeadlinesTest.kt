@@ -35,13 +35,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.UUID
@@ -90,7 +94,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         val familyId = CustodyKey.of(alice.uid, bob.uid)
 
         EmulatorEnvironment.step("deadlines: Alice offers a day with the default deadline")
-        val firstDay = LocalDate.now().plusDays(FIRST_OFFER_DAYS_AHEAD).toString()
+        val firstDay = currentDay().plus(FIRST_OFFER_DAYS_AHEAD, DateTimeUnit.DAY).toString()
         val firstGroup = offerDay(firstDay, otherSlotOn(agreed, firstDay), AnswerByPick.DEFAULT)
         val firstId = RequestDeadlineId.of(RequestKind.SWAP, alice.uid, firstGroup, familyId)
         val started = awaitClock(alice, firstId) { true }
@@ -114,7 +118,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
         assertTrue(bob.requestClockActions.markSeen(firstId))
         assertNotNull(awaitClock(alice, firstId) { it.seenAtMillis != null }.seenAtMillis)
 
-        val secondDay = LocalDate.now().plusDays(SECOND_OFFER_DAYS_AHEAD)
+        val secondDay = currentDay().plus(SECOND_OFFER_DAYS_AHEAD, DateTimeUnit.DAY)
         val secondId = lastChanceOnASecondOffer(agreed, familyId, secondDay)
         answerTheLastChance(familyId, secondDay, secondId)
     }
@@ -164,7 +168,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
             events = emptyList(),
             overrides = bob.custodyRepository.observeDayOverrides().first(),
             shared = shared,
-            today = LocalDate.now(),
+            today = currentDay(),
             clocks = ClocksAt.of(listOf(bobsClock), System.currentTimeMillis())
         )
         assertTrue(
@@ -286,7 +290,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
             events = emptyList(),
             overrides = emptyMap(),
             shared = null,
-            today = LocalDate.now(),
+            today = currentDay(),
             clocks = ClocksAt.of(listOf(alicesClock), System.currentTimeMillis()),
             settings = settings
         )
@@ -323,8 +327,8 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
                     familyId = familyId,
                     responderUid = bob.uid,
                     answerByMillis = System.currentTimeMillis() + SHORT_DEADLINE_MILLIS,
-                    capMillis = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                    firstDate = day,
+                    capMillis = day.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                    firstDate = day.toJavaLocalDate(),
                     dayCount = 1
                 )
             )
@@ -368,7 +372,7 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
             events = emptyList(),
             overrides = overrides,
             shared = null,
-            today = LocalDate.now(),
+            today = currentDay(),
             clocks = ClocksAt.of(listOf(clock), System.currentTimeMillis())
         )
         assertTrue(
@@ -500,7 +504,10 @@ class TwoParentRequestDeadlinesTest : TwoParentTest() {
 
     private companion object {
         /** A Monday; the pattern's anchor, as in `TwoParentCustodyTest`. */
-        val START: LocalDate = LocalDate.of(2026, 10, 5)
+        val START: LocalDate = LocalDate(2026, 10, 5)
+
+        /** Today on this phone, as the custody domain's kotlinx-datetime day (MON-24). */
+        fun currentDay(): LocalDate = java.time.LocalDate.now().toKotlinLocalDate()
 
         /** The default deadline is three days, so the offer's day lies well beyond it. */
         const val FIRST_OFFER_DAYS_AHEAD = 10L
