@@ -1876,6 +1876,10 @@ jobs:
     permissions:
       contents: read
       checks: write
+    # Every third-party action here is pinned to a commit, with its tag beside it: this job runs on
+    # the owner's own machine, and a tag can be moved to other code. The `actions/*` steps are
+    # GitHub's own and stay on tags, as everywhere else in this file. Update a pin by resolving the
+    # tag again (`git ls-remote https://github.com/<owner>/<repo> refs/tags/<tag> 'refs/tags/<tag>^{}'`).
     steps:
       - uses: actions/checkout@v4
 
@@ -1888,15 +1892,17 @@ jobs:
       # The Mac keeps its own ~/.gradle and ~/.konan between runs, so there is nothing for the
       # action's cache to save: it would only upload and restore gigabytes the disk already has.
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4 (v4.4.3)
         with:
           cache-disabled: true
 
       # Gradle configures every project before it runs a task, and `:app` and `:shared` both apply
-      # the Android plugin, which looks for an SDK even when only iOS tasks run. This puts one on
-      # the Mac (in its home directory, kept between runs), so the owner installs nothing for it.
+      # the Android plugin, which fails configuration with "SDK location not found" when no
+      # ANDROID_HOME or local.properties names one, even when only iOS tasks were asked for. This
+      # puts one on the Mac (in its home directory, kept between runs), so the owner installs
+      # nothing for it.
       - name: Set up the Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3 (v3.2.2)
 
       - name: Xcode
         run: xcodebuild -version
@@ -1926,7 +1932,7 @@ jobs:
 
       - name: Publish test check run
         if: always()
-        uses: mikepenz/action-junit-report@v6
+        uses: mikepenz/action-junit-report@8a133bfa3ecb0ea9024c1e2ae788b4c25f6cdb9d # v6 (v6.6.2)
         with:
           check_name: Shared tests (iOS simulator)
           report_paths: shared/build/test-results/iosSimulatorArm64Test/*.xml
