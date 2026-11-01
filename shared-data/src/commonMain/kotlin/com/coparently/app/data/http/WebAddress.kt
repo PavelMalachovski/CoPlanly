@@ -1,3 +1,14 @@
+/*
+ * Adapted from OkHttp 4.12.0 (https://github.com/square/okhttp),
+ * okhttp/src/main/kotlin/okhttp3/HttpUrl.kt.
+ * Copyright (C) 2015 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0; the licence is in
+ * third_party/okhttp/LICENSE.txt.
+ *
+ * Modified for CoPlanly (MON-24): the parts of `HttpUrl` and `HttpUrl.Builder.parse` the school
+ * import used (http and https only, no user info or fragment), rewritten in common Kotlin.
+ */
 package com.coparently.app.data.http
 
 /**

@@ -2,7 +2,9 @@ package com.coparently.app.data.http
 
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.util.AttributeKey
 
 /**
  * A new HTTP client for one of the app's two outside services (MON-24): a school's Bakaláři
@@ -21,11 +23,22 @@ import io.ktor.client.plugins.HttpTimeout
 expect fun httpClient(timeouts: HttpTimeouts): HttpClient
 
 /**
+ * A client over [engine] configured exactly as [httpClient] configures OkHttp and NSURLSession:
+ * for the R8 runtime probe and the tests, which answer from memory but must run the production
+ * configuration (the timeouts, the redirect switch).
+ */
+fun httpClient(engine: HttpClientEngine, timeouts: HttpTimeouts): HttpClient =
+    HttpClient(engine) { sharedConfiguration(timeouts) }.withCallTimeout(timeouts)
+
+/**
  * How long a client waits, as the library it replaced waited (MON-24).
  *
  * @property connectMillis To open a connection.
  * @property socketMillis Between two reads or two writes.
- * @property callMillis For the whole call, redirects included, or null for no limit.
+ * @property callMillis For the whole call, every redirect and every body included, or null for no
+ *   limit. Enforced around the redirect loop ([send]), as OkHttp's `callTimeout` covered the whole
+ *   chain of follow-ups; past it the call fails as an `IOException`, as OkHttp's did.
+ *   Ktor's own request timeout would restart on each redirect, so it is not used.
  */
 class HttpTimeouts private constructor(
     val connectMillis: Long,
@@ -51,13 +64,20 @@ class HttpTimeouts private constructor(
     }
 }
 
-/** What every platform's client is configured with, for [timeouts]. */
+/** What every platform's client is configured with, for [timeouts]; see [withCallTimeout] too. */
 internal fun HttpClientConfig<*>.sharedConfiguration(timeouts: HttpTimeouts) {
     expectSuccess = false
     followRedirects = false
     install(HttpTimeout) {
         connectTimeoutMillis = timeouts.connectMillis
         socketTimeoutMillis = timeouts.socketMillis
-        requestTimeoutMillis = timeouts.callMillis
     }
+}
+
+/** Where a client keeps its whole-call limit, which [send] applies around the redirect loop. */
+internal val CALL_TIMEOUT_MILLIS = AttributeKey<Long>("CoPlanlyCallTimeoutMillis")
+
+/** This client, with [timeouts]' whole-call limit recorded for [send]. */
+internal fun HttpClient.withCallTimeout(timeouts: HttpTimeouts): HttpClient = apply {
+    timeouts.callMillis?.let { attributes.put(CALL_TIMEOUT_MILLIS, it) }
 }

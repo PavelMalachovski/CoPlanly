@@ -11,6 +11,8 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.IOException
 
 /**
@@ -116,9 +118,23 @@ internal enum class Redirects {
  * Sends [outgoing], following its redirects by [redirects]' rules, and returns the last answer.
  * A redirect whose `Location` is missing or not an http(s) address is the answer itself, as it was.
  *
- * @throws IOException when the server cannot be reached, or OkHttp's follow-up limit is passed.
+ * The client's whole-call limit (`HttpTimeouts.callMillis`) covers the whole chain, every redirect
+ * and body included, as OkHttp's `callTimeout` did. It is measured on the engine's dispatcher, as
+ * OkHttp measured it on its own watchdog thread rather than the caller's: on a phone that is a real
+ * clock either way, and a test that puts the engine on virtual time puts the limit there too, where a
+ * caller's virtual clock alone would end a call still being answered on a real one.
+ *
+ * @throws IOException when the server cannot be reached, the whole-call limit passes ("timeout",
+ *   as OkHttp's `InterruptedIOException` said), or OkHttp's follow-up limit is passed.
  */
 internal suspend fun HttpClient.send(outgoing: Outgoing, redirects: Redirects): Answer {
+    val callMillis = attributes.getOrNull(CALL_TIMEOUT_MILLIS) ?: return followingRedirects(outgoing, redirects)
+    return withContext(engine.dispatcher) {
+        withTimeoutOrNull(callMillis) { followingRedirects(outgoing, redirects) }
+    } ?: throw IOException("timeout")
+}
+
+private suspend fun HttpClient.followingRedirects(outgoing: Outgoing, redirects: Redirects): Answer {
     var current = outgoing
     var followUps = 0
     while (true) {

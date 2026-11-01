@@ -1,13 +1,15 @@
 package com.coparently.app.r8probe
 
+import com.coparently.app.data.http.HttpTimeouts
+import com.coparently.app.data.http.httpClient
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCredential
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.events
-import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.engine.callContext
+import io.ktor.client.plugins.HttpTimeoutCapability
 import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
@@ -25,12 +27,15 @@ import java.time.LocalDate
 /**
  * The two imports' HTTP clients in the minified build (MON-24 fix round): a recorded Google
  * `events.list` page through `GoogleCalendarApi`, and a Bakaláři sign-in and events answer through
- * `BakalariClient` and the app's events parser, each through the whole Ktor client pipeline
- * (plugins, the redirect and timeout handling, `bodyAsText`) and the production parsers, checked
- * value by value.
+ * `BakalariClient` and the app's events parser, each checked value by value. Each client is built
+ * by `httpClient(engine, timeouts)` with the timeouts its Koin module gives it, so the minified
+ * build runs production's configuration: the `HttpTimeout` plugin, Ktor's redirects off, the
+ * whole-call limit around the redirect loop (the school client's), `bodyAsText` and the parsers.
  *
  * The one part that is not production is the engine: [CannedEngine] answers in memory, because the
  * clients only speak https to fixed hosts, and the `r8Test` build may not open a cleartext socket.
+ * So no timeout fires and nothing redirects here: what runs minified is the configuration and the
+ * code paths, not the waiting.
  * google-api-client's `@Key` models had a case here until MON-24 phase 2 removed them; this replaced
  * it.
  */
@@ -51,7 +56,7 @@ internal object HttpImportProbe {
                 if (authorized) 200 to GOOGLE_PAGE_BODY else 401 to ""
             }
             val read = runBlocking {
-                GoogleCalendarApi(HttpClient(engine)).listEvents(
+                GoogleCalendarApi(httpClient(engine, HttpTimeouts.GOOGLE_CALENDAR)).listEvents(
                     GoogleCredential("r8-probe"),
                     timeMin = LocalDateTime(2026, 5, 1, 0, 0),
                     timeMax = LocalDateTime(2026, 6, 1, 0, 0)
@@ -77,7 +82,7 @@ internal object HttpImportProbe {
                     else -> 404 to ""
                 }
             }
-            val client = BakalariClient(HttpClient(engine))
+            val client = BakalariClient(httpClient(engine, HttpTimeouts.SCHOOL))
             val decoded = runBlocking {
                 val tokens = client.signIn(SCHOOL, "r8-probe", "heslo")
                 val event = client.events(SCHOOL, tokens.accessToken, LocalDate.of(2026, 10, 5)).single()
@@ -115,6 +120,9 @@ private class CannedEngine(
     override val config: HttpClientEngineConfig = HttpClientEngineConfig()
 
     override val dispatcher = Dispatchers.Unconfined
+
+    /** As Ktor's `MockEngine`: the `HttpTimeout` plugin refuses an engine that does not declare it. */
+    override val supportedCapabilities = setOf(HttpTimeoutCapability)
 
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
         val (status, body) = answer(data)

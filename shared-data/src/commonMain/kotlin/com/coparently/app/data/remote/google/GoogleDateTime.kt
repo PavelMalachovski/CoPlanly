@@ -1,3 +1,15 @@
+/*
+ * Adapted from google-http-java-client 1.42.3
+ * (https://github.com/googleapis/google-http-java-client),
+ * google-http-client/src/main/java/com/google/api/client/util/DateTime.java.
+ * Copyright (c) 2010 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0; the licence is in
+ * third_party/google-http-client-java/LICENSE.
+ *
+ * Modified for CoPlanly (MON-24): `parseRfc3339`'s pattern and rules rewritten in Kotlin over
+ * kotlinx-datetime, without `java.util.Calendar`, for both the JVM and iOS.
+ */
 package com.coparently.app.data.remote.google
 
 import kotlinx.datetime.DateTimeUnit

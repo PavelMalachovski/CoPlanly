@@ -1,3 +1,16 @@
+/*
+ * Adapted from OkHttp 4.12.0 (https://github.com/square/okhttp),
+ * okhttp/src/main/kotlin/okhttp3/internal/hostnames.kt
+ * (Copyright (C) 2012 The Android Open Source Project) and
+ * okhttp/src/main/kotlin/okhttp3/HttpUrl.kt (Copyright (C) 2015 Square, Inc.).
+ *
+ * Licensed under the Apache License, Version 2.0; the licence is in
+ * third_party/okhttp/LICENSE.txt.
+ *
+ * Modified for CoPlanly (MON-24): `toCanonicalHost` and `percentDecode` rewritten in common
+ * Kotlin, with the `java.net.IDN.toASCII` step they called written from RFC 3490 and RFC 3491
+ * (no JDK code) and Punycode from RFC 3492 (`Punycode.kt`).
+ */
 package com.coparently.app.data.http
 
 /**
