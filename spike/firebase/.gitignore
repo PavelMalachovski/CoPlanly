@@ -1,0 +1,5 @@
+build/
+.gradle/
+.kotlin/
+functions/node_modules/
+*-debug.log

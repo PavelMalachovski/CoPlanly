@@ -1,0 +1,243 @@
+# MON-24's Firebase spike (iPhone phase 2, task 1): the criteria of the brief as tests, run through
+# GitLive's firebase-kotlin-sdk on an Android emulator and on an iOS simulator, each against the
+# Firebase emulators. Throwaway: this file and spike/firebase/ are deleted once the decision is
+# recorded in docs/ROADMAP.md. Not part of CI (`ci.yml`).
+name: Firebase spike (MON-24)
+
+on:
+  push:
+    paths:
+      - 'spike/**'
+      - '.github/workflows/firebase-spike.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Spike — Android emulator (API 30)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: firestore-tests/package-lock.json
+
+      - name: Install the Firebase CLI and the spike's function
+        run: |
+          npm ci --prefix firestore-tests
+          npm install --prefix spike/firebase/functions --no-audit --no-fund
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the test APK
+        run: ./gradlew -p spike/firebase assembleDebugAndroidTest --stacktrace
+
+      - name: Resolved Firebase Android versions
+        run: |
+          ./gradlew -p spike/firebase dependencies --configuration debugAndroidTestRuntimeClasspath \
+            | grep -E "com.google.firebase:firebase-(bom|firestore|auth|functions|storage|messaging|common):|dev.gitlive:firebase-(app|firestore):" \
+            | sed 's/^[ |+\\-]*//' | sort -u | head -40 || true
+
+      - name: Cache the Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firestore-tests/package-lock.json') }}
+
+      - name: Restore the API 30 AVD
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-30-default-x86_64-pixel_2
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the criteria on the emulator
+        id: tests
+        timeout-minutes: 25
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+          STATUS_FILE: ${{ runner.temp }}/spike-status
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          ram-size: 4096M
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash spike/firebase/run-android.sh; status=$?; echo "$status" > "$STATUS_FILE"; adb logcat -d -v time > spike/firebase/build/logcat.txt 2>&1 || true; bash tools/stop-emulator.sh; exit $status
+
+      - name: Results
+        if: always()
+        run: python3 spike/firebase/results.py spike/firebase/build/outputs/androidTest-results
+
+      - name: The criteria ran and passed
+        if: always()
+        env:
+          STATUS_FILE: ${{ runner.temp }}/spike-status
+        run: |
+          if [ ! -f "$STATUS_FILE" ]; then
+            echo "::error::The tests did not finish."
+            exit 1
+          fi
+          status=$(cat "$STATUS_FILE")
+          [ "$status" = "0" ] || { echo "::error::The tests exited with status $status."; exit 1; }
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-spike-android
+          path: |
+            spike/firebase/build/reports/
+            spike/firebase/build/outputs/androidTest-results/
+            spike/firebase/build/logcat.txt
+            spike/firebase/*-debug.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  ios:
+    name: Spike — iOS simulator (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Firebase emulators)
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up JDK 17 (Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: firestore-tests/package-lock.json
+
+      - name: Install the Firebase CLI and the spike's function
+        run: |
+          npm ci --prefix firestore-tests
+          npm install --prefix spike/firebase/functions --no-audit --no-fund
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-spike-${{ runner.os }}-${{ runner.arch }}-2.3.21
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: cocoapods-spike-${{ runner.os }}-firebase-11.8.0
+
+      # The spike build applies the Android plugin, whose configuration needs an SDK location.
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Xcode and CocoaPods
+        run: |
+          xcodebuild -version
+          pod --version || sudo gem install cocoapods
+          pod --version
+
+      - name: Build the pods and link the test executable
+        run: ./gradlew -p spike/firebase linkDebugTestIosSimulatorArm64 --stacktrace
+
+      - name: Pods resolved
+        if: always()
+        run: find spike/firebase/build/cocoapods -name Podfile.lock -exec grep -E "^  - Firebase" {} \; | sort -u || true
+
+      - name: Boot a simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+          devices = json.load(sys.stdin)["devices"]
+          def version(runtime):
+              return [int(n) for n in re.findall(r"\d+", runtime.split("iOS")[-1])]
+          ios = sorted((r for r in devices if ".iOS-" in r and devices[r]), key=version)
+          phones = [d for d in devices[ios[-1]] if d["name"].startswith("iPhone")]
+          print(phones[0]["udid"])
+          ')
+          echo "Booting $udid"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+
+      - name: Run the criteria on the simulator
+        id: tests
+        timeout-minutes: 30
+        continue-on-error: true
+        env:
+          FIREBASE_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+        run: bash spike/firebase/run-ios.sh
+
+      - name: Results
+        if: always()
+        run: python3 spike/firebase/results.py spike/firebase/build/test-results/iosSimulatorArm64Test
+
+      - name: The criteria ran and passed
+        if: always()
+        run: |
+          [ "${{ steps.tests.outcome }}" = "success" ] || { echo "::error::The iOS tests failed or did not finish."; exit 1; }
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-spike-ios
+          path: |
+            spike/firebase/build/reports/
+            spike/firebase/build/test-results/
+            spike/firebase/*-debug.log
+          if-no-files-found: ignore
+          retention-days: 14

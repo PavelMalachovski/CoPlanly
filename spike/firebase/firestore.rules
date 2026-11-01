@@ -1,0 +1,9 @@
+rules_version = '2';
+// The spike tests the SDK, not CoPlanly's rules (firestore-tests/ does that), so everything is open.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
