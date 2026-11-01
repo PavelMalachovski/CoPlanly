@@ -3,8 +3,8 @@ package com.coparently.app.domain.contacts
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.domain.model.Pet
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -120,8 +120,8 @@ class ContactDirectoryTest {
         childName = name,
         dateOfBirth = null,
         emergencyContacts = contacts.toList(),
-        createdAt = LocalDateTime.of(2026, 8, 1, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 8, 1, 9, 0)
+        createdAt = LocalDateTime(2026, 8, 1, 9, 0),
+        updatedAt = LocalDateTime(2026, 8, 1, 9, 0)
     )
 
     @Test

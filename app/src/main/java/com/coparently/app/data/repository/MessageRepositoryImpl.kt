@@ -11,6 +11,7 @@ import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.repository.MessageRepository
+import com.coparently.app.domain.time.wallClockNow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -23,7 +24,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.transform
-import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -154,7 +154,7 @@ class MessageRepositoryImpl @Inject constructor(
             id = conversationId,
             participants = participants,
             title = title,
-            createdAt = LocalDateTime.now()
+            createdAt = wallClockNow()
         )
         messageDao.insertConversation(conversation.toEntity())
 
@@ -386,7 +386,7 @@ class MessageRepositoryImpl @Inject constructor(
             // Archiving is one-way: once a legacy thread has been merged away it stays merged,
             // whichever copy learns about it first.
             archived = (remote["archived"] as? Boolean ?: false) || (local?.archived ?: false),
-            createdAt = remote.dateTimeOrNull("createdAt") ?: local?.createdAt ?: LocalDateTime.now(),
+            createdAt = remote.dateTimeOrNull("createdAt") ?: local?.createdAt ?: wallClockNow(),
             syncedToFirestore = true
         )
         // Firestore echoes back every write this device makes, including its own marks, so

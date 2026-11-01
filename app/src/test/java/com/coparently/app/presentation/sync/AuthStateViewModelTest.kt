@@ -26,10 +26,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -42,7 +42,7 @@ import kotlin.test.assertFalse
 class AuthStateViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val now = LocalDateTime.parse("2026-09-01T09:00:00")
+    private val now = LocalDateTime(2026, 9, 1, 9, 0)
 
     private val firebaseUser = mockk<FirebaseUser> { every { uid } returns "u1" }
     private val firebaseAuthService = mockk<FirebaseAuthService>(relaxed = true)

@@ -18,6 +18,7 @@ import com.coparently.app.domain.guests.GuestGrantPolicy
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.repository.ChildInfoRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -25,9 +26,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,9 +42,8 @@ class ChildInfoRepositoryImpl @Inject constructor(
 ) : ChildInfoRepository {
 
     private val gson = GsonBuilder()
-        .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
+        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
         .create()
-    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     override fun getAllChildInfo(): Flow<List<ChildInfo>> =
         getAllChildInfoInEveryFamily().inFamilyOnScreen(
@@ -286,7 +283,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
         return ChildInfo(
             id = id,
             childName = childName,
-            dateOfBirth = dateOfBirth,
+            dateOfBirth = dateOfBirth?.toKotlinLocalDateTime(),
             medications = gson.fromJson(
                 medicationsJson,
                 Array<com.coparently.app.domain.model.Medication>::class.java
@@ -314,8 +311,8 @@ class ChildInfoRepositoryImpl @Inject constructor(
                 gson.fromJson(medicalPhotosJson, Array<String>::class.java)?.toList()
             ),
             guests = ChildInfoGuests.decode(gson.fromJson(guestsJson, Map::class.java)),
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toKotlinLocalDateTime(),
+            updatedAt = updatedAt.toKotlinLocalDateTime(),
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -330,7 +327,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
         return ChildInfoEntity(
             id = id,
             childName = childName,
-            dateOfBirth = dateOfBirth,
+            dateOfBirth = dateOfBirth?.toJavaLocalDateTime(),
             medicationsJson = gson.toJson(medications),
             activitiesJson = gson.toJson(activities),
             allergiesJson = gson.toJson(allergies),
@@ -340,11 +337,11 @@ class ChildInfoRepositoryImpl @Inject constructor(
             medicalProfileJson = gson.toJson(medicalProfile),
             medicalPhotosJson = gson.toJson(medicalPhotos),
             guestsJson = gson.toJson(ChildInfoGuests.encode(guests)),
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toJavaLocalDateTime(),
+            updatedAt = updatedAt.toJavaLocalDateTime(),
             // Derived at the one boundary every save crosses, from the wall clock each save path
             // already stamps — so no path can forget it (schema 40, see `EventTimestamp`).
-            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -364,7 +361,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
         return mapOf(
             "id" to id,
             "childName" to childName,
-            "dateOfBirth" to dateOfBirth?.format(formatter),
+            "dateOfBirth" to dateOfBirth?.let(IsoText::dateTime),
             "medications" to medications.map {
                 mapOf(
                     "name" to it.name,
@@ -405,10 +402,10 @@ class ChildInfoRepositoryImpl @Inject constructor(
             "medicalProfile" to gson.fromJson(gson.toJson(medicalProfile), Map::class.java),
             "medicalPhotos" to medicalPhotos,
             "guests" to ChildInfoGuests.encode(guests),
-            "createdAt" to createdAt.format(formatter),
+            "createdAt" to IsoText.dateTime(createdAt),
             // UTC, offset-free: the field keeps its name and type so an older build still parses
             // it, and only the zone it expresses changed (schema 40, see `EventTimestamp`).
-            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime())),
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
             "createdByFirebaseUid" to createdByFirebaseUid,
             "lastModifiedBy" to lastModifiedBy,
             "sharedWith" to audience,
@@ -424,7 +421,7 @@ class ChildInfoRepositoryImpl @Inject constructor(
         return ChildInfo(
             id = this["id"] as String,
             childName = this["childName"] as String,
-            dateOfBirth = (this["dateOfBirth"] as? String)?.let { LocalDateTime.parse(it, formatter) },
+            dateOfBirth = (this["dateOfBirth"] as? String)?.let(IsoText::parseDateTime),
             medications = (this["medications"] as? List<Map<String, Any?>>)?.map {
                 com.coparently.app.domain.model.Medication(
                     name = it["name"] as String,
@@ -469,10 +466,9 @@ class ChildInfoRepositoryImpl @Inject constructor(
                 ).withSanitizedVaccinationNames(),
             medicalPhotos = ChildInfoPhotos.decode(this["medicalPhotos"]),
             guests = ChildInfoGuests.decode(this["guests"]),
-            createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
+            createdAt = IsoText.parseDateTime(this["createdAt"] as String),
             // The instant the document names, shown in this phone's zone (see `EventTimestamp`).
-            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String))
-                .toJavaLocalDateTime(),
+            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String)),
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,
             syncedToFirestore = true,

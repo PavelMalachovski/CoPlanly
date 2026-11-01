@@ -1,7 +1,7 @@
 package com.coparently.app.domain.model
 
 import com.coparently.app.domain.consent.HealthConsent
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Domain model representing a user (parent).

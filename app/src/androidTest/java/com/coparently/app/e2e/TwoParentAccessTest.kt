@@ -273,8 +273,8 @@ class TwoParentAccessTest : TwoParentTest() {
             id = UUID.randomUUID().toString(),
             childName = "Ema",
             dateOfBirth = null,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = alice.uid,
             lastModifiedBy = alice.uid
         )

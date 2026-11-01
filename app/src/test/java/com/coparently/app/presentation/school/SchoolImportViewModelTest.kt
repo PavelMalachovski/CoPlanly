@@ -26,10 +26,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -192,8 +192,8 @@ class SchoolImportViewModelTest {
         id = id,
         childName = name,
         dateOfBirth = null,
-        createdAt = LocalDateTime.of(2026, 1, 1, 0, 0),
-        updatedAt = LocalDateTime.of(2026, 1, 1, 0, 0),
+        createdAt = LocalDateTime(2026, 1, 1, 0, 0),
+        updatedAt = LocalDateTime(2026, 1, 1, 0, 0),
         familyId = familyId
     )
 }

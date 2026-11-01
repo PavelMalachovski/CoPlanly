@@ -93,9 +93,9 @@ internal object QaFamily {
         val child = ChildInfo(
             id = UUID.randomUUID().toString(),
             childName = name,
-            dateOfBirth = born.atStartOfDay(),
-            createdAt = now,
-            updatedAt = now,
+            dateOfBirth = born.atStartOfDay().toKotlinLocalDateTime(),
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = by.uid,
             lastModifiedBy = by.uid,
             familyId = FamilyKey.of(by.uid, partnerUid)

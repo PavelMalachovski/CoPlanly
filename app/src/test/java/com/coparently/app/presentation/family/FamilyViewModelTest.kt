@@ -28,10 +28,10 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -88,8 +88,8 @@ class FamilyViewModelTest {
                 id = "c1",
                 childName = "Emma",
                 dateOfBirth = null,
-                createdAt = LocalDateTime.of(2026, 1, 1, 9, 0),
-                updatedAt = LocalDateTime.of(2026, 1, 1, 9, 0)
+                createdAt = LocalDateTime(2026, 1, 1, 9, 0),
+                updatedAt = LocalDateTime(2026, 1, 1, 9, 0)
             )
         )
         advanceUntilIdle()

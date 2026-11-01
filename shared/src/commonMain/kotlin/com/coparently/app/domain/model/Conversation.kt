@@ -1,6 +1,7 @@
 package com.coparently.app.domain.model
 
-import java.time.LocalDateTime
+import com.coparently.app.domain.time.wallClockNow
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Domain model representing a conversation between parents.
@@ -32,6 +33,6 @@ data class Conversation(
     val lastDeliveredAt: Map<String, Long> = emptyMap(),
     val lastMessageAtMillis: Long? = null,
     val archived: Boolean = false,
-    val createdAt: LocalDateTime = LocalDateTime.now(),
+    val createdAt: LocalDateTime = wallClockNow(),
     val syncedToFirestore: Boolean = false
 )

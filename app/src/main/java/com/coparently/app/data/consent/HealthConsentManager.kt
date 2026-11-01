@@ -8,6 +8,7 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.wallClockNow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -135,7 +135,7 @@ class HealthConsentManager @Inject constructor(
     /** Writes [child] as this parent's edit, queued for upload. */
     private suspend fun save(child: ChildInfo, uid: String) {
         childInfoRepository.upsertChildInfo(
-            child.copy(lastModifiedBy = uid, syncedToFirestore = false, updatedAt = LocalDateTime.now())
+            child.copy(lastModifiedBy = uid, syncedToFirestore = false, updatedAt = wallClockNow())
         )
     }
 

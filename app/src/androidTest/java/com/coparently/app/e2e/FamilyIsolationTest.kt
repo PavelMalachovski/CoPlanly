@@ -187,13 +187,21 @@ class FamilyIsolationTest : TwoParentTest() {
         inA.child?.let { child ->
             val stored = checkNotNull(alice.childInfoRepository.getChildInfoById(child.id))
             alice.childInfoRepository.upsertChildInfo(
-                stored.copy(medicalNotes = "$canaryA inhaler", syncedToFirestore = false, updatedAt = now())
+                stored.copy(
+                    medicalNotes = "$canaryA inhaler",
+                    syncedToFirestore = false,
+                    updatedAt = now().toKotlinLocalDateTime()
+                )
             )
         }
         inA.pet?.let { pet ->
             val stored = checkNotNull(alice.petRepository.getPetById(pet.id))
             alice.petRepository.upsertPet(
-                stored.copy(feedingNotes = "$canaryA once a day", syncedToFirestore = false, updatedAt = now())
+                stored.copy(
+                    feedingNotes = "$canaryA once a day",
+                    syncedToFirestore = false,
+                    updatedAt = now().toKotlinLocalDateTime()
+                )
             )
         }
         alice.syncService.performFullSync().getOrThrow()
@@ -438,8 +446,8 @@ class FamilyIsolationTest : TwoParentTest() {
         childName = name,
         dateOfBirth = null,
         medicalNotes = "$name's notes",
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -448,8 +456,8 @@ class FamilyIsolationTest : TwoParentTest() {
         id = UUID.randomUUID().toString(),
         name = name,
         species = PetSpecies.DOG,
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )

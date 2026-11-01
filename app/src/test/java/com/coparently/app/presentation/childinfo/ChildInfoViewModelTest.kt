@@ -17,10 +17,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -139,8 +139,8 @@ class ChildInfoViewModelTest {
     private fun child(id: String, name: String) = ChildInfo(
         id = id,
         childName = name,
-        dateOfBirth = LocalDateTime.of(2018, 5, 4, 0, 0),
-        createdAt = LocalDateTime.of(2026, 1, 1, 9, 0),
-        updatedAt = LocalDateTime.of(2026, 1, 1, 9, 0)
+        dateOfBirth = LocalDateTime(2018, 5, 4, 0, 0),
+        createdAt = LocalDateTime(2026, 1, 1, 9, 0),
+        updatedAt = LocalDateTime(2026, 1, 1, 9, 0)
     )
 }

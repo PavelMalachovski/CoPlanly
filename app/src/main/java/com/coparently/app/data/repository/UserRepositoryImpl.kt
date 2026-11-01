@@ -14,6 +14,7 @@ import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
@@ -22,7 +23,6 @@ import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,7 +49,7 @@ class UserRepositoryImpl @Inject constructor(
 ) : UserRepository {
 
     private val gson = GsonBuilder()
-        .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
+        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
         .create()
 
     override fun getAllUsers(): Flow<List<User>> {
@@ -440,7 +440,7 @@ class UserRepositoryImpl @Inject constructor(
                     "googleCalendarSyncEnabled" to user.googleCalendarSyncEnabled,
                     "googleCalendarId" to (user.googleCalendarId ?: ""),
                     "fcmToken" to (user.fcmToken ?: ""),
-                    "dateOfBirth" to (user.dateOfBirth?.toString() ?: ""),
+                    "dateOfBirth" to (user.dateOfBirth?.let(IsoText::date) ?: ""),
                     "phone" to (user.phone ?: ""),
                     // The parent's own health data was removed (GDPR data minimisation): the
                     // co-parent can read this document. Every save erases what an older build
@@ -624,7 +624,7 @@ class UserRepositoryImpl @Inject constructor(
             partnerId = partnerId,
             partnerIdsJson = gson.toJson(partnerIds),
             fcmToken = fcmToken,
-            dateOfBirth = dateOfBirth?.toString(),
+            dateOfBirth = dateOfBirth?.let(IsoText::date),
             phone = phone,
             onboardingCompletedAt = onboardingCompletedAt,
             caresForKinds = FamilyKind.toStored(caresFor),

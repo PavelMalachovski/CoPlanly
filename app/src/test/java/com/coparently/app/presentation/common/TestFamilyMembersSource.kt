@@ -7,7 +7,7 @@ import com.coparently.app.domain.repository.PetRepository
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * A real [FamilyMembersSource] over stubbed repositories.
@@ -22,7 +22,7 @@ fun testFamilyMembersSource(
     childNames: List<String> = emptyList(),
     petNames: List<String> = emptyList()
 ): FamilyMembersSource {
-    val now = LocalDateTime.parse("2026-08-01T09:00:00")
+    val now = LocalDateTime(2026, 8, 1, 9, 0)
     val childInfoRepository = mockk<ChildInfoRepository> {
         every { getAllChildInfo() } returns flowOf(
             childNames.map { name ->

@@ -306,8 +306,8 @@ class ChildInfoRepositoryImplTest {
         id = CHILD_ID,
         childName = "Ema",
         dateOfBirth = null,
-        createdAt = NOW,
-        updatedAt = NOW,
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
         createdByFirebaseUid = createdByFirebaseUid,
         lastModifiedBy = ALICE,
         syncedToFirestore = false

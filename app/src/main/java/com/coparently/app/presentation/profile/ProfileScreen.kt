@@ -49,7 +49,10 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.theme.Spacing
-import java.time.LocalDate
+import com.coparently.app.utils.format
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -249,11 +252,11 @@ private fun MyProfileContent(
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { dateTime ->
-                onDateOfBirthChange(dateTime.toLocalDate())
+                onDateOfBirthChange(dateTime.toLocalDate().toKotlinLocalDate())
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false },
-            initialDate = person.dateOfBirth?.atStartOfDay()
+            initialDate = person.dateOfBirth?.toJavaLocalDate()?.atStartOfDay()
         )
     }
 

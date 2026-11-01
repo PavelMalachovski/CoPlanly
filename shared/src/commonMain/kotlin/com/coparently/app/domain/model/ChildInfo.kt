@@ -1,7 +1,7 @@
 package com.coparently.app.domain.model
 
 import com.coparently.app.domain.guests.GuestGrant
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Domain model representing information about a child.

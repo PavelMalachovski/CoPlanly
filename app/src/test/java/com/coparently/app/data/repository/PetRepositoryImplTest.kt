@@ -18,10 +18,10 @@ import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 
 /**
@@ -288,6 +288,6 @@ class PetRepositoryImplTest {
         const val CAROL = "carol-uid"
         const val BOB_FAMILY = "alice-uid__bob-uid"
         const val PET_ID = "pet-1"
-        val NOW: LocalDateTime = LocalDateTime.of(2026, 8, 1, 12, 0)
+        val NOW: LocalDateTime = LocalDateTime(2026, 8, 1, 12, 0)
     }
 }

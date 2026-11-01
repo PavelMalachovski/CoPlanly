@@ -17,8 +17,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -133,6 +133,6 @@ class HealthConsentManagerTest {
         const val FAMILY = "alice__bob"
         val PHOTO = "ph1|medical_photos/alice__bob/mine/1.jpg|image/jpeg|100|" + "1".repeat(64)
         val OTHER_PHOTO = "ph1|medical_photos/alice__bob/mine/2.jpg|image/jpeg|100|" + "2".repeat(64)
-        val CREATED: LocalDateTime = LocalDateTime.of(2026, 5, 1, 9, 0)
+        val CREATED: LocalDateTime = LocalDateTime(2026, 5, 1, 9, 0)
     }
 }

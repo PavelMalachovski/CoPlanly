@@ -240,6 +240,28 @@ class WireTimeParityTest {
         if (new !is E) fail("$label: java.time threw $old, new code $new")
     }
 
+    /**
+     * [IsoText.dateTimeShortest] against `java.time.LocalDateTime.toString()` itself, the call the
+     * writers it replaces made: zero seconds, and fractions in whole milliseconds, microseconds and
+     * nanoseconds, are each drawn often.
+     */
+    @Test
+    fun shortestDateTimeMatchesToString() {
+        val random = Random(SEED)
+        repeat(CASES) {
+            val base = randomLocalDateTime(random)
+            val second = if (random.nextBoolean()) 0 else base.second
+            val nano = when (random.nextInt(5)) {
+                0 -> 0
+                1 -> random.nextInt(1000) * NANOS_PER_MILLI
+                2 -> random.nextInt(1_000_000) * NANOS_PER_MICRO
+                else -> base.nano
+            }
+            val local = base.withSecond(second).withNano(nano)
+            assertEquals(local.toString(), IsoText.dateTimeShortest(local.toKotlinLocalDateTime()), "$local")
+        }
+    }
+
     private fun randomMillis(random: Random): Long = when (random.nextInt(5)) {
         0 -> random.nextLong()
         1 -> random.nextLong(YEAR_0_MILLIS, YEAR_10000_MILLIS)
@@ -380,6 +402,7 @@ class WireTimeParityTest {
         const val CASES = 5_000
         const val MILLIS_PER_SECOND = 1_000L
         const val NANOS_PER_MILLI = 1_000_000
+        const val NANOS_PER_MICRO = 1_000
         const val NANOS_PER_SECOND = 1_000_000_000
         const val MAX_OFFSET_SECONDS = 18 * 3600
         const val YEAR_0_MILLIS = -62_167_219_200_000L

@@ -47,7 +47,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.todayIn
 import java.time.LocalDate
 import java.util.UUID
@@ -186,7 +185,7 @@ class SeasonalScheduleViewModel @Inject constructor(
                     custodyFor = CustodyResolver.resolver(it, overrides) { null },
                     provider = location.provider,
                     birthdays = children.mapNotNull { child ->
-                        child.dateOfBirth?.let { born -> child.childName to born.toLocalDate().toKotlinLocalDate() }
+                        child.dateOfBirth?.let { born -> child.childName to born.date }
                     }
                 )
             }

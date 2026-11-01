@@ -1,6 +1,6 @@
 package com.coparently.app.domain.model
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**

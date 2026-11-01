@@ -305,7 +305,7 @@ class UiTourSeed @Inject constructor(
                 medicalProfile = MedicalProfile(
                     bloodType = BloodType.A_POSITIVE,
                     intolerances = listOf(emma.intolerance),
-                    vaccinations = listOf(Vaccination("MMR", LocalDate.of(2017, 5, 3)))
+                    vaccinations = listOf(Vaccination("MMR", kotlinx.datetime.LocalDate(2017, 5, 3)))
                 ),
                 emergencyContacts = listOf(EmergencyContact("Jana Svobodová", emma.grandmother, "+420 602 123 456"))
             )
@@ -325,12 +325,14 @@ class UiTourSeed @Inject constructor(
                 name = MAX,
                 species = PetSpecies.DOG,
                 breed = pet.breed,
-                vaccinations = listOf(Vaccination(pet.vaccination, family.today.minusMonths(PET_VACCINE_MONTHS))),
+                vaccinations = listOf(
+                    Vaccination(pet.vaccination, family.today.minusMonths(PET_VACCINE_MONTHS).toKotlinLocalDate())
+                ),
                 feedingNotes = pet.feedingNotes,
                 vetName = "Veterinární klinika Vinohrady",
                 vetPhone = "+420 222 555 111",
-                createdAt = now,
-                updatedAt = now,
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime(),
                 createdByFirebaseUid = family.alice,
                 lastModifiedBy = family.alice,
                 familyId = family.id
@@ -343,9 +345,9 @@ class UiTourSeed @Inject constructor(
         return ChildInfo(
             id = UUID.randomUUID().toString(),
             childName = name,
-            dateOfBirth = born,
-            createdAt = now,
-            updatedAt = now,
+            dateOfBirth = born.toKotlinLocalDateTime(),
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = family.alice,
             lastModifiedBy = family.alice,
             familyId = family.id

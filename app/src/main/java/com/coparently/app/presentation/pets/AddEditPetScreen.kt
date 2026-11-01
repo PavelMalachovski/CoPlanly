@@ -53,6 +53,7 @@ import com.coparently.app.R
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.childinfo.components.MedicationEditor
 import com.coparently.app.presentation.common.ConfirmationDialog
@@ -65,8 +66,11 @@ import com.coparently.app.presentation.common.field
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.util.UUID
 
 /**
@@ -174,11 +178,11 @@ fun AddEditPetScreen(
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { date ->
-                dateOfBirth = date
+                dateOfBirth = date.toKotlinLocalDateTime()
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false },
-            initialDate = dateOfBirth
+            initialDate = dateOfBirth?.toJavaLocalDateTime()
         )
     }
 
@@ -360,7 +364,7 @@ fun AddEditPetScreen(
                     if (name.isNotBlank()) {
                         isSaving = true
                         val base = currentPet.takeIf { !isNewPet }
-                        val now = LocalDateTime.now()
+                        val now = wallClockNow()
                         val resolvedId = base?.id ?: petId?.takeIf { it != "new" }
                             ?: UUID.randomUUID().toString()
                         val pet = (

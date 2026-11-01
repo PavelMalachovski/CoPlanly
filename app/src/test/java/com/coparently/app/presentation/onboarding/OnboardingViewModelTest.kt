@@ -35,11 +35,11 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -345,7 +345,7 @@ class OnboardingViewModelTest {
     fun `the profile step no longer touches the date of birth or the phone`() = runTest(dispatcher) {
         // Both left the wizard (they stay on My details); a profile save must keep what is stored.
         coEvery { userRepository.getCurrentUser() } returns storedUser.copy(
-            dateOfBirth = LocalDate.of(1990, 3, 4),
+            dateOfBirth = LocalDate(1990, 3, 4),
             phone = "+420 777"
         )
         viewModel = newViewModel()
@@ -358,7 +358,7 @@ class OnboardingViewModelTest {
 
         val saved = mutableListOf<User>()
         coVerify { userRepository.updateUser(capture(saved)) }
-        assertEquals(LocalDate.of(1990, 3, 4), saved.last().dateOfBirth)
+        assertEquals(LocalDate(1990, 3, 4), saved.last().dateOfBirth)
         assertEquals("+420 777", saved.last().phone)
     }
 

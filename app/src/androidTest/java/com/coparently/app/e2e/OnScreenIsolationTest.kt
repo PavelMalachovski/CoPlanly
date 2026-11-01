@@ -149,8 +149,8 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
                 id = UUID.randomUUID().toString(),
                 childName = "$word Mia",
                 dateOfBirth = null,
-                createdAt = now,
-                updatedAt = now,
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime(),
                 createdByFirebaseUid = parent.uid,
                 lastModifiedBy = parent.uid
             )
@@ -160,8 +160,8 @@ class OnScreenIsolationTest : AliceOnScreenTest() {
                 id = UUID.randomUUID().toString(),
                 name = "$word Rex",
                 species = PetSpecies.DOG,
-                createdAt = now,
-                updatedAt = now,
+                createdAt = now.toKotlinLocalDateTime(),
+                updatedAt = now.toKotlinLocalDateTime(),
                 createdByFirebaseUid = parent.uid,
                 lastModifiedBy = parent.uid
             )

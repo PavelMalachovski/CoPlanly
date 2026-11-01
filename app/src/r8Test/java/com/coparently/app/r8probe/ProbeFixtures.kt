@@ -15,8 +15,8 @@ import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.presentation.event.EventDraft
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * The values the probe writes: every field set, so every key has to appear in the JSON.
@@ -28,8 +28,8 @@ import java.time.LocalDateTime
 @Suppress("MagicNumber")
 internal object ProbeFixtures {
 
-    private val created = LocalDateTime.of(2026, 5, 4, 9, 30)
-    private val updated = LocalDateTime.of(2026, 5, 4, 9, 45)
+    private val created = LocalDateTime(2026, 5, 4, 9, 30)
+    private val updated = LocalDateTime(2026, 5, 4, 9, 45)
 
     val medication = Medication(
         name = "Ibuprofen",
@@ -38,7 +38,7 @@ internal object ProbeFixtures {
         notes = "after food"
     )
 
-    val vaccination = Vaccination(name = "MMR", date = LocalDate.of(2019, 5, 1))
+    val vaccination = Vaccination(name = "MMR", date = LocalDate(2019, 5, 1))
 
     /** What the probe expects [vaccination]'s date to be written as (`LocalDateJsonAdapter`). */
     const val VACCINATION_DATE = "2019-05-01"
@@ -53,7 +53,7 @@ internal object ProbeFixtures {
     val child = ChildInfo(
         id = "r8-probe-child",
         childName = "Ema",
-        dateOfBirth = LocalDateTime.of(2018, 3, 14, 0, 0),
+        dateOfBirth = LocalDateTime(2018, 3, 14, 0, 0),
         medications = listOf(medication),
         activities = listOf(
             Activity(
@@ -93,7 +93,7 @@ internal object ProbeFixtures {
         species = PetSpecies.DOG,
         breed = "Beagle",
         medications = listOf(medication),
-        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate.of(2025, 9, 1))),
+        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate(2025, 9, 1))),
         createdAt = created,
         updatedAt = updated
     )

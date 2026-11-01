@@ -1,6 +1,6 @@
 package com.coparently.app.domain.model
 
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The medical facts an emergency needs, for one child.

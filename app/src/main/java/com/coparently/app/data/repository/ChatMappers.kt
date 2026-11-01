@@ -7,9 +7,12 @@ import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
+import com.coparently.app.domain.time.IsoText
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -42,7 +45,7 @@ internal fun ConversationEntity.toDomain(): Conversation = Conversation(
     lastDeliveredAt = gson.fromJson(lastDeliveredAtJson, markMapType) ?: emptyMap(),
     lastMessageAtMillis = lastMessageAtMillis,
     archived = archived,
-    createdAt = createdAt,
+    createdAt = createdAt.toKotlinLocalDateTime(),
     syncedToFirestore = syncedToFirestore
 )
 
@@ -55,7 +58,7 @@ internal fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     lastDeliveredAtJson = gson.toJson(lastDeliveredAt),
     lastMessageAtMillis = lastMessageAtMillis,
     archived = archived,
-    createdAt = createdAt,
+    createdAt = createdAt.toJavaLocalDateTime(),
     syncedToFirestore = syncedToFirestore
 )
 
@@ -186,7 +189,7 @@ internal fun Map<String, Any>.longOrNull(key: String): Long? = (this[key] as? Nu
 /** The document's [key] as an ISO local date-time, or `null` when absent or unparseable. */
 internal fun Map<String, Any>.dateTimeOrNull(key: String): LocalDateTime? =
     (this[key] as? String)?.let {
-        runCatching { LocalDateTime.parse(it, chatDateFormatter) }.getOrNull()
+        runCatching { IsoText.parseDateTime(it) }.getOrNull()
     }
 
 /**
@@ -200,11 +203,15 @@ internal fun Map<String, Any>.dateTimeOrNull(key: String): LocalDateTime? =
  *
  * Both branches are needed because both exist: documents written before this change, and
  * documents a co-parent's phone is still writing while it runs an older build.
+ *
+ * The legacy branch stays on `java.time` (MON-24): it reads no domain type, only turns old text
+ * into a number, and keeping the very parse and zone resolution it always used is what keeps an
+ * old message at the time it always showed.
  */
 internal fun Map<String, Any>.sentAtMillisOrNull(key: String): Long? = when (val value = this[key]) {
     is Number -> value.toLong()
     is String -> runCatching {
-        LocalDateTime.parse(value, chatDateFormatter)
+        java.time.LocalDateTime.parse(value, chatDateFormatter)
             .atZone(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
@@ -212,8 +219,11 @@ internal fun Map<String, Any>.sentAtMillisOrNull(key: String): Long? = when (val
     else -> null
 }
 
-/** The date-time as an ISO local date-time string, matching what the documents carry. */
-internal fun LocalDateTime.toIsoString(): String = format(chatDateFormatter)
+/**
+ * The date-time as an ISO local date-time string, matching what the documents carry:
+ * [IsoText.dateTime] writes what `ISO_LOCAL_DATE_TIME` wrote here before (MON-24).
+ */
+internal fun LocalDateTime.toIsoString(): String = IsoText.dateTime(this)
 
 /** The larger of two nullable Longs, or whichever one is present. */
 internal fun maxOfNullable(a: Long?, b: Long?): Long? = when {

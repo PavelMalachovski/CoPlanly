@@ -4,7 +4,7 @@ import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.Vaccination
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * The values the pet form edits, compared with what it was seeded with to tell whether Back

@@ -1,6 +1,7 @@
 package com.coparently.app.domain.model
 
 import com.coparently.app.domain.activity.ActivityAnnouncement
+import kotlin.time.Clock
 
 /**
  * Domain model representing a message in a conversation.
@@ -31,7 +32,7 @@ data class Message(
     val senderId: String,
     val senderName: String,
     val content: String,
-    val sentAtMillis: Long = System.currentTimeMillis(),
+    val sentAtMillis: Long = Clock.System.now().toEpochMilliseconds(),
     val messageType: MessageType = MessageType.TEXT,
     val attachments: List<String> = emptyList(),
     val isRead: Boolean = false,

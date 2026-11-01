@@ -19,6 +19,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDateTime
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -31,7 +32,6 @@ import java.io.File
 import java.nio.file.Files
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -182,7 +182,7 @@ class SchoolImporterTest {
             partnerId = onScreen,
             partnerIds = coParents
         )
-        val at = LocalDateTime.of(2020, 1, 1, 0, 0)
+        val at = LocalDateTime(2020, 1, 1, 0, 0)
         coEvery { children.getChildInfoById("child-1") } returns ChildInfo(
             id = "child-1",
             childName = "Anna",

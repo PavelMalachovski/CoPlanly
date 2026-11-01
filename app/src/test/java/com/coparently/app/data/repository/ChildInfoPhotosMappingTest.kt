@@ -140,8 +140,8 @@ class ChildInfoPhotosMappingTest {
         childName = "Ema",
         dateOfBirth = null,
         medicalPhotos = photos,
-        createdAt = NOW,
-        updatedAt = NOW,
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = false

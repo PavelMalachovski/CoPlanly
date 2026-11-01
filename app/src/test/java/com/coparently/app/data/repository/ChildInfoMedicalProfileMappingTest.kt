@@ -5,8 +5,8 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.Vaccination
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 
 /**
@@ -31,7 +31,7 @@ class ChildInfoMedicalProfileMappingTest {
             intolerances = listOf("lactose"),
             hereditaryConditions = listOf("asthma"),
             vaccinations = listOf(
-                Vaccination("MMR", LocalDate.of(2024, 3, 12)),
+                Vaccination("MMR", LocalDate(2024, 3, 12)),
                 Vaccination("Tetanus", null)
             )
         )
@@ -43,7 +43,7 @@ class ChildInfoMedicalProfileMappingTest {
 
     @Test
     fun `a vaccination date is written as an ISO string, not as an object`() {
-        val json = gson.toJson(Vaccination("MMR", LocalDate.of(2024, 3, 12)))
+        val json = gson.toJson(Vaccination("MMR", LocalDate(2024, 3, 12)))
 
         assertEquals("""{"name":"MMR","date":"2024-03-12"}""", json)
     }

@@ -1,6 +1,6 @@
 package com.coparently.app.domain.model
 
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Domain model representing a family pet shared between the two parents.

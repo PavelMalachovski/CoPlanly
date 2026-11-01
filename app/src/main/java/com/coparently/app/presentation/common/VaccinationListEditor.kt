@@ -28,6 +28,8 @@ import com.coparently.app.presentation.childinfo.components.DatePickerDialog
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -148,7 +150,7 @@ private fun VaccinationAddRow(
                 Button(
                     onClick = {
                         if (newName.isNotBlank()) {
-                            onAdd(Vaccination(name = newName, date = newDate))
+                            onAdd(Vaccination(name = newName, date = newDate?.toKotlinLocalDate()))
                             newName = ""
                             newDate = null
                             isAdding = false

@@ -47,7 +47,6 @@ import kotlinx.datetime.atTime
 import kotlinx.datetime.minusMonth
 import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toJavaYearMonth
-import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.yearMonth
 import javax.inject.Inject
 
@@ -153,7 +152,7 @@ class MonthReviewViewModel @Inject constructor(
                     custodyFor = CustodyResolver.resolver(it, overrides) { null },
                     provider = location.provider,
                     birthdays = children.mapNotNull { child ->
-                        child.dateOfBirth?.let { born -> child.childName to born.toLocalDate().toKotlinLocalDate() }
+                        child.dateOfBirth?.let { born -> child.childName to born.date }
                     }
                 )
             }

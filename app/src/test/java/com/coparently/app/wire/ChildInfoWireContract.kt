@@ -8,10 +8,9 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.SchoolInfo
+import com.coparently.app.domain.time.IsoText
 import io.mockk.mockk
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDateTime
 
 /**
  * `child_info`: read by `ChildInfoRepositoryImpl.toChildInfo` (the pull), stored through Room
@@ -21,7 +20,6 @@ import java.time.format.DateTimeFormatter
 internal object ChildInfoWireContract : WireContract {
 
     private val repository by lazy { ChildInfoRepositoryImpl(mockk(), mockk(), mockk(), mockk()) }
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     override val collection = "child_info"
 
@@ -35,13 +33,13 @@ internal object ChildInfoWireContract : WireContract {
         return mapOf(
             "id" to child.id,
             "childName" to child.childName,
-            "dateOfBirth" to child.dateOfBirth?.format(formatter),
+            "dateOfBirth" to child.dateOfBirth?.let(IsoText::dateTime),
             "allergies" to child.allergies,
             "medications" to child.medications.map { it.name },
             "intolerances" to child.medicalProfile.intolerances,
             "school" to child.schoolInfo?.name,
             "guests" to child.guests.keys.sorted(),
-            "updatedAtMillis" to EventTimestamp.ofWallClock(child.updatedAt.toKotlinLocalDateTime()),
+            "updatedAtMillis" to EventTimestamp.ofWallClock(child.updatedAt),
             "createdByFirebaseUid" to child.createdByFirebaseUid,
             "familyId" to child.familyId,
             "deleted" to false
@@ -65,7 +63,7 @@ internal object ChildInfoWireContract : WireContract {
     private fun child() = ChildInfo(
         id = "child-current-1",
         childName = "Anya",
-        dateOfBirth = LocalDateTime.of(2019, 4, 2, 0, 0),
+        dateOfBirth = LocalDateTime(2019, 4, 2, 0, 0),
         medications = listOf(Medication(name = "Ventolin", dosage = "2 puffs", frequency = "as needed")),
         allergies = listOf("peanuts"),
         medicalNotes = "Asthma",
@@ -84,8 +82,8 @@ internal object ChildInfoWireContract : WireContract {
                 expiresAtMillis = 1_780_000_000_000L
             )
         ),
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime.of(2026, 5, 2, 18, 45, 10),
+        createdAt = LocalDateTime(2026, 5, 1, 8, 0),
+        updatedAt = LocalDateTime(2026, 5, 2, 18, 45, 10),
         createdByFirebaseUid = "uidA",
         lastModifiedBy = "uidA",
         familyId = "uidA__uidB"

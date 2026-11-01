@@ -12,12 +12,13 @@ import kotlin.time.Instant
  *
  * Every function reproduces, exactly, the documented output or acceptance of the `java.time` call
  * the Android build has always used for the same field — `DateTimeFormatter.ISO_LOCAL_DATE_TIME`,
- * `OffsetDateTime.parse`, `LocalDate.toString`/`LocalDate.parse`, `DateTimeFormatter.BASIC_ISO_DATE`
- * and the pattern `HH:mm` — because the text is shared state: a co-parent on an older Android build
- * reads what this code writes and writes what this code reads, and a single differing character (a
- * dropped `:00`, a year sign, a tolerated separator) would make the two phones disagree about a
- * document. The rules were written from ISO 8601, the `java.time` javadoc and black-box runs of
- * `java.time`; `WireTimeParityTest` holds them to `java.time` on seeded random and mutated text.
+ * `LocalDateTime.toString`, `OffsetDateTime.parse`, `LocalDate.toString`/`LocalDate.parse`,
+ * `DateTimeFormatter.BASIC_ISO_DATE` and the pattern `HH:mm` — because the text is shared state:
+ * a co-parent on an older Android build reads what this code writes and writes what this code
+ * reads, and a single differing character (a dropped `:00`, a year sign, a tolerated separator)
+ * would make the two phones disagree about a document. The rules were written from ISO 8601, the
+ * `java.time` javadoc and black-box runs of `java.time`; `WireTimeParityTest` holds them to
+ * `java.time` on seeded random and mutated text.
  *
  * Every parser throws [IllegalArgumentException] on text the corresponding `java.time` parse
  * refuses, and accepts all text it accepts. Digits are ASCII only, as `java.time`'s standard
@@ -39,6 +40,36 @@ object IsoText {
         append(':')
         appendTwoDigits(value.second)
         appendTrimmedFraction(value.nanosecond)
+    }
+
+    /**
+     * [value] as `java.time.LocalDateTime.toString()` writes it: the [date] text, `T`, two-digit hour
+     * and minute, and then only as much as the value needs — nothing more when the second and the
+     * nanosecond are both zero; otherwise `:ss`, followed, when the nanosecond is not zero, by a
+     * decimal point and three, six or nine digits, the fewest of those that hold it exactly.
+     *
+     * This is the shape some older writers put on the wire through `toString()` (for example a chat
+     * card's `whenIso`), which differs from [dateTime] whenever the second is zero.
+     */
+    fun dateTimeShortest(value: LocalDateTime): String = buildString {
+        appendIsoDate(value.date)
+        append('T')
+        appendTwoDigits(value.hour)
+        append(':')
+        appendTwoDigits(value.minute)
+        val nanosecond = value.nanosecond
+        if (value.second == 0 && nanosecond == 0) return@buildString
+        append(':')
+        appendTwoDigits(value.second)
+        if (nanosecond == 0) return@buildString
+        append('.')
+        when {
+            nanosecond % NANOS_PER_MILLI == 0 ->
+                append((nanosecond / NANOS_PER_MILLI).toString().padStart(MILLI_DIGITS, '0'))
+            nanosecond % NANOS_PER_MICRO == 0 ->
+                append((nanosecond / NANOS_PER_MICRO).toString().padStart(MICRO_DIGITS, '0'))
+            else -> append(nanosecond.toString().padStart(FRACTION_DIGITS, '0'))
+        }
     }
 
     /**
@@ -390,6 +421,15 @@ private const val NANOS_PER_SECOND = 1_000_000_000
 
 /** Nanoseconds in a millisecond. */
 private const val NANOS_PER_MILLI = 1_000_000
+
+/** Nanoseconds in a microsecond. */
+private const val NANOS_PER_MICRO = 1_000
+
+/** Digits of a fraction printed in milliseconds. */
+private const val MILLI_DIGITS = 3
+
+/** Digits of a fraction printed in microseconds. */
+private const val MICRO_DIGITS = 6
 
 /** Milliseconds in a second. */
 private const val MILLIS_PER_SECOND = 1_000L

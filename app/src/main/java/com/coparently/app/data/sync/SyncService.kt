@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.datetime.toJavaLocalDateTime
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -86,11 +85,11 @@ class SyncService @Inject constructor(
     private val knownFamilies: KnownFamilies
 ) {
     // `LocalDate::class.java` needs the same adapter `ChildInfoRepositoryImpl` and
-    // `UserRepositoryImpl` register: `Vaccination.date` is a `LocalDate`, and a document read
-    // back through a Gson without this adapter would fail to parse it back out of the ISO
+    // `UserRepositoryImpl` register: `Vaccination.date` is a kotlinx `LocalDate`, and a document
+    // read back through a Gson without this adapter would fail to parse it back out of the ISO
     // string the repositories already write - see `medicalProfile` handling below.
     private val gson = GsonBuilder()
-        .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
+        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
         .create()
     private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 

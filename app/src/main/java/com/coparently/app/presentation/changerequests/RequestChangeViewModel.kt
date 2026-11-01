@@ -17,6 +17,7 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
@@ -170,7 +171,7 @@ class RequestChangeViewModel @Inject constructor(
                             entityType = ActivityEntityType.CHANGE_REQUEST,
                             entityId = event.id,
                             title = event.title,
-                            whenIso = proposedStart.toString()
+                            whenIso = IsoText.dateTimeShortest(proposedStart)
                         ),
                         senderName = user.name,
                         partnerUid = partnerId

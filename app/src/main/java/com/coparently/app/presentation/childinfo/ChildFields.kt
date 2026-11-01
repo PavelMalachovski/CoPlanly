@@ -6,7 +6,7 @@ import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.SchoolInfo
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * The values the child form edits, held in `ChildInfoViewModel.childForm` so a rotation keeps

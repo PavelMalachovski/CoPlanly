@@ -17,8 +17,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -27,7 +27,7 @@ import kotlin.test.assertNull
  * A parent's own profile survives storage, and a malformed stored date does not crash the app.
  *
  * `UserEntity.dateOfBirth` is an ISO string rather than a converted `LocalDateTime`, so parsing
- * happens in the mapper — and a mapper that lets `DateTimeParseException` escape would take down
+ * happens in the mapper — and a mapper that lets a parse exception escape would take down
  * every screen that reads the signed-in user, which is most of them.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -35,7 +35,7 @@ class UserProfileMappingTest {
 
     @Test
     fun `an ISO date parses back to the same day`() {
-        assertEquals(LocalDate.of(1988, 4, 17), parseProfileDate("1988-04-17"))
+        assertEquals(LocalDate(1988, 4, 17), parseProfileDate("1988-04-17"))
     }
 
     @Test
@@ -130,7 +130,7 @@ class UserProfileMappingTest {
             name = "Alice Novak",
             role = "mom",
             colorCode = "#FF4081",
-            dateOfBirth = LocalDate.of(1988, 4, 17),
+            dateOfBirth = LocalDate(1988, 4, 17),
             phone = "+420123456789",
             healthConsent = HealthConsent(version = 1, atMillis = 1_787_000_000_000L)
         )

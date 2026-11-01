@@ -59,6 +59,38 @@ class WireTimeTextTest {
     }
 
     @Test
+    fun `a toString-shaped date-time drops zero seconds and prints three, six or nine digits`() {
+        assertEquals("2026-10-27T10:00", IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0)))
+        assertEquals("2026-10-27T10:00:07", IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7)))
+        assertEquals(
+            "2026-10-27T10:00:00.123",
+            IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 0, 123_000_000))
+        )
+        assertEquals(
+            "2026-10-27T10:00:07.120",
+            IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7, 120_000_000))
+        )
+        assertEquals(
+            "2026-10-27T10:00:07.123400",
+            IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7, 123_400_000))
+        )
+        assertEquals(
+            "2026-10-27T10:00:07.000005",
+            IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7, 5_000))
+        )
+        assertEquals(
+            "2026-10-27T10:00:07.123456789",
+            IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7, 123_456_789))
+        )
+        assertEquals(
+            "2026-10-27T10:00:07.000000001",
+            IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7, 1))
+        )
+        assertEquals("+10000-01-01T00:00", IsoText.dateTimeShortest(LocalDateTime(10_000, 1, 1, 0, 0)))
+        assertEquals("-0005-01-01T23:59", IsoText.dateTimeShortest(LocalDateTime(-5, 1, 1, 23, 59)))
+    }
+
+    @Test
     fun `a contact window's time is hours and minutes, seconds dropped`() {
         assertEquals("10:00", IsoText.hourMinute(LocalTime(10, 0)))
         assertEquals("10:00", IsoText.hourMinute(LocalTime(10, 0, 7)))

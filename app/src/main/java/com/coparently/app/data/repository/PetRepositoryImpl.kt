@@ -18,15 +18,13 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.Vaccination
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,9 +47,8 @@ class PetRepositoryImpl @Inject constructor(
 ) : PetRepository {
 
     private val gson = GsonBuilder()
-        .registerTypeAdapter(LocalDate::class.java, LocalDateJsonAdapter())
+        .registerTypeAdapter(kotlinx.datetime.LocalDate::class.java, LocalDateJsonAdapter())
         .create()
-    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     override fun getAllPets(): Flow<List<Pet>> {
         return petDao.getAllPets().map { entities ->
@@ -312,7 +309,7 @@ class PetRepositoryImpl @Inject constructor(
             name = name,
             species = PetSpecies.fromStored(species),
             breed = breed,
-            dateOfBirth = dateOfBirth,
+            dateOfBirth = dateOfBirth?.toKotlinLocalDateTime(),
             medications = gson.fromJson(medicationsJson, Array<Medication>::class.java)
                 ?.toList() ?: emptyList(),
             vaccinations = gson.fromJson(vaccinationsJson, Array<Vaccination>::class.java)
@@ -322,8 +319,8 @@ class PetRepositoryImpl @Inject constructor(
             vetName = vetName,
             vetPhone = vetPhone,
             photos = gson.fromJson(photosJson, Array<String>::class.java)?.toList() ?: emptyList(),
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toKotlinLocalDateTime(),
+            updatedAt = updatedAt.toKotlinLocalDateTime(),
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -340,7 +337,7 @@ class PetRepositoryImpl @Inject constructor(
             name = name,
             species = species.name,
             breed = breed,
-            dateOfBirth = dateOfBirth,
+            dateOfBirth = dateOfBirth?.toJavaLocalDateTime(),
             medicationsJson = gson.toJson(medications),
             vaccinationsJson = gson.toJson(vaccinations),
             specialNeeds = specialNeeds,
@@ -348,11 +345,11 @@ class PetRepositoryImpl @Inject constructor(
             vetName = vetName,
             vetPhone = vetPhone,
             photosJson = gson.toJson(photos),
-            createdAt = createdAt,
-            updatedAt = updatedAt,
+            createdAt = createdAt.toJavaLocalDateTime(),
+            updatedAt = updatedAt.toJavaLocalDateTime(),
             // Derived at the one boundary every save crosses, from the wall clock each save path
             // already stamps — so no path can forget it (schema 40, see `EventTimestamp`).
-            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -372,7 +369,7 @@ class PetRepositoryImpl @Inject constructor(
             "name" to name,
             "species" to species.name,
             "breed" to breed,
-            "dateOfBirth" to dateOfBirth?.format(formatter),
+            "dateOfBirth" to dateOfBirth?.let(IsoText::dateTime),
             "medications" to medications.map {
                 mapOf(
                     "name" to it.name,
@@ -384,7 +381,7 @@ class PetRepositoryImpl @Inject constructor(
             "vaccinations" to vaccinations.map {
                 mapOf(
                     "name" to it.name,
-                    "date" to it.date?.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    "date" to it.date?.let(IsoText::date)
                 )
             },
             "specialNeeds" to specialNeeds,
@@ -392,10 +389,10 @@ class PetRepositoryImpl @Inject constructor(
             "vetName" to vetName,
             "vetPhone" to vetPhone,
             "photos" to photos,
-            "createdAt" to createdAt.format(formatter),
+            "createdAt" to IsoText.dateTime(createdAt),
             // UTC, offset-free: the field keeps its name and type so an older build still parses
             // it, and only the zone it expresses changed (schema 40, see `EventTimestamp`).
-            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime())),
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
             "createdByFirebaseUid" to createdByFirebaseUid,
             "lastModifiedBy" to lastModifiedBy,
             "sharedWith" to audience,
@@ -416,9 +413,7 @@ class PetRepositoryImpl @Inject constructor(
             name = this["name"] as String,
             species = PetSpecies.fromStored(this["species"] as? String),
             breed = this["breed"] as? String,
-            dateOfBirth = (this["dateOfBirth"] as? String)?.let {
-                LocalDateTime.parse(it, formatter)
-            },
+            dateOfBirth = (this["dateOfBirth"] as? String)?.let(IsoText::parseDateTime),
             medications = (this["medications"] as? List<Map<String, Any?>>)?.mapNotNull {
                 val name = it["name"] as? String ?: return@mapNotNull null
                 Medication(
@@ -433,7 +428,7 @@ class PetRepositoryImpl @Inject constructor(
                 Vaccination(
                     name = name,
                     date = (it["date"] as? String)?.let { date ->
-                        runCatching { LocalDate.parse(date) }.getOrNull()
+                        runCatching { IsoText.parseDate(date) }.getOrNull()
                     }
                 )
             } ?: emptyList(),
@@ -442,10 +437,9 @@ class PetRepositoryImpl @Inject constructor(
             vetName = this["vetName"] as? String,
             vetPhone = this["vetPhone"] as? String,
             photos = (this["photos"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-            createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
+            createdAt = IsoText.parseDateTime(this["createdAt"] as String),
             // The instant the document names, shown in this phone's zone (see `EventTimestamp`).
-            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String))
-                .toJavaLocalDateTime(),
+            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String)),
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,
             syncedToFirestore = true,

@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.coparently.app.R
 import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.*
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.childinfo.components.*
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.DatePickerField
@@ -31,8 +32,10 @@ import com.coparently.app.presentation.consent.HealthConsentDialog
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.LockedMedicalSection
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
-import java.time.LocalDateTime
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.util.UUID
 
 /**
@@ -187,11 +190,11 @@ fun AddEditChildInfoScreen(
     if (showDatePicker) {
         DatePickerDialog(
             onDateSelected = { date ->
-                dateOfBirth = date
+                dateOfBirth = date.toKotlinLocalDateTime()
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false },
-            initialDate = dateOfBirth
+            initialDate = dateOfBirth?.toJavaLocalDateTime()
         )
     }
 
@@ -532,7 +535,7 @@ fun AddEditChildInfoScreen(
                         // (the same trap AddEditEventScreen avoids for Event via existingEvent).
                         val isNewChild = childInfoId == null || childInfoId == "new"
                         val base = currentChildInfo.takeIf { !isNewChild }
-                        val now = LocalDateTime.now()
+                        val now = wallClockNow()
                         val resolvedId = base?.id ?: childInfoId?.takeIf { it != "new" }
                             ?: UUID.randomUUID().toString()
                         val childInfo = (

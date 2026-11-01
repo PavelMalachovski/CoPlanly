@@ -8,9 +8,8 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.Vaccination
 import io.mockk.mockk
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * `pets`: read by `PetRepositoryImpl.toPet` (the pull), stored through Room (`toEntity`/
@@ -35,7 +34,7 @@ internal object PetWireContract : WireContract {
             "species" to pet.species.name,
             "vaccinations" to pet.vaccinations.map { "${it.name}@${it.date}" },
             "photos" to pet.photos,
-            "updatedAtMillis" to EventTimestamp.ofWallClock(pet.updatedAt.toKotlinLocalDateTime()),
+            "updatedAtMillis" to EventTimestamp.ofWallClock(pet.updatedAt),
             "createdByFirebaseUid" to pet.createdByFirebaseUid,
             "familyId" to pet.familyId,
             "deleted" to false
@@ -61,16 +60,16 @@ internal object PetWireContract : WireContract {
         name = "Rex",
         species = PetSpecies.DOG,
         breed = "Beagle",
-        dateOfBirth = LocalDateTime.of(2021, 3, 14, 0, 0),
+        dateOfBirth = LocalDateTime(2021, 3, 14, 0, 0),
         medications = listOf(Medication(name = "Wormer", dosage = "1 tablet", frequency = "quarterly")),
-        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate.of(2026, 2, 1))),
+        vaccinations = listOf(Vaccination(name = "Rabies", date = LocalDate(2026, 2, 1))),
         vetName = "Dr. Novak",
         photos = listOf(
             "ph1|pet_photos/uidA__uidB/pet-current-1/5e2f7d31.jpg|image/jpeg|48213|" +
                 "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
         ),
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime.of(2026, 5, 2, 18, 45, 10),
+        createdAt = LocalDateTime(2026, 5, 1, 8, 0),
+        updatedAt = LocalDateTime(2026, 5, 2, 18, 45, 10),
         createdByFirebaseUid = "uidA",
         lastModifiedBy = "uidA",
         familyId = "uidA__uidB"

@@ -11,13 +11,14 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
@@ -179,7 +180,7 @@ class MultiFamilyRecordsTest : TwoParentTest() {
     private fun newChild(parent: EmulatorParent, name: String): ChildInfo = ChildInfo(
         id = UUID.randomUUID().toString(),
         childName = name,
-        dateOfBirth = LocalDateTime.of(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY, 0, 0),
+        dateOfBirth = LocalDateTime(BIRTH_YEAR, BIRTH_MONTH, BIRTH_DAY, 0, 0),
         medications = listOf(Medication(name = "Salbutamol", dosage = "100 mcg", frequency = "as needed")),
         allergies = listOf("Peanuts"),
         medicalNotes = "Mild asthma",
@@ -203,7 +204,8 @@ class MultiFamilyRecordsTest : TwoParentTest() {
     )
 
     /** Whole seconds: the wire carries `updatedAt` as an instant and drops what is finer. */
-    private fun now(): LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+    private fun now(): LocalDateTime =
+        java.time.LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toKotlinLocalDateTime()
 
     private companion object {
         const val BIRTH_YEAR = 2019

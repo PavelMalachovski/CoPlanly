@@ -198,7 +198,12 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         // Carol's Room row still names the solo path. Her next save of the pet writes it over the
         // server's rewritten reference — and widens the audience to Dan, which a save now does.
         carol.petRepository.upsertPet(
-            pet.copy(photos = listOf(solo), familyId = familyId, lastModifiedBy = carol.uid, updatedAt = now())
+            pet.copy(
+                photos = listOf(solo),
+                familyId = familyId,
+                lastModifiedBy = carol.uid,
+                updatedAt = now().toKotlinLocalDateTime()
+            )
         )
         assertEquals(listOf(solo), photosOnServer(carol, pet.id))
         dan.petRepository.pullOnce()
@@ -323,8 +328,8 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         id = UUID.randomUUID().toString(),
         childName = "Ella",
         dateOfBirth = null,
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )
@@ -333,8 +338,8 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         id = UUID.randomUUID().toString(),
         name = "Luna",
         species = PetSpecies.DOG,
-        createdAt = now(),
-        updatedAt = now(),
+        createdAt = now().toKotlinLocalDateTime(),
+        updatedAt = now().toKotlinLocalDateTime(),
         createdByFirebaseUid = parent.uid,
         lastModifiedBy = parent.uid
     )

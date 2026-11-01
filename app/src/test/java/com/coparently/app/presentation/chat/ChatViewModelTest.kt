@@ -39,13 +39,13 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDateTime
 
 /**
  * Unit tests for [ChatViewModel]'s session-dependent state.
@@ -814,7 +814,7 @@ class ChatViewModelTest {
         const val DRAFT = "are you free on Friday?"
 
         /** The conversation's creation time, which is still a local date-time. */
-        val TIMESTAMP: LocalDateTime = LocalDateTime.of(2026, 8, 1, 12, 0)
+        val TIMESTAMP: LocalDateTime = LocalDateTime(2026, 8, 1, 12, 0)
 
         /** 2026-08-01T10:00:00Z — the test message's send instant. */
         const val SENT_AT_MILLIS = 1_785_578_400_000L

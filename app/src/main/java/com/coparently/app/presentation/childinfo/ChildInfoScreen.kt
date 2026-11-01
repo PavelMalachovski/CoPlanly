@@ -42,6 +42,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -185,7 +186,7 @@ private fun ChildrenList(children: List<ChildInfo>, onOpenChild: (String) -> Uni
                         supporting = child.dateOfBirth?.let { dob ->
                             stringResource(
                                 R.string.childinfo_dob_value,
-                                dob.toLocalDate().format(dateFormatter)
+                                dob.date.format(dateFormatter)
                             )
                         },
                         onClick = { onOpenChild(child.id) },
@@ -376,7 +377,7 @@ private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {
                 supporting = childInfo.dateOfBirth?.let { dob ->
                     stringResource(
                         R.string.childinfo_dob_value,
-                        dob.toLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+                        dob.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
                     )
                 },
                 onClick = onClick

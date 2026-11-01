@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import java.time.LocalDate
-import java.time.format.DateTimeParseException
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
 
 /**
  * Reads a stored profile date.
@@ -13,6 +13,9 @@ import java.time.format.DateTimeParseException
  * signed-in user reads this row, so an exception here would not spoil a date field — it would
  * empty the app.
  *
+ * [IsoText.parseDate] accepts exactly what `java.time.LocalDate.parse` accepted here before
+ * (MON-24), and throws [IllegalArgumentException] where that threw `DateTimeParseException`.
+ *
  * @param stored The raw column value, or null
  * @return The date, or null when absent, blank or unparseable
  */
@@ -20,8 +23,8 @@ fun parseProfileDate(stored: String?): LocalDate? {
     val trimmed = stored?.trim().orEmpty()
     if (trimmed.isEmpty()) return null
     return try {
-        LocalDate.parse(trimmed)
-    } catch (e: DateTimeParseException) {
+        IsoText.parseDate(trimmed)
+    } catch (e: IllegalArgumentException) {
         null
     }
 }
