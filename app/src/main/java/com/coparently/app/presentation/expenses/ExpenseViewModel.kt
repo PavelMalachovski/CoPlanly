@@ -54,7 +54,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
-import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.util.UUID
 

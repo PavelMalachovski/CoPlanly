@@ -62,7 +62,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * CompositionLocal for providing Google Sign-In callback throughout the app.

@@ -201,7 +201,7 @@ const RULES = [
   {
     sections: ['3.22'],
     why: 'the AI assist (reply suggestions, month summary, its consent) or the month in review',
-    paths: ['K/domain/ai/**', 'K/data/ai/**', 'K/presentation/ai/**', 'K/di/AiModule.kt',
+    paths: ['K/domain/ai/**', 'K/data/ai/**', 'K/presentation/ai/**', 'K/di/koin/AiModule.kt',
       'K/presentation/chat/ReplySuggestion*', 'K/presentation/chat/MessageTemplatesBottomSheet.kt',
       'K/domain/review/**', 'K/presentation/review/**',
       'app/src/main/res/values*/ai_strings.xml', 'app/src/main/res/values*/month_review_strings.xml'],
