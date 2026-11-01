@@ -539,9 +539,11 @@ When touching the UI, keep these invariants:
    Hilt 2.58 (androidx.hilt's processor and `hilt-work` 1.3.0), kotlinx-coroutines 1.11.0,
    predictive back on. **Kotlin, KSP, Dagger and Roborazzi move together, and AGP holds them
    back**: KSP has been versioned apart from Kotlin since 2.3.0 and is
-   KSP2 only; 2.3.12 and later need AGP 8.12. Dagger 2.58 is the newest whose Hilt plugin accepts
-   AGP 8, and its `hiltJavaCompile` step reads Kotlin metadata up to 2.3 only. So Kotlin 2.4 waits
-   for AGP 9 and Dagger 2.60. Compiler options go through `kotlin { compilerOptions { … } }`;
+   KSP2 only; 2.3.12 and later need AGP 8.12. Dagger's Hilt plugin accepts AGP 8 up to 2.59 (2.59.1
+   asks for AGP 9), and up to 2.59 its `hiltJavaCompile` step reads Kotlin metadata up to 2.3 only.
+   So Kotlin 2.4 waits for AGP 9 and Dagger 2.60. The `upgrade` job runs this branch's test APK on
+   the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
+   Kotlin. Compiler options go through `kotlin { compilerOptions { … } }`;
    `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.4.0 with no `-ktx`
    artifacts** (audit L-2): 34.0.0 removed them, and the Kotlin extensions (`Firebase`, `logEvent`,
    `storageMetadata`, …) are imported from the product's own package

@@ -497,11 +497,15 @@ dependencies {
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
     testImplementation(kotlin("test"))
-    // kotlin-reflect at the compiler's own version. MockK asks for 2.0.0, which reads Kotlin
-    // metadata only up to 2.1, and this module is compiled with Kotlin 2.3; a reflection library
-    // older than the compiler is unsupported. Unversioned, it follows the Kotlin plugin.
+    // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
+    // reads Kotlin metadata only up to 2.1, and this module is compiled with Kotlin 2.3; a
+    // reflection library older than the compiler is unsupported. Unversioned, it follows the
+    // Kotlin plugin. Not for androidTest: the test APK carries kotlin-reflect but not the stdlib,
+    // and the `upgrade` job runs it inside the *base* build's process, on the base's stdlib. A
+    // kotlin-reflect newer than that stdlib fails there (2.3's needs
+    // `kotlin.jvm.internal.KotlinGenericDeclaration`, which stdlib 2.1 lacks), so androidTest keeps
+    // MockK's 2.0.0 until main itself ships stdlib 2.3.
     testImplementation(kotlin("reflect"))
-    androidTestImplementation(kotlin("reflect"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")

@@ -594,7 +594,7 @@ class ChatViewModel @Inject constructor(
         drafts[conversationId] = text
         pendingDraft = conversationId
         // A hand-rolled debounce rather than `Flow.debounce`, which is still `@FlowPreview` in
-        // coroutines 1.9 and would need a module-wide opt-in for one call site.
+        // coroutines 1.11 and would need a module-wide opt-in for one call site.
         draftWriteJob?.cancel()
         draftWriteJob = viewModelScope.launch {
             delay(DRAFT_PERSIST_DEBOUNCE_MS)

@@ -2,14 +2,15 @@
 plugins {
     id("com.android.application") version "8.10.1" apply false
     // Kotlin 2.3.21 (MON-24): the newest Kotlin that every processor below can still read with
-    // AGP 8.10. Kotlin 2.4 writes metadata 2.4.0, which only Dagger 2.60+ reads, and Dagger 2.59+
-    // requires AGP 9. The Compose compiler plugin always takes the Kotlin version.
+    // AGP 8.10. Kotlin 2.4 writes metadata 2.4.0, which only Dagger 2.60+ reads, and Dagger
+    // 2.59.1+ requires AGP 9. The Compose compiler plugin always takes the Kotlin version.
     id("org.jetbrains.kotlin.android") version "2.3.21" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.21" apply false
-    // 2.58 is the newest Dagger whose Hilt plugin accepts AGP 8.x (8.4+); 2.59 asks for AGP 9.
-    // Its javac half (`hiltJavaCompile*`, which builds the root component even under KSP) reads
-    // Kotlin metadata strictly with kotlin-metadata-jvm 2.2.20, so up to 2.3: 2.56.2 stopped at
-    // 2.2. Move it with Kotlin. The library versions in app/build.gradle.kts follow this one.
+    // Dagger up to 2.59 accepts AGP 8.4+; 2.59.1 and later ask for AGP 9. Its javac half
+    // (`hiltJavaCompile*`, which builds the root component even under KSP) reads Kotlin metadata
+    // strictly, with kotlin-metadata-jvm 2.2.20 in 2.58 and 2.59, so up to 2.3: 2.56.2 stopped at
+    // 2.2, and 2.59 would buy nothing over 2.58. Move it with Kotlin. The library versions in
+    // app/build.gradle.kts follow this one.
     id("com.google.dagger.hilt.android") version "2.58" apply false
     // Annotation processing for Hilt and Room. Since 2.3.0 KSP is versioned on its own and is KSP2
     // only (no Kotlin prefix). 2.3.11 is built against Kotlin 2.3.20, analyses with a 2.4.20
