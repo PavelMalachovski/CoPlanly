@@ -6,4 +6,7 @@ import java.security.SecureRandom
 private val secureRandom: SecureRandom by lazy { SecureRandom() }
 
 /** [size] bytes from `SecureRandom`, the source `InviteCodeGenerator` draws from today. */
-actual fun secureRandomBytes(size: Int): ByteArray = ByteArray(size).also { secureRandom.nextBytes(it) }
+actual fun secureRandomBytes(size: Int): ByteArray {
+    require(size >= 0) { "size must not be negative: $size" }
+    return ByteArray(size).also { secureRandom.nextBytes(it) }
+}

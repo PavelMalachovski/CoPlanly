@@ -21,6 +21,17 @@ class DecimalTextTest {
     }
 
     @Test
+    fun halfUpReadsTheShortestDigitsOfEveryForm() {
+        // Each was checked against BigDecimal on JDK 21. The text of the first is "1.23456789125E8",
+        // of the second "9.99999999995E8" (a carry across the point), of the third
+        // "0.30000000000000004": a platform printing other digits would round differently.
+        assertEquals("123456789.13", DecimalText.halfUp(123456789.125, 2))
+        assertEquals("1000000000.00", DecimalText.halfUp(999999999.995, 2))
+        assertEquals("0.30", DecimalText.halfUp(0.1 + 0.2, 2))
+        assertEquals("1.01", DecimalText.halfUp(1.005, 2))
+    }
+
+    @Test
     fun halfUpWritesNoExponent() {
         assertEquals("10000000.00", DecimalText.halfUp(1.0E7, 2))
         assertEquals("0.00", DecimalText.halfUp(1.0E-5, 2))

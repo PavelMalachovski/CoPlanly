@@ -9,12 +9,15 @@ import kotlin.test.assertEquals
  */
 class UnicodeTest {
 
+    // Every non-ASCII value is an escape, not a literal: an editor that normalises source text
+    // would otherwise turn an input or an expected value into the other form, unnoticed.
+
     @Test
     fun aCaronSplitsFromItsLetter() {
-        val decomposed = "čas".canonicalDecomposition()
+        val decomposed = "\u010Das".canonicalDecomposition()
 
         assertEquals(4, decomposed.length)
-        assertEquals("čas", decomposed)
+        assertEquals("c\u030Cas", decomposed)
     }
 
     @Test
@@ -24,7 +27,8 @@ class UnicodeTest {
 
     @Test
     fun cyrillicShortIDecomposes() {
-        // й is и with a breve: the reason chat search cannot use SQLite's unicode61 tokenizer.
-        assertEquals("й", "й".canonicalDecomposition())
+        // The short i is the plain i with a breve: the reason chat search cannot use SQLite's
+        // unicode61 tokenizer.
+        assertEquals("\u0438\u0306", "\u0439".canonicalDecomposition())
     }
 }
