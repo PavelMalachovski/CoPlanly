@@ -1,11 +1,11 @@
 package com.coparently.app.domain.error
 
 /**
- * What kind of failure an event operation hit, as [ErrorHandler] classifies it (CQ-11).
+ * What kind of failure an event operation hit, as the app's `ErrorHandler` classifies it (CQ-11).
  *
  * A classification, not a message: the domain layer has no `Context`, so the sentence a user
  * reads is chosen by the presentation layer from the variant (`presentation/common/ErrorText.kt`,
- * CQ-14). The original exception goes to Crashlytics in [ErrorHandler.handleError] and to the log
+ * CQ-14). The original exception goes to Crashlytics in `ErrorHandler.handleError` and to the log
  * at the call site. Only variants something produces live here — a `SyncError`, a `userMessage`
  * and a `shouldRetry` flag were declared for years and read by nothing, which read as coverage.
  */

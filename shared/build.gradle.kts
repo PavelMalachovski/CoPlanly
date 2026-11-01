@@ -43,8 +43,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             // The same version as the app's kotlinx-coroutines-android: one coroutines release
-            // in the process.
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+            // in the process. `api`, because the domain's repository interfaces expose `Flow` in
+            // their signatures, so a consumer of this module compiles against it too.
+            api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
             // 0.8.0 (May 2026) requires Kotlin stdlib 2.1.20 or later and uses the standard
             // library's `kotlin.time.Instant` (0.7 moved it there). On Android it is java.time
             // underneath, which minSdk 26 has.
