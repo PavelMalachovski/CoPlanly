@@ -77,8 +77,11 @@ object DecimalText {
      * exponent; no spaces, no grouping, no comma — and answers
      * `setScale(scale).unscaledValue().longValueExact()`: "12.5" at scale 2 is 1250, "12.505" is
      * null.
+     *
+     * `internal`: only the tests read amounts with it today (the app reads them through
+     * `BigDecimal`), so it stays out of the iPhone framework's API until a caller needs it.
      */
-    fun parse(plain: String, scale: Int): Long? {
+    internal fun parse(plain: String, scale: Int): Long? {
         require(scale >= 0) { "scale must not be negative: $scale" }
         val decimal = parseDecimal(plain) ?: return null
         val units = exactUnits(decimal.digits.trimStart('0'), decimal.exponent + scale) ?: return null

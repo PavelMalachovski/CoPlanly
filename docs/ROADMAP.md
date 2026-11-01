@@ -2702,10 +2702,11 @@ the repository):
 - **A surrogate written as UTF-8 follows Unicode.** `PercentCodec.decode` (the install referrer and
   the message report only) equals `URLDecoder` on every input but one class: bytes `ED A0..BF …`,
   for which the JDK writes one U+FFFD and `Utf8Decoder` writes one per maximal subpart, as the
-  Unicode Standard (§3.9) prescribes. Android's runtime is not OpenJDK, so the JDK's count was
-  never Android's contract, and neither caller can tell the difference in practice.
-  `PercentCodecParityTest` compares every other input with the JDK and holds this class to
-  Unicode's count.
+  Unicode Standard (§3.9) prescribes. The parity tests compare with the desktop JDK the unit
+  tests run on, and nobody has measured what Android's own class library answers for this class,
+  so the JDK's count is not a known Android contract; neither caller can tell the difference in
+  practice. `PercentCodecParityTest` compares every other input with the JDK and holds this class
+  to Unicode's count. An on-device parity check is carried into phase 2.
 
 `UnansweredRows` and `ClocksAt.governing` are public in `:shared` only for `RequestInbox` and
 `OtherFamiliesSignals`, and carry `@InternalSharedApi` (an error-level opt-in) until those move;
@@ -2739,7 +2740,10 @@ bytes are identical on Android):
   `java.time` code they replaced, which so far ran only in a scratch harness; and a real check of
   the device zone in `ZoneRulesParityTest`, whose "the default zone is the device's" case compares
   the default with itself — nothing holds iOS yet to the days custody and recurrence derive from
-  instants.
+  instants; and an instrumented parity test, so the API 26/30/35 legs run it on Android itself
+  rather than the desktop JDK, comparing `PercentCodec.decode`/`encode` with `URLDecoder`/
+  `URLEncoder` (UTF-8), `Utf8.encode` with `toByteArray(UTF_8)`, and the plan-citation hash with
+  `MessageDigest` over those bytes, over a corpus with lone surrogates and the bytes `ED A0 80`.
 - **Edge cases recorded, not changed**: `WallClock`'s arithmetic is exact within about ±146 years
   (kotlin `Duration`); `AnswerBy`, `ReminderPlan` and `RequestCap` use `toEpochMilliseconds()`,
   which saturates where `toEpochMilli()` threw; kotlinx's clock gives `createdAt`/`respondedAt`
@@ -2747,7 +2751,9 @@ bytes are identical on Android):
   `[0-9]`, so a layer or override whose numbers are written in non-ASCII digits, which Android's
   ICU-backed `\d` used to read and no build writes, is now kept as unreadable (item 30's safe
   direction); a seasonal layer's name decoding relies on each platform's strict UTF-8 decoder,
-  which `SeasonalLayerTest` holds iOS to once `shared-ios` runs.
+  which `SeasonalLayerTest` holds iOS to once `shared-ios` runs; `CustodyHistory`'s layer id
+  throws `IllegalArgumentException` where `java.time` threw `DateTimeException`, for a year
+  outside 0..9999 — unreachable, and no caller catches the old type.
 - **CI hygiene**: the `shared` job repeats the shared tests `build-test` already runs (for Kover);
   a manual run skips `shared-ios`; androidTest runs kotlin-reflect 2.0.0 over 2.3-compiled classes
   (raise it after merge); `ParentsSourceTest` can race a leaked `shareIn` collector (give

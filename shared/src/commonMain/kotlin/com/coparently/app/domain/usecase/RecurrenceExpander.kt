@@ -163,13 +163,15 @@ object RecurrenceExpander {
      * have not come round yet.
      */
     private fun wholeMonths(start: LocalDateTime, target: LocalDateTime): Long {
-        val months = (target.year - start.year) * MONTHS_PER_YEAR + (target.month.ordinal - start.month.ordinal)
+        // In Long, as `ChronoUnit` counts: years × 12 overflows an Int past ~178 million years.
+        val months = (target.year.toLong() - start.year) * MONTHS_PER_YEAR +
+            (target.month.ordinal - start.month.ordinal)
         val notYet = target.day < start.day || (target.day == start.day && target.time < start.time)
-        return if (notYet) months - 1L else months.toLong()
+        return if (notYet) months - 1 else months
     }
 
     private const val DAYS_PER_WEEK = 7L
-    private const val MONTHS_PER_YEAR = 12
+    private const val MONTHS_PER_YEAR = 12L
 
     /** 23:59:59, the last second a recurrence end date still allows an occurrence to start. */
     private val LAST_SECOND = LocalTime(23, 59, 59)

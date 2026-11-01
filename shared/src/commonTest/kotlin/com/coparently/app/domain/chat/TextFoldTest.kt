@@ -58,4 +58,12 @@ class TextFoldTest {
         // The three no-break spaces are not whitespace to Character.isWhitespace, so they stay.
         assertEquals("a b c d", TextFold.simple("a b c d"))
     }
+
+    @Test
+    fun theMongolianVowelSeparatorIsNotWhitespace() {
+        // U+180E has been a format character (Cf), not a space, since Unicode 6.3, and
+        // Character.isWhitespace says no. A platform whose table predates that would fold it to a
+        // space; this holds the iPhone's to the JVM's answer.
+        assertEquals("a\u180Eb", TextFold.simple("a\u180Eb"))
+    }
 }
