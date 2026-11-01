@@ -113,11 +113,13 @@ internal fun AiConsentSettingsRow(
     onWithdraw: () -> Unit
 ) {
     val dateFormatter = remember { localizedDate("yMMMd") }
+    // A local: AiConsent lives in the shared module, so its property does not smart-cast here.
+    val grantedAtMillis = consent?.grantedAtMillis
     val supporting = when {
         consent == null -> stringResource(R.string.ai_consent_settings_not_given)
-        consent.grantedAtMillis == null -> stringResource(R.string.ai_consent_settings_given_now)
+        grantedAtMillis == null -> stringResource(R.string.ai_consent_settings_given_now)
         else -> {
-            val day = Instant.ofEpochMilli(consent.grantedAtMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+            val day = Instant.ofEpochMilli(grantedAtMillis).atZone(ZoneId.systemDefault()).toLocalDate()
             stringResource(R.string.ai_consent_settings_given, day.format(dateFormatter))
         }
     }
