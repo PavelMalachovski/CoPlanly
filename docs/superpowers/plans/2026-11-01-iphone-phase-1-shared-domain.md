@@ -27,6 +27,9 @@ catalog), GitHub Actions with the owner's Mac as a self-hosted runner.
 **Spec:** `docs/superpowers/specs/2026-10-27-iphone-app-design.md` (§5.1 steps 1–2, §5.6, §9.3).
 Read it, and the parts of `CLAUDE.md` each task names, before starting.
 
+**Execution method: subagent-driven** (owner decision, 1 November 2026): a fresh implementer per
+task and a fresh reviewer before the next task starts, then a whole-branch review.
+
 **Start gate.** Do not start before the Android app is released and its first feedback round is
 handled (spec §2, owner decision). This plan was written on 1 November 2026. **Before Task 1, run
 the inventory commands in each task again**: the counts and file names below are from that date.
