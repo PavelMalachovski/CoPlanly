@@ -2762,9 +2762,14 @@ bytes are identical on Android):
 
 **Toolchain ahead of the iPhone.** Kotlin/Native pins Xcode: Kotlin 2.3.21 supports Xcode up to
 26.0, 2.4.21 up to 26.4, and Xcode 27 only from Kotlin 2.5.0, not stable yet. The owner's Mac has
-Xcode 27, so:
-1. **Now (💻):** install Xcode 26.0.1 beside it and give the runner `DEVELOPER_DIR` in its `.env`
-   file (`docs/IOS-RUNNER.md`, step 1), keeping Xcode 27 for everything else.
+Xcode 27.2 (build 27B52), and on 1 November 2026 it ran the whole phase-1 check with Kotlin 2.3.21:
+`:shared:iosSimulatorArm64Test` (818 tests, 0 failures, on an iOS 27.2 simulator) and
+`:shared:linkDebugFrameworkIosSimulatorArm64`. The only noise is eight linker warnings, `could not
+open …/klib/cache/ios_simulator_arm64-gSTATIC-system/…-cache.a`, from Kotlin/Native's prebuilt
+platform caches; they do not fail the link. So:
+1. **Now (💻):** the runner uses Xcode 27.2, the Mac's default. Xcode 26.0.1 beside it, through
+   `DEVELOPER_DIR` in the runner's `.env` (`docs/IOS-RUNNER.md`, step 1), is the fallback for the
+   day a Kotlin/Native build stops working on the newer Xcode, not a step to take now.
 2. **Before phase 3** (the iPhone shell, built in Xcode day to day): AGP 9, which Dagger 2.60 and
    so Kotlin 2.4 wait for (CLAUDE.md, toolchain), then Kotlin 2.4 (Xcode up to 26.4).
 3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
@@ -2774,12 +2779,14 @@ Xcode 27, so:
 1. Set Settings → Actions → General to "Require approval for all external contributors" first —
    the runner's boundary, since a fork's pull request runs its own copy of the workflow and the
    job's fork guard is only defence in depth — then register the Mac runner (`docs/IOS-RUNNER.md`),
-   preferably under a standard macOS account of its own, with Xcode 26.0.1 as above, and set the
+   preferably under a standard macOS account of its own, on the Mac's Xcode 27.2, and set the
    repository variable `IOS_RUNNER_READY` to `true`.
 2. Run `shared-ios` green once — "Shared tests (iOS simulator)" runs every `commonTest`, and
-   `:shared:linkDebugFrameworkIosSimulatorArm64` produces `Shared.framework`. Not yet run: the
-   Linux job compiles the iOS klib, and a JS build of `commonTest` was the stand-in in the cloud
-   sessions.
+   `:shared:linkDebugFrameworkIosSimulatorArm64` produces `Shared.framework`. Both ran green by hand
+   on the owner's Mac (Xcode 27.2, 818 tests, 0 failures) on 1 November 2026, after commonTest's
+   names were made legal for Kotlin/Native (it refuses a comma or parentheses in a backticked name,
+   which the JVM accepts); the Linux `shared` job now compiles commonTest for iOS too. What is left
+   is the same run through the runner, so the check is CI's and not a hand's.
 3. Merge after the Android release and its first feedback round (spec §2), and only once step 2
    is green.
 

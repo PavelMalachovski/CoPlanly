@@ -542,8 +542,10 @@ When touching the UI, keep these invariants:
    KSP2 only; 2.3.12 and later need AGP 8.12. Dagger's Hilt plugin accepts AGP 8 up to 2.59 (2.59.1
    asks for AGP 9), and up to 2.59 its `hiltJavaCompile` step reads Kotlin metadata up to 2.3 only.
    So Kotlin 2.4 waits for AGP 9 and Dagger 2.60. **Kotlin/Native pins Xcode too**: 2.3.21 supports
-   Xcode up to 26.0 (2.4.21 up to 26.4; Xcode 27 needs Kotlin 2.5), so the Mac runner uses an
-   Xcode 26 beside any newer one through the runner's `DEVELOPER_DIR` (`docs/IOS-RUNNER.md`), AGP 9
+   Xcode up to 26.0 (2.4.21 up to 26.4; Xcode 27 needs Kotlin 2.5). In practice 2.3.21 builds, links
+   and runs commonTest on the owner's Xcode 27.2 (November 2026; eight harmless linker warnings about
+   its prebuilt caches), so the runner uses that, with an Xcode 26 beside it through the runner's
+   `DEVELOPER_DIR` as the fallback (`docs/IOS-RUNNER.md`); AGP 9
    with Kotlin 2.4 comes before the iPhone work's phase 3, and a stable Kotlin 2.5 before the App
    Store (ROADMAP MON-24). The `upgrade` job runs this branch's test APK on
    the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
