@@ -562,6 +562,12 @@ When touching the UI, keep these invariants:
    `storageMetadata`, …) are imported from the product's own package
    (`com.google.firebase.analytics.logEvent`, never `…analytics.ktx…`). `Task.await()` comes from the
    explicitly declared `kotlinx-coroutines-play-services`, not from Firebase's transitive graph.
+   **Ktor 3.6.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
+   Google Calendar's: the newest 3.x, built with Kotlin 2.3.21 like this project, on the OkHttp
+   engine on Android (which brings **OkHttp 5.5.1**; the app declares no OkHttp of its own any more,
+   and Coil 2.7 runs on that one) and Darwin on iOS. google-api-client and
+   google-api-services-calendar left the build with it. Like kotlinx-serialization, it moves with
+   Kotlin: never take a Ktor built with a newer Kotlin than the project's (3.6.1 is built with 2.3.21).
 3. **Calendar**: month view is a classic grid from the 1st with horizontal month paging
    (kizitonwose `HorizontalCalendar`); day/week use `HorizontalPager` with fling physics.
    Event chips are single-line (`softWrap = false` + ellipsis). School vacation is a thin
@@ -669,9 +675,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
-  fails if a field a keep rule names came out renamed — since MON-24 that is the Google Calendar
-  models, which google-http-client fills by reflection) — plus the shared module's two, `shared` and
-  `shared-ios` (below), Cloud Functions, `web` (below), the
+  fails if a field a keep rule names came out renamed — the Google Calendar models, which
+  google-http-client filled by reflection, until MON-24 phase 2 removed that client; since then no
+  rule names one, and the check says so and passes, holding the next reflective reader's rule) —
+  plus the shared modules' two, `shared` and `shared-ios` (below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, that no production code imports
@@ -957,8 +964,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   classes by hand the way the e2e parents do: a child and a pet through `ChildInfoRepositoryImpl`/
   `PetRepositoryImpl` into an in-memory Room, signed out on a named `demo-coplanly` FirebaseApp, then
   the stored JSON columns and the repositories' own read-back; `DayOverrideJson`; the event draft
-  through `StoredJson` as `EventViewModel` saves it; the chat and revision mappers; `Converters`;
-  the calendar's `@Key` models, which google-http-client still parses with its own Gson.
+  through `StoredJson` as `EventViewModel` saves it; the chat and revision mappers; `Converters`.
+  The calendar's `@Key` models had a case while google-http-client parsed them with its own Gson;
+  it left in MON-24 phase 2, and the import now reads Google's JSON by hand on Ktor.
   `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
   fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
   a value that does not read back equal, a probe that did not finish, and a stored model
@@ -975,18 +983,21 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   checks.
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
-- **The shared module has two jobs of its own** (MON-24, November 2026), both gated on `changes`'
-  `shared` output: `shared/**`, the root and module build files and the workflow — and a `shared/`
-  path is also an Android path for every other output, treated as the build is (every Android job,
-  every emulator leg), because the app compiles it. **`shared`** (Linux) runs
-  `:shared:testDebugUnitTest` (check run "Shared tests (JVM)"), `:shared:compileKotlinIosSimulatorArm64`,
+- **The shared modules have two jobs of their own** (MON-24, November 2026), both gated on
+  `changes`' `shared` output: `shared/**` and `shared-data/**`, the root and module build files and
+  the workflow — and a path in either module is also an Android path for every other output,
+  treated as the build is (every Android job, every emulator leg), because the app compiles both.
+  **`shared`** (Linux) runs, for `:shared` and `:shared-data` (phase 2's data layer) alike,
+  `testDebugUnitTest` (check run "Shared tests (JVM)"), `compileKotlinIosSimulatorArm64`,
   the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
   that does not compile for iOS fails on every pull request, Mac or no Mac — and
-  `:shared:compileTestKotlinIosSimulatorArm64`, the same for commonTest. **A backticked test name
+  `compileTestKotlinIosSimulatorArm64`, the same for commonTest. **A backticked test name
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
-  same tests once more, because Kover merges `:shared` into the app's coverage report.
-  **`shared-ios`** runs `:shared:iosSimulatorArm64Test` and `:shared:linkDebugFrameworkIosSimulatorArm64`
+  same tests once more, because Kover merges `:shared` and `:shared-data` into the app's coverage
+  report. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
+  `:shared:linkDebugFrameworkIosSimulatorArm64` and `:shared-data:iosSimulatorArm64Test` (`:shared-data`
+  makes no framework of its own; `:shared-ui` will make the one the iPhone app links)
   (check run "Shared tests (iOS simulator)", `require_tests`) on a **GitHub-hosted** `macos-latest`
   runner, gated on `shared` like the Linux job (owner decision, 1 November 2026). The repository is
   public, so macOS runners are free, and a fork's code runs on GitHub's machine, never on anybody's
@@ -994,10 +1005,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   self-hosted runner back for this without reading `docs/IOS-RUNNER.md`, which keeps the setup and
   its security boundary as the fallback (a fork's pull request runs its own copy of `ci.yml`, so
   only the repository's "Require approval for all external contributors" setting protects a
-  self-hosted machine). `:shared:detekt` runs in the `detekt` job against the app's config and the app's
-  baseline file — one baseline for both modules, which `:app:detektBaseline` writes because it also
-  reads `shared/src` (`:shared:detektBaseline` is disabled: detekt's baseline task replaces the
-  file's findings with its own run's, so a second writer would erase the first's).
+  self-hosted machine). `:shared:detekt` and `:shared-data:detekt` run in the `detekt` job against
+  the app's config and the app's baseline file — one baseline for every module, which
+  `:app:detektBaseline` writes because it also reads `shared/src` and `shared-data/src` (the other
+  modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with
+  its own run's, so a second writer would erase the first's).
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
   feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
   is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
@@ -1092,8 +1104,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   any path the script does not know; and the `web` job runs on anything but docs and the Android
   app and its build — `web/`, `web-tests/`, `functions/`, `firebase.json`, `firestore-tests/`' lock
   file, the workflow, or an unfamiliar path; and the `shared` and `shared-ios` jobs run on
-  `shared/**`, the build files and the workflow, where a `shared/` path also counts as the build
-  for every Android output (the app compiles it). A push to `main` always runs everything, which
+  `shared/**`, `shared-data/**`, the build files and the workflow, where a path in either module
+  also counts as the build for every Android output (the app compiles both). A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -1412,9 +1424,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 ```
 shared/    — Kotlin Multiplatform module (MON-24): the domain both apps run, moved out of app/
              with its packages unchanged; commonMain/commonTest, Android and iOS targets
+shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer both apps run, moving
+             out of app/ task by task with its packages unchanged; so far the HTTP clients on Ktor
+             (data/http/, the Bakaláři client and directory, Google Calendar's events.list).
+             Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
-data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync
+data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
+             except what has moved to shared-data/ (below)
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules), and the database builder (DatabaseBuilder.kt)
@@ -1443,10 +1460,22 @@ file by file:
   `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`;
 - `review/MonthStatsWire.kt`, which writes the AI summary's month as `java.time.YearMonth` text.
 
+**Where a `data/…` path in this file lives** (MON-24 phase 2, from November 2026). The data layer
+moves to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`
+is `shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.kt` (its test under
+`shared-data/src/commonTest/`). Moved so far (Task 5, the HTTP clients on Ktor): `data/http/` (new:
+`httpClient()`, OkHttp on Android and Darwin on iOS, and the address and form encodings the old
+clients wrote); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
+`BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and
+`BakalariAuthorizer` stay in the app; and in `data/remote/google/`, `GoogleCalendarApi`,
+`CalendarPaging` and the new `GoogleCalendarEvents` — `GoogleCalendarAccess`, `CredentialProvider`
+and the rest stay. Every other `data/…` path is still under `app/src/main/java/com/coparently/app/`.
+
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
 still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
-opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`.
+opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`, and in
+`shared-data/` `BakalariJson`, which the school import's parsers in the app read.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 
@@ -2401,7 +2430,13 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     with `client_id=ANDR`, `/api/3/timetable/actual`, `/api/3/events`, the school directory at
     `sluzby.bakalari.cz`), parsed by hand over a JSON tree (kotlinx.serialization's `JsonElement`
     since MON-24, read as leniently as Gson's tree was) — no reflected DTO, so R8 has nothing to
-    rename. `SchoolImportPlanner` is the pure decision. Six things not to undo.
+    rename. `SchoolImportPlanner` is the pure decision. **The client and the directory are on
+    Ktor in `shared-data/` since MON-24 phase 2** (OkHttp before; the parsers and the authorizer
+    stay in the app — see "Where a `data/…` path lives"), and send what OkHttp 4.12 sent, form
+    encoding and address included: `BakalariRequestShapeTest` and `WebAddressVectorsTest` hold the
+    bytes, because the event ids below hash the address `BakalariUrls.normalize` writes. Don't hand
+    an address or a form to Ktor's own encoders, and don't let a logging plugin near the client (the
+    form carries the password). Six things not to undo.
     - **The password is used once and dropped.** A connection is one `EncryptedPreferences` key,
       `school_connection_<16 hex of sha256(uid|baseUrl|username)>`, holding the tokens, the child,
       the family and a ledger of imported ids, and naming its owner uid — the store refuses it to
@@ -3149,7 +3184,10 @@ below hold what it fixed in place.
     ahead of Google's verification of the OAuth consent screen). `GoogleCalendarAccess.SCOPE` is
     `calendar.events.owned.readonly`: the events of calendars the parent owns, which the primary
     calendar, the only one imported, always is. `GoogleCalendarApi` has one call, `listEvents`.
-    Its create, update and delete had no caller and went with the full `calendar` scope.
+    Its create, update and delete had no caller and went with the full `calendar` scope. Since
+    MON-24 phase 2 it is a Ktor call to Calendar API v3 `events.list` in `shared-data/` (it was
+    google-api-client's), sending the request that library sent (`GoogleCalendarRequestShapeTest`)
+    with the access token alone (`GoogleCredential`), and reading the page by hand.
     `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
     easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
     an event shared. **The import runs on its own while the switch is on** (owner request, 28 October

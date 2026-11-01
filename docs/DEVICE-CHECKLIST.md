@@ -85,7 +85,7 @@ Play install, a vendor skin.
 | `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart; every type posted to its channel and naming its screen (D-13). Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 | `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
-| `app/src/r8Test/.../R8JsonProbe` (`R8GsonProbe` until MON-24) — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's stored-JSON half (Gson's until MON-24, `StoredJson`'s since, with the same bytes): a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision mappers, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
+| `app/src/r8Test/.../R8JsonProbe` (`R8GsonProbe` until MON-24) — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's stored-JSON half (Gson's until MON-24, `StoredJson`'s since, with the same bytes): a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision mappers (the Google Calendar `@Key` models had a case until google-api-client left in MON-24 phase 2; the import now reads Google's JSON by hand) | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
 | `web-tests/verify-page.spec.js`, `calendar-feed.spec.js` — not an `androidTest`: the **`web`** job runs them with Playwright and Node against the Auth, Firestore and Functions emulators | §6's **verification page** in Chromium: receipts reserved and registered through the real callables, then the exported file (a match, with registered time, period, format and size), a copy with one byte changed (no match), the file against another record ID, the ID typed as people retype it, an unknown ID and a mere reservation (not found), a rate limit, a hostile server value shown as text; English and Czech, following the browser and switched by hand; 375 px wide with nothing scrolling sideways; only the fingerprint leaves the browser, and no uid, family id, e-mail or name is on the page or in the answer. The **calendar feed** (§3.11 and §3.13's feed boxes) through Mozilla's `ical.js` plus an octet-level RFC 5545 check — CRLF, 75-octet folding never inside a UTF-8 character, TEXT escaping, UID/DTSTAMP/DTSTART on every event, DTEND after DTSTART, UNTIL matching a floating DTSTART, unique and stable UIDs, every title round-tripping — for `buildFeed` in all five languages and for the real `calendarFeed` endpoint behind a link `createCalendarFeed` minted | The page **hosted** over https at its real address, and `EXPORT_VERIFY_URL` printed on a file; a file that travelled (e-mail, Drive, a USB stick) checked on a real computer in Safari or Firefox; a real calendar app (Apple Calendar on an iPhone, Google Calendar) subscribing to the link, refreshing, and drawing it |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
@@ -704,7 +704,11 @@ the tap actually landing on that screen.
       somebody else invited you to, which sits on your calendar too; each imported event opens
       with **Private** on, and the co-parent's phone never shows it. A connection made on the
       previous build (the full `calendar` scope) still imports after this build is installed over
-      it, without reconnecting.
+      it, without reconnecting. Since MON-24 phase 2 the import calls `events.list` through Ktor
+      (`shared-data/`, `GoogleCalendarApi`) instead of google-api-client, with the same request
+      (`GoogleCalendarRequestShapeTest`); run this check once on that build: an all-day event and a
+      weekly one land on their days, and an import past a page (over 250 events in the year) is
+      whole.
   - **If it fails:** an import that ends the connection at once with "Access expired or was
     revoked" (Google's 403 `insufficient_scope`) means `events.list` refused the scope on this
     account. Revert `GoogleCalendarAccess.SCOPE` to `calendar.events.readonly`, with the privacy
@@ -1064,9 +1068,15 @@ is the first time the import meets a real server. Needs a parent (or student) Ba
       connection is remembered.
 - [ ] Two children at the same school: connect each with its own Bakaláři login (Bakaláři issues
       one per child); each child's events carry that child.
-- **If it fails:** `data/school/bakalari/` (parsers, client), `domain/school/SchoolImportPlanner`,
-  `presentation/school/`. Capture the failing JSON (with names and ids redacted) and add it to
-  `app/src/test/resources/school/bakalari/` with a test.
+- **Since MON-24 phase 2** the client talks to the school through Ktor's OkHttp engine (OkHttp
+  5.5.1, from 4.12), from `shared-data/`. The requests are pinned to what OkHttp 4.12 sent
+  (`BakalariRequestShapeTest`), but no real school has answered the new client yet: this section,
+  run once on that build, is its acceptance.
+- **If it fails:** `data/school/bakalari/` (parsers and the authorizer in the app, the client and
+  the directory in `shared-data/`), `data/http/` (`shared-data/`: the Ktor client, the addresses as
+  OkHttp wrote them), `domain/school/SchoolImportPlanner`, `presentation/school/`. Capture the
+  failing JSON (with names and ids redacted) and add it to `app/src/test/resources/school/bakalari/`
+  with a test.
 
 ### 3.19 A child's health details need a consent first (L-2) · 1P, withdrawal check 2P
 
@@ -1604,8 +1614,11 @@ the same on B's phone if you have one.
 - [ ] **Fallback (1P):** run `adb shell pm clear app.coplanly`, sign in as A again, and let it
       sync. The medical profile comes back from Firestore complete. That covers both directions
       of the JSON mapping on a release build.
-- [ ] A Google Calendar import on the release build works. It uses the `@Key` models. **[CI]** for
-      parsing a page into them (`r8-runtime`); the OAuth sign-in and the network are the phone's.
+- [ ] A Google Calendar import on the release build works. It used google-api-client's `@Key`
+      models, which R8 could break, until MON-24 phase 2; it now reads Google's JSON by hand on Ktor
+      (`shared-data/`), with nothing R8 can rename, and Ktor ships its own R8 rules. The release
+      build is still where R8 would refuse a class Ktor references (`app/proguard-rules.pro`), so
+      the import on it is worth one run; the OAuth sign-in and the network are the phone's.
 - [ ] **Telemetry end to end** (a release build has `ENABLE_ANALYTICS=true`):
   - Run `adb shell setprop debug.firebase.analytics.app app.coplanly` and open Firebase
     console → Analytics → DebugView.
