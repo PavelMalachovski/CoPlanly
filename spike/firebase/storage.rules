@@ -1,9 +1,0 @@
-rules_version = '2';
-// The spike tests the SDK, not CoPlanly's rules, so everything is open.
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if true;
-    }
-  }
-}
