@@ -93,7 +93,7 @@ jobs:
           COPLANLY_RELEASE_KEY_PASSWORD: ${{ secrets.COPLANLY_RELEASE_KEY_PASSWORD }}
         # Every upload to Play needs a higher versionCode than the last. The run number only
         # grows, and the offset keeps it above the hard-coded default in app/build.gradle.kts.
-        run: ./gradlew bundleRelease assembleRelease -PCOPLANLY_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
+        run: ./gradlew :app:bundleRelease :app:assembleRelease -PCOPLANLY_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
 
       - name: Verify R8 kept the Gson field names
         run: node tools/check-r8-mapping.js

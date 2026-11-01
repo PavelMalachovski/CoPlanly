@@ -5,7 +5,7 @@
 #   bash tools/ci-background-build.sh start   # a step before the emulator: returns at once
 #   bash tools/ci-background-build.sh wait    # first line of the emulator script: blocks
 #
-# `start` launches `./gradlew assembleDebug assembleDebugAndroidTest` detached and returns; the
+# `start` launches `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest` detached and returns; the
 # process outlives its step (a runner reaps a job's processes at the end of the job, not of the
 # step). Restoring the AVD and booting the emulator take one to two minutes that the build used
 # to wait behind — measured on PR #102: boot finished at 08:33:03, and only then did two minutes
@@ -17,10 +17,15 @@
 # builds as it always did.
 #
 # BACKGROUND_BUILD_TASKS overrides what `start` builds (the `r8-runtime` job builds
-# `assembleR8Test`); unset, it is the two APKs the instrumented and e2e jobs install.
+# `:app:assembleR8Test`); unset, it is the two APKs the instrumented and e2e jobs install.
+#
+# Every task is named with `:app:` (MON-24). A bare `assembleDebugAndroidTest` is a selector that
+# also builds the `:shared` module's AAR and an empty instrumentation APK for it, which nothing
+# installs on purpose and which only costs time and disk on a runner that is about to unpack an
+# emulator.
 set -u
 
-TASKS="${BACKGROUND_BUILD_TASKS:-assembleDebug assembleDebugAndroidTest}"
+TASKS="${BACKGROUND_BUILD_TASKS:-:app:assembleDebug :app:assembleDebugAndroidTest}"
 DIR="${BACKGROUND_BUILD_DIR:-${RUNNER_TEMP:-/tmp}/background-build}"
 LOG="$DIR/build.log"
 STATUS="$DIR/status"

@@ -162,7 +162,7 @@ jobs:
       # `assembleDebug` does, so running them together shares a configuration phase and a
       # Kotlin compile instead of repeating both.
       - name: Assemble debug and run unit tests
-        run: ./gradlew assembleDebug testDebugUnitTest
+        run: ./gradlew :app:assembleDebug testDebugUnitTest
 
       # `DatabaseSchemaExportTest` cannot catch what CQ-1 says it catches, and this is the
       # step that can. KSP (Room) writes `app/schemas/<version>.json` during the build above, from
@@ -209,7 +209,7 @@ jobs:
       # which is the one place in this file `continue-on-error` is the right tool.
       - name: Coverage report (Kover)
         continue-on-error: true
-        run: ./gradlew koverXmlReportDebug koverHtmlReportDebug
+        run: ./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug
 
       - name: Upload coverage report
         if: always()
@@ -376,7 +376,7 @@ jobs:
       # reaching a device again. No signing config exists yet, so this produces an unsigned
       # bundle — which is exactly the part worth checking.
       - name: Assemble release (R8)
-        run: ./gradlew assembleRelease
+        run: ./gradlew :app:assembleRelease
 
       # The comment above says building here is what stops the Gson/R8 defect reaching a device.
       # Building alone does not: R8 rewriting a kept field raises nothing, emits well-formed
@@ -467,7 +467,7 @@ jobs:
       # R8 is the long part (~7 minutes in `release`); it runs while the AVD restores and boots.
       - name: Start building the minified APK in the background
         env:
-          BACKGROUND_BUILD_TASKS: assembleR8Test
+          BACKGROUND_BUILD_TASKS: :app:assembleR8Test
         run: bash tools/ci-background-build.sh start
 
       # The API 30 AVD the `instrumented` job caches — restored only, so no two jobs race to save it.
@@ -888,7 +888,7 @@ jobs:
           # Waits for the background build, then records the screen in 170 s segments while the
           # tests run (on legs with `record`) and pulls the MP4s after; the exit status is the
           # tests', and a recorder that fails never fails the job.
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       # **A boot that dies before the script starts is booted again, once, cold.** The cached API 30
       # snapshot sometimes comes up without its input service: `sys.boot_completed` reads 1 at once,
@@ -934,7 +934,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed
         if: always()
@@ -1339,7 +1339,7 @@ jobs:
         working-directory: upgrade-base
         # The base build's daemon would otherwise keep its 4 GB heap beside this branch's
         # daemon and the emulator on a 16 GB runner.
-        run: ./gradlew assembleDebug && ./gradlew --stop
+        run: ./gradlew :app:assembleDebug && ./gradlew --stop
 
       # "A co-parent on the previous build", for the Firestore wire format (CLAUDE.md, the rule
       # under item 5). This branch's `app/src/test/resources/wire/current/` is what it writes; the

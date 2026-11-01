@@ -3,7 +3,7 @@
 # variants (theme, language, font scale) — for a design review without a phone. Run by
 # .github/workflows/ui-tour.yml; not part of CI.
 #
-#   tools/ui-tour/run-ui-tour.sh            # after ./gradlew assembleDebug assembleDebugAndroidTest
+#   tools/ui-tour/run-ui-tour.sh            # after ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 #
 # Needs what tools/e2e/run-two-parent-tests.sh needs: an Android emulator on adb, `npm ci` done in
 # `firestore-tests/` (the Firebase CLI) and `functions/`, and a JDK 21+ for the emulators
@@ -82,7 +82,7 @@ if [ "${1:-}" != "--inside-emulators" ]; then
   [ -x "$firebase" ] || fail "Firebase CLI not found at $firebase — run 'npm ci' in firestore-tests/ first."
   [ -d functions/node_modules ] || fail "functions/node_modules is missing — run 'npm ci' in functions/ first."
   for apk in "$APP_APK" "$TEST_APK"; do
-    [ -f "$apk" ] || fail "Missing $apk — run ./gradlew assembleDebug assembleDebugAndroidTest first."
+    [ -f "$apk" ] || fail "Missing $apk — run ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest first."
   done
   if [ -n "${FIREBASE_JAVA_HOME:-}" ]; then
     export PATH="$FIREBASE_JAVA_HOME/bin:$PATH"

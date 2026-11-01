@@ -62,7 +62,9 @@ adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 
 # counts as a failure. So its classes are excluded by name rather than left to skip.
 ui_tour_classes="com.coparently.app.e2e.UiTourTest,com.coparently.app.e2e.UiTourOnboardingTest"
 
-gradle_command="./gradlew connectedDebugAndroidTest \
+# `:app:` (MON-24): a bare `connectedDebugAndroidTest` also installs and runs the `:shared`
+# module's empty instrumentation APK on the emulator.
+gradle_command="./gradlew :app:connectedDebugAndroidTest \
 -Pandroid.testInstrumentationRunnerArguments.package=com.coparently.app.e2e \
 -Pandroid.testInstrumentationRunnerArguments.notClass=$ui_tour_classes \
 -Pandroid.testInstrumentationRunnerArguments.coplanlyEmulatorHost=$host ${GRADLE_ARGS:-}"
