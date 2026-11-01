@@ -34,6 +34,12 @@ kotlin {
         }
     }
 
+    // `expect object` (Sha256, Lzma1Raw) is a Beta feature that warns on every build without this
+    // flag; an object is the shape the brief names, so the warning is acknowledged here once.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     sourceSets {
         commonMain.dependencies {
             // The same version as the app's kotlinx-coroutines-android: one coroutines release
@@ -43,6 +49,11 @@ kotlin {
             // library's `kotlin.time.Instant` (0.7 moved it there). On Android it is java.time
             // underneath, which minSdk 26 has.
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
+        }
+        androidMain.dependencies {
+            // PAY by square's raw LZMA1 encoder (`Lzma1Raw`), the version the app uses: one
+            // library in the process, and the encoder `PaymentQrTest` pins byte for byte.
+            implementation("org.tukaani:xz:1.10")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
