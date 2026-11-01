@@ -16,4 +16,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "CoPlanly"
 include(":app")
+// The Kotlin Multiplatform module the Android and iPhone apps share (MON-24).
+include(":shared")
 

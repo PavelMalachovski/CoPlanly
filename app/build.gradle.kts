@@ -333,6 +333,15 @@ android {
 }
 
 dependencies {
+    // The shared Kotlin Multiplatform module (MON-24): the domain the iPhone app runs too. Its
+    // classes keep their `com.coparently.app.domain` packages, so nothing here imports
+    // differently, and R8 shrinks them with the app's own.
+    implementation(project(":shared"))
+    // Its Android unit tests' coverage joins this module's Kover report (`koverXmlReportDebug`
+    // runs `:shared`'s debug tests too), so the one figure in the PR comment still covers the
+    // domain after it moves.
+    kover(project(":shared"))
+
     // Core Android - Updated to latest stable versions
     implementation("androidx.core:core-ktx:1.13.1")
     // AppCompat is required for per-app language preferences
@@ -611,6 +620,16 @@ detekt {
 
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+}
+
+// One baseline for two modules (MON-24): `:shared:detekt` reads this module's baseline file, and
+// detekt's `detektBaseline` *replaces* a file's findings with the ones it found in its own run. So
+// the shared module's own baseline task is switched off (shared/build.gradle.kts) and this one
+// also reads the shared sources, which makes `./gradlew detektBaseline` (the Regenerate workflow)
+// write one file holding both modules' accepted findings. An entry names a file and a signature,
+// never a directory, so a file moved into `shared/` keeps the entry it had.
+tasks.named<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>("detektBaseline") {
+    source(rootProject.layout.projectDirectory.dir("shared/src"))
 }
 
 // Screenshots are recorded into, and verified against, the committed baselines in

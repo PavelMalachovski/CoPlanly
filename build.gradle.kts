@@ -6,6 +6,8 @@ plugins {
     // 2.59.1+ requires AGP 9. The Compose compiler plugin always takes the Kotlin version.
     id("org.jetbrains.kotlin.android") version "2.3.21" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.21" apply false
+    // The shared module (MON-24). Same artifact as the Android plugin above, so the same version.
+    id("org.jetbrains.kotlin.multiplatform") version "2.3.21" apply false
     // Dagger up to 2.59 accepts AGP 8.4+; 2.59.1 and later ask for AGP 9. Its javac half
     // (`hiltJavaCompile*`, which builds the root component even under KSP) reads Kotlin metadata
     // strictly, with kotlin-metadata-jvm 2.2.20 in 2.58 and 2.59, so up to 2.3: 2.56.2 stopped at
