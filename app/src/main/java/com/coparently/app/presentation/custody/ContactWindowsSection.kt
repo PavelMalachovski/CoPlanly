@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,6 +63,16 @@ private val DEFAULT_WINDOW_START: LocalTime = LocalTime(15, 0)
 
 /** See [DEFAULT_WINDOW_START]. */
 private val DEFAULT_WINDOW_END: LocalTime = LocalTime(19, 0)
+
+/**
+ * Saves a time of day as its second of the day. kotlinx-datetime's [LocalTime] is not a platform
+ * class, and Java-serialising it into the saved-state Bundle would depend on R8 keeping its
+ * serialisation proxy in a release build.
+ */
+private val TimeOfDaySaver: Saver<LocalTime, Int> = Saver(
+    save = { it.toSecondOfDay() },
+    restore = { LocalTime.fromSecondOfDay(it) }
+)
 
 /** How a window's times are written on screen: 24-hour, as the time picker uses. */
 
@@ -208,8 +219,8 @@ private fun ContactWindowDialog(
 ) {
     var weekday by rememberSaveable { mutableStateOf(DayOfWeek.WEDNESDAY) }
     var week by rememberSaveable { mutableStateOf<Int?>(null) }
-    var start by rememberSaveable { mutableStateOf(DEFAULT_WINDOW_START) }
-    var end by rememberSaveable { mutableStateOf(DEFAULT_WINDOW_END) }
+    var start by rememberSaveable(stateSaver = TimeOfDaySaver) { mutableStateOf(DEFAULT_WINDOW_START) }
+    var end by rememberSaveable(stateSaver = TimeOfDaySaver) { mutableStateOf(DEFAULT_WINDOW_END) }
     var parent by rememberSaveable { mutableStateOf(ContactWindow.SLOT_TWO) }
     var picking by remember { mutableStateOf<TimeField?>(null) }
     val draft = ContactWindowDraft(weekday, week, start, end, parent)
