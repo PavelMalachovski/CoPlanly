@@ -456,6 +456,15 @@ dependencies {
     // same version as the shared module's, declared here because the app's own models
     // (`EventDraft`) and the school import's tree reads use it directly.
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    // Not a dependency: a library on the runtime classpath still brings Gson, asking for 2.10.1,
+    // after Google's calendar client left (MON-24 phase 2). This keeps it at 2.11.0, the version the
+    // app declared and ran until MON-24, so the library runs the Gson it ran before. It is also the
+    // version `GsonParityTest` and `GsonDeviceParityTest` compare with: Android's consistent
+    // resolution pins the test classpaths to the app's runtime version, so without this they
+    // cannot resolve 2.11.0 at all.
+    constraints {
+        implementation("com.google.code.gson:gson:2.11.0")
+    }
 
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
@@ -519,9 +528,9 @@ dependencies {
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
     // The oracle `GsonParityTest` compares `StoredJson` with, and the wire contracts' fixture
-    // printer: the Gson the app shipped until MON-24, at the version it shipped. Tests only — the
-    // app itself has no Gson since then, and none comes with a library since Google's calendar
-    // client left (MON-24 phase 2).
+    // printer: the Gson the app shipped until MON-24, at the version it shipped. The app's own code
+    // has no Gson since then; a library still brings it, held at this version by the constraint
+    // above.
     testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test"))
     // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
