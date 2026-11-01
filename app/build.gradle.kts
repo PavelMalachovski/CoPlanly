@@ -621,12 +621,12 @@ kotlin {
 // writes nothing there, which is why the Regenerate workflow runs `kspDebugKotlin --rerun`. Since
 // KSP 2.3 (MON-24) the processors run on KSP2, the only mode KSP still has.
 //
-// `room.generateKotlin = false` keeps Room emitting the Java it emitted under kapt. Room's Kotlin
-// output is stricter about nullability in queries; switching to it is a separate change with its
-// own review, not something to ride on a change of processor.
+// Room generates Kotlin, its default under KSP and the only output Room for Kotlin Multiplatform
+// has (MON-24; it emitted Java until then, as it had under kapt). The Kotlin output throws where
+// the Java returned null into a non-null type, on a single-row query that finds no row, so every
+// such query is declared nullable (`DaoEmptyResultTest`). The schema JSON does not depend on it.
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.generateKotlin", "false")
 }
 
 // Detekt configuration for static code analysis
