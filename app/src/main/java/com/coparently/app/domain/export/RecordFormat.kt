@@ -1,15 +1,14 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.domain.chat.ChatAttachment
+import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.versions.EventVersionKind
-import java.math.BigDecimal
-import java.math.RoundingMode
-import java.time.Instant
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toKotlinTimeZone
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * How a record prints its values — one definition, shared by the CSV and the PDF so the two
@@ -17,25 +16,30 @@ import java.util.Locale
  *
  * Every format is fixed and locale-independent (`Locale.ROOT`): this is evidence, and a date a
  * reader in another country could misread (`03/04`) is worse than one that looks foreign.
+ *
+ * The times are printed by the shared [RecordTimeText] (`yyyy-MM-dd HH:mm:ss xxx` and
+ * `yyyy-MM-dd HH:mm`, as before) and the amount by [DecimalText]; this object takes the app's
+ * `java.time` values and converts them until the record's model moves to kotlinx-datetime.
  */
 object RecordFormat {
 
-    private val instantFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss xxx", Locale.ROOT)
-    private val wallClockFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT)
     private const val MONEY_SCALE = 2
 
     /** An instant in [zone], with its offset printed, so it cannot be read in the wrong zone. */
-    fun instant(millis: Long, zone: ZoneId): String = Instant.ofEpochMilli(millis).atZone(zone).format(instantFormat)
+    fun instant(millis: Long, zone: ZoneId): String = RecordTimeText.instant(millis, zone.toKotlinTimeZone())
 
     /** A wall-clock time as the parent entered it — no zone, because none was stored. */
-    fun wallClock(value: LocalDateTime?): String = value?.format(wallClockFormat).orEmpty()
+    fun wallClock(value: LocalDateTime?): String =
+        value?.let { RecordTimeText.wallClock(it.toKotlinLocalDateTime()) }.orEmpty()
 
     /** A date, ISO. */
-    fun date(value: LocalDate?): String = value?.toString().orEmpty()
+    fun date(value: LocalDate?): String = value?.let { RecordTimeText.date(it.toKotlinLocalDate()) }.orEmpty()
 
-    /** An amount with two decimals and a point, never a grouping separator. */
-    fun amount(value: Double): String =
-        BigDecimal.valueOf(value).setScale(MONEY_SCALE, RoundingMode.HALF_UP).toPlainString()
+    /**
+     * An amount with two decimals and a point, never a grouping separator:
+     * `BigDecimal.valueOf(value).setScale(2, HALF_UP).toPlainString()`, which [DecimalText.halfUp] is.
+     */
+    fun amount(value: Double): String = DecimalText.halfUp(value, MONEY_SCALE)
 
     /** What a revision recorded, in the reader's words. */
     fun action(kind: EventVersionKind?, actions: RecordActions): String = when (kind) {

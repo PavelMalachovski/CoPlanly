@@ -48,8 +48,9 @@ kotlin {
             api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
             // 0.8.0 (May 2026) requires Kotlin stdlib 2.1.20 or later and uses the standard
             // library's `kotlin.time.Instant` (0.7 moved it there). On Android it is java.time
-            // underneath, which minSdk 26 has.
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
+            // underneath, which minSdk 26 has. `api`, because the domain's signatures take its
+            // types (`EventTimestamp.ofWallClock`, `IsoText`); its jar carries its own R8 rules.
+            api("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
         }
         androidMain.dependencies {
             // PAY by square's raw LZMA1 encoder (`Lzma1Raw`), the version the app uses: one

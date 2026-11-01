@@ -1,5 +1,8 @@
 package com.coparently.app.domain.custody
 
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -245,9 +248,9 @@ object SeasonalLayerCodec {
         VERSION,
         layer.id,
         layer.priority.toString(),
-        layer.fromDate.toString(),
-        layer.toDate.toString(),
-        layer.startDate.toString(),
+        IsoText.date(layer.fromDate.toKotlinLocalDate()),
+        IsoText.date(layer.toDate.toKotlinLocalDate()),
+        IsoText.date(layer.startDate.toKotlinLocalDate()),
         layer.patternDays.toString(),
         layer.momDayIndices.sorted().joinToString(LIST_SEPARATOR.toString()),
         ContactWindowCodec.encodeAll(layer.contactWindows).joinToString(LIST_SEPARATOR.toString()),
@@ -268,11 +271,11 @@ object SeasonalLayerCodec {
             SeasonalLayer(
                 id = parts[IDX_ID],
                 name = requireNotNull(percentDecode(parts[IDX_NAME])),
-                fromDate = LocalDate.parse(parts[IDX_FROM]),
-                toDate = LocalDate.parse(parts[IDX_TO]),
+                fromDate = IsoText.parseDate(parts[IDX_FROM]).toJavaLocalDate(),
+                toDate = IsoText.parseDate(parts[IDX_TO]).toJavaLocalDate(),
                 patternDays = parts[IDX_CYCLE].toInt(),
                 momDayIndices = parts[IDX_DAYS].splitList().map { it.toInt() }.toSet(),
-                startDate = LocalDate.parse(parts[IDX_ANCHOR]),
+                startDate = IsoText.parseDate(parts[IDX_ANCHOR]).toJavaLocalDate(),
                 contactWindows = ContactWindowCodec.canonical(windows),
                 priority = parts[IDX_PRIORITY].toInt()
             )

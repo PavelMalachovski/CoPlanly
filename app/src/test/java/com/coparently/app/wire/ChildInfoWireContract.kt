@@ -9,6 +9,7 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.SchoolInfo
 import io.mockk.mockk
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -40,7 +41,7 @@ internal object ChildInfoWireContract : WireContract {
             "intolerances" to child.medicalProfile.intolerances,
             "school" to child.schoolInfo?.name,
             "guests" to child.guests.keys.sorted(),
-            "updatedAtMillis" to EventTimestamp.ofWallClock(child.updatedAt),
+            "updatedAtMillis" to EventTimestamp.ofWallClock(child.updatedAt.toKotlinLocalDateTime()),
             "createdByFirebaseUid" to child.createdByFirebaseUid,
             "familyId" to child.familyId,
             "deleted" to false

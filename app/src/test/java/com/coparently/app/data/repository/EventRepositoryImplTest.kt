@@ -26,6 +26,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -759,7 +760,7 @@ class EventRepositoryImplTest {
         parentOwner = "mom",
         createdAt = now,
         updatedAt = now,
-        updatedAtMillis = EventTimestamp.ofWallClock(now)
+        updatedAtMillis = EventTimestamp.ofWallClock(now.toKotlinLocalDateTime())
     )
 
     private fun baseDomain() = Event(

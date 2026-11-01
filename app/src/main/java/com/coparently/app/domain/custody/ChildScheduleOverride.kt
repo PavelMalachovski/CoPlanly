@@ -1,6 +1,9 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.family.FamilyMemberRef
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -147,7 +150,7 @@ object ChildOverrideCodec {
     fun encode(override: ChildScheduleOverride): String = listOf(
         VERSION,
         override.member.stored,
-        override.startDate.toString(),
+        IsoText.date(override.startDate.toKotlinLocalDate()),
         override.patternDays.toString(),
         override.momDayIndices.sorted().joinToString(LIST_SEPARATOR.toString()),
         ContactWindowCodec.encodeAll(override.contactWindows).joinToString(LIST_SEPARATOR.toString())
@@ -166,7 +169,7 @@ object ChildOverrideCodec {
                 childId = child.id,
                 patternDays = parts[IDX_CYCLE].toInt(),
                 momDayIndices = parts[IDX_DAYS].splitList().map { it.toInt() }.toSet(),
-                startDate = LocalDate.parse(parts[IDX_ANCHOR]),
+                startDate = IsoText.parseDate(parts[IDX_ANCHOR]).toJavaLocalDate(),
                 contactWindows = ContactWindowCodec.canonical(windows)
             )
         }.getOrNull()

@@ -2,6 +2,8 @@ package com.coparently.app.data.sync
 
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.events.EventTimestamp
+import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toKotlinTimeZone
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -104,7 +106,7 @@ class ConflictResolverTest {
         parentOwner = "mom",
         createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
         updatedAt = wallClock,
-        updatedAtMillis = EventTimestamp.ofWallClock(wallClock, zone),
+        updatedAtMillis = EventTimestamp.ofWallClock(wallClock.toKotlinLocalDateTime(), zone.toKotlinTimeZone()),
         lastModifiedBy = by
     )
 

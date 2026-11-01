@@ -33,6 +33,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -572,7 +573,7 @@ class EventRepositoryImpl @Inject constructor(
             updatedAt = updatedAt,
             // Derived here, at the one boundary every save crosses, from the wall clock each save
             // path already stamps — so no path can forget it (see `EventTimestamp.ofWallClock`).
-            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             sharedWithJson = gson.toJson(sharedWith),

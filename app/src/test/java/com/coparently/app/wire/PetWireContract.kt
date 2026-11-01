@@ -8,6 +8,7 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.Vaccination
 import io.mockk.mockk
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -34,7 +35,7 @@ internal object PetWireContract : WireContract {
             "species" to pet.species.name,
             "vaccinations" to pet.vaccinations.map { "${it.name}@${it.date}" },
             "photos" to pet.photos,
-            "updatedAtMillis" to EventTimestamp.ofWallClock(pet.updatedAt),
+            "updatedAtMillis" to EventTimestamp.ofWallClock(pet.updatedAt.toKotlinLocalDateTime()),
             "createdByFirebaseUid" to pet.createdByFirebaseUid,
             "familyId" to pet.familyId,
             "deleted" to false

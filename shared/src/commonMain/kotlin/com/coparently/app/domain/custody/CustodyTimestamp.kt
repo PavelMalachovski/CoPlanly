@@ -1,9 +1,12 @@
 package com.coparently.app.domain.custody
 
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.toEpochMillisExact
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.UtcOffset
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /**
  * When the pair's custody document was last written, on the wire and in memory.
@@ -38,18 +41,16 @@ import java.time.format.DateTimeFormatter
  */
 object CustodyTimestamp {
 
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-
     /**
      * What a write of [millis] puts in the document.
      *
      * The same shape the previous code wrote: `ISO_LOCAL_DATE_TIME` always formats seconds on
      * output — unlike `LocalDateTime.toString()`, which omits them at zero — so a co-parent on
      * an older build is handed text of exactly the form they have always parsed. Fractions are
-     * printed only when non-zero, with trailing zeros trimmed.
+     * printed only when non-zero, with trailing zeros trimmed. [IsoText.dateTime] keeps that shape.
      */
     fun toWire(millis: Long): String =
-        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDateTime().format(formatter)
+        IsoText.dateTime(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC))
 
     /**
      * The instant a document's `lastModifiedAt` names.
@@ -63,7 +64,7 @@ object CustodyTimestamp {
     fun fromWire(iso: String?): Long {
         val text = iso?.takeIf { it.isNotBlank() } ?: return UNDATED
         return runCatching {
-            LocalDateTime.parse(text, formatter).toInstant(ZoneOffset.UTC).toEpochMilli()
+            IsoText.parseDateTime(text).toInstant(UtcOffset.ZERO).toEpochMillisExact()
         }.getOrDefault(UNDATED)
     }
 

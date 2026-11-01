@@ -1,8 +1,9 @@
 package com.coparently.app.domain.custody
 
 import com.coparently.app.domain.model.CustodyModel
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 /** Whether this layer is a stretch of an earlier schedule kept by [CustodyHistory], not one the parents made. */
 val SeasonalLayer.isHistory: Boolean
@@ -46,8 +47,6 @@ object CustodyHistory {
     /** How far back history reaches from the day a new schedule takes effect. */
     const val MAX_YEARS_BACK = 3L
 
-    private val ID_DATE: DateTimeFormatter = DateTimeFormatter.BASIC_ISO_DATE
-
     /**
      * The first day [proposed] decides when it is accepted on [acceptedOn]: its own start date, or
      * the acceptance day when that start date has already passed. The calendar's proposal preview
@@ -57,7 +56,7 @@ object CustodyHistory {
         maxOf(proposed.startDate, acceptedOn)
 
     /** The stored name of a history layer ending on [until]. Stored data, never translated. */
-    fun layerName(until: LocalDate): String = "Earlier schedule until $until"
+    fun layerName(until: LocalDate): String = "Earlier schedule until ${IsoText.date(until.toKotlinLocalDate())}"
 
     /**
      * [incoming] with the days before its effective date kept as [outgoing] drew them.
@@ -85,7 +84,7 @@ object CustodyHistory {
             SeasonalLayer(
                 // Named by its own first day: history never overlaps, so no two stretches share
                 // it, while two changes may share an effective date (one cut short by a sooner one).
-                id = "$ID_PREFIX${range.start.format(ID_DATE)}",
+                id = "$ID_PREFIX${IsoText.basicDate(range.start.toKotlinLocalDate())}",
                 name = layerName(lastDay),
                 fromDate = range.start,
                 toDate = range.endInclusive,

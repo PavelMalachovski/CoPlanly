@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.toJavaLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -236,7 +237,7 @@ class CalendarSyncRepository @Inject constructor(
             isRecurring = recurrence != null,
             recurrencePattern = recurrence?.firstOrNull()?.toString(),
             createdAt = LocalDateTime.now(),
-            updatedAt = EventTimestamp.toWallClock(importedAtMillis),
+            updatedAt = EventTimestamp.toWallClock(importedAtMillis).toJavaLocalDateTime(),
             updatedAtMillis = importedAtMillis,
             createdByFirebaseUid = ownerUid,
             familyId = ownerFamilyId,

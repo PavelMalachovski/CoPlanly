@@ -18,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
@@ -159,7 +160,7 @@ class ChildInfoPhotosMappingTest {
         medicalPhotosJson = photosJson,
         createdAt = NOW,
         updatedAt = NOW,
-        updatedAtMillis = EventTimestamp.ofWallClock(NOW),
+        updatedAtMillis = EventTimestamp.ofWallClock(NOW.toKotlinLocalDateTime()),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = true

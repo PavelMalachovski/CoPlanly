@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -299,7 +300,7 @@ class ChatEventCardViewModelTest {
         parentOwner = "mom",
         createdAt = AT,
         updatedAt = AT,
-        updatedAtMillis = EventTimestamp.ofWallClock(AT),
+        updatedAtMillis = EventTimestamp.ofWallClock(AT.toKotlinLocalDateTime()),
         createdByFirebaseUid = CO_PARENT,
         sharedWithJson = """["$ME","$CO_PARENT"]"""
     )

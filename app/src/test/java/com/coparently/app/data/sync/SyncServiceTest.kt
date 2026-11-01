@@ -34,6 +34,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -1537,7 +1538,7 @@ class SyncServiceTest {
         parentOwner = "mom",
         createdAt = now,
         updatedAt = now,
-        updatedAtMillis = EventTimestamp.ofWallClock(now),
+        updatedAtMillis = EventTimestamp.ofWallClock(now.toKotlinLocalDateTime()),
         createdByFirebaseUid = createdByFirebaseUid,
         sharedWithJson = gson.toJson(sharedWith)
     )
@@ -1554,7 +1555,7 @@ class SyncServiceTest {
         schoolInfoJson = null,
         createdAt = now,
         updatedAt = updatedAt,
-        updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
+        updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = synced
@@ -1576,7 +1577,7 @@ class SyncServiceTest {
         "emergencyContacts" to emptyList<Any>(),
         "schoolInfo" to null,
         "createdAt" to now.format(formatter),
-        "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
+        "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime())),
         "createdByFirebaseUid" to ALICE,
         "lastModifiedBy" to ALICE,
         "sharedWith" to listOf(ALICE, BOB)

@@ -2,6 +2,7 @@ package com.coparently.app.data.notification
 
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.events.EventTimestamp
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
 import kotlin.test.assertFalse
@@ -73,6 +74,6 @@ class ReminderWorkerTest {
         reminderMinutes = 30,
         createdAt = start.minusDays(3),
         updatedAt = start.minusDays(3),
-        updatedAtMillis = EventTimestamp.ofWallClock(start.minusDays(3))
+        updatedAtMillis = EventTimestamp.ofWallClock(start.minusDays(3).toKotlinLocalDateTime())
     )
 }

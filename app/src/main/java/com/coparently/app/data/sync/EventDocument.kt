@@ -5,6 +5,8 @@ import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.google.gson.Gson
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -75,7 +77,7 @@ internal object EventDocument {
         createdAt = LocalDateTime.parse(data["createdAt"] as String, formatter),
         // The wall clock shown on this phone is the instant in this phone's zone, not the
         // writer's: the wire value no longer names the writer's wall clock at all.
-        updatedAt = EventTimestamp.toWallClock(updatedAtMillis),
+        updatedAt = EventTimestamp.toWallClock(updatedAtMillis).toJavaLocalDateTime(),
         updatedAtMillis = updatedAtMillis,
         syncedToFirestore = true,
         createdByFirebaseUid = data["createdByFirebaseUid"] as? String,
@@ -131,7 +133,7 @@ internal object EventDocument {
             "createdAt" to createdAt.format(formatter),
             // UTC, offset-free: the field keeps its name and type so an older build still parses
             // it, and only the zone it expresses changed (MON-4, see `EventTimestamp`).
-            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime())),
             "createdByFirebaseUid" to creatorUid,
             "sharedWith" to audience,
             "lastModifiedBy" to (lastModifiedBy ?: creatorUid),

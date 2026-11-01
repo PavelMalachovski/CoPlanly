@@ -5,7 +5,6 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.format.DateTimeParseException
 import java.util.TimeZone
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -106,8 +105,10 @@ class EventDocumentTest {
     @Test
     fun `a document with an unreadable updatedAt is refused, not dated`() {
         // As before MON-4: the caller skips the document rather than inventing a time that would
-        // win or lose a conflict it has no business deciding.
-        assertFailsWith<DateTimeParseException> {
+        // win or lose a conflict it has no business deciding. `EventTimestamp` reads the text in
+        // common code now (MON-24), so the refusal is an IllegalArgumentException rather than
+        // java.time's DateTimeParseException; the per-document catch takes either.
+        assertFailsWith<IllegalArgumentException> {
             EventDocument.toEntity(minimalDocument(updatedAt = "not a date"))
         }
     }

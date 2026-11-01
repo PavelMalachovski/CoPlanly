@@ -22,6 +22,8 @@ import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -350,7 +352,7 @@ class PetRepositoryImpl @Inject constructor(
             updatedAt = updatedAt,
             // Derived at the one boundary every save crosses, from the wall clock each save path
             // already stamps — so no path can forget it (schema 40, see `EventTimestamp`).
-            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
+            updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -393,7 +395,7 @@ class PetRepositoryImpl @Inject constructor(
             "createdAt" to createdAt.format(formatter),
             // UTC, offset-free: the field keeps its name and type so an older build still parses
             // it, and only the zone it expresses changed (schema 40, see `EventTimestamp`).
-            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt)),
+            "updatedAt" to EventTimestamp.toWire(EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime())),
             "createdByFirebaseUid" to createdByFirebaseUid,
             "lastModifiedBy" to lastModifiedBy,
             "sharedWith" to audience,
@@ -442,7 +444,8 @@ class PetRepositoryImpl @Inject constructor(
             photos = (this["photos"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
             createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
             // The instant the document names, shown in this phone's zone (see `EventTimestamp`).
-            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String)),
+            updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire(this["updatedAt"] as String))
+                .toJavaLocalDateTime(),
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,
             syncedToFirestore = true,

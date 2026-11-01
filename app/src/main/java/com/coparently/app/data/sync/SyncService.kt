@@ -40,6 +40,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.toJavaLocalDateTime
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -1086,7 +1087,7 @@ class SyncService @Inject constructor(
             createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
             // Read as UTC — what an upgraded build writes — and a legacy naive value the same way,
             // wrong by its writer's offset and irreducibly so (schema 40, see `EventTimestamp`).
-            updatedAt = EventTimestamp.toWallClock(updatedAtMillis),
+            updatedAt = EventTimestamp.toWallClock(updatedAtMillis).toJavaLocalDateTime(),
             updatedAtMillis = updatedAtMillis,
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,

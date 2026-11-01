@@ -18,6 +18,7 @@ import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
@@ -291,7 +292,7 @@ class ChildInfoRepositoryImplTest {
 
         repository.upsertChildInfo(childInfo(createdByFirebaseUid = ALICE))
 
-        val instant = EventTimestamp.ofWallClock(NOW)
+        val instant = EventTimestamp.ofWallClock(NOW.toKotlinLocalDateTime())
         val uploaded = slot<Map<String, Any?>>()
         coVerify { firestoreChildInfoDataSource.upsertChildInfo(CHILD_ID, capture(uploaded)) }
         assertEquals(EventTimestamp.toWire(instant), uploaded.captured["updatedAt"])

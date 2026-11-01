@@ -1,14 +1,14 @@
 package com.coparently.app.domain.events
 
-import org.junit.Test
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.UtcOffset
+import kotlinx.datetime.asTimeZone
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.time.Instant
 
 /**
  * The events `updatedAt` wire form (MON-4): an instant, written as offset-free UTC text so an
@@ -16,7 +16,7 @@ import kotlin.test.assertFailsWith
  */
 class EventTimestampTest {
 
-    private val noonZulu = Instant.parse("2026-09-23T12:00:00Z").toEpochMilli()
+    private val noonZulu = Instant.parse("2026-09-23T12:00:00Z").toEpochMilliseconds()
 
     @Test
     fun `the wire form is UTC with no offset`() {
@@ -26,9 +26,10 @@ class EventTimestampTest {
     @Test
     fun `an older build can still parse what this one writes`() {
         // The whole reason the field carries no `Z`: the old reader would throw on it and skip
-        // the event, so a co-parent who has not updated would never see it.
+        // the event, so a co-parent who has not updated would never see it. `IsoText.parseDateTime`
+        // is that reader's grammar (`WireTimeParityTest` holds it to `ISO_LOCAL_DATE_TIME`).
         val written = EventTimestamp.toWire(noonZulu + 123)
-        LocalDateTime.parse(written, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        IsoText.parseDateTime(written)
     }
 
     @Test
@@ -53,25 +54,25 @@ class EventTimestampTest {
 
     @Test
     fun `an unreadable value throws rather than inventing a time`() {
-        assertFailsWith<DateTimeParseException> { EventTimestamp.fromWire("yesterday") }
+        assertFailsWith<IllegalArgumentException> { EventTimestamp.fromWire("yesterday") }
     }
 
     @Test
     fun `one wall clock in two zones is two instants`() {
         // Prague at noon (UTC+2 in September) and New York at noon (UTC-4) — the comparison the
         // naive `LocalDateTime` called a tie.
-        val wallClock = LocalDateTime.of(2026, 9, 23, 12, 0)
-        val prague = EventTimestamp.ofWallClock(wallClock, ZoneId.of("Europe/Prague"))
-        val newYork = EventTimestamp.ofWallClock(wallClock, ZoneId.of("America/New_York"))
-        assertEquals(Instant.parse("2026-09-23T10:00:00Z").toEpochMilli(), prague)
-        assertEquals(Instant.parse("2026-09-23T16:00:00Z").toEpochMilli(), newYork)
+        val wallClock = LocalDateTime(2026, 9, 23, 12, 0)
+        val prague = EventTimestamp.ofWallClock(wallClock, TimeZone.of("Europe/Prague"))
+        val newYork = EventTimestamp.ofWallClock(wallClock, TimeZone.of("America/New_York"))
+        assertEquals(Instant.parse("2026-09-23T10:00:00Z").toEpochMilliseconds(), prague)
+        assertEquals(Instant.parse("2026-09-23T16:00:00Z").toEpochMilliseconds(), newYork)
     }
 
     @Test
     fun `the displayed wall clock is the instant in the viewer's zone`() {
-        val plusTwo = ZoneOffset.ofHours(2)
+        val plusTwo = UtcOffset(hours = 2).asTimeZone()
         assertEquals(
-            LocalDateTime.of(2026, 9, 23, 14, 0),
+            LocalDateTime(2026, 9, 23, 14, 0),
             EventTimestamp.toWallClock(noonZulu, plusTwo)
         )
         assertEquals(noonZulu, EventTimestamp.ofWallClock(EventTimestamp.toWallClock(noonZulu, plusTwo), plusTwo))

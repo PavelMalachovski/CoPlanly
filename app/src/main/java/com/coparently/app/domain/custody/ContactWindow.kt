@@ -1,7 +1,9 @@
 package com.coparently.app.domain.custody
 
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalTime
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /**
  * Part of one cycle day that the child spends with a parent who does not have that day (MON-6b):
@@ -58,7 +60,8 @@ data class ContactWindow(
  * The one wire form of a [ContactWindow], used by Room and by Firestore alike.
  *
  * A window is written as one short string, `"<dayIndex>|<HH:mm>|<HH:mm>|<slot>"` — `"9|15:00|19:00|dad"`
- * — and a model's windows as a list of them. Deliberately **not** a Gson serialisation of the data
+ * — and a model's windows as a list of them; the times are [IsoText.hourMinute]'s, the `HH:mm` they have
+ * always been. Deliberately **not** a Gson serialisation of the data
  * class: R8 renamed a Gson model's fields once already and it shipped (`FamilyMemberRef` records
  * the same decision), and a string a person can read in the Firestore console is also a string
  * `firestore.rules` can compare for equality.
@@ -78,13 +81,12 @@ object ContactWindowCodec {
 
     private const val SEPARATOR = '|'
     private const val FIELDS = 4
-    private val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     /** [window] as its wire string. */
     fun encode(window: ContactWindow): String = listOf(
         window.dayIndex.toString(),
-        window.start.format(TIME),
-        window.end.format(TIME),
+        IsoText.hourMinute(window.start.toKotlinLocalTime()),
+        IsoText.hourMinute(window.end.toKotlinLocalTime()),
         window.parent
     ).joinToString(SEPARATOR.toString())
 
@@ -97,8 +99,8 @@ object ContactWindowCodec {
         return runCatching {
             ContactWindow(
                 dayIndex = index.toInt(),
-                start = LocalTime.parse(start, TIME),
-                end = LocalTime.parse(end, TIME),
+                start = IsoText.parseHourMinute(start).toJavaLocalTime(),
+                end = IsoText.parseHourMinute(end).toJavaLocalTime(),
                 parent = parent
             )
         }.getOrNull()
