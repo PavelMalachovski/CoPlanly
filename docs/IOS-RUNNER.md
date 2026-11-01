@@ -23,10 +23,24 @@ only when all three of these are true:
 
 - the pull request changes `shared/`, the build files or the workflow (`tools/ci-changes.js`, the
   `shared` output), or it is a push to `main`;
-- the repository variable `IOS_RUNNER_READY` is `true` (step 6 below);
+- the repository variable `IOS_RUNNER_READY` is `true` (step 8 below);
 - the code is this repository's own: a push, or a pull request from a branch of this repository.
-  **A pull request from a fork never runs on the Mac.** A self-hosted runner executes whatever the
-  pull request's workflow and build scripts say, as your user, on your machine.
+
+**That last condition is defence in depth, not the lock.** A self-hosted runner executes whatever
+a job's workflow and build scripts say, on your machine, as the macOS user the runner runs as. The
+repository is public, and a pull request runs the workflow file of its own merge commit — so a
+fork can delete the `if:` on `shared-ios`, or add a job of its own with
+`runs-on: [self-hosted, macOS, ARM64, coplanly]`, and either would run on the Mac. The `if:` only
+stops a fork that left the workflow as it is.
+
+**The boundary is a repository setting a fork cannot edit**: Settings → Actions → General →
+"Approval for running fork pull request workflows from contributors", set to **"Require approval
+for all external contributors"** (step 3). With it, no fork's workflow runs anywhere — on GitHub's
+machines or on the Mac — until you approve that run. Approving is running: **never approve a fork
+run whose diff touches `.github/`, a Gradle build file (`*.gradle.kts`, `gradle/`,
+`settings.gradle.kts`, `gradle.properties`) or `tools/`**, because those decide what executes on
+the Mac. Read the diff first; when in doubt, do not approve, and ask the contributor to split the
+change or let a maintainer bring it in on a branch of this repository.
 
 ## Setting it up
 
@@ -63,7 +77,7 @@ only when all three of these are true:
    Leave out the `xcode-select --switch` line this time: it would make Xcode 26 the Mac's default
    in place of Xcode 27.
 
-   Then give the runner that Xcode alone: after step 3, add the line
+   Then give the runner that Xcode alone: after step 5, add the line
    `DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer` to the `.env` file in the
    runner's folder (`~/actions-runner-coplanly/.env`) and restart it (`./svc.sh stop`,
    `./svc.sh start`). The runner passes that file's variables to every job, so `xcode-select` can
@@ -78,7 +92,40 @@ only when all three of these are true:
    /usr/libexec/java_home -v 17   # prints its path
    ```
 
-3. **Register the runner, for this repository only.** On GitHub: the repository → Settings →
+   Steps 1 and 2 need an administrator, so do them from your own account. The cask installs the
+   JDK for every account on the Mac.
+
+3. **Require approval for every fork run — before the runner exists.** This is required, not
+   optional, and it comes first because it is the only boundary a fork cannot edit (see "What runs
+   on it"). On GitHub: the repository → Settings → Actions → General → "Approval for running fork
+   pull request workflows from contributors" → **"Require approval for all external
+   contributors"** (or the strictest option under its current name) → Save. The default for a
+   public repository, "first-time contributors", lets anyone who has had one pull request merged
+   run any workflow without asking, the Mac's included.
+
+   From then on, a fork's run waits under the pull request's checks with **"Approve and run"**.
+   Approve it only after reading the diff, and **never when it touches `.github/`, a Gradle build
+   file (`*.gradle.kts`, `gradle/`, `settings.gradle.kts`, `gradle.properties`) or `tools/`**.
+
+4. **Give the runner a macOS account of its own** (recommended). System Settings → Users & Groups
+   → Add User: a **Standard** account, not an Administrator, for example `ci-runner`. Every job
+   runs as the account the runner runs as, so under your own account a job could read your whole
+   home folder — your files, your keychain once unlocked, your SSH keys and browser profiles. Under
+   a standard account it reads that account's home and what the Mac lets every user read, and it
+   cannot use `sudo`. Turn on automatic login for it (System Settings → Users & Groups →
+   "Automatically log in as"), because the simulator needs a logged-in session (step 6). macOS
+   offers no automatic login while FileVault is on; then log the account in by hand after each
+   restart, and switch back to yours with fast user switching — its session keeps running.
+
+   Log in as that account once and check that it sees a simulator:
+   `xcrun simctl list devices available` (with `export DEVELOPER_DIR=…` first when the runner uses
+   a second Xcode, step 1). Do steps 5 and 6 logged in as it, so the runner's folder is in its
+   home.
+
+   If you keep the runner under your own account instead, know what that means: a job that got
+   past step 3 runs with everything you can reach.
+
+5. **Register the runner, for this repository only.** On GitHub: the repository → Settings →
    Actions → Runners → **New self-hosted runner** → macOS, ARM64. Follow the download and
    `./config.sh` steps it shows, in a folder of its own (for example `~/actions-runner-coplanly`).
    When `config.sh` asks:
@@ -90,7 +137,7 @@ only when all three of these are true:
    Register it from the **repository's** settings, not an organisation's, so no other repository
    can send it a job.
 
-4. **Run it as a launch agent**, so it starts when you log in and keeps running:
+6. **Run it as a launch agent**, so it starts when the runner's account logs in and keeps running:
 
    ```bash
    cd ~/actions-runner-coplanly
@@ -99,27 +146,26 @@ only when all three of these are true:
    ./svc.sh status
    ```
 
-   A launch agent runs in your login session, which is what the iOS simulator needs: it does not
-   boot without one. Keep the user logged in, and stop the Mac from sleeping while it should take
-   jobs (System Settings → Energy, "Prevent automatic sleeping when the display is off"). The
-   runner page on GitHub should now show the runner as **Idle**.
+   A launch agent runs in its account's login session, which is what the iOS simulator needs: it
+   does not boot without one. Keep that account logged in, and stop the Mac from sleeping while it
+   should take jobs (System Settings → Energy, "Prevent automatic sleeping when the display is
+   off"). The runner page on GitHub should now show the runner as **Idle**.
 
-5. **Make sure nothing else uses this runner.**
+7. **Make sure nothing else uses this runner.**
    - It is listed under this repository's Settings → Actions → Runners, and under no
      organisation's.
    - No other repository has a runner registered from this Mac with the label `coplanly`.
-   - Settings → Actions → General → the approval setting for fork pull request workflows: choose
-     the strictest option ("Require approval for all outside collaborators", or its current
-     name). The job already skips fork pull requests; this is a second lock on the same door.
+   - Settings → Actions → General still says "Require approval for all external contributors"
+     (step 3). Check it again whenever the repository's settings change hands.
 
-6. **Turn the job on.** Settings → Secrets and variables → Actions → **Variables** → New
+8. **Turn the job on.** Settings → Secrets and variables → Actions → **Variables** → New
    repository variable: name `IOS_RUNNER_READY`, value `true`.
 
    Until this variable exists the `shared-ios` job is **skipped**, so pull requests do not wait for
    a runner that is not there. Set it to anything else (or delete it) to skip the job again, for
    example while the Mac is away for a long time.
 
-7. **Check that it fails loudly, not silently.** With the variable set:
+9. **Check that it fails loudly, not silently.** With the variable set:
    - Stop the runner (`./svc.sh stop`) and push a change under `shared/` to a pull request. The
      `shared-ios` job shows as **Queued** ("Waiting for a runner"), and the "CI report" job waits
      for it. Nothing turns green.
@@ -128,16 +174,17 @@ only when all three of these are true:
    A job nobody picks up is cancelled by GitHub after 24 hours and shows as cancelled, never as
    passed.
 
-8. **Run it green once.** The pull request that added the `:shared` module (phase 1 of the iPhone
-   work) merges only after "Shared tests (iOS simulator)" has passed on this runner at least once.
+10. **Run it green once.** The pull request that added the `:shared` module (phase 1 of the
+    iPhone work) merges only after "Shared tests (iOS simulator)" has passed on this runner at
+    least once.
 
 ## Day to day
 
 - **Disk.** The runner keeps `~/.gradle` and `~/.konan` (the Kotlin/Native compiler, a few GB)
-  between runs, which is what makes a run take minutes rather than tens of minutes. The job also
-  installs Android's command-line SDK tools in your home directory (Gradle configures the Android
-  modules before it runs an iOS task, and they look for an SDK). Delete any of these if the disk
-  fills; the next run downloads them again.
+  between runs, in the runner account's home, which is what makes a run take minutes rather than
+  tens of minutes. The job also installs Android's command-line SDK tools there (Gradle
+  configures the Android modules before it runs an iOS task, and they look for an SDK). Delete
+  any of these if the disk fills; the next run downloads them again.
 - **Updating Xcode.** After an update, run `xcodebuild -runFirstLaunch` again and check that
   `xcrun simctl list devices available` still lists an iPhone. An Xcode newer than the Kotlin
   version supports (see "Which Xcode" in step 1) stays beside the runner's, not in its place.

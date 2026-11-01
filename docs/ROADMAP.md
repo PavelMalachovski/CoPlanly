@@ -2765,7 +2765,10 @@ Xcode 27, so:
    App Store Connect will require by then.
 
 **Left for phase 1, all the owner's (💻):**
-1. Register the Mac runner (`docs/IOS-RUNNER.md`), with Xcode 26.0.1 as above, then set the
+1. Set Settings → Actions → General to "Require approval for all external contributors" first —
+   the runner's boundary, since a fork's pull request runs its own copy of the workflow and the
+   job's fork guard is only defence in depth — then register the Mac runner (`docs/IOS-RUNNER.md`),
+   preferably under a standard macOS account of its own, with Xcode 26.0.1 as above, and set the
    repository variable `IOS_RUNNER_READY` to `true`.
 2. Run `shared-ios` green once — "Shared tests (iOS simulator)" runs every `commonTest`, and
    `:shared:linkDebugFrameworkIosSimulatorArm64` produces `Shared.framework`. Not yet run: the

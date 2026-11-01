@@ -1919,9 +1919,12 @@ jobs:
   #    registered and online. Without it the job would wait for a runner that does not exist —
   #    for a day, holding `report` and its comment — so until then it is *skipped*. After it is
   #    set, a Mac that is switched off makes the job wait in the queue, visibly; it never passes.
-  #  * **The Mac never runs fork code**: a self-hosted runner executes whatever the pull request's
-  #    workflow and build scripts say, on the owner's own machine. A pull request from a fork is
-  #    skipped; a push (to `main`) and a pull request from a branch of this repository run.
+  #  * A push (to `main`) or a pull request from a branch of this repository; a fork's is skipped.
+  #    This is defence in depth, not the lock: a self-hosted runner executes whatever a job's
+  #    workflow and build scripts say, on the owner's own machine, and a fork's pull request runs
+  #    its own copy of this file, which can drop this `if` or add a job for the runner's labels.
+  #    The boundary is the repository setting "Require approval for all external contributors"
+  #    (docs/IOS-RUNNER.md, step 3), which a fork cannot edit.
   shared-ios:
     name: Shared — iOS simulator tests and framework (Mac)
     needs: changes

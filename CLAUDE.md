@@ -952,9 +952,14 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   **`shared-ios`** runs `:shared:iosSimulatorArm64Test` and `:shared:linkDebugFrameworkIosSimulatorArm64`
   (check run "Shared tests (iOS simulator)", `require_tests`) on the owner's Mac, a self-hosted
   runner labelled `self-hosted, macOS, ARM64, coplanly` (`docs/IOS-RUNNER.md`). Two things not to
-  undo. **The Mac never runs fork code**: the job's `if` carries `github.event_name == 'push' ||
-  github.event.pull_request.head.repo.full_name == github.repository`, because a self-hosted runner
-  executes whatever a pull request's workflow and build scripts say, on the owner's machine. And
+  undo. **No fork's code runs on the Mac without the owner's approval**: the repository setting
+  "Require approval for all external contributors" (Settings → Actions → General) is the
+  boundary, because a self-hosted runner executes whatever a job's workflow and build scripts say,
+  on the owner's machine, and a fork's pull request runs its own copy of `ci.yml` — it can drop the
+  job's guard or add a job for the runner's labels. The job's `if`, `github.event_name == 'push' ||
+  github.event.pull_request.head.repo.full_name == github.repository`, is defence in depth, not the
+  lock; keep it, and never approve a fork run that touches `.github/`, the Gradle build files or
+  `tools/` (`docs/IOS-RUNNER.md`). And
   **it is skipped until the repository variable `IOS_RUNNER_READY` is `true`**, which the owner sets
   once the runner is online: without it the job would queue for a day for a runner that does not
   exist, holding `report`. Once it is set, a Mac that is off makes the job wait in the queue,
