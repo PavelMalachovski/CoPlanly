@@ -1,8 +1,9 @@
 package com.coparently.app.domain.custody
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CustodyKeyTest {
 
@@ -18,7 +19,7 @@ class CustodyKeyTest {
 
     @Test
     fun `different pairs yield different ids`() {
-        assert(CustodyKey.of("aaa", "bbb") != CustodyKey.of("aaa", "ccc"))
+        assertTrue(CustodyKey.of("aaa", "bbb") != CustodyKey.of("aaa", "ccc"))
     }
 
     @Test

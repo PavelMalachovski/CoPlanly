@@ -1,9 +1,9 @@
 package com.coparently.app.domain.chat
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertThrows
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 
 class ConversationKeyTest {
 
@@ -33,14 +33,14 @@ class ConversationKeyTest {
 
     @Test
     fun `pairing a user with themselves is rejected`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ConversationKey.of("uidA", "uidA")
         }
     }
 
     @Test
     fun `a blank uid is rejected`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ConversationKey.of("uidA", "  ")
         }
     }
@@ -66,10 +66,10 @@ class ConversationKeyTest {
     fun `a uid containing the separator is rejected instead of silently colliding`() {
         // Without this guard, of("x__y", "z") and of("x", "y__z") would both join to
         // "x__y__z" — two different pairs producing the same id.
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ConversationKey.of("x__y", "z")
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ConversationKey.of("x", "y__z")
         }
     }

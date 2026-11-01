@@ -1,6 +1,6 @@
 package com.coparently.app.domain.parentingplan
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue

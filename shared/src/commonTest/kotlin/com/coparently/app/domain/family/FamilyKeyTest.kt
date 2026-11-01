@@ -2,7 +2,7 @@ package com.coparently.app.domain.family
 
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyKey
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
