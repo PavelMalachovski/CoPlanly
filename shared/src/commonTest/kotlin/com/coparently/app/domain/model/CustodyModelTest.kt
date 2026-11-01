@@ -3,6 +3,7 @@ package com.coparently.app.domain.model
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CustodyModelTest {
 
@@ -41,27 +42,27 @@ class CustodyModelTest {
     @Test
     fun `a model is equivalent to itself`() {
         val m = model(14, setOf(0, 1, 2, 3, 4, 5, 6))
-        assert(m.isEquivalentTo(m))
+        assertTrue(m.isEquivalentTo(m))
     }
 
     @Test
     fun `a start date shifted by a whole cycle describes the same schedule`() {
         val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 3))
         val b = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 17))
-        assert(a.isEquivalentTo(b)) { "14 days later in a 14-day cycle is the same pattern" }
+        assertTrue(a.isEquivalentTo(b), "14 days later in a 14-day cycle is the same pattern")
     }
 
     @Test
     fun `a start date shifted by part of a cycle describes a different schedule`() {
         val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 3))
         val b = model(14, setOf(0, 1, 2, 3, 4, 5, 6), LocalDate(2026, 8, 10))
-        assert(!a.isEquivalentTo(b))
+        assertTrue(!a.isEquivalentTo(b))
     }
 
     @Test
     fun `a complemented model is not equivalent to the original`() {
         val a = model(14, setOf(0, 1, 2, 3, 4, 5, 6))
-        assert(!a.isEquivalentTo(a.complemented()))
+        assertTrue(!a.isEquivalentTo(a.complemented()))
     }
 
     @Test
@@ -70,7 +71,7 @@ class CustodyModelTest {
         // Comparing over a fixed window would call these equivalent.
         val fortnight = model(14, (0..6).toSet(), LocalDate(2026, 8, 3))
         val threeWeeks = model(21, (0..6).toSet(), LocalDate(2026, 8, 3))
-        assert(!fortnight.isEquivalentTo(threeWeeks))
+        assertTrue(!fortnight.isEquivalentTo(threeWeeks))
     }
 
     @Test
@@ -83,7 +84,7 @@ class CustodyModelTest {
         // second).
         val a = model(46341, setOf(0))
         val b = model(46342, emptySet())
-        assert(!a.isEquivalentTo(b))
+        assertTrue(!a.isEquivalentTo(b))
     }
 
     @Test
