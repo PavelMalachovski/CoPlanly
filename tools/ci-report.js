@@ -253,6 +253,10 @@ function describeArtifact(name) {
   return null;
 }
 
+/** Said when the emulator jobs were left out because the pull request is a draft (ci.yml). */
+const EMULATORS_SKIPPED_NOTE = 'Emulator jobs skipped on a draft: add the `full-ci` label to run them ' +
+  '(they also run when the pull request is ready for review).';
+
 /**
  * The whole document. Pure, so it can be tested without a network.
  * @param {object} data {suites, coverage, jobs, artifacts, plan, runUrl, repoUrl, runId, sha}
@@ -260,6 +264,7 @@ function describeArtifact(name) {
  */
 function render(data) {
   const {suites = [], coverage = null, screenshots = null, jobs = null, artifacts = null, plan = '', runUrl} = data;
+  const emulatorsSkipped = data.emulatorsSkippedOnDraft === true;
   const failedJobs = (jobs || []).filter((j) => ['failure', 'cancelled', 'timed_out'].includes(jobState(j)));
   const failedTests = suites.reduce((n, s) => n + s.failed, 0);
   const pending = (jobs || []).filter((j) => j.status !== 'completed');
@@ -279,6 +284,8 @@ function render(data) {
     }
     lines.push('');
   }
+
+  if (emulatorsSkipped) lines.push(`> ${EMULATORS_SKIPPED_NOTE}`, '');
 
   lines.push('### Tests', '');
   if (suites.length === 0) {
@@ -329,6 +336,7 @@ function render(data) {
   const json = {
     sha: data.sha || null,
     run: runUrl || null,
+    emulatorsSkippedOnDraft: emulatorsSkipped,
     failedJobs: failedJobs.map((j) => j.name),
     pendingJobs: pending.map((j) => j.name),
     suites: suites.map(({label, tests, failed, skipped, failures}) =>
@@ -393,6 +401,7 @@ async function main() {
   const markdown = render({
     suites, coverage, screenshots, jobs, artifacts, plan,
     sha: env.HEAD_SHA || env.GITHUB_SHA,
+    emulatorsSkippedOnDraft: env.EMULATORS_SKIPPED_ON_DRAFT === 'true',
     runUrl: repo && runId ? `${server}/${repo}/actions/runs/${runId}` : undefined,
   });
   if (args.out) fs.writeFileSync(args.out, markdown);
@@ -407,4 +416,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = {decodeXml, parseJUnit, parseCoverage, suiteLabel, collect, render, describeArtifact};
+module.exports = {EMULATORS_SKIPPED_NOTE, decodeXml, parseJUnit, parseCoverage, suiteLabel, collect, render, describeArtifact};

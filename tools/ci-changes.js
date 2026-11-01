@@ -5,6 +5,9 @@
  *
  *   git diff --name-only "$BASE_SHA"...HEAD | node tools/ci-changes.js >> "$GITHUB_OUTPUT"
  *
+ * With `--event` it decides something else: not which jobs the paths need but whether the expensive
+ * emulator jobs may run at all (below). With `--none` it prints the answer for "run nothing".
+ *
  * It prints eight `key=value` lines: `android`, `e2e`, `screenshots`, `upgrade`, `matrix` (the
  * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`),
  * `r8runtime` (the minified build run on an emulator, `r8-runtime`), `web` (the verification
@@ -149,6 +152,39 @@ const LEG_16KB = {
 };
 const FULL_MATRIX = [LEG_26, LEG_30, LEG_16KB];
 
+/** The pull request label that asks for the emulator jobs on a draft. */
+const FULL_CI_LABEL = 'full-ci';
+
+/**
+ * Whether the emulator jobs (`instrumented`, `e2e`, `upgrade`, `r8-runtime`) may run, from the
+ * event alone (owner decision, 1 November 2026). Each of those jobs still has its own path gate;
+ * this is ANDed with it. On a pull request they run when it is not a draft or carries the
+ * `full-ci` label; on anything else (a push to `main`, a manual run) they always do.
+ *
+ * `unrelatedLabel` marks the run a pull request's `labeled` event starts for a label other than
+ * `full-ci`: nothing in it needs building, so the workflow runs no job from the paths and posts no
+ * report over the real run's.
+ *
+ * @param {Object<string,string|undefined>} env EVENT_NAME, EVENT_ACTION, LABEL_NAME, PR_DRAFT
+ *   ("true" for a draft) and PR_FULL_CI ("true" when the pull request carries the label)
+ * @return {{emulators: boolean, unrelatedLabel: boolean, skippedOnDraft: boolean}}
+ */
+function decideEmulators(env) {
+  if (env.EVENT_NAME !== 'pull_request') return { emulators: true, unrelatedLabel: false, skippedOnDraft: false };
+  const unrelatedLabel = env.EVENT_ACTION === 'labeled' && env.LABEL_NAME !== FULL_CI_LABEL;
+  const emulators = !unrelatedLabel && (env.PR_DRAFT !== 'true' || env.PR_FULL_CI === 'true');
+  return { emulators, unrelatedLabel, skippedOnDraft: !emulators && !unrelatedLabel };
+}
+
+/** The `$GITHUB_OUTPUT` lines for [decideEmulators]. */
+function formatEvent(decision) {
+  return [
+    `emulators=${decision.emulators}`,
+    `unrelated_label=${decision.unrelatedLabel}`,
+    `emulators_skipped_on_draft=${decision.skippedOnDraft}`,
+  ].join('\n') + '\n';
+}
+
 /** The answer for "run everything". */
 function everything() {
   return { android: true, e2e: true, screenshots: true, upgrade: true, matrix: FULL_MATRIX, r8runtime: true, web: true, shared: true };
@@ -199,6 +235,16 @@ function format(decision) {
 if (require.main === module) {
   if (process.argv.includes('--all')) {
     process.stdout.write(format(everything()));
+  } else if (process.argv.includes('--none')) {
+    process.stdout.write(format(nothing()));
+  } else if (process.argv.includes('--event')) {
+    const decision = decideEmulators(process.env);
+    process.stdout.write(formatEvent(decision));
+    process.stderr.write(
+      `emulator jobs: ${decision.emulators ? 'allowed' : 'not run'}` +
+        `${decision.unrelatedLabel ? ' (an unrelated label was added)' : ''}` +
+        `${decision.skippedOnDraft ? ' (draft pull request without the full-ci label)' : ''}\n`,
+    );
   } else {
     const input = require('fs').readFileSync(0, 'utf8');
     const decision = decide(input.split('\n'));
@@ -212,4 +258,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { decide, format, everything, nothing, FULL_MATRIX, LEG_30 };
+module.exports = { decide, format, everything, nothing, decideEmulators, formatEvent, FULL_CI_LABEL, FULL_MATRIX, LEG_30 };

@@ -5,7 +5,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { decide, format, everything, nothing } = require('../ci-changes.js');
+const { decide, format, everything, nothing, decideEmulators, formatEvent } = require('../ci-changes.js');
 
 const legs = (decision) => decision.matrix.map((leg) => leg['api-level']);
 
@@ -316,4 +316,46 @@ test('the shared jobs skip what the module cannot read', () => {
     assert.equal(decide([path]).shared, false, path);
   }
   assert.equal(nothing().shared, false);
+});
+
+test('a draft pull request runs the emulator jobs only with the full-ci label', () => {
+  const draft = { EVENT_NAME: 'pull_request', EVENT_ACTION: 'synchronize', PR_DRAFT: 'true', PR_FULL_CI: 'false' };
+  assert.deepEqual(decideEmulators(draft), { emulators: false, unrelatedLabel: false, skippedOnDraft: true });
+  assert.equal(decideEmulators({ ...draft, PR_FULL_CI: 'true' }).emulators, true);
+  assert.equal(decideEmulators({ ...draft, PR_FULL_CI: 'true' }).skippedOnDraft, false);
+  // Labelling with full-ci starts the run that carries them.
+  const labelled = { ...draft, EVENT_ACTION: 'labeled', LABEL_NAME: 'full-ci', PR_FULL_CI: 'true' };
+  assert.deepEqual(decideEmulators(labelled), { emulators: true, unrelatedLabel: false, skippedOnDraft: false });
+});
+
+test('a pull request that is ready for review runs the emulator jobs', () => {
+  for (const action of ['opened', 'synchronize', 'reopened', 'ready_for_review']) {
+    const decision = decideEmulators({ EVENT_NAME: 'pull_request', EVENT_ACTION: action, PR_DRAFT: 'false', PR_FULL_CI: 'false' });
+    assert.deepEqual(decision, { emulators: true, unrelatedLabel: false, skippedOnDraft: false }, action);
+  }
+  // Missing facts are not a draft: a gate that cannot read its input must not silently stop testing.
+  assert.equal(decideEmulators({ EVENT_NAME: 'pull_request' }).emulators, true);
+});
+
+test('a push to main and a manual run always run the emulator jobs', () => {
+  assert.deepEqual(decideEmulators({ EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main' }),
+    { emulators: true, unrelatedLabel: false, skippedOnDraft: false });
+  assert.equal(decideEmulators({ EVENT_NAME: 'workflow_dispatch' }).emulators, true);
+  // A draft flag only means something on a pull request.
+  assert.equal(decideEmulators({ EVENT_NAME: 'workflow_dispatch', PR_DRAFT: 'true' }).emulators, true);
+});
+
+test('an unrelated label starts a run that does nothing, on a draft or not', () => {
+  for (const draft of ['true', 'false']) {
+    const decision = decideEmulators({ EVENT_NAME: 'pull_request', EVENT_ACTION: 'labeled', LABEL_NAME: 'bug', PR_DRAFT: draft, PR_FULL_CI: 'false' });
+    assert.deepEqual(decision, { emulators: false, unrelatedLabel: true, skippedOnDraft: false }, draft);
+  }
+  // Even when the pull request already carries full-ci: that label's own run did the work.
+  assert.equal(decideEmulators({ EVENT_NAME: 'pull_request', EVENT_ACTION: 'labeled', LABEL_NAME: 'bug', PR_DRAFT: 'true', PR_FULL_CI: 'true' }).emulators, false);
+});
+
+test('the event decision prints three output lines', () => {
+  assert.equal(formatEvent(decideEmulators({ EVENT_NAME: 'pull_request', PR_DRAFT: 'true' })),
+    'emulators=false\nunrelated_label=false\nemulators_skipped_on_draft=true\n');
+  assert.equal(format(nothing()).includes('android=false'), true);
 });

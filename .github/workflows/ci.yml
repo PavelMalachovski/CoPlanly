@@ -10,6 +10,16 @@
 # checked. The instrumented job runs on three emulators (API 26, 30 and 35 with 16 KB pages);
 # see its comment for what each level is there to catch.
 #
+# ## Draft pull requests skip the emulator jobs (owner decision, 1 November 2026)
+#
+# The four emulator jobs — `instrumented`, `e2e`, `upgrade`, `r8-runtime` — are the expensive ones.
+# On a **draft** pull request they run only when the pull request carries the `full-ci` label;
+# once it is ready for review, or on a push to `main` or a manual run, they run as before. The
+# decision is `changes`' `emulators` output (`tools/ci-changes.js --event`, tested in
+# `tools/test/ci-changes.test.js`), ANDed into each job's own path gate. The `pull_request` trigger
+# lists `labeled` and `ready_for_review` so that adding the label, or marking the pull request
+# ready, starts the run that carries them. Every other job is gated as it was.
+#
 # ## Why the Android work is three jobs and not one
 #
 # It used to be one job running five Gradle invocations in sequence, and the measured cost
@@ -36,12 +46,24 @@ on:
   push:
     branches: [main]
   pull_request:
+    # The first three are the defaults, listed because naming any type drops the rest.
+    # `labeled` starts a run when `full-ci` is added; `ready_for_review` when a draft is marked
+    # ready. A label other than `full-ci` starts a run that does nothing (see `changes`).
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
   # Manual runs on any branch: a session without an Android SDK can push a branch and have this
   # workflow prove the Kotlin before a pull request exists.
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # A `labeled` run for a label other than `full-ci` does nothing, so it gets a group of its own
+  # (by run id) instead of the pull request's: in the shared group it would cancel the real run
+  # in progress and replace it with an empty one. A `full-ci` run, and `ready_for_review`, share
+  # the pull request's group on purpose: they supersede a run that skipped the emulators, and a
+  # later push supersedes them in turn. Nothing cancels a run in its own group but a newer one.
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}${{
+    (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name != 'full-ci')
+    && format('-label-{0}', github.run_id) || '' }}
   # Only a pull request's superseded run is cancelled: a run on `main` is the backstop for the legs
   # a pull request skipped, and two quick merges must each get their full matrix.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -93,18 +115,45 @@ jobs:
       # The `shared` and `shared-ios` jobs: the multiplatform module (`shared/**`), the build files
       # and the workflow. A `shared/` path is also an Android path for every output above.
       shared: ${{ steps.filter.outputs.shared }}
+      # The four emulator jobs (`instrumented`, `e2e`, `upgrade`, `r8-runtime`) may run: false on a
+      # draft pull request without the `full-ci` label. ANDed into each of them beside its path
+      # gate; true for a ready pull request, a push to `main` and a manual run.
+      emulators: ${{ steps.event.outputs.emulators }}
+      # A `labeled` run for a label other than `full-ci`: every output is false and `report` stays
+      # quiet, so the real run's comment is not overwritten by an empty one.
+      unrelated_label: ${{ steps.event.outputs.unrelated_label }}
+      # Emulator jobs skipped because the pull request is a draft: the report says so.
+      emulators_skipped_on_draft: ${{ steps.event.outputs.emulators_skipped_on_draft }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Decide whether the emulator jobs may run
+        id: event
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          LABEL_NAME: ${{ github.event.label.name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_FULL_CI: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+          GITHUB_REF: ${{ github.ref }}
+        run: node tools/ci-changes.js --event | tee -a "$GITHUB_OUTPUT"
 
       - name: Decide which jobs to run
         id: filter
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          UNRELATED_LABEL: ${{ steps.event.outputs.unrelated_label }}
         run: |
           set -u
+          if [ "$UNRELATED_LABEL" = "true" ]; then
+            echo "A label other than full-ci was added — running nothing."
+            node tools/ci-changes.js --none | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "Not a pull request — running everything."
             node tools/ci-changes.js --all | tee -a "$GITHUB_OUTPUT"
@@ -441,7 +490,7 @@ jobs:
   r8-runtime:
     name: Android — minified build at runtime (R8)
     needs: changes
-    if: needs.changes.outputs.r8runtime == 'true'
+    if: needs.changes.outputs.r8runtime == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -769,7 +818,7 @@ jobs:
   instrumented:
     name: Android — instrumented tests (API ${{ matrix.api-level }}${{ matrix.label }})
     needs: changes
-    if: needs.changes.outputs.android == 'true'
+    if: needs.changes.outputs.android == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     # The emulator step has its own 10-minute limit; this covers setup, a cold AVD and uploads.
     timeout-minutes: 35
@@ -1025,7 +1074,7 @@ jobs:
   e2e:
     name: Android — two parents on the Firebase emulators
     needs: changes
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
@@ -1274,7 +1323,7 @@ jobs:
   upgrade:
     name: Android — upgrade over main
     needs: changes
-    if: needs.changes.outputs.upgrade == 'true'
+    if: needs.changes.outputs.upgrade == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1952,7 +2001,9 @@ jobs:
   report:
     name: CI report
     needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules, shared, shared-ios]
-    if: always()
+    # Not for the run an unrelated label starts: it built nothing and would replace the real run's
+    # comment with an empty one.
+    if: always() && needs.changes.outputs.unrelated_label != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -2007,6 +2058,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           REPORT_JOB_NAME: CI report
+          EMULATORS_SKIPPED_ON_DRAFT: ${{ needs.changes.outputs.emulators_skipped_on_draft }}
         run: |
           node tools/ci-report.js --artifacts ci-artifacts \
             --plan "$RUNNER_TEMP/manual-test-plan.md" --out "$RUNNER_TEMP/ci-summary.md"

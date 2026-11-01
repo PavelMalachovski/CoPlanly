@@ -1060,6 +1060,25 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   build it describes to run. And a gated-out job reports as *skipped*, which branch protection
   counts as passing; nothing is a required check today, so this is safe, but marking one required
   later means a PR merges on a skip rather than a build.
+- **A draft pull request runs the emulator jobs only with the `full-ci` label** (1 November 2026,
+  owner decision). `instrumented`, `e2e`, `upgrade` and `r8-runtime` are the expensive jobs, so on
+  a draft they are skipped on every push unless the pull request carries the label `full-ci`. They
+  run as before once the pull request is ready for review, on a push to `main` and on a manual run.
+  The `changes` job decides it from the event (`node tools/ci-changes.js --event`, tested in
+  `tools/test/ci-changes.test.js`) and publishes it as its `emulators` output, which each of the four
+  jobs ANDs with its own path gate; every other job is gated as before. Four things to know.
+  **Labelling starts a run**: the `pull_request` trigger lists `opened`, `synchronize`, `reopened`,
+  `labeled` and `ready_for_review`, so adding `full-ci`, or marking a draft ready, runs the jobs the
+  last push skipped. **A label other than `full-ci` starts a run that does nothing**: `changes`
+  prints every output false (`--none`) and `report` does not post, so an empty summary does not
+  replace the real one. Such a run has a concurrency group of its own (by run id), because in the
+  pull request's group it would cancel the real run in progress; a `full-ci` or `ready_for_review`
+  run shares the pull request's group and supersedes the run before it, and a later push supersedes
+  it. **A skipped job reads as skipped** in the summary, and the summary adds "Emulator jobs skipped
+  on a draft: add the `full-ci` label to run them" (`tools/ci-report.js`, fed by `changes`'
+  `emulators_skipped_on_draft`). And **a skip is not a pass for the draft's merge**: nothing is a
+  required check, but a pull request must not leave draft with the emulator legs never having run
+  once; marking it ready is what runs them.
 - **An emulator leg is decided by the tests' exit status, not by the emulator step** (September
   2026). The emulator repeatedly never exited after the action's `adb emu kill` with every test
   passed — on API 26 first, and on PR #102 on API 30 too, 9–11 minutes a leg, which made the legs
