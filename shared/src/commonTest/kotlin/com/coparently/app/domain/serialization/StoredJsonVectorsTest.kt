@@ -28,24 +28,29 @@ import kotlin.test.assertNull
  * The text [StoredJson] writes, pinned as literals on every platform it runs on (MON-24).
  *
  * Every expected string here is **Gson 2.11.0's own output** for the same value, obtained by
- * running Gson on the JVM over a twin of each class (same field names, same order) and pasting the
- * result — never written by hand. `GsonParityTest` makes the same comparison live on the JVM; this
- * file exists so the iPhone's simulator is held to the same bytes, since the iPhone has no Gson to
- * compare with. Each vector is also read back, to the value it was written from.
+ * running Gson on the JVM over a twin of each class (same field names) and pasting the result —
+ * never written by hand — with each class's keys sorted by name, as Gson wrote them on a phone:
+ * ART returns a class's fields in dex order, which is by name (`GsonFieldOrder`; the JVM's
+ * declaration order never reached a phone). `GsonDeviceParityTest` compares with Gson on ART, and
+ * `GsonParityTest` makes the same comparison live on the JVM; this file exists so the iPhone's
+ * simulator is held to the same bytes, since the iPhone has no Gson to compare with. Each vector
+ * is also read back, to the value it was written from.
  */
 class StoredJsonVectorsTest {
 
     @Test
-    fun aClassWritesEveryPropertyInOrderDefaultsIncludedAndANullLeftOut() {
-        vector(Shape("plain"), """{"text":"plain",""" + REST)
+    fun aClassWritesEveryPropertyByNameDefaultsIncludedAndANullLeftOut() {
+        vector(Shape("plain"), shapeText("plain"))
     }
 
     @Test
     fun htmlCharactersAreEscapedAsGsonEscapedThem() {
         vector(
             Shape("<a href='x'>&b=c</a>", optional = "x"),
-            "{\"text\":\"\\u003ca href\\u003d\\u0027x\\u0027\\u003e\\u0026b\\u003dc\\u003c/a\\u003e\"," +
-                "\"optional\":\"x\"," + REST
+            shapeText(
+                "\\u003ca href\\u003d\\u0027x\\u0027\\u003e\\u0026b\\u003dc\\u003c/a\\u003e",
+                optional = "\"optional\":\"x\","
+            )
         )
     }
 
@@ -53,7 +58,7 @@ class StoredJsonVectorsTest {
     fun quotesBackslashesAndControlCharactersAreEscapedAndDeleteIsNot() {
         vector(
             Shape("\"\\/ \u0000\u0001\b\t\n\u000b\u000c\r\u001f\u007f"),
-            "{\"text\":\"\\\"\\\\/ \\u0000\\u0001\\b\\t\\n\\u000b\\f\\r\\u001f\u007f\"," + REST
+            shapeText("\\\"\\\\/ \\u0000\\u0001\\b\\t\\n\\u000b\\f\\r\\u001f\u007f")
         )
     }
 
@@ -61,7 +66,7 @@ class StoredJsonVectorsTest {
     fun nonAsciiIsWrittenAsItIsExceptTheTwoLineSeparators() {
         vector(
             Shape("Жёлтый ї é 😀 \u2028\u2029 \u00a0"),
-            "{\"text\":\"Жёлтый ї é 😀 \\u2028\\u2029 \u00a0\"," + REST
+            shapeText("Жёлтый ї é 😀 \\u2028\\u2029 \u00a0")
         )
     }
 
@@ -82,8 +87,7 @@ class StoredJsonVectorsTest {
         expected.forEach { (ratio, text) ->
             vector(
                 Shape("d", ratio = ratio),
-                "{\"text\":\"d\",\"count\":0,\"big\":0,\"ratio\":$text,\"flag\":false,\"tags\":[],\"nested\":[]," +
-                    "\"byName\":{},\"level\":\"LOW\"}"
+                shapeText("d", ratio = text)
             )
         }
     }
@@ -92,8 +96,8 @@ class StoredJsonVectorsTest {
     fun wholeNumbersBooleansAndEnumsAreWrittenPlainly() {
         vector(
             Shape("n", count = Int.MIN_VALUE, big = Long.MAX_VALUE, flag = true, level = Level.HIGH),
-            """{"text":"n","count":-2147483648,"big":9223372036854775807,"ratio":0.0,"flag":true,""" +
-                """"tags":[],"nested":[],"byName":{},"level":"HIGH"}"""
+            """{"big":9223372036854775807,"byName":{},"count":-2147483648,"flag":true,"level":"HIGH",""" +
+                """"nested":[],"ratio":0.0,"tags":[],"text":"n"}"""
         )
     }
 
@@ -106,8 +110,8 @@ class StoredJsonVectorsTest {
                 nested = listOf(emptyList(), listOf("a"), listOf("b", "c")),
                 byName = linkedMapOf("k<" to 1, "z" to -2)
             ),
-            "{\"text\":\"l\",\"count\":0,\"big\":0,\"ratio\":0.0,\"flag\":false,\"tags\":[\"\",\"a\"]," +
-                "\"nested\":[[],[\"a\"],[\"b\",\"c\"]],\"byName\":{\"k\\u003c\":1,\"z\":-2},\"level\":\"LOW\"}"
+            "{\"big\":0,\"byName\":{\"k\\u003c\":1,\"z\":-2},\"count\":0,\"flag\":false,\"level\":\"LOW\"," +
+                "\"nested\":[[],[\"a\"],[\"b\",\"c\"]],\"ratio\":0.0,\"tags\":[\"\",\"a\"],\"text\":\"l\"}"
         )
     }
 
@@ -116,7 +120,7 @@ class StoredJsonVectorsTest {
         vector(
             Medication.serializer(),
             Medication("Ventolin", "2 puffs", "as needed", null),
-            """{"name":"Ventolin","dosage":"2 puffs","frequency":"as needed"}"""
+            """{"dosage":"2 puffs","frequency":"as needed","name":"Ventolin"}"""
         )
         vector(
             MedicalProfile.serializer(),
@@ -126,29 +130,29 @@ class StoredJsonVectorsTest {
                 emptyList(),
                 listOf(Vaccination("MMR", LocalDate(2024, 3, 12)), Vaccination("Tetanus", null))
             ),
-            """{"bloodType":"AB_NEGATIVE","intolerances":["lactose"],"hereditaryConditions":[],""" +
-                """"vaccinations":[{"name":"MMR","date":"2024-03-12"},{"name":"Tetanus"}]}"""
+            """{"bloodType":"AB_NEGATIVE","hereditaryConditions":[],"intolerances":["lactose"],""" +
+                """"vaccinations":[{"date":"2024-03-12","name":"MMR"},{"name":"Tetanus"}]}"""
         )
         vector(
             MedicalProfile.serializer(),
             MedicalProfile(),
-            """{"intolerances":[],"hereditaryConditions":[],"vaccinations":[]}"""
+            """{"hereditaryConditions":[],"intolerances":[],"vaccinations":[]}"""
         )
         vector(
             ListSerializer(Activity.serializer()),
             listOf(Activity("Swim", "Mon 4-5 pm", "Pool & Gym", null, "+420 123")),
-            "[{\"name\":\"Swim\",\"schedule\":\"Mon 4-5 pm\",\"location\":\"Pool \\u0026 Gym\"," +
-                "\"contactPhone\":\"+420 123\"}]"
+            "[{\"contactPhone\":\"+420 123\",\"location\":\"Pool \\u0026 Gym\",\"name\":\"Swim\"," +
+                "\"schedule\":\"Mon 4-5 pm\"}]"
         )
         vector(
             EmergencyContact.serializer(),
             EmergencyContact("Babička", "grandmother", "+420 777", null),
-            """{"name":"Babička","relationship":"grandmother","phone":"+420 777"}"""
+            """{"name":"Babička","phone":"+420 777","relationship":"grandmother"}"""
         )
         vector(
             SchoolInfo.serializer(),
             SchoolInfo("ZŠ <Lipová>", grade = "3.A"),
-            "{\"name\":\"ZŠ \\u003cLipová\\u003e\",\"grade\":\"3.A\"}"
+            "{\"grade\":\"3.A\",\"name\":\"ZŠ \\u003cLipová\\u003e\"}"
         )
     }
 
@@ -170,16 +174,16 @@ class StoredJsonVectorsTest {
                     listOf("d1|mom|uidA|2026-04-01T09:00|DECLINED|uidB|2026-04-02T09:00|")
                 )
             ),
-            "{\"2026-05-01\":{\"toParent\":\"dad\",\"requestedBy\":\"uidA\",\"requestedAt\":\"2026-04-20T10:00\"," +
-                "\"status\":\"ACCEPTED\",\"decidedBy\":\"uidB\",\"decidedAt\":\"2026-04-21T08:00\"," +
-                "\"note\":\"Ill — can\\u0027t \\u0027swap\\u0027\",\"groupId\":\"g1\"," +
-                "\"earlier\":[\"d1|mom|uidA|2026-04-01T09:00|DECLINED|uidB|2026-04-02T09:00|\"]}}"
+            "{\"2026-05-01\":{\"decidedAt\":\"2026-04-21T08:00\",\"decidedBy\":\"uidB\"," +
+                "\"earlier\":[\"d1|mom|uidA|2026-04-01T09:00|DECLINED|uidB|2026-04-02T09:00|\"],\"groupId\":\"g1\"," +
+                "\"note\":\"Ill — can\\u0027t \\u0027swap\\u0027\",\"requestedAt\":\"2026-04-20T10:00\"," +
+                "\"requestedBy\":\"uidA\",\"status\":\"ACCEPTED\",\"toParent\":\"dad\"}}"
         )
         vector(
             swaps,
             mapOf("2026-05-02" to DayOverride("mom", "uidB", "2026-04-20T10:00")),
-            """{"2026-05-02":{"toParent":"mom","requestedBy":"uidB","requestedAt":"2026-04-20T10:00",""" +
-                """"status":"PENDING"}}"""
+            """{"2026-05-02":{"requestedAt":"2026-04-20T10:00","requestedBy":"uidB","status":"PENDING",""" +
+                """"toParent":"mom"}}"""
         )
     }
 
@@ -304,9 +308,12 @@ class StoredJsonVectorsTest {
     @Serializable
     private enum class Level { LOW, HIGH }
 
-    private companion object {
-        /** Everything after `text` (and `optional`) in a [Shape] left at its defaults. */
-        const val REST =
-            """"count":0,"big":0,"ratio":0.0,"flag":false,"tags":[],"nested":[],"byName":{},"level":"LOW"}"""
-    }
+    /**
+     * A [Shape] left at its defaults but for [text] (already escaped as JSON), [ratio] and
+     * [optional] (a whole member, `"optional":"…",`), in the order Gson wrote a class's fields on a
+     * phone: sorted by name.
+     */
+    private fun shapeText(text: String, ratio: String = "0.0", optional: String = ""): String =
+        """{"big":0,"byName":{},"count":0,"flag":false,"level":"LOW","nested":[],""" + optional +
+            """"ratio":""" + ratio + ""","tags":[],"text":"""" + text + """"}"""
 }

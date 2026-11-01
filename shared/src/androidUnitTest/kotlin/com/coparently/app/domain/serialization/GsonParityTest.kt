@@ -46,6 +46,10 @@ import kotlin.test.assertEquals
  * character class Gson escapes or does not, nulls and defaults, empty and nested lists, the
  * doubles the brief names — both must write the same text, and [StoredJson] must read Gson's text
  * back to the value. The app's own models are covered by the app's `GsonParityTest`.
+ *
+ * "The same text" is Gson's text as it came out **on a phone**: a class's keys sorted by field
+ * name, because ART returns a class's fields in dex order ([ArtFieldOrder]). This JVM's Gson writes
+ * them in declaration order, which no phone ever stored, so its text is re-sorted before comparing.
  */
 class GsonParityTest {
 
@@ -184,7 +188,9 @@ class GsonParityTest {
 
     private fun <T> same(serializer: KSerializer<T>, value: T, gson: Gson) {
         val written = gson.toJson(value)
-        assertEquals(written, StoredJson.encode(serializer, value), "$value")
+        val onPhones = ArtFieldOrder.of(written, value)
+        assertEquals(onPhones, StoredJson.encode(serializer, value), "$value")
+        assertEquals(value, StoredJson.decode(serializer, onPhones), onPhones)
         assertEquals(value, StoredJson.decode(serializer, written), written)
     }
 

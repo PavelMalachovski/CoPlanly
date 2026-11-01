@@ -1486,15 +1486,20 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    **Every JSON text the app stores goes through `StoredJson`** (`domain/serialization/`, MON-24) —
    the Room columns that hold lists, maps and models, the event draft, the revision outbox, the
    school connection and the medical profile's map in `toFirestoreMap()`. It replaced Gson and
-   writes **byte for byte** what Gson wrote (HTML escaping, nulls left out, defaults written, the
-   JVM's `Double.toString` layout on every platform), and reads what Gson read: unknown keys, a
+   writes **byte for byte** what Gson wrote on a phone (HTML escaping, nulls left out, defaults
+   written, the JVM's `Double.toString` layout on every platform, and a class's keys **sorted by
+   field name** — `GsonFieldOrder`: ART returns a class's fields in dex order, which is by name, so
+   that is the order Gson wrote on every phone, while a JVM's declaration order never reached one),
+   and reads what Gson read: unknown keys, a
    quoted number, and a field Gson left at the JVM's default — a missing or null required property
    reads as 0, false or an empty text, list or map instead of a null in a non-null type. Two
    things not to undo. **The text is not kotlinx's own**: `GsonShapedText` prints it, because rows
    already on phones are compared whole (`mirrorIntoRoom`) and read by older builds. **Gson stays
-   the oracle in the tests**: `GsonParityTest` (the app's and the shared module's JVM tests) compares
-   every model, and every wire-fixture value that went through Gson, with Gson 2.11 configured as
-   each call site was, and `StoredJsonVectorsTest` pins Gson's output as literals so the iPhone's
+   the oracle in the tests**: `GsonDeviceParityTest` (androidTest, every emulator leg) compares each
+   model with Gson 2.11 on ART itself; `GsonParityTest` (the app's and the shared module's JVM tests)
+   compares every model, and every wire-fixture value that went through Gson, with Gson configured
+   as each call site was, its class keys re-sorted by name (`ArtFieldOrder`, because HotSpot's
+   order is not a phone's); and `StoredJsonVectorsTest` pins that output as literals so the iPhone's
    simulator is held to it too. A new stored model is `@Serializable`, gets a case in both and one
    in the R8 probe (`R8JsonProbe`), and its JSON never goes through anything but `StoredJson`.
    **A wire-format change arrives with its fixture diff** (September 2026) — how "a co-parent on the

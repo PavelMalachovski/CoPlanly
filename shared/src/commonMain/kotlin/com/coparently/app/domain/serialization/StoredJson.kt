@@ -18,7 +18,9 @@ import kotlinx.serialization.json.JsonNull
  * compares whole to decide whether to re-insert, and a co-parent's device that reads the same
  * document. So the text is not kotlinx's own; it is printed by [GsonShapedText] from the tree
  * kotlinx builds, the way Gson's `JsonWriter` printed it:
- * - compact, fields in declaration order, map entries in iteration order;
+ * - compact, a class's fields sorted by name — the order Gson wrote them in on Android, where
+ *   ART returns a class's fields in dex order, which is by name ([GsonFieldOrder]) — and map
+ *   entries in iteration order;
  * - every property written, defaults included, and a null property left out (a null in a list is
  *   written), unless [encodeValue] is asked to `serializeNulls` as the revision outbox's Gson was;
  * - Gson's HTML escaping (`<`, `>`, `&`, `=`, `'` as `\u003c` …), U+2028 and U+2029 escaped,
@@ -62,8 +64,10 @@ object StoredJson {
     }
 
     /** [value] as the JSON text Gson wrote for it. */
-    fun <T> encode(serializer: KSerializer<T>, value: T): String =
-        GsonShapedText.print(json.encodeToJsonElement(serializer, value), htmlSafe = true, serializeNulls = false)
+    fun <T> encode(serializer: KSerializer<T>, value: T): String {
+        val tree = GsonFieldOrder.apply(json.encodeToJsonElement(serializer, value), serializer.descriptor)
+        return GsonShapedText.print(tree, htmlSafe = true, serializeNulls = false)
+    }
 
     /**
      * [text] read as [serializer]'s type, as Gson read it.

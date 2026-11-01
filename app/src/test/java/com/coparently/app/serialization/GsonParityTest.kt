@@ -46,6 +46,9 @@ import kotlin.test.assertEquals
  * wire fixtures (`app/src/test/resources/wire/`) that went through Gson on its way into or out of
  * Room. The shared module's models have their own `GsonParityTest` there.
  *
+ * A class's keys are compared in the order Gson wrote them on a phone, sorted by name
+ * ([ArtFieldOrder]), not in this JVM's declaration order, which never reached a phone.
+ *
  * Each Gson is configured as its call site was: `provideGson()`'s lenient instance for the draft,
  * a plain `Gson()`, the child and pet repositories' with the `LocalDate` adapter
  * ([LegacyLocalDateJsonAdapter], verbatim), and the revision outbox's (`serializeNulls`,
@@ -83,7 +86,10 @@ class GsonParityTest {
             )
             val written = lenient.toJson(draft)
             assertEquals(plain.toJson(draft), written)
-            assertEquals(written, StoredJson.encode(EventDraft.serializer(), draft))
+            // As a phone wrote it: the fields sorted by name (ArtFieldOrder).
+            val onPhones = ArtFieldOrder.of(written, draft)
+            assertEquals(onPhones, StoredJson.encode(EventDraft.serializer(), draft))
+            assertEquals(draft, StoredJson.decodeOrNull(EventDraft.serializer(), onPhones))
             assertEquals(draft, StoredJson.decodeOrNull(EventDraft.serializer(), written))
         }
     }

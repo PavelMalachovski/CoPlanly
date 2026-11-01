@@ -534,6 +534,9 @@ dependencies {
     // MockK's 2.0.0 until main itself ships stdlib 2.3.
     testImplementation(kotlin("reflect"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    // `GsonDeviceParityTest`'s oracle: the Gson the app shipped until MON-24, on the device's ART,
+    // whose field order the stored bytes follow. Test APK only.
+    androidTestImplementation("com.google.code.gson:gson:2.11.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.10.00"))

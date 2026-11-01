@@ -57,9 +57,14 @@ class StoredLocalDateParityTest {
                 hereditaryConditions = profile.hereditaryConditions,
                 vaccinations = dates.mapIndexed { index, date -> LegacyVaccination("v$index", date) }
             )
-            assertEquals(legacy.toJson(twin), StoredJson.encode(MedicalProfile.serializer(), profile), "$dates")
+            // As the legacy Gson wrote them on a phone: a class's keys sorted by name (ArtFieldOrder).
             assertEquals(
-                legacy.toJson(twin.vaccinations),
+                ArtFieldOrder.of(legacy.toJson(twin), twin),
+                StoredJson.encode(MedicalProfile.serializer(), profile),
+                "$dates"
+            )
+            assertEquals(
+                ArtFieldOrder.of(legacy.toJson(twin.vaccinations), twin.vaccinations),
                 StoredJson.encode(ListSerializer(Vaccination.serializer()), profile.vaccinations),
                 "$dates"
             )
