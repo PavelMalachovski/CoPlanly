@@ -49,7 +49,7 @@ class FamilyKeyTest {
     }
 
     @Test
-    fun `a uid that names nobody is a caller bug, not an id`() {
+    fun `a uid that names nobody is a caller bug - not an id`() {
         assertFailsWith<IllegalArgumentException> { FamilyKey.of("", "uid-b") }
         assertFailsWith<IllegalArgumentException> { FamilyKey.of("uid-a", "   ") }
     }

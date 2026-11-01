@@ -37,7 +37,7 @@ class ProfessionalGrantPolicyTest {
     }
 
     @Test
-    fun `a grant ending now is already expired, like the rule's strict comparison`() {
+    fun `a grant ending now is already expired - like the rule's strict comparison`() {
         val both = mapOf("a" to 1L, "b" to 2L)
         assertFalse(ProfessionalGrantPolicy.isActive(grant(both, expiresAtMillis = now), now))
         assertEquals(
@@ -47,7 +47,7 @@ class ProfessionalGrantPolicyTest {
     }
 
     @Test
-    fun `a missing end is expired, never unlimited`() {
+    fun `a missing end is expired - never unlimited`() {
         assertTrue(ProfessionalGrantPolicy.isExpired(grant(mapOf("a" to 1L, "b" to 2L), 0L), now))
     }
 
@@ -57,7 +57,7 @@ class ProfessionalGrantPolicyTest {
     }
 
     @Test
-    fun `the status names whose consent is missing, from each side`() {
+    fun `the status names whose consent is missing - from each side`() {
         val onlyA = grant(mapOf("a" to 1L))
         assertEquals(ProfessionalGrantStatus.WAITING_FOR_YOU, ProfessionalGrantPolicy.statusFor(onlyA, "b", now))
         assertEquals(

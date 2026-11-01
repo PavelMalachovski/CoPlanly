@@ -23,7 +23,7 @@ import kotlin.test.assertFailsWith
 class WireTimeParsingTest {
 
     @Test
-    fun `the brief's inputs, as an event's updatedAt`() {
+    fun `the brief's inputs - as an event's updatedAt`() {
         assertEquals(ZERO_SECONDS, EventTimestamp.fromWire("2026-10-27T10:00"))
         assertEquals(ZERO_SECONDS, EventTimestamp.fromWire("2026-10-27T10:00:00.000"))
         // An offset is honoured: 10:00 at +02:00 is 08:00Z.
@@ -34,7 +34,7 @@ class WireTimeParsingTest {
     }
 
     @Test
-    fun `the brief's inputs, as a custody document's lastModifiedAt`() {
+    fun `the brief's inputs - as a custody document's lastModifiedAt`() {
         assertEquals(ZERO_SECONDS, CustodyTimestamp.fromWire("2026-10-27T10:00"))
         assertEquals(ZERO_SECONDS, CustodyTimestamp.fromWire("2026-10-27T10:00:00.000"))
         // The custody reader never took an offset: an offset is undated, not shifted.
@@ -95,7 +95,7 @@ class WireTimeParsingTest {
     }
 
     @Test
-    fun `a contact window's time reads two digits, a colon and two digits`() {
+    fun `a contact window's time reads two digits - a colon and two digits`() {
         assertEquals(LocalTime(10, 0), IsoText.parseHourMinute("10:00"))
         assertEquals(LocalTime(23, 59), IsoText.parseHourMinute("23:59"))
         // The pattern's smart resolver reads 24:00 as midnight.

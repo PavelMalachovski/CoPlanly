@@ -61,19 +61,19 @@ class OnboardingStateTest {
     }
 
     @Test
-    fun `a child but no name is still asked, because the name is the one required field`() {
+    fun `a child but no name is still asked - because the name is the one required field`() {
         assertTrue(OnboardingState.isNeeded(user(name = "  "), hasChildInfo = true))
     }
 
     @Test
-    fun `a null user is not asked, because there is nobody to ask`() {
+    fun `a null user is not asked - because there is nobody to ask`() {
         // Sign-out and cold-start races both land here. Showing a wizard to nobody would
         // strand the app on a screen with no account behind it.
         assertFalse(OnboardingState.isNeeded(null, hasChildInfo = false))
     }
 
     @Test
-    fun `a pet counts as evidence, so a pets-only family is not asked again`() {
+    fun `a pet counts as evidence - so a pets-only family is not asked again`() {
         // Counting children alone handed the questionnaire to a pets-only family on every
         // launch — and permanently, if the marker write ever failed, because such an account
         // can never satisfy "named and has a child".

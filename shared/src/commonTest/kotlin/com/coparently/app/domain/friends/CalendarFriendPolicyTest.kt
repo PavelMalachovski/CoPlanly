@@ -69,7 +69,7 @@ class CalendarFriendPolicyTest {
     }
 
     @Test
-    fun `the profile gate of two families names all four parents, each once, oldest first`() {
+    fun `the profile gate of two families names all four parents - each once - oldest first`() {
         // L-5: a grandmother admitted by two families is readable by both. A parent who is in
         // both families (the M-4 case) appears once.
         val first = grant(now + 1)

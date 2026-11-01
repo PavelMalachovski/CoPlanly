@@ -130,7 +130,7 @@ class DayOverrideTransitionTest {
     }
 
     @Test
-    fun `an answer keeps the earlier list, so a declined change leaves the agreement standing`() {
+    fun `an answer keeps the earlier list - so a declined change leaves the agreement standing`() {
         val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", dad, now).getOrThrow()
         val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, now, accept = true).getOrThrow()
         val change = DayOverrideTransition.offer(accepted, date, "mom", mom, "2026-08-30T09:00:00").getOrThrow()
@@ -153,7 +153,7 @@ class DayOverrideTransitionTest {
     }
 
     @Test
-    fun `the parent who offered can withdraw a pending offer, keeping its slot, group and earlier answers`() {
+    fun `the parent who offered can withdraw a pending offer - keeping its slot - group and earlier answers`() {
         val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", dad, now, groupId = "g1").getOrThrow()
         val accepted = DayOverrideTransition.decideGroup(offered, listOf(date), mom, now, accept = true).getOrThrow()
         val change = DayOverrideTransition
@@ -185,7 +185,7 @@ class DayOverrideTransitionTest {
     }
 
     @Test
-    fun `only the parent who offered may withdraw, and only while it waits`() {
+    fun `only the parent who offered may withdraw - and only while it waits`() {
         val offered = DayOverrideTransition.offer(emptyMap(), date, "dad", mom, now).getOrThrow()
         val accepted = DayOverrideTransition.accept(offered, date, dad, now).getOrThrow()
 

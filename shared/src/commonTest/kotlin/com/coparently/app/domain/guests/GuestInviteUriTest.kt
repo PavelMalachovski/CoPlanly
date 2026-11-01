@@ -25,7 +25,7 @@ class GuestInviteUriTest {
     }
 
     @Test
-    fun `a guest link is not a pairing link, and a pairing link is not a guest link`() {
+    fun `a guest link is not a pairing link - and a pairing link is not a guest link`() {
         // The whole reason the host differs. If either of these ever passes the other's
         // check, one kind of code is being redeemed through the wrong callable.
         assertTrue(GuestInviteUri.isGuestUri("coplanly", "guest"))

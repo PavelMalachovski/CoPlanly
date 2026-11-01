@@ -15,7 +15,7 @@ class IbanTest {
     }
 
     @Test
-    fun `a wrong check digit, a bad shape and nothing are refused`() {
+    fun `a wrong check digit - a bad shape and nothing are refused`() {
         listOf("CZ6508000000192000145398", "CZ65", "6508000000192000145399", "CZ65 0800 0000 1920 0014 539!", "", null)
             .forEach { assertNull(Iban.normalize(it), it.toString()) }
     }

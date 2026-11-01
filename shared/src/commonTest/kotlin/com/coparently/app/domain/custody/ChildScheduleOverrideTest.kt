@@ -27,7 +27,7 @@ class ChildScheduleOverrideTest {
     // ---- the wire form ------------------------------------------------------
 
     @Test
-    fun `an override round-trips through its wire string, windows included`() {
+    fun `an override round-trips through its wire string - windows included`() {
         val override = ChildScheduleOverride(
             childId = "teen-1",
             patternDays = 14,
@@ -43,7 +43,7 @@ class ChildScheduleOverrideTest {
     }
 
     @Test
-    fun `the canonical list is sorted, de-duplicated and keeps unreadable entries verbatim`() {
+    fun `the canonical list is sorted - de-duplicated and keeps unreadable entries verbatim`() {
         val decoded = ChildOverrideCodec.decodeAll(listOf(TEEN, "C2;from-the-future", BABY, TEEN, 42))
 
         assertEquals(listOf("baby-1", "teen-1"), decoded.overrides.map { it.childId })
@@ -55,7 +55,7 @@ class ChildScheduleOverrideTest {
     }
 
     @Test
-    fun `a second entry for the same child is kept, not read`() {
+    fun `a second entry for the same child is kept - not read`() {
         val other = "C1;child:baby-1;2026-09-07;1;;"
         val decoded = ChildOverrideCodec.decodeAll(listOf(BABY, other))
 
@@ -65,7 +65,7 @@ class ChildScheduleOverrideTest {
     }
 
     @Test
-    fun `entries that are not a readable child override are unreadable, never guessed`() {
+    fun `entries that are not a readable child override are unreadable - never guessed`() {
         listOf(
             "C2;child:baby-1;2026-09-07;1;0;",
             "C1;pet:rex;2026-09-07;1;0;",
@@ -84,7 +84,7 @@ class ChildScheduleOverrideTest {
     }
 
     @Test
-    fun `a null or empty list is no overrides, and none encodes as an empty list`() {
+    fun `a null or empty list is no overrides - and none encodes as an empty list`() {
         assertEquals(DecodedChildOverrides(), ChildOverrideCodec.decodeAll(null))
         assertEquals(emptyList<String>(), ChildOverrideCodec.encodeAll(emptyList()))
     }
@@ -102,7 +102,7 @@ class ChildScheduleOverrideTest {
     // ---- resolution ---------------------------------------------------------
 
     @Test
-    fun `an override answers alone on every date, before its anchor too`() {
+    fun `an override answers alone on every date - before its anchor too`() {
         val baby = requireNotNull(ChildOverrideCodec.decode(BABY))
         listOf("2026-09-07", "2026-09-14", "2026-08-31", "2027-01-01").forEach {
             assertEquals("mom", baby.custodyFor(date(it)), it)
@@ -179,7 +179,7 @@ class ChildScheduleOverrideTest {
     }
 
     @Test
-    fun `it appears at two children and one override, never at one`() {
+    fun `it appears at two children and one override - never at one`() {
         val overrides = ChildOverrideCodec.decodeAll(listOf(BABY)).overrides
         val day = date("2026-09-14")
 

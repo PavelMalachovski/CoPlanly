@@ -72,7 +72,7 @@ class RequestDeadlineIdTest {
     )
 
     @Test
-    fun `the id carries the kind and the proposer, and a proposal its family`() {
+    fun `the id carries the kind and the proposer - and a proposal its family`() {
         assertEquals("swap_uA_g-1", RequestDeadlineId.of(RequestKind.SWAP, "uA", "g-1", family))
         assertEquals("change_uA_cr-1", RequestDeadlineId.of(RequestKind.CHANGE, "uA", "cr-1", family))
         assertEquals("event_uA_ev-1", RequestDeadlineId.of(RequestKind.EVENT, "uA", "ev-1", family))
@@ -87,7 +87,7 @@ class RequestDeadlineIdTest {
     }
 
     @Test
-    fun `an expense split's clock is named by its proposer, its family and its time in millis`() {
+    fun `an expense split's clock is named by its proposer - its family and its time in millis`() {
         // A split's time is unique only within one family's `family_settings` document, so its id
         // carries the family, as a custody proposal's does.
         val split = SplitRatioProposal(
@@ -136,7 +136,7 @@ class RequestDeadlineIdTest {
     }
 
     @Test
-    fun `a wire name reads back as its kind, and a name this build does not know as nothing`() {
+    fun `a wire name reads back as its kind - and a name this build does not know as nothing`() {
         // These strings are stored in the clock and rebuilt by the rules: they are a wire format.
         assertEquals(
             listOf("swap", "change", "event", "proposal", "split"),

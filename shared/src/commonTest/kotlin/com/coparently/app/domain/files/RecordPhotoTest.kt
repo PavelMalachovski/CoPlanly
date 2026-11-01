@@ -20,7 +20,7 @@ class RecordPhotoTest {
     private val soloPhoto = RecordPhoto(soloPath, "image/jpeg", 1024, SHA)
 
     @Test
-    fun `a path names the family, or the uploader before there is one`() {
+    fun `a path names the family - or the uploader before there is one`() {
         assertEquals("pet_photos/alice__bob/pet-1/a.jpg", familyPath)
         assertEquals("pet_photos/solo_alice/pet-1/a.jpg", soloPath)
         assertEquals("medical_photos", RecordPhotoKind.MEDICAL.prefix)
@@ -53,7 +53,7 @@ class RecordPhotoTest {
     }
 
     @Test
-    fun `a malformed reference is dropped, not guessed at`() {
+    fun `a malformed reference is dropped - not guessed at`() {
         val cases = listOf(
             "ph1|pet_photos/alice__bob/pet-1/a.jpg|image/jpeg|x|$SHA",
             "ph1|pet_photos/alice__bob/pet-1/a.jpg|application/pdf|10|$SHA",
@@ -71,7 +71,7 @@ class RecordPhotoTest {
     }
 
     @Test
-    fun `either parent reads a family path, nobody else does`() {
+    fun `either parent reads a family path - nobody else does`() {
         assertTrue(RecordPhotoPaths.mayRead(familyPath, ALICE))
         assertTrue(RecordPhotoPaths.mayRead(familyPath, BOB))
         assertFalse(RecordPhotoPaths.mayRead(familyPath, GUEST))
@@ -86,7 +86,7 @@ class RecordPhotoTest {
     }
 
     @Test
-    fun `a guest, a friend or a professional sees the record without its photo`() {
+    fun `a guest - a friend or a professional sees the record without its photo`() {
         val reference = RecordPhotoCodec.encode(familyPhoto)
         assertNull(RecordPhotoAccess.viewable(reference, RecordPhotoKind.PET, "pet-1", FAMILY, GUEST))
         assertNull(RecordPhotoAccess.viewable(reference, RecordPhotoKind.PET, "pet-1", FAMILY, null))
@@ -97,7 +97,7 @@ class RecordPhotoTest {
     }
 
     @Test
-    fun `a photo is only followed under its own record, kind and family`() {
+    fun `a photo is only followed under its own record - kind and family`() {
         val reference = RecordPhotoCodec.encode(familyPhoto)
         assertNull(RecordPhotoAccess.viewable(reference, RecordPhotoKind.PET, "pet-2", FAMILY, ALICE))
         assertNull(RecordPhotoAccess.viewable(reference, RecordPhotoKind.MEDICAL, "pet-1", FAMILY, ALICE))
@@ -186,7 +186,7 @@ class RecordPhotoTest {
     }
 
     @Test
-    fun `a record being created goes to the family on screen, the family it is created in`() {
+    fun `a record being created goes to the family on screen - the family it is created in`() {
         assertEquals(
             "alice__carol",
             RecordPhotoPaths.uploadFamily(null, storedRecord = false, ALICE, listOf(BOB, CAROL), CAROL)

@@ -32,7 +32,7 @@ class AnswerByTest {
     private fun date(month: Int, day: Int): LocalDate = LocalDate(2026, month, day)
 
     @Test
-    fun `with no cap the presets are tomorrow, three days and a week, rounded up to the quarter hour`() {
+    fun `with no cap the presets are tomorrow - three days and a week - rounded up to the quarter hour`() {
         val offer = AnswerBy.offer(NOW, null, ZONE)
 
         assertEquals(AnswerByBand.CHOICES, offer.band)
@@ -128,7 +128,7 @@ class AnswerByTest {
     }
 
     @Test
-    fun `between two and forty-eight hours there is one deadline halfway, rounded down`() {
+    fun `between two and forty-eight hours there is one deadline halfway - rounded down`() {
         val cap = at("2026-10-11T08:00")
         val offer = AnswerBy.offer(NOW, cap, ZONE)
 
@@ -182,7 +182,7 @@ class AnswerByTest {
     }
 
     @Test
-    fun `a picked date too near falls back to tomorrow, and nothing is further than 30 days`() {
+    fun `a picked date too near falls back to tomorrow - and nothing is further than 30 days`() {
         // Too near: its evening is less than two hours away. At 19:00 today's 20:00 is one, so the pick
         // reads the Tomorrow time instead; so does a date that has gone by.
         val sevenPm = at("2026-10-10T19:00")

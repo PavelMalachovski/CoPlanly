@@ -47,13 +47,13 @@ class ToneCheckTest {
     // ---- punctuation ------------------------------------------------------
 
     @Test
-    fun `three marks in a row are flagged, mixed or not`() {
+    fun `three marks in a row are flagged - mixed or not`() {
         assertTrue(ToneCheck.check("Really!!!", words).raisedPunctuation)
         assertTrue(ToneCheck.check("What?!?", words).raisedPunctuation)
     }
 
     @Test
-    fun `two marks, or marks apart, are not`() {
+    fun `two marks - or marks apart - are not`() {
         assertFalse(ToneCheck.check("Thanks!!", words).raisedPunctuation)
         assertFalse(ToneCheck.check("Really? Yes! Ok?", words).raisedPunctuation)
     }
@@ -61,7 +61,7 @@ class ToneCheckTest {
     // ---- the word list ----------------------------------------------------
 
     @Test
-    fun `listed words are reported as typed, in order`() {
+    fun `listed words are reported as typed - in order`() {
         val nudge = ToneCheck.check("You ALWAYS do this, never again", words)
 
         assertEquals(listOf("ALWAYS", "never"), nudge.words)

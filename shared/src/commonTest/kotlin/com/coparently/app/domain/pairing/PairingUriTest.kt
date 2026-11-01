@@ -71,7 +71,7 @@ class PairingUriTest {
     }
 
     @Test
-    fun `extractCode reads the web form, with or without a trailing slash`() {
+    fun `extractCode reads the web form - with or without a trailing slash`() {
         assertEquals("4F7K2M", PairingUri.extractCode("https://coparently-a39c9.web.app/pair/4F7K2M"))
         assertEquals("4F7K2M", PairingUri.extractCode("https://coparently-a39c9.web.app/pair/4f7k2m/"))
     }

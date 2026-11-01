@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class ContactDirectoryTest {
 
     @Test
-    fun `the list is the children's own emergency contacts, one group each`() {
+    fun `the list is the children's own emergency contacts - one group each`() {
         val groups = ContactDirectory.of(
             listOf(
                 child("c1", "Mia", contact("Nina", "Grandmother", "+420111")),
@@ -125,7 +125,7 @@ class ContactDirectoryTest {
     )
 
     @Test
-    fun `a pet's vet is a contact, so a pets-only family's emergency screen is not empty`() {
+    fun `a pet's vet is a contact - so a pets-only family's emergency screen is not empty`() {
         val groups = ContactDirectory.of(
             children = emptyList(),
             pets = listOf(pet(vetName = "Dr Novak", vetPhone = "+420 111"))
@@ -140,7 +140,7 @@ class ContactDirectoryTest {
     }
 
     @Test
-    fun `a pet with no vet number is left out, like a child with no contacts`() {
+    fun `a pet with no vet number is left out - like a child with no contacts`() {
         val groups = ContactDirectory.of(
             children = emptyList(),
             pets = listOf(pet(vetName = "Dr Novak", vetPhone = null))

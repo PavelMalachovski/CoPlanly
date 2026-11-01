@@ -46,7 +46,7 @@ class AwaitingAnswersTest {
         }
 
     @Test
-    fun `a swap offered for several days counts once, as the inbox shows one card`() {
+    fun `a swap offered for several days counts once - as the inbox shows one card`() {
         val week = (1..3).associate { day ->
             LocalDate(2026, 10, day).toString() to swap(groupId = "g1")
         }
@@ -66,7 +66,7 @@ class AwaitingAnswersTest {
     }
 
     @Test
-    fun `an event waits for an answer only while pending, and never from its creator`() {
+    fun `an event waits for an answer only while pending - and never from its creator`() {
         // The rule a chat card about an event routes by too: the inbox opens for exactly the
         // events this count includes, and an event outside it opens as a preview.
         fun awaits(candidate: Event, uid: String = me) = AwaitingAnswers.eventAwaitsAnswerFrom(candidate, uid)

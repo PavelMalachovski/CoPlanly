@@ -60,7 +60,7 @@ class CustodyPatternDiffTest {
     }
 
     @Test
-    fun `moving one weekend reports one day per weekend day, not the whole cycle`() {
+    fun `moving one weekend reports one day per weekend day - not the whole cycle`() {
         val agreed = model((0..13).toSet() - setOf(5, 6))
         val proposed = model((0..13).toSet() - setOf(5, 6, 12, 13))
 
@@ -73,7 +73,7 @@ class CustodyPatternDiffTest {
     }
 
     @Test
-    fun `a proposal that assigns the same days is identical, not an empty change list`() {
+    fun `a proposal that assigns the same days is identical - not an empty change list`() {
         val agreed = model((0..6).toSet())
         // Same schedule expressed a cycle later: every day still lands on the same parent.
         val proposed = model((0..6).toSet(), start = monday.plus(14, DateTimeUnit.DAY))
@@ -86,7 +86,7 @@ class CustodyPatternDiffTest {
     }
 
     @Test
-    fun `no agreed pattern is not comparable, so the screen falls back rather than guessing`() {
+    fun `no agreed pattern is not comparable - so the screen falls back rather than guessing`() {
         val diff = CustodyPatternDiff.of(null, model((0..6).toSet()), monday)
 
         assertFalse(diff.comparable)
@@ -94,7 +94,7 @@ class CustodyPatternDiffTest {
     }
 
     @Test
-    fun `a cycle length off an unvalidated document is refused, never silently equal`() {
+    fun `a cycle length off an unvalidated document is refused - never silently equal`() {
         val agreed = model((0..6).toSet())
         val nonsense = model(setOf(0), days = 0)
 

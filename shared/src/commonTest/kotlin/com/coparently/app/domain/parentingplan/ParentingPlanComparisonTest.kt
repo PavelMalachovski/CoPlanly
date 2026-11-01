@@ -124,7 +124,7 @@ class ParentingPlanComparisonTest {
     }
 
     @Test
-    fun `answers are trimmed, and agreement compares the trimmed text`() {
+    fun `answers are trimmed - and agreement compares the trimmed text`() {
         val theirs = ParentingPlanEntry().withAnswer(question, "  Weeks  ", now)
         val yours = mine("Weeks").withAgreement(question, "Weeks", now)
         val bothAgreed = theirs.withAgreement(question, "Weeks", now)

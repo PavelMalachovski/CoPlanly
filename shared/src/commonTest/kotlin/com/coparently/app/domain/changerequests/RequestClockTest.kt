@@ -78,7 +78,7 @@ class RequestClockTest {
     }
 
     @Test
-    fun `a last chance runs to its end, and the button never comes back`() {
+    fun `a last chance runs to its end - and the button never comes back`() {
         val c = clock(lastChanceAt = T0 + H, until = T0 + 25 * H)
         assertEquals(ClockState.LAST_CHANCE, RequestClock.stateOf(c, T0 + 2 * H))
         assertNull(RequestClock.lastChanceWindowMillis(c, T0 + 2 * H))

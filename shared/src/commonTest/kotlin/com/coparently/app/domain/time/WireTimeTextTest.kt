@@ -59,7 +59,7 @@ class WireTimeTextTest {
     }
 
     @Test
-    fun `a toString-shaped date-time drops zero seconds and prints three, six or nine digits`() {
+    fun `a toString-shaped date-time drops zero seconds and prints three - six or nine digits`() {
         assertEquals("2026-10-27T10:00", IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0)))
         assertEquals("2026-10-27T10:00:07", IsoText.dateTimeShortest(LocalDateTime(2026, 10, 27, 10, 0, 7)))
         assertEquals(
@@ -91,7 +91,7 @@ class WireTimeTextTest {
     }
 
     @Test
-    fun `a contact window's time is hours and minutes, seconds dropped`() {
+    fun `a contact window's time is hours and minutes - seconds dropped`() {
         assertEquals("10:00", IsoText.hourMinute(LocalTime(10, 0)))
         assertEquals("10:00", IsoText.hourMinute(LocalTime(10, 0, 7)))
         assertEquals("10:00", IsoText.hourMinute(LocalTime(10, 0, 7, 123_000_000)))
@@ -109,7 +109,7 @@ class WireTimeTextTest {
     }
 
     @Test
-    fun `a history layer's id date is the basic ISO date, four-digit years only`() {
+    fun `a history layer's id date is the basic ISO date - four-digit years only`() {
         assertEquals("20261027", IsoText.basicDate(LocalDate(2026, 10, 27)))
         assertEquals("20260329", IsoText.basicDate(LocalDate(2026, 3, 29)))
         assertEquals("00000101", IsoText.basicDate(LocalDate(0, 1, 1)))
@@ -127,14 +127,14 @@ class WireTimeTextTest {
     }
 
     @Test
-    fun `the record's year is the year of era, as the yyyy pattern prints it`() {
+    fun `the record's year is the year of era - as the yyyy pattern prints it`() {
         assertEquals("+10000-01-01 00:00", RecordTimeText.wallClock(LocalDateTime(10_000, 1, 1, 0, 0)))
         assertEquals("0006-01-01 00:00", RecordTimeText.wallClock(LocalDateTime(-5, 1, 1, 0, 0)))
         assertEquals("0001-01-01 00:00", RecordTimeText.wallClock(LocalDateTime(0, 1, 1, 0, 0)))
     }
 
     @Test
-    fun `the record prints an instant with its offset, and plus zero rather than Z`() {
+    fun `the record prints an instant with its offset - and plus zero rather than Z`() {
         val utc = TimeZone.UTC
         assertEquals("2026-10-27 10:00:00 +00:00", RecordTimeText.instant(ZERO_SECONDS, utc))
         assertEquals("2026-10-27 10:00:07 +00:00", RecordTimeText.instant(SECONDS, utc))
@@ -163,7 +163,7 @@ class WireTimeTextTest {
     }
 
     @Test
-    fun `the record's offset drops seconds, and a sub-minute offset prints as plus zero`() {
+    fun `the record's offset drops seconds - and a sub-minute offset prints as plus zero`() {
         // Only a local mean time before 1900 has such offsets, and `xxx` printed them this way.
         assertEquals(
             "2026-10-27 09:59:30 +00:00",

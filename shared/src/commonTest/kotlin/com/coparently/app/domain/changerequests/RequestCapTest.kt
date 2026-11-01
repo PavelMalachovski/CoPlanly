@@ -80,7 +80,7 @@ class RequestCapTest {
     }
 
     @Test
-    fun `a proposal that starts later is capped at its start, not at a day it would never repaint`() {
+    fun `a proposal that starts later is capped at its start - not at a day it would never repaint`() {
         // From 1 December, Bob every day. Accepted now it decides from 1 December on, so before
         // then nothing moves however the pattern would repeat backwards.
         val fromDecember = CustodyModel.custom("proposed", date(12, 1), 1, emptySet())
@@ -88,7 +88,7 @@ class RequestCapTest {
     }
 
     @Test
-    fun `a proposal's cap is the first day anything changes, today or later`() {
+    fun `a proposal's cap is the first day anything changes - today or later`() {
         // No agreed schedule to change, and a copy of it: nothing would change.
         assertNull(RequestCap.forProposal(null, agreed, TODAY, ZONE))
         assertNull(RequestCap.forProposal(agreed, agreed.copy(id = "proposed"), TODAY, ZONE))

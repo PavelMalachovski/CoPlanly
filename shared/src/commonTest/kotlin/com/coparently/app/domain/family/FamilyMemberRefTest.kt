@@ -87,7 +87,7 @@ class FamilyMemberRefTest {
     }
 
     @Test
-    fun `an unset record names nobody, so it matches no chip`() {
+    fun `an unset record names nobody - so it matches no chip`() {
         // Every record written before this type holds an empty list. If "unset" matched every
         // member, every chip would show the same untagged pile and the filter would say nothing.
         val unset = emptyList<FamilyMemberRef>()
@@ -104,7 +104,7 @@ class FamilyMemberRefTest {
     }
 
     @Test
-    fun `the legacy childId converts, and a blank one converts to nothing`() {
+    fun `the legacy childId converts - and a blank one converts to nothing`() {
         assertEquals(listOf(Child("c1")), FamilyMemberRef.fromLegacyChildId("c1"))
         assertEquals(emptyList(), FamilyMemberRef.fromLegacyChildId(null))
         assertEquals(emptyList(), FamilyMemberRef.fromLegacyChildId(""))

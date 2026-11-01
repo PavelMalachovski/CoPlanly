@@ -66,14 +66,14 @@ class CustodyResolverTest {
     }
 
     @Test
-    fun `a pending override changes nothing, because nobody has agreed to it`() {
+    fun `a pending override changes nothing - because nobody has agreed to it`() {
         val overrides = mapOf(momDay.toString() to override("dad", DayOverrideStatus.PENDING))
 
         assertEquals("mom", custodyFor(overrides)(momDay))
     }
 
     @Test
-    fun `an agreed swap stands while a change to it waits, and after the change is declined`() {
+    fun `an agreed swap stands while a change to it waits - and after the change is declined`() {
         val answer = DayOverrideDecisionCodec.answerOf(override("dad", DayOverrideStatus.ACCEPTED))
         val waiting = override("mom", DayOverrideStatus.PENDING).copy(earlier = listOf(answer))
         val declined = override("mom", DayOverrideStatus.DECLINED).copy(earlier = listOf(answer))
@@ -128,7 +128,7 @@ class CustodyResolverTest {
     }
 
     @Test
-    fun `an unanswered day is not a handover, it is an unknown`() {
+    fun `an unanswered day is not a handover - it is an unknown`() {
         assertFalse(
             CustodyResolver.isHandoverDay(custodyFor(activeModel = null), momDay)
         )

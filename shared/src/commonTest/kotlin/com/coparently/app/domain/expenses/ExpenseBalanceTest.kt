@@ -218,7 +218,7 @@ class ExpenseBalanceTest {
     // ---- the agreed split ------------------------------------------------------
 
     @Test
-    fun `an expense priced at an agreed split owes that share, not half`() {
+    fun `an expense priced at an agreed split owes that share - not half`() {
         // 70/30 means slot 1 owes 70 of a 100 they did not pay for.
         val balance = calculateExpenseBalance(
             expenses = listOf(expense("school", 100.0, dad, splitBasisPoints = 7000)),
@@ -230,7 +230,7 @@ class ExpenseBalanceTest {
     }
 
     @Test
-    fun `the payer's own share is netted off, so they are owed only the rest`() {
+    fun `the payer's own share is netted off - so they are owed only the rest`() {
         val balance = calculateExpenseBalance(
             expenses = listOf(expense("school", 100.0, dad, splitBasisPoints = 7000)),
             currentUserId = dad,
@@ -268,7 +268,7 @@ class ExpenseBalanceTest {
     }
 
     @Test
-    fun `a ratio on a row naming one person is ignored, so it stays a claim on nobody`() {
+    fun `a ratio on a row naming one person is ignored - so it stays a claim on nobody`() {
         // The shape every expense had before the co-parent was resolved on the save path, and
         // the shape an unpaired account still produces: shared, stamped with a ratio, and split
         // with the payer alone. Once the account pairs, both slots become known — and applying

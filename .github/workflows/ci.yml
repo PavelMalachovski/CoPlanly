@@ -1844,8 +1844,10 @@ jobs:
   # `compileKotlinIosSimulatorArm64` builds the iOS klib on Linux. Kotlin has done that without a
   # flag since 2.2.20 ("stable cross-platform compilation"), so a common-code change that does not
   # compile for iOS — a `java.*` import in commonMain, say — fails here on every pull request,
-  # whether or not the Mac is online. Linking the framework and running the tests on a simulator
-  # need Xcode: that is `shared-ios` below.
+  # whether or not the Mac is online. `compileTestKotlinIosSimulatorArm64` does the same for
+  # commonTest: Kotlin/Native refuses names the JVM accepts (a comma or parentheses in a backticked
+  # test name), and the JVM run above never sees it. Linking the framework and running the tests
+  # on a simulator need Xcode: that is `shared-ios` below.
   shared:
     name: Shared — JVM tests and iOS compile
     needs: changes
@@ -1878,7 +1880,7 @@ jobs:
           key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts') }}
 
       - name: Shared tests (JVM) and the iOS compile
-        run: ./gradlew :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64
+        run: ./gradlew :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()

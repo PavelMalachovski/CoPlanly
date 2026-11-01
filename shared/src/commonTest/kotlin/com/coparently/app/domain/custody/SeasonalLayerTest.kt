@@ -36,7 +36,7 @@ class SeasonalLayerTest {
     // ---- the wire form ------------------------------------------------------
 
     @Test
-    fun `a layer round-trips through its wire string, name and windows included`() {
+    fun `a layer round-trips through its wire string - name and windows included`() {
         val layer = SeasonalLayer(
             id = "summer-26",
             name = "Letní; 50/50, léto",
@@ -55,7 +55,7 @@ class SeasonalLayerTest {
     }
 
     @Test
-    fun `a name is written as the Android build wrote it, an unpaired surrogate included`() {
+    fun `a name is written as the Android build wrote it - an unpaired surrogate included`() {
         fun nameWire(name: String) = SeasonalLayerCodec.encode(
             SeasonalLayer("s", name, date("2026-07-01"), date("2026-07-31"), 1, setOf(0))
         ).substringAfterLast(';')
@@ -82,7 +82,7 @@ class SeasonalLayerTest {
     }
 
     @Test
-    fun `the canonical list is sorted, de-duplicated and keeps unreadable entries verbatim`() {
+    fun `the canonical list is sorted - de-duplicated and keeps unreadable entries verbatim`() {
         val decoded = decoded(CHRISTMAS_DAD, "L2;from-the-future", JULY_MUM_AUGUST_DAD, CHRISTMAS_DAD)
 
         assertEquals(2, decoded.layers.size)
@@ -113,7 +113,7 @@ class SeasonalLayerTest {
     // ---- resolution (the calendar feed's fixtures) --------------------------
 
     @Test
-    fun `a layer replaces the base pattern inside its dates, and only there`() {
+    fun `a layer replaces the base pattern inside its dates - and only there`() {
         val model = withLayers(JULY_MUM_AUGUST_DAD)
 
         assertEquals("mom", model.getCustodyFor(date("2026-07-06")))
@@ -127,7 +127,7 @@ class SeasonalLayerTest {
     }
 
     @Test
-    fun `overlapping layers resolve by priority, then the later start`() {
+    fun `overlapping layers resolve by priority - then the later start`() {
         val model = withLayers(WINTER_MUM, CHRISTMAS_DAD)
 
         assertEquals("mom", model.getCustodyFor(date("2026-12-23")))

@@ -29,7 +29,7 @@ class CustodyHistoryTest {
     private fun day(month: Int, dayOfMonth: Int, year: Int = 2026) = LocalDate(year, month, dayOfMonth)
 
     @Test
-    fun `accepted after its start date, the new schedule starts on the acceptance day`() {
+    fun `accepted after its start date - the new schedule starts on the acceptance day`() {
         val incoming = new(day(10, 1))
         val frozen = CustodyHistory.freeze(old, incoming, acceptedOn = day(10, 10))
 
@@ -41,7 +41,7 @@ class CustodyHistoryTest {
     }
 
     @Test
-    fun `accepted before its start date, the old schedule runs to the day before it`() {
+    fun `accepted before its start date - the old schedule runs to the day before it`() {
         val incoming = new(day(11, 1))
         val frozen = CustodyHistory.freeze(old, incoming, acceptedOn = day(10, 10))
 
@@ -160,7 +160,7 @@ class CustodyHistoryTest {
     }
 
     @Test
-    fun `the layer budget drops the oldest history, never a real layer`() {
+    fun `the layer budget drops the oldest history - never a real layer`() {
         val reals = (1..30).map { d ->
             SeasonalLayer.allWith("real-$d", "Day $d", day(1, d, 2027)..day(1, d, 2027), ContactWindow.SLOT_ONE)
         }

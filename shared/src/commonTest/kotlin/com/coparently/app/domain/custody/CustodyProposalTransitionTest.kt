@@ -92,7 +92,7 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
-    fun `a proposal carries its contact windows, and accepting makes them the agreed ones`() {
+    fun `a proposal carries its contact windows - and accepting makes them the agreed ones`() {
         // MON-6b. A proposal always says what the windows become, "none" included, so a
         // co-parent's build can tell it from a proposal an older build wrote without the key.
         val window = ContactWindow(2, LocalTime(15, 0), LocalTime(19, 0), DAD_SLOT)
@@ -177,7 +177,7 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
-    fun `past its deadline the answering parent may still decline, and is no longer blocked`() {
+    fun `past its deadline the answering parent may still decline - and is no longer blocked`() {
         // Phase 3a, final review I-2: past the deadline the inbox offers Decline alone. The
         // transition knows nothing of the clock, and must not start to: until the proposer's phone
         // withdraws the proposal, it refuses every schedule change the answering parent makes.
@@ -218,7 +218,7 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
-    fun `only the proposer may withdraw, and withdrawing records no decision`() {
+    fun `only the proposer may withdraw - and withdrawing records no decision`() {
         val pending = CustodyProposalTransition
             .propose(current, wanted, true, DAD, NOW).getOrThrow()
 
@@ -230,7 +230,7 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
-    fun `a proposal carries the plan citation it was given, and none by default`() {
+    fun `a proposal carries the plan citation it was given - and none by default`() {
         val cited = CustodyProposalTransition
             .propose(current, wanted, true, DAD, NOW, planCitation = CITATION).getOrThrow()
         val plain = CustodyProposalTransition.propose(current, wanted, true, DAD, NOW).getOrThrow()
@@ -272,7 +272,7 @@ class CustodyProposalTransitionTest {
     }
 
     @Test
-    fun `deciding when nothing is pending is a failure, not a no-op`() {
+    fun `deciding when nothing is pending is a failure - not a no-op`() {
         assertTrue(CustodyProposalTransition.accept(current, MOM, NOW, NOW_MILLIS, ACCEPTED_ON).isFailure)
         assertTrue(CustodyProposalTransition.decline(current, MOM, NOW, null).isFailure)
         assertTrue(CustodyProposalTransition.withdraw(current, MOM).isFailure)

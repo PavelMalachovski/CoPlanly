@@ -26,7 +26,7 @@ class HomeWeekTest {
     private val now: LocalDateTime = LocalDateTime(2026, 8, 21, 14, 0)
 
     @Test
-    fun `the window is seven days from today, not the calendar week`() {
+    fun `the window is seven days from today - not the calendar week`() {
         // 21 August 2026 is a Friday. A Monday-to-Sunday week would end in two days; this one
         // has to reach the following Thursday, because that is what "the next seven days" means
         // to a parent opening the app on a Friday.
@@ -45,7 +45,7 @@ class HomeWeekTest {
     }
 
     @Test
-    fun `an event that already started today is behind the parent, not ahead of them`() {
+    fun `an event that already started today is behind the parent - not ahead of them`() {
         val entries = HomeWeek.of(
             events = listOf(
                 event("this-morning", now.minus(3, DateTimeUnit.HOUR)),
@@ -107,7 +107,7 @@ class HomeWeekTest {
     }
 
     @Test
-    fun `each row carries the parent whose day it falls on, not the event's owner`() {
+    fun `each row carries the parent whose day it falls on - not the event's owner`() {
         val tuesday = LocalDate(2026, 8, 25)
         val entries = HomeWeek.of(
             // The event belongs to slot 2, but it falls on a day slot 1 has the child.
@@ -151,7 +151,7 @@ class HomeWeekTest {
     }
 
     @Test
-    fun `today's agenda covers the whole day, past events included`() {
+    fun `today's agenda covers the whole day - past events included`() {
         // Unlike the week, whose window opens at now: the today card answers "what is today",
         // and a 9:00 appointment does not stop having happened at 9:05.
         val agenda = HomeWeek.todayOf(

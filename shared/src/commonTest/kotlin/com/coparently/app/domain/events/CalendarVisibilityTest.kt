@@ -39,14 +39,14 @@ class CalendarVisibilityTest {
     }
 
     @Test
-    fun `a pending event is not drawn, because nobody has agreed to it`() {
+    fun `a pending event is not drawn - because nobody has agreed to it`() {
         val events = listOf(event("pending", EventAcceptance.PENDING))
 
         assertEquals(emptyList(), CalendarVisibility.visible(events))
     }
 
     @Test
-    fun `a declined event is not drawn either, or no would look like yes`() {
+    fun `a declined event is not drawn either - or no would look like yes`() {
         val events = listOf(event("declined", EventAcceptance.DECLINED))
 
         assertEquals(emptyList(), CalendarVisibility.visible(events))

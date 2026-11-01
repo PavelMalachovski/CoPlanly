@@ -35,7 +35,7 @@ class ActivityAnnouncementTest {
     }
 
     @Test
-    fun `an absent optional is omitted, not written as an empty string`() {
+    fun `an absent optional is omitted - not written as an empty string`() {
         val map = announcement.copy(whenIso = null).toMap()
 
         assertEquals(setOf("kind", "entityType", "entityId", "title"), map.keys)
@@ -75,7 +75,7 @@ class ActivityAnnouncementTest {
     }
 
     @Test
-    fun `a blank title is tolerated, because an untitled entity is still worth announcing`() {
+    fun `a blank title is tolerated - because an untitled entity is still worth announcing`() {
         val map = announcement.toMap().toMutableMap().apply { put("title", "") }
 
         assertEquals("", ActivityAnnouncement.fromMap(map)?.title)

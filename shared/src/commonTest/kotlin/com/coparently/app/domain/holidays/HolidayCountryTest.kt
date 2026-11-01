@@ -33,7 +33,7 @@ class HolidayCountryTest {
     }
 
     @Test
-    fun `a strict lookup names only a country with a table, and never falls back`() {
+    fun `a strict lookup names only a country with a table - and never falls back`() {
         // A device region is a guess to offer, not a stored answer: "US" must not become Czechia.
         assertEquals(HolidayCountry.GERMANY, HolidayCountry.ofCodeOrNull("de"))
         assertNull(HolidayCountry.ofCodeOrNull("US"))

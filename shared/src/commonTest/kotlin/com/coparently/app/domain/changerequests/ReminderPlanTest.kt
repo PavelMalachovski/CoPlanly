@@ -37,7 +37,7 @@ private const val MINUTE = 60_000L
 class ReminderPlanTest {
 
     @Test
-    fun `a day or more gets three, at a third, two thirds and two hours before`() {
+    fun `a day or more gets three - at a third - two thirds and two hours before`() {
         val sent = at("2026-10-10T10:00")
         val answerBy = at("2026-10-13T10:00")
 
@@ -48,7 +48,7 @@ class ReminderPlanTest {
     }
 
     @Test
-    fun `six to twenty-four hours gets two, at the midpoint and an hour before`() {
+    fun `six to twenty-four hours gets two - at the midpoint and an hour before`() {
         val sent = at("2026-10-10T10:00")
         val answerBy = at("2026-10-10T20:00")
 
@@ -84,7 +84,7 @@ class ReminderPlanTest {
     }
 
     @Test
-    fun `when eight is too late it moves to half past eight the evening before, and equal times merge`() {
+    fun `when eight is too late it moves to half past eight the evening before - and equal times merge`() {
         // 17 hours: the midpoint is 22:30 and an hour before the deadline is 06:00. Both are at night, and
         // 08:00 on the 11th is after the 07:00 deadline, so both go to 20:30 on the 10th: one time.
         val sent = at("2026-10-10T14:00")

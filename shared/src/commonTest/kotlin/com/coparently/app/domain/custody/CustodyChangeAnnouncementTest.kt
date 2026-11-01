@@ -124,7 +124,7 @@ class CustodyChangeAnnouncementTest {
     }
 
     @Test
-    fun `nothing is announced before parents has loaded, even for a genuine remote change`() {
+    fun `nothing is announced before parents has loaded - even for a genuine remote change`() {
         // Parents starts every fresh subscription from a synthetic "nobody is known yet", and
         // CustodyModelRepository's pair resolution (Room-only) is reliably faster than Parents
         // resolving its Firestore pairing listeners. So the echo of this device's own

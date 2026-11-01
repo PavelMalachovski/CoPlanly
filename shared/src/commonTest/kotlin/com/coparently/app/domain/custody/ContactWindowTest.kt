@@ -31,7 +31,7 @@ class ContactWindowTest {
     }
 
     @Test
-    fun `the canonical list is sorted and de-duplicated, so a re-encode cannot change it`() {
+    fun `the canonical list is sorted and de-duplicated - so a re-encode cannot change it`() {
         // `firestore.rules` refuses a proposal or swap write that changes the stored list; two
         // devices writing the same set must therefore produce the same list.
         val later = WEDNESDAY.copy(dayIndex = 9)
@@ -42,7 +42,7 @@ class ContactWindowTest {
     }
 
     @Test
-    fun `an entry this build cannot read is dropped, never guessed into a window`() {
+    fun `an entry this build cannot read is dropped - never guessed into a window`() {
         val decoded = ContactWindowCodec.decodeAll(
             listOf(
                 "2|15:00|19:00|dad",
@@ -126,7 +126,7 @@ class ContactWindowTest {
     }
 
     @Test
-    fun `equivalence compares windows by date, not by cycle index`() {
+    fun `equivalence compares windows by date - not by cycle index`() {
         // The same Wednesday afternoon, written from a start date one week later: every index
         // moves by seven, and the schedule is the same.
         val a = everyOtherWeekend().copy(contactWindows = listOf(WEDNESDAY, WEDNESDAY.copy(dayIndex = 9)))

@@ -32,7 +32,7 @@ class PlanScheduleLinkTest {
     ) = PlanScheduleLink.offersProposal(questionId, yours, theirs, paired, pending)
 
     @Test
-    fun `the schedule questions are the rotation and the two holiday questions, and every one exists`() {
+    fun `the schedule questions are the rotation and the two holiday questions - and every one exists`() {
         assertEquals(
             mapOf(
                 "care_weekday" to PlanScheduleTarget.BASE_PATTERN,
@@ -74,7 +74,7 @@ class PlanScheduleLinkTest {
     }
 
     @Test
-    fun `unpaired, or while the co-parent's proposal waits, nothing is offered`() {
+    fun `unpaired - or while the co-parent's proposal waits - nothing is offered`() {
         val (yours, theirs) = agreed(custody, weekOnWeekOff)
 
         assertFalse(offers(custody, yours, theirs, paired = false))
@@ -83,7 +83,7 @@ class PlanScheduleLinkTest {
     }
 
     @Test
-    fun `the reference quotes both wordings and cites their hash, the same from either phone`() {
+    fun `the reference quotes both wordings and cites their hash - the same from either phone`() {
         val (yours, theirs) = agreed(summer, "July with me, August with you", "July to Olya, August to Pavel")
 
         val mine = assertNotNull(PlanScheduleLink.reference(summer, yours, theirs))
@@ -135,7 +135,7 @@ class PlanScheduleLinkTest {
     }
 
     @Test
-    fun `no citation, an unreadable one, or an unknown question says nothing`() {
+    fun `no citation - an unreadable one - or an unknown question says nothing`() {
         val (yours, theirs) = agreed(custody, weekOnWeekOff)
 
         assertEquals(CitationStatus.None, PlanScheduleLink.citationStatus(null, yours, theirs))

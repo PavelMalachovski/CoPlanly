@@ -59,7 +59,7 @@ class HolidayFairnessTest {
     }
 
     @Test
-    fun `an accepted swap moves a holiday, a pending one does not`() {
+    fun `an accepted swap moves a holiday - a pending one does not`() {
         val accepted = DayOverride("mom", "alice", "2026-12-01T10:00:00", DayOverrideStatus.ACCEPTED)
         val pending = DayOverride("mom", "alice", "2026-12-01T10:00:00", DayOverrideStatus.PENDING)
         val result = fairness(base, mapOf("2026-12-24" to accepted, "2026-12-25" to pending))
@@ -69,7 +69,7 @@ class HolidayFairnessTest {
     }
 
     @Test
-    fun `a seasonal layer counts, in nights and in the vacation it covers`() {
+    fun `a seasonal layer counts - in nights and in the vacation it covers`() {
         val summer = SeasonalLayer.allWith("s", "Summer", date("2026-07-01")..date("2026-08-31"), "mom")
         val result = fairness(base.copy(seasonalLayers = listOf(summer)))
 
@@ -90,7 +90,7 @@ class HolidayFairnessTest {
     }
 
     @Test
-    fun `a birthday lands on its day this year, and 29 February on the 28th`() {
+    fun `a birthday lands on its day this year - and 29 February on the 28th`() {
         val result = fairness(
             base,
             birthdays = listOf("Ema" to date("2019-12-24"), "Jan" to date("2020-02-29"))
@@ -101,7 +101,7 @@ class HolidayFairnessTest {
     }
 
     @Test
-    fun `other public holidays are listed once, and the fixed dates are not repeated`() {
+    fun `other public holidays are listed once - and the fixed dates are not repeated`() {
         val holidays = fairness(base).rows.mapNotNull { it.occasion as? FairnessOccasion.PublicHoliday }
 
         val fixed = setOf(date("2026-12-24"), date("2026-01-01"))
@@ -120,7 +120,7 @@ class HolidayFairnessTest {
     // ---- "Fill from school holidays" ----------------------------------------
 
     @Test
-    fun `the Czech breaks come widened over weekends and holidays, soonest first`() {
+    fun `the Czech breaks come widened over weekends and holidays - soonest first`() {
         val upcoming = SchoolVacationSuggestions.upcoming(CzechHolidays, date("2026-09-23"))
 
         assertEquals(

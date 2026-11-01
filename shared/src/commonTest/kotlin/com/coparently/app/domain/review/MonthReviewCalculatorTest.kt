@@ -65,7 +65,7 @@ class MonthReviewCalculatorTest {
     }
 
     @Test
-    fun `an accepted swap moves a day and adds its handovers, a pending one only counts as offered`() {
+    fun `an accepted swap moves a day and adds its handovers - a pending one only counts as offered`() {
         val result = review(
             overrides = mapOf(
                 "2026-09-08" to swap("dad", DayOverrideStatus.ACCEPTED),
@@ -92,7 +92,7 @@ class MonthReviewCalculatorTest {
     }
 
     @Test
-    fun `special days are the month's holidays and birthdays, each date once`() {
+    fun `special days are the month's holidays and birthdays - each date once`() {
         // 28 September is Czech Statehood Day, a slot-2 day; the birthday on the 10th is slot 1's,
         // and a second birthday on the holiday itself adds no date.
         val result = review(

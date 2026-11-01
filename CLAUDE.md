@@ -945,9 +945,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `shared` output: `shared/**`, the root and module build files and the workflow — and a `shared/`
   path is also an Android path for every other output, treated as the build is (every Android job,
   every emulator leg), because the app compiles it. **`shared`** (Linux) runs
-  `:shared:testDebugUnitTest` (check run "Shared tests (JVM)") and `:shared:compileKotlinIosSimulatorArm64`,
+  `:shared:testDebugUnitTest` (check run "Shared tests (JVM)"), `:shared:compileKotlinIosSimulatorArm64`,
   the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
-  that does not compile for iOS fails on every pull request, Mac or no Mac. `build-test` runs the
+  that does not compile for iOS fails on every pull request, Mac or no Mac — and
+  `:shared:compileTestKotlinIosSimulatorArm64`, the same for commonTest. **A backticked test name
+  in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
+  refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more, because Kover merges `:shared` into the app's coverage report.
   **`shared-ios`** runs `:shared:iosSimulatorArm64Test` and `:shared:linkDebugFrameworkIosSimulatorArm64`
   (check run "Shared tests (iOS simulator)", `require_tests`) on the owner's Mac, a self-hosted

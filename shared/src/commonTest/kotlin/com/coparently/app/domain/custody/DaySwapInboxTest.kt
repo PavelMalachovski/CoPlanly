@@ -45,7 +45,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `a declined swap is still shown, so the parent who offered it learns the answer`() {
+    fun `a declined swap is still shown - so the parent who offered it learns the answer`() {
         val visible = DaySwapInbox.visible(
             mapOf("2026-09-05" to swap(DayOverrideStatus.DECLINED)),
             today
@@ -56,7 +56,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `a day already lived is history, not inbox`() {
+    fun `a day already lived is history - not inbox`() {
         val visible = DaySwapInbox.visible(
             mapOf("2026-08-31" to swap(DayOverrideStatus.PENDING)),
             today
@@ -131,7 +131,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `swaps with no group id stay separate, one card each`() {
+    fun `swaps with no group id stay separate - one card each`() {
         // Every swap written before groups existed carries a null id. Folding them into one
         // group would merge unrelated agreements into a single Accept button.
         val groups = DaySwapInbox.groups(
@@ -175,7 +175,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `only the parent who offered a group may withdraw it, and only while a day waits`() {
+    fun `only the parent who offered a group may withdraw it - and only while a day waits`() {
         val waiting = DaySwapInbox.groups(
             mapOf("2026-09-02" to grouped("g1", requestedBy = mom), "2026-09-03" to grouped("g1", requestedBy = mom)),
             today
@@ -191,7 +191,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `an offer says whether it gives days, asks for them, or does both`() {
+    fun `an offer says whether it gives days - asks for them - or does both`() {
         fun group(vararg toParents: String) = DaySwapGroup(
             toParents.mapIndexed { i, slot ->
                 DaySwap(
@@ -240,7 +240,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `a group whose days have already started is bounded by today, like the flat list`() {
+    fun `a group whose days have already started is bounded by today - like the flat list`() {
         val groups = DaySwapInbox.groups(
             mapOf(
                 "2026-08-30" to grouped("g1"),
@@ -254,7 +254,7 @@ class DaySwapInboxTest {
     }
 
     @Test
-    fun `allGroups keeps past days and groups them like groups()`() {
+    fun `allGroups keeps past days and groups them like groups`() {
         val week = swap(DayOverrideStatus.ACCEPTED).copy(groupId = "week")
 
         val groups = DaySwapInbox.allGroups(

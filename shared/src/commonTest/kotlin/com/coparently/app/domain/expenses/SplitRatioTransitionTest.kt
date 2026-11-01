@@ -101,7 +101,7 @@ class SplitRatioTransitionTest {
     }
 
     @Test
-    fun `proposing what is already agreed is refused, not sent as a question`() {
+    fun `proposing what is already agreed is refused - not sent as a question`() {
         val result = SplitRatioTransition.propose(settings(), SplitRatio.EVEN, mom, 3L)
 
         assertTrue(result.isFailure)
@@ -116,7 +116,7 @@ class SplitRatioTransitionTest {
     }
 
     @Test
-    fun `a share is stored exactly, so a month of expenses cannot drift`() {
+    fun `a share is stored exactly - so a month of expenses cannot drift`() {
         val ratio = SplitRatio.ofMomPercent(70)
 
         assertEquals(7000, ratio.momShareBasisPoints)

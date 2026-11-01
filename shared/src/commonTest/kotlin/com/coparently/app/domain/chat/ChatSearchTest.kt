@@ -32,7 +32,7 @@ class ChatSearchTest {
     }
 
     @Test
-    fun `case is ignored in Cyrillic, which LIKE would not do`() {
+    fun `case is ignored in Cyrillic - which LIKE would not do`() {
         assertEquals("Привет", matched("Привет, как дела?", "привет"))
     }
 
@@ -67,7 +67,7 @@ class ChatSearchTest {
     // is why the DAO's candidates are still a `LIKE` (docs/ROADMAP.md MON-15).
 
     @Test
-    fun `a query matches inside a word, not only at its start`() {
+    fun `a query matches inside a word - not only at its start`() {
         assertEquals("ick", matched("Pickup at five", "ick"))
     }
 
@@ -136,7 +136,7 @@ class ChatSearchTest {
     }
 
     @Test
-    fun `a space also widens the prefilter, because the fold treats a line break as one`() {
+    fun `a space also widens the prefilter - because the fold treats a line break as one`() {
         assertEquals("%", ChatSearch.candidatePattern("15 00"))
     }
 

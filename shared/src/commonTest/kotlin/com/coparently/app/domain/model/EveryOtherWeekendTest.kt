@@ -81,7 +81,7 @@ class EveryOtherWeekendTest {
     }
 
     @Test
-    fun `the switch reverses who is resident, not which days are contact`() {
+    fun `the switch reverses who is resident - not which days are contact`() {
         val resident = pattern(momIsResident = true)
         val contact = pattern(momIsResident = false)
 
@@ -99,7 +99,7 @@ class EveryOtherWeekendTest {
     }
 
     @Test
-    fun `the fortnight repeats, so the fourth weekend is contact again`() {
+    fun `the fortnight repeats - so the fourth weekend is contact again`() {
         val model = pattern(momIsResident = true)
 
         // 8 Aug is contact; 22 Aug is fourteen days later.

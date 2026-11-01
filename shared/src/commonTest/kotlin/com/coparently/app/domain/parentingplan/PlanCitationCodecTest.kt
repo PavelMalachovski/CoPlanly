@@ -23,7 +23,7 @@ class PlanCitationCodecTest {
     }
 
     @Test
-    fun `a missing or blank citation is no citation, not an error`() {
+    fun `a missing or blank citation is no citation - not an error`() {
         assertNull(PlanCitationCodec.decode(null))
         assertNull(PlanCitationCodec.decode(""))
         assertNull(PlanCitationCodec.decode("   "))

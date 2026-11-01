@@ -75,7 +75,7 @@ class EventAcceptanceTransitionTest {
     }
 
     @Test
-    fun `an event created while unpaired does not, because nobody could answer it`() {
+    fun `an event created while unpaired does not - because nobody could answer it`() {
         assertFalse(
             EventAcceptanceTransition.required(
                 event = event(parentOwner = "dad"),
@@ -86,7 +86,7 @@ class EventAcceptanceTransitionTest {
     }
 
     @Test
-    fun `a private event never needs acceptance, because it never reaches the co-parent`() {
+    fun `a private event never needs acceptance - because it never reaches the co-parent`() {
         // A pending event is hidden from every calendar view and a private one never reaches
         // Firestore, so marking one pending would delete it from its own creator's calendar with
         // nobody able to give it back.
@@ -111,7 +111,7 @@ class EventAcceptanceTransitionTest {
     }
 
     @Test
-    fun `the recipient accepts, and the event records who and when`() {
+    fun `the recipient accepts - and the event records who and when`() {
         val pending = event(acceptance = EventAcceptance.PENDING)
 
         val accepted = EventAcceptanceTransition.accept(pending, them, at).getOrThrow()
@@ -129,7 +129,7 @@ class EventAcceptanceTransitionTest {
     }
 
     @Test
-    fun `declining leaves the event, and says so`() {
+    fun `declining leaves the event - and says so`() {
         val pending = event(acceptance = EventAcceptance.PENDING)
 
         val declined = EventAcceptanceTransition.decline(pending, them, at).getOrThrow()
@@ -155,7 +155,7 @@ class EventAcceptanceTransitionTest {
     }
 
     @Test
-    fun `the creator may withdraw a pending event, and only the creator`() {
+    fun `the creator may withdraw a pending event - and only the creator`() {
         val pending = event(acceptance = EventAcceptance.PENDING)
 
         assertTrue(EventAcceptanceTransition.cancel(pending, me).isSuccess)

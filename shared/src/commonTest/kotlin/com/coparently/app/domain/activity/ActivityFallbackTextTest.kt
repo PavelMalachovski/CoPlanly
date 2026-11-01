@@ -75,7 +75,7 @@ class ActivityFallbackTextTest {
     }
 
     @Test
-    fun `a split's answers and its withdrawal read as plain sentences, whatever the slot`() {
+    fun `a split's answers and its withdrawal read as plain sentences - whatever the slot`() {
         val expected = mapOf(
             ActivityKind.SPLIT_ACCEPTED to "Accepted the expense split",
             ActivityKind.SPLIT_DECLINED to "Declined the expense split",
@@ -101,7 +101,7 @@ class ActivityFallbackTextTest {
     }
 
     @Test
-    fun `every kind produces something, so no bubble is ever empty`() {
+    fun `every kind produces something - so no bubble is ever empty`() {
         ActivityKind.entries.forEach { kind ->
             val text = ActivityFallbackText.of(announcement(kind, "Thing"))
             assertTrue(text.isNotBlank(), "$kind produced nothing")
@@ -109,7 +109,7 @@ class ActivityFallbackTextTest {
     }
 
     @Test
-    fun `no two kinds read the same, so the fallback is as specific as the card`() {
+    fun `no two kinds read the same - so the fallback is as specific as the card`() {
         val texts = ActivityKind.entries.map { ActivityFallbackText.of(announcement(it, "Thing")) }
 
         assertEquals(ActivityKind.entries.size, texts.toSet().size)

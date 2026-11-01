@@ -36,7 +36,7 @@ class CategoryBreakdownTest {
     }
 
     @Test
-    fun `a currency's shares are of its own total, not of everything spent`() {
+    fun `a currency's shares are of its own total - not of everything spent`() {
         // The subtler half of the rule above. Two separate totals but one shared denominator
         // would still draw a chart that lies, and it is the version an implementation reaches
         // by accident.
@@ -69,7 +69,7 @@ class CategoryBreakdownTest {
     }
 
     @Test
-    fun `a category with nothing in it is absent, not a zero row`() {
+    fun `a category with nothing in it is absent - not a zero row`() {
         // A parent scanning for the big number should not read past six empty lines to find it.
         val slices = breakdownByCurrency(
             listOf(expense(amount = 10.0, category = ExpenseCategory.TOYS))

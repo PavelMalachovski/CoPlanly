@@ -28,7 +28,7 @@ class FamilyAudienceTest {
     }
 
     @Test
-    fun `an event of a family that has ended names nobody, not the family on screen`() {
+    fun `an event of a family that has ended names nobody - not the family on screen`() {
         // The leak: Bob unpaired, Alice paired with Carol, and the first sync re-uploaded every
         // event of the Bob family to Carol.
         assertNull(FamilyAudience.partnerFor(carolFamily, "alice", listOf("bob"), selectedPartner = "bob"))
@@ -67,7 +67,7 @@ class FamilyAudienceTest {
     }
 
     @Test
-    fun `a record of a family that has ended names nobody, never the family on screen`() {
+    fun `a record of a family that has ended names nobody - never the family on screen`() {
         // The ended family's child is not Carol's to read.
         assertNull(FamilyAudience.recordPartnerFor(bobFamily, "alice", listOf("carol"), "carol"))
         assertNull(FamilyAudience.recordPartnerFor(bobFamily, "alice", emptyList(), null))

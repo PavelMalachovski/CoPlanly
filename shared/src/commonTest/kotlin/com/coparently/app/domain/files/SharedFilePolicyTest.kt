@@ -21,7 +21,7 @@ class SharedFilePolicyTest {
     }
 
     @Test
-    fun `a file at the cap is refused, one byte under is not`() {
+    fun `a file at the cap is refused - one byte under is not`() {
         val atCap = SharedFilePolicy.check("application/pdf", SharedFilePolicy.MAX_BYTES)
         assertEquals(SharedFilePolicy.Rejection.SIZE, atCap)
         assertNull(SharedFilePolicy.check("application/pdf", SharedFilePolicy.MAX_BYTES - 1))
@@ -58,7 +58,7 @@ class SharedFilePolicyTest {
     }
 
     @Test
-    fun `hex is lowercase, two digits a byte, whatever the locale`() {
+    fun `hex is lowercase - two digits a byte - whatever the locale`() {
         assertEquals("00ff10ab", byteArrayOf(0, -1, 16, -85).toHex())
     }
 }

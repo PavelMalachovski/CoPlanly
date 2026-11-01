@@ -42,7 +42,7 @@ class TelemetryConsentTest {
     }
 
     @Test
-    fun `an unreadable stored value reads as never asked, not as agreed`() {
+    fun `an unreadable stored value reads as never asked - not as agreed`() {
         assertEquals(TelemetryConsent.UNANSWERED, TelemetryConsent.fromStored(null))
         assertEquals(TelemetryConsent.UNANSWERED, TelemetryConsent.fromStored(""))
         assertEquals(TelemetryConsent.UNANSWERED, TelemetryConsent.fromStored("true"))

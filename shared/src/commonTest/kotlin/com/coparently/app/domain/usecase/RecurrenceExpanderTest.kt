@@ -167,7 +167,7 @@ class RecurrenceExpanderTest {
     }
 
     @Test
-    fun `February still clamps, because it has to`() {
+    fun `February still clamps - because it has to`() {
         val e = event(LocalDateTime(2026, 1, 31, 9, 0), pattern = "monthly")
 
         val february = RecurrenceExpander.expand(

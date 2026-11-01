@@ -164,7 +164,7 @@ class RequestHistoryTest {
     }
 
     @Test
-    fun `a swap offered as one group is one entry with its first date and day count, past days included`() {
+    fun `a swap offered as one group is one entry with its first date and day count - past days included`() {
         val decided = swap(DayOverrideStatus.ACCEPTED)
 
         val entries = history(
@@ -283,7 +283,7 @@ class RequestHistoryTest {
     }
 
     @Test
-    fun `the custody decision is one entry, asked by the other parent`() {
+    fun `the custody decision is one entry - asked by the other parent`() {
         val decision = CustodyDecision(
             outcome = CustodyDecisionOutcome.DECLINED,
             by = "u2",
@@ -354,7 +354,7 @@ class RequestHistoryTest {
     }
 
     @Test
-    fun `"No answer" is its own outcome, dated by its closure`() {
+    fun `"No answer" is its own outcome - dated by its closure`() {
         val pending = request("r1", status = ChangeRequestStatus.PENDING)
         val closedClock = closed(RequestKind.CHANGE, "r1")
 
@@ -383,7 +383,7 @@ class RequestHistoryTest {
     }
 
     @Test
-    fun `a late answer shows as the answer, not as "No answer"`() {
+    fun `a late answer shows as the answer - not as "No answer"`() {
         // Each was closed as "No answer" first, then answered from a co-parent's older build.
         val answeredAt = CLOSED_AT.plus(10, DateTimeUnit.HOUR)
         val entries = history(
@@ -550,7 +550,7 @@ class RequestHistoryTest {
         SplitRatioDecision(outcome = outcome, by = by, atMillis = millisOf(at), proposalAtMillis = SPLIT_AT)
 
     @Test
-    fun `the split's last decision is one entry, keyed by its proposal and asked by the other parent`() {
+    fun `the split's last decision is one entry - keyed by its proposal and asked by the other parent`() {
         val entries = RequestHistory.build(
             scope,
             changeRequests = emptyList(),
@@ -576,7 +576,7 @@ class RequestHistoryTest {
     }
 
     @Test
-    fun `a split decision with no readable time, or by somebody outside the family, is no entry`() {
+    fun `a split decision with no readable time - or by somebody outside the family - is no entry`() {
         listOf(
             splitDecision(SplitRatioOutcome.ACCEPTED).copy(atMillis = 0L),
             splitDecision(SplitRatioOutcome.ACCEPTED, by = "u3"),
@@ -588,7 +588,7 @@ class RequestHistoryTest {
     }
 
     @Test
-    fun `a split withdrawn at its end stays in History from its clock, and its answer wins over the clock`() {
+    fun `a split withdrawn at its end stays in History from its clock - and its answer wins over the clock`() {
         val withdrawn = closed(RequestKind.SPLIT, SPLIT_AT.toString(), from = "u2")
 
         val unanswered = RequestHistory.build(
