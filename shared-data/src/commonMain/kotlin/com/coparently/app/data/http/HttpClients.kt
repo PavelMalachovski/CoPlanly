@@ -1,8 +1,11 @@
 package com.coparently.app.data.http
 
+import com.coparently.app.domain.InternalSharedApi
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.HttpClientEngineConfig
+import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.util.AttributeKey
 
@@ -25,10 +28,20 @@ expect fun httpClient(timeouts: HttpTimeouts): HttpClient
 /**
  * A client over [engine] configured exactly as [httpClient] configures OkHttp and NSURLSession:
  * for the R8 runtime probe and the tests, which answer from memory but must run the production
- * configuration (the timeouts, the redirect switch).
+ * configuration (the timeouts, the redirect switch). Public only for the app's R8 probe.
  */
+@InternalSharedApi
 fun httpClient(engine: HttpClientEngine, timeouts: HttpTimeouts): HttpClient =
     HttpClient(engine) { sharedConfiguration(timeouts) }.withCallTimeout(timeouts)
+
+/**
+ * The one way each platform's [httpClient] builds its client, so none can leave out the
+ * configuration or the whole-call limit. The client owns the engine and closes it with itself.
+ */
+internal fun <T : HttpClientEngineConfig> httpClient(
+    factory: HttpClientEngineFactory<T>,
+    timeouts: HttpTimeouts
+): HttpClient = HttpClient(factory) { sharedConfiguration(timeouts) }.withCallTimeout(timeouts)
 
 /**
  * How long a client waits, as the library it replaced waited (MON-24).

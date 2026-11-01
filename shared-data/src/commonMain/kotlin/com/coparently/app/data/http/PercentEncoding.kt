@@ -1,7 +1,8 @@
 /*
  * Adapted from OkHttp 4.12.0 (https://github.com/square/okhttp),
- * okhttp/src/main/kotlin/okhttp3/HttpUrl.kt and okhttp/src/main/kotlin/okhttp3/FormBody.kt
- * (Copyright (C) 2015 and 2014 Square, Inc.; licence in third_party/okhttp/LICENSE.txt), and from
+ * okhttp/src/main/kotlin/okhttp3/HttpUrl.kt (Copyright (C) 2015 Square, Inc.) and
+ * okhttp/src/main/kotlin/okhttp3/FormBody.kt (Copyright (C) 2014 Square, Inc.; licence in
+ * third_party/okhttp/LICENSE.txt), and from
  * google-http-java-client 1.42.3 (https://github.com/googleapis/google-http-java-client),
  * google-http-client/src/main/java/com/google/api/client/util/escape/PercentEscaper.java
  * (Copyright (c) 2010 Google Inc.; licence in third_party/google-http-client-java/LICENSE).

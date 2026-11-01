@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.r8probe
 
 import com.coparently.app.data.http.HttpTimeouts
@@ -6,6 +8,7 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCredential
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.events
+import com.coparently.app.domain.InternalSharedApi
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.engine.callContext

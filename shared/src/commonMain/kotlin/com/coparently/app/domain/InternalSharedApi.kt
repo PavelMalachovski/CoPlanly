@@ -14,7 +14,7 @@ package com.coparently.app.domain
  * Today: `UnansweredRows` and `ClocksAt.governing`, for `RequestInbox` (it reads the payments'
  * `SupportProposal`, still `java.time`) and `OtherFamiliesSignals` (data layer, phase 2); and, in
  * `:shared-data`, `BakalariJson`, for the school import's three parsers, which build the
- * `java.time` school domain.
+ * `java.time` school domain, and the engine overload of `httpClient`, for the app's R8 probe.
  */
 @RequiresOptIn(
     message = "Public only for a caller still in the app module (MON-24); not API for new callers.",
