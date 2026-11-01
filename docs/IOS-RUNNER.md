@@ -47,13 +47,21 @@ only when all three of these are true:
    project's Kotlin 2.3.21 supports Xcode up to **26.0**; Kotlin 2.4.21 reaches 26.4, and Xcode 27
    needs Kotlin 2.5.0, which is not stable yet (ROADMAP MON-24). If the Mac has Xcode 27 for your
    own work, keep it, and install **Xcode 26.0.1 beside it** for the runner (from
-   developer.apple.com/download/all, unpacked as `/Applications/Xcode-26.0.1.app`). Run the four
-   commands above once with `DEVELOPER_DIR` pointing at it, so its simulator runtime is installed:
+   developer.apple.com/download/all, unpacked as `/Applications/Xcode-26.0.1.app`). Run the
+   commands above once more against it, so its licence is accepted and its simulator runtime is
+   installed. `sudo` does not pass your environment on, so the licence command calls that Xcode's
+   own `xcodebuild` by its path; the others run as you and read the exported variable:
 
    ```bash
    export DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer
-   sudo xcodebuild -license accept && xcodebuild -runFirstLaunch && xcodebuild -downloadPlatform iOS
+   sudo "$DEVELOPER_DIR/usr/bin/xcodebuild" -license accept
+   xcodebuild -runFirstLaunch
+   xcodebuild -downloadPlatform iOS
+   xcrun simctl list devices available   # at least one iPhone must be listed
    ```
+
+   Leave out the `xcode-select --switch` line this time: it would make Xcode 26 the Mac's default
+   in place of Xcode 27.
 
    Then give the runner that Xcode alone: after step 3, add the line
    `DEVELOPER_DIR=/Applications/Xcode-26.0.1.app/Contents/Developer` to the `.env` file in the

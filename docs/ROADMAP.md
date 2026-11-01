@@ -2671,7 +2671,7 @@ converts their dates.
 
 | File | Why it stays |
 | --- | --- |
-| `usecase/CreateEventUseCase.kt`, `UpdateEventUseCase.kt`, `DeleteEventUseCase.kt` | `@Inject`; analytics and Crashlytics (`data/`); `android.util.Log` |
+| `usecase/CreateEventUseCase.kt`, `UpdateEventUseCase.kt`, `DeleteEventUseCase.kt` | `@Inject`; analytics and Crashlytics (`data/`); `android.util.Log` and `java.util.UUID` (Create only) |
 | `usecase/GetEventsUseCase.kt`, `EventValidator.kt` | `@Inject` |
 | `usecase/EventUseCases.kt` | bundles the four use cases above |
 | `error/ErrorHandler.kt` | `@Inject`; Crashlytics and `NetworkMonitor`; `java.io.IOException` |
@@ -2681,7 +2681,7 @@ converts their dates.
 | `review/MonthStatsWire.kt` | writes the AI summary's month as `java.time.YearMonth` text (kotlinx's JVM converter); moving it means pinning that text for every year |
 | `export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt` | `java.time` (`LocalDate`, `LocalDateTime`, `ZoneId`, a `DateTimeFormatter` parse in the builder) |
 | `export/RecordLayout.kt`, `RecordVerificationLayout.kt` | date-free, but they lay out `CommunicationRecord` |
-| `school/SchoolEvents.kt`, `SchoolTimetable.kt`, `SchoolImportPlanner.kt`, `SchoolImportItems.kt` | `java.time`; the Bakaláři parsers in `data/` hand them `java.time` values |
+| `school/SchoolEvents.kt`, `SchoolTimetable.kt`, `SchoolImportPlanner.kt`, `SchoolImportItems.kt` | `java.time`; the Bakaláři parsers in `data/` hand them `java.time` values. When `SchoolImportItems` moves, its id hash must switch from `encodeToByteArray()` to `Utf8.encode` (see "Carried into phase 2") |
 | `payments/Payment.kt` | `java.time.YearMonth` |
 | `support/SupportAgreement.kt`, `SupportReminderRule.kt` | `java.time` (`LocalDate`, `YearMonth`) |
 | `changerequests/RequestInbox.kt`, `FamilyAgreements.kt` | date-free, but they read `SupportProposal` |
@@ -2691,6 +2691,21 @@ converts their dates.
 | `chat/MessageReport.kt` | `java.time.Instant` text in the report it writes |
 | `ai/AiAssist.kt` | `java.time.YearMonth` |
 | `repository/FriendRepository.kt`, `repository/ProfessionalRepository.kt` | `java.time.LocalDate` windows |
+
+**Two decisions the code cites** (phase 1, recorded here because the working ledger is not in
+the repository):
+- **The seasonal layer's name codec keeps its own percent-encoding.** `SeasonalLayerCodec` writes a
+  name the way `encodeURIComponent` does (a space is `%20`), not as `URLEncoder` (a space is `+`),
+  so it does not use the shared `PercentCodec`; its functions were ported unchanged, and its decoder
+  is strict — malformed UTF-8, an overlong form, an encoded surrogate or an escape cut short leaves
+  the entry unreadable and kept verbatim (CLAUDE.md item 30). The wire is byte for byte what it was.
+- **A surrogate written as UTF-8 follows Unicode.** `PercentCodec.decode` (the install referrer and
+  the message report only) equals `URLDecoder` on every input but one class: bytes `ED A0..BF …`,
+  for which the JDK writes one U+FFFD and `Utf8Decoder` writes one per maximal subpart, as the
+  Unicode Standard (§3.9) prescribes. Android's runtime is not OpenJDK, so the JDK's count was
+  never Android's contract, and neither caller can tell the difference in practice.
+  `PercentCodecParityTest` compares every other input with the JDK and holds this class to
+  Unicode's count.
 
 `UnansweredRows` and `ClocksAt.governing` are public in `:shared` only for `RequestInbox` and
 `OtherFamiliesSignals`, and carry `@InternalSharedApi` (an error-level opt-in) until those move;
@@ -2711,18 +2726,28 @@ bytes are identical on Android):
   `wallClockNow()` elsewhere. They are equal; use `wallClockNow()`.
 - **Gson to kotlinx.serialization** (spec §5.1, moved to phase 2). Until then the date adapter
   `UserRepositoryImpl` and `SyncService` register is defensive only: neither Gson meets a date.
+- **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
+  which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
+  platforms would derive different `school-…` ids from the same school data. It must hash
+  `Utf8.encode` (the JVM's bytes on every platform), as `PlanCitation` and `PaymentQr` already do.
 - **Tests to add**: a literal for the `conversations.createdAt` text (`ChatMappers`); commonTest
   vectors for a preset landing in a DST gap and for the quiet hours' exact edges (the request-clock
-  parity test reaches them only by chance); an `isOccurrence` probe one minute off.
+  parity test reaches them only by chance), including Havana's midnight gap with `TOMORROW` and an
+  autumn overlap with `WEEK` in `AnswerByTest`, and generator branches that draw moments next to a
+  transition; an `isOccurrence` probe one minute off; a committed end-to-end parity test of the
+  custody codecs (`ContactWindowCodec`, `SeasonalLayerCodec`, `ChildOverrideCodec`) against the
+  `java.time` code they replaced, which so far ran only in a scratch harness; and a real check of
+  the device zone in `ZoneRulesParityTest`, whose "the default zone is the device's" case compares
+  the default with itself — nothing holds iOS yet to the days custody and recurrence derive from
+  instants.
 - **Edge cases recorded, not changed**: `WallClock`'s arithmetic is exact within about ±146 years
   (kotlin `Duration`); `AnswerBy`, `ReminderPlan` and `RequestCap` use `toEpochMilliseconds()`,
   which saturates where `toEpochMilli()` threw; kotlinx's clock gives `createdAt`/`respondedAt`
   more fraction digits than before, which every reader accepts; the custody codecs' `\d` became
   `[0-9]`, so a layer or override whose numbers are written in non-ASCII digits, which Android's
   ICU-backed `\d` used to read and no build writes, is now kept as unreadable (item 30's safe
-  direction); a seasonal layer's name decoding relies on each platform's strict UTF-8 decoder and,
-  for a short `%4` escape, on `substring`'s bounds check, which Kotlin/Native has and Kotlin/JS
-  does not — `SeasonalLayerTest` holds iOS to both once `shared-ios` runs.
+  direction); a seasonal layer's name decoding relies on each platform's strict UTF-8 decoder,
+  which `SeasonalLayerTest` holds iOS to once `shared-ios` runs.
 - **CI hygiene**: the `shared` job repeats the shared tests `build-test` already runs (for Kover);
   a manual run skips `shared-ios`; androidTest runs kotlin-reflect 2.0.0 over 2.3-compiled classes
   (raise it after merge); `ParentsSourceTest` can race a leaked `shareIn` collector (give
