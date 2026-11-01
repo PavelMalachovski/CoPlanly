@@ -113,7 +113,8 @@ function suiteLabel(artifact) {
   return ({unit: 'Unit (JVM)', functions: 'Cloud Functions', rules: 'Firestore / Storage rules',
     screenshots: 'Screenshots (Roborazzi)', e2e: 'Two parents (e2e)',
     upgrade: 'Upgrade over the base build', 'r8-probe': 'R8 runtime probe',
-    web: 'Web (verify page, calendar feed)'})[name] ||
+    web: 'Web (verify page, calendar feed)', shared: 'Shared module (JVM)',
+    'shared-ios': 'Shared module (iOS simulator)'})[name] ||
     name;
 }
 

@@ -71,6 +71,8 @@ test('suite labels', () => {
       'Instrumented, API 35 (google_apis_ps16k)');
   assert.equal(report.suiteLabel('junit-upgrade'), 'Upgrade over the base build');
   assert.equal(report.suiteLabel('junit-web'), 'Web (verify page, calendar feed)');
+  assert.equal(report.suiteLabel('junit-shared'), 'Shared module (JVM)');
+  assert.equal(report.suiteLabel('junit-shared-ios'), 'Shared module (iOS simulator)');
 });
 
 test('collect reads junit-* and coverage-report directories', () => {

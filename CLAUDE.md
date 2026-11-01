@@ -617,6 +617,12 @@ crash with "migration from 3 to 9 required but not found".
 ```
 
 ```bash
+./gradlew :shared:testDebugUnitTest                # the shared module's commonTest on the JVM
+./gradlew :shared:compileKotlinIosSimulatorArm64   # its iOS klib; any host, no Mac (Kotlin 2.2.20+)
+./gradlew :shared:iosSimulatorArm64Test            # commonTest on an iOS simulator: a Mac with Xcode
+```
+
+```bash
 cd functions && npm test && npm run lint    # Cloud Functions (mocha + eslint)
 cd firestore-tests && npm test              # firestore.rules + storage.rules on the emulators
 cd web-tests && npm test                    # web/verify/ in Chromium + the calendar feed as RFC 5545,
@@ -642,14 +648,15 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   degrades gracefully if it is missing (see the conditional apply in `app/build.gradle.kts`).
 - **GitHub CI runs on every pull request, and on every push to `main`** — a push to a
   feature branch with no PR open is not built (`.github/workflows/ci.yml`, added
-  August 2026 — this line used to say there was none). Fourteen jobs that test (this line used to
-  say thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
+  August 2026 — this line used to say there was none). Sixteen jobs that test (this line used to
+  say fourteen, before `shared` and `shared-ios`; thirteen, before `web`; eleven before `upgrade` and `r8-runtime`; ten before detekt left the lint job; eight before `screenshots`
   and `e2e`; seven before `instrumented`), plus `report`, which only reads them (below): `changes` (a cheap gate,
   below), four Android ones — `build-test` (`assembleDebug` + `testDebugUnitTest` in a
   single invocation), `static` (`lint` alone — the id is kept), `detekt` (its own job since
   September 2026: the two ran in sequence, lint 5:15 then detekt 0:52), `release` (`assembleRelease`, where
   R8 runs, and where `node tools/check-r8-mapping.js` then reads R8's own `mapping.txt` and
-  fails if a field a keep rule names came out renamed) — plus Cloud Functions, `web` (below), the
+  fails if a field a keep rule names came out renamed) — plus the shared module's two, `shared` and
+  `shared-ios` (below), Cloud Functions, `web` (below), the
   Firestore rules suite against the emulator, and `invariants` (`node tools/check-invariants.js`, no
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, and the rule that every type
@@ -929,6 +936,27 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   far as `toFirestoreMap()`'s medical profile is the same Gson call as the Room column it checks.
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
+- **The shared module has two jobs of its own** (MON-24, November 2026), both gated on `changes`'
+  `shared` output: `shared/**`, the root and module build files and the workflow — and a `shared/`
+  path is also an Android path for every other output, treated as the build is (every Android job,
+  every emulator leg), because the app compiles it. **`shared`** (Linux) runs
+  `:shared:testDebugUnitTest` (check run "Shared tests (JVM)") and `:shared:compileKotlinIosSimulatorArm64`,
+  the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
+  that does not compile for iOS fails on every pull request, Mac or no Mac. `build-test` runs the
+  same tests once more, because Kover merges `:shared` into the app's coverage report.
+  **`shared-ios`** runs `:shared:iosSimulatorArm64Test` and `:shared:linkDebugFrameworkIosSimulatorArm64`
+  (check run "Shared tests (iOS simulator)", `require_tests`) on the owner's Mac, a self-hosted
+  runner labelled `self-hosted, macOS, ARM64, coplanly` (`docs/IOS-RUNNER.md`). Two things not to
+  undo. **The Mac never runs fork code**: the job's `if` carries `github.event_name == 'push' ||
+  github.event.pull_request.head.repo.full_name == github.repository`, because a self-hosted runner
+  executes whatever a pull request's workflow and build scripts say, on the owner's machine. And
+  **it is skipped until the repository variable `IOS_RUNNER_READY` is `true`**, which the owner sets
+  once the runner is online: without it the job would queue for a day for a runner that does not
+  exist, holding `report`. Once it is set, a Mac that is off makes the job wait in the queue,
+  visibly, and never turns it green. `:shared:detekt` runs in the `detekt` job against the app's config and the app's
+  baseline file — one baseline for both modules, which `:app:detektBaseline` writes because it also
+  reads `shared/src` (`:shared:detektBaseline` is disabled: detekt's baseline task replaces the
+  file's findings with its own run's, so a second writer would erase the first's).
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
   feed", September 2026; check run "Web — verify page and ICS", artefact `junit-web`). `web-tests/`
   is its own small package (Playwright and Mozilla's `ical.js`), deliberately **not** under `web/`,
@@ -1009,7 +1037,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
   suite can never move to verify.
 - **A pull request runs only the jobs its diff can affect** (September 2026). The `changes` job
-  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides seven outputs and is tested
+  pipes `git diff --name-only` into `tools/ci-changes.js`, which decides eight outputs and is tested
   by `tools/test/ci-changes.test.js` in `invariants`: docs/functions/rules only → no Android job;
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
@@ -1021,7 +1049,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `wire/current/` fixtures), the build, or
   any path the script does not know; and the `web` job runs on anything but docs and the Android
   app and its build — `web/`, `web-tests/`, `functions/`, `firebase.json`, `firestore-tests/`' lock
-  file, the workflow, or an unfamiliar path. A push to `main` always runs everything, which
+  file, the workflow, or an unfamiliar path; and the `shared` and `shared-ios` jobs run on
+  `shared/**`, the build files and the workflow, where a `shared/` path also counts as the build
+  for every Android output (the app compiles it). A push to `main` always runs everything, which
   is the backstop for the legs a PR skipped; lint's NewApi check is the per-PR guard for a
   newer-API call. Three things not to get wrong. Every skip list is deliberately narrow — a path
   wrongly *on* one silently stops testing real changes, which is far worse than a path wrongly off
@@ -1306,6 +1336,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
 ## Architecture map
 
 ```
+shared/    — Kotlin Multiplatform module (MON-24): the domain the iPhone app will share, moving out
+             of app/ with its packages unchanged; commonMain/commonTest, Android and iOS targets
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync
 presentation/ — Compose screens per feature + ViewModels + theme
