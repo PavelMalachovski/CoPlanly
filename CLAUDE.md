@@ -1069,12 +1069,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   jobs ANDs with its own path gate; every other job is gated as before. Four things to know.
   **Labelling starts a run**: the `pull_request` trigger lists `opened`, `synchronize`, `reopened`,
   `labeled` and `ready_for_review`, so adding `full-ci`, or marking a draft ready, runs the jobs the
-  last push skipped. **A label other than `full-ci` starts a run that does nothing**: `changes`
-  prints every output false (`--none`) and `report` does not post, so an empty summary does not
-  replace the real one. Such a run has a concurrency group of its own (by run id), because in the
+  last push skipped. **A label other than `full-ci` starts a run that does no work**: the run starts and
+  publishes its job entries, but every one is skipped except `changes`, which takes a few seconds. `changes` prints every output false (`--none`),
+  `invariants`, `functions` and `rules` (which do not depend on `changes`) carry `if: github.event.action
+  != 'labeled' || github.event.label.name == 'full-ci'`, and `report` does not post, so an empty summary
+  does not replace the real one. Those skipped entries can appear beside the real results in the
+  checks list. Such a run has a concurrency group of its own (by run id), because in the
   pull request's group it would cancel the real run in progress; a `full-ci` or `ready_for_review`
   run shares the pull request's group and supersedes the run before it, and a later push supersedes
-  it. **A skipped job reads as skipped** in the summary, and the summary adds "Emulator jobs skipped
+  it. Adding `full-ci` to a pull request that is already ready for review re-runs everything, which
+  is harmless. **A skipped job reads as skipped** in the summary, and the summary adds "Emulator jobs skipped
   on a draft: add the `full-ci` label to run them" (`tools/ci-report.js`, fed by `changes`'
   `emulators_skipped_on_draft`). And **a skip is not a pass for the draft's merge**: nothing is a
   required check, but a pull request must not leave draft with the emulator legs never having run

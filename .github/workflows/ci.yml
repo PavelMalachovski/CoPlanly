@@ -48,14 +48,15 @@ on:
   pull_request:
     # The first three are the defaults, listed because naming any type drops the rest.
     # `labeled` starts a run when `full-ci` is added; `ready_for_review` when a draft is marked
-    # ready. A label other than `full-ci` starts a run that does nothing (see `changes`).
+    # ready. A label other than `full-ci` starts a run that does no work: its jobs
+    # are skipped (see `changes`).
     types: [opened, synchronize, reopened, labeled, ready_for_review]
   # Manual runs on any branch: a session without an Android SDK can push a branch and have this
   # workflow prove the Kotlin before a pull request exists.
   workflow_dispatch:
 
 concurrency:
-  # A `labeled` run for a label other than `full-ci` does nothing, so it gets a group of its own
+  # A `labeled` run for a label other than `full-ci` does no work (its jobs are skipped), so it gets a group of its own
   # (by run id) instead of the pull request's: in the shared group it would cancel the real run
   # in progress and replace it with an empty one. A `full-ci` run, and `ready_for_review`, share
   # the pull request's group on purpose: they supersede a run that skipped the emulators, and a
@@ -137,7 +138,6 @@ jobs:
           LABEL_NAME: ${{ github.event.label.name }}
           PR_DRAFT: ${{ github.event.pull_request.draft }}
           PR_FULL_CI: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-          GITHUB_REF: ${{ github.ref }}
         run: node tools/ci-changes.js --event | tee -a "$GITHUB_OUTPUT"
 
       - name: Decide which jobs to run
@@ -1574,6 +1574,9 @@ jobs:
 
   invariants:
     name: Resource and payload invariants
+    # Skipped on the run a label other than `full-ci` starts (see `changes`): no `needs: changes`, so
+    # they are gated on the event itself.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -1613,6 +1616,9 @@ jobs:
 
   functions:
     name: Cloud Functions
+    # Skipped on the run a label other than `full-ci` starts (see `changes`): no `needs: changes`, so
+    # they are gated on the event itself.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1767,6 +1773,9 @@ jobs:
 
   rules:
     name: Firestore security rules
+    # Skipped on the run a label other than `full-ci` starts (see `changes`): no `needs: changes`, so
+    # they are gated on the event itself.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
