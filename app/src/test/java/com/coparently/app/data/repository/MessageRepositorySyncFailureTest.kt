@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -305,7 +306,7 @@ class MessageRepositorySyncFailureTest {
         id = CONVERSATION_ID,
         participantsJson = """["$UID","uidB"]""",
         title = "Co-parent",
-        createdAt = TIMESTAMP
+        createdAt = TIMESTAMP.toKotlinLocalDateTime()
     )
 
     private fun localMessages() = listOf(

@@ -2,6 +2,7 @@ package com.coparently.app.data.notification
 
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.events.EventTimestamp
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
@@ -34,7 +35,8 @@ class ReminderWorkerTest {
 
     @Test
     fun `a reminder for an event that has moved does not fire`() {
-        assertFalse(ReminderWorker.shouldFire(event().copy(startDateTime = start.plusDays(1)), start.toString()))
+        val moved = event().copy(startDateTime = start.plusDays(1).toKotlinLocalDateTime())
+        assertFalse(ReminderWorker.shouldFire(moved, start.toString()))
     }
 
     @Test
@@ -58,7 +60,7 @@ class ReminderWorkerTest {
         assertFalse(ReminderWorker.shouldFire(weekly, start.plusWeeks(3).plusHours(1).toString()))
         assertFalse(
             ReminderWorker.shouldFire(
-                weekly.copy(recurrenceEndDate = start.toLocalDate().plusWeeks(2)),
+                weekly.copy(recurrenceEndDate = start.toLocalDate().plusWeeks(2).toKotlinLocalDate()),
                 start.plusWeeks(3).toString()
             )
         )
@@ -67,13 +69,13 @@ class ReminderWorkerTest {
     private fun event() = EventEntity(
         id = "e1",
         title = "Dentist",
-        startDateTime = start,
-        endDateTime = start.plusHours(1),
+        startDateTime = start.toKotlinLocalDateTime(),
+        endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
         eventType = "medical",
         parentOwner = "mom",
         reminderMinutes = 30,
-        createdAt = start.minusDays(3),
-        updatedAt = start.minusDays(3),
+        createdAt = start.minusDays(3).toKotlinLocalDateTime(),
+        updatedAt = start.minusDays(3).toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(start.minusDays(3).toKotlinLocalDateTime())
     )
 }

@@ -2,9 +2,9 @@ package com.coparently.app.data.sync
 
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.TimeZone
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -83,7 +83,7 @@ class EventDocumentTest {
             EventDocument.toEntity(minimalDocument(updatedAt = "2026-09-23T09:00:00"))
         }
         assertEquals(Instant.parse("2026-09-23T09:00:00Z").toEpochMilli(), entity.updatedAtMillis)
-        assertEquals(LocalDateTime.of(2026, 9, 23, 11, 0), entity.updatedAt)
+        assertEquals(LocalDateTime(2026, 9, 23, 11, 0), entity.updatedAt)
     }
 
     @Test

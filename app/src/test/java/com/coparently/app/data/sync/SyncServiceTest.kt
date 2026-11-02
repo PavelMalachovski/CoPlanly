@@ -34,6 +34,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
@@ -1465,16 +1467,16 @@ class SyncServiceTest {
             "id" to entity.id,
             "title" to entity.title,
             "description" to entity.description,
-            "startDateTime" to entity.startDateTime.format(formatter),
-            "endDateTime" to entity.endDateTime?.format(formatter),
+            "startDateTime" to entity.startDateTime.toJavaLocalDateTime().format(formatter),
+            "endDateTime" to entity.endDateTime?.toJavaLocalDateTime()?.format(formatter),
             "eventType" to entity.eventType,
             "parentOwner" to entity.parentOwner,
             "isRecurring" to entity.isRecurring,
             "recurrencePattern" to entity.recurrencePattern,
-            "recurrenceEndDate" to entity.recurrenceEndDate?.toString(),
+            "recurrenceEndDate" to entity.recurrenceEndDate?.toJavaLocalDate()?.toString(),
             "pickupConfirmedBy" to entity.pickupConfirmedBy,
-            "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
-            "createdAt" to entity.createdAt.format(formatter),
+            "pickupConfirmedAt" to entity.pickupConfirmedAt?.toJavaLocalDateTime()?.format(formatter),
+            "createdAt" to entity.createdAt.toJavaLocalDateTime().format(formatter),
             "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
             "createdByFirebaseUid" to entity.createdByFirebaseUid,
             "sharedWith" to sharedWith,
@@ -1532,12 +1534,12 @@ class SyncServiceTest {
     private fun eventEntity(createdByFirebaseUid: String, sharedWith: List<String>) = EventEntity(
         id = EVENT_ID,
         title = "Swimming lesson",
-        startDateTime = now,
-        endDateTime = now.plusHours(1),
+        startDateTime = now.toKotlinLocalDateTime(),
+        endDateTime = now.plusHours(1).toKotlinLocalDateTime(),
         eventType = "activity",
         parentOwner = "mom",
-        createdAt = now,
-        updatedAt = now,
+        createdAt = now.toKotlinLocalDateTime(),
+        updatedAt = now.toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(now.toKotlinLocalDateTime()),
         createdByFirebaseUid = createdByFirebaseUid,
         sharedWithJson = gson.toJson(sharedWith)
@@ -1553,8 +1555,8 @@ class SyncServiceTest {
         medicalNotes = null,
         emergencyContactsJson = "[]",
         schoolInfoJson = null,
-        createdAt = now,
-        updatedAt = updatedAt,
+        createdAt = now.toKotlinLocalDateTime(),
+        updatedAt = updatedAt.toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(updatedAt.toKotlinLocalDateTime()),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,

@@ -101,11 +101,11 @@ class ConflictResolverTest {
     private fun savedAt(wallClock: LocalDateTime, zone: ZoneId, by: String) = EventEntity(
         id = EVENT_ID,
         title = if (zone == newYork) "New York's title" else "Prague's title",
-        startDateTime = LocalDateTime.of(2026, 10, 1, 15, 0),
+        startDateTime = LocalDateTime.of(2026, 10, 1, 15, 0).toKotlinLocalDateTime(),
         eventType = "pickup",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
-        updatedAt = wallClock,
+        createdAt = LocalDateTime.of(2026, 9, 1, 9, 0).toKotlinLocalDateTime(),
+        updatedAt = wallClock.toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(wallClock.toKotlinLocalDateTime(), zone.toKotlinTimeZone()),
         lastModifiedBy = by
     )

@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
 
 /** What kind of record is waiting for a family, with the prefix of its [UnassignedRecord.key]. */
@@ -421,19 +422,19 @@ private fun PetEntity.isOwnWithoutFamily(uid: String) =
     ownWithoutFamily(createdByFirebaseUid, familyId, deletedAtMillis, uid)
 
 private fun EventEntity.asRecord() =
-    UnassignedRecord(UnassignedKind.EVENT, id, title, date = startDateTime.toLocalDate())
+    UnassignedRecord(UnassignedKind.EVENT, id, title, date = startDateTime.date.toJavaLocalDate())
 
 private fun ExpenseEntity.asRecord() = UnassignedRecord(
     kind = UnassignedKind.EXPENSE,
     id = id,
     title = title,
-    date = date,
+    date = date.toJavaLocalDate(),
     amount = amount,
     currency = currency
 )
 
 private fun ChildInfoEntity.asRecord() =
-    UnassignedRecord(UnassignedKind.CHILD, id, childName, date = dateOfBirth?.toLocalDate())
+    UnassignedRecord(UnassignedKind.CHILD, id, childName, date = dateOfBirth?.date?.toJavaLocalDate())
 
 private fun PetEntity.asRecord() = UnassignedRecord(UnassignedKind.PET, id, name)
 

@@ -2,30 +2,41 @@ package com.coparently.app.data.local
 
 import androidx.room.TypeConverter
 import com.coparently.app.domain.serialization.StoredJson
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Type converters for Room database.
  * Converts custom types to and from database-compatible types.
+ *
+ * **The stored text is fixed** (MON-24 phase 2). The date-time columns hold what
+ * `java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME` wrote on every phone before the entities
+ * moved to common code, and the date columns what `ISO_LOCAL_DATE` wrote: [IsoText] writes and reads
+ * exactly that, on Android and on the iPhone alike. It matters beyond display — a row is compared
+ * whole by the sync, an older build reads what this one writes, and the calendar's range queries
+ * compare these columns as text — so `ConvertersParityTest` holds both directions to `java.time`.
+ * Never write these columns through `kotlinx.datetime`'s own `toString()`: it prints a fraction in
+ * groups of three, where `ISO_LOCAL_DATE_TIME` trims it.
  */
 class Converters {
-    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     /**
-     * Converts a LocalDateTime to a String for database storage.
+     * Converts a LocalDateTime to a String for database storage: `ISO_LOCAL_DATE_TIME`'s text,
+     * the second always printed and a fraction only when there is one, trimmed.
      */
     @TypeConverter
     fun fromLocalDateTime(value: LocalDateTime?): String? {
-        return value?.format(formatter)
+        return value?.let(IsoText::dateTime)
     }
 
     /**
-     * Converts a String to a LocalDateTime from database storage.
+     * Converts a String to a LocalDateTime from database storage, reading what
+     * `LocalDateTime.parse(text, ISO_LOCAL_DATE_TIME)` read.
      */
     @TypeConverter
     fun toLocalDateTime(value: String?): LocalDateTime? {
-        return value?.let { LocalDateTime.parse(it, formatter) }
+        return value?.let(IsoText::parseDateTime)
     }
 
     /**
@@ -46,18 +57,19 @@ class Converters {
     }
 
     /**
-     * Converts a LocalDate to a String for database storage.
+     * Converts a LocalDate to a String for database storage: `ISO_LOCAL_DATE`'s text.
      */
     @TypeConverter
-    fun fromLocalDate(value: java.time.LocalDate?): String? {
-        return value?.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+    fun fromLocalDate(value: LocalDate?): String? {
+        return value?.let(IsoText::date)
     }
 
     /**
-     * Converts a String to a LocalDate from database storage.
+     * Converts a String to a LocalDate from database storage, reading what
+     * `LocalDate.parse(text, ISO_LOCAL_DATE)` read.
      */
     @TypeConverter
-    fun toLocalDate(value: String?): java.time.LocalDate? {
-        return value?.let { java.time.LocalDate.parse(it, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }
+    fun toLocalDate(value: String?): LocalDate? {
+        return value?.let(IsoText::parseDate)
     }
 }

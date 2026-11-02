@@ -3,7 +3,7 @@ package com.coparently.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Entity representing an event change request in the local Room database.

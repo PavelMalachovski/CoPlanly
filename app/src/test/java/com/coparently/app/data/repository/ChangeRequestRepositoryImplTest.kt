@@ -90,10 +90,10 @@ class ChangeRequestRepositoryImplTest {
         eventTitle = "Dentist",
         requestedBy = MY_UID,
         requestedTo = CO_PARENT_UID,
-        currentStartDateTime = inTenDays,
-        proposedStartDateTime = inTenDays.plusDays(1),
+        currentStartDateTime = inTenDays.toKotlinLocalDateTime(),
+        proposedStartDateTime = inTenDays.plusDays(1).toKotlinLocalDateTime(),
         status = "PENDING",
-        createdAt = AT,
+        createdAt = AT.toKotlinLocalDateTime(),
         syncedToFirestore = true,
         familyId = FAMILY_ID
     )
@@ -105,10 +105,10 @@ class ChangeRequestRepositoryImplTest {
         eventTitle = "Swimming",
         requestedBy = CO_PARENT_UID,
         requestedTo = MY_UID,
-        currentStartDateTime = AT,
-        proposedStartDateTime = AT.plusDays(1),
+        currentStartDateTime = AT.toKotlinLocalDateTime(),
+        proposedStartDateTime = AT.plusDays(1).toKotlinLocalDateTime(),
         status = "PENDING",
-        createdAt = AT,
+        createdAt = AT.toKotlinLocalDateTime(),
         syncedToFirestore = true
     )
 

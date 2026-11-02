@@ -8,6 +8,7 @@ import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.data.local.entity.UserEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -83,7 +84,14 @@ class DaoEmptyResultTest {
         val start = LocalDateTime.of(2026, 5, 1, 0, 0)
         val end = LocalDateTime.of(2026, 5, 31, 23, 59)
 
-        assertEquals(0, database.eventDao().getEventsCountForParent("mom", start, end))
+        assertEquals(
+            0,
+            database.eventDao().getEventsCountForParent(
+                "mom",
+                start.toKotlinLocalDateTime(),
+                end.toKotlinLocalDateTime()
+            )
+        )
         assertEquals(0, database.eventDao().countRowsOfOtherFamilies(FAMILY, ALICE))
         assertEquals(0, database.childInfoDao().countRowsOfOtherFamilies(FAMILY, ALICE))
         assertEquals(0, database.expenseDao().countRowsOfOtherFamilies(FAMILY, ALICE))
@@ -156,11 +164,11 @@ class DaoEmptyResultTest {
         return EventEntity(
             id = id,
             title = "Dentist",
-            startDateTime = at,
+            startDateTime = at.toKotlinLocalDateTime(),
             eventType = "appointment",
             parentOwner = "mom",
-            createdAt = at,
-            updatedAt = at,
+            createdAt = at.toKotlinLocalDateTime(),
+            updatedAt = at.toKotlinLocalDateTime(),
             updatedAtMillis = 1L,
             familyId = familyId
         )

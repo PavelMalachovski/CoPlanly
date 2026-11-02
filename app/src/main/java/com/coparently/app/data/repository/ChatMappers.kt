@@ -10,8 +10,6 @@ import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import java.time.ZoneId
@@ -40,7 +38,7 @@ internal fun ConversationEntity.toDomain(): Conversation = Conversation(
     lastDeliveredAt = StoredJson.decodeOrNull(markMap, lastDeliveredAtJson) ?: emptyMap(),
     lastMessageAtMillis = lastMessageAtMillis,
     archived = archived,
-    createdAt = createdAt.toKotlinLocalDateTime(),
+    createdAt = createdAt,
     syncedToFirestore = syncedToFirestore
 )
 
@@ -53,7 +51,7 @@ internal fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     lastDeliveredAtJson = StoredJson.encode(markMap, lastDeliveredAt),
     lastMessageAtMillis = lastMessageAtMillis,
     archived = archived,
-    createdAt = createdAt.toJavaLocalDateTime(),
+    createdAt = createdAt,
     syncedToFirestore = syncedToFirestore
 )
 

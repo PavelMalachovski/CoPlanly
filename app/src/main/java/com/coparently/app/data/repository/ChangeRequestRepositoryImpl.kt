@@ -26,8 +26,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
 
 class ChangeRequestRepositoryImpl(
     private val changeRequestDao: ChangeRequestDao,
@@ -279,14 +277,14 @@ class ChangeRequestRepositoryImpl(
         eventTitle = eventTitle,
         requestedBy = requestedBy,
         requestedTo = requestedTo,
-        currentStartDateTime = currentStartDateTime.toKotlinLocalDateTime(),
-        currentEndDateTime = currentEndDateTime?.toKotlinLocalDateTime(),
-        proposedStartDateTime = proposedStartDateTime.toKotlinLocalDateTime(),
-        proposedEndDateTime = proposedEndDateTime?.toKotlinLocalDateTime(),
+        currentStartDateTime = currentStartDateTime,
+        currentEndDateTime = currentEndDateTime,
+        proposedStartDateTime = proposedStartDateTime,
+        proposedEndDateTime = proposedEndDateTime,
         note = note,
         status = ChangeRequestStatus.valueOf(status),
-        createdAt = createdAt.toKotlinLocalDateTime(),
-        respondedAt = respondedAt?.toKotlinLocalDateTime(),
+        createdAt = createdAt,
+        respondedAt = respondedAt,
         syncedToFirestore = syncedToFirestore,
         familyId = familyId
     )
@@ -297,14 +295,14 @@ class ChangeRequestRepositoryImpl(
         eventTitle = eventTitle,
         requestedBy = requestedBy,
         requestedTo = requestedTo,
-        currentStartDateTime = currentStartDateTime.toJavaLocalDateTime(),
-        currentEndDateTime = currentEndDateTime?.toJavaLocalDateTime(),
-        proposedStartDateTime = proposedStartDateTime.toJavaLocalDateTime(),
-        proposedEndDateTime = proposedEndDateTime?.toJavaLocalDateTime(),
+        currentStartDateTime = currentStartDateTime,
+        currentEndDateTime = currentEndDateTime,
+        proposedStartDateTime = proposedStartDateTime,
+        proposedEndDateTime = proposedEndDateTime,
         note = note,
         status = status.name,
-        createdAt = createdAt.toJavaLocalDateTime(),
-        respondedAt = respondedAt?.toJavaLocalDateTime(),
+        createdAt = createdAt,
+        respondedAt = respondedAt,
         syncedToFirestore = syncedToFirestore,
         familyId = familyId
     )

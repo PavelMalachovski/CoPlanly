@@ -32,6 +32,8 @@ import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -412,11 +414,11 @@ class UnassignedRecordsTest {
     ) = EventEntity(
         id = id,
         title = id,
-        startDateTime = NOW,
+        startDateTime = NOW.toKotlinLocalDateTime(),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = NOW,
-        updatedAt = NOW,
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
         updatedAtMillis = 0L,
         createdByFirebaseUid = createdBy,
         isPrivate = isPrivate,
@@ -430,8 +432,8 @@ class UnassignedRecordsTest {
         amount = 40.0,
         category = ExpenseCategory.CLOTHING.name,
         paidBy = ALICE,
-        date = NOW.toLocalDate(),
-        createdAt = NOW,
+        date = NOW.toLocalDate().toKotlinLocalDate(),
+        createdAt = NOW.toKotlinLocalDateTime(),
         createdByFirebaseUid = createdBy,
         deletedAtMillis = deletedAtMillis
     )
@@ -446,8 +448,8 @@ class UnassignedRecordsTest {
         medicalNotes = null,
         emergencyContactsJson = "[]",
         schoolInfoJson = null,
-        createdAt = NOW,
-        updatedAt = NOW,
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
         updatedAtMillis = 0L,
         createdByFirebaseUid = createdBy,
         lastModifiedBy = createdBy,
@@ -467,8 +469,8 @@ class UnassignedRecordsTest {
         feedingNotes = null,
         vetName = null,
         vetPhone = null,
-        createdAt = NOW,
-        updatedAt = NOW,
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
         updatedAtMillis = 0L,
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,

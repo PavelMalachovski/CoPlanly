@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -198,9 +197,9 @@ class CalendarSyncRepositoryTest {
         repository().syncFromGoogle().toList()
 
         val byId = inserted.captured.associateBy { it.id }
-        assertEquals(LocalDateTime.of(2026, 9, 14, 0, 0), byId.getValue("one-day").startDateTime)
-        assertEquals(LocalDateTime.of(2026, 9, 14, 23, 59), byId.getValue("one-day").endDateTime)
-        assertEquals(LocalDateTime.of(2026, 9, 15, 23, 59), byId.getValue("two-days").endDateTime)
+        assertEquals(KotlinLocalDateTime(2026, 9, 14, 0, 0), byId.getValue("one-day").startDateTime)
+        assertEquals(KotlinLocalDateTime(2026, 9, 14, 23, 59), byId.getValue("one-day").endDateTime)
+        assertEquals(KotlinLocalDateTime(2026, 9, 15, 23, 59), byId.getValue("two-days").endDateTime)
     }
 
     @Test
@@ -275,12 +274,12 @@ class CalendarSyncRepositoryTest {
         val shared = EventEntity(
             id = "e1",
             title = "Dentist",
-            startDateTime = LocalDateTime.of(2026, 9, 14, 9, 0),
-            endDateTime = LocalDateTime.of(2026, 9, 14, 10, 0),
+            startDateTime = KotlinLocalDateTime(2026, 9, 14, 9, 0),
+            endDateTime = KotlinLocalDateTime(2026, 9, 14, 10, 0),
             eventType = "medical",
             parentOwner = "dad",
-            createdAt = LocalDateTime.of(2026, 9, 1, 9, 0),
-            updatedAt = LocalDateTime.of(2026, 9, 1, 9, 0),
+            createdAt = KotlinLocalDateTime(2026, 9, 1, 9, 0),
+            updatedAt = KotlinLocalDateTime(2026, 9, 1, 9, 0),
             updatedAtMillis = 1L,
             syncedToFirestore = true,
             createdByFirebaseUid = "u1",

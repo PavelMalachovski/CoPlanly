@@ -8,7 +8,7 @@ import androidx.room.Query
 import androidx.room.Update
 import com.coparently.app.data.local.entity.EventEntity
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Data Access Object for EventEntity.

@@ -2,7 +2,7 @@ package com.coparently.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * A private journal entry as Room stores it (MON-22, schema 41).

@@ -2,7 +2,7 @@ package com.coparently.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Entity representing child information in the local Room database.

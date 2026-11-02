@@ -294,12 +294,12 @@ class ChatEventCardViewModelTest {
     private fun entity() = EventEntity(
         id = ID,
         title = "Dentist",
-        startDateTime = AT,
-        endDateTime = AT.plusHours(1),
+        startDateTime = AT.toKotlinLocalDateTime(),
+        endDateTime = AT.plusHours(1).toKotlinLocalDateTime(),
         eventType = "doctor",
         parentOwner = "mom",
-        createdAt = AT,
-        updatedAt = AT,
+        createdAt = AT.toKotlinLocalDateTime(),
+        updatedAt = AT.toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(AT.toKotlinLocalDateTime()),
         createdByFirebaseUid = CO_PARENT,
         sharedWithJson = """["$ME","$CO_PARENT"]"""

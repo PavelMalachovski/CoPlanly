@@ -24,8 +24,6 @@ import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
 import kotlinx.serialization.builtins.ListSerializer
 import java.time.Instant
 
@@ -278,7 +276,7 @@ class ChildInfoRepositoryImpl(
         return ChildInfo(
             id = id,
             childName = childName,
-            dateOfBirth = dateOfBirth?.toKotlinLocalDateTime(),
+            dateOfBirth = dateOfBirth,
             medications = StoredJson.decodeOrNull(MEDICATIONS, medicationsJson).orEmpty(),
             activities = StoredJson.decodeOrNull(ACTIVITIES, activitiesJson).orEmpty(),
             allergies = StoredJson.decodeOrNull(StoredJson.strings, allergiesJson).orEmpty(),
@@ -292,8 +290,8 @@ class ChildInfoRepositoryImpl(
                 StoredJson.decodeOrNull(StoredJson.strings, medicalPhotosJson)
             ),
             guests = ChildInfoGuests.decode(StoredJson.decodeValue(guestsJson)),
-            createdAt = createdAt.toKotlinLocalDateTime(),
-            updatedAt = updatedAt.toKotlinLocalDateTime(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -308,7 +306,7 @@ class ChildInfoRepositoryImpl(
         return ChildInfoEntity(
             id = id,
             childName = childName,
-            dateOfBirth = dateOfBirth?.toJavaLocalDateTime(),
+            dateOfBirth = dateOfBirth,
             medicationsJson = StoredJson.encode(MEDICATIONS, medications),
             activitiesJson = StoredJson.encode(ACTIVITIES, activities),
             allergiesJson = StoredJson.encode(StoredJson.strings, allergies),
@@ -318,8 +316,8 @@ class ChildInfoRepositoryImpl(
             medicalProfileJson = StoredJson.encode(MedicalProfile.serializer(), medicalProfile),
             medicalPhotosJson = StoredJson.encode(StoredJson.strings, medicalPhotos),
             guestsJson = StoredJson.encodeValue(ChildInfoGuests.encode(guests)),
-            createdAt = createdAt.toJavaLocalDateTime(),
-            updatedAt = updatedAt.toJavaLocalDateTime(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             // Derived at the one boundary every save crosses, from the wall clock each save path
             // already stamps — so no path can forget it (schema 40, see `EventTimestamp`).
             updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),

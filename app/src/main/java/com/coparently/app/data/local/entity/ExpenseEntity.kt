@@ -2,8 +2,8 @@ package com.coparently.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Entity representing an expense in the local Room database.

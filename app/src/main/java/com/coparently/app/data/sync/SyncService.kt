@@ -33,16 +33,15 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.serialization.StoredJson
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.datetime.toJavaLocalDateTime
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Date
 
 /**
@@ -80,7 +79,6 @@ class SyncService(
     private val requestClockKeeper: RequestClockKeeper,
     private val knownFamilies: KnownFamilies
 ) {
-    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     private val _syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
     val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
@@ -354,23 +352,23 @@ class SyncService(
                                 "id" to localEntity.id,
                                 "title" to localEntity.title,
                                 "description" to localEntity.description,
-                                "startDateTime" to localEntity.startDateTime.format(formatter),
-                                "endDateTime" to localEntity.endDateTime?.format(formatter),
+                                "startDateTime" to IsoText.dateTime(localEntity.startDateTime),
+                                "endDateTime" to localEntity.endDateTime?.let(IsoText::dateTime),
                                 "eventType" to localEntity.eventType,
                                 "parentOwner" to localEntity.parentOwner,
                                 "isRecurring" to localEntity.isRecurring,
                                 "recurrencePattern" to localEntity.recurrencePattern,
-                                "recurrenceEndDate" to localEntity.recurrenceEndDate?.toString(),
+                                "recurrenceEndDate" to localEntity.recurrenceEndDate?.let(IsoText::date),
                                 "pickupConfirmedBy" to localEntity.pickupConfirmedBy,
-                                "pickupConfirmedAt" to localEntity.pickupConfirmedAt?.format(formatter),
-                                "createdAt" to localEntity.createdAt.format(formatter),
+                                "pickupConfirmedAt" to localEntity.pickupConfirmedAt?.let(IsoText::dateTime),
+                                "createdAt" to IsoText.dateTime(localEntity.createdAt),
                                 "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
                                 "imageUrl" to localEntity.imageUrl,
                                 "acceptance" to localEntity.acceptance,
                                 "acceptedBy" to localEntity.acceptedBy,
-                                "acceptedAt" to localEntity.acceptedAt?.format(formatter),
+                                "acceptedAt" to localEntity.acceptedAt?.let(IsoText::dateTime),
                                 "isImportant" to localEntity.isImportant,
                                 "friendParticipates" to (localEntity.friendParticipates ?: ""),
                                 "reminderMinutes" to localEntity.reminderMinutes,
@@ -671,7 +669,7 @@ class SyncService(
             val childInfoData = mapOf(
                 "id" to entity.id,
                 "childName" to entity.childName,
-                "dateOfBirth" to entity.dateOfBirth?.format(formatter),
+                "dateOfBirth" to entity.dateOfBirth?.let(IsoText::dateTime),
                 "medications" to StoredJson.decodeArray(entity.medicationsJson),
                 "activities" to StoredJson.decodeArray(entity.activitiesJson),
                 "allergies" to StoredJson.decodeArray(entity.allergiesJson),
@@ -683,7 +681,7 @@ class SyncService(
                     StoredJson.decodeArray(entity.medicalPhotosJson)
                 ),
                 "guests" to ChildInfoGuests.encode(guestsOf(entity)),
-                "createdAt" to entity.createdAt.format(formatter),
+                "createdAt" to IsoText.dateTime(entity.createdAt),
                 // UTC, offset-free, from the instant (schema 40) — see `EventTimestamp`.
                 "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
                 "createdByFirebaseUid" to entity.createdByFirebaseUid,
@@ -764,7 +762,7 @@ class SyncService(
                             val localData = mapOf(
                                 "id" to localEntity.id,
                                 "childName" to localEntity.childName,
-                                "dateOfBirth" to localEntity.dateOfBirth?.format(formatter),
+                                "dateOfBirth" to localEntity.dateOfBirth?.let(IsoText::dateTime),
                                 "medications" to StoredJson.decodeArray(localEntity.medicationsJson),
                                 "activities" to StoredJson.decodeArray(localEntity.activitiesJson),
                                 "allergies" to StoredJson.decodeArray(localEntity.allergiesJson),
@@ -776,7 +774,7 @@ class SyncService(
                                     StoredJson.decodeArray(localEntity.medicalPhotosJson)
                                 ),
                                 "guests" to ChildInfoGuests.encode(guestsOf(localEntity)),
-                                "createdAt" to localEntity.createdAt.format(formatter),
+                                "createdAt" to IsoText.dateTime(localEntity.createdAt),
                                 "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
@@ -1062,7 +1060,7 @@ class SyncService(
         return com.coparently.app.data.local.entity.ChildInfoEntity(
             id = this["id"] as String,
             childName = this["childName"] as String,
-            dateOfBirth = (this["dateOfBirth"] as? String)?.let { LocalDateTime.parse(it, formatter) },
+            dateOfBirth = (this["dateOfBirth"] as? String)?.let(IsoText::parseDateTime),
             medicationsJson = StoredJson.encodeValue(this["medications"] ?: emptyList<Any>()),
             activitiesJson = StoredJson.encodeValue(this["activities"] ?: emptyList<Any>()),
             allergiesJson = StoredJson.encodeValue(this["allergies"] ?: emptyList<String>()),
@@ -1072,10 +1070,10 @@ class SyncService(
             medicalProfileJson = StoredJson.encodeValue(this["medicalProfile"] ?: emptyMap<String, Any?>()),
             medicalPhotosJson = StoredJson.encodeValue(ChildInfoPhotos.decode(this["medicalPhotos"])),
             guestsJson = StoredJson.encodeValue(ChildInfoGuests.encode(ChildInfoGuests.decode(this["guests"]))),
-            createdAt = LocalDateTime.parse(this["createdAt"] as String, formatter),
+            createdAt = IsoText.parseDateTime(this["createdAt"] as String),
             // Read as UTC — what an upgraded build writes — and a legacy naive value the same way,
             // wrong by its writer's offset and irreducibly so (schema 40, see `EventTimestamp`).
-            updatedAt = EventTimestamp.toWallClock(updatedAtMillis).toJavaLocalDateTime(),
+            updatedAt = EventTimestamp.toWallClock(updatedAtMillis),
             updatedAtMillis = updatedAtMillis,
             createdByFirebaseUid = this["createdByFirebaseUid"] as? String,
             lastModifiedBy = this["lastModifiedBy"] as? String,

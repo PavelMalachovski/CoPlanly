@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.coparently.app.data.local.entity.JournalEntryEntity
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The private journal (MON-22). Every query is scoped to its author.

@@ -6,10 +6,6 @@ import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import kotlinx.datetime.toJavaLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * The one reader of an `events` Firestore document, and its two full-document writers.
@@ -25,8 +21,6 @@ import java.time.format.DateTimeFormatter
  * fixtures in `app/src/test/resources/wire/`) run the production mappers on the JVM.
  */
 internal object EventDocument {
-
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     /**
      * Reads one document into a Room row, already marked as coming from the server.
@@ -57,25 +51,25 @@ internal object EventDocument {
         id = data["id"] as String,
         title = data["title"] as String,
         description = data["description"] as? String,
-        startDateTime = LocalDateTime.parse(data["startDateTime"] as String, formatter),
+        startDateTime = IsoText.parseDateTime(data["startDateTime"] as String),
         // Blank reads as "no end", like every other optional date here. `toFirestoreMap()` writes
         // `""` for an event without one, so parsing it unguarded threw, and the per-document catch
         // on the reading side then skipped the event: the co-parent never received it at all.
         endDateTime = (data["endDateTime"] as? String)?.ifBlank { null }
-            ?.let { LocalDateTime.parse(it, formatter) },
+            ?.let(IsoText::parseDateTime),
         eventType = data["eventType"] as String,
         parentOwner = data["parentOwner"] as String,
         isRecurring = data["isRecurring"] as? Boolean ?: false,
         recurrencePattern = (data["recurrencePattern"] as? String)?.ifBlank { null },
         recurrenceEndDate = (data["recurrenceEndDate"] as? String)?.ifBlank { null }
-            ?.let { LocalDate.parse(it) },
+            ?.let(IsoText::parseDate),
         pickupConfirmedBy = (data["pickupConfirmedBy"] as? String)?.ifBlank { null },
         pickupConfirmedAt = (data["pickupConfirmedAt"] as? String)?.ifBlank { null }
-            ?.let { LocalDateTime.parse(it, formatter) },
-        createdAt = LocalDateTime.parse(data["createdAt"] as String, formatter),
+            ?.let(IsoText::parseDateTime),
+        createdAt = IsoText.parseDateTime(data["createdAt"] as String),
         // The wall clock shown on this phone is the instant in this phone's zone, not the
         // writer's: the wire value no longer names the writer's wall clock at all.
-        updatedAt = EventTimestamp.toWallClock(updatedAtMillis).toJavaLocalDateTime(),
+        updatedAt = EventTimestamp.toWallClock(updatedAtMillis),
         updatedAtMillis = updatedAtMillis,
         syncedToFirestore = true,
         createdByFirebaseUid = data["createdByFirebaseUid"] as? String,
@@ -88,7 +82,7 @@ internal object EventDocument {
         acceptance = acceptanceOf(data),
         acceptedBy = (data["acceptedBy"] as? String)?.ifBlank { null },
         acceptedAt = (data["acceptedAt"] as? String)?.ifBlank { null }
-            ?.let { LocalDateTime.parse(it, formatter) },
+            ?.let(IsoText::parseDateTime),
         // Absent reads as false: a document written before this field existed carries no such
         // expectation, and inventing one would put an exclamation mark on somebody else's
         // ordinary event.
@@ -176,16 +170,16 @@ internal object EventDocument {
         "id" to entity.id,
         "title" to entity.title,
         "description" to entity.description,
-        "startDateTime" to entity.startDateTime.format(formatter),
-        "endDateTime" to entity.endDateTime?.format(formatter),
+        "startDateTime" to IsoText.dateTime(entity.startDateTime),
+        "endDateTime" to entity.endDateTime?.let(IsoText::dateTime),
         "eventType" to entity.eventType,
         "parentOwner" to entity.parentOwner,
         "isRecurring" to entity.isRecurring,
         "recurrencePattern" to entity.recurrencePattern,
-        "recurrenceEndDate" to entity.recurrenceEndDate?.toString(),
+        "recurrenceEndDate" to entity.recurrenceEndDate?.let(IsoText::date),
         "pickupConfirmedBy" to entity.pickupConfirmedBy,
-        "pickupConfirmedAt" to entity.pickupConfirmedAt?.format(formatter),
-        "createdAt" to entity.createdAt.format(formatter),
+        "pickupConfirmedAt" to entity.pickupConfirmedAt?.let(IsoText::dateTime),
+        "createdAt" to IsoText.dateTime(entity.createdAt),
         // The instant, as UTC text — the same wire form [fromEvent] writes (MON-4).
         "updatedAt" to EventTimestamp.toWire(entity.updatedAtMillis),
         "createdByFirebaseUid" to entity.createdByFirebaseUid,
@@ -195,7 +189,7 @@ internal object EventDocument {
         "imageUrl" to entity.imageUrl,
         "acceptance" to entity.acceptance,
         "acceptedBy" to entity.acceptedBy,
-        "acceptedAt" to entity.acceptedAt?.format(formatter),
+        "acceptedAt" to entity.acceptedAt?.let(IsoText::dateTime),
         "isImportant" to entity.isImportant,
         "friendParticipates" to (entity.friendParticipates ?: ""),
         "forMembers" to storedMembers(entity.forMembersJson),

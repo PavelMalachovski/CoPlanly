@@ -35,10 +35,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
 
 /**
  * Implementation of EventRepository.
@@ -92,10 +88,9 @@ class EventRepositoryImpl(
     override fun getEventsByDateRange(start: LocalDateTime, end: LocalDateTime): Flow<List<Event>> {
         // Non-recurring events matched by the query + recurring events expanded
         // into their occurrences within the range.
-        // Room keeps java.time columns until the data layer moves (MON-24 phase 2).
         return kotlinx.coroutines.flow.combine(
-            eventDao.getSingleEventsByDateRange(start.toJavaLocalDateTime(), end.toJavaLocalDateTime()),
-            eventDao.getRecurringEventsStartedBefore(end.toJavaLocalDateTime())
+            eventDao.getSingleEventsByDateRange(start, end),
+            eventDao.getRecurringEventsStartedBefore(end)
         ) { single, recurring ->
             val singleEvents = CalendarVisibility.visible(single.map { it.toDomain() })
             val occurrences = com.coparently.app.domain.usecase.RecurrenceExpander.expandAll(
@@ -113,7 +108,7 @@ class EventRepositoryImpl(
 
     /** One day's events, filtered by the same rule as the range query. */
     override fun getEventsByDate(date: LocalDateTime): Flow<List<Event>> {
-        return eventDao.getEventsByDate(date.toJavaLocalDateTime()).map { entities ->
+        return eventDao.getEventsByDate(date).map { entities ->
             CalendarVisibility.visible(entities.map { it.toDomain() })
         }.inFamilyOnScreen(
             firebaseAuthService,
@@ -514,14 +509,14 @@ class EventRepositoryImpl(
             id = id,
             title = title,
             description = description,
-            startDateTime = startDateTime.toKotlinLocalDateTime(),
-            endDateTime = endDateTime?.toKotlinLocalDateTime(),
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
             eventType = eventType,
             parentOwner = parentOwner,
             isRecurring = isRecurring,
             recurrencePattern = recurrencePattern,
-            createdAt = createdAt.toKotlinLocalDateTime(),
-            updatedAt = updatedAt.toKotlinLocalDateTime(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             sharedWith = runCatching {
@@ -530,9 +525,9 @@ class EventRepositoryImpl(
             lastModifiedBy = lastModifiedBy,
             permissions = permissions,
             isPrivate = isPrivate,
-            recurrenceEndDate = recurrenceEndDate?.toKotlinLocalDate(),
+            recurrenceEndDate = recurrenceEndDate,
             pickupConfirmedBy = pickupConfirmedBy,
-            pickupConfirmedAt = pickupConfirmedAt?.toKotlinLocalDateTime(),
+            pickupConfirmedAt = pickupConfirmedAt,
             reminderMinutes = reminderMinutes,
             imageUrl = imageUrl,
             // An unrecognised status from a newer build reads as NOT_REQUIRED rather than
@@ -541,7 +536,7 @@ class EventRepositoryImpl(
             acceptance = runCatching { EventAcceptance.valueOf(acceptance) }
                 .getOrDefault(EventAcceptance.NOT_REQUIRED),
             acceptedBy = acceptedBy,
-            acceptedAt = acceptedAt?.toKotlinLocalDateTime(),
+            acceptedAt = acceptedAt,
             isImportant = isImportant,
             friendParticipates = friendParticipates,
             familyId = familyId,
@@ -561,14 +556,14 @@ class EventRepositoryImpl(
             id = id,
             title = title,
             description = description,
-            startDateTime = startDateTime.toJavaLocalDateTime(),
-            endDateTime = endDateTime?.toJavaLocalDateTime(),
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
             eventType = eventType,
             parentOwner = parentOwner,
             isRecurring = isRecurring,
             recurrencePattern = recurrencePattern,
-            createdAt = createdAt.toJavaLocalDateTime(),
-            updatedAt = updatedAt.toJavaLocalDateTime(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             // Derived here, at the one boundary every save crosses, from the wall clock each save
             // path already stamps — so no path can forget it (see `EventTimestamp.ofWallClock`).
             updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),
@@ -578,14 +573,14 @@ class EventRepositoryImpl(
             lastModifiedBy = lastModifiedBy,
             permissions = permissions,
             isPrivate = isPrivate,
-            recurrenceEndDate = recurrenceEndDate?.toJavaLocalDate(),
+            recurrenceEndDate = recurrenceEndDate,
             pickupConfirmedBy = pickupConfirmedBy,
-            pickupConfirmedAt = pickupConfirmedAt?.toJavaLocalDateTime(),
+            pickupConfirmedAt = pickupConfirmedAt,
             reminderMinutes = reminderMinutes,
             imageUrl = imageUrl,
             acceptance = acceptance.name,
             acceptedBy = acceptedBy,
-            acceptedAt = acceptedAt?.toJavaLocalDateTime(),
+            acceptedAt = acceptedAt,
             isImportant = isImportant,
             friendParticipates = friendParticipates,
             familyId = familyId,

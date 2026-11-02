@@ -2,7 +2,8 @@ package com.coparently.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Entity representing an event in the local Room database.
@@ -60,7 +61,7 @@ data class EventEntity(
     val lastModifiedBy: String? = null,
     val permissions: String = "read_write",
     val isPrivate: Boolean = false,
-    val recurrenceEndDate: java.time.LocalDate? = null,
+    val recurrenceEndDate: LocalDate? = null,
     val pickupConfirmedBy: String? = null,
     val pickupConfirmedAt: LocalDateTime? = null,
     val reminderMinutes: Int? = null,

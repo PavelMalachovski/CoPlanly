@@ -22,6 +22,8 @@ import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -127,8 +129,8 @@ class ExpenseRepositoryImplTest {
                 amount = 42.0,
                 category = "EDUCATION",
                 paidBy = "mom",
-                date = LocalDate.of(2026, 8, 1),
-                createdAt = LocalDateTime.of(2026, 8, 1, 9, 0),
+                date = LocalDate.of(2026, 8, 1).toKotlinLocalDate(),
+                createdAt = LocalDateTime.of(2026, 8, 1, 9, 0).toKotlinLocalDateTime(),
                 createdByFirebaseUid = "uidA",
                 deletedAtMillis = 1_000L
             )

@@ -8,6 +8,7 @@ import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
 import com.google.gson.Gson
+import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
@@ -53,8 +54,8 @@ internal object EventWireContract : WireContract {
             "id" to entity.id,
             "title" to entity.title,
             "description" to entity.description,
-            "startDateTime" to entity.startDateTime.format(formatter),
-            "endDateTime" to entity.endDateTime?.format(formatter),
+            "startDateTime" to entity.startDateTime.toJavaLocalDateTime().format(formatter),
+            "endDateTime" to entity.endDateTime?.toJavaLocalDateTime()?.format(formatter),
             "eventType" to entity.eventType,
             "parentOwner" to entity.parentOwner,
             "isRecurring" to entity.isRecurring,
@@ -152,12 +153,12 @@ internal object EventWireContract : WireContract {
         id = "evt-current-3",
         title = "Handover",
         description = null,
-        startDateTime = LocalDateTime.of(2026, 5, 15, 17, 0),
-        endDateTime = LocalDateTime.of(2026, 5, 15, 17, 30),
+        startDateTime = LocalDateTime.of(2026, 5, 15, 17, 0).toKotlinLocalDateTime(),
+        endDateTime = LocalDateTime.of(2026, 5, 15, 17, 30).toKotlinLocalDateTime(),
         eventType = "handover",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime.of(2026, 5, 4, 12, 0),
+        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime(),
+        updatedAt = LocalDateTime.of(2026, 5, 4, 12, 0).toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.fromWire("2026-05-04T10:00:00"),
         createdByFirebaseUid = ALICE,
         sharedWithJson = "[\"$ALICE\",\"$BOB\"]",

@@ -299,7 +299,7 @@ class ChildInfoRepositoryImplTest {
         val saved = slot<ChildInfoEntity>()
         coVerify { childInfoDao.updateChildInfo(capture(saved)) }
         assertEquals(instant, saved.captured.updatedAtMillis)
-        assertEquals(NOW, saved.captured.updatedAt, "the displayed wall clock is unchanged")
+        assertEquals(NOW.toKotlinLocalDateTime(), saved.captured.updatedAt, "the displayed wall clock is unchanged")
     }
 
     private fun childInfo(createdByFirebaseUid: String?) = ChildInfo(

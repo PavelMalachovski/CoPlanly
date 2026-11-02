@@ -14,6 +14,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -121,7 +122,7 @@ class ConversationMigratorTest {
             participantsJson = """["$UID_A","carol-uid"]""",
             title = "Someone else",
             archived = false,
-            createdAt = CREATED_AT
+            createdAt = CREATED_AT.toKotlinLocalDateTime()
         )
         coEvery { messageDao.getActiveConversations() } returns flowOf(listOf(otherPair))
 
@@ -174,7 +175,7 @@ class ConversationMigratorTest {
                 participantsJson = """["$UID_A","$UID_B"]""",
                 title = "Another old thread",
                 archived = false,
-                createdAt = CREATED_AT
+                createdAt = CREATED_AT.toKotlinLocalDateTime()
             )
             coEvery { messageDao.getActiveConversations() } returns
                 flowOf(listOf(legacyRow(), secondLegacy))
@@ -237,7 +238,7 @@ class ConversationMigratorTest {
         participantsJson = """["$UID_A","$UID_B"]""",
         title = "Old thread",
         archived = false,
-        createdAt = CREATED_AT
+        createdAt = CREATED_AT.toKotlinLocalDateTime()
     )
 
     private fun canonicalRow() = ConversationEntity(
@@ -245,7 +246,7 @@ class ConversationMigratorTest {
         participantsJson = """["$UID_A","$UID_B"]""",
         title = "Co-parent chat",
         archived = false,
-        createdAt = CREATED_AT
+        createdAt = CREATED_AT.toKotlinLocalDateTime()
     )
 
     private fun messageRow(id: String) = MessageEntity(

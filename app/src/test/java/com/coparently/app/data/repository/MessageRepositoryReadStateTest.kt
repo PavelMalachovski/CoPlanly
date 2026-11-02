@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -542,7 +543,7 @@ class MessageRepositoryReadStateTest {
         title = "Anna",
         lastReadAtJson = lastReadAtJson,
         lastDeliveredAtJson = lastDeliveredAtJson,
-        createdAt = TIMESTAMP
+        createdAt = TIMESTAMP.toKotlinLocalDateTime()
     )
 
     private fun message() = Message(

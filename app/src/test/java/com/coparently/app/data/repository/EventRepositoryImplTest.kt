@@ -656,7 +656,7 @@ class EventRepositoryImplTest {
         val entity = baseEntity().copy(
             acceptance = "ACCEPTED",
             acceptedBy = "uid-dad",
-            acceptedAt = now
+            acceptedAt = now.toKotlinLocalDateTime()
         )
         coEvery { eventDao.getEventById("e1") } returns entity
 
@@ -760,12 +760,12 @@ class EventRepositoryImplTest {
     private fun baseEntity() = EventEntity(
         id = "e1",
         title = "Soccer",
-        startDateTime = now,
-        endDateTime = now.plusHours(1),
+        startDateTime = now.toKotlinLocalDateTime(),
+        endDateTime = now.plusHours(1).toKotlinLocalDateTime(),
         eventType = "sports",
         parentOwner = "mom",
-        createdAt = now,
-        updatedAt = now,
+        createdAt = now.toKotlinLocalDateTime(),
+        updatedAt = now.toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(now.toKotlinLocalDateTime())
     )
 

@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.coparently.app.data.local.entity.ExpenseEntity
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Data Access Object for expenses.

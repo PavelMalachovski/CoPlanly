@@ -6,6 +6,8 @@ import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /**
@@ -33,13 +35,17 @@ class JournalRepositoryImpl(
     }
 
     override suspend fun entriesBetween(authorUid: String, from: LocalDate, to: LocalDate): List<JournalEntry> =
-        journalDao.entriesBetween(authorUid, from, to).map { it.toJournalEntry() }
+        journalDao.entriesBetween(authorUid, from.toKotlinLocalDate(), to.toKotlinLocalDate())
+            .map { it.toJournalEntry() }
 }
 
-/** Room row to domain entry. */
+/**
+ * Room row to domain entry. The row's date is `kotlinx.datetime`'s since the entities moved to
+ * common code (MON-24 phase 2); the domain entry stays on `java.time` until it moves too.
+ */
 internal fun JournalEntryEntity.toJournalEntry() = JournalEntry(
     id = id,
-    entryDate = entryDate,
+    entryDate = entryDate.toJavaLocalDate(),
     text = text,
     createdAtMillis = createdAtMillis,
     updatedAtMillis = updatedAtMillis,
@@ -52,7 +58,7 @@ internal fun JournalEntry.toJournalEntity() = JournalEntryEntity(
     id = id,
     createdByFirebaseUid = createdByFirebaseUid,
     familyId = familyId,
-    entryDate = entryDate,
+    entryDate = entryDate.toKotlinLocalDate(),
     text = text,
     createdAtMillis = createdAtMillis,
     updatedAtMillis = updatedAtMillis

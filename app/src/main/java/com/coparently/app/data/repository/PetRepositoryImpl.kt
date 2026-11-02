@@ -24,8 +24,6 @@ import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
 import kotlinx.serialization.builtins.ListSerializer
 
 /**
@@ -304,7 +302,7 @@ class PetRepositoryImpl(
             name = name,
             species = PetSpecies.fromStored(species),
             breed = breed,
-            dateOfBirth = dateOfBirth?.toKotlinLocalDateTime(),
+            dateOfBirth = dateOfBirth,
             medications = StoredJson.decodeOrNull(MEDICATIONS, medicationsJson) ?: emptyList(),
             vaccinations = StoredJson.decodeOrNull(VACCINATIONS, vaccinationsJson) ?: emptyList(),
             specialNeeds = specialNeeds,
@@ -312,8 +310,8 @@ class PetRepositoryImpl(
             vetName = vetName,
             vetPhone = vetPhone,
             photos = StoredJson.decodeOrNull(StoredJson.strings, photosJson) ?: emptyList(),
-            createdAt = createdAt.toKotlinLocalDateTime(),
-            updatedAt = updatedAt.toKotlinLocalDateTime(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             createdByFirebaseUid = createdByFirebaseUid,
             lastModifiedBy = lastModifiedBy,
             syncedToFirestore = syncedToFirestore,
@@ -330,7 +328,7 @@ class PetRepositoryImpl(
             name = name,
             species = species.name,
             breed = breed,
-            dateOfBirth = dateOfBirth?.toJavaLocalDateTime(),
+            dateOfBirth = dateOfBirth,
             medicationsJson = StoredJson.encode(MEDICATIONS, medications),
             vaccinationsJson = StoredJson.encode(VACCINATIONS, vaccinations),
             specialNeeds = specialNeeds,
@@ -338,8 +336,8 @@ class PetRepositoryImpl(
             vetName = vetName,
             vetPhone = vetPhone,
             photosJson = StoredJson.encode(StoredJson.strings, photos),
-            createdAt = createdAt.toJavaLocalDateTime(),
-            updatedAt = updatedAt.toJavaLocalDateTime(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
             // Derived at the one boundary every save crosses, from the wall clock each save path
             // already stamps — so no path can forget it (schema 40, see `EventTimestamp`).
             updatedAtMillis = EventTimestamp.ofWallClock(updatedAt),

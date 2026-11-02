@@ -11,6 +11,7 @@ import io.mockk.slot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -61,7 +62,9 @@ class JournalRepositoryImplTest {
     fun `the export's read is the author's entries for the period`() = runTest {
         val from = LocalDate.of(2026, 9, 1)
         val to = LocalDate.of(2026, 9, 30)
-        coEvery { dao.entriesBetween("alice", from, to) } returns listOf(entry.toJournalEntity())
+        coEvery {
+            dao.entriesBetween("alice", from.toKotlinLocalDate(), to.toKotlinLocalDate())
+        } returns listOf(entry.toJournalEntity())
 
         assertEquals(listOf(entry), repository.entriesBetween("alice", from, to))
     }

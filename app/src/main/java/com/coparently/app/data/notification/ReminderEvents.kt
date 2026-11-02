@@ -2,8 +2,6 @@ package com.coparently.app.data.notification
 
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
 
 /**
  * The part of a stored event a reminder reads — when its occurrences start, its title and its
@@ -18,15 +16,15 @@ import kotlinx.datetime.toKotlinLocalDateTime
 internal fun EventEntity.toReminderEvent(): Event = Event(
     id = id,
     title = title,
-    startDateTime = startDateTime.toKotlinLocalDateTime(),
-    endDateTime = endDateTime?.toKotlinLocalDateTime(),
+    startDateTime = startDateTime,
+    endDateTime = endDateTime,
     eventType = eventType,
     parentOwner = parentOwner,
     isRecurring = isRecurring,
     recurrencePattern = recurrencePattern,
-    recurrenceEndDate = recurrenceEndDate?.toKotlinLocalDate(),
+    recurrenceEndDate = recurrenceEndDate,
     reminderMinutes = reminderMinutes,
     isPrivate = isPrivate,
-    createdAt = createdAt.toKotlinLocalDateTime(),
-    updatedAt = updatedAt.toKotlinLocalDateTime()
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )

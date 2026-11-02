@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -171,8 +170,8 @@ class CalendarSyncRepository(
     private data class GoogleFields(
         val title: String,
         val description: String?,
-        val start: LocalDateTime,
-        val end: LocalDateTime?,
+        val start: kotlinx.datetime.LocalDateTime,
+        val end: kotlinx.datetime.LocalDateTime?,
         val isRecurring: Boolean,
         val recurrencePattern: String?
     ) {
@@ -228,14 +227,16 @@ class CalendarSyncRepository(
             id = id ?: java.util.UUID.randomUUID().toString(),
             title = summary ?: "Untitled Event",
             description = description,
-            startDateTime = startDateTime,
-            endDateTime = endDateTime,
+            // The row's columns are `kotlinx.datetime` since the entities moved to common code
+            // (MON-24 phase 2); the same value, and the same stored text (`Converters`).
+            startDateTime = startDateTime.toKotlinLocalDateTime(),
+            endDateTime = endDateTime?.toKotlinLocalDateTime(),
             eventType = "google",
             parentOwner = ownerSlot,
             isRecurring = recurrence != null,
             recurrencePattern = recurrence?.firstOrNull(),
-            createdAt = LocalDateTime.now(),
-            updatedAt = EventTimestamp.toWallClock(importedAtMillis).toJavaLocalDateTime(),
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = EventTimestamp.toWallClock(importedAtMillis),
             updatedAtMillis = importedAtMillis,
             createdByFirebaseUid = ownerUid,
             familyId = ownerFamilyId,

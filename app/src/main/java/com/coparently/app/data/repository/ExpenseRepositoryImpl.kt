@@ -30,10 +30,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -65,7 +61,7 @@ class ExpenseRepositoryImpl(
         expenseDao.getAllExpenses().map { entities -> entities.map { it.toDomain() } }
 
     override fun getExpensesForPeriod(start: LocalDate, end: LocalDate): Flow<List<Expense>> {
-        return expenseDao.getExpensesForPeriod(start.toJavaLocalDate(), end.toJavaLocalDate()).map { entities ->
+        return expenseDao.getExpensesForPeriod(start, end).map { entities ->
             entities.map { it.toDomain() }
         }.inFamilyOnScreen(
             firebaseAuthService,
@@ -447,10 +443,10 @@ class ExpenseRepositoryImpl(
             category = ExpenseCategory.valueOf(category),
             paidBy = paidBy,
             splitBetween = splitBetween,
-            date = date.toKotlinLocalDate(),
+            date = date,
             receiptUrl = receiptUrl,
             notes = notes,
-            createdAt = createdAt.toKotlinLocalDateTime(),
+            createdAt = createdAt,
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             splitBasisPoints = splitBasisPoints
@@ -470,10 +466,10 @@ class ExpenseRepositoryImpl(
             category = category.name,
             paidBy = paidBy,
             splitBetweenJson = StoredJson.encode(StoredJson.strings, splitBetween),
-            date = date.toJavaLocalDate(),
+            date = date,
             receiptUrl = receiptUrl,
             notes = notes,
-            createdAt = createdAt.toJavaLocalDateTime(),
+            createdAt = createdAt,
             syncedToFirestore = syncedToFirestore,
             createdByFirebaseUid = createdByFirebaseUid,
             splitBasisPoints = splitBasisPoints
