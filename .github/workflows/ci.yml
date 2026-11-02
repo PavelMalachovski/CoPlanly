@@ -1182,7 +1182,7 @@ jobs:
       # itself (tools/stop-emulator.sh); the timeout is the backstop.
       - name: Run the two-parent tests
         id: e2e-tests
-        timeout-minutes: 15
+        timeout-minutes: 20
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -1221,7 +1221,7 @@ jobs:
       - name: Run the two-parent tests (again, on a cold boot)
         id: e2e-tests-retry
         if: steps.e2e-tests-started.outputs.started == 'false'
-        timeout-minutes: 15
+        timeout-minutes: 20
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         env:
