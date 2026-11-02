@@ -540,8 +540,9 @@ When touching the UI, keep these invariants:
    Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there for Android and
    both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
    (`sqlite-bundled`, released with Room 2.7.2) on iOS only; the schema goes to `app/schemas/`
-   through the `room.schemaLocation` KSP argument rather than the Room Gradle plugin, which finds
-   its KSP tasks by KSP1 classes that KSP 2.3 removed and could not be checked here — Navigation 2.9.3,
+   through the `room.schemaLocation` KSP argument, which the app already used, rather than the Room
+   Gradle plugin, which was not tried in this task (Google's Maven repository, where the plugin is
+   published, is unreachable from the cloud sessions this was built in) — Navigation 2.9.3,
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
@@ -1011,9 +1012,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `testDebugUnitTest` (check run "Shared tests (JVM)"), `compileKotlinIosSimulatorArm64`,
   the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
   that does not compile for iOS fails on every pull request, Mac or no Mac — and
-  `compileTestKotlinIosSimulatorArm64`, the same for commonTest; it also reruns Room's iOS
-  processor (`:shared-data:kspKotlinIosSimulatorArm64 --rerun`) and fails, as `build-test` does for
-  Android, when the schema it exports into `app/schemas/` differs from the committed one. **A backticked test name
+  `compileTestKotlinIosSimulatorArm64`, the same for commonTest; before them it deletes the
+  current version's schema, reruns Room's iOS processor alone
+  (`:shared-data:kspKotlinIosSimulatorArm64 --rerun`) and fails, as `build-test` now does for
+  Android (`:shared-data:kspDebugKotlinAndroid --rerun`, after the same deletion), when the file
+  was not written again or differs from the committed one — a clean `git status` alone cannot tell
+  "identical" from "never written". **A backticked test name
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more, because Kover merges `:shared` and `:shared-data` into the app's coverage

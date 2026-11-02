@@ -2784,8 +2784,8 @@ bytes are identical on Android):
   the bundled SQLite driver in `no_backup/databases/`, with `NSFileProtectionComplete` on the file
   and its `-wal` and `-shm` siblings and no SQLCipher (owner answer 1, design §9.1);
   `IosDatabaseTest` round-trips a row in every table there. The schema is exported through the
-  `room.schemaLocation` KSP argument, as the app did, not the Room Gradle plugin, whose KSP 2.3
-  compatibility could not be checked from a cloud session. Still to run on a phone: an install
+  `room.schemaLocation` KSP argument, as the app did; the Room Gradle plugin was not tried, since
+  Google's Maven repository is unreachable from the cloud sessions. Still to run on a phone: an install
   over the previous build (`docs/DEVICE-CHECKLIST.md` §2.1), and on an iPhone, that the database
   is unreadable while the phone is locked.
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
@@ -2836,6 +2836,16 @@ platform caches; they do not fail the link. So:
    later wait for it too: their OkHttp 5.5 needs compileSdk 37. And once the iPhone app's XCTest host
    exists: run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it), and check on a phone that
    the preference item survives a relaunch and is readable after the first unlock.
+   On the same host, run `IosDatabaseTest` on a real iPhone, where its read-back of the
+   protection class runs (the simulator reports none), and check on a phone that the database file
+   and its `-wal` and `-shm` siblings (`no_backup/databases/coparently_database`) report
+   `NSFileProtectionComplete`, and that the database cannot be opened while the phone is locked
+   (a background task that tries fails until the next unlock). `docs/DEVICE-CHECKLIST.md` has no
+   iPhone-app section yet; this joins it when it gets one.
+   And before any iPhone build reaches a user: `PRIVACY-POLICY.md`, `DPIA.md` and
+   `DATA-SAFETY.md` describe the iPhone's local storage — the database under iOS Data Protection
+   (`NSFileProtectionComplete`), with no SQLCipher, beside Android's SQLCipher (design §9.1, owner
+   answer 1) — and `web/privacy/` is regenerated (CLAUDE.md, Legal item 1).
 3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
    App Store Connect will require by then.
 

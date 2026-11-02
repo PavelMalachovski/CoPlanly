@@ -212,8 +212,23 @@ jobs:
       # One invocation, not two: `testDebugUnitTest` compiles the same debug sources
       # `assembleDebug` does, so running them together shares a configuration phase and a
       # Kotlin compile instead of repeating both.
+      # The current version's schema is deleted before the build, so the check after it can tell
+      # "written again, identical" from "not written at all": `git status --porcelain` is clean in
+      # both cases, and only the first proves the moved database (MON-24 phase 2) still exports
+      # exactly what is committed. `--rerun` on Room's Android processor for the same reason: a
+      # KSP task restored from the build cache writes nothing into `app/schemas/`. Only the current
+      # version's file is touched; the older ones are fixtures nobody rebuilds.
+      - name: Remove the current schema so the build must write it
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 -oE 'version = [0-9]+' shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt | grep -oE '[0-9]+')
+          schema="app/schemas/com.coparently.app.data.local.CoPlanlyDatabase/$version.json"
+          echo "Database version $version; removing $schema so the build has to write it again."
+          rm -f "$schema"
+          echo "SCHEMA_FILE=$schema" >> "$GITHUB_ENV"
+
       - name: Assemble debug and run unit tests
-        run: ./gradlew :app:assembleDebug testDebugUnitTest
+        run: ./gradlew :app:assembleDebug testDebugUnitTest :shared-data:kspDebugKotlinAndroid --rerun
 
       # `DatabaseSchemaExportTest` cannot catch what CQ-1 says it catches, and this is the
       # step that can. KSP (Room) writes `app/schemas/<version>.json` during the build above, from
@@ -235,6 +250,12 @@ jobs:
       - name: The exported schema must be committed, not merely producible
         run: |
           set -euo pipefail
+          if [ ! -f "$SCHEMA_FILE" ]; then
+            echo "::error::Room's Android processor did not write $SCHEMA_FILE: the schema export"
+            echo "::error::did not run (room.schemaLocation in shared-data/build.gradle.kts), so"
+            echo "::error::nothing here proves the committed schema is still the database's."
+            exit 1
+          fi
           dirty=$(git status --porcelain -- app/schemas)
           if [ -n "$dirty" ]; then
             echo "$dirty"
@@ -1917,16 +1938,22 @@ jobs:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts') }}
 
-      # `kspKotlinIosSimulatorArm64 --rerun`: Room's processor for the iPhone writes the exported
-      # schema into `app/schemas/` too (the database is common code since MON-24 phase 2), and a
-      # result restored from the build cache would write nothing, so the step below would pass
-      # without having looked. `--rerun` applies to that one task.
-      - name: Shared tests (JVM) and the iOS compile
-        run: >-
-          ./gradlew
-          :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
-          :shared-data:testDebugUnitTest :shared-data:kspKotlinIosSimulatorArm64 --rerun
-          :shared-data:compileKotlinIosSimulatorArm64 :shared-data:compileTestKotlinIosSimulatorArm64
+      # Room's processor for the iPhone writes the exported schema into `app/schemas/` too (the
+      # database is common code since MON-24 phase 2). The current version's file is deleted first
+      # and the iOS processor runs on its own, before anything Android's processor would also write
+      # it, so the check below proves this processor wrote it, identical, rather than finding it
+      # untouched. `--rerun`: a KSP task restored from the build cache writes nothing there.
+      - name: Remove the current schema so the iPhone build must write it
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 -oE 'version = [0-9]+' shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt | grep -oE '[0-9]+')
+          schema="app/schemas/com.coparently.app.data.local.CoPlanlyDatabase/$version.json"
+          echo "Database version $version; removing $schema so the build has to write it again."
+          rm -f "$schema"
+          echo "SCHEMA_FILE=$schema" >> "$GITHUB_ENV"
+
+      - name: Room's processor for iOS
+        run: ./gradlew :shared-data:kspKotlinIosSimulatorArm64 --rerun
 
       # The same check as `build-test`'s, for the iPhone's processor: the schema it exports must be
       # the committed one, byte for byte. The schema is common code, so a difference here is a
@@ -1934,6 +1961,11 @@ jobs:
       - name: The iPhone build exports the committed Room schema
         run: |
           set -euo pipefail
+          if [ ! -f "$SCHEMA_FILE" ]; then
+            echo "::error::Room's processor for iOS did not write $SCHEMA_FILE: the schema export"
+            echo "::error::did not run for the iPhone (room.schemaLocation in shared-data/build.gradle.kts)."
+            exit 1
+          fi
           dirty=$(git status --porcelain -- app/schemas)
           if [ -n "$dirty" ]; then
             echo "$dirty"
@@ -1941,6 +1973,13 @@ jobs:
             echo "::error::Room's processor for iOS exported a schema that differs from app/schemas/."
             exit 1
           fi
+
+      - name: Shared tests (JVM) and the iOS compile
+        run: >-
+          ./gradlew
+          :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
+          :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
+          :shared-data:compileTestKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()

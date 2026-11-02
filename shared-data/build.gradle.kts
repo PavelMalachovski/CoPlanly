@@ -167,11 +167,11 @@ dependencies {
 // file (the schema is common code), so the Linux `shared` job's iOS compile checks it too.
 //
 // A KSP argument, as the app passed it, not the Room Gradle plugin's `room { schemaDirectory }`:
-// the plugin finds the KSP tasks it configures by KSP's task classes, and KSP 2.3 removed the KSP1
-// ones, which no session here could check against the plugin (Google's Maven repository is not
-// reachable from the cloud sessions this project is written in). The cost is the one the app
-// already had: the directory is not a declared output, so a KSP task restored from the build cache
-// writes nothing there, which is why the Regenerate workflow runs the task with `--rerun`.
+// the plugin was not tried in this task (Google's Maven repository, where it is published, is not
+// reachable from the cloud sessions this project is written in), and this argument is what the app
+// already used with KSP 2.3. The cost is the one the app already had: the directory is not a
+// declared output, so a KSP task restored from the build cache writes nothing there, which is why
+// the Regenerate workflow runs the task with `--rerun` and CI deletes `46.json` before its build.
 ksp {
     arg("room.schemaLocation", "$rootDir/app/schemas")
 }

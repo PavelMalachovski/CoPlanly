@@ -16,6 +16,7 @@ import kotlinx.io.files.Path
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileProtectionComplete
 import platform.Foundation.NSFileProtectionKey
+import kotlin.concurrent.Volatile
 
 /**
  * Opens the app's database on the iPhone (MON-24 phase 2): the same [CoPlanlyDatabase], entities
@@ -40,7 +41,7 @@ import platform.Foundation.NSFileProtectionKey
 fun buildCoPlanlyDatabase(directories: AppDirectories): CoPlanlyDatabase {
     val folder = Path(directories.noBackup, DATABASE_FOLDER).toString()
     val path = Path(folder, DATABASE_NAME).toString()
-    DatabaseFileProtection.prepare(folder, path)
+    DatabaseFileProtection.prepareForBuild(folder, path)
     return Room.databaseBuilder<CoPlanlyDatabase>(name = path)
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
@@ -50,7 +51,7 @@ fun buildCoPlanlyDatabase(directories: AppDirectories): CoPlanlyDatabase {
         .addCallback(
             object : RoomDatabase.Callback() {
                 override fun onOpen(connection: SQLiteConnection) {
-                    DatabaseFileProtection.protect(path)
+                    DatabaseFileProtection.protectOnOpen(path)
                 }
             }
         )
@@ -64,14 +65,44 @@ fun buildCoPlanlyDatabase(directories: AppDirectories): CoPlanlyDatabase {
  * and `-shm` ones when the last connection closes: the folder carries the class, which a file
  * created in it inherits; the database file is created with it before SQLite first opens it; and
  * each file found when Room opens the database is given it again.
+ *
+ * **Each step reports what it did** ([prepare]'s result, [protect]'s map, and the last of each the
+ * builder ran, [lastPrepared] and [lastOpened]), so a test can see that every
+ * `setAttributes(NSFileProtectionComplete)` succeeded. That is what can be checked everywhere: the
+ * simulator accepts the attribute but reports no protection class when it is read back, so only a
+ * device shows that the class stuck (`IosDatabaseTest`, ROADMAP MON-24's phase-3 list).
  */
 internal object DatabaseFileProtection {
 
     /** The suffixes of the files SQLite keeps beside the database in WAL mode. */
     val SIBLING_SUFFIXES = listOf("", "-wal", "-shm")
 
-    /** Creates [folder] and an empty database file at [path], both protected, if missing. */
-    fun prepare(folder: String, path: String) {
+    /** What the builder's [prepare] answered for the database it last built; null before any. */
+    @Volatile
+    var lastPrepared: Boolean? = null
+        private set
+
+    /** What [protect] answered when Room last opened a database: each file and whether it took. */
+    @Volatile
+    var lastOpened: Map<String, Boolean> = emptyMap()
+        private set
+
+    /** Records [prepare]'s answer for the builder. */
+    fun prepareForBuild(folder: String, path: String) {
+        lastPrepared = prepare(folder, path)
+    }
+
+    /** Records [protect]'s answer for Room's open callback. */
+    fun protectOnOpen(path: String) {
+        lastOpened = protect(path)
+    }
+
+    /**
+     * Creates [folder] and an empty database file at [path], both protected, if missing.
+     *
+     * @return whether the folder and the file exist and every protection attribute was set.
+     */
+    fun prepare(folder: String, path: String): Boolean {
         val files = NSFileManager.defaultManager
         val created = files.createDirectoryAtPath(
             folder,
@@ -80,21 +111,25 @@ internal object DatabaseFileProtection {
             error = null
         )
         if (!created) logger.w(TAG, "Could not create the database folder")
-        if (!files.setAttributes(COMPLETE, ofItemAtPath = folder, error = null)) {
-            logger.w(TAG, "Could not protect the database folder")
-        }
-        if (!files.fileExistsAtPath(path) && !files.createFileAtPath(path, contents = null, attributes = COMPLETE)) {
-            logger.w(TAG, "Could not create the database file")
-        }
-        protect(path)
+        val folderProtected = files.setAttributes(COMPLETE, ofItemAtPath = folder, error = null)
+        if (!folderProtected) logger.w(TAG, "Could not protect the database folder")
+        val fileReady = files.fileExistsAtPath(path) ||
+            files.createFileAtPath(path, contents = null, attributes = COMPLETE)
+        if (!fileReady) logger.w(TAG, "Could not create the database file")
+        val fileStates = protect(path)
+        return created && folderProtected && fileReady && fileStates[path] == true && fileStates.values.all { it }
     }
 
-    /** Gives the database at [path], and each sibling that exists, `NSFileProtectionComplete`. */
-    fun protect(path: String) {
+    /**
+     * Gives the database at [path], and each sibling that exists, `NSFileProtectionComplete`.
+     *
+     * @return each file that exists, by path, and whether its attribute was set.
+     */
+    fun protect(path: String): Map<String, Boolean> {
         val files = NSFileManager.defaultManager
-        SIBLING_SUFFIXES.map { path + it }.filter { files.fileExistsAtPath(it) }.forEach { file ->
-            if (!files.setAttributes(COMPLETE, ofItemAtPath = file, error = null)) {
-                logger.w(TAG, "Could not protect ${file.substringAfterLast('/')}")
+        return SIBLING_SUFFIXES.map { path + it }.filter { files.fileExistsAtPath(it) }.associateWith { file ->
+            files.setAttributes(COMPLETE, ofItemAtPath = file, error = null).also { set ->
+                if (!set) logger.w(TAG, "Could not protect ${file.substringAfterLast('/')}")
             }
         }
     }
