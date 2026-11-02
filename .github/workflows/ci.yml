@@ -538,6 +538,11 @@ jobs:
             ~/.android/adb*
           key: avd-30-default-x86_64-pixel_2
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
@@ -867,6 +872,11 @@ jobs:
       - name: Start building the APKs in the background
         run: bash tools/ci-background-build.sh start
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       # The runner image ships KVM but leaves it owned by a group the runner user is not in,
       # so without this the emulator falls back to software rendering and times out.
       - name: Enable KVM
@@ -1153,6 +1163,11 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
           key: avd-30-default-x86_64-pixel_2
+
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
 
       - name: Enable KVM
         run: |
@@ -1456,6 +1471,11 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
           key: avd-30-default-x86_64-pixel_2
+
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
 
       - name: Enable KVM
         run: |

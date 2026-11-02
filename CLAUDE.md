@@ -1175,6 +1175,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Espresso Back then waits ten seconds for a focus that never returns (PR #138 lost two on-screen
   tests to it), so `tools/e2e/run-two-parent-tests.sh` hides error dialogs and stops the launcher
   before the tests, as the UI tour's script does.
+  **Each emulator job frees disk space first** (`tools/ci-free-disk.sh`, the "Free disk space"
+  step before "Enable KVM", November 2026): two jobs died with "No space left on device" while the
+  SDK manager unpacked the emulator or a system image, before any test ran. It removes toolchains
+  no job uses (.NET, Haskell, Swift, Boost, PowerShell, CodeQL and a few hosted runtimes) and
+  never the Android SDK, a JDK, Node or the Gradle home.
 - **The app ships a hand-written baseline profile** (`app/src/main/baseline-prof.txt`, week 8):
   package wildcards over the start path, installed by `profileinstaller` on a sideloaded or
   closed-test install. Recording one needs a Macrobenchmark module and a device per release, which
