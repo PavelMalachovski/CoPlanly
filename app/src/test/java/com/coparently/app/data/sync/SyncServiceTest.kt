@@ -1601,6 +1601,6 @@ class SyncServiceTest {
 
         /** Where [SyncServiceTest.declaredSql] looks, relative to the repository root. */
         const val DAO_SOURCE_PATH =
-            "app/src/main/java/com/coparently/app/data/local/dao/EventDao.kt"
+            "shared-data/src/commonMain/kotlin/com/coparently/app/data/local/dao/EventDao.kt"
     }
 }
