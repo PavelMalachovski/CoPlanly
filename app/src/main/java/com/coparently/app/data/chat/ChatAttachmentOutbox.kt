@@ -1,9 +1,9 @@
 package com.coparently.app.data.chat
 
-import android.content.Context
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatAttachment
@@ -31,14 +31,14 @@ import java.io.IOException
  * downloading it back.
  */
 class ChatAttachmentOutbox(
-    private val context: Context,
+    private val directories: AppDirectories,
     private val stager: SharedFileStager,
     private val storage: SharedFileStorage,
     private val cache: SharedFileCache,
     private val authService: FirebaseAuthService
 ) : AttachmentUploadGate {
 
-    private val root: File get() = File(context.filesDir, OUTBOX_DIRECTORY)
+    private val root: File get() = File(directories.files.toString(), OUTBOX_DIRECTORY)
 
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
 

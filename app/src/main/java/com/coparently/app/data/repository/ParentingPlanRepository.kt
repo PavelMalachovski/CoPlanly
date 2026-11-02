@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.ParentingPlanDao
 import com.coparently.app.data.local.entity.ParentingPlanEntryEntity
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
@@ -40,7 +40,7 @@ data class ParentingPlanLocalCopy(
 class ParentingPlanRepository(
     private val dao: ParentingPlanDao,
     private val remote: FirestoreParentingPlanDataSource,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashReporter: CrashReporter
 ) {
 
     private val textMap = MapSerializer(String.serializer(), String.serializer())
@@ -58,7 +58,7 @@ class ParentingPlanRepository(
                 // Room being the source of truth. An uncaught failure here would instead reach
                 // the collector's `viewModelScope.launch` and take the process.
                 logger.w(TAG, "Parenting plan mirror ended", e)
-                crashlyticsManager.recordException(e)
+                crashReporter.record(e)
             }
             .mirrorOnly<ParentingPlanPair>()
 
@@ -130,7 +130,7 @@ class ParentingPlanRepository(
             // Not a failure the parent needs to see: the row stays in the outbox and the next
             // sync sends it. An uncaught one would crash the screen that called `save`.
             logger.w(TAG, "Parenting plan half not uploaded", e)
-            crashlyticsManager.recordException(e)
+            crashReporter.record(e)
         }
     }
 

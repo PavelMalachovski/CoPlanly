@@ -7,9 +7,9 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.notification.toReminderEvent
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
@@ -65,7 +65,7 @@ class SyncService(
     private val fcmService: FcmService,
     private val conflictResolver: ConflictResolver,
     private val parentSlotMigrator: ParentSlotMigrator,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val petRepository: PetRepository,
     private val messageRepository: MessageRepository,
     private val changeRequestRepository: ChangeRequestRepository,

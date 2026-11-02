@@ -1,7 +1,7 @@
 package com.coparently.app.data.school
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.school.bakalari.BakalariTokens
 import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolConnectionStatus
@@ -45,7 +45,7 @@ data class StoredSchoolConnection(
 }
 
 /**
- * The school connections, sealed in [EncryptedPreferences] (SEC-5) under
+ * The school connections, sealed in [SecurePreferences] (SEC-5) under
  * [PreferenceKeys.SCHOOL_CONNECTION_PREFIX] — one key per connection.
  *
  * **Scoped to the signed-in account, in the style of `TodayWidgetNames`**: every record names its
@@ -63,7 +63,7 @@ data class StoredSchoolConnection(
  * data class, so the stored text depends on no class's shape.
  */
 class SchoolConnectionStore(
-    private val preferences: EncryptedPreferences
+    private val preferences: SecurePreferences
 ) {
     private val version = MutableStateFlow(0L)
 

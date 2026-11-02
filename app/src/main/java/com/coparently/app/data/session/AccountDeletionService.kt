@@ -1,8 +1,8 @@
 package com.coparently.app.data.session
 
 import com.coparently.app.data.local.CoPlanlyDatabase
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.notification.ReminderScheduler
@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
 class AccountDeletionService(
     private val functions: FirebaseFunctions,
     private val database: CoPlanlyDatabase,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val fcmService: FcmService,
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler,

@@ -1,7 +1,7 @@
 package com.coparently.app.domain.usecase
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.ValidationResult
 import com.coparently.app.domain.repository.EventRepository
@@ -15,8 +15,8 @@ import kotlin.time.Clock
 class UpdateEventUseCase(
     private val eventRepository: EventRepository,
     private val eventValidator: EventValidator,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager,
+    private val analytics: Analytics,
+    private val crashReporter: CrashReporter,
     private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
 ) {
     /**
@@ -44,11 +44,11 @@ class UpdateEventUseCase(
             reminderScheduler.schedule(updatedEvent)
 
             // Log analytics
-            analyticsManager.logEventUpdated(updatedEvent.eventType)
+            analytics.log("event_updated", mapOf("event_type" to updatedEvent.eventType))
 
             Result.success(updatedEvent)
         } catch (e: Exception) {
-            crashlyticsManager.recordException(e)
+            crashReporter.record(e)
             Result.failure(e)
         }
     }

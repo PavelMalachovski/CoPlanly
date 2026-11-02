@@ -133,39 +133,6 @@ class AnalyticsManager(
     }
 
     /**
-     * Log event created.
-     *
-     * @param eventType Type of event created (e.g., "pickup", "appointment", "other")
-     */
-    fun logEventCreated(eventType: String) {
-        analytics.logEvent("event_created") {
-            param("event_type", eventType)
-        }
-    }
-
-    /**
-     * Log event updated.
-     *
-     * @param eventType Type of event updated
-     */
-    fun logEventUpdated(eventType: String) {
-        analytics.logEvent("event_updated") {
-            param("event_type", eventType)
-        }
-    }
-
-    /**
-     * Log event deleted.
-     *
-     * @param eventType Type of event deleted
-     */
-    fun logEventDeleted(eventType: String) {
-        analytics.logEvent("event_deleted") {
-            param("event_type", eventType)
-        }
-    }
-
-    /**
      * Log Google Calendar sync event.
      *
      * @param success Whether sync was successful

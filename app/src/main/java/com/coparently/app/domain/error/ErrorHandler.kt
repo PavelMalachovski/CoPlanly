@@ -1,6 +1,6 @@
 package com.coparently.app.domain.error
 
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.domain.usecase.ValidationException
 import com.coparently.app.utils.NetworkMonitor
 import java.io.IOException
@@ -16,7 +16,7 @@ import java.io.IOException
  * a parent than a sentence chosen by exception type. Do not route those through here.
  */
 class ErrorHandler(
-    private val crashlyticsManager: CrashlyticsManager,
+    private val crashReporter: CrashReporter,
     private val networkMonitor: NetworkMonitor
 ) {
     /**
@@ -25,7 +25,7 @@ class ErrorHandler(
      * @return The [AppError] the presentation layer words by type.
      */
     fun handleError(error: Throwable): AppError {
-        crashlyticsManager.recordException(error)
+        crashReporter.record(error)
 
         return when (error) {
             is ValidationException -> AppError.ValidationError(

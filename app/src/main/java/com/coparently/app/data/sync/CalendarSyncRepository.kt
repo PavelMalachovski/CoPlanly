@@ -1,8 +1,8 @@
 package com.coparently.app.data.sync
 
-import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleAccessException
@@ -34,7 +34,7 @@ class CalendarSyncRepository(
     private val googleCalendarApi: GoogleCalendarApi,
     private val credentialProvider: CredentialProvider,
     private val userRepository: UserRepository,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashReporter: CrashReporter
 ) {
     /**
      * Syncs events from Google Calendar to local database (pull).
@@ -131,7 +131,7 @@ class CalendarSyncRepository(
             logger.e("CalendarSync", "Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
             // The exception's class and message go to the log above and to Crashlytics; they
             // used to be printed on the Settings screen too, in English, as the whole message.
-            crashlyticsManager.recordException(e)
+            crashReporter.record(e)
             emit(SyncResult.Error(SyncFailure.UNKNOWN))
         }
     }

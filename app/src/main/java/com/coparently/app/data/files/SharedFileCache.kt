@@ -1,6 +1,6 @@
 package com.coparently.app.data.files
 
-import android.content.Context
+import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.domain.files.toHex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,11 +22,11 @@ class SharedFileIntegrityException : IOException("Downloaded file does not match
  * it did. The cache is the system's to clear — nothing here is the record, the server is.
  */
 class SharedFileCache(
-    private val context: Context,
+    private val directories: AppDirectories,
     private val storage: SharedFileStorage
 ) {
 
-    private val viewRoot: File get() = File(context.cacheDir, VIEW_DIRECTORY)
+    private val viewRoot: File get() = File(directories.cache.toString(), VIEW_DIRECTORY)
 
     /** A verified local copy of the file at [storagePath], downloading it when there is none. */
     suspend fun localCopy(storagePath: String, fileName: String, sha256: String): File =

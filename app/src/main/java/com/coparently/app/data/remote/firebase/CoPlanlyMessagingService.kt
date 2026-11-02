@@ -1,6 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.sync.SyncWorker
 import com.google.firebase.auth.FirebaseAuth
@@ -37,7 +37,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
 
     private val fcmService: FcmService by inject()
 
-    private val crashlyticsManager: CrashlyticsManager by inject()
+    private val crashReporter: CrashReporter by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -87,7 +87,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
                 // A token that never reaches Firestore means the co-parent's pushes go nowhere,
                 // and nothing on either device says so.
                 logger.e(TAG, "Storing the refreshed FCM token failed", e)
-                crashlyticsManager.recordException(e)
+                crashReporter.record(e)
             }
         }
     }

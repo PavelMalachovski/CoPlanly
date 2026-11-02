@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
@@ -22,7 +22,7 @@ class NotificationManager(
     private val context: Context,
     private val fcmService: FcmService,
     private val firebaseAuthService: FirebaseAuthService,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashReporter: CrashReporter
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -70,7 +70,7 @@ class NotificationManager(
                 // without either of them learning why. It must not crash the app; it must not be
                 // invisible either.
                 logger.e(TAG, "FCM token registration failed", e)
-                crashlyticsManager.recordException(e)
+                crashReporter.record(e)
             }
         }
     }
@@ -88,7 +88,7 @@ class NotificationManager(
                 }
             } catch (e: Exception) {
                 logger.e(TAG, "FCM token refresh failed", e)
-                crashlyticsManager.recordException(e)
+                crashReporter.record(e)
             }
         }
     }

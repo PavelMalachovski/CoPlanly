@@ -19,6 +19,8 @@ import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.payment.PaymentStore
+import com.coparently.app.data.platform.AndroidAppDirectories
+import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
@@ -157,6 +159,9 @@ class EmulatorParent private constructor(
      */
     private val fileContext: Context = PhoneDirectories(context, name)
 
+    /** [fileContext]'s directories, as `shared-data`'s classes ask for them. */
+    private val directories: AppDirectories = AndroidAppDirectories(fileContext)
+
     /** This phone's Room database. In memory: each test starts from an empty install. */
     val database: CoPlanlyDatabase =
         Room.inMemoryDatabaseBuilder(context, CoPlanlyDatabase::class.java).build()
@@ -167,7 +172,7 @@ class EmulatorParent private constructor(
     private val messageDataSource = FirestoreMessageDataSource(firestore)
 
     val sharedFileStorage = SharedFileStorage(storage)
-    val sharedFileCache = SharedFileCache(fileContext, sharedFileStorage)
+    val sharedFileCache = SharedFileCache(directories, sharedFileStorage)
     private val stager = SharedFileStager(fileContext)
 
     /** The production record-photo storage (L-4): medical, pet, receipt and event photos. */
@@ -181,7 +186,7 @@ class EmulatorParent private constructor(
     )
 
     /** The production chat outbox: stages a file, uploads it, then lets the message be written. */
-    val attachmentOutbox = ChatAttachmentOutbox(fileContext, stager, sharedFileStorage, sharedFileCache, authService)
+    val attachmentOutbox = ChatAttachmentOutbox(directories, stager, sharedFileStorage, sharedFileCache, authService)
 
     /** This phone's plaintext files and notifications, as account deletion clears them. */
     val deviceTraces = DeviceTraces(fileContext)
@@ -193,7 +198,7 @@ class EmulatorParent private constructor(
 
     /** The production vault: Firestore index, Storage bytes, Room cache of the index. */
     val documentRepository = FamilyDocumentRepositoryImpl(
-        context = fileContext,
+        directories = directories,
         index = FamilyDocumentIndex(firestore, FamilyDocumentIndexCache(database.familyDocumentCacheDao())),
         authService = authService,
         stager = stager,
@@ -406,7 +411,7 @@ class EmulatorParent private constructor(
     val parentingPlanRepository = ParentingPlanRepository(
         dao = database.parentingPlanDao(),
         remote = planDataSource,
-        crashlyticsManager = mockk<CrashlyticsManager>(relaxed = true)
+        crashReporter = mockk<CrashlyticsManager>(relaxed = true)
     )
 
     val friendRepository = FriendRepositoryImpl(

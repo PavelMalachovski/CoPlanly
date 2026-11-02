@@ -1,7 +1,7 @@
 package com.coparently.app.domain.usecase
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadline
@@ -41,8 +41,8 @@ class CreateEventUseCaseTest {
     /** Strict: a read or a write the test did not expect fails it. */
     private val eventRepository = mockk<EventRepository>()
     private val requestDeadlines = mockk<RequestDeadlineRepository>()
-    private val analytics = mockk<AnalyticsManager>(relaxed = true)
-    private val crashlytics = mockk<CrashlyticsManager>(relaxed = true)
+    private val analytics = mockk<Analytics>(relaxed = true)
+    private val crashlytics = mockk<CrashReporter>(relaxed = true)
     private val reminders = mockk<ReminderScheduler>(relaxed = true)
     private val useCase = CreateEventUseCase(
         eventRepository,
@@ -189,7 +189,7 @@ class CreateEventUseCaseTest {
         assertTrue(result.isSuccess)
         assertEquals("e-new", result.getOrThrow().id)
         coVerify(exactly = 1) { requestDeadlines.start(any()) }
-        verify(exactly = 0) { crashlytics.recordException(any()) }
+        verify(exactly = 0) { crashlytics.record(any()) }
     }
 
     @Test
@@ -200,7 +200,7 @@ class CreateEventUseCaseTest {
         val result = useCase(newEvent, answerBy = AnswerByPick.DEFAULT)
 
         assertTrue(result.isSuccess)
-        verify(exactly = 0) { crashlytics.recordException(any()) }
+        verify(exactly = 0) { crashlytics.record(any()) }
     }
 
     @Test
@@ -215,7 +215,7 @@ class CreateEventUseCaseTest {
         coVerifyOrder {
             eventRepository.insertEvent(any(), true)
             reminders.schedule(match { it.id == "e-new" })
-            analytics.logEventCreated("medical")
+            analytics.log("event_created", mapOf("event_type" to "medical"))
             requestDeadlines.start(any())
         }
     }

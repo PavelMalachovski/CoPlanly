@@ -2743,6 +2743,29 @@ bytes are identical on Android):
   OkHttp 4.12's reading of them (`WebAddressVectorsTest`), because event ids hash them. The
   Bakaláři parsers stay in the app with the `java.time` school domain they build. Still to run on a
   phone: `docs/DEVICE-CHECKLIST.md` §3.18 and §3.9's Google Calendar import, once, on this build.
+- ~~**Platform services behind interfaces**~~ **Done (phase 2, Task 6, November 2026)**:
+  `shared-data/…/data/platform/` declares `Logger`, `AppDirectories`, `SecurePreferences`,
+  `CrashReporter`, `Analytics` and `Connectivity`. On Android each is the class that already did
+  the work — `android.util.Log` behind the ambient `logger`, the `Context`'s directories,
+  `EncryptedPreferences` (still in the app, unchanged in package, name and constructors, because
+  the `upgrade` seed builds it), `CrashlyticsManager`, `AnalyticsManager` and `NetworkMonitor` —
+  so nothing stored or sent moved; `TelemetryConsentApplier` stays the one switch. On the iPhone:
+  one Keychain item (`SealedSecurePreferences` over `KeychainTextStore`, readable after first
+  unlock, this device only), the app container with `no_backup` excluded from backup,
+  `NWPathMonitor`, and no-ops that collect nothing until phase 4. `SecurePreferencesContractTest`
+  holds both stores to one contract (the Android copy, `EncryptedPreferencesContractTest`, repeats
+  it under Robolectric). `PreferenceKeys` and `PreferenceBlobCodec` moved to `commonMain`, the
+  codec on `kotlin.io.encoding.Base64` with the same bytes. The data layer's `Log` calls, its
+  preference, crash and analytics users and its three directory readers now go through the
+  interfaces, and so do the event use cases, `ActivityAnnouncer` and `ErrorHandler`: what keeps
+  them in the app now is `java.util.UUID` (`CreateEventUseCase`, `ActivityAnnouncer`) and
+  `ErrorHandler`'s `NetworkMonitor.isOnline()`, a synchronous question `Connectivity`'s
+  `StateFlow` answers only while collected, and they move into `shared-data` with Task 8. What still imports `android.*` in `data/` is Task 7's (SQLCipher,
+  the passphrase) and Task 8's: string resources, notifications, `Uri` and the content resolver,
+  plain `SharedPreferences` (the account-switch guard, the install referrer), `Base64` and the
+  Keystore in `EncryptionManager`, the PDF writer, ML Kit, dictation and the Credential Manager.
+  Still to run: the iOS tests on the simulator (`KeychainSecurePreferencesTest` needs a Keychain the
+  simulator test process may use).
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
   platforms would derive different `school-…` ids from the same school data. It must hash

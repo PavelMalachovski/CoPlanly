@@ -3,7 +3,7 @@ package com.coparently.app.data.remote.google
 import android.content.Context
 import androidx.credentials.CredentialManager
 import com.coparently.app.R
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -25,7 +25,7 @@ import kotlinx.coroutines.tasks.await
  */
 class CredentialManagerService(
     private val context: Context,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val googleOAuthFunctions: GoogleOAuthFunctions
 ) {
     private val credentialManager: CredentialManager? = try {

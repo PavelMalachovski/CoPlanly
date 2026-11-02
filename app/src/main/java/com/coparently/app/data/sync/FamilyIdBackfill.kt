@@ -6,8 +6,8 @@ import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.PetDao
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.family.FamilyKey
 
@@ -56,7 +56,7 @@ class FamilyIdBackfill(
     private val childInfoDao: ChildInfoDao,
     private val petDao: PetDao,
     private val changeRequestDao: ChangeRequestDao,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: SecurePreferences
 ) {
 
     /**

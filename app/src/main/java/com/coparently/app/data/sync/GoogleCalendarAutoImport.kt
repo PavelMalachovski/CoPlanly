@@ -1,7 +1,7 @@
 package com.coparently.app.data.sync
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.lastOrNull
 class GoogleCalendarAutoImport(
     private val calendarSyncRepository: CalendarSyncRepository,
     private val credentialManagerService: CredentialManagerService,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: SecurePreferences
 ) {
 
     /**

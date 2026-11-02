@@ -1,6 +1,6 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
@@ -114,7 +114,7 @@ data class FamilySplit(
 class FamilySettingsRepository(
     private val dataSource: FirestoreFamilySettingsDataSource,
     private val userRepository: UserRepository,
-    private val preferences: EncryptedPreferences,
+    private val preferences: SecurePreferences,
     fcmService: FcmService,
     activityAnnouncer: ActivityAnnouncer,
     requestDeadlines: RequestDeadlineRepository

@@ -1,7 +1,7 @@
 package com.coparently.app.domain.usecase
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 
@@ -10,8 +10,8 @@ import com.coparently.app.domain.repository.EventRepository
  */
 class DeleteEventUseCase(
     private val eventRepository: EventRepository,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager,
+    private val analytics: Analytics,
+    private val crashReporter: CrashReporter,
     private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler
 ) {
     /**
@@ -25,11 +25,11 @@ class DeleteEventUseCase(
             reminderScheduler.cancel(event.id)
 
             // Log analytics
-            analyticsManager.logEventDeleted(event.eventType)
+            analytics.log("event_deleted", mapOf("event_type" to event.eventType))
 
             Result.success(Unit)
         } catch (e: Exception) {
-            crashlyticsManager.recordException(e)
+            crashReporter.record(e)
             Result.failure(e)
         }
     }
@@ -43,7 +43,7 @@ class DeleteEventUseCase(
             reminderScheduler.cancel(eventId)
             Result.success(Unit)
         } catch (e: Exception) {
-            crashlyticsManager.recordException(e)
+            crashReporter.record(e)
             Result.failure(e)
         }
     }

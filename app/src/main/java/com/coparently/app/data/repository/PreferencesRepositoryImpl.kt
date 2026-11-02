@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.money.defaultCurrencyForRegion
 import com.coparently.app.domain.money.resolveDefaultCurrency
@@ -22,7 +22,7 @@ import java.util.Locale
  * Manages user preferences using EncryptedPreferences.
  */
 class PreferencesRepositoryImpl(
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val currencyHints: CurrencyHints
 ) : PreferencesRepository {
 

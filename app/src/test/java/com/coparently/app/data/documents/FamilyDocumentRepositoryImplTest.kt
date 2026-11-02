@@ -1,6 +1,6 @@
 package com.coparently.app.data.documents
 
-import android.content.Context
+import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.documents.VaultListing
 import com.google.firebase.auth.FirebaseUser
@@ -24,7 +24,7 @@ class FamilyDocumentRepositoryImplTest {
     private val authService = mockk<FirebaseAuthService>()
 
     private val repository = FamilyDocumentRepositoryImpl(
-        context = mockk<Context>(),
+        directories = mockk<AppDirectories>(),
         index = index,
         authService = authService,
         stager = mockk(),

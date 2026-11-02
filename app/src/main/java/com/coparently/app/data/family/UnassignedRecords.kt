@@ -14,8 +14,8 @@ import com.coparently.app.data.local.entity.ExpenseEntity
 import com.coparently.app.data.local.entity.KnownFamilyEntity
 import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.data.repository.toDomainModel
@@ -164,7 +164,7 @@ class UnassignedRecords(
     private val expenseRepository: ExpenseRepository,
     private val custodyModelRepository: CustodyModelRepository,
     private val syncRequester: SyncRequester,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: SecurePreferences
 ) {
 
     /**

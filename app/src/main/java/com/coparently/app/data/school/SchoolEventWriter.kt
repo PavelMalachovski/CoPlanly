@@ -1,8 +1,8 @@
 package com.coparently.app.data.school
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.EventRepository
@@ -47,8 +47,8 @@ data class SchoolImportCounts(
 class SchoolEventWriter(
     private val eventDao: EventDao,
     private val eventRepository: EventRepository,
-    analyticsManager: AnalyticsManager,
-    crashlyticsManager: CrashlyticsManager,
+    analytics: Analytics,
+    crashReporter: CrashReporter,
     reminderScheduler: ReminderScheduler,
     requestDeadlines: RequestDeadlineRepository
 ) {
@@ -58,22 +58,22 @@ class SchoolEventWriter(
     private val createEvent = CreateEventUseCase(
         eventRepository,
         EventValidator(),
-        analyticsManager,
-        crashlyticsManager,
+        analytics,
+        crashReporter,
         reminderScheduler,
         requestDeadlines
     )
     private val updateEvent = UpdateEventUseCase(
         eventRepository,
         EventValidator(),
-        analyticsManager,
-        crashlyticsManager,
+        analytics,
+        crashReporter,
         reminderScheduler
     )
     private val deleteEvent = DeleteEventUseCase(
         eventRepository,
-        analyticsManager,
-        crashlyticsManager,
+        analytics,
+        crashReporter,
         reminderScheduler
     )
 

@@ -3,8 +3,8 @@ package com.coparently.app.data.repository
 import androidx.room.withTransaction
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.EventDao
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 
 /**
@@ -35,7 +35,7 @@ import com.coparently.app.data.platform.logger
  * half — in the same pass, one step after this class had run, and permanently, because the slot
  * marker below had already advanced. See [EventDao.reslotOwner].
  *
- * [reslot] also records, in [EncryptedPreferences], which slot this user's records are now
+ * [reslot] also records, in [SecurePreferences], which slot this user's records are now
  * stamped with — see [reslotIfSlotChanged] for why that record exists and why it is not
  * [com.coparently.app.domain.model.User.role].
  */
@@ -43,12 +43,12 @@ class ParentSlotMigrator(
     private val database: CoPlanlyDatabase,
     private val eventDao: EventDao,
     private val custodyModelRepository: CustodyModelRepository,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: SecurePreferences
 ) {
     /**
      * Re-stamps this user's rows from [from] to [to].
      *
-     * Also records [to] as [myUid]'s current slot in [EncryptedPreferences] — see
+     * Also records [to] as [myUid]'s current slot in [SecurePreferences] — see
      * [reslotIfSlotChanged] — so this, the one place this device's records actually change
      * slot, is the one place that record is kept current. Both of today's callers
      * (`PairingViewModel.withSlotReslot` on the accept path, and [reslotIfSlotChanged] on the
@@ -99,7 +99,7 @@ class ParentSlotMigrator(
      * nothing about that path resembles "the user tapped Accept", so it gets a second entry
      * point rather than a second caller of the first one.
      *
-     * **The "before" side is [EncryptedPreferences]'s marker, never `User.role`.** An earlier
+     * **The "before" side is [SecurePreferences]'s marker, never `User.role`.** An earlier
      * version of this method compared against Room's `role` field and had three separate,
      * related defects:
      *
@@ -146,7 +146,7 @@ class ParentSlotMigrator(
      * exactly the same severity, in the opposite direction, and it can fire on a device that was
      * never interrupted at all. Tying the marker to the complement's completion — the obvious
      * alternative — buys "retried once" at the price of "possibly applied twice", and there is no
-     * transaction that could span both, because the marker lives in [EncryptedPreferences] and
+     * transaction that could span both, because the marker lives in [SecurePreferences] and
      * the complement in Room. Closing this properly needs the model to record which slot it is
      * expressed in, so that complementing becomes an assertion about state rather than a toggle;
      * that is a Room schema change and a follow-up, not a comment.

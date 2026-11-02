@@ -1423,7 +1423,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `firebase_analytics_collection_deactivated` is a **different** knob that must stay `false`,
   because `true` disables Analytics permanently and no runtime call can undo it. And
   `UNANSWERED` is a third state on purpose: "said no" and "was never asked" collect the same
-  nothing, but only one of them still owes the user a question.
+  nothing, but only one of them still owes the user a question. **The data layer reports through
+  `shared-data`'s `CrashReporter` and `Analytics`** (MON-24 phase 2, Task 6), which on Android are
+  `CrashlyticsManager` and `AnalyticsManager` themselves (`platformModule`) and on the iPhone no-ops
+  that collect nothing; neither interface has, or may grow, a way to turn collection on.
 - Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
 ## Architecture map
@@ -1433,8 +1436,10 @@ shared/    — Kotlin Multiplatform module (MON-24): the domain both apps run, m
              with its packages unchanged; commonMain/commonTest, Android and iOS targets
 shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer both apps run, moving
              out of app/ task by task with its packages unchanged; so far the HTTP clients on Ktor
-             (data/http/, the Bakaláři client and directory, Google Calendar's events.list).
-             Depends on shared/; no iOS framework of its own
+             (data/http/, the Bakaláři client and directory, Google Calendar's events.list) and
+             the platform services the data layer reaches through interfaces (data/platform/:
+             logger, directories, the sealed preference store, crash reports, analytics,
+             connectivity). Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
@@ -1453,9 +1458,10 @@ root changed. **The exceptions are the phase-1 stay list**, still under
 `app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
 file by file:
 - dependency injection, Android or the data layer — the event use cases and `EventValidator` in
-  `usecase/` (analytics and Crashlytics, and Hilt's `@Inject` until MON-24 phase 2;
-  `RecurrenceExpander` moved),
-  `error/ErrorHandler.kt`, `activity/ActivityAnnouncer.kt`, `model/MessageTemplate.kt`
+  `usecase/` (since MON-24 phase 2's Task 6 they report through `shared-data`'s `Analytics` and
+  `CrashReporter` and log through its `logger`, so they move with the data layer to `shared-data`,
+  not to `shared`; `java.util.UUID` is left; `RecurrenceExpander` moved),
+  `error/ErrorHandler.kt` (`NetworkMonitor`), `activity/ActivityAnnouncer.kt`, `model/MessageTemplate.kt`
   (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`);
 - `java.time` not yet converted — the communication record's builder, CSV and layouts in
   `export/` (`RecordLabels`, `RecordPlan`, `RecordTimeText` and `RecordVerification` moved), the
@@ -1476,7 +1482,17 @@ the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `d
 `BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and
 `BakalariAuthorizer` stay in the app; and in `data/remote/google/`, `GoogleCalendarApi`,
 `CalendarPaging` and the new `GoogleCalendarEvents` — `GoogleCalendarAccess`, `CredentialProvider`
-and the rest stay. Every other `data/…` path is still under `app/src/main/java/com/coparently/app/`.
+and the rest stay. Task 6, the platform services: `data/platform/` (new: `Logger` and the ambient
+`logger`, `AppDirectories`, `SecurePreferences` with the iPhone's `SealedSecurePreferences` over a
+Keychain item, `CrashReporter`, `Analytics`, `Connectivity`; the Android implementations are in
+`shared-data/src/androidMain/` where they need only the Android SDK, and otherwise are the app's
+own classes bound in `di/koin/PlatformModule.kt`), and from `data/local/preferences/`,
+`PreferenceKeys` and `PreferenceBlobCodec` — `EncryptedPreferences`, the Android
+`SecurePreferences`, and `InMemorySharedPreferences` stay. Every other `data/…` path is still under
+`app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
+interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter` or
+`Analytics` rather than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager` or
+`AnalyticsManager`, and logs with `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -1916,7 +1932,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     that build; the old file is deleted only after the new one is written. Don't write through the
     library again, and don't make a second `EncryptedPreferences` over the same file — each keeps
     its own map and they overwrite each other (the e2e phones get their own directories for that
-    reason).
+    reason). **It is the Android `SecurePreferences`** (MON-24 phase 2, Task 6), which the data
+    layer depends on; it stays in the app with its package, name and constructors because the
+    `upgrade` seed builds it. The iPhone's is one Keychain item (`SealedSecurePreferences` over
+    `KeychainTextStore`, readable after first unlock, this device only), the same blob and the same
+    rules; `SecurePreferencesContractTest` (and its Android copy, `EncryptedPreferencesContractTest`)
+    hold the two to one contract — change a behaviour in both.
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`

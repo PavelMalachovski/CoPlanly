@@ -1,7 +1,7 @@
 package com.coparently.app.domain.usecase
 
-import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -27,8 +27,8 @@ import kotlin.time.Clock
 class CreateEventUseCase(
     private val eventRepository: EventRepository,
     private val eventValidator: EventValidator,
-    private val analyticsManager: AnalyticsManager,
-    private val crashlyticsManager: CrashlyticsManager,
+    private val analytics: Analytics,
+    private val crashReporter: CrashReporter,
     private val reminderScheduler: com.coparently.app.domain.notification.ReminderScheduler,
     private val requestDeadlines: RequestDeadlineRepository
 ) {
@@ -76,7 +76,7 @@ class CreateEventUseCase(
             reminderScheduler.schedule(finalEvent)
 
             // Log analytics
-            analyticsManager.logEventCreated(finalEvent.eventType)
+            analytics.log("event_created", mapOf("event_type" to finalEvent.eventType))
 
             // Last, because it is the one step that waits on the server: a screen that leaves in the
             // middle of it loses only the clock, never the reminder or the count above.
@@ -84,7 +84,7 @@ class CreateEventUseCase(
 
             Result.success(finalEvent)
         } catch (e: Exception) {
-            crashlyticsManager.recordException(e)
+            crashReporter.record(e)
             Result.failure(e)
         }
     }

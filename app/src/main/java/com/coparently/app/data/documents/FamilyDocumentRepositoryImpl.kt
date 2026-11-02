@@ -1,9 +1,9 @@
 package com.coparently.app.data.documents
 
-import android.content.Context
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.documents.DocumentCategory
@@ -29,7 +29,7 @@ import java.util.UUID
  * download URL (CLAUDE.md item 31).
  */
 class FamilyDocumentRepositoryImpl(
-    private val context: Context,
+    private val directories: AppDirectories,
     private val index: FamilyDocumentIndex,
     private val authService: FirebaseAuthService,
     private val stager: SharedFileStager,
@@ -54,7 +54,7 @@ class FamilyDocumentRepositoryImpl(
     ): Result<FamilyDocument> = guarded("add") {
         val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
         val docId = UUID.randomUUID().toString()
-        val staging = File(context.cacheDir, "$UPLOAD_DIRECTORY/$docId")
+        val staging = File(directories.cache.toString(), "$UPLOAD_DIRECTORY/$docId")
         try {
             val staged = stager.stage(contentUri, staging)
             val document = FamilyDocument(

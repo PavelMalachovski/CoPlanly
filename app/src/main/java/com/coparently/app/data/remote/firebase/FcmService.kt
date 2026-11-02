@@ -1,7 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.family.FamilyKey
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,7 +16,7 @@ class FcmService(
     private val firebaseMessaging: FirebaseMessaging,
     private val firestore: FirebaseFirestore,
     private val firebaseAuthService: FirebaseAuthService,
-    private val encryptedPreferences: EncryptedPreferences
+    private val encryptedPreferences: SecurePreferences
 ) {
     /** Whether this person has left push notifications on. On unless they switched it off. */
     fun isPushEnabled(): Boolean =

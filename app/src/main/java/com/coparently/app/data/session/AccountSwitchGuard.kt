@@ -2,8 +2,8 @@ package com.coparently.app.data.session
 
 import android.content.Context
 import com.coparently.app.data.local.CoPlanlyDatabase
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.notification.ReminderScheduler
@@ -40,7 +40,7 @@ class AccountSwitchGuard(
     private val context: Context,
     private val database: CoPlanlyDatabase,
     private val authService: FirebaseAuthService,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler
 ) {
