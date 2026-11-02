@@ -436,8 +436,8 @@ class ChangeRequestRepositoryImplTest {
         // family, so a clock would have everything it needs to start — that none does is down to an
         // answer being no request.
         val pavelsAhead = pavelsRequest.copy(
-            currentStartDateTime = inTenDays,
-            proposedStartDateTime = inTenDays.plusDays(1),
+            currentStartDateTime = inTenDays.toKotlinLocalDateTime(),
+            proposedStartDateTime = inTenDays.plusDays(1).toKotlinLocalDateTime(),
             familyId = FAMILY_ID
         )
         listOf(ChangeRequestStatus.ACCEPTED, ChangeRequestStatus.DECLINED).forEach { status ->
