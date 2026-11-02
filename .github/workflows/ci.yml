@@ -959,7 +959,7 @@ jobs:
           # Waits for the background build, then records the screen in 170 s segments while the
           # tests run (on legs with `record`) and pulls the MP4s after; the exit status is the
           # tests', and a recorder that fails never fails the job.
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       # **A boot that dies before the script starts is booted again, once, cold.** The cached API 30
       # snapshot sometimes comes up without its input service: `sys.boot_completed` reads 1 at once,
@@ -1005,7 +1005,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed
         if: always()

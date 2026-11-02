@@ -1173,8 +1173,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   and "flake" is not a root cause — and the retry is a **cold** boot, because a second snapshot boot
   can die the same way. A cold boot can also leave a system dialog holding the window focus, and an
   Espresso Back then waits ten seconds for a focus that never returns (PR #138 lost two on-screen
-  tests to it), so `tools/e2e/run-two-parent-tests.sh` hides error dialogs and stops the launcher
-  before the tests, as the UI tour's script does.
+  tests to it, and an API 35 instrumented leg lost `LocalDatePickerDialogTest` on 2 November 2026),
+  so `tools/clear-system-dialogs.sh` hides error dialogs and stops the launcher before the tests —
+  in the e2e script and in every `instrumented` leg — as the UI tour's script does.
   **Each emulator job frees disk space first** (`tools/ci-free-disk.sh`, the "Free disk space"
   step before the background build and "Enable KVM", November 2026): two jobs died with "No space left on device" while the
   SDK manager unpacked the emulator or a system image, before any test ran. It removes toolchains
