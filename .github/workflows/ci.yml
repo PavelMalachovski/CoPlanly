@@ -523,6 +523,11 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       # R8 is the long part (~7 minutes in `release`); it runs while the AVD restores and boots.
       - name: Start building the minified APK in the background
         env:
@@ -537,11 +542,6 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
           key: avd-30-default-x86_64-pixel_2
-
-      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
-      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
-      - name: Free disk space
-        run: bash tools/ci-free-disk.sh
 
       - name: Enable KVM
         run: |
@@ -867,15 +867,15 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # Compiles while the AVD restores and the emulator boots, which used to happen first and
-      # leave the build waiting — the script's first line waits for it (tools/ci-background-build.sh).
-      - name: Start building the APKs in the background
-        run: bash tools/ci-background-build.sh start
-
       # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
       # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
       - name: Free disk space
         run: bash tools/ci-free-disk.sh
+
+      # Compiles while the AVD restores and the emulator boots, which used to happen first and
+      # leave the build waiting — the script's first line waits for it (tools/ci-background-build.sh).
+      - name: Start building the APKs in the background
+        run: bash tools/ci-background-build.sh start
 
       # The runner image ships KVM but leaves it owned by a group the runner user is not in,
       # so without this the emulator falls back to software rendering and times out.
@@ -1141,6 +1141,11 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       # Built while the AVD restores and the emulator boots; the script's first line waits for it
       # (tools/ci-background-build.sh). It used to run first, and the boot waited behind it.
       - name: Start building the APKs in the background
@@ -1163,11 +1168,6 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
           key: avd-30-default-x86_64-pixel_2
-
-      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
-      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
-      - name: Free disk space
-        run: bash tools/ci-free-disk.sh
 
       - name: Enable KVM
         run: |
@@ -1457,6 +1457,11 @@ jobs:
           fi
           exit $status
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       # This branch's app and test APKs, while the AVD restores and the emulator boots; the
       # emulator script's first line waits for it (tools/ci-background-build.sh).
       - name: Start building this branch's APKs in the background
@@ -1471,11 +1476,6 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
           key: avd-30-default-x86_64-pixel_2
-
-      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
-      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
-      - name: Free disk space
-        run: bash tools/ci-free-disk.sh
 
       - name: Enable KVM
         run: |

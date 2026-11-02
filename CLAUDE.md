@@ -1176,7 +1176,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   tests to it), so `tools/e2e/run-two-parent-tests.sh` hides error dialogs and stops the launcher
   before the tests, as the UI tour's script does.
   **Each emulator job frees disk space first** (`tools/ci-free-disk.sh`, the "Free disk space"
-  step before "Enable KVM", November 2026): two jobs died with "No space left on device" while the
+  step before the background build and "Enable KVM", November 2026): two jobs died with "No space left on device" while the
   SDK manager unpacked the emulator or a system image, before any test ran. It removes toolchains
   no job uses (.NET, Haskell, Swift, Boost, PowerShell, CodeQL and a few hosted runtimes) and
   never the Android SDK, a JDK, Node or the Gradle home.
