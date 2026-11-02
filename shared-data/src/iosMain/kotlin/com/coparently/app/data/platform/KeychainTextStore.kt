@@ -58,8 +58,9 @@ class KeychainTextStore(
 ) : SealedTextStore {
 
     // Only "not found" means nothing is stored: any other status — the item locked before the first
-    // unlock, the Keychain unavailable, a missing entitlement — is reported as unreadable, and the
-    // store keeps the item rather than starting again over it.
+    // unlock (-25308), no Keychain for this process at all (errSecNotAvailable, -25291, as for a test
+    // binary with no app host), a missing entitlement (-34018) — is reported as unreadable, so the
+    // store keeps the item and runs in memory rather than starting again over it or crashing.
     override fun read(): StoredText = memScoped {
         val query = dictionary(
             kSecClass to kSecClassGenericPassword,

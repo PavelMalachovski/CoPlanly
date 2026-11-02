@@ -1940,7 +1940,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     the lock before the first unlock) is never deleted or written — the store runs in memory for
     that process — and only text that was read and cannot be decoded is replaced, as Android's
     unopenable file is. `SecurePreferencesContractTest` (and its Android copy, `EncryptedPreferencesContractTest`)
-    hold the two to one contract — change a behaviour in both.
+    hold the two to one contract — change a behaviour in both. On the iOS simulator the contract
+    runs over an in-memory store: a test binary with no app host has no Keychain (`errSecNotAvailable`),
+    so `KeychainSecurePreferencesTest` is `@Ignore`d until the iPhone app's XCTest host runs it.
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
     `agreedTo`, `catalogueVersions` and `updatedAt` as maps keyed by uid, and `firestore.rules`

@@ -13,7 +13,9 @@ import kotlin.test.assertTrue
  * What every [SecurePreferences] does, whatever seals it (MON-24 phase 2, Task 6).
  *
  * Run here over [SealedSecurePreferences] in memory (`SealedSecurePreferencesContractTest`, the JVM
- * and the iOS simulator), on the simulator over the real Keychain (`KeychainSecurePreferencesTest`),
+ * and the iOS simulator), over the real Keychain in an app-hosted process (`KeychainSecurePreferencesTest`,
+ * ignored until the iPhone app's XCTest host exists in phase 3: a bare simulator test binary has no
+ * Keychain),
  * and in the app over the real Android store under Robolectric (`EncryptedPreferencesContractTest`,
  * which repeats these cases because the app's tests cannot extend a class of this module's tests —
  * change the two together).

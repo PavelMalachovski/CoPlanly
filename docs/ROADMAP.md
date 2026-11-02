@@ -2764,8 +2764,9 @@ bytes are identical on Android):
   the passphrase) and Task 8's: string resources, notifications, `Uri` and the content resolver,
   plain `SharedPreferences` (the account-switch guard, the install referrer), `Base64` and the
   Keystore in `EncryptionManager`, the PDF writer, ML Kit, dictation and the Credential Manager.
-  Still to run: the iOS tests on the simulator (`KeychainSecurePreferencesTest` needs a Keychain the
-  simulator test process may use).
+  The contract and the store run under Kotlin/Native on the simulator over an in-memory store;
+  `KeychainSecurePreferencesTest` is `@Ignore`d, because a test binary with no app host has no
+  Keychain (every call answers `errSecNotAvailable`, −25291), and runs before phase 3 (below).
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
   platforms would derive different `school-…` ids from the same school data. It must hash
@@ -2811,7 +2812,9 @@ platform caches; they do not fail the link. So:
    day a Kotlin/Native build stops working on the newer Xcode, not a step to take now.
 2. **Before phase 3** (the iPhone shell, built in Xcode day to day): AGP 9, which Dagger 2.60 and
    so Kotlin 2.4 wait for (CLAUDE.md, toolchain), then Kotlin 2.4 (Xcode up to 26.4). Ktor 3.6 and
-   later wait for it too: their OkHttp 5.5 needs compileSdk 37.
+   later wait for it too: their OkHttp 5.5 needs compileSdk 37. And once the iPhone app's XCTest host
+   exists: run `KeychainSecurePreferencesTest` app-hosted (un-`@Ignore` it), and check on a phone that
+   the preference item survives a relaunch and is readable after the first unlock.
 3. **Before the App Store submission** (phase 6): a stable Kotlin 2.5, for Xcode 27 and the SDK
    App Store Connect will require by then.
 
