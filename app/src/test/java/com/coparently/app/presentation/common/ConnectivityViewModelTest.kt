@@ -27,9 +27,9 @@ import kotlin.test.assertTrue
 class ConnectivityViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val online = MutableStateFlow(true)
+    private val networkUp = MutableStateFlow(true)
     private val monitor = mockk<NetworkMonitor> {
-        every { networkStatus } returns online
+        every { networkStatus } returns networkUp
     }
 
     @Before
@@ -51,7 +51,7 @@ class ConnectivityViewModelTest {
             runCurrent()
             assertFalse(viewModel.isOffline.value)
 
-            online.value = false
+            networkUp.value = false
             advanceTimeBy(GRACE_MS - 1)
             runCurrent()
             assertFalse(viewModel.isOffline.value, "shown before the grace period ran out")
@@ -60,7 +60,7 @@ class ConnectivityViewModelTest {
             runCurrent()
             assertTrue(viewModel.isOffline.value)
 
-            online.value = true
+            networkUp.value = true
             runCurrent()
             assertFalse(viewModel.isOffline.value, "still shown after the network came back")
         }
@@ -72,10 +72,10 @@ class ConnectivityViewModelTest {
         runCurrent()
 
         // A Wi-Fi-to-mobile handover, or a lift ride.
-        online.value = false
+        networkUp.value = false
         advanceTimeBy(GRACE_MS / 2)
         runCurrent()
-        online.value = true
+        networkUp.value = true
         advanceTimeBy(GRACE_MS * 2)
         runCurrent()
 

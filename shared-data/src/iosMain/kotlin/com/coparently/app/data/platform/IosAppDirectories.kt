@@ -31,7 +31,7 @@ class IosAppDirectories : AppDirectories {
     override val noBackup: Path by lazy {
         val path = directory(NSApplicationSupportDirectory, "no_backup")
         NSURL.fileURLWithPath(path).setResourceValue(
-            NSNumber.numberWithBool(true),
+            NSNumber(bool = true),
             forKey = NSURLIsExcludedFromBackupKey,
             error = null
         )
