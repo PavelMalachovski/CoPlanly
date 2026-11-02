@@ -16,6 +16,8 @@ plugins {
     id("com.android.library")
     id("io.gitlab.arturbosch.detekt")
     id("org.jetbrains.kotlinx.kover")
+    // Room's processor, for Android and both iPhone targets (Task 7; the app ran it until then).
+    id("com.google.devtools.ksp")
 }
 
 /**
@@ -32,6 +34,14 @@ plugins {
  */
 val ktorVersion = "3.5.1"
 
+/**
+ * Room 2.7.2, the version the app compiled against before the database moved here, so nothing about
+ * the generated code or the exported schema changes with the move. It is Room for Kotlin
+ * Multiplatform: the same artifacts carry the Android, iOS and JVM targets. Its SQLite driver
+ * artifacts are androidx.sqlite 2.5.2, released with it (see `sqlite-bundled` below).
+ */
+val roomVersion = "2.7.2"
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -44,6 +54,13 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
+    // `expect object CoPlanlyDatabaseConstructor`, whose `actual` Room's processor writes per
+    // target (`@ConstructedBy`), is a Beta feature that warns on every build without this flag, as
+    // in `:shared`.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     sourceSets {
         commonMain.dependencies {
             // `api`: this module's signatures take the domain's types and its date-time and JSON
@@ -54,14 +71,33 @@ kotlin {
             // `kotlinx.io.IOException`, which a network failure arrives as on every platform (on
             // the JVM it is `java.io.IOException` itself). The version Ktor 3.5.1 is built on.
             api("org.jetbrains.kotlinx:kotlinx-io-core:0.9.0")
+            // `api`: `CoPlanlyDatabase` extends `RoomDatabase` and the app reaches its DAOs.
+            api("androidx.room:room-runtime:$roomVersion")
         }
         androidMain.dependencies {
             // OkHttp, which the school import already talked to schools with before the move.
             implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+            // SQLCipher, Room's open helper on Android (SEC-2; `EncryptedDatabase`). The same
+            // declaration as the app's: `@aar`, as the library's own instructions specify, which
+            // drops its transitive dependencies.
+            implementation("net.zetetic:sqlcipher-android:4.6.1@aar")
+            // The `SupportSQLite…` interfaces SQLCipher's open helper and the legacy migrations
+            // are written against, named because the `@aar` above drops SQLCipher's own. Room
+            // brings it too; 2.5.2 is the release that shipped with Room 2.7.2 (18 June 2025).
+            implementation("androidx.sqlite:sqlite:2.5.2")
+            // `CrashlyticsManager`, which `EncryptedDatabase` reports a failed conversion through
+            // and whose constructor the `upgrade` job's seed calls. The app's BoM version.
+            implementation(project.dependencies.platform("com.google.firebase:firebase-bom:34.4.0"))
+            implementation("com.google.firebase:firebase-crashlytics")
         }
         iosMain.dependencies {
             // NSURLSession.
             implementation("io.ktor:ktor-client-darwin:$ktorVersion")
+            // Room's bundled SQLite driver on the iPhone (`IosDatabase.kt`): SQLite compiled into
+            // the app rather than the system library, so both platforms' SQLite behave alike.
+            // androidx.sqlite 2.5.2 is the release Room 2.7.2 depends on (both 18 June 2025).
+            // iOS only, so no Android build resolves it.
+            implementation("androidx.sqlite:sqlite-bundled:2.5.2")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -117,6 +153,27 @@ detekt {
 
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+    // Room's processor runs on the platform compilations, each of which includes `commonMain`; it
+    // writes the DAOs' implementations and the `actual` of `CoPlanlyDatabaseConstructor` for each.
+    add("kspAndroid", "androidx.room:room-compiler:$roomVersion")
+    add("kspIosArm64", "androidx.room:room-compiler:$roomVersion")
+    add("kspIosSimulatorArm64", "androidx.room:room-compiler:$roomVersion")
+}
+
+// Room writes the exported schema, `<schemaLocation>/com.coparently.app.data.local.CoPlanlyDatabase/
+// <version>.json`, where it has always been: `app/schemas/`, which the app's instrumented tests
+// read as assets (`MigrationTestHelper`), the `upgrade` job reads, and `ci.yml` checks with
+// `git status --porcelain -- app/schemas` after the build. Every target's processor writes the same
+// file (the schema is common code), so the Linux `shared` job's iOS compile checks it too.
+//
+// A KSP argument, as the app passed it, not the Room Gradle plugin's `room { schemaDirectory }`:
+// the plugin finds the KSP tasks it configures by KSP's task classes, and KSP 2.3 removed the KSP1
+// ones, which no session here could check against the plugin (Google's Maven repository is not
+// reachable from the cloud sessions this project is written in). The cost is the one the app
+// already had: the directory is not a declared output, so a KSP task restored from the build cache
+// writes nothing there, which is why the Regenerate workflow runs the task with `--rerun`.
+ksp {
+    arg("room.schemaLocation", "$rootDir/app/schemas")
 }
 
 // Never written from here, for `:shared`'s reason: `:app:detektBaseline` reads `shared-data/src`

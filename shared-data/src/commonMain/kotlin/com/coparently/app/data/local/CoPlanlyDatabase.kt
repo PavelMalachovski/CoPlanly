@@ -1,7 +1,9 @@
 package com.coparently.app.data.local
 
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import com.coparently.app.data.local.dao.BudgetDao
 import com.coparently.app.data.local.dao.ChangeRequestDao
@@ -39,6 +41,15 @@ import com.coparently.app.data.local.entity.UserEntity
  * Room database for CoPlanly app.
  * Contains all entities and DAOs for local data storage.
  *
+ * Common code since MON-24 phase 2 (Room for Kotlin Multiplatform): the entities, the DAOs and
+ * [Converters] are the same on Android and on the iPhone, and so is the schema Room exports into
+ * `app/schemas/`. How the file is opened is not: Android opens it through SQLCipher with the whole
+ * migration chain (`buildCoPlanlyDatabase` in `androidMain`, `di/DatabaseBuilder.kt`), the iPhone
+ * through the bundled SQLite driver under iOS Data Protection (`IosDatabase.kt`). A migration
+ * from version 47 on is written here, against `SQLiteConnection`, so both platforms run it; the
+ * legacy chain up to 46 stays Android's (`DatabaseMigrations`), since an iPhone database is always
+ * created at the current version.
+ *
  * @see RoomDatabase
  */
 @Database(
@@ -64,6 +75,7 @@ import com.coparently.app.data.local.entity.UserEntity
     exportSchema = true
 )
 @TypeConverters(Converters::class)
+@ConstructedBy(CoPlanlyDatabaseConstructor::class)
 abstract class CoPlanlyDatabase : RoomDatabase() {
     /**
      * Provides access to EventDao.
@@ -139,4 +151,14 @@ abstract class CoPlanlyDatabase : RoomDatabase() {
      * Gets the KnownFamilyDao (schema 46).
      */
     abstract fun knownFamilyDao(): KnownFamilyDao
+}
+
+/**
+ * Builds a [CoPlanlyDatabase] without reflection (Room KMP's `@ConstructedBy`). Room's processor
+ * writes the `actual` for every target it runs on (KSP for Android and both iPhone targets, in
+ * `shared-data/build.gradle.kts`); nothing here is written by hand.
+ */
+@Suppress("KotlinNoActualForExpect")
+expect object CoPlanlyDatabaseConstructor : RoomDatabaseConstructor<CoPlanlyDatabase> {
+    override fun initialize(): CoPlanlyDatabase
 }

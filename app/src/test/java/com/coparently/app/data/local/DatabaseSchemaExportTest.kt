@@ -45,7 +45,7 @@ class DatabaseSchemaExportTest {
         assertTrue(
             exported.isNotEmpty(),
             "No exported schemas at all under $SCHEMA_DIR. Room writes them during KSP from " +
-                "the room.schemaLocation argument in app/build.gradle.kts."
+                "the room.schemaLocation argument in shared-data/build.gradle.kts."
         )
         assertEquals(
             version,
@@ -97,8 +97,10 @@ class DatabaseSchemaExportTest {
 
     private companion object {
         const val SCHEMA_DIR = "schemas/com.coparently.app.data.local.CoPlanlyDatabase"
+
+        // In `:shared-data` since MON-24 phase 2; relative to this module, which [resolve] keeps.
         const val DATABASE_SOURCE =
-            "src/main/java/com/coparently/app/data/local/CoPlanlyDatabase.kt"
+            "../shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt"
         val VERSION_IN_SOURCE = Regex("""version\s*=\s*(\d+)""")
         val VERSION_IN_JSON = Regex(""""version"\s*:\s*(\d+)""")
     }

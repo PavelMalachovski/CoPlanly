@@ -2767,6 +2767,27 @@ bytes are identical on Android):
   The contract and the store run under Kotlin/Native on the simulator over an in-memory store;
   `KeychainSecurePreferencesTest` is `@Ignore`d, because a test binary with no app host has no
   Keychain (every call answers `errSecNotAvailable`, −25291), and runs before phase 3 (below).
+- ~~**Room on Kotlin Multiplatform**~~ **Done (phase 2, Task 7, November 2026)**: the database is
+  in `:shared-data` on Room 2.7.2 for Kotlin Multiplatform — the entities, DAOs, `Converters` and
+  `CoPlanlyDatabase` (with `@ConstructedBy`) in `commonMain`, Room's processor run there for
+  Android and both iPhone targets, the app running none. The schema is unchanged: no version bump,
+  no migration, and Room still writes `app/schemas/…/46.json`, which `build-test` and now the
+  `shared` job's iOS export must leave untouched. The entities' date columns are `kotlinx.datetime`
+  and `Converters` writes them through `IsoText`, the text `java.time`'s ISO formatters wrote
+  (`ConvertersParityTest` against the old converter, both directions); the mappers lost their
+  bridging calls. On Android, `DatabaseMigrations`, SQLCipher's `security/`, `EncryptionManager`,
+  `CrashlyticsManager` and `buildCoPlanlyDatabase` moved to `androidMain` with their packages,
+  names, constructors and `@file:JvmName("DatabaseModuleKt")`, so the `upgrade` seed still calls the
+  base build's; the 41 legacy migrations stay Android's, and one written from 47 on goes in
+  `commonMain` against `SQLiteConnection` (`ConnectionMigrationOnSqlCipherTest` runs that shape
+  over SQLCipher's open helper). On the iPhone, `buildCoPlanlyDatabase(AppDirectories)` opens it on
+  the bundled SQLite driver in `no_backup/databases/`, with `NSFileProtectionComplete` on the file
+  and its `-wal` and `-shm` siblings and no SQLCipher (owner answer 1, design §9.1);
+  `IosDatabaseTest` round-trips a row in every table there. The schema is exported through the
+  `room.schemaLocation` KSP argument, as the app did, not the Room Gradle plugin, whose KSP 2.3
+  compatibility could not be checked from a cloud session. Still to run on a phone: an install
+  over the previous build (`docs/DEVICE-CHECKLIST.md` §2.1), and on an iPhone, that the database
+  is unreadable while the phone is locked.
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
   platforms would derive different `school-…` ids from the same school data. It must hash

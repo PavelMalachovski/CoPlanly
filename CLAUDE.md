@@ -536,7 +536,12 @@ When touching the UI, keep these invariants:
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
    used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
-   Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone), Navigation 2.9.3,
+   Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone) — **Room for Kotlin
+   Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there for Android and
+   both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
+   (`sqlite-bundled`, released with Room 2.7.2) on iOS only; the schema goes to `app/schemas/`
+   through the `room.schemaLocation` KSP argument rather than the Room Gradle plugin, which finds
+   its KSP tasks by KSP1 classes that KSP 2.3 removed and could not be checked here — Navigation 2.9.3,
    **Koin 4.1.1** (BOM; `koin-android`, `koin-androidx-compose`, `koin-androidx-workmanager`, and
    `koin-test` for the JVM tests — MON-24 phase 2 replaced Hilt 2.58 with it; 4.2.x is newer but its
    Compose artifacts pull Compose 1.10, activity 1.12 and lifecycle 2.10 past the BOM, so it waits
@@ -628,7 +633,7 @@ When touching the UI, keep these invariants:
    Never hardcode user-visible text in composables — see "Localization (i18n)" below.
 
 DB note: installs older than the migration chain (schema < v5) are wiped via
-`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `buildCoPlanlyDatabase` (`di/DatabaseBuilder.kt`) — a v3 install used to
+`fallbackToDestructiveMigrationFrom(1,2,3,4)` in `buildCoPlanlyDatabase` (`di/DatabaseBuilder.kt`, in `shared-data`'s `androidMain` since MON-24 phase 2) — a v3 install used to
 crash with "migration from 3 to 9 required but not found".
 
 ## Build & verify
@@ -743,6 +748,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   itself calls, under a database name of its own. It snapshots and restores `DatabaseKey`'s
   preferences around each case, because that store has one fixed name the UI tests' real
   database also depends on; keep that if you add a case that forgets or mints a passphrase.
+  **`ConnectionMigrationOnSqlCipherTest`** (MON-24 phase 2) does the same for the path every
+  migration from 47 on takes: a `Migration` that overrides only `migrate(SQLiteConnection)`, run by
+  Room over SQLCipher's open helper through `coPlanlyDatabaseBuilder`. Room takes the version from
+  `@Database`, so it steps the encrypted file's `user_version` back one and lets that migration
+  replace the last step, which is the code a `Migration(46, 47)` goes through.
   **(2) Missing schemas.** `CoPlanlyDatabaseMigrationTest` held 14 test methods when the job
   was added, and only the six covering 11→12, 12→13 and 13→14 could run. The other eight name
   14→15 through 24→25 and need `15.json`–`24.json`, which do not exist and cannot be
@@ -890,7 +900,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   pull request this job is for. A PR that changes a listed signature fails the seed with
   `NoSuchMethodError` — adapt the fixture (reflection, or SQL) until the change is on the base.
   `buildCoPlanlyDatabase` is one of them, which is why `di/DatabaseBuilder.kt` keeps the JVM class
-  name it had as `DatabaseModule.kt` (`@file:JvmName("DatabaseModuleKt")`), and why the test
+  name it had as `DatabaseModule.kt` (`@file:JvmName("DatabaseModuleKt")`) — in `shared-data`'s
+  `androidMain` since MON-24 phase 2, with the same package and signature, and with
+  `coPlanlyDatabaseBuilder` beside it for a test that adds to the production path — and why the test
   application (`KoinTestApplication`) must not touch Koin: the seed runs it in a base build that may
   have none.
   **Both classes skip themselves without `-e coplanlyUpgradePhase seed|verify`**, which is what
@@ -911,7 +923,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   on a wire-format change — `app/src/test/resources/wire/current/` is one of the job's inputs.
 
   **A second workflow file exists and is not part of CI**: `.github/workflows/regenerate.yml` runs
-  `detektBaseline` and exports the Room schema, then commits both back to the branch it ran on
+  `detektBaseline` and exports the Room schema (`:shared-data:kspDebugKotlinAndroid --rerun`, where
+  Room's processor runs since MON-24 phase 2), then commits both back to the branch it ran on
   (rebasing onto the branch head first, so a push made while it ran does not lose its work; the
   bot's commit starts no CI run, so the next human push is what verifies it).
   It exists because those are the two artefacts only a machine with an Android SDK can produce,
@@ -998,7 +1011,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `testDebugUnitTest` (check run "Shared tests (JVM)"), `compileKotlinIosSimulatorArm64`,
   the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
   that does not compile for iOS fails on every pull request, Mac or no Mac — and
-  `compileTestKotlinIosSimulatorArm64`, the same for commonTest. **A backticked test name
+  `compileTestKotlinIosSimulatorArm64`, the same for commonTest; it also reruns Room's iOS
+  processor (`:shared-data:kspKotlinIosSimulatorArm64 --rerun`) and fails, as `build-test` does for
+  Android, when the schema it exports into `app/schemas/` differs from the committed one. **A backticked test name
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more, because Kover merges `:shared` and `:shared-data` into the app's coverage
@@ -1102,7 +1117,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   a screen-only change (`presentation/` outside `common/`, `res/`, `app/src/test/`) → no e2e
   (`common/` stays in because the e2e parents construct `ParentsSource`); nothing the screenshots
   render → no screenshots; and the **emulator matrix is API 30 alone** unless the diff reaches
-  what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`,
+  what API 26 and 16 KB exist for — `data/local/` (SQLCipher, Room; in the app or in any
+  `shared-data` source set, `DATABASE_SOURCES`), the manifest, `androidTest/`,
   `src/debug/`, the emulator script — or the build; and the `upgrade` job runs when the diff reaches
   what stored data depends on (`data/local/`, `data/security/`, `di/DatabaseBuilder.kt` and
   `di/koin/DatabaseModule.kt`, the
@@ -1445,14 +1461,18 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              (data/http/, the Bakaláři client and directory, Google Calendar's events.list) and
              the platform services the data layer reaches through interfaces (data/platform/:
              logger, directories, the sealed preference store, crash reports, analytics,
-             connectivity). Depends on shared/; no iOS framework of its own
+             connectivity) and the Room database on Room KMP (data/local/: entities, DAOs and
+             Converters in commonMain; the migrations, SQLCipher and the Android builder in
+             androidMain; the iPhone's builder in iosMain). Depends on shared/; no iOS framework
+             of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
-             except what has moved to shared-data/ (below)
+             except what has moved to shared-data/ (below), the Room database included
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
-             listed in appModules), and the database builder (DatabaseBuilder.kt)
+             listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
+             (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
 ```
 
 **Where a `domain/…` path in this file lives** (MON-24 phase 1, November 2026). The domain moved
@@ -1494,7 +1514,19 @@ Keychain item, `CrashReporter`, `Analytics`, `Connectivity`; the Android impleme
 `shared-data/src/androidMain/` where they need only the Android SDK, and otherwise are the app's
 own classes bound in `di/koin/PlatformModule.kt`), and from `data/local/preferences/`,
 `PreferenceKeys` and `PreferenceBlobCodec` — `EncryptedPreferences`, the Android
-`SecurePreferences`, and `InMemorySharedPreferences` stay. Every other `data/…` path is still under
+`SecurePreferences`, and `InMemorySharedPreferences` stay. Task 7, the Room database on Room for
+Kotlin Multiplatform: in `commonMain`, `data/local/CoPlanlyDatabase.kt` (with `@ConstructedBy` and
+the `expect object CoPlanlyDatabaseConstructor` whose `actual` Room's processor writes per target),
+`Converters.kt`, `dao/` and `entity/`, and `di/DatabaseName.kt` (`DATABASE_NAME`, same package as
+before); in `androidMain`, `data/local/DatabaseMigrations.kt`, `data/local/security/`
+(`EncryptedDatabase`, `DatabaseKey`, `SqlCipherMigration`), `data/security/EncryptionManager.kt`,
+`data/crashlytics/CrashlyticsManager.kt` (the two `EncryptedDatabase` and `DatabaseKey` take, whose
+constructors the `upgrade` seed calls) and `di/DatabaseBuilder.kt`; in `iosMain`,
+`data/local/IosDatabase.kt`. **The entities' date columns are `kotlinx.datetime`** since then, and
+`Converters` writes them through `IsoText`, the same text `java.time`'s ISO formatters wrote
+(`ConvertersParityTest`, `shared-data/src/androidUnitTest/`); a mapper converts nothing between an
+entity and the domain, and the journal's entry, still `java.time` (phase-1 stay list), is bridged
+in `JournalRepositoryImpl`. Every other `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter` or
 `Analytics` rather than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager` or
@@ -1511,8 +1543,18 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
 ### Things that are easy to get wrong
 
 1. **Room schema changes** require: entity change → version bump in `CoPlanlyDatabase` →
-   migration in `DatabaseMigrations` (it is auto-registered via `ALL_MIGRATIONS`).
-   Exported schemas live in `app/schemas/`.
+   a migration → the Regenerate workflow for the schema. Exported schemas live in `app/schemas/`,
+   written there by Room's processor in `shared-data` (`room.schemaLocation`). **Where it all
+   lives since MON-24 phase 2** (Room for Kotlin Multiplatform): the entities, DAOs, `Converters`
+   and `CoPlanlyDatabase` in `shared-data/src/commonMain/`, the same on Android and the iPhone; the
+   41 legacy migrations up to 46 in `DatabaseMigrations` in `shared-data/src/androidMain/`,
+   unchanged and Android's alone (an iPhone database is always created at the current version, so
+   it never runs them; `ALL_MIGRATIONS` registers them). **A migration from 47 on is written in
+   `commonMain` against `SQLiteConnection`** (`connection.execSQL(…)`, never
+   `SupportSQLiteDatabase`) and added by both platforms' builders: Android runs it through
+   SQLCipher's open helper, in Room's compatibility mode, which `ConnectionMigrationOnSqlCipherTest`
+   proves on the emulators. A column's stored text is fixed: a date column goes through
+   `Converters` (`IsoText`), never `kotlinx.datetime`'s own `toString()`.
 2. **Event editing must preserve fields.** `AddEditEventScreen` keeps a snapshot of the
    loaded event and uses `copy()`. Never rebuild an `Event` from scratch on save —
    that wipes `sharedWith`/`permissions`/`createdByFirebaseUid` (this was a real bug).
@@ -1928,7 +1970,14 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     job opens a database the *previous build* wrote (encrypted → encrypted, one release step; see
     the CI section). What neither can prove is an upgrade from an older build, or under a phone's
     hardware-backed Keystore, so the first launch on a device holding real data is still an
-    acceptance step (`docs/DEVICE-CHECKLIST.md` §2.1).
+    acceptance step (`docs/DEVICE-CHECKLIST.md` §2.1). **These files live in `shared-data`'s
+    `androidMain` since MON-24 phase 2** (`data/local/security/`, `data/security/EncryptionManager.kt`,
+    `data/crashlytics/CrashlyticsManager.kt`, `di/DatabaseBuilder.kt`), packages, names and
+    constructors unchanged. **The iPhone has no SQLCipher** (owner decision, iPhone design §9.1):
+    `IosDatabase.kt` opens the same database on Room's bundled driver in `no_backup/databases/`,
+    the file and its `-wal` and `-shm` siblings under `NSFileProtectionComplete`, so iOS encrypts
+    them while the phone is locked (`IosDatabaseTest`). Don't add a key the app holds there without
+    an owner decision: a simulator test process has no Keychain.
     **The preference store follows the same idea since SEC-5** (September 2026):
     `EncryptedPreferences` is no longer `security-crypto`'s alpha `EncryptedSharedPreferences` but
     one file, `no_backup/secure_prefs.bin` — the whole map (`PreferenceBlobCodec`, never Gson)

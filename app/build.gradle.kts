@@ -6,7 +6,6 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
     id("io.github.takahirom.roborazzi")
     id("org.jetbrains.kotlinx.kover")
-    id("com.google.devtools.ksp")
 }
 
 // The Google Services and Firebase Crashlytics Gradle plugins both require a
@@ -322,7 +321,7 @@ android {
         }
     }
 
-    // Exported Room schemas (see the "room.schemaLocation" KSP arg below) are the fixtures
+    // Exported Room schemas (`room.schemaLocation` in shared-data/build.gradle.kts) are the fixtures
     // MigrationTestHelper reads to create a database at a past version and to validate the
     // rebuilt schema after a migration — without this, CoPlanlyDatabaseMigrationTest cannot
     // find 11.json/12.json at instrumentation runtime.
@@ -399,11 +398,13 @@ dependencies {
     implementation("io.insert-koin:koin-androidx-compose")
     implementation("io.insert-koin:koin-androidx-workmanager")
 
-    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it)
+    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it). The database, its
+    // entities and DAOs live in `:shared-data` since MON-24 phase 2 (Room for Kotlin
+    // Multiplatform), and Room's processor runs there; the app keeps the runtime it calls
+    // (`withTransaction`, `Room.inMemoryDatabaseBuilder` in the tests) and runs no processor.
     val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
     // MigrationTestHelper — instrumented tests that run a real migration against a real
     // SQLite database and validate the result against the exported schema JSON.
     androidTestImplementation("androidx.room:room-testing:$roomVersion")
@@ -624,20 +625,13 @@ kotlin {
     }
 }
 
-// Room runs on KSP, not kapt (so did Hilt, until Koin replaced it in MON-24 phase 2): kapt
-// generated Java stubs for every Kotlin file before processing, the single slowest phase of every
-// build in CI. Room writes `schemas/<version>.json` from this argument. It is a plain string, so
-// Gradle does not know the directory is an output — a KSP task restored from the build cache
-// writes nothing there, which is why the Regenerate workflow runs `kspDebugKotlin --rerun`. Since
-// KSP 2.3 (MON-24) the processors run on KSP2, the only mode KSP still has.
-//
-// Room generates Kotlin, its default under KSP and the only output Room for Kotlin Multiplatform
-// has (MON-24; it emitted Java until then, as it had under kapt). The Kotlin output throws where
-// the Java returned null into a non-null type, on a single-row query that finds no row, so every
-// such query is declared nullable (`DaoEmptyResultTest`). The schema JSON does not depend on it.
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
+// Room ran on KSP here until MON-24 phase 2 moved the database to `:shared-data`, which now runs
+// the processor for Android and the iPhone and writes the exported schema to this module's
+// `schemas/` as before (`room.schemaLocation` in shared-data/build.gradle.kts). Nothing in this
+// module needs KSP any more, so the plugin is not applied. Room generates Kotlin there, the only
+// output Room for Kotlin Multiplatform has; the Kotlin output throws where the Java returned null
+// into a non-null type, on a single-row query that finds no row, so every such query is declared
+// nullable (`DaoEmptyResultTest`). The schema JSON does not depend on it.
 
 // Detekt configuration for static code analysis
 detekt {
