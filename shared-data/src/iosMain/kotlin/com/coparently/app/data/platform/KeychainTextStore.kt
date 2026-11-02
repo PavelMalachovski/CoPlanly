@@ -57,7 +57,10 @@ class KeychainTextStore(
     private val account: String = APP_ACCOUNT
 ) : SealedTextStore {
 
-    override fun read(): String? = memScoped {
+    // Only "not found" means nothing is stored: any other status — the item locked before the first
+    // unlock, the Keychain unavailable, a missing entitlement — is reported as unreadable, and the
+    // store keeps the item rather than starting again over it.
+    override fun read(): StoredText = memScoped {
         val query = dictionary(
             kSecClass to kSecClassGenericPassword,
             kSecAttrService to retained(service),
@@ -67,9 +70,11 @@ class KeychainTextStore(
         )
         val result = alloc<CFTypeRefVar>()
         when (val status = SecItemCopyMatching(query, result.ptr)) {
-            errSecSuccess -> (CFBridgingRelease(result.value) as NSData).toByteArray().decodeToString()
-            errSecItemNotFound -> null
-            else -> throw KeychainException("read", status)
+            errSecSuccess -> StoredText.Present(
+                (CFBridgingRelease(result.value) as NSData).toByteArray().decodeToString()
+            )
+            errSecItemNotFound -> StoredText.Absent
+            else -> StoredText.Unreadable("OSStatus $status")
         }
     }
 
@@ -136,7 +141,7 @@ class KeychainTextStore(
 }
 
 /** A Keychain call that answered [status], an `OSStatus`, rather than success. */
-class KeychainException(operation: String, status: Int) :
+class KeychainException(operation: String, val status: Int) :
     IllegalStateException("Keychain $operation failed: OSStatus $status")
 
 /** The app's [SecurePreferences] on the iPhone: one Keychain item (see [KeychainTextStore]). */

@@ -30,11 +30,12 @@ class IosAppDirectories : AppDirectories {
 
     override val noBackup: Path by lazy {
         val path = directory(NSApplicationSupportDirectory, "no_backup")
-        NSURL.fileURLWithPath(path).setResourceValue(
+        val excluded = NSURL.fileURLWithPath(path).setResourceValue(
             NSNumber(bool = true),
             forKey = NSURLIsExcludedFromBackupKey,
             error = null
         )
+        if (!excluded) logger.w(TAG, "Could not exclude no_backup from backups")
         Path(path)
     }
 
@@ -42,12 +43,17 @@ class IosAppDirectories : AppDirectories {
     private fun directory(base: NSSearchPathDirectory, child: String): String {
         val root = NSSearchPathForDirectoriesInDomains(base, NSUserDomainMask, true).first() as String
         val path = "$root/$child"
-        NSFileManager.defaultManager.createDirectoryAtPath(
+        val created = NSFileManager.defaultManager.createDirectoryAtPath(
             path,
             withIntermediateDirectories = true,
             attributes = null,
             error = null
         )
+        if (!created) logger.w(TAG, "Could not create the $child directory")
         return path
+    }
+
+    private companion object {
+        const val TAG = "IosAppDirectories"
     }
 }

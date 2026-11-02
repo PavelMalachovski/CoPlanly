@@ -19,7 +19,7 @@ internal class MemoryTextStore : SealedTextStore {
     /** How many writes reached the store. */
     var writes = 0
 
-    override fun read(): String? = text
+    override fun read(): StoredText = text?.let { StoredText.Present(it) } ?: StoredText.Absent
 
     override fun write(text: String) {
         this.text = text

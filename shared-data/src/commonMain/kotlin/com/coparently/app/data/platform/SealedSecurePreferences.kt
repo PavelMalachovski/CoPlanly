@@ -9,14 +9,34 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
  */
 interface SealedTextStore {
 
-    /** The stored text, or null when there is none; throws when it is there but cannot be read. */
-    fun read(): String?
+    /**
+     * What the storage holds: [StoredText.Absent], the [StoredText.Present] text, or
+     * [StoredText.Unreadable] when it could not be asked — which says nothing about what is there.
+     */
+    fun read(): StoredText
 
     /** Replaces the stored text; throws when it cannot. */
     fun write(text: String)
 
     /** Removes the stored text, if any. */
     fun delete()
+}
+
+/** What a [SealedTextStore] answered when it was read. */
+sealed interface StoredText {
+
+    /** Nothing is stored: a first launch, or a store that was deleted. */
+    data object Absent : StoredText
+
+    /** The stored [text]. */
+    data class Present(val text: String) : StoredText
+
+    /**
+     * The storage could not be read, for [reason] — on the iPhone a Keychain status other than
+     * "not found", such as `errSecInteractionNotAllowed` before the phone's first unlock. Temporary
+     * as far as anyone can tell, so what is stored must survive it.
+     */
+    data class Unreadable(val reason: String) : StoredText
 }
 
 /**
@@ -28,10 +48,15 @@ interface SealedTextStore {
  * answers:
  *  * every edit reaches [storage] before it returns, under one lock, so two edits are never written
  *    in the wrong order;
- *  * a text that cannot be read is deleted and the store starts empty (the parent signs in to
- *    Google Calendar again; nothing else here is not re-derivable);
- *  * opening writes at once, as a probe: storage that cannot be written leaves the store in memory
- *    for the life of the process — never anywhere in clear.
+ *  * a text that was read and cannot be decoded is deleted and the store starts empty (the parent
+ *    signs in to Google Calendar again; nothing else here is not re-derivable) — the Android rule
+ *    for a sealed file that cannot be opened, a condition that does not go away;
+ *  * storage that could not be read at all ([StoredText.Unreadable]) is **never deleted and never
+ *    written**: the store starts empty in memory for this process, and the next launch reads the
+ *    item again. A Keychain read refused before the phone's first unlock is temporary, and treating
+ *    it like damage would erase the Google tokens and the school connections for good;
+ *  * otherwise opening writes at once, as a probe: storage that cannot be written leaves the store
+ *    in memory for the life of the process — never anywhere in clear.
  *
  * The key names and every getter's default are `EncryptedPreferences`'s, so the two platforms read
  * one vocabulary.
@@ -44,9 +69,14 @@ class SealedSecurePreferences(private val storage: SealedTextStore) : SecurePref
     private val persistent: Boolean
 
     init {
-        values += readStored()
-        persistent = writeStored(values)
-        if (!persistent) logger.e(TAG, "No sealed storage available; keeping preferences in memory only")
+        val stored = readStored()
+        if (stored == null) {
+            persistent = false
+        } else {
+            values += stored
+            persistent = writeStored(values)
+            if (!persistent) logger.e(TAG, "No sealed storage available; keeping preferences in memory only")
+        }
     }
 
     override fun putAccessToken(token: String) = putString(KEY_ACCESS_TOKEN, token)
@@ -164,19 +194,29 @@ class SealedSecurePreferences(private val storage: SealedTextStore) : SecurePref
         }
     }
 
-    /** The stored entries; nothing when there are none or they cannot be read (the text is deleted). */
-    private fun readStored(): Map<String, Any> {
-        val text = try {
+    /**
+     * The stored entries: none when nothing is stored or the stored text cannot be decoded (it is
+     * deleted), and null when the storage could not be read — the caller then keeps everything in
+     * memory and leaves the storage as it is.
+     */
+    private fun readStored(): Map<String, Any>? {
+        val answer = try {
             storage.read()
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            discard("Sealed storage unreadable; clearing it and starting again", e)
-            return emptyMap()
-        } ?: return emptyMap()
-        return try {
-            PreferenceBlobCodec.decode(text)
-        } catch (e: IllegalArgumentException) {
-            discard("Sealed text unreadable; clearing it and starting again", e)
-            emptyMap()
+            StoredText.Unreadable(e.message ?: e::class.simpleName.orEmpty())
+        }
+        return when (answer) {
+            StoredText.Absent -> emptyMap()
+            is StoredText.Unreadable -> {
+                logger.w(TAG, "Sealed storage could not be read (${answer.reason}); keeping it, in memory only")
+                null
+            }
+            is StoredText.Present -> try {
+                PreferenceBlobCodec.decode(answer.text)
+            } catch (e: IllegalArgumentException) {
+                discard("Sealed text unreadable; clearing it and starting again", e)
+                emptyMap()
+            }
         }
     }
 

@@ -2,7 +2,6 @@ package com.coparently.app.data.platform
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 /**
  * [SecurePreferencesContractTest] over the real Keychain of the simulator (MON-24 phase 2, Task 6),
@@ -20,9 +19,9 @@ class KeychainSecurePreferencesTest : SecurePreferencesContractTest() {
     fun `the item holds the text it was given until it is deleted`() {
         storage.write("first")
         storage.write("second — ключ")
-        assertEquals("second — ключ", storage.read())
+        assertEquals(StoredText.Present("second — ключ"), storage.read())
 
         storage.delete()
-        assertNull(storage.read())
+        assertEquals(StoredText.Absent, storage.read())
     }
 }

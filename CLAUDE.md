@@ -1936,7 +1936,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     layer depends on; it stays in the app with its package, name and constructors because the
     `upgrade` seed builds it. The iPhone's is one Keychain item (`SealedSecurePreferences` over
     `KeychainTextStore`, readable after first unlock, this device only), the same blob and the same
-    rules; `SecurePreferencesContractTest` (and its Android copy, `EncryptedPreferencesContractTest`)
+    rules but one: a Keychain item that could not be *read* (any status but "not found", such as
+    the lock before the first unlock) is never deleted or written — the store runs in memory for
+    that process — and only text that was read and cannot be decoded is replaced, as Android's
+    unopenable file is. `SecurePreferencesContractTest` (and its Android copy, `EncryptedPreferencesContractTest`)
     hold the two to one contract — change a behaviour in both.
 21. **A parenting plan is two halves and a derived agreement, and neither half may write the
     other** (MON-5, Aug 2026, schema 34). `parenting_plans/{familyId}` holds `answers`,
