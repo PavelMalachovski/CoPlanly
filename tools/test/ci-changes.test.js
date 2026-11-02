@@ -5,7 +5,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { decide, format, everything, nothing, decideEmulators, formatEvent } = require('../ci-changes.js');
+const {
+  decide, format, everything, nothing, decideEmulators, formatEvent, EMULATOR_SENSITIVE, UPGRADE_INPUTS,
+} = require('../ci-changes.js');
 
 const legs = (decision) => decision.matrix.map((leg) => leg['api-level']);
 
@@ -104,6 +106,43 @@ test('the database, the manifest and the instrumented tests run all three emulat
     'tools/with-screen-recording.sh',
   ]) {
     assert.deepEqual(legs(decide([path])), [26, 30, 35], path);
+  }
+});
+
+test('the database moved to shared-data still counts as the database (MON-24 phase 2)', () => {
+  // Any shared-data path runs everything already; these hold the database's own rules should
+  // that ever be narrowed.
+  const database = [
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/entity/EventEntity.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/dao/EventDao.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/Converters.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/local/DatabaseMigrations.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/local/security/EncryptedDatabase.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/security/EncryptionManager.kt',
+    'shared-data/src/iosMain/kotlin/com/coparently/app/data/local/IosDatabase.kt',
+  ];
+  for (const path of database) {
+    assert.ok(EMULATOR_SENSITIVE.test(path), path);
+    assert.ok(UPGRADE_INPUTS.test(path), path);
+    assert.deepEqual(legs(decide([path])), [26, 30, 35], path);
+    assert.equal(decide([path]).upgrade, true, path);
+  }
+  for (const path of [
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/crashlytics/CrashlyticsManager.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/di/DatabaseBuilder.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/di/DatabaseName.kt',
+  ]) {
+    assert.ok(UPGRADE_INPUTS.test(path), path);
+  }
+  // The rest of shared-data is not the database, whatever SHARED decides for it.
+  for (const path of [
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/http/WebAddress.kt',
+    'shared-data/build.gradle.kts',
+    'shared/src/commonMain/kotlin/com/coparently/app/data/local/Nothing.kt',
+  ]) {
+    assert.equal(EMULATOR_SENSITIVE.test(path), false, path);
+    assert.equal(UPGRADE_INPUTS.test(path), false, path);
   }
 });
 

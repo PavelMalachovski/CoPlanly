@@ -62,26 +62,50 @@ const SHARED = /^shared(-data)?\//;
 const SCREENSHOT_INPUTS = /^(app\/src\/main\/java\/com\/coparently\/app\/(presentation|domain|utils)\/|app\/src\/main\/res\/|app\/src\/test\/java\/com\/coparently\/app\/screenshots\/|app\/src\/test\/screenshots\/|tools\/screenshot-gallery\.js$)/;
 
 /**
+ * Where the database's sources live (MON-24 phase 2): `data/local/` and `data/security/` in the
+ * app (the preference store still, and anything added there later), and in `shared-data` in every
+ * source set — the entities, DAOs and `Converters` in `commonMain`, the migrations, SQLCipher and
+ * the Keystore wrapper in `androidMain`, the iPhone's builder in `iosMain`. Any path under
+ * `shared-data/` already runs every job (see [SHARED]); naming the moved directories here as well
+ * keeps the database's own rules true should that ever be narrowed.
+ */
+const DATABASE_SOURCES = '(app\\/src\\/main\\/java|shared-data\\/src\\/[^/]+\\/kotlin)\\/com\\/coparently\\/app\\/';
+
+/**
  * What the API 26 and 16 KB emulator legs exist to catch beyond API 30: native libraries and the
  * encrypted database (`data/local/`) with the Keystore wrapper that seals its passphrase
- * (`data/security/`), the manifest, the instrumented tests themselves, the
- * debug-only network config, and how the emulator step runs. A newer-API call elsewhere in the
- * code is lint's NewApi check first, on every pull request; these two legs are its runtime
- * confirmation, and they run on every push to `main`.
+ * (`data/security/`), wherever their sources live ([DATABASE_SOURCES]), the manifest, the
+ * instrumented tests themselves, the debug-only network config, and how the emulator step runs. A
+ * newer-API call elsewhere in the code is lint's NewApi check first, on every pull request; these
+ * two legs are its runtime confirmation, and they run on every push to `main`.
  */
-const EMULATOR_SENSITIVE = /^(app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/main\/java\/com\/coparently\/app\/data\/local\/|app\/src\/main\/java\/com\/coparently\/app\/data\/security\/|app\/src\/androidTest\/|app\/src\/debug\/|tools\/with-screen-recording\.sh$)/;
+const EMULATOR_SENSITIVE = new RegExp(
+  '^(app\\/src\\/main\\/AndroidManifest\\.xml$|app\\/src\\/main\\/jniLibs\\/|' +
+    DATABASE_SOURCES + '(data\\/local\\/|data\\/security\\/)|' +
+    'app\\/src\\/androidTest\\/|app\\/src\\/debug\\/|tools\\/with-screen-recording\\.sh$)',
+);
 
 /**
  * What the `upgrade` job (the base build's data opened by this build) can be broken by: the
  * database and everything under `data/local/` (entities, migrations, SQLCipher, the preference
- * store), the Keystore wrapper, the builder in `DatabaseBuilder.kt` and `databaseModule`, the
- * telemetry answer's stored form, the constructors the seed calls (`UpgradeFixture` lists them), the exported schemas, the
- * manifest, native libraries, the test runner, and the job's own tests and scripts. Also
- * `app/src/test/resources/wire/current/`: the job runs the *base* build's `WireContractTest` over
- * what this branch writes, and a change there is exactly a change to the wire format — a mapper
- * change that alters a document cannot land without one, because `CurrentWireFixturesTest` fails.
+ * store), the Keystore wrapper, the builder in `DatabaseBuilder.kt` (with the file name beside it,
+ * `DatabaseName.kt`) and `databaseModule`, wherever their sources live ([DATABASE_SOURCES]), the
+ * telemetry answer's stored form, the constructors the seed calls (`UpgradeFixture` lists them),
+ * the exported schemas, the manifest, native libraries, the test runner, and the job's own tests
+ * and scripts. Also `app/src/test/resources/wire/current/`: the job runs the *base* build's
+ * `WireContractTest` over what this branch writes, and a change there is exactly a change to the
+ * wire format — a mapper change that alters a document cannot land without one, because
+ * `CurrentWireFixturesTest` fails.
  */
-const UPGRADE_INPUTS = /^(app\/src\/test\/resources\/wire\/current\/|app\/src\/main\/java\/com\/coparently\/app\/(data\/local\/|data\/security\/|data\/crashlytics\/|data\/telemetry\/|domain\/telemetry\/|di\/DatabaseBuilder\.kt$|di\/koin\/DatabaseModule\.kt$)|app\/schemas\/|app\/src\/main\/AndroidManifest\.xml$|app\/src\/main\/jniLibs\/|app\/src\/androidTest\/java\/com\/coparently\/app\/(upgrade\/|KoinTestRunner\.kt$)|tools\/upgrade\/|tools\/ci-background-build\.sh$|tools\/stop-emulator\.sh$)/;
+const UPGRADE_INPUTS = new RegExp(
+  '^(app\\/src\\/test\\/resources\\/wire\\/current\\/|' +
+    DATABASE_SOURCES +
+    '(data\\/local\\/|data\\/security\\/|data\\/crashlytics\\/|data\\/telemetry\\/|domain\\/telemetry\\/|' +
+    'di\\/DatabaseBuilder\\.kt$|di\\/DatabaseName\\.kt$|di\\/koin\\/DatabaseModule\\.kt$)|' +
+    'app\\/schemas\\/|app\\/src\\/main\\/AndroidManifest\\.xml$|app\\/src\\/main\\/jniLibs\\/|' +
+    'app\\/src\\/androidTest\\/java\\/com\\/coparently\\/app\\/(upgrade\\/|KoinTestRunner\\.kt$)|' +
+    'tools\\/upgrade\\/|tools\\/ci-background-build\\.sh$|tools\\/stop-emulator\\.sh$)',
+);
 
 /**
  * Paths the `upgrade` job is known not to depend on. Anything outside this list *and* outside
@@ -261,4 +285,7 @@ if (require.main === module) {
   }
 }
 
-module.exports = { decide, format, everything, nothing, decideEmulators, formatEvent, FULL_CI_LABEL, FULL_MATRIX, LEG_30 };
+module.exports = {
+  decide, format, everything, nothing, decideEmulators, formatEvent, FULL_CI_LABEL, FULL_MATRIX, LEG_30,
+  EMULATOR_SENSITIVE, UPGRADE_INPUTS,
+};

@@ -217,7 +217,11 @@ jobs:
 
       # `DatabaseSchemaExportTest` cannot catch what CQ-1 says it catches, and this is the
       # step that can. KSP (Room) writes `app/schemas/<version>.json` during the build above, from
-      # the `room.schemaLocation` argument — so by the time the unit test reads that directory
+      # the `room.schemaLocation` argument (in shared-data/build.gradle.kts since MON-24 phase 2,
+      # where Room's processor now runs: `:shared-data:kspDebugKotlinAndroid`, which the app's
+      # compile depends on, so this step still follows the task that writes the schema; the
+      # moved database must export exactly the committed `46.json`, identity hash included)
+      # — so by the time the unit test reads that directory
       # the file it is looking for has just been created, whether or not anybody committed it.
       # The test passes on a repository missing the very export it exists to demand.
       #
@@ -1913,12 +1917,30 @@ jobs:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts') }}
 
+      # `kspKotlinIosSimulatorArm64 --rerun`: Room's processor for the iPhone writes the exported
+      # schema into `app/schemas/` too (the database is common code since MON-24 phase 2), and a
+      # result restored from the build cache would write nothing, so the step below would pass
+      # without having looked. `--rerun` applies to that one task.
       - name: Shared tests (JVM) and the iOS compile
         run: >-
           ./gradlew
           :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
-          :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
-          :shared-data:compileTestKotlinIosSimulatorArm64
+          :shared-data:testDebugUnitTest :shared-data:kspKotlinIosSimulatorArm64 --rerun
+          :shared-data:compileKotlinIosSimulatorArm64 :shared-data:compileTestKotlinIosSimulatorArm64
+
+      # The same check as `build-test`'s, for the iPhone's processor: the schema it exports must be
+      # the committed one, byte for byte. The schema is common code, so a difference here is a
+      # difference between Room's targets, which no migration could reconcile.
+      - name: The iPhone build exports the committed Room schema
+        run: |
+          set -euo pipefail
+          dirty=$(git status --porcelain -- app/schemas)
+          if [ -n "$dirty" ]; then
+            echo "$dirty"
+            git diff -- app/schemas | head -100
+            echo "::error::Room's processor for iOS exported a schema that differs from app/schemas/."
+            exit 1
+          fi
 
       - name: Upload reports
         if: always()

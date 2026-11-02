@@ -70,7 +70,7 @@ const RULES = [
   {
     sections: ['2.1'],
     why: 'database, encryption or schema',
-    paths: ['K/data/local/**', 'K/data/security/**', 'K/di/DatabaseBuilder.kt',
+    paths: ['K/data/local/**', 'K/data/security/**', 'K/di/DatabaseBuilder.kt', 'K/di/DatabaseName.kt',
       'K/di/koin/DatabaseModule.kt', 'app/schemas/**', 'app/src/androidTest/**/data/local/**'],
   },
   {
