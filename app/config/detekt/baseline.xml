@@ -214,9 +214,9 @@
     <ID>TooGenericExceptionCaught:SyncViewModel.kt$SyncViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UpdateEventUseCase.kt$UpdateEventUseCase$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UserRepositoryImpl.kt$UserRepositoryImpl$e: Exception</ID>
-    <ID>TooManyFunctions:AnalyticsManager.kt$AnalyticsManager</ID>
+    <ID>TooManyFunctions:AnalyticsManager.kt$AnalyticsManager : Analytics</ID>
     <ID>TooManyFunctions:ChildInfoDao.kt$ChildInfoDao</ID>
-    <ID>TooManyFunctions:EncryptedPreferences.kt$EncryptedPreferences</ID>
+    <ID>TooManyFunctions:EncryptedPreferences.kt$EncryptedPreferences : SecurePreferences</ID>
     <ID>TooManyFunctions:EventDao.kt$EventDao</ID>
     <ID>TooManyFunctions:EventViewModel.kt$EventViewModel : ViewModel</ID>
     <ID>TooManyFunctions:Extensions.kt$com.coparently.app.utils.Extensions.kt</ID>

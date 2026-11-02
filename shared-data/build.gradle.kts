@@ -90,6 +90,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // As in the app: `android.util.Log`, which the common code's `logger` reaches on Android, is a
+    // stub in JVM unit tests and would throw "not mocked" from a failure path a test drives.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 // The app's detekt configuration and the app's one baseline file, as `:shared` reads them (see

@@ -23,6 +23,7 @@ val appModules: List<Module> = listOf(
     journalModule,
     knownFamilyModule,
     notificationModule,
+    platformModule,
     receiptModule,
     repositoryModule,
     requestClockModule,

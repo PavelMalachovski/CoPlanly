@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.security.EncryptionManager
 import java.io.File
 import java.io.IOException
@@ -56,13 +57,19 @@ import java.io.IOException
  * The same rules hold as before: a sealed file that cannot be opened is deleted and the store
  * starts empty (the user re-authorises Calendar), and a device that cannot seal anything keeps the
  * store in memory — never on disk in clear text.
+ *
+ * **It is the Android [SecurePreferences]** (MON-24 phase 2): the data layer depends on that
+ * interface, and the iPhone implements it over the Keychain (`SealedSecurePreferences`), held to
+ * the same answers by `SecurePreferencesContractTest` and, here, `EncryptedPreferencesContractTest`.
+ * This class stays in the app with its name, package and constructors, because the `upgrade` job's
+ * seed builds it against the previous build's classes.
  */
 class EncryptedPreferences internal constructor(
     private val context: Context,
     private val cipher: StoreCipher,
     private val fileName: String = STORE_FILE,
     private val legacyName: String = LEGACY_STORE_NAME
-) {
+) : SecurePreferences {
 
     /** The production store: the Keystore key [encryptionManager] holds, the app's own files. */
     constructor(
@@ -90,7 +97,7 @@ class EncryptedPreferences internal constructor(
     /**
      * Stores an access token securely.
      */
-    fun putAccessToken(token: String) {
+    override fun putAccessToken(token: String) {
         store.edit()
             .putString(KEY_ACCESS_TOKEN, token)
             .apply()
@@ -99,14 +106,14 @@ class EncryptedPreferences internal constructor(
     /**
      * Retrieves the stored access token.
      */
-    fun getAccessToken(): String? {
+    override fun getAccessToken(): String? {
         return store.getString(KEY_ACCESS_TOKEN, null)
     }
 
     /**
      * Stores a refresh token securely.
      */
-    fun putRefreshToken(token: String) {
+    override fun putRefreshToken(token: String) {
         store.edit()
             .putString(KEY_REFRESH_TOKEN, token)
             .apply()
@@ -115,14 +122,14 @@ class EncryptedPreferences internal constructor(
     /**
      * Retrieves the stored refresh token.
      */
-    fun getRefreshToken(): String? {
+    override fun getRefreshToken(): String? {
         return store.getString(KEY_REFRESH_TOKEN, null)
     }
 
     /**
      * Stores token expiry time in milliseconds.
      */
-    fun putTokenExpiry(expiryTimeMillis: Long) {
+    override fun putTokenExpiry(expiryTimeMillis: Long) {
         store.edit()
             .putLong(KEY_TOKEN_EXPIRY, expiryTimeMillis)
             .apply()
@@ -131,7 +138,7 @@ class EncryptedPreferences internal constructor(
     /**
      * Retrieves the stored token expiry time.
      */
-    fun getTokenExpiry(): Long? {
+    override fun getTokenExpiry(): Long? {
         val expiry = store.getLong(KEY_TOKEN_EXPIRY, -1)
         return if (expiry == -1L) null else expiry
     }
@@ -139,7 +146,7 @@ class EncryptedPreferences internal constructor(
     /**
      * Stores Google Calendar ID.
      */
-    fun putCalendarId(calendarId: String) {
+    override fun putCalendarId(calendarId: String) {
         store.edit()
             .putString(KEY_CALENDAR_ID, calendarId)
             .apply()
@@ -148,14 +155,14 @@ class EncryptedPreferences internal constructor(
     /**
      * Retrieves the stored Google Calendar ID.
      */
-    fun getCalendarId(): String? {
+    override fun getCalendarId(): String? {
         return store.getString(KEY_CALENDAR_ID, "primary")
     }
 
     /**
      * Stores Google ID token (from Credential Manager).
      */
-    fun putGoogleIdToken(token: String) {
+    override fun putGoogleIdToken(token: String) {
         store.edit()
             .putString(KEY_GOOGLE_ID_TOKEN, token)
             .apply()
@@ -164,14 +171,14 @@ class EncryptedPreferences internal constructor(
     /**
      * Retrieves the stored Google ID token.
      */
-    fun getGoogleIdToken(): String? {
+    override fun getGoogleIdToken(): String? {
         return store.getString(KEY_GOOGLE_ID_TOKEN, null)
     }
 
     /**
      * Stores user email from Google account.
      */
-    fun putUserEmail(email: String) {
+    override fun putUserEmail(email: String) {
         store.edit()
             .putString(KEY_USER_EMAIL, email)
             .apply()
@@ -180,7 +187,7 @@ class EncryptedPreferences internal constructor(
     /**
      * Retrieves the stored user email.
      */
-    fun getUserEmail(): String? {
+    override fun getUserEmail(): String? {
         return store.getString(KEY_USER_EMAIL, null)
     }
 
@@ -189,7 +196,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param isDarkTheme Whether dark theme is enabled
      */
-    fun putDarkTheme(isDarkTheme: Boolean) {
+    override fun putDarkTheme(isDarkTheme: Boolean) {
         store.edit()
             .putBoolean(KEY_DARK_THEME, isDarkTheme)
             .apply()
@@ -201,7 +208,7 @@ class EncryptedPreferences internal constructor(
      *
      * @return True if dark theme, false if light theme, null if system default
      */
-    fun getDarkTheme(): Boolean? {
+    override fun getDarkTheme(): Boolean? {
         return if (store.contains(KEY_DARK_THEME)) {
             store.getBoolean(KEY_DARK_THEME, false)
         } else {
@@ -212,7 +219,7 @@ class EncryptedPreferences internal constructor(
     /**
      * Clears dark theme preference (reverts to system default).
      */
-    fun clearDarkTheme() {
+    override fun clearDarkTheme() {
         store.edit()
             .remove(KEY_DARK_THEME)
             .apply()
@@ -224,7 +231,7 @@ class EncryptedPreferences internal constructor(
      * @param key The key name
      * @param value The boolean value
      */
-    fun putBoolean(key: String, value: Boolean) {
+    override fun putBoolean(key: String, value: Boolean) {
         store.edit()
             .putBoolean(key, value)
             .apply()
@@ -237,7 +244,7 @@ class EncryptedPreferences internal constructor(
      * @param defaultValue The default value if not found
      * @return The boolean value
      */
-    fun getBoolean(key: String, defaultValue: Boolean): Boolean {
+    override fun getBoolean(key: String, defaultValue: Boolean): Boolean {
         return store.getBoolean(key, defaultValue)
     }
 
@@ -247,7 +254,7 @@ class EncryptedPreferences internal constructor(
      * @param key The key name
      * @param value The string value
      */
-    fun putString(key: String, value: String) {
+    override fun putString(key: String, value: String) {
         store.edit()
             .putString(key, value)
             .apply()
@@ -260,7 +267,7 @@ class EncryptedPreferences internal constructor(
      * @param defaultValue The default value if not found
      * @return The string value
      */
-    fun getString(key: String, defaultValue: String? = null): String? {
+    override fun getString(key: String, defaultValue: String?): String? {
         return store.getString(key, defaultValue)
     }
 
@@ -274,7 +281,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param familyId The family on screen when the form opened, or null for none.
      */
-    fun putEventDraft(familyId: String?, draftJson: String) {
+    override fun putEventDraft(familyId: String?, draftJson: String) {
         store.edit()
             .putString(eventDraftKey(familyId), draftJson)
             .apply()
@@ -284,7 +291,7 @@ class EncryptedPreferences internal constructor(
      * Retrieves [familyId]'s stored event draft — never another family's.
      * Issue 1.3: Draft saving functionality.
      */
-    fun getEventDraft(familyId: String?): String? {
+    override fun getEventDraft(familyId: String?): String? {
         return store.getString(eventDraftKey(familyId), null)
     }
 
@@ -292,7 +299,7 @@ class EncryptedPreferences internal constructor(
      * Clears [familyId]'s stored event draft.
      * Issue 1.3: Draft saving functionality.
      */
-    fun clearEventDraft(familyId: String?) {
+    override fun clearEventDraft(familyId: String?) {
         store.edit()
             .remove(eventDraftKey(familyId))
             .apply()
@@ -311,7 +318,7 @@ class EncryptedPreferences internal constructor(
      * @param conversationId The thread the text was typed into.
      * @param text What is in the composer.
      */
-    fun putChatDraft(conversationId: String, text: String) {
+    override fun putChatDraft(conversationId: String, text: String) {
         val key = PreferenceKeys.CHAT_DRAFT_PREFIX + conversationId
         store.edit().apply {
             if (text.isEmpty()) remove(key) else putString(key, text)
@@ -323,7 +330,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param conversationId The thread to read the draft of.
      */
-    fun getChatDraft(conversationId: String): String =
+    override fun getChatDraft(conversationId: String): String =
         store.getString(PreferenceKeys.CHAT_DRAFT_PREFIX + conversationId, null)
             .orEmpty()
 
@@ -332,7 +339,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param basisPoints `0..10000`.
      */
-    fun putSplitRatioBasisPoints(basisPoints: Int) {
+    override fun putSplitRatioBasisPoints(basisPoints: Int) {
         store.edit()
             .putInt(PreferenceKeys.SPLIT_RATIO_BASIS_POINTS, basisPoints)
             .apply()
@@ -344,7 +351,7 @@ class EncryptedPreferences internal constructor(
      * Null rather than "half each": "we never agreed" and "we agreed on half each" are different
      * facts, and only the caller knows which fallback belongs to it.
      */
-    fun getSplitRatioBasisPoints(): Int? =
+    override fun getSplitRatioBasisPoints(): Int? =
         store.getInt(PreferenceKeys.SPLIT_RATIO_BASIS_POINTS, -1)
             .takeIf { it >= 0 }
 
@@ -354,7 +361,7 @@ class EncryptedPreferences internal constructor(
      * @param slot `"mom"` or `"dad"`, or null to forget — which is what a paired write does,
      *   because from then on the pair's document is the record and the cache merely mirrors it.
      */
-    fun putSplitRatioSlot(slot: String?) {
+    override fun putSplitRatioSlot(slot: String?) {
         store.edit()
             .apply {
                 if (slot == null) {
@@ -367,7 +374,7 @@ class EncryptedPreferences internal constructor(
     }
 
     /** The slot the cached share was captured under, or null when it was never recorded. */
-    fun getSplitRatioSlot(): String? =
+    override fun getSplitRatioSlot(): String? =
         store.getString(PreferenceKeys.SPLIT_RATIO_SLOT, null)
 
     /**
@@ -376,7 +383,7 @@ class EncryptedPreferences internal constructor(
      * @param familyId The family whose `family_settings` document carries the agreement.
      * @param basisPoints `0..10000`.
      */
-    fun putFamilySplitRatioBasisPoints(familyId: String, basisPoints: Int) {
+    override fun putFamilySplitRatioBasisPoints(familyId: String, basisPoints: Int) {
         store.edit()
             .putInt(PreferenceKeys.SPLIT_RATIO_FAMILY_PREFIX + familyId, basisPoints)
             .apply()
@@ -389,7 +396,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param familyId The family to read the agreement of.
      */
-    fun getFamilySplitRatioBasisPoints(familyId: String): Int? =
+    override fun getFamilySplitRatioBasisPoints(familyId: String): Int? =
         store.getInt(PreferenceKeys.SPLIT_RATIO_FAMILY_PREFIX + familyId, -1)
             .takeIf { it >= 0 }
 
@@ -398,7 +405,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param code ISO 4217 currency code, e.g. "CZK"
      */
-    fun putDefaultCurrency(code: String) {
+    override fun putDefaultCurrency(code: String) {
         store.edit()
             .putString(KEY_DEFAULT_CURRENCY, code)
             .apply()
@@ -409,7 +416,7 @@ class EncryptedPreferences internal constructor(
      *
      * @return The ISO 4217 code, or null when the user has never had one resolved
      */
-    fun getDefaultCurrency(): String? {
+    override fun getDefaultCurrency(): String? {
         return store.getString(KEY_DEFAULT_CURRENCY, null)
     }
 
@@ -418,7 +425,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param prefix The family of keys to list, such as [PreferenceKeys.SCHOOL_CONNECTION_PREFIX]
      */
-    fun keysWithPrefix(prefix: String): Set<String> =
+    override fun keysWithPrefix(prefix: String): Set<String> =
         store.all.keys.filterTo(mutableSetOf()) { it.startsWith(prefix) }
 
     /**
@@ -426,7 +433,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param key The key name
      */
-    fun remove(key: String) {
+    override fun remove(key: String) {
         store.edit()
             .remove(key)
             .apply()
@@ -437,7 +444,7 @@ class EncryptedPreferences internal constructor(
      *
      * @param prefix The family of keys to forget, such as [PreferenceKeys.SCHOOL_CONNECTION_PREFIX]
      */
-    fun removeWithPrefix(prefix: String) {
+    override fun removeWithPrefix(prefix: String) {
         val keys = keysWithPrefix(prefix)
         if (keys.isEmpty()) return
         store.edit().apply { keys.forEach { remove(it) } }.apply()
@@ -449,7 +456,7 @@ class EncryptedPreferences internal constructor(
      * What a connection Google has refused for good leaves behind: the tokens are worthless, and
      * the address is how the app knows to offer a reconnect rather than a first connect.
      */
-    fun removeGoogleTokens() {
+    override fun removeGoogleTokens() {
         store.edit()
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
@@ -465,7 +472,7 @@ class EncryptedPreferences internal constructor(
      * push opt-out, the telemetry answer, the family on screen, the sync cursors and the calendar
      * filters: disconnecting one calendar quietly reset the app.
      */
-    fun removeGoogleCalendarAccount() {
+    override fun removeGoogleCalendarAccount() {
         store.edit()
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_REFRESH_TOKEN)
@@ -499,7 +506,7 @@ class EncryptedPreferences internal constructor(
      * KDoc for why the marker is keyed per-UID: it is what stops a second account that later
      * signs in on this device from reading the first account's now-surviving marker as its own.
      */
-    fun clear() {
+    override fun clear() {
         val preservedMarkers = store.all
             .filterKeys { key -> PRESERVED_PREFIXES.any { key.startsWith(it) } }
             .mapNotNull { (key, value) -> (value as? String)?.let { key to it } }

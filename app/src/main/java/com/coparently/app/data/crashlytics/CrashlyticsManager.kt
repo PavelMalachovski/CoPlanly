@@ -1,16 +1,26 @@
 package com.coparently.app.data.crashlytics
 
+import com.coparently.app.data.platform.CrashReporter
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 /**
  * Manager for logging exceptions and custom data to Firebase Crashlytics.
  * Provides centralized crash reporting and monitoring.
  *
+ * It is the Android [CrashReporter] (MON-24 phase 2), which the data layer reports through. It never
+ * turns collection on: `TelemetryConsentApplier` is the one switch (REL-5), and a report made while
+ * collection is off is not kept.
+ *
  * @property crashlytics Firebase Crashlytics instance
  */
 class CrashlyticsManager(
     private val crashlytics: FirebaseCrashlytics
-) {
+) : CrashReporter {
+
+    /** [recordException], as the data layer's [CrashReporter]. */
+    override fun record(error: Throwable) {
+        recordException(error)
+    }
 
     /**
      * Records a non-fatal exception to Crashlytics.

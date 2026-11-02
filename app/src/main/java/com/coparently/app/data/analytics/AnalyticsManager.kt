@@ -1,5 +1,6 @@
 package com.coparently.app.data.analytics
 
+import com.coparently.app.data.platform.Analytics
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.logEvent
 
@@ -7,11 +8,34 @@ import com.google.firebase.analytics.logEvent
  * Manager for logging analytics events to Firebase Analytics.
  * Provides centralized analytics tracking for app events.
  *
+ * It is the Android [Analytics] (MON-24 phase 2). It never turns collection on or off:
+ * `TelemetryConsentApplier` is the one switch (REL-5).
+ *
  * @property analytics Firebase Analytics instance
  */
 class AnalyticsManager(
     private val analytics: FirebaseAnalytics
-) {
+) : Analytics {
+
+    /**
+     * Logs [event] with [params] as Firebase parameters: a text as a string, a whole number as a
+     * long, a decimal as a double — what the `log…` functions below write — and anything else as
+     * its text.
+     */
+    override fun log(event: String, params: Map<String, Any>) {
+        analytics.logEvent(event) {
+            params.forEach { (key, value) ->
+                when (value) {
+                    is String -> param(key, value)
+                    is Long -> param(key, value)
+                    is Int -> param(key, value.toLong())
+                    is Double -> param(key, value)
+                    is Float -> param(key, value.toDouble())
+                    else -> param(key, value.toString())
+                }
+            }
+        }
+    }
 
     /**
      * Log screen view event.

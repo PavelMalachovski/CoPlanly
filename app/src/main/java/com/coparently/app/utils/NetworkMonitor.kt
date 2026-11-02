@@ -5,18 +5,28 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import com.coparently.app.data.platform.Connectivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Network connectivity monitor using ConnectivityManager.
  * Provides real-time network status updates.
+ *
+ * It is the Android [Connectivity] (MON-24 phase 2): [online] is [networkStatus] held as a state,
+ * listening only while somebody collects it.
  */
 class NetworkMonitor(
     private val context: Context
-) {
+) : Connectivity {
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -75,4 +85,17 @@ class NetworkMonitor(
             connectivityManager.unregisterNetworkCallback(callback)
         }
     }.distinctUntilChanged()
+
+    /**
+     * [networkStatus] as a state, starting from [isOnline]. The network callback is registered only
+     * while it has a collector; the scope is this object's own, which lives as long as the graph's
+     * one instance does.
+     */
+    override val online: StateFlow<Boolean> by lazy {
+        networkStatus.stateIn(
+            CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            SharingStarted.WhileSubscribed(),
+            isOnline()
+        )
+    }
 }

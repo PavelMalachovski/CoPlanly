@@ -1,9 +1,11 @@
 package com.coparently.app.data.local.preferences
 
-import java.util.Base64
+import kotlin.io.encoding.Base64
 
 /**
- * The plaintext form of the whole preference store, before [EncryptedPreferences] seals it (SEC-5).
+ * The plaintext form of the whole preference store, before it is sealed (SEC-5): by
+ * `EncryptedPreferences` into a file on Android, by the Keychain on the iPhone
+ * (`SealedSecurePreferences`).
  *
  * One line per entry — `<type>:<key>:<value>` — under a version header, with the key and every
  * string Base64-encoded so no separator can appear inside one. The types are the ones a
@@ -14,6 +16,11 @@ import java.util.Base64
  * and `org.json` is a stub in JVM unit tests, where this format is proved. The whole store is
  * a few kilobytes — tokens, a handful of settings, chat drafts — so a full rewrite per edit is
  * cheap, and one sealed blob also hides the key names, which the old per-entry scheme did too.
+ *
+ * **Common code since MON-24 phase 2**, so the iPhone's Keychain item holds the same text the
+ * Android file seals. The move changed no byte: `kotlin.io.encoding.Base64.Default` is RFC 4648's
+ * standard alphabet with padding, as `java.util.Base64`'s basic encoder is, entries are still
+ * sorted by key in `String` order, and a number is still printed by the platform's `toString()`.
  */
 object PreferenceBlobCodec {
 
@@ -24,13 +31,10 @@ object PreferenceBlobCodec {
     private const val SET_SEPARATOR = ','
     private const val FIELD_COUNT = 3
 
-    private val encoder = Base64.getEncoder()
-    private val decoder = Base64.getDecoder()
-
     /** The text for [values]. Null values are left out, as a `SharedPreferences` would. */
     fun encode(values: Map<String, Any?>): String = buildString {
         append(HEADER)
-        values.toSortedMap().forEach { (key, value) ->
+        values.entries.sortedBy { it.key }.forEach { (key, value) ->
             val line = entry(key, value) ?: return@forEach
             append('\n').append(line)
         }
@@ -59,7 +63,7 @@ object PreferenceBlobCodec {
             is Boolean -> "b" to value.toString()
             is Set<*> -> "S" to value.filterIsInstance<String>().sorted()
                 .joinToString(SET_SEPARATOR.toString()) { b64(it) }
-            else -> throw IllegalArgumentException("A preference cannot hold ${value::class.java.name}")
+            else -> throw IllegalArgumentException("A preference cannot hold ${value::class.simpleName}")
         }
         return "$type$SEPARATOR${b64(key)}$SEPARATOR$payload"
     }
@@ -80,7 +84,7 @@ object PreferenceBlobCodec {
         return unb64(encodedKey) to value
     }
 
-    private fun b64(text: String): String = encoder.encodeToString(text.toByteArray(Charsets.UTF_8))
+    private fun b64(text: String): String = Base64.Default.encode(text.encodeToByteArray())
 
-    private fun unb64(text: String): String = String(decoder.decode(text), Charsets.UTF_8)
+    private fun unb64(text: String): String = Base64.Default.decode(text).decodeToString()
 }
