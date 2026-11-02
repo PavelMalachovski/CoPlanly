@@ -1,9 +1,9 @@
 package com.coparently.app.data.school
 
-import android.util.Log
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -93,18 +93,18 @@ class SchoolEventWriter(
         val failed = mutableSetOf<String>()
         plan.creates.forEach { event ->
             createEvent(event, announce = false).onFailure { cause ->
-                Log.w(TAG, "An imported school event could not be created", cause)
+                logger.w(TAG, "An imported school event could not be created", cause)
                 failed += event.id
             }
         }
         val updated = plan.updates.count { event ->
             updateEvent(event, announce = false).onFailure { cause ->
-                Log.w(TAG, "An imported school event could not be updated", cause)
+                logger.w(TAG, "An imported school event could not be updated", cause)
             }.isSuccess
         }
         val deleted = plan.deletes.count { event ->
             deleteEvent(event, announce = false).onFailure { cause ->
-                Log.w(TAG, "A school-hours event could not be deleted", cause)
+                logger.w(TAG, "A school-hours event could not be deleted", cause)
             }.isSuccess
         }
         return SchoolImportCounts(plan.creates.size - failed.size, updated, deleted, failed)

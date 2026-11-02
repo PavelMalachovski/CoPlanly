@@ -1,7 +1,7 @@
 package com.coparently.app.data.local.security
 
 import android.content.Context
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.security.EncryptionException
 import com.coparently.app.data.security.EncryptionManager
 import java.security.SecureRandom
@@ -62,7 +62,7 @@ class DatabaseKey(
             if (encryptionManager.hasKey()) {
                 throw IllegalStateException("The Keystore refused to unwrap the passphrase", e)
             }
-            Log.e(TAG, "Database passphrase could not be unwrapped; the database is unreadable", e)
+            logger.e(TAG, "Database passphrase could not be unwrapped; the database is unreadable", e)
             null
         }
     }

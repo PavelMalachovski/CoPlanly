@@ -4,6 +4,7 @@ import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ChildInfoEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.sync.ChildInfoAudience
@@ -170,7 +171,7 @@ class ChildInfoRepositoryImpl(
         if (tombstoned.isSuccess) {
             childInfoDao.deleteChildInfoById(id)
         } else {
-            android.util.Log.w(
+            logger.w(
                 "ChildInfoRepo",
                 "Child tombstone not written; the deletion stays queued for the next sync",
                 tombstoned.exceptionOrNull()
@@ -219,7 +220,7 @@ class ChildInfoRepositoryImpl(
 
         // Download from Firestore
         firestoreChildInfoDataSource.getChildInfoForParent(firebaseUser.uid)
-            .catch { e -> android.util.Log.w("ChildInfoRepo", "Child info sync failed", e) }
+            .catch { e -> logger.w("ChildInfoRepo", "Child info sync failed", e) }
             .collect { firestoreList ->
                 for (firestoreData in firestoreList) {
                     applyDownloaded(firestoreData)
@@ -240,7 +241,7 @@ class ChildInfoRepositoryImpl(
         // (never by content) and skipped, as `ExpenseRepositoryImpl` does.
         val childInfo = runCatching { firestoreData.toChildInfo() }
             .onFailure { e ->
-                android.util.Log.w(
+                logger.w(
                     "ChildInfoRepo",
                     "Child info document ${firestoreData["id"]} could not be read " +
                         "(${e.javaClass.simpleName}); skipped"

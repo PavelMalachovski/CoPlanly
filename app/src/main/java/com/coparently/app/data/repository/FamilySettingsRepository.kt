@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
@@ -169,7 +169,7 @@ class FamilySettingsRepository(
         .onStart { emit(null) }
         .catch { cause ->
             // A denial or an offline cold cache is "no proposal known", never a crash in a collector.
-            Log.w(TAG, "A family's settings listener ended", cause)
+            logger.w(TAG, "A family's settings listener ended", cause)
             emit(null)
         }
         .distinctUntilChanged()
@@ -188,7 +188,7 @@ class FamilySettingsRepository(
                 // Room is not the source of truth here — the cached ratio is — so a denial or an
                 // offline cold cache degrades to "what this family last agreed", never to a crash
                 // inside a `viewModelScope.launch`.
-                Log.w(TAG, "The family settings listener ended", cause)
+                logger.w(TAG, "The family settings listener ended", cause)
                 emit(FamilySplit(familyId, null, agreedRatioOrDefault(familyId)))
             }
     }
@@ -358,7 +358,7 @@ class FamilySettingsRepository(
         if (documents.read(pair.documentId) != null) return
 
         val anchored = reanchored(cached) ?: return
-        Log.i(TAG, "Publishing the ratio agreed before pairing to ${pair.documentId}")
+        logger.i(TAG, "Publishing the ratio agreed before pairing to ${pair.documentId}")
         documents.write(
             pair,
             FamilySettings(
@@ -528,7 +528,7 @@ private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsD
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "Could not read the family settings document", e)
+        logger.w(TAG, "Could not read the family settings document", e)
         null
     }
 
@@ -538,7 +538,7 @@ private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsD
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "The family settings write was refused", e)
+        logger.w(TAG, "The family settings write was refused", e)
         Result.failure(e)
     }
 
@@ -551,7 +551,7 @@ private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsD
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "The family settings transaction did not go through", e)
+        logger.w(TAG, "The family settings transaction did not go through", e)
         null
     }
 

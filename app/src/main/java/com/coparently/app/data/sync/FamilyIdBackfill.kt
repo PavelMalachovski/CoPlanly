@@ -1,6 +1,5 @@
 package com.coparently.app.data.sync
 
-import android.util.Log
 import com.coparently.app.data.local.dao.BudgetDao
 import com.coparently.app.data.local.dao.ChangeRequestDao
 import com.coparently.app.data.local.dao.ChildInfoDao
@@ -9,6 +8,7 @@ import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.family.FamilyKey
 
 /**
@@ -81,7 +81,7 @@ class FamilyIdBackfill(
             childInfoDao.stampFamilyIdOfAuthor(familyId, partner) +
             petDao.stampFamilyIdOfAuthor(familyId, partner) +
             changeRequestDao.stampFamilyIdOfCounterpart(familyId, partner)
-        if (stamped > 0) Log.i(TAG, "Family id backfill: stamped $stamped row(s) of $partner as $familyId")
+        if (stamped > 0) logger.i(TAG, "Family id backfill: stamped $stamped row(s) of $partner as $familyId")
     }
 
     /**
@@ -105,7 +105,7 @@ class FamilyIdBackfill(
         }
         val familyId = FamilyKey.of(userId, onlyPartner)
         if (hasEarlierFamily(familyId, userId)) {
-            Log.i(TAG, "Family id backfill: an earlier family is on this phone; own rows stay unassigned")
+            logger.i(TAG, "Family id backfill: an earlier family is on this phone; own rows stay unassigned")
             return
         }
         val stamped = eventDao.stampFamilyIdOfAuthor(familyId, userId) +
@@ -115,7 +115,7 @@ class FamilyIdBackfill(
             childInfoDao.stampFamilyIdOfAuthor(familyId, userId) +
             petDao.stampFamilyIdOfAuthor(familyId, userId)
         if (encryptedPreferences.getString(key) != onlyPartner) encryptedPreferences.putString(key, onlyPartner)
-        if (stamped > 0) Log.i(TAG, "Family id backfill for $userId: stamped $stamped own row(s) as $familyId")
+        if (stamped > 0) logger.i(TAG, "Family id backfill for $userId: stamped $stamped own row(s) as $familyId")
     }
 
     /** Whether any row on this phone names a family of [userId]'s other than [familyId]. */

@@ -1,10 +1,10 @@
 package com.coparently.app.data.remote.google
 
 import android.content.Context
-import android.util.Log
 import androidx.credentials.CredentialManager
 import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -31,7 +31,7 @@ class CredentialManagerService(
     private val credentialManager: CredentialManager? = try {
         CredentialManager.create(context)
     } catch (e: Exception) {
-        Log.e(TAG, "Failed to create CredentialManager", e)
+        logger.e(TAG, "Failed to create CredentialManager", e)
         null
     }
     private val _googleSignInClient: GoogleSignInClient? by lazy {
@@ -57,7 +57,7 @@ class CredentialManagerService(
                 .build()
             GoogleSignIn.getClient(context, gso)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create GoogleSignInClient", e)
+            logger.e(TAG, "Failed to create GoogleSignInClient", e)
             null
         }
     }
@@ -72,7 +72,7 @@ class CredentialManagerService(
                 .build()
             GoogleSignIn.getClient(context, gso)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create auth GoogleSignInClient", e)
+            logger.e(TAG, "Failed to create auth GoogleSignInClient", e)
             null
         }
     }
@@ -128,7 +128,7 @@ class CredentialManagerService(
                 Pair(null, "Sign-in intent should be handled by Activity")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting sign-in: ${e.message}", e)
+            logger.e(TAG, "Error starting sign-in: ${e.message}", e)
             Pair(null, "Failed to start sign-in: ${e.message}")
         }
     }
@@ -145,13 +145,13 @@ class CredentialManagerService(
     ): Pair<GoogleSignInAccount?, GoogleSignInFailure?> {
         return try {
             val account = completedTask.await()
-            Log.d(TAG, "Sign-in successful for: ${account.email}")
+            logger.d(TAG, "Sign-in successful for: ${account.email}")
             val authCode = account.serverAuthCode ?: return Pair(null, GoogleSignInFailure.NoAuthCode)
             // Обмениваем authorization code на access и refresh токены
             exchangeAuthCodeForTokens(authCode, account.email ?: "")
             Pair(account, null)
         } catch (e: ApiException) {
-            Log.e(TAG, "Sign-in failed with code: ${e.statusCode}", e)
+            logger.e(TAG, "Sign-in failed with code: ${e.statusCode}", e)
             val failure = if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
                 GoogleSignInFailure.Cancelled
             } else {
@@ -163,7 +163,7 @@ class CredentialManagerService(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
+            logger.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
             Pair(null, GoogleSignInFailure.Unexpected)
         }
     }
@@ -179,7 +179,7 @@ class CredentialManagerService(
         // client secret for this grant, and that secret used to be compiled into the APK —
         // where it was available to anybody who installed the app.
         val tokens = googleOAuthFunctions.exchangeAuthCode(authCode).getOrElse { e ->
-            Log.e(TAG, "Error exchanging auth code for tokens: ${GoogleOAuthFunctions.diagnosisOf(e)}", e)
+            logger.e(TAG, "Error exchanging auth code for tokens: ${GoogleOAuthFunctions.diagnosisOf(e)}", e)
             throw e
         }
 
@@ -200,7 +200,7 @@ class CredentialManagerService(
         encryptedPreferences.putTokenExpiry(expiryFrom(tokens.expiresInSeconds))
         encryptedPreferences.putUserEmail(email)
 
-        Log.d(TAG, "Tokens obtained and stored successfully")
+        logger.d(TAG, "Tokens obtained and stored successfully")
     }
 
     /** When a token that lives [expiresInSeconds] from now runs out, as epoch millis. */
@@ -264,7 +264,7 @@ class CredentialManagerService(
         }
         encryptedPreferences.putAccessToken(tokens.accessToken)
         encryptedPreferences.putTokenExpiry(expiryFrom(tokens.expiresInSeconds))
-        Log.d(TAG, "Access token refreshed successfully")
+        logger.d(TAG, "Access token refreshed successfully")
         return GoogleAccess.Granted(tokens.accessToken)
     }
 
@@ -276,7 +276,7 @@ class CredentialManagerService(
      */
     private fun renewalFailed(e: Throwable): GoogleAccess {
         val failure = (e as? GoogleAccessException)?.failure ?: GoogleAccessFailure.UNAVAILABLE
-        Log.w(TAG, "Could not renew the Google access token: $failure", e)
+        logger.w(TAG, "Could not renew the Google access token: $failure", e)
         if (failure == GoogleAccessFailure.NEEDS_RECONNECT) {
             markNeedsReconnect()
         }
@@ -345,9 +345,9 @@ class CredentialManagerService(
         try {
             _googleSignInClient?.signOut()?.await()
             _googleSignInClient?.revokeAccess()?.await()
-            Log.d(TAG, "User signed out successfully")
+            logger.d(TAG, "User signed out successfully")
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.e(TAG, "Google revoke failed after the local credential was cleared", e)
+            logger.e(TAG, "Google revoke failed after the local credential was cleared", e)
         }
     }
 
@@ -375,7 +375,7 @@ class CredentialManagerService(
             }
             clientId
         } catch (e: Exception) {
-            Log.e(TAG, "Web Client ID not configured: ${e.message}")
+            logger.e(TAG, "Web Client ID not configured: ${e.message}")
             throw IllegalStateException(
                 "Google OAuth not configured. Please:\n1. Go to Google Cloud Console\n" +
                     "2. Create OAuth 2.0 Client ID for Web application\n" +

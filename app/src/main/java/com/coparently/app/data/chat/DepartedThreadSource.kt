@@ -1,6 +1,6 @@
 package com.coparently.app.data.chat
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.repository.UserRepository
@@ -44,7 +44,7 @@ class DepartedThreadSource(
                 messages.observeDepartedThreads(uid)
                     .map { documents -> parse(documents, uid, System.currentTimeMillis()) }
                     .catch { e ->
-                        Log.w(TAG, "Kept-thread listener failed; showing none", e)
+                        logger.w(TAG, "Kept-thread listener failed; showing none", e)
                         emit(emptyList())
                     }
             }
@@ -59,7 +59,7 @@ class DepartedThreadSource(
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "Kept threads could not be read", e)
+        logger.w(TAG, "Kept threads could not be read", e)
         emptyList()
     }
 

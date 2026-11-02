@@ -1,6 +1,6 @@
 package com.coparently.app.domain.activity
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -102,7 +102,7 @@ class ActivityAnnouncer(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Could not announce ${announcement.kind}; the change itself is saved", e)
+            logger.w(TAG, "Could not announce ${announcement.kind}; the change itself is saved", e)
         }
     }
 

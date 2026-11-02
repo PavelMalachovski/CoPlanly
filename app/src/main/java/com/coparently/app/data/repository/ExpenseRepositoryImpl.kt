@@ -4,6 +4,7 @@ import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ExpenseEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
@@ -124,7 +125,7 @@ class ExpenseRepositoryImpl(
                 ?.get("createdByFirebaseUid") as? String
             pushToFirestore(expense, ownerUid = existingOwnerUid ?: firebaseUser.uid)
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            android.util.Log.w("ExpenseRepo", "Expense owner lookup failed; kept locally", e)
+            logger.w("ExpenseRepo", "Expense owner lookup failed; kept locally", e)
         }
     }
 
@@ -140,7 +141,7 @@ class ExpenseRepositoryImpl(
             firestoreExpenseDataSource.setExpense(expense.id, expenseToFirestoreMap(expense, ownerUid))
             expenseDao.insertExpense(expense.copy(syncedToFirestore = true).toEntity())
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            android.util.Log.w("ExpenseRepo", "Expense Firestore sync failed; kept locally", e)
+            logger.w("ExpenseRepo", "Expense Firestore sync failed; kept locally", e)
         }
     }
 
@@ -213,7 +214,7 @@ class ExpenseRepositoryImpl(
         if (tombstoned.isSuccess) {
             expenseDao.deleteExpense(expenseId)
         } else {
-            android.util.Log.w(
+            logger.w(
                 "ExpenseRepo",
                 "Expense tombstone not written; the deletion stays queued for the next sync",
                 tombstoned.exceptionOrNull()
@@ -232,7 +233,7 @@ class ExpenseRepositoryImpl(
         retryPendingDeletions(firebaseUser.uid)
 
         firestoreExpenseDataSource.getAllExpenses(familyId)
-            .catch { e -> android.util.Log.w("ExpenseRepo", "Expense sync failed", e) }
+            .catch { e -> logger.w("ExpenseRepo", "Expense sync failed", e) }
             .collect { expenses ->
                 expenses.forEach { data ->
                     val id = data["id"] as String
@@ -259,7 +260,7 @@ class ExpenseRepositoryImpl(
                     val expense = runCatching {
                         expenseFromDocument(data)
                     }.getOrElse { e ->
-                        android.util.Log.w("ExpenseRepo", "Skipping an expense document that does not parse: $id", e)
+                        logger.w("ExpenseRepo", "Skipping an expense document that does not parse: $id", e)
                         return@forEach
                     }
                     expenseDao.insertExpense(expense.toEntity())
@@ -296,7 +297,7 @@ class ExpenseRepositoryImpl(
             if (tombstoned.isSuccess) {
                 expenseDao.deleteExpense(entity.id)
             } else {
-                android.util.Log.w(
+                logger.w(
                     "ExpenseRepo",
                     "Expense tombstone for ${entity.id} not written; it stays queued",
                     tombstoned.exceptionOrNull()

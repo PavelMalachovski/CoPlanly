@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.local.dao.MessageDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.domain.chat.AttachmentUploadGate
@@ -65,7 +65,7 @@ class MessageRepositoryImpl(
             .onEach { remote -> mirrorConversation(conversationId, remote) }
             .reconnecting("Conversation")
             .catch { e ->
-                Log.w(
+                logger.w(
                     TAG,
                     "Conversation observe failed (conversations/{id} document listener). " +
                         "This is a single-document listener, so no index is involved — a " +
@@ -97,7 +97,7 @@ class MessageRepositoryImpl(
             .onEach { documents -> mirrorMessages(documents) }
             .reconnecting("Messages")
             .catch { e ->
-                Log.w(
+                logger.w(
                     TAG,
                     "Message observe failed (messages: conversationId ==, orderBy timestamp ASC). " +
                         "A FAILED_PRECONDITION here means a missing Firestore index — " +
@@ -233,7 +233,7 @@ class MessageRepositoryImpl(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Sending message ${message.id} was refused; re-publishing the thread", e)
+            logger.w(TAG, "Sending message ${message.id} was refused; re-publishing the thread", e)
             if (!republishConversation(message.conversationId)) throw e
             firestoreMessageDataSource.sendMessage(message.id, message.toFirestoreMap())
         }
@@ -275,7 +275,7 @@ class MessageRepositoryImpl(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Re-publishing the conversation failed", e)
+            logger.w(TAG, "Re-publishing the conversation failed", e)
             false
         }
     }
@@ -313,7 +313,7 @@ class MessageRepositoryImpl(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Outbox: message ${message.id} still undelivered", e)
+                logger.w(TAG, "Outbox: message ${message.id} still undelivered", e)
                 messageDao.insertMessage(message.copy(status = MessageSendStatus.ERROR).toEntity())
             }
         }
@@ -479,7 +479,7 @@ class MessageRepositoryImpl(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(
+            logger.w(
                 TAG,
                 "Chat $operation failed. " +
                     "Room keeps the local copy and the next open retries.",
@@ -524,7 +524,7 @@ class MessageRepositoryImpl(
             }
             val backoffMs = (RECONNECT_BASE_DELAY_MS shl attempt.toInt())
                 .coerceAtMost(RECONNECT_MAX_DELAY_MS)
-            Log.w(
+            logger.w(
                 TAG,
                 "$what listener failed; reconnecting in " +
                     "${backoffMs}ms (attempt ${attempt + 1} of $MAX_RECONNECT_ATTEMPTS).",

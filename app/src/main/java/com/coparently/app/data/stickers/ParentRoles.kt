@@ -1,6 +1,6 @@
 package com.coparently.app.data.stickers
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
@@ -38,7 +38,7 @@ class ParentRoles(
         return callbackFlow {
             val registration = firestore.collection(USERS).document(uid).addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "The parent role could not be read", error)
+                    logger.w(TAG, "The parent role could not be read", error)
                     trySend(ParentRoleAnswer.Loading)
                     return@addSnapshotListener
                 }
@@ -72,7 +72,7 @@ class ParentRoles(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "The parent role could not be saved", e)
+            logger.w(TAG, "The parent role could not be saved", e)
             false
         }
     }

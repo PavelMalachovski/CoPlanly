@@ -1,6 +1,6 @@
 package com.coparently.app.data.consent
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.consent.HEALTH_CONSENT_VERSION
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.ChildInfo
@@ -145,7 +145,7 @@ class HealthConsentManager(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.e(TAG, "Deleting a medical photo while withdrawing health consent failed", e)
+        logger.e(TAG, "Deleting a medical photo while withdrawing health consent failed", e)
         false
     }
 

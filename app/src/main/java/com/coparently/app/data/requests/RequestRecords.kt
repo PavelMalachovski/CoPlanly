@@ -1,6 +1,6 @@
 package com.coparently.app.data.requests
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
@@ -114,7 +114,7 @@ constructor(
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
         // Firestore, Room or anything under them: the step reads it as "try again".
-        Log.w(TAG, "Could not read a request's record", e)
+        logger.w(TAG, "Could not read a request's record", e)
         UNKNOWN_LOOK
     }
 

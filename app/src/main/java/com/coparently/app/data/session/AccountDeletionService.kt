@@ -1,9 +1,9 @@
 package com.coparently.app.data.session
 
-import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -59,7 +59,7 @@ class AccountDeletionService(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.e(TAG, "Account deletion failed", e)
+        logger.e(TAG, "Account deletion failed", e)
         Result.failure(e)
     }
 

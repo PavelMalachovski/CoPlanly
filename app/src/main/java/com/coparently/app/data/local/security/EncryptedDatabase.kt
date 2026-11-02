@@ -1,9 +1,9 @@
 package com.coparently.app.data.local.security
 
 import android.content.Context
-import android.util.Log
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.logger
 import net.zetetic.database.DatabaseErrorHandler
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -114,7 +114,7 @@ class EncryptedDatabase(
             SqlCipherMigration.Step.FINISH_SWAP -> swapIn(export, database)
             SqlCipherMigration.Step.DISCARD_LEFTOVER -> deleteWithSidecars(export)
             SqlCipherMigration.Step.DISCARD_UNREADABLE -> {
-                Log.e(TAG, "The database cannot be decrypted with any key this device still has")
+                logger.e(TAG, "The database cannot be decrypted with any key this device still has")
                 crashlyticsManager.recordException(
                     IllegalStateException("Database passphrase lost; local data discarded")
                 )
@@ -150,7 +150,7 @@ class EncryptedDatabase(
         export: File,
         cause: Exception
     ): SupportSQLiteOpenHelper.Factory? {
-        Log.e(TAG, "Could not open the database encrypted", cause)
+        logger.e(TAG, "Could not open the database encrypted", cause)
         crashlyticsManager.recordException(cause)
         if (database.exists() && SqlCipherMigration.looksLikePlaintext(database)) {
             deleteWithSidecars(export)
@@ -278,7 +278,7 @@ class EncryptedDatabase(
      */
     private object KeepOnCorruption : DatabaseErrorHandler {
         override fun onCorruption(database: SQLiteDatabase) {
-            Log.e(TAG, "SQLite reported corruption in ${database.path}; leaving the file alone")
+            logger.e(TAG, "SQLite reported corruption in ${database.path}; leaving the file alone")
         }
     }
 

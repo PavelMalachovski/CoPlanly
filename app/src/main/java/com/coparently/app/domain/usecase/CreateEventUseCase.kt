@@ -1,8 +1,8 @@
 package com.coparently.app.domain.usecase
 
-import android.util.Log
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
@@ -102,7 +102,7 @@ class CreateEventUseCase(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "The request clock of a new event could not be started", e)
+            logger.w(TAG, "The request clock of a new event could not be started", e)
         }
     }
 

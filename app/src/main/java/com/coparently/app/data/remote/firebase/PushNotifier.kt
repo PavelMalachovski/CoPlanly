@@ -8,10 +8,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
-import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.coparently.app.R
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.utils.DAY_IN_SENTENCE
@@ -70,7 +70,7 @@ class PushNotifier(private val context: Context) {
     fun receive(data: Map<String, String>, signedInUid: String?, onAccepted: () -> Unit = {}): Int? {
         val addressee = data[PushPayload.TARGET_USER_ID]?.takeIf { it.isNotBlank() }
         if (signedInUid == null || (addressee != null && addressee != signedInUid)) {
-            Log.i(TAG, "Dropping a push addressed to an account that is not signed in here")
+            logger.i(TAG, "Dropping a push addressed to an account that is not signed in here")
             return null
         }
 

@@ -1,11 +1,11 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import androidx.room.withTransaction
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 
 /**
  * Moves this device's records from one parent slot to the other.
@@ -193,7 +193,7 @@ class ParentSlotMigrator(
         // would be undetectable in the field — and it is the only symptom an interrupted pass
         // (see the class doc's point 3) leaves behind for an operator to find.
         val changed = reslot(from = marker, to = to, myUid = myUid)
-        Log.i(TAG, "Reacted to a remote slot change ($marker -> $to) for $myUid: re-stamped $changed record(s)")
+        logger.i(TAG, "Reacted to a remote slot change ($marker -> $to) for $myUid: re-stamped $changed record(s)")
 
         custodyModelRepository.getActiveModelSync()?.complemented()?.let { complemented ->
             custodyModelRepository.saveReslotted(complemented)
@@ -220,7 +220,7 @@ class ParentSlotMigrator(
         if (knownSlot(myUid) == to) return true
         val from = if (to == SLOT_ONE) SLOT_TWO else SLOT_ONE
         val changed = reslot(from = from, to = to, myUid = myUid)
-        Log.i(TAG, "Pairing moved the slot ($from -> $to) for $myUid: re-stamped $changed record(s)")
+        logger.i(TAG, "Pairing moved the slot ($from -> $to) for $myUid: re-stamped $changed record(s)")
         custodyModelRepository.getActiveModelSync()?.complemented()?.let { complemented ->
             custodyModelRepository.saveReslotted(complemented)
         }

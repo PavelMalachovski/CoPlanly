@@ -1,6 +1,6 @@
 package com.coparently.app.data.school
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariException
@@ -113,7 +113,7 @@ class SchoolImporter internal constructor(
         // be when the daily job runs (isolation audit, October 2026).
         val family = familyOf(uid, user, stored.connection)
         if (family !is ConnectionFamily.Known) {
-            Log.i(TAG, "A connection that names no family imports nothing while the parent has two")
+            logger.i(TAG, "A connection that names no family imports nothing while the parent has two")
             return SchoolSyncResult.NeedsFamily
         }
 
@@ -206,7 +206,7 @@ class SchoolImporter internal constructor(
             }
         } catch (e: BakalariException.Forbidden) {
             // The summer holidays can take the right away; nothing is imported, nothing deleted.
-            Log.i(TAG, "No timetable right on this account right now", e)
+            logger.i(TAG, "No timetable right on this account right now", e)
             emptyList()
         }
     }
@@ -215,7 +215,7 @@ class SchoolImporter internal constructor(
         try {
             authorizer.withAccess(uid, connectionId) { baseUrl, token -> client.events(baseUrl, token, today) }
         } catch (e: BakalariException.Forbidden) {
-            Log.i(TAG, "No events right on this account right now", e)
+            logger.i(TAG, "No events right on this account right now", e)
             emptyList()
         }
 
@@ -233,7 +233,7 @@ class SchoolImporter internal constructor(
     }
 
     private fun failure(uid: String, connectionId: String, error: BakalariException): SchoolSyncResult {
-        Log.w(TAG, "School import failed", error)
+        logger.w(TAG, "School import failed", error)
         return when (error) {
             // The authorizer has already marked the connection.
             is BakalariException.NeedsPassword, is BakalariException.InvalidGrant -> SchoolSyncResult.NeedsPassword

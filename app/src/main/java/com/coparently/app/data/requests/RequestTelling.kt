@@ -1,6 +1,6 @@
 package com.coparently.app.data.requests
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushPayload
@@ -40,7 +40,7 @@ class RequestTelling(
                 PushPayload.ANSWER_BY to untilMillis.toString(),
                 PushPayload.FAMILY_ID to clock.familyId
             )
-        ).onFailure { Log.w(TAG, "The last-chance push was not queued", it) }
+        ).onFailure { logger.w(TAG, "The last-chance push was not queued", it) }
         announce(clock, card, ActivityKind.REQUEST_LAST_CHANCE, actor)
     }
 

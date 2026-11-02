@@ -1,11 +1,11 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
@@ -135,7 +135,7 @@ class EventRepositoryImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Fetching event $id from Firestore failed", e)
+            logger.w(TAG, "Fetching event $id from Firestore failed", e)
             return null
         } ?: return null
 
@@ -145,7 +145,7 @@ class EventRepositoryImpl(
         if (Tombstone.isDeleted(data)) return null
 
         val entity = runCatching { EventDocument.toEntity(data) }.getOrElse { cause ->
-            Log.w(TAG, "Event $id could not be read from its document", cause)
+            logger.w(TAG, "Event $id could not be read from its document", cause)
             return null
         }
 
@@ -206,7 +206,7 @@ class EventRepositoryImpl(
                     )
                     eventDao.updateEvent(syncedEvent.toEntity())
                 } else {
-                    Log.w(TAG, "Event ${stamped.id} not uploaded; it stays queued", uploaded.exceptionOrNull())
+                    logger.w(TAG, "Event ${stamped.id} not uploaded; it stays queued", uploaded.exceptionOrNull())
                 }
             }
         }
@@ -236,7 +236,7 @@ class EventRepositoryImpl(
                 if (removed.isSuccess) {
                     eventDao.updateEvent(event.copy(syncedToFirestore = false).toEntity())
                 } else {
-                    Log.w(TAG, "Private event ${event.id} still has a remote copy", removed.exceptionOrNull())
+                    logger.w(TAG, "Private event ${event.id} still has a remote copy", removed.exceptionOrNull())
                 }
             }
         } else {
@@ -246,7 +246,7 @@ class EventRepositoryImpl(
             recordVersion(event, EventVersionKind.UPDATED, firebaseUser.uid, audience, document)
             val uploaded = firestoreEventDataSource.updateEvent(event.id, document)
             if (uploaded.isFailure) {
-                Log.w(TAG, "Event ${event.id} update not written; it stays queued", uploaded.exceptionOrNull())
+                logger.w(TAG, "Event ${event.id} update not written; it stays queued", uploaded.exceptionOrNull())
             }
             // Converge the Room copy on what was uploaded. Without this the stale audience
             // survives locally until the next down-sync, which is exactly the window the
@@ -312,7 +312,7 @@ class EventRepositoryImpl(
             // document, and this device already hides it.
             eventDao.deleteEventById(event.id)
         } else {
-            android.util.Log.w(
+            logger.w(
                 "EventRepo",
                 "Event tombstone not written; the deletion stays queued for the next sync",
                 tombstoned.exceptionOrNull()

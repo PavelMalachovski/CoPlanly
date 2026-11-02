@@ -2,10 +2,10 @@ package com.coparently.app.data.local.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.security.EncryptionManager
 import java.io.File
 import java.io.IOException
@@ -532,7 +532,7 @@ class EncryptedPreferences internal constructor(
         // Writing now doubles as the probe: a device whose Keystore cannot seal anything learns
         // it here, before a single token is handed to a store that could not keep it.
         if (!writeSealed(file, values)) {
-            Log.e(TAG, "No encrypted store available; keeping preferences in memory only")
+            logger.e(TAG, "No encrypted store available; keeping preferences in memory only")
             return InMemorySharedPreferences(values)
         }
         if (legacy != null) {
@@ -551,7 +551,7 @@ class EncryptedPreferences internal constructor(
             // The Keystore key is gone (a lock-screen reset on some builds, a restore) or the file
             // is damaged. The file is useless either way: start again, and the user re-authorises
             // Calendar — nothing else in here is not re-derivable.
-            Log.w(TAG, "Encrypted store unreadable; clearing it and re-creating", e)
+            logger.w(TAG, "Encrypted store unreadable; clearing it and re-creating", e)
             file.delete()
             null
         }
@@ -570,7 +570,7 @@ class EncryptedPreferences internal constructor(
         if (!partial.renameTo(file)) throw IOException("Could not move the sealed store into place")
         true
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.e(TAG, "Could not write the encrypted store", e)
+        logger.e(TAG, "Could not write the encrypted store", e)
         false
     }
 
@@ -586,7 +586,7 @@ class EncryptedPreferences internal constructor(
         val present = try {
             context.getSharedPreferences(legacyName, Context.MODE_PRIVATE).all.isNotEmpty()
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Could not check for the old encrypted store", e)
+            logger.w(TAG, "Could not check for the old encrypted store", e)
             false
         }
         if (!present) return null
@@ -605,7 +605,7 @@ class EncryptedPreferences internal constructor(
             // Deliberately broad: besides the checked failures, the old library's Keystore path
             // throws `ProviderException` and `IllegalStateException` on some builds, and nothing
             // about reading an old store may stop the app from opening.
-            Log.e(TAG, "The old encrypted store could not be opened; its contents are lost", e)
+            logger.e(TAG, "The old encrypted store could not be opened; its contents are lost", e)
             deleteLegacyStore()
             null
         }
@@ -619,7 +619,7 @@ class EncryptedPreferences internal constructor(
         try {
             context.deleteSharedPreferences(legacyName)
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.e(TAG, "Could not delete the old encrypted store", e)
+            logger.e(TAG, "Could not delete the old encrypted store", e)
         }
     }
 

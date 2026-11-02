@@ -1,7 +1,7 @@
 package com.coparently.app.data.family
 
-import android.util.Log
 import com.coparently.app.data.local.dao.KnownFamilyDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.domain.family.FamilyKey
@@ -53,7 +53,7 @@ class KnownFamilies(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Could not read a family's $what (${e.javaClass.simpleName}); kept the last one")
+            logger.w(TAG, "Could not read a family's $what (${e.javaClass.simpleName}); kept the last one")
         }
     }
 

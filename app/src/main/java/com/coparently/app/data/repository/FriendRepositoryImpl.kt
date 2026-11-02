@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
@@ -158,7 +158,7 @@ class FriendRepositoryImpl(
             // a cancelled coroutine that reports itself as a failed read is a lie about why.
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Could not read this account's calendar-friend grants", e)
+            logger.w(TAG, "Could not read this account's calendar-friend grants", e)
             return emptyList()
         }
         return liveSoonestFirst(documents.mapNotNull { FriendMappers.grantFrom(it.id, it.data) })
@@ -235,7 +235,7 @@ class FriendRepositoryImpl(
                 .whereIn(FIELD_CREATOR, parents.toList())
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.w(TAG, "The family's events could not be read", error)
+                        logger.w(TAG, "The family's events could not be read", error)
                         trySend(friendCalendarReadFor(error))
                         close()
                         return@addSnapshotListener

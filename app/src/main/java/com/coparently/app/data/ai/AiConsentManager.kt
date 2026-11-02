@@ -1,6 +1,6 @@
 package com.coparently.app.data.ai
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.ai.AI_CONSENT_VERSION
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.domain.repository.UserRepository
@@ -93,7 +93,7 @@ class AiConsentManager(
             // answer, and the caller words it.
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.e(TAG, "Writing the AI consent failed", e)
+            logger.e(TAG, "Writing the AI consent failed", e)
             false
         }
         if (saved) {
@@ -112,7 +112,7 @@ class AiConsentManager(
             // An unreadable profile is "not known": the parent is asked, and the server decides.
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Reading the AI consent failed", e)
+            logger.w(TAG, "Reading the AI consent failed", e)
             null
         }
         known.value = Known(uid, consent)

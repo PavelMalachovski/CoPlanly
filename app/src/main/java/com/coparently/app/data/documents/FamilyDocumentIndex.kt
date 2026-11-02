@@ -1,6 +1,6 @@
 package com.coparently.app.data.documents
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.documents.VaultListing
 import com.google.firebase.firestore.FirebaseFirestore
@@ -42,7 +42,7 @@ class FamilyDocumentIndex(
                 when {
                     // Not closed: a refused or dropped listener must not end the screen's flow.
                     error != null -> {
-                        Log.w(TAG, "Vault listener failed", error)
+                        logger.w(TAG, "Vault listener failed", error)
                         trySend(VaultIndexEvent.Failed)
                     }
                     snapshot == null -> Unit

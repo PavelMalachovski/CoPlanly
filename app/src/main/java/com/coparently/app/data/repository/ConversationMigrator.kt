@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.local.dao.MessageDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.domain.chat.ConversationKey
 import kotlinx.coroutines.CancellationException
@@ -106,7 +106,7 @@ class ConversationMigrator(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(
+            logger.w(
                 TAG,
                 "Chat merge: unexpected failure merging a legacy thread into the canonical one; " +
                     "continuing with any other candidates, the next launch retries this one.",
@@ -123,7 +123,7 @@ class ConversationMigrator(
     private suspend fun mergeOne(legacyId: String, canonicalId: String) {
         val messageIds = collectMessageIds(legacyId)
         if (messageIds == null) {
-            Log.w(
+            logger.w(
                 TAG,
                 "Chat merge: could not determine the full set of messages in a legacy thread " +
                     "(the remote read failed); leaving it active so the next launch retries."
@@ -133,7 +133,7 @@ class ConversationMigrator(
 
         val fullyRepointedRemotely = messageIds.all { id -> tryRemoteRepoint(id, canonicalId) }
         if (!fullyRepointedRemotely) {
-            Log.w(
+            logger.w(
                 TAG,
                 "Chat merge: not every message of a legacy thread reached the canonical one " +
                     "remotely; leaving it active so the next launch retries the whole thread."
@@ -145,7 +145,7 @@ class ConversationMigrator(
         messageDao.archiveConversation(legacyId)
         archiveRemotely(legacyId)
 
-        Log.i(
+        logger.i(
             TAG,
             "Chat merge: moved ${messageIds.size} message(s) from $legacyId into $canonicalId " +
                 "and archived $legacyId."
@@ -178,7 +178,7 @@ class ConversationMigrator(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Chat merge: remote message read failed for a legacy thread.", e)
+            logger.w(TAG, "Chat merge: remote message read failed for a legacy thread.", e)
             return null
         }
         return localIds + remoteIds
@@ -202,7 +202,7 @@ class ConversationMigrator(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Chat merge: failed to re-point message $messageId.", e)
+            logger.w(TAG, "Chat merge: failed to re-point message $messageId.", e)
             false
         }
 
@@ -221,7 +221,7 @@ class ConversationMigrator(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Chat merge: failed to mark a legacy thread archived remotely.", e)
+            logger.w(TAG, "Chat merge: failed to mark a legacy thread archived remotely.", e)
         }
     }
 

@@ -1,6 +1,6 @@
 package com.coparently.app.data.chat
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
@@ -149,7 +149,7 @@ class ChatMirror(
             // Not fatal on its own — the document may already exist and only the write failed —
             // but without an id there is nothing to attach to, so this pass gives up and the
             // next pairing emission starts a new one.
-            Log.w(TAG, "ensureConversation failed; not attaching this pass", e)
+            logger.w(TAG, "ensureConversation failed; not attaching this pass", e)
             null
         }
 
@@ -172,11 +172,11 @@ class ChatMirror(
         while (currentCoroutineContext().isActive) {
             try {
                 block()
-                Log.w(TAG, "Chat $what mirror ended; restarting")
+                logger.w(TAG, "Chat $what mirror ended; restarting")
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                Log.w(TAG, "Chat $what mirror threw; restarting", e)
+                logger.w(TAG, "Chat $what mirror threw; restarting", e)
             }
             sleep(RESTART_DELAY_MILLIS)
         }

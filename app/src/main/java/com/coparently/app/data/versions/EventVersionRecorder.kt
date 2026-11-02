@@ -1,9 +1,9 @@
 package com.coparently.app.data.versions
 
-import android.util.Log
 import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventVersionOutboxEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.domain.versions.EventVersionKind
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -80,7 +80,7 @@ class EventVersionRecorder(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.e(TAG, "Revision of event $eventId could not be queued", e)
+            logger.e(TAG, "Revision of event $eventId could not be queued", e)
         }
     }
 
@@ -108,7 +108,7 @@ class EventVersionRecorder(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Revision outbox not flushed; it stays queued for the next sync", e)
+            logger.w(TAG, "Revision outbox not flushed; it stays queued for the next sync", e)
         }
     }
 
@@ -160,14 +160,14 @@ class EventVersionRecorder(
             // A write that times out is still queued in Firestore's own cache; the next pass finds
             // it landed through `exists()` below.
             val landed = withTimeoutOrNull(UPLOAD_TIMEOUT_MS) { remote.create(row.id, document) } != null
-            if (landed) outboxDao.delete(row.id) else Log.w(TAG, "Revision ${row.id} not acknowledged yet")
+            if (landed) outboxDao.delete(row.id) else logger.w(TAG, "Revision ${row.id} not acknowledged yet")
             landed
         } catch (e: CancellationException) {
             throw e
         } catch (e: FirebaseFirestoreException) {
             onRefusal(row, e)
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Revision ${row.id} not uploaded; it stays queued", e)
+            logger.w(TAG, "Revision ${row.id} not uploaded; it stays queued", e)
             false
         }
     }
@@ -181,14 +181,14 @@ class EventVersionRecorder(
      */
     private suspend fun onRefusal(row: EventVersionOutboxEntity, e: FirebaseFirestoreException): Boolean {
         if (e.code != FirebaseFirestoreException.Code.PERMISSION_DENIED) {
-            Log.w(TAG, "Revision ${row.id} not uploaded (${e.code}); it stays queued", e)
+            logger.w(TAG, "Revision ${row.id} not uploaded (${e.code}); it stays queued", e)
             return false
         }
         val alreadyThere = runCatching { remote.exists(row.id) }.getOrDefault(false)
         if (alreadyThere) {
             outboxDao.delete(row.id)
         } else {
-            Log.w(TAG, "Revision ${row.id} of event ${row.eventId} refused by the server", e)
+            logger.w(TAG, "Revision ${row.id} of event ${row.eventId} refused by the server", e)
             outboxDao.recordRefusal(row.id)
         }
         return true

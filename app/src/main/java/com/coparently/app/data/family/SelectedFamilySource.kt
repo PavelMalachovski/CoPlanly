@@ -1,9 +1,9 @@
 package com.coparently.app.data.family
 
-import android.util.Log
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.domain.family.FamilyKey
@@ -154,7 +154,7 @@ class SelectedFamilySource(
         val target = families().firstOrNull { it.familyId == familyId }
         if (target == null) {
             pendingSwitch.set(PendingSwitch(uid, familyId, System.currentTimeMillis() + PENDING_SWITCH_MILLIS))
-            Log.w(TAG, "A switch to a family this device does not know yet waits for the next reconcile")
+            logger.w(TAG, "A switch to a family this device does not know yet waits for the next reconcile")
             return null
         }
         pendingSwitch.set(null)

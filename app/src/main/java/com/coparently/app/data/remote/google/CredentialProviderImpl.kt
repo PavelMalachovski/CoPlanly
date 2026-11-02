@@ -1,6 +1,6 @@
 package com.coparently.app.data.remote.google
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 
 /**
  * [CredentialProvider] over the tokens [CredentialManagerService] keeps.
@@ -23,7 +23,7 @@ class CredentialProviderImpl(
         when (val access = credentialManagerService.accessToken(forceRefresh)) {
             is GoogleAccess.Granted -> GoogleCredential(access.accessToken)
             is GoogleAccess.Denied -> {
-                Log.w(TAG, "No Google credential: ${access.failure}")
+                logger.w(TAG, "No Google credential: ${access.failure}")
                 throw GoogleAccessException(access.failure)
             }
         }

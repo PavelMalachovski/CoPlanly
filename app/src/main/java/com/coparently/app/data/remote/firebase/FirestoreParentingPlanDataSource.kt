@@ -1,6 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
@@ -37,7 +37,7 @@ class FirestoreParentingPlanDataSource(
         val registration = firestore.collection(COLLECTION).document(familyId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Parenting plan listener failed", error)
+                    logger.w(TAG, "Parenting plan listener failed", error)
                     close(error)
                     return@addSnapshotListener
                 }

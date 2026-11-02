@@ -1,7 +1,7 @@
 package com.coparently.app.data.export
 
-import android.util.Log
 import com.coparently.app.data.local.dao.MessageDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.repository.toDomain
@@ -152,7 +152,7 @@ class CommunicationRecordSource(
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-        Log.w(TAG, "Export could not read $what from the server; the record is marked incomplete", e)
+        logger.w(TAG, "Export could not read $what from the server; the record is marked incomplete", e)
         null
     }
 

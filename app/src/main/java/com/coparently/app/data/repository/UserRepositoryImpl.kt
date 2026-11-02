@@ -2,6 +2,7 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
@@ -68,7 +69,7 @@ class UserRepositoryImpl(
         return try {
             getUserById(firebaseUser.uid)
         } catch (e: Exception) {
-            android.util.Log.e("UserRepository", "Failed to get current user data", e)
+            logger.e("UserRepository", "Failed to get current user data", e)
             null
         }
     }
@@ -165,7 +166,7 @@ class UserRepositoryImpl(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            android.util.Log.e(TAG, "Failed to ensure the user profile", e)
+            logger.e(TAG, "Failed to ensure the user profile", e)
         }
     }
 
@@ -233,7 +234,7 @@ class UserRepositoryImpl(
         } else {
             "Merging the fields that are known into the existing document."
         }
-        android.util.Log.w(TAG, "No name could be derived; $sources. $outcome")
+        logger.w(TAG, "No name could be derived; $sources. $outcome")
 
         if (remote != null) {
             val patch = buildMap<String, Any> {
@@ -245,7 +246,7 @@ class UserRepositoryImpl(
             }
             if (patch.isNotEmpty()) {
                 firestoreUserDataSource.updateUser(uid, patch).onFailure {
-                    android.util.Log.e(TAG, "Failed to merge the name-less profile into Firestore", it)
+                    logger.e(TAG, "Failed to merge the name-less profile into Firestore", it)
                 }
             }
         }
@@ -315,7 +316,7 @@ class UserRepositoryImpl(
         if (patch.isEmpty()) return
 
         firestoreUserDataSource.updateUser(uid, patch)
-            .onFailure { android.util.Log.e(TAG, "Failed to merge the profile into Firestore", it) }
+            .onFailure { logger.e(TAG, "Failed to merge the profile into Firestore", it) }
     }
 
     /**
@@ -387,7 +388,7 @@ class UserRepositoryImpl(
         try {
             userDao.updateUser(user.toEntity())
         } catch (e: Exception) {
-            android.util.Log.e("UserRepository", "Failed to update user in local database", e)
+            logger.e("UserRepository", "Failed to update user in local database", e)
             throw e
         }
 
@@ -459,7 +460,7 @@ class UserRepositoryImpl(
                 firestoreUserDataSource.updateUser(firebaseUser.uid, userData).getOrThrow()
                 mirrorCaresForToFamily(firebaseUser.uid, user)
             } catch (e: Exception) {
-                android.util.Log.e("UserRepository", "Failed to sync user update to Firestore", e)
+                logger.e("UserRepository", "Failed to sync user update to Firestore", e)
                 // Don't throw here - local update succeeded, Firestore sync failed
             }
         }
@@ -492,7 +493,7 @@ class UserRepositoryImpl(
             firestoreFamilyDataSource
                 .setCaresFor(familyId, uid, FamilyKind.toStored(user.caresFor) ?: "")
         }.onFailure { e ->
-            android.util.Log.w(
+            logger.w(
                 "UserRepository",
                 "caresFor not mirrored to the family document; the profile copy stands",
                 e
@@ -513,12 +514,12 @@ class UserRepositoryImpl(
     override suspend fun setHealthConsent(consent: HealthConsent?) {
         val uid = firebaseAuthService.getCurrentUser()?.uid ?: return
         val changed = userDao.setHealthConsent(uid, consent?.version, consent?.atMillis)
-        if (changed == 0) android.util.Log.w(TAG, "No local profile row to record the health consent on")
+        if (changed == 0) logger.w(TAG, "No local profile row to record the health consent on")
         val value: Any = consent?.let {
             mapOf(HEALTH_CONSENT_VERSION_KEY to it.version, HEALTH_CONSENT_AT_KEY to it.atMillis)
         } ?: FieldValue.delete()
         firestoreUserDataSource.updateUser(uid, mapOf(HEALTH_CONSENT_KEY to value))
-            .onFailure { android.util.Log.e(TAG, "Failed to write the health consent to Firestore", it) }
+            .onFailure { logger.e(TAG, "Failed to write the health consent to Firestore", it) }
     }
 
     override suspend fun getAiConsent(): AiConsent? {
@@ -537,7 +538,7 @@ class UserRepositoryImpl(
             mapOf(AI_CONSENT_VERSION_KEY to it, AI_CONSENT_AT_KEY to FieldValue.serverTimestamp())
         } ?: FieldValue.delete()
         return firestoreUserDataSource.updateUser(uid, mapOf(AI_CONSENT_KEY to value))
-            .onFailure { android.util.Log.e(TAG, "Failed to write the AI consent to Firestore", it) }
+            .onFailure { logger.e(TAG, "Failed to write the AI consent to Firestore", it) }
             .isSuccess
     }
 
@@ -561,7 +562,7 @@ class UserRepositoryImpl(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            android.util.Log.e(TAG, "Failed to read the remote profile", e)
+            logger.e(TAG, "Failed to read the remote profile", e)
             null
         }
     }

@@ -1,6 +1,6 @@
 package com.coparently.app.data.family
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
@@ -231,7 +231,7 @@ constructor(
     private fun clocksOf(myUid: String, family: FamilyOption): Flow<ClocksAt> =
         requestClocks.observeFamily(myUid, family.familyId)
             .catch { e ->
-                Log.w(TAG, "Another family's request clocks could not be read; the dot ignores them", e)
+                logger.w(TAG, "Another family's request clocks could not be read; the dot ignores them", e)
                 emit(ClocksAt())
             }
             .onStart { emit(ClocksAt()) }
@@ -251,7 +251,7 @@ constructor(
             }
             .catch { e ->
                 // Deliberately no id in the message: it is two Firebase uids joined.
-                Log.w(TAG, "Another family's $kind listener gave up; no dot for it", e)
+                logger.w(TAG, "Another family's $kind listener gave up; no dot for it", e)
                 emit(false)
             }
             // `combine` waits for every listener to answer once; before the first snapshot

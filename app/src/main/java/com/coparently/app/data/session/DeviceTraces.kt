@@ -1,10 +1,10 @@
 package com.coparently.app.data.session
 
 import android.content.Context
-import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.export.ExportFileWriter
+import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -55,13 +55,13 @@ class DeviceTraces(
 
     private fun delete(directory: File) {
         if (directory.exists() && !directory.deleteRecursively()) {
-            Log.w(TAG, "Could not delete everything under ${directory.name}")
+            logger.w(TAG, "Could not delete everything under ${directory.name}")
         }
     }
 
     private fun cancelNotifications() {
         runCatching { NotificationManagerCompat.from(context).cancelAll() }
-            .onFailure { Log.w(TAG, "Could not cancel the notifications", it) }
+            .onFailure { logger.w(TAG, "Could not cancel the notifications", it) }
     }
 
     companion object {

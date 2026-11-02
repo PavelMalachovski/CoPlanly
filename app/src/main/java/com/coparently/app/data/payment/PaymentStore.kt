@@ -1,6 +1,6 @@
 package com.coparently.app.data.payment
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -52,7 +52,7 @@ class PaymentStore(
                 .whereEqualTo("familyId", familyId)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.w(TAG, "Payments could not be read", error)
+                        logger.w(TAG, "Payments could not be read", error)
                         trySend(null)
                         return@addSnapshotListener
                     }
@@ -157,7 +157,7 @@ class PaymentStore(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "A payment could not be stored", e)
+        logger.w(TAG, "A payment could not be stored", e)
         false
     }
 

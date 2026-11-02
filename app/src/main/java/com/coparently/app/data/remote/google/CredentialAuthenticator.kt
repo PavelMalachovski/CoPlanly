@@ -2,7 +2,6 @@ package com.coparently.app.data.remote.google
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import androidx.credentials.CreatePasswordRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -13,6 +12,7 @@ import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.coparently.app.R
+import com.coparently.app.data.platform.logger
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -90,7 +90,7 @@ class CredentialAuthenticator(
         try {
             credentialManager.createCredential(activity, CreatePasswordRequest(email, password))
         } catch (e: CreateCredentialException) {
-            Log.d(TAG, "Password not saved: ${e.type}")
+            logger.d(TAG, "Password not saved: ${e.type}")
         }
     }
 

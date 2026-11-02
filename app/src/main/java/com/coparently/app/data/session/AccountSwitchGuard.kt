@@ -1,10 +1,10 @@
 package com.coparently.app.data.session
 
 import android.content.Context
-import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -60,7 +60,7 @@ class AccountSwitchGuard(
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val lastUid = prefs.getString(KEY_LAST_UID, null)
             if (lastUid != null && lastUid != uid) {
-                Log.i(TAG, "Different account signed in; clearing local data")
+                logger.i(TAG, "Different account signed in; clearing local data")
                 withContext(Dispatchers.IO) { database.clearAllTables() }
                 // The previous account's pending event reminders, which would otherwise wake for
                 // rows that are gone (and find nothing) or, worse, announce its titles.

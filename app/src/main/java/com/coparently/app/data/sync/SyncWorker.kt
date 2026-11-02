@@ -1,7 +1,6 @@
 package com.coparently.app.data.sync
 
 import android.content.Context
-import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -12,6 +11,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +41,7 @@ class SyncWorker(
             requestedSinceRunStarted.set(false)
             val result = syncService.performFullSync()
             result.exceptionOrNull()?.let { cause ->
-                Log.w(TAG, "Periodic sync reported a failure; will retry.", cause)
+                logger.w(TAG, "Periodic sync reported a failure; will retry.", cause)
                 crashlyticsManager.recordException(cause)
             }
             // A request that arrived while this run was in flight was dropped by KEEP. It is
@@ -57,7 +57,7 @@ class SyncWorker(
             // WorkManager stopping the worker is not a failure to report.
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.e(TAG, "Periodic sync threw; will retry.", e)
+            logger.e(TAG, "Periodic sync threw; will retry.", e)
             crashlyticsManager.recordException(e)
             Result.retry()
         }
@@ -73,7 +73,7 @@ class SyncWorker(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Automatic Google Calendar import threw.", e)
+            logger.w(TAG, "Automatic Google Calendar import threw.", e)
             crashlyticsManager.recordException(e)
         }
     }

@@ -1,6 +1,6 @@
 package com.coparently.app.data.requests
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportRead
@@ -48,7 +48,7 @@ class FamilyAgreementsSource(
     private fun <T> Flow<T>.orEmptyOnFailure(empty: T, what: String): Flow<T> =
         catch { e ->
             if (e is CancellationException) throw e
-            Log.w(TAG, "The family's $what could not be read for the requests", e)
+            logger.w(TAG, "The family's $what could not be read for the requests", e)
             emit(empty)
         }.onStart { emit(empty) }
 

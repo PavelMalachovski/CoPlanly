@@ -1,10 +1,10 @@
 package com.coparently.app.data.documents
 
 import android.content.Context
-import android.util.Log
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
@@ -114,7 +114,7 @@ class FamilyDocumentRepositoryImpl(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "Vault $operation failed", e)
+        logger.w(TAG, "Vault $operation failed", e)
         Result.failure(e)
     }
 

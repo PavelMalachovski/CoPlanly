@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.data.platform.logger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -66,7 +67,7 @@ class FirebaseAuthService(
             // Log Firebase configuration for debugging
             val projectId = firebaseAuth.app.options.projectId
             val apiKey = firebaseAuth.app.options.apiKey
-            android.util.Log.d(
+            logger.d(
                 "FirebaseAuthService",
                 "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}..."
             )
@@ -75,8 +76,8 @@ class FirebaseAuthService(
             Result.success(result.user!!)
         } catch (e: Exception) {
             // Log detailed error information
-            android.util.Log.e("FirebaseAuthService", "Account creation failed", e)
-            android.util.Log.e("FirebaseAuthService", "Error details - message: ${e.message}, cause: ${e.cause}")
+            logger.e("FirebaseAuthService", "Account creation failed", e)
+            logger.e("FirebaseAuthService", "Error details - message: ${e.message}, cause: ${e.cause}")
             Result.failure(e)
         }
     }
@@ -93,7 +94,7 @@ class FirebaseAuthService(
             val result = firebaseAuth.signInWithCredential(credential).await()
             Result.success(result.user!!)
         } catch (e: Exception) {
-            android.util.Log.e("FirebaseAuthService", "Google sign-in failed", e)
+            logger.e("FirebaseAuthService", "Google sign-in failed", e)
             Result.failure(e)
         }
     }
@@ -129,7 +130,7 @@ class FirebaseAuthService(
             firebaseAuth.signOut()
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("FirebaseAuthService", "Error signing out: ${e.message}", e)
+            logger.e("FirebaseAuthService", "Error signing out: ${e.message}", e)
             Result.failure(e)
         }
     }

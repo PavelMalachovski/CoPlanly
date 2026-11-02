@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +69,7 @@ class NotificationManager(
                 // Push registration failing silently is how a parent stops receiving anything
                 // without either of them learning why. It must not crash the app; it must not be
                 // invisible either.
-                android.util.Log.e(TAG, "FCM token registration failed", e)
+                logger.e(TAG, "FCM token registration failed", e)
                 crashlyticsManager.recordException(e)
             }
         }
@@ -86,7 +87,7 @@ class NotificationManager(
                     fcmService.updateUserToken(token)
                 }
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "FCM token refresh failed", e)
+                logger.e(TAG, "FCM token refresh failed", e)
                 crashlyticsManager.recordException(e)
             }
         }

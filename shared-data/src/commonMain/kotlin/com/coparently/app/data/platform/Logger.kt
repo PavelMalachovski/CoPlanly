@@ -19,10 +19,10 @@ interface Logger {
     fun w(tag: String, message: String, error: Throwable? = null)
 
     /** A step worth seeing in a device log: a sync's counts, a migration's outcome. */
-    fun i(tag: String, message: String)
+    fun i(tag: String, message: String, error: Throwable? = null)
 
     /** Detail for a developer at the device. */
-    fun d(tag: String, message: String)
+    fun d(tag: String, message: String, error: Throwable? = null)
 }
 
 /**

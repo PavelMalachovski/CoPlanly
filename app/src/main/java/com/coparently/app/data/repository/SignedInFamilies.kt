@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.local.entity.CustodyModelEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.model.User
@@ -96,7 +96,7 @@ internal data class SignedInFamilies(
         fun pairOf(uid: String?, partnerId: String?): CustodyPair? {
             if (uid.isNullOrBlank() || partnerId.isNullOrBlank()) return null
             val documentId = runCatching { CustodyKey.of(uid, partnerId) }
-                .onFailure { Log.w(TAG, "Cannot derive a custody document id for this pair", it) }
+                .onFailure { logger.w(TAG, "Cannot derive a custody document id for this pair", it) }
                 .getOrNull() ?: return null
             return CustodyPair(documentId, listOf(uid, partnerId).sorted(), uid)
         }

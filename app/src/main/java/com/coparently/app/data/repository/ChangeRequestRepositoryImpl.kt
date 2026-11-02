@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.local.dao.ChangeRequestDao
 import com.coparently.app.data.local.entity.ChangeRequestEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
@@ -122,7 +122,7 @@ class ChangeRequestRepositoryImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Change request ${request.id} stays queued", e)
+            logger.w(TAG, "Change request ${request.id} stays queued", e)
             return
         }
         withContext(NonCancellable) {
@@ -148,7 +148,7 @@ class ChangeRequestRepositoryImpl(
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // `start` reports a refusal as null and is not meant to throw. If it does, the request is
             // already on the server and its co-parent still has to be told, so the clock is given up.
-            Log.w(TAG, "Change request ${request.id} goes out without its clock", e)
+            logger.w(TAG, "Change request ${request.id} goes out without its clock", e)
             null
         }
     }
@@ -182,7 +182,7 @@ class ChangeRequestRepositoryImpl(
             // Offline-first: a Firestore failure (missing index, denied read, no network)
             // must not crash the app — Room stays the source of truth. Swallow and log.
             .catch { e ->
-                Log.w(TAG, "Change request sync failed", e)
+                logger.w(TAG, "Change request sync failed", e)
             }
             .collect { documents ->
                 documents.forEach { data ->

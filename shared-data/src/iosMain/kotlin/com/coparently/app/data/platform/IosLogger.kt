@@ -10,9 +10,9 @@ internal object IosLogger : Logger {
 
     override fun w(tag: String, message: String, error: Throwable?) = print("W", tag, message, error)
 
-    override fun i(tag: String, message: String) = print("I", tag, message, null)
+    override fun i(tag: String, message: String, error: Throwable?) = print("I", tag, message, error)
 
-    override fun d(tag: String, message: String) = print("D", tag, message, null)
+    override fun d(tag: String, message: String, error: Throwable?) = print("D", tag, message, error)
 
     private fun print(level: String, tag: String, message: String, error: Throwable?) {
         println("$level/$tag: $message")

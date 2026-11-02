@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
@@ -289,7 +289,7 @@ constructor(
         // not given the schedule of the family the phone showed before (schema 45).
         val entity = activeRowNow(families) ?: return
         if (readShared(pair) != SharedCustodyRead.Absent) return
-        Log.i(TAG, "Publishing the custody pattern this device held before the pair had one")
+        logger.i(TAG, "Publishing the custody pattern this device held before the pair had one")
         pushToFirestore(entity.toDomainModel(), entity, families)
     }
 
@@ -359,7 +359,7 @@ constructor(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(
+            logger.w(
                 TAG,
                 "Could not read the shared custody document. Reported as Unavailable, not " +
                     "as an absent document: a caller that mistook the two would publish its own " +
@@ -958,7 +958,7 @@ constructor(
             }
             .onEach { document -> document.documentId?.let { mirrorIntoRoom(it, document.custody) } }
             .retryWhen { cause, attempt ->
-                Log.w(
+                logger.w(
                     TAG,
                     "Shared custody stream failed (attempt $attempt), retrying — this covers " +
                         "the pair lookup, the custody_models listener and the Room mirror. A " +
@@ -1428,7 +1428,7 @@ constructor(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(
+        logger.w(
             TAG,
             "Custody $operation failed for the shared custody document. Room keeps the local " +
                 "copy, which the mirror will not overwrite with the older document, and " +
@@ -1489,7 +1489,7 @@ constructor(
          */
         fun defaultScope(): CoroutineScope = CoroutineScope(
             SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, throwable ->
-                Log.e(
+                logger.e(
                     TAG,
                     "The shared custody stream died with an uncaught exception. Custody no " +
                         "longer syncs for the rest of this process; Room keeps serving the " +

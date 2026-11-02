@@ -1,6 +1,6 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.PartnerSummary
 import com.google.firebase.firestore.DocumentSnapshot
@@ -50,7 +50,7 @@ internal fun FirebaseFirestore.partnerProfile(partnerId: String, pairedAt: Long?
                 }
                 // The UI renders a blank name identically whether the profile could not be read
                 // or genuinely has none; the log is what tells the two apart after the fact.
-                Log.w(TAG, "Partner profile listener failed", error)
+                logger.w(TAG, "Partner profile listener failed", error)
                 if (answered.compareAndSet(false, true)) trySend(bareSummary(partnerId, pairedAt))
                 close(error)
             }
@@ -62,7 +62,7 @@ internal fun FirebaseFirestore.partnerProfile(partnerId: String, pairedAt: Long?
             retry
         }
         // Given up: the last profile read — or the bare partner — stands until the link moves.
-        .catch { Log.w(TAG, "Partner profile listener gave up", it) }
+        .catch { logger.w(TAG, "Partner profile listener gave up", it) }
 }
 
 /**

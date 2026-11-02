@@ -1,8 +1,8 @@
 package com.coparently.app.data.sync
 
-import android.util.Log
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import kotlinx.coroutines.flow.lastOrNull
@@ -46,7 +46,7 @@ class GoogleCalendarAutoImport(
         encryptedPreferences.putString(PreferenceKeys.GOOGLE_CALENDAR_LAST_AUTO_IMPORT, nowMillis.toString())
         val result = calendarSyncRepository.syncFromGoogle().lastOrNull()
         if (result is SyncResult.Error) {
-            Log.w(TAG, "Automatic Google Calendar import failed: ${result.reason}")
+            logger.w(TAG, "Automatic Google Calendar import failed: ${result.reason}")
         }
         return result
     }

@@ -2,6 +2,7 @@ package com.coparently.app.data.remote.firebase
 
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.family.FamilyKey
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
@@ -224,8 +225,8 @@ class FcmService(
             firestore.collection("users").document(uid)
                 .update("fcmToken", com.google.firebase.firestore.FieldValue.delete())
                 .await()
-        }.onFailure { android.util.Log.w("FcmService", "Could not detach the FCM token", it) }
+        }.onFailure { logger.w("FcmService", "Could not detach the FCM token", it) }
         runCatching { firebaseMessaging.deleteToken().await() }
-            .onFailure { android.util.Log.w("FcmService", "Could not delete the FCM token", it) }
+            .onFailure { logger.w("FcmService", "Could not delete the FCM token", it) }
     }
 }

@@ -1,7 +1,7 @@
 package com.coparently.app.data.session
 
-import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
@@ -69,7 +69,7 @@ class SessionProfileSynchronizer(
                 // Before the profile write: if a different account just signed in, the wipe
                 // must land before anything reads or uploads the previous account's rows.
                 accountSwitchGuard.ensureAccountConsistency()
-                Log.d(TAG, "Ensuring the profile document for the signed-in user")
+                logger.d(TAG, "Ensuring the profile document for the signed-in user")
                 userRepository.ensureProfile()
             }
     }

@@ -1,10 +1,10 @@
 package com.coparently.app.data.repository
 
 import android.content.Context
-import android.util.Log
 import com.coparently.app.R
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.UserDao
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
@@ -295,7 +295,7 @@ class PairingRepositoryImpl(
         ) {
             // Reset so the next emission retries rather than believing this one landed.
             appliedPairing.compareAndSet(applied, previous)
-            Log.w(TAG, "Failed to mirror the pairing transition into Room", e)
+            logger.w(TAG, "Failed to mirror the pairing transition into Room", e)
         }
     }
 
@@ -391,7 +391,7 @@ class PairingRepositoryImpl(
         val registration = firestore.collection(USERS).document(uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "User document listener failed", error)
+                    logger.w(TAG, "User document listener failed", error)
                     return@addSnapshotListener
                 }
                 trySend(snapshot)
@@ -405,7 +405,7 @@ class PairingRepositoryImpl(
             .whereEqualTo("status", STATUS_PENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Own-invitations listener failed", error)
+                    logger.w(TAG, "Own-invitations listener failed", error)
                 }
                 trySend(snapshot?.documents.orEmpty().toActiveCodeInvites())
             }
@@ -423,7 +423,7 @@ class PairingRepositoryImpl(
                     if (error != null) {
                         // The address itself is deliberately not logged — logcat is
                         // readable by anyone with adb access to the device.
-                        Log.w(TAG, "Incoming-invitations listener failed", error)
+                        logger.w(TAG, "Incoming-invitations listener failed", error)
                     }
                     trySend(snapshot?.documents.orEmpty().mapNotNull { it.toInvite() })
                 }
@@ -500,7 +500,7 @@ class PairingRepositoryImpl(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Failed to create the post-pairing conversation", e)
+            logger.w(TAG, "Failed to create the post-pairing conversation", e)
         }
     }
 

@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
@@ -148,7 +148,7 @@ class ProfessionalRepositoryImpl(
             .whereIn(FIELD_CREATOR, grant.familyParents)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Professional events listener failed", error)
+                    logger.w(TAG, "Professional events listener failed", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
@@ -161,14 +161,14 @@ class ProfessionalRepositoryImpl(
     override fun observeCustody(grant: ProfessionalGrant): Flow<SharedCustody?> =
         custodyDataSource.observeCustody(grant.familyId)
             .catch { e ->
-                Log.w(TAG, "Professional custody listener failed", e)
+                logger.w(TAG, "Professional custody listener failed", e)
                 emit(null)
             }
 
     override fun observePlan(grant: ProfessionalGrant): Flow<Map<String, ParentingPlanEntry>> =
         planDataSource.observePlan(grant.familyId)
             .catch { e ->
-                Log.w(TAG, "Professional plan listener failed", e)
+                logger.w(TAG, "Professional plan listener failed", e)
                 emit(emptyMap())
             }
 
@@ -187,7 +187,7 @@ class ProfessionalRepositoryImpl(
         val query = familyId?.let { byPerson.whereEqualTo(FIELD_FAMILY_ID, it) } ?: byPerson
         val registration = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                Log.w(TAG, "Professional grants listener failed", error)
+                logger.w(TAG, "Professional grants listener failed", error)
                 trySend(emptyList())
                 return@addSnapshotListener
             }

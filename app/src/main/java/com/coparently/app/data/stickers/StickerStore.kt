@@ -1,6 +1,6 @@
 package com.coparently.app.data.stickers
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushPayload
@@ -53,7 +53,7 @@ class StickerStore(
         val registration = firestore.collection(COLLECTION).whereEqualTo(field, uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Stickers could not be read", error)
+                    logger.w(TAG, "Stickers could not be read", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
@@ -81,7 +81,7 @@ class StickerStore(
             fcmService.queueNotificationForUser(
                 to,
                 mapOf(PushPayload.TYPE to PushPayload.STICKER_RECEIVED, PushPayload.ACTOR to name)
-            ).onFailure { Log.w(TAG, "The sticker's push could not be queued", it) }
+            ).onFailure { logger.w(TAG, "The sticker's push could not be queued", it) }
             // In the thread of the family it was sent in, whichever family is on screen by now.
             activityAnnouncer.announce(cardFor(id, kind), senderName = name, partnerUid = to)
         }
@@ -107,7 +107,7 @@ class StickerStore(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "A sticker could not be marked seen", e)
+            logger.w(TAG, "A sticker could not be marked seen", e)
         }
     }
 
@@ -119,7 +119,7 @@ class StickerStore(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "A sticker could not be stored", e)
+        logger.w(TAG, "A sticker could not be stored", e)
         false
     }
 

@@ -1,6 +1,7 @@
 package com.coparently.app.data.remote.firebase
 
 import android.graphics.Bitmap
+import com.coparently.app.data.platform.logger
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
@@ -50,11 +51,11 @@ class QRCodeService {
             bitmap
         } catch (e: WriterException) {
             // Log error and return null if QR code generation fails
-            android.util.Log.e("QRCodeService", "Failed to generate QR code", e)
+            logger.e("QRCodeService", "Failed to generate QR code", e)
             null
         } catch (e: Exception) {
             // Catch any other unexpected exceptions
-            android.util.Log.e("QRCodeService", "Unexpected error generating QR code", e)
+            logger.e("QRCodeService", "Unexpected error generating QR code", e)
             null
         }
     }

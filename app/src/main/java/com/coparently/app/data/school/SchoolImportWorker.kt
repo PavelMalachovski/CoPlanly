@@ -1,7 +1,6 @@
 package com.coparently.app.data.school
 
 import android.content.Context
-import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -9,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 
@@ -36,7 +36,7 @@ class SchoolImportWorker(
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Each connection's outcome is already on the connection; this is the unexpected rest.
-            Log.e(TAG, "The school import failed unexpectedly", e)
+            logger.e(TAG, "The school import failed unexpectedly", e)
             Result.success()
         }
     }

@@ -1,10 +1,10 @@
 package com.coparently.app.data.pairing
 
 import android.content.Context
-import android.util.Log
 import com.android.installreferrer.api.InstallReferrerClient
 import com.android.installreferrer.api.InstallReferrerClient.InstallReferrerResponse
 import com.android.installreferrer.api.InstallReferrerStateListener
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.InstallReferrerSource
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +74,7 @@ class PlayInstallReferrerSource(
                     val answer = when (referrerOutcome(responseCode)) {
                         ReferrerOutcome.ANSWERED ->
                             runCatching { Answer(client.installReferrer.installReferrer) }
-                                .onFailure { Log.w(TAG, "Install referrer could not be read", it) }
+                                .onFailure { logger.w(TAG, "Install referrer could not be read", it) }
                                 .getOrNull()
                         ReferrerOutcome.NEVER -> Answer(null)
                         ReferrerOutcome.RETRY -> null
@@ -90,7 +90,7 @@ class PlayInstallReferrerSource(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Install referrer service could not be reached", e)
+            logger.w(TAG, "Install referrer service could not be reached", e)
             if (continuation.isActive) continuation.resume(null)
         }
     }

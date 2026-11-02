@@ -1,6 +1,6 @@
 package com.coparently.app.data.payment
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.payment.Iban
 import com.google.firebase.firestore.FieldValue
@@ -36,7 +36,7 @@ class PaymentAccounts(
     fun observeIban(uid: String): Flow<String?> = callbackFlow {
         val registration = firestore.collection(USERS).document(uid).addSnapshotListener { snapshot, error ->
             if (error != null) {
-                Log.w(TAG, "A payment account could not be read", error)
+                logger.w(TAG, "A payment account could not be read", error)
                 trySend(null)
             } else {
                 // `as? String`, never `getString`: the document is its owner's to write, and a
@@ -67,7 +67,7 @@ class PaymentAccounts(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "The payment account could not be saved", e)
+            logger.w(TAG, "The payment account could not be saved", e)
             false
         }
     }

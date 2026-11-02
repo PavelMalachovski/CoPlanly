@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
@@ -19,6 +18,7 @@ import androidx.work.WorkerParameters
 import com.coparently.app.R
 import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.data.payment.PaymentStore
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushChannel
 import com.coparently.app.data.remote.firebase.PushDestination
@@ -80,7 +80,7 @@ class SupportReminderWorker(
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                Log.w(TAG, "A child support reminder could not be checked", e)
+                logger.w(TAG, "A child support reminder could not be checked", e)
             }
         }
         return Result.success()

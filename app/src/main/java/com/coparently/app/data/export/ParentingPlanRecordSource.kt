@@ -1,6 +1,6 @@
 package com.coparently.app.data.export
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.domain.export.PlanSource
 import com.coparently.app.domain.family.FamilyKey
@@ -38,7 +38,7 @@ class ParentingPlanRecordSource(
         } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            Log.w(TAG, "Export could not read the parenting plan from the server; printing this phone's copy", e)
+            logger.w(TAG, "Export could not read the parenting plan from the server; printing this phone's copy", e)
             null
         }
         return PlanSource(

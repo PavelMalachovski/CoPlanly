@@ -4,6 +4,7 @@ import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.PetEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
 import com.coparently.app.data.sync.PetAudience
@@ -136,7 +137,7 @@ class PetRepositoryImpl(
         if (tombstoned.isSuccess) {
             petDao.deletePetById(id)
         } else {
-            android.util.Log.w(
+            logger.w(
                 "PetRepo",
                 "Pet tombstone not written; the deletion stays queued for the next sync",
                 tombstoned.exceptionOrNull()
@@ -180,7 +181,7 @@ class PetRepositoryImpl(
         }
 
         firestorePetDataSource.getPetsForParent(firebaseUser.uid)
-            .catch { e -> android.util.Log.w("PetRepo", "Pet sync failed", e) }
+            .catch { e -> logger.w("PetRepo", "Pet sync failed", e) }
             .collect { firestoreList ->
                 for (firestoreData in firestoreList) {
                     if (applyDownloaded(firestoreData)) {
@@ -208,7 +209,7 @@ class PetRepositoryImpl(
         // (never by content) and skipped, as `ExpenseRepositoryImpl` does.
         val pet = runCatching { firestoreData.toPet() }
             .onFailure { e ->
-                android.util.Log.w(
+                logger.w(
                     "PetRepo",
                     "Pet document ${firestoreData["id"]} could not be read " +
                         "(${e.javaClass.simpleName}); skipped"

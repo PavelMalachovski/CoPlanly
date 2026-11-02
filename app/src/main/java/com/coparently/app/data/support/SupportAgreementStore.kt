@@ -1,6 +1,6 @@
 package com.coparently.app.data.support
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -56,7 +56,7 @@ class SupportAgreementStore(
             .addSnapshotListener { snapshot, error ->
                 when {
                     error != null -> {
-                        Log.w(TAG, "Child support could not be read", error)
+                        logger.w(TAG, "Child support could not be read", error)
                         trySend(SupportRead.Unavailable)
                     }
                     snapshot == null || !snapshot.exists() -> trySend(SupportRead.None)
@@ -82,7 +82,7 @@ class SupportAgreementStore(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "Child support could not be read from the server", e)
+        logger.w(TAG, "Child support could not be read from the server", e)
         null
     }
 
@@ -169,7 +169,7 @@ class SupportAgreementStore(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "Child support could not be stored", e)
+        logger.w(TAG, "Child support could not be stored", e)
         false
     }
 

@@ -1,6 +1,6 @@
 package com.coparently.app.data.repository
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
 import com.coparently.app.data.requests.RequestDeadlineDocument
@@ -54,7 +54,7 @@ class RequestDeadlineRepositoryImpl(
                 true
             }
             .catch { e ->
-                Log.w(TAG, "The request clocks listener gave up; reading as no clocks", e)
+                logger.w(TAG, "The request clocks listener gave up; reading as no clocks", e)
                 emit(emptyList())
             }
 
@@ -121,7 +121,7 @@ class RequestDeadlineRepositoryImpl(
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Any refusal reads the same to the caller; the log keeps which.
-            Log.w(TAG, "$what was refused", e)
+            logger.w(TAG, "$what was refused", e)
             false
         }
 
@@ -133,7 +133,7 @@ class RequestDeadlineRepositoryImpl(
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             // Any failure reads the same to the caller; the log keeps which.
-            Log.w(TAG, "Could not read $what", e)
+            logger.w(TAG, "Could not read $what", e)
             fallback
         }
 

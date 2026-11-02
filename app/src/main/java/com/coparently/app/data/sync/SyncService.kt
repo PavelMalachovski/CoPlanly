@@ -1,6 +1,5 @@
 package com.coparently.app.data.sync
 
-import android.util.Log
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.ChildInfoDao
@@ -11,6 +10,7 @@ import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.notification.toReminderEvent
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
@@ -156,7 +156,7 @@ class SyncService(
                 requestClockKeeper.sweep(currentUser.uid, coParentsOf(currentUser.uid, me))
             }.onFailure { e ->
                 if (e is CancellationException) throw e
-                Log.w(TAG, "The request clocks were not swept", e)
+                logger.w(TAG, "The request clocks were not swept", e)
             }
             // Same reason again, for the parenting plan (MON-5): its screen uploads on save,
             // and a save made offline or refused has nothing else retrying it. A parenting plan
@@ -233,7 +233,7 @@ class SyncService(
             if (tombstoned.isSuccess) {
                 eventDao.deleteEventById(entity.id)
             } else {
-                Log.w(
+                logger.w(
                     TAG,
                     "Event tombstone for ${entity.id} not written; it stays queued",
                     tombstoned.exceptionOrNull()
@@ -386,7 +386,7 @@ class SyncService(
                             } else if (updated.isSuccess) {
                                 eventDao.markAsSynced(localEntity.id)
                             } else {
-                                Log.w(
+                                logger.w(
                                     TAG,
                                     "Event ${localEntity.id} kept locally; its update was not written",
                                     updated.exceptionOrNull()
@@ -469,7 +469,7 @@ class SyncService(
             coParents = coParents
         ) { eventDao.markOwnEventsUnsynced(userId) }
         if (backfill.newCoParents.isNotEmpty()) {
-            Log.i(
+            logger.i(
                 TAG,
                 "Audience backfill for $userId with new co-parent(s) ${backfill.newCoParents}: " +
                     "re-queued ${backfill.requeued} event(s)"
@@ -501,7 +501,7 @@ class SyncService(
             coParents = coParents
         ) { childInfoDao.markOwnChildInfoUnsynced(userId) }
         if (backfill.newCoParents.isNotEmpty()) {
-            Log.i(
+            logger.i(
                 TAG,
                 "Child-info audience backfill for $userId with new co-parent(s) " +
                     "${backfill.newCoParents}: re-queued ${backfill.requeued} row(s)"
@@ -653,7 +653,7 @@ class SyncService(
             if (tombstoned.isSuccess) {
                 childInfoDao.deleteChildInfoById(entity.id)
             } else {
-                Log.w(
+                logger.w(
                     TAG,
                     "Child tombstone for ${entity.id} not written; it stays queued",
                     tombstoned.exceptionOrNull()
@@ -791,7 +791,7 @@ class SyncService(
                             } else if (updated.isSuccess) {
                                 childInfoDao.markAsSynced(localEntity.id)
                             } else {
-                                Log.w(
+                                logger.w(
                                     TAG,
                                     "Child info ${localEntity.id} kept locally; its update was not written",
                                     updated.exceptionOrNull()
@@ -895,7 +895,7 @@ class SyncService(
             // all present identically as "Room says mom". `ParentSlotMigrator` logs its
             // re-stamp count for the same reason — a silent value nobody can read is how the
             // both-parents-in-slot-1 defect stayed invisible through three pairing rounds.
-            Log.i(
+            logger.i(
                 TAG,
                 "Profile sync for $userId: remote role=${remoteUserData["role"]}, " +
                     "local=${currentUser.role}, applied=${updatedUser.role}"
@@ -913,7 +913,7 @@ class SyncService(
                 }
             }.onFailure { e ->
                 if (e is CancellationException) throw e
-                Log.e(TAG, "Failed to react to a remote slot change", e)
+                logger.e(TAG, "Failed to react to a remote slot change", e)
             }
         }
     }
@@ -933,7 +933,7 @@ class SyncService(
                 eventDao.updateEvent(localEntity.copy(syncedToFirestore = false))
             }
         } else {
-            Log.w(
+            logger.w(
                 TAG,
                 "Private event ${localEntity.id} still has a remote copy; retrying next sync",
                 removed.exceptionOrNull()
@@ -948,7 +948,7 @@ class SyncService(
     private inline fun <T> readDocument(kind: String, id: String?, read: () -> T): T? =
         runCatching(read)
             .onFailure { e ->
-                Log.w(TAG, "$kind document $id could not be read (${e.javaClass.simpleName}); skipped")
+                logger.w(TAG, "$kind document $id could not be read (${e.javaClass.simpleName}); skipped")
             }
             .getOrNull()
 

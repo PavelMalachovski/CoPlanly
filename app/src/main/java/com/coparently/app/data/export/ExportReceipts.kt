@@ -1,7 +1,7 @@
 package com.coparently.app.data.export
 
-import android.util.Log
 import com.coparently.app.BuildConfig
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.export.ExportFormat
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
@@ -69,7 +69,7 @@ class ExportReceipts(
         // file then says. Rethrowing would fail an export that works without the server.
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "$name failed; the export will say it is not registered", e)
+        logger.w(TAG, "$name failed; the export will say it is not registered", e)
         null
     }
 

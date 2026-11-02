@@ -1,6 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.friends.AcceptCalendarFriendResult
 import com.coparently.app.domain.guests.AcceptGuestResult
 import com.coparently.app.domain.model.InvitePreview
@@ -59,7 +59,7 @@ class PairingFunctions(
             val partnerId = data["partnerId"] as? String
             val role = (data["role"] as? String)?.takeIf { it.isNotBlank() }
             if (role == null) {
-                Log.w(TAG, "acceptPairingInvitation succeeded but returned no role; slot re-stamp will be skipped")
+                logger.w(TAG, "acceptPairingInvitation succeeded but returned no role; slot re-stamp will be skipped")
             }
             AcceptInvitationResult(
                 partnerId = checkNotNull(partnerId?.takeIf { it.isNotBlank() }) {

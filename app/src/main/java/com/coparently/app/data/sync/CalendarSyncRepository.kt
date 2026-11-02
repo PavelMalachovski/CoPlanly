@@ -3,6 +3,7 @@ package com.coparently.app.data.sync
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.google.CredentialProvider
 import com.coparently.app.data.remote.google.GoogleAccessException
 import com.coparently.app.data.remote.google.GoogleAccessFailure
@@ -103,31 +104,31 @@ class CalendarSyncRepository(
                 )
             )
         } catch (e: SyncFailureException) {
-            android.util.Log.e("CalendarSync", "Sync refused: ${e.failure}", e)
+            logger.e("CalendarSync", "Sync refused: ${e.failure}", e)
             emit(SyncResult.Error(e.failure))
         } catch (e: GoogleAccessException) {
             // No usable connection: never made, ended by Google, or out of reach this time.
-            android.util.Log.w("CalendarSync", "No Google access: ${e.failure}", e)
+            logger.w("CalendarSync", "No Google access: ${e.failure}", e)
             emit(SyncResult.Error(SyncFailure.forAccess(e.failure)))
         } catch (e: IllegalStateException) {
-            android.util.Log.e("CalendarSync", "Authentication error: ${e.message}", e)
+            logger.e("CalendarSync", "Authentication error: ${e.message}", e)
             emit(SyncResult.Error(SyncFailure.AUTHENTICATION))
         } catch (e: android.os.NetworkOnMainThreadException) {
-            android.util.Log.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
+            logger.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
             emit(SyncResult.Error(SyncFailure.UNKNOWN))
         } catch (e: GoogleCalendarHttpException) {
             // Google refused the call. Kept before the IOException branch below: the exception
             // google-api-client threw before MON-24 extended IOException, and the reverse order
             // (which shipped once) made every 401/403/404/500 read as a generic "Network error".
             // Kotlin does not flag an unreachable catch the way Java does.
-            android.util.Log.e("CalendarSync", "Google API error: ${e.statusCode}", e)
+            logger.e("CalendarSync", "Google API error: ${e.statusCode}", e)
             emit(SyncResult.Error(SyncFailure.forStatus(e.statusCode)))
         } catch (e: java.io.IOException) {
-            android.util.Log.e("CalendarSync", "Network error: ${e.message}", e)
+            logger.e("CalendarSync", "Network error: ${e.message}", e)
             emit(SyncResult.Error(SyncFailure.NETWORK))
         } catch (e: Exception) {
             // Log full error for debugging
-            android.util.Log.e("CalendarSync", "Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
+            logger.e("CalendarSync", "Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
             // The exception's class and message go to the log above and to Crashlytics; they
             // used to be printed on the Settings screen too, in English, as the whole message.
             crashlyticsManager.recordException(e)

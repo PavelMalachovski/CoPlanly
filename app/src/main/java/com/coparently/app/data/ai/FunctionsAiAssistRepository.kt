@@ -1,6 +1,6 @@
 package com.coparently.app.data.ai
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.ai.AiAssistResult
 import com.google.firebase.functions.FirebaseFunctions
@@ -61,14 +61,14 @@ class FunctionsAiAssistRepository(
     } catch (e: CancellationException) {
         throw e
     } catch (e: FirebaseFunctionsException) {
-        Log.w(TAG, "aiAssist refused: ${e.code}")
+        logger.w(TAG, "aiAssist refused: ${e.code}")
         AiAssistErrors.classify(e.code.name, e.details, e.message)
     } catch (
         // Offline, a TLS or socket failure, a backend not yet deployed: none of them is the
         // parent's to fix beyond "try again", which is what Unavailable says.
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "aiAssist could not be reached", e)
+        logger.w(TAG, "aiAssist could not be reached", e)
         AiAssistResult.Unavailable
     }
 

@@ -1,5 +1,6 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.data.platform.logger
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -20,7 +21,7 @@ class FirestoreUserDataSource(
     suspend fun getUserById(uid: String): Map<String, Any?>? {
         // Validate uid before making request
         if (uid.isBlank()) {
-            android.util.Log.w("FirestoreUserDataSource", "Attempted to get user with blank uid")
+            logger.w("FirestoreUserDataSource", "Attempted to get user with blank uid")
             return null
         }
 
@@ -31,13 +32,13 @@ class FirestoreUserDataSource(
                 .get()
                 .await()
 
-            android.util.Log.d(
+            logger.d(
                 "FirestoreUserDataSource",
                 "Got user from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $uid"
             )
             snapshot.data
         } catch (e: Exception) {
-            android.util.Log.e("FirestoreUserDataSource", "Failed to get user", e)
+            logger.e("FirestoreUserDataSource", "Failed to get user", e)
             null
         }
     }
@@ -97,13 +98,13 @@ class FirestoreUserDataSource(
                 .get()
                 .await()
 
-            android.util.Log.d(
+            logger.d(
                 "FirestoreUserDataSource",
                 "Got invitation from ${if (snapshot.metadata.isFromCache) "cache" else "server"}: $invitationId"
             )
             snapshot.data
         } catch (e: Exception) {
-            android.util.Log.e("FirestoreUserDataSource", "Failed to get an invitation", e)
+            logger.e("FirestoreUserDataSource", "Failed to get an invitation", e)
             null
         }
     }
