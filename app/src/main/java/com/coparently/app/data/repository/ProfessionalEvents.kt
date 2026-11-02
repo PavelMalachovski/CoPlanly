@@ -9,7 +9,6 @@ import com.coparently.app.domain.time.LAST_INSTANT_OF_DAY
 import com.coparently.app.domain.usecase.RecurrenceExpander
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 
 /**
@@ -54,17 +53,17 @@ object ProfessionalEvents {
             id = row.id,
             title = row.title,
             description = row.description,
-            startDateTime = row.startDateTime.toKotlinLocalDateTime(),
-            endDateTime = row.endDateTime?.toKotlinLocalDateTime(),
+            startDateTime = row.startDateTime,
+            endDateTime = row.endDateTime,
             eventType = row.eventType,
             parentOwner = row.parentOwner,
             isRecurring = row.isRecurring,
             recurrencePattern = row.recurrencePattern,
-            createdAt = row.createdAt.toKotlinLocalDateTime(),
-            updatedAt = row.updatedAt.toKotlinLocalDateTime(),
+            createdAt = row.createdAt,
+            updatedAt = row.updatedAt,
             syncedToFirestore = true,
             createdByFirebaseUid = row.createdByFirebaseUid,
-            recurrenceEndDate = row.recurrenceEndDate?.toKotlinLocalDate(),
+            recurrenceEndDate = row.recurrenceEndDate,
             isImportant = row.isImportant,
             familyId = row.familyId,
             lastModifiedBy = row.lastModifiedBy,
@@ -73,7 +72,7 @@ object ProfessionalEvents {
             acceptance = runCatching { EventAcceptance.valueOf(row.acceptance) }
                 .getOrDefault(EventAcceptance.NOT_REQUIRED),
             acceptedBy = row.acceptedBy,
-            acceptedAt = row.acceptedAt?.toKotlinLocalDateTime(),
+            acceptedAt = row.acceptedAt,
             friendParticipates = row.friendParticipates
         )
     }
