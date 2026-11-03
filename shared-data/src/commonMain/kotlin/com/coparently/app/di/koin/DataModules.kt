@@ -45,6 +45,7 @@ import com.coparently.app.data.repository.JournalRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
+import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
@@ -197,6 +198,9 @@ val repositoryDataModule: Module = module {
     // 8f). Its thread-title wording and the sync request are the platform's.
     singleOf(::PairingRepositoryImpl)
     single<PairingRepository> { get<PairingRepositoryImpl>() }
+    // Moves this phone's records between the two parent slots when a pairing or a server backfill
+    // moves this parent's (Task 8g).
+    singleOf(::ParentSlotMigrator)
 }
 
 /**

@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.coparently.app.data.local.entity.EventEntity
 import kotlinx.coroutines.flow.Flow
@@ -202,6 +203,21 @@ interface EventDao {
             "WHERE pickupConfirmedBy = :from AND createdByFirebaseUid = :myUid AND deletedAtMillis IS NULL"
     )
     suspend fun reslotPickup(from: String, to: String, myUid: String): Int
+
+    /**
+     * [reslotOwner] and then [reslotPickup], in one transaction: either both re-stamps land or
+     * neither does, so a process death between them cannot leave an event's owner in the new slot
+     * and its pickup confirmation in the old one. `ParentSlotMigrator.reslot`'s one write.
+     *
+     * Room's own transaction on both platforms (MON-24 phase 2): the migrator ran the two statements
+     * in `RoomDatabase.withTransaction`, which is Android's alone. `EventDaoReslotTest` (on the
+     * emulators) proves a refused second statement takes the first back with it.
+     *
+     * @return How many rows the two statements changed, together.
+     */
+    @Transaction
+    suspend fun reslotOwnerAndPickup(from: String, to: String, myUid: String): Int =
+        reslotOwner(from, to, myUid) + reslotPickup(from, to, myUid)
 
     /**
      * Re-queues every non-private event this user created for upload, by clearing the flag

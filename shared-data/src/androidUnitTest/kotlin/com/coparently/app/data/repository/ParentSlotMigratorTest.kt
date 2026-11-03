@@ -1,22 +1,17 @@
 package com.coparently.app.data.repository
 
-import androidx.room.withTransaction
-import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.EventDao
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.slot
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -29,7 +24,7 @@ import kotlin.test.assertNull
  * it twice changes nothing the second time.
  *
  * [ParentSlotMigrator.reslotIfSlotChanged]'s tests below back the "before" side with
- * [markerStore], a plain map standing in for [EncryptedPreferences] — not with Room's `role`,
+ * [markerStore], a plain map standing in for [SecurePreferences] — not with Room's `role`,
  * which a round-1 review found could never be the "before" side (never written by the accept
  * path, seeded with a placeholder on profile creation, written non-atomically with the
  * re-stamp). The two regression tests near the bottom pin the failures that comparison caused.
@@ -37,10 +32,9 @@ import kotlin.test.assertNull
 class ParentSlotMigratorTest {
 
     private val eventDao: EventDao = mockk(relaxed = true)
-    private val database: CoPlanlyDatabase = mockk()
     private val custodyModelRepository: CustodyModelRepository = mockk(relaxed = true)
-    private val encryptedPreferences: EncryptedPreferences = mockk(relaxed = true)
-    private val migrator = ParentSlotMigrator(database, eventDao, custodyModelRepository, encryptedPreferences)
+    private val encryptedPreferences: SecurePreferences = mockk(relaxed = true)
+    private val migrator = ParentSlotMigrator(eventDao, custodyModelRepository, encryptedPreferences)
 
     /**
      * A real backing map behind the preferences mock: a marker one call writes is the marker
@@ -52,12 +46,12 @@ class ParentSlotMigratorTest {
 
     @Before
     fun setup() {
-        // `withTransaction` is an extension on RoomDatabase, so it is mocked statically and
-        // made to simply run its block — these tests are about which rows the migration
-        // targets, not about Room's transaction machinery.
-        mockkStatic("androidx.room.RoomDatabaseKt")
-        coEvery { database.withTransaction(any<suspend () -> Int>()) } coAnswers {
-            secondArg<suspend () -> Int>().invoke()
+        // The DAO's one transactional write runs its two statements, as Room's generated
+        // implementation does — these tests are about which rows the migration targets, not about
+        // Room's transaction machinery, which `EventDaoReslotTest` proves on the emulators.
+        coEvery { eventDao.reslotOwnerAndPickup(any(), any(), any()) } coAnswers {
+            val (from, to, uid) = Triple(firstArg<String>(), secondArg<String>(), thirdArg<String>())
+            eventDao.reslotOwner(from, to, uid) + eventDao.reslotPickup(from, to, uid)
         }
         // No active pattern by default; the custody-complement tests below stub one in.
         coEvery { custodyModelRepository.getActiveModelSync() } returns null
@@ -70,9 +64,6 @@ class ParentSlotMigratorTest {
             markerStore[firstArg()] = secondArg()
         }
     }
-
-    @After
-    fun tearDown() = unmockkStatic("androidx.room.RoomDatabaseKt")
 
     private fun markerKey(uid: String) = "${PreferenceKeys.PARENT_SLOT_MARKER_PREFIX}$uid"
 

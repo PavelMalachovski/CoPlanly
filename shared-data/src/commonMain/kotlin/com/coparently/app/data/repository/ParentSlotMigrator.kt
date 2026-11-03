@@ -1,7 +1,5 @@
 package com.coparently.app.data.repository
 
-import androidx.room.withTransaction
-import com.coparently.app.data.local.CoPlanlyDatabase
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.platform.SecurePreferences
@@ -38,9 +36,12 @@ import com.coparently.app.data.platform.logger
  * [reslot] also records, in [SecurePreferences], which slot this user's records are now
  * stamped with — see [reslotIfSlotChanged] for why that record exists and why it is not
  * [com.coparently.app.domain.model.User.role].
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8g). The two statements run in one transaction
+ * through [EventDao.reslotOwnerAndPickup], Room's own on both platforms, where this class used to
+ * open it with Android's `RoomDatabase.withTransaction`; so it no longer takes the database.
  */
 class ParentSlotMigrator(
-    private val database: CoPlanlyDatabase,
     private val eventDao: EventDao,
     private val custodyModelRepository: CustodyModelRepository,
     private val encryptedPreferences: SecurePreferences
@@ -62,9 +63,7 @@ class ParentSlotMigrator(
     suspend fun reslot(from: String, to: String, myUid: String): Int {
         require(myUid.isNotBlank()) { "reslot needs a uid to scope by" }
         if (from == to) return 0
-        val changed = database.withTransaction {
-            eventDao.reslotOwner(from, to, myUid) + eventDao.reslotPickup(from, to, myUid)
-        }
+        val changed = eventDao.reslotOwnerAndPickup(from, to, myUid)
         encryptedPreferences.putString(slotMarkerKey(myUid), to)
         return changed
     }

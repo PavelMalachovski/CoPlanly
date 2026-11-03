@@ -465,7 +465,6 @@ class EmulatorParent private constructor(
         fcmService = fcmService,
         conflictResolver = ConflictResolver(),
         parentSlotMigrator = ParentSlotMigrator(
-            database = database,
             eventDao = database.eventDao(),
             custodyModelRepository = custodyRepository,
             encryptedPreferences = encryptedPreferences
