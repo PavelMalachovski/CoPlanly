@@ -9,6 +9,7 @@ import com.coparently.app.data.family.AgreementSignalSources
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
+import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.money.CurrencyHints
@@ -242,8 +243,8 @@ val repositoryDataModule: Module = module {
 
 /**
  * Which family is on screen and what it may show (MON-24 phase 2, Task 8c; CLAUDE.md items 43, 46,
- * 50): the switcher's selection, the view the repositories filter by, and each family's names and
- * slots as this phone last read them.
+ * 50): the switcher's selection, the view the repositories filter by, each family's names and
+ * slots as this phone last read them, and (Task 8h) what waits in the families not on screen.
  */
 val familyDataModule: Module = module {
     // The three agreements' listeners the other families' signals add per family (board SW-7).
@@ -253,6 +254,8 @@ val familyDataModule: Module = module {
     singleOf(::KnownFamilySlots)
     factory<FamilySlotsSource> { get<KnownFamilySlots>() }
     singleOf(::SelectedFamilySource)
+    // The switcher's dot: what waits in each family not on screen (design item 13; Task 8h).
+    singleOf(::OtherFamiliesSignals)
 }
 
 /**

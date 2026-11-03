@@ -1,5 +1,3 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.data.family
 
 import com.coparently.app.data.platform.logger
@@ -11,7 +9,6 @@ import com.coparently.app.data.repository.longOrNull
 import com.coparently.app.data.repository.markMap
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.support.SupportRead
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
@@ -32,6 +29,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -46,7 +44,9 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * One kind of news a family that is not on screen can have waiting (M-8). The switcher draws a
@@ -114,6 +114,10 @@ enum class FamilySignal {
  *   listener that gave up raises nothing until the switcher is next subscribed.
  *
  * It only reads: it never creates a conversation, a custody document or a settings document.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8h), with the request clocks it reads. "Today" for a
+ * day swap and "now" for a professional's grant are the system's, as `java.time`'s `LocalDate.now()`
+ * and `System.currentTimeMillis()` answered them here before.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OtherFamiliesSignals
@@ -183,7 +187,7 @@ constructor(
             custodyDataSource.observeCustody(family.familyId),
             clocksOf(myUid, family)
         ) { custody, clocks ->
-            hasPendingSchedule(custody, myUid, java.time.LocalDate.now().toKotlinLocalDate(), clocks)
+            hasPendingSchedule(custody, myUid, Clock.System.todayIn(TimeZone.currentSystemDefault()), clocks)
         }
             .bounded(FamilySignal.SCHEDULE)
         val split = combine(
@@ -208,7 +212,7 @@ constructor(
             .map { hasPendingSupport(it, myUid) }
             .bounded(FamilySignal.SUPPORT)
         val professional = agreementSources.professionalRepository.observeFamilyGrants(family.familyId)
-            .map { hasProfessionalWaiting(it, myUid, family.familyId, System.currentTimeMillis()) }
+            .map { hasProfessionalWaiting(it, myUid, family.familyId, Clock.System.now().toEpochMilliseconds()) }
             .bounded(FamilySignal.PROFESSIONAL)
         val plan = if (family.partnerUid.isBlank()) {
             flowOf(false)
@@ -400,8 +404,6 @@ constructor(
          * the one that does says it is open or in its last chance. [clockId] names the clock from
          * the family the two parents make.
          */
-        // `governing` is public in `:shared` only for its callers left in the app (MON-24).
-        @OptIn(InternalSharedApi::class)
         private fun stillWaits(clocks: ClocksAt, myUid: String, author: String, clockId: (String) -> String?): Boolean {
             val familyId = FamilyKey.orNull(myUid, author) ?: return true
             val scope = RequestScope(myUid, author, familyId, soleFamily = false)

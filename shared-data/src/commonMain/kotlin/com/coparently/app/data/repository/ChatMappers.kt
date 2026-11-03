@@ -25,8 +25,9 @@ import kotlinx.serialization.builtins.serializer
  * conversions instead of writing a second, subtly different set.
  *
  * In `:shared-data` since MON-24 phase 2 (Task 8b). The mappers a caller still in the app reads —
- * the export, the other families' signals, the R8 probe and the messages wire contract — are
- * public behind [InternalSharedApi] until those callers move; the rest stay `internal`.
+ * the export, the R8 probe and the messages wire contract — are public behind [InternalSharedApi]
+ * until those callers move; the rest stay `internal` (the mark mappers again since the other
+ * families' signals moved here, Task 8h).
  */
 
 /** A read or delivery mark map: uid -> epoch millis. */
@@ -176,8 +177,7 @@ internal fun Map<String, Any>.stringList(key: String): List<String> =
     (this[key] as? List<*>)?.filterIsInstance<String>().orEmpty()
 
 /** The document's [key] as a `{uid: epochMillis}` map, dropping entries of another shape. */
-@InternalSharedApi
-fun Map<String, Any>.markMap(key: String): Map<String, Long> =
+internal fun Map<String, Any>.markMap(key: String): Map<String, Long> =
     (this[key] as? Map<*, *>)
         ?.mapNotNull { (uid, mark) ->
             val id = uid as? String ?: return@mapNotNull null
@@ -188,8 +188,7 @@ fun Map<String, Any>.markMap(key: String): Map<String, Long> =
         .orEmpty()
 
 /** The document's [key] as a Long, or `null` when absent or not a number. */
-@InternalSharedApi
-fun Map<String, Any>.longOrNull(key: String): Long? = (this[key] as? Number)?.toLong()
+internal fun Map<String, Any>.longOrNull(key: String): Long? = (this[key] as? Number)?.toLong()
 
 /** The document's [key] as an ISO local date-time, or `null` when absent or unparseable. */
 internal fun Map<String, Any>.dateTimeOrNull(key: String): LocalDateTime? =

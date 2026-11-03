@@ -1,9 +1,5 @@
-// `governing` is public in `:shared` only for this file and one in the app (MON-24).
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.domain.changerequests
 
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.custody.DaySwapGroup

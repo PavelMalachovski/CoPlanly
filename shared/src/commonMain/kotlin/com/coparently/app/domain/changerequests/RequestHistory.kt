@@ -1,6 +1,5 @@
 package com.coparently.app.domain.changerequests
 
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.CustodyDecision
 import com.coparently.app.domain.custody.CustodyDecisionOutcome
 import com.coparently.app.domain.custody.CustodyProposal
@@ -125,7 +124,6 @@ data class HistoryEntry(
  * what happened and could disagree with the first. Only the latest custody decision and the latest
  * split decision are kept by their documents; older ones stay in the chat's cards.
  */
-@OptIn(InternalSharedApi::class)
 object RequestHistory {
 
     /**
@@ -333,7 +331,6 @@ object RequestHistory {
  * `RequestInbox` adds the pending proposals' rows with it; `internal` again since that moved here
  * too (MON-24 phase 2, Task 8e).
  */
-@OptIn(InternalSharedApi::class)
 internal object UnansweredRows {
 
     /**
@@ -436,11 +433,10 @@ internal object UnansweredRows {
  * other parent as its responder ([RequestClock.governs]). Null otherwise — no id, no such clock, or
  * one this phone must ignore — and the request is then placed as if it had none.
  *
- * Public because `OtherFamiliesSignals`, still in the app module (MON-24), places another family's
- * requests by it, as `RequestInbox` does here; [InternalSharedApi] keeps it from new callers until
- * that moves too and this is `internal` again.
+ * Public because `OtherFamiliesSignals`, in `:shared-data` (MON-24 phase 2, Task 8h), places
+ * another family's requests by it, as `RequestInbox` does here; `internal` stops at the module, so
+ * it cannot be, and it no longer waits on a caller in the app.
  */
-@InternalSharedApi
 fun ClocksAt.governing(scope: RequestScope, clockId: String?, authorUid: String?): TimedRequest? {
     val timed = timed(clockId) ?: return null
     val author = authorUid?.takeIf { scope.isPair(it) } ?: return null

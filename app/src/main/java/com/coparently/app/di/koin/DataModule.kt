@@ -14,7 +14,6 @@ import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
-import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.files.RecordPhotoImageLoader
 import com.coparently.app.data.files.SharedFileCache
@@ -93,7 +92,6 @@ val dataModule = module {
     singleOf(::ExportReceipts)
     singleOf(::OptionalRecordSections)
     singleOf(::ParentingPlanRecordSource)
-    singleOf(::OtherFamiliesSignals)
     singleOf(::UnassignedRecords)
     singleOf(::RecordPhotoImageLoader)
     singleOf(::SharedFileCache)
