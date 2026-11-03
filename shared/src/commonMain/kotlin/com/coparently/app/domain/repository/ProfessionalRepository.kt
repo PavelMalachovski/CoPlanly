@@ -8,7 +8,7 @@ import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Professional access to one family (MON-18): a mediator, lawyer, guardian ad litem or therapist

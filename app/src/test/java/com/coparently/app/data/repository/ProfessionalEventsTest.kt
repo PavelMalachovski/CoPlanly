@@ -1,10 +1,9 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.domain.events.EventAcceptance
-import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 
 /**
@@ -13,8 +12,8 @@ import kotlin.test.assertEquals
  */
 class ProfessionalEventsTest {
 
-    private val from = LocalDate.of(2026, 10, 1)
-    private val to = LocalDate.of(2026, 10, 28)
+    private val from = LocalDate(2026, 10, 1)
+    private val to = LocalDate(2026, 10, 28)
 
     private fun doc(id: String, start: String, vararg overrides: Pair<String, Any?>): Map<String, Any?> = mapOf(
         "id" to id,
@@ -100,7 +99,7 @@ class ProfessionalEventsTest {
         assertEquals("f1", event.friendParticipates)
         assertEquals(EventAcceptance.ACCEPTED, event.acceptance)
         assertEquals("b", event.acceptedBy)
-        assertEquals(LocalDateTime.of(2026, 9, 2, 8, 30).toKotlinLocalDateTime(), event.acceptedAt)
+        assertEquals(LocalDateTime(2026, 9, 2, 8, 30), event.acceptedAt)
         assertEquals("b", event.lastModifiedBy)
     }
 

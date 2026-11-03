@@ -1,9 +1,9 @@
 package com.coparently.app.domain.guests
 
-import org.junit.Test
-import java.time.Instant
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /** The choices a parent is offered, and the one choice they are not. */
 class GuestAccessDurationTest {
@@ -11,18 +11,26 @@ class GuestAccessDurationTest {
     private val now: Instant = Instant.parse("2026-08-23T09:30:00Z")
 
     @Test
-    fun `every choice ends, and ends in the future`() {
+    fun `every choice ends - and ends in the future`() {
         // The property that matters. If any entry here ever produced a non-positive or
         // already-past expiry, GuestGrantPolicy would read the grant it created as expired
         // and the parent would be told they had let somebody in who could not get in.
         GuestAccessDuration.entries.forEach { choice ->
             val expiry = choice.expiryFrom(now)
-            assertTrue(expiry > now.toEpochMilli(), "${choice.name} does not end in the future")
+            assertTrue(expiry > now.toEpochMilliseconds(), "${choice.name} does not end in the future")
             assertTrue(
                 GuestGrantPolicy.isActive(grant(expiry), at = now),
                 "${choice.name} produces a grant that is already inactive"
             )
         }
+    }
+
+    @Test
+    fun `each choice ends that many days from now`() {
+        // As java.time's Instant.plus(Duration.ofDays(n)).toEpochMilli() computed them.
+        assertEquals(1_788_082_200_000L, GuestAccessDuration.WEEK.expiryFrom(now))
+        assertEquals(1_790_069_400_000L, GuestAccessDuration.MONTH.expiryFrom(now))
+        assertEquals(1_795_253_400_000L, GuestAccessDuration.QUARTER.expiryFrom(now))
     }
 
     @Test
@@ -45,7 +53,7 @@ class GuestAccessDurationTest {
         uid = "gran-uid",
         name = "Nina",
         grantedBy = "alice-uid",
-        grantedAtMillis = now.toEpochMilli(),
+        grantedAtMillis = now.toEpochMilliseconds(),
         expiresAtMillis = expiresAtMillis
     )
 }

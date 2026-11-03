@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /** What the professional's calendar is showing. */
@@ -73,7 +74,7 @@ class ProfessionalCalendarViewModel(
             } else {
                 val end = start.plusDays(WINDOW_DAYS - 1)
                 combine(
-                    repository.observeFamilyEvents(g, start, end),
+                    repository.observeFamilyEvents(g, start.toKotlinLocalDate(), end.toKotlinLocalDate()),
                     repository.observeCustody(g)
                 ) { events, custody ->
                     ProfessionalCalendarUiState.Ready(

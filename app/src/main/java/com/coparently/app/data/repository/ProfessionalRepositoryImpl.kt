@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import java.util.UUID
 
 /**

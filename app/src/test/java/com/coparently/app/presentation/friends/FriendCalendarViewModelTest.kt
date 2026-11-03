@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
@@ -171,8 +172,8 @@ class FriendCalendarViewModelTest {
 
     @Test
     fun `paging moves the window by four weeks`() = runTest(dispatcher) {
-        val froms = mutableListOf<LocalDate>()
-        val tos = mutableListOf<LocalDate>()
+        val froms = mutableListOf<kotlinx.datetime.LocalDate>()
+        val tos = mutableListOf<kotlinx.datetime.LocalDate>()
         val repository = mockk<FriendRepository> {
             every { observeMyGrants() } returns flowOf(listOf(grant))
             every { observeFamilyEvents(FAMILY_ID, capture(froms), capture(tos)) } returns
@@ -187,10 +188,10 @@ class FriendCalendarViewModelTest {
         model.previous()
         advanceUntilIdle()
 
-        val today = froms.first()
+        val today = froms.first().toJavaLocalDate()
         assertEquals(LocalDate.now(), today)
-        assertEquals(listOf(today, today.plusDays(28), today), froms)
-        assertEquals(today.plusDays(27), tos.first())
+        assertEquals(listOf(today, today.plusDays(28), today), froms.map { it.toJavaLocalDate() })
+        assertEquals(today.plusDays(27), tos.first().toJavaLocalDate())
         assertEquals(today, assertIs<FriendCalendarUiState.Ready>(model.uiState.value).days.first().date)
     }
 

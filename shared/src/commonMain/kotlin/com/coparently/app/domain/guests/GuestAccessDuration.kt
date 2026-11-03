@@ -1,7 +1,9 @@
 package com.coparently.app.domain.guests
 
-import java.time.Duration
-import java.time.Instant
+import com.coparently.app.domain.time.toEpochMillisExact
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 /**
  * The lengths of guest access a parent can pick from when they invite somebody.
@@ -18,16 +20,16 @@ import java.time.Instant
 enum class GuestAccessDuration(val duration: Duration) {
 
     /** A visit. */
-    WEEK(Duration.ofDays(7)),
+    WEEK(7.days),
 
     /** The default — see [GuestGrantPolicy.DEFAULT_DURATION]. */
     MONTH(GuestGrantPolicy.DEFAULT_DURATION),
 
     /** A school term, roughly. The longest on offer. */
-    QUARTER(Duration.ofDays(90));
+    QUARTER(90.days);
 
     /** The expiry to put on a grant offered at [from], as epoch milliseconds. */
-    fun expiryFrom(from: Instant): Long = from.plus(duration).toEpochMilli()
+    fun expiryFrom(from: Instant): Long = (from + duration).toEpochMillisExact()
 
     companion object {
         /** What the invite sheet starts on. */

@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
+import kotlin.time.Clock
 
 /**
  * Why a photograph did not make it on or off the record.
@@ -207,7 +207,7 @@ class ChildInfoViewModel(
     /**
      * Mints the invitation, using the length currently chosen.
      *
-     * The expiry is computed here, from `Instant.now()`, rather than by the repository or the
+     * The expiry is computed here, from `Clock.System.now()`, rather than by the repository or the
      * callable: it is the parent's choice, and it has to be the same value the sheet has been
      * showing them. Recomputing it further down would silently move the date they agreed to.
      */
@@ -218,7 +218,7 @@ class ChildInfoViewModel(
         viewModelScope.launch {
             val result = guestRepository.inviteGuest(
                 childInfoId = current.childInfoId,
-                grantExpiresAtMillis = current.duration.expiryFrom(Instant.now())
+                grantExpiresAtMillis = current.duration.expiryFrom(Clock.System.now())
             )
             _guestInvite.value = result.fold(
                 onSuccess = { _guestInvite.value.copy(isBusy = false, invite = it) },

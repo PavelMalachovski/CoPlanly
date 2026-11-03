@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /** What a family friend's calendar is showing. */
@@ -90,7 +91,8 @@ class FriendCalendarViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val read: Flow<Pair<LocalDate, FriendCalendarRead>> = combine(windowStart, attempt) { start, _ -> start }
         .flatMapLatest { start ->
-            friendRepository.observeFamilyEvents(familyId, start, start.plusDays(WINDOW_DAYS - 1L))
+            val last = start.plusDays(WINDOW_DAYS - 1L)
+            friendRepository.observeFamilyEvents(familyId, start.toKotlinLocalDate(), last.toKotlinLocalDate())
                 .map { start to it }
         }
 

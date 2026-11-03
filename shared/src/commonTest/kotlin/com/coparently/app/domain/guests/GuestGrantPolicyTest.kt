@@ -1,12 +1,15 @@
 package com.coparently.app.domain.guests
 
-import org.junit.Test
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZonedDateTime
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Whether a guest may still read a child's record.
@@ -14,6 +17,9 @@ import kotlin.test.assertTrue
  * Every case here decides access to a child's medical record, so the rule throughout is **fail
  * closed**: anything this cannot make sense of is inactive. An expiry that silently reads as
  * "never" is the failure that leaves a grandparent's weekend access in place for good.
+ *
+ * The expected milliseconds were computed with `java.time`, which this policy used until MON-24
+ * phase 2 (Task 8e).
  */
 class GuestGrantPolicyTest {
 
@@ -21,12 +27,12 @@ class GuestGrantPolicyTest {
 
     @Test
     fun `a grant is active before it expires`() {
-        assertTrue(GuestGrantPolicy.isActive(grant(), at = expiry.minusSeconds(1)))
+        assertTrue(GuestGrantPolicy.isActive(grant(), at = expiry - 1.seconds))
     }
 
     @Test
     fun `a grant is inactive after it expires`() {
-        assertFalse(GuestGrantPolicy.isActive(grant(), at = expiry.plusSeconds(1)))
+        assertFalse(GuestGrantPolicy.isActive(grant(), at = expiry + 1.seconds))
     }
 
     @Test
@@ -38,7 +44,7 @@ class GuestGrantPolicyTest {
     }
 
     @Test
-    fun `an expiry that is not a time at all is inactive, never active`() {
+    fun `an expiry that is not a time at all is inactive - never active`() {
         // A field that was absent, defaulted, or written by something that did not know it had
         // to fill it in. Reading zero as "no expiry" would turn a weekend into forever.
         assertFalse(GuestGrantPolicy.isActive(grant(expiresAtMillis = 0L), at = expiry))
@@ -51,25 +57,24 @@ class GuestGrantPolicyTest {
         // which can pick the wrong winner by exactly the offset between two parents. An expiry
         // decides who may read a child's medical record; it must not depend on where the reader
         // is standing. Millis names one instant and there is no zone to get wrong.
-        val ends = ZonedDateTime.of(2026, 9, 1, 14, 0, 0, 0, ZoneId.of("Europe/Prague")).toInstant()
-        val grant = grant(expiresAtMillis = ends.toEpochMilli())
-        val inPrague = ZonedDateTime.of(2026, 9, 1, 13, 0, 0, 0, ZoneId.of("Europe/Prague"))
-        val inTokyo = inPrague.withZoneSameInstant(ZoneId.of("Asia/Tokyo"))
+        val prague = TimeZone.of("Europe/Prague")
+        val ends = LocalDateTime(2026, 9, 1, 14, 0).toInstant(prague)
+        val grant = grant(expiresAtMillis = ends.toEpochMilliseconds())
+        val inPrague = LocalDateTime(2026, 9, 1, 13, 0).toInstant(prague)
+        val inTokyo = LocalDateTime(2026, 9, 1, 20, 0).toInstant(TimeZone.of("Asia/Tokyo"))
 
-        assertEquals(inPrague.toInstant(), inTokyo.toInstant())
-        assertTrue(GuestGrantPolicy.isActive(grant, at = inPrague.toInstant()))
-        assertTrue(GuestGrantPolicy.isActive(grant, at = inTokyo.toInstant()))
+        assertEquals(inPrague, inTokyo)
+        assertTrue(GuestGrantPolicy.isActive(grant, at = inPrague))
+        assertTrue(GuestGrantPolicy.isActive(grant, at = inTokyo))
 
-        assertFalse(GuestGrantPolicy.isActive(grant, at = inPrague.plusHours(2).toInstant()))
+        assertFalse(GuestGrantPolicy.isActive(grant, at = inPrague + 2.hours))
     }
 
     @Test
     fun `the default expiry is thirty days out`() {
         val granted = Instant.parse("2026-08-23T09:30:00Z")
 
-        val expires = GuestGrantPolicy.defaultExpiry(from = granted)
-
-        assertEquals(granted.plusSeconds(30L * 24 * 60 * 60).toEpochMilli(), expires)
+        assertEquals(1_790_069_400_000L, GuestGrantPolicy.defaultExpiry(from = granted))
     }
 
     @Test
@@ -78,7 +83,7 @@ class GuestGrantPolicyTest {
         val grant = grant(expiresAtMillis = GuestGrantPolicy.defaultExpiry(from = granted))
 
         assertTrue(GuestGrantPolicy.isActive(grant, at = granted))
-        assertFalse(GuestGrantPolicy.isActive(grant, at = granted.plusSeconds(31L * 24 * 60 * 60)))
+        assertFalse(GuestGrantPolicy.isActive(grant, at = granted + (31L * 24 * 60 * 60).seconds))
     }
 
     @Test
@@ -86,12 +91,12 @@ class GuestGrantPolicyTest {
         val active = grant(uid = "gran-uid")
         val expired = grant(
             uid = "old-uid",
-            expiresAtMillis = Instant.parse("2026-08-01T00:00:00Z").toEpochMilli()
+            expiresAtMillis = Instant.parse("2026-08-01T00:00:00Z").toEpochMilliseconds()
         )
 
         val visible = GuestGrantPolicy.active(
             listOf(active, expired),
-            at = expiry.minusSeconds(1)
+            at = expiry - 1.seconds
         )
 
         assertEquals(listOf("gran-uid"), visible.map { it.uid })
@@ -99,12 +104,12 @@ class GuestGrantPolicyTest {
 
     private fun grant(
         uid: String = "gran-uid",
-        expiresAtMillis: Long = Instant.parse("2026-09-01T12:00:00Z").toEpochMilli()
+        expiresAtMillis: Long = 1_788_264_000_000L
     ) = GuestGrant(
         uid = uid,
         name = "Nina",
         grantedBy = "alice-uid",
-        grantedAtMillis = Instant.parse("2026-08-23T09:30:00Z").toEpochMilli(),
+        grantedAtMillis = 1_787_477_400_000L,
         expiresAtMillis = expiresAtMillis
     )
 }

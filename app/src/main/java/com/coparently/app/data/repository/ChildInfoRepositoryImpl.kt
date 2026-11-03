@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
-import java.time.Instant
+import kotlin.time.Clock
 
 /**
  * Implementation of [ChildInfoRepository].
@@ -267,7 +267,7 @@ class ChildInfoRepositoryImpl(
      * still sitting in the audience — is what the sweep exists to clean up.
      */
     private fun activeGuestUids(childInfo: ChildInfo): List<String> =
-        GuestGrantPolicy.active(childInfo.guests.values.toList(), Instant.now()).map { it.uid }
+        GuestGrantPolicy.active(childInfo.guests.values.toList(), Clock.System.now()).map { it.uid }
 
     /**
      * Converts ChildInfoEntity to domain ChildInfo.

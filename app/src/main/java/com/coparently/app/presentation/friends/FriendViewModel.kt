@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
+import kotlin.time.Clock
 
 /**
  * The friend-invite sheet's state.
@@ -131,7 +131,7 @@ class FriendViewModel(
         if (state.isBusy || state.invite != null) return
         _invite.value = state.copy(isBusy = true, errorRes = null)
         viewModelScope.launch {
-            friendRepository.inviteFriend(state.duration.expiryFrom(Instant.now())).fold(
+            friendRepository.inviteFriend(state.duration.expiryFrom(Clock.System.now())).fold(
                 onSuccess = { created ->
                     _invite.update { it.copy(invite = created, isBusy = false) }
                 },

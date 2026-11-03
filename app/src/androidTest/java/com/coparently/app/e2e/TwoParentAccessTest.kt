@@ -244,8 +244,8 @@ class TwoParentAccessTest : TwoParentTest() {
         assertEquals(mapOf(alice.uid to "Alice", bob.uid to "Bob"), grant.parentNames)
 
         EmulatorEnvironment.step("Grandma's calendar holds the shared event and nothing else of Alice's")
-        val today = LocalDate.now()
-        val lastDay = today.plusDays(FRIEND_WINDOW_DAYS)
+        val today = LocalDate.now().toKotlinLocalDate()
+        val lastDay = LocalDate.now().plusDays(FRIEND_WINDOW_DAYS).toKotlinLocalDate()
         val read = withTimeout(EmulatorParent.WAIT_MS) {
             grandma.friendRepository.observeFamilyEvents(grant.familyId, today, lastDay).first()
         }
@@ -618,8 +618,8 @@ class TwoParentAccessTest : TwoParentTest() {
         assertNotNull(custody)
     }
 
-    private fun window(): Pair<LocalDate, LocalDate> =
-        LocalDate.now().minusDays(1) to LocalDate.now().plusDays(PERIOD_DAYS)
+    private fun window(): Pair<kotlinx.datetime.LocalDate, kotlinx.datetime.LocalDate> =
+        LocalDate.now().minusDays(1).toKotlinLocalDate() to LocalDate.now().plusDays(PERIOD_DAYS).toKotlinLocalDate()
 
     // ---- Shared helpers -----------------------------------------------------------------------
 

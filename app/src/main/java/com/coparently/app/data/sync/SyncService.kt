@@ -43,8 +43,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.time.Instant
 import java.time.LocalDateTime
+import kotlin.time.Clock
 
 /**
  * Service for managing synchronization between local database and Firestore.
@@ -694,7 +694,7 @@ class SyncService(
                     creatorUid = entity.createdByFirebaseUid,
                     partnerId = coParent,
                     guestUids = GuestGrantPolicy
-                        .active(guestsOf(entity).values.toList(), Instant.now())
+                        .active(guestsOf(entity).values.toList(), Clock.System.now())
                         .map { it.uid }
                 )
             )

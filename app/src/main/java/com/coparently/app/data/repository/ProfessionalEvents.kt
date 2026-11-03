@@ -10,9 +10,8 @@ import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.LAST_INSTANT_OF_DAY
 import com.coparently.app.domain.usecase.RecurrenceExpander
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.atTime
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
 
 /**
  * The events a professional's (MON-18) or a calendar friend's (phase 2) read-only calendar shows,
@@ -45,8 +44,8 @@ object ProfessionalEvents {
             .mapNotNull { runCatching { toEvent(it) }.getOrNull() }
         return RecurrenceExpander.expandAll(
             CalendarVisibility.visible(masters),
-            from.toKotlinLocalDate().atTime(0, 0),
-            to.toKotlinLocalDate().atTime(LAST_INSTANT_OF_DAY)
+            from.atTime(0, 0),
+            to.atTime(LAST_INSTANT_OF_DAY)
         )
     }
 

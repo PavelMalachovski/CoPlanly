@@ -47,6 +47,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.time.Clock
 
 /**
  * The family's children, one row each.
@@ -295,7 +296,7 @@ private fun GuestAccessGroup(
     // rule already refuses them and the sweep removes them — and offering a destructive
     // action that does nothing is worse than not listing them at all.
     val active = remember(guests) {
-        GuestGrantPolicy.active(guests.values.toList(), Instant.now())
+        GuestGrantPolicy.active(guests.values.toList(), Clock.System.now())
     }
     var pendingRevoke by remember { mutableStateOf<GuestGrant?>(null) }
 

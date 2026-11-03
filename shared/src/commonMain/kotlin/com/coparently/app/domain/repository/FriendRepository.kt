@@ -6,7 +6,7 @@ import com.coparently.app.domain.friends.FriendCalendarRead
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.guests.GuestInvite
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * Letting a trusted third person read the family's calendar, and their own profile.

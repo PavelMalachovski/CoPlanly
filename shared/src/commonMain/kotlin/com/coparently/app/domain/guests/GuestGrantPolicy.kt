@@ -1,7 +1,9 @@
 package com.coparently.app.domain.guests
 
-import java.time.Duration
-import java.time.Instant
+import com.coparently.app.domain.time.toEpochMillisExact
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 /**
  * Whether a [GuestGrant] is still good, and how long a new one lasts.
@@ -17,6 +19,10 @@ import java.time.Instant
  * expiry this cannot make sense of is treated as already past, never as absent: reading a missing
  * or nonsensical value as "no expiry" would turn a grandparent's weekend into a permanent grant,
  * and it would do it silently.
+ *
+ * On `kotlin.time` since MON-24 phase 2 (Task 8e), where it was `java.time`: a duration of whole
+ * days is the same milliseconds, and [toEpochMillisExact] is `Instant.toEpochMilli`, which throws
+ * rather than saturates.
  */
 object GuestGrantPolicy {
 
@@ -27,7 +33,7 @@ object GuestGrantPolicy {
      * month is long enough that nobody has to renew it mid-visit while being short enough that
      * a forgotten grant ends on its own.
      */
-    val DEFAULT_DURATION: Duration = Duration.ofDays(30)
+    val DEFAULT_DURATION: Duration = DEFAULT_DAYS.days
 
     /**
      * Whether [grant] may still be used at [at].
@@ -41,7 +47,7 @@ object GuestGrantPolicy {
      * written by something that did not know it had to fill it in. Treated as expired.
      */
     fun isActive(grant: GuestGrant, at: Instant): Boolean =
-        grant.expiresAtMillis > 0L && at.toEpochMilli() < grant.expiresAtMillis
+        grant.expiresAtMillis > 0L && at.toEpochMillisExact() < grant.expiresAtMillis
 
     /** The grants of a record that are still good at [at], in the order given. */
     fun active(grants: List<GuestGrant>, at: Instant): List<GuestGrant> =
@@ -54,5 +60,7 @@ object GuestGrantPolicy {
      * rule and by a scheduled function, and rules cannot parse a string into a timestamp — see
      * [GuestGrant.expiresAtMillis].
      */
-    fun defaultExpiry(from: Instant): Long = from.plus(DEFAULT_DURATION).toEpochMilli()
+    fun defaultExpiry(from: Instant): Long = (from + DEFAULT_DURATION).toEpochMillisExact()
+
+    private const val DEFAULT_DAYS = 30
 }

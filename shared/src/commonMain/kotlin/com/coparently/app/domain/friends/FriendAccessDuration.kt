@@ -1,8 +1,10 @@
 package com.coparently.app.domain.friends
 
 import com.coparently.app.domain.guests.GuestGrantPolicy
-import java.time.Duration
-import java.time.Instant
+import com.coparently.app.domain.time.toEpochMillisExact
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 // File-level, not in the companion: an enum's entries are built before its companion object is.
 private const val WEEK_DAYS = 7L
@@ -24,19 +26,20 @@ private const val QUARTER_DAYS = 90L
 enum class FriendAccessDuration(private val duration: Duration?) {
 
     /** A visit. */
-    WEEK(Duration.ofDays(WEEK_DAYS)),
+    WEEK(WEEK_DAYS.days),
 
     /** The default, as for a guest. */
     MONTH(GuestGrantPolicy.DEFAULT_DURATION),
 
     /** A school term, roughly. */
-    QUARTER(Duration.ofDays(QUARTER_DAYS)),
+    QUARTER(QUARTER_DAYS.days),
 
     /** Until the parents unlink or revoke it. */
     WHILE_LINKED(null);
 
     /** The expiry to put on a grant offered at [from], as epoch milliseconds. */
-    fun expiryFrom(from: Instant): Long = duration?.let { from.plus(it).toEpochMilli() } ?: WHILE_LINKED_EXPIRY_MILLIS
+    fun expiryFrom(from: Instant): Long =
+        duration?.let { (from + it).toEpochMillisExact() } ?: WHILE_LINKED_EXPIRY_MILLIS
 
     companion object {
         /** What the invite sheet starts on. */

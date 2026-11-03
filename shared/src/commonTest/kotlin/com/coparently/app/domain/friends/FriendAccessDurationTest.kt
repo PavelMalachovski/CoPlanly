@@ -1,11 +1,10 @@
 package com.coparently.app.domain.friends
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import java.time.Duration
-import java.time.Instant
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 /** A family friend may be given a dated access or one that lasts while the parents are linked. */
 class FriendAccessDurationTest {
@@ -14,9 +13,10 @@ class FriendAccessDurationTest {
 
     @Test
     fun `dated choices end that many days from now`() {
-        assertEquals(now.plus(Duration.ofDays(7)).toEpochMilli(), FriendAccessDuration.WEEK.expiryFrom(now))
-        assertEquals(now.plus(Duration.ofDays(30)).toEpochMilli(), FriendAccessDuration.MONTH.expiryFrom(now))
-        assertEquals(now.plus(Duration.ofDays(90)).toEpochMilli(), FriendAccessDuration.QUARTER.expiryFrom(now))
+        // As java.time's Instant.plus(Duration.ofDays(n)).toEpochMilli() computed them.
+        assertEquals(1_793_095_200_000L, FriendAccessDuration.WEEK.expiryFrom(now))
+        assertEquals(1_795_082_400_000L, FriendAccessDuration.MONTH.expiryFrom(now))
+        assertEquals(1_800_266_400_000L, FriendAccessDuration.QUARTER.expiryFrom(now))
     }
 
     @Test
@@ -29,7 +29,7 @@ class FriendAccessDurationTest {
     @Test
     fun `no dated choice reads as while linked`() {
         FriendAccessDuration.entries.filter { it != FriendAccessDuration.WHILE_LINKED }.forEach {
-            assertFalse(it.name, FriendAccessDuration.isWhileLinked(it.expiryFrom(now)))
+            assertFalse(FriendAccessDuration.isWhileLinked(it.expiryFrom(now)), it.name)
         }
     }
 

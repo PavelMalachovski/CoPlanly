@@ -383,8 +383,8 @@ class FamilyIsolationTest : TwoParentTest() {
 
     /** The positive control: each outsider of family B still reads what B gave them. */
     private suspend fun assertOutsidersStillReadFamilyB(outsiders: Outsiders, familyB: String, inB: FamilyRecords) {
-        val from = LocalDate.now().minusDays(1)
-        val to = LocalDate.now().plusDays(WINDOW_DAYS)
+        val from = LocalDate.now().minusDays(1).toKotlinLocalDate()
+        val to = LocalDate.now().plusDays(WINDOW_DAYS).toKotlinLocalDate()
         val bEventIds = inB.events.map { it.id }.toSet()
         withTimeout(EmulatorParent.WAIT_MS) {
             outsiders.friend.friendRepository.observeFamilyEvents(familyB, from, to).first { read ->
