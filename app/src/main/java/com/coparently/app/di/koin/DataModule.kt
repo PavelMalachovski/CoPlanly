@@ -70,7 +70,6 @@ import com.coparently.app.data.requests.RequestClockSteps
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestNotices
 import com.coparently.app.data.requests.RequestRecords
-import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.data.school.SchoolAccounts
 import com.coparently.app.data.school.SchoolConnectionStore
@@ -202,7 +201,6 @@ val dataModule = module {
     singleOf(::RequestClocks)
     singleOf(::RequestNotices)
     singleOf(::RequestRecords)
-    singleOf(::RequestTelling)
     single { RequestTime() }
     singleOf(::SchoolAccounts)
     singleOf(::SchoolConnectionStore)

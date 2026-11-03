@@ -29,6 +29,7 @@ import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
+import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
@@ -126,6 +127,14 @@ val chatDataModule: Module = module {
 }
 
 /**
+ * What the request clocks' background steps say to the answering parent (phase 3a; MON-24 phase 2,
+ * Task 8c). The clocks' keeper, steps and notices are still bound in the app's `dataModule`.
+ */
+val requestsDataModule: Module = module {
+    singleOf(::RequestTelling)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -135,7 +144,8 @@ val dataModules: List<Module> = listOf(
     versionsDataModule,
     repositoryDataModule,
     familyDataModule,
-    chatDataModule
+    chatDataModule,
+    requestsDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,

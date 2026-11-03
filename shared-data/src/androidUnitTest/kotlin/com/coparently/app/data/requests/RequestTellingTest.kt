@@ -1,8 +1,8 @@
 package com.coparently.app.data.requests
 
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -10,7 +10,6 @@ import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestDeadlineId
 import com.coparently.app.domain.changerequests.RequestKind
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -30,8 +29,8 @@ import org.junit.Test
 class RequestTellingTest {
 
     private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
-    private val fcmService = mockk<FcmService>()
-    private val authService = mockk<FirebaseAuthService>()
+    private val fcmService = mockk<PushQueue>()
+    private val authService = mockk<SignedInUser>()
     private val telling = RequestTelling(announcer, fcmService, authService)
 
     private val clock = RequestDeadline(
@@ -46,8 +45,7 @@ class RequestTellingTest {
     private val card = CardSubject(ActivityEntityType.CHANGE_REQUEST, "ev-9", "Dentist")
 
     init {
-        val user = mockk<FirebaseUser> { every { displayName } returns "Alice" }
-        every { authService.getCurrentUser() } returns user
+        every { authService.getCurrentDisplayName() } returns "Alice"
         coEvery { fcmService.queueNotificationForUser(any(), any()) } returns Result.success(Unit)
     }
 

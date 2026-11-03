@@ -1,9 +1,9 @@
 package com.coparently.app.data.requests
 
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
@@ -22,8 +22,8 @@ import com.coparently.app.domain.changerequests.RequestDeadline
  */
 class RequestTelling(
     private val activityAnnouncer: ActivityAnnouncer,
-    private val fcmService: FcmService,
-    private val authService: FirebaseAuthService
+    private val fcmService: PushQueue,
+    private val authService: SignedInUser
 ) {
 
     /**
@@ -62,7 +62,7 @@ class RequestTelling(
     }
 
     /** The signed-in parent's display name, for the push and the bubble; blank is tolerated. */
-    private fun senderName(): String = authService.getCurrentUser()?.displayName.orEmpty()
+    private fun senderName(): String = authService.getCurrentDisplayName().orEmpty()
 
     private companion object {
         const val TAG = "RequestTelling"
