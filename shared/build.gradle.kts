@@ -3,8 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // The shared Kotlin Multiplatform module (MON-24, phase 1 of the iPhone app;
 // docs/superpowers/specs/2026-10-27-iphone-app-design.md §5.1). It holds the domain both apps
 // run: the Android app depends on it (`implementation(project(":shared"))`) and the iPhone app
-// links the `Shared` framework below. A file moved here keeps its package
-// (`com.coparently.app.domain.…`), so no importer in the app changes.
+// reaches it through `:shared-ui`'s `Shared` framework, which exports it. A file moved here keeps
+// its package (`com.coparently.app.domain.…`), so no importer in the app changes.
 //
 // Android is an ordinary `androidTarget()` on the `com.android.library` plugin the root declares
 // (AGP 8.10). The AGP 9 `com.android.kotlin.multiplatform.library` plugin is a later move, with
@@ -26,14 +26,12 @@ kotlin {
 
     // The iPhone app's targets: a device and the Apple-silicon simulator. Since Kotlin 2.2.20
     // a Linux host compiles their klibs (`compileKotlinIosSimulatorArm64`) without any flag, so
-    // the Linux `shared` job checks that the code compiles for iOS; linking the framework and
-    // running the tests on a simulator need Xcode, which is the Mac's `shared-ios` job.
-    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
-        target.binaries.framework {
-            baseName = "Shared"
-            isStatic = true
-        }
-    }
+    // the Linux `shared` job checks that the code compiles for iOS; running the tests on a
+    // simulator needs Xcode, which is the hosted macOS `shared-ios` job. This module makes no
+    // framework of its own since MON-24 phase 2 (Task 9): `:shared-ui`'s `Shared` framework, the one
+    // the iPhone app links, exports it.
+    iosArm64()
+    iosSimulatorArm64()
 
     // `expect object` (Sha256, Lzma1Raw) is a Beta feature that warns on every build without this
     // flag; an object is the shape the brief names, so the warning is acknowledged here once.

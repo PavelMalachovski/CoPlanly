@@ -357,6 +357,10 @@ dependencies {
     // joins the same report.
     implementation(project(":shared-data"))
     kover(project(":shared-data"))
+    // The UI both apps share (MON-24 phase 2, Task 9): so far the strings, as Compose
+    // Multiplatform resources (`Res`, which the parity tests read). The app reads the same files
+    // as Android resources through `tools/strings-to-android-res.gradle.kts`, applied below.
+    implementation(project(":shared-ui"))
 
     // Core Android - Updated to latest stable versions
     implementation("androidx.core:core-ktx:1.13.1")
@@ -670,16 +674,18 @@ dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
 }
 
-// One baseline for every module (MON-24): `:shared:detekt` and `:shared-data:detekt` read this
-// module's baseline file, and detekt's `detektBaseline` *replaces* a file's findings with the ones
-// it found in its own run. So the other modules' baseline tasks are switched off (their build
-// files) and this one also reads their sources, which makes `./gradlew detektBaseline` (the
-// Regenerate workflow) write one file holding every module's accepted findings. An entry names a
-// file and a signature, never a directory, so a file moved into `shared/` or `shared-data/` keeps
-// the entry it had.
+// One baseline for every module (MON-24): `:shared:detekt`, `:shared-data:detekt` and
+// `:shared-ui:detekt` read this module's baseline file, and detekt's `detektBaseline` *replaces* a
+// file's findings with the ones it found in its own run. So the other modules' baseline tasks are
+// switched off (their build files) and this one also reads their sources, which makes
+// `./gradlew detektBaseline` (the Regenerate workflow) write one file holding every module's
+// accepted findings. An entry names a
+// file and a signature, never a directory, so a file moved into `shared/`, `shared-data/` or
+// `shared-ui/` keeps the entry it had.
 tasks.named<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>("detektBaseline") {
     source(rootProject.layout.projectDirectory.dir("shared/src"))
     source(rootProject.layout.projectDirectory.dir("shared-data/src"))
+    source(rootProject.layout.projectDirectory.dir("shared-ui/src"))
 }
 
 // Screenshots are recorded into, and verified against, the committed baselines in

@@ -21,6 +21,13 @@ plugins {
     id("com.android.library") version "8.10.1" apply false
     id("com.google.gms.google-services") version "4.4.2" apply false
     id("com.google.firebase.crashlytics") version "3.0.2" apply false
+    // Compose Multiplatform (MON-24 phase 2, Task 9): `:shared-ui`'s resources now, its screens
+    // later. 1.9.3, not 1.10: 1.10 pulls Compose 1.10 past the app's BOM (2025.10.00, Compose 1.9.3
+    // and Material 3 1.4.0), which would move every screenshot baseline inside a build change, the
+    // reason Koin waits at 4.1.1 too. 1.9.3's Android artifacts ask for androidx Compose 1.9.4, one
+    // patch above the BOM (see shared-ui/build.gradle.kts). The Compose compiler stays the
+    // `org.jetbrains.kotlin.plugin.compose` above, at the Kotlin version.
+    id("org.jetbrains.compose") version "1.9.3" apply false
     id("io.gitlab.arturbosch.detekt") version "1.23.7" apply false
     // JVM screenshot tests (Robolectric, no emulator). From 1.61.0 the library and the plugin are
     // compiled with Kotlin 2.3 (metadata 2.3.0), so the project's Kotlin must be 2.3 or later:
