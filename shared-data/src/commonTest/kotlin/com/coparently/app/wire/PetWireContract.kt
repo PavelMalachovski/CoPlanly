@@ -2,7 +2,10 @@
 
 package com.coparently.app.wire
 
-import com.coparently.app.data.repository.PetRepositoryImpl
+import com.coparently.app.data.repository.toDomain
+import com.coparently.app.data.repository.toEntity
+import com.coparently.app.data.repository.toFirestoreMap
+import com.coparently.app.data.repository.toPet
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
@@ -10,17 +13,20 @@ import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.model.PetSpecies
 import com.coparently.app.domain.model.Vaccination
-import io.mockk.mockk
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
- * `pets`: read by `PetRepositoryImpl.toPet` (the pull), stored through Room (`toEntity`/
- * `toDomain`) and written back by `toFirestoreMap` with `set()`.
+ * `pets`: read by `toPet` (`PetRepositoryImpl`'s pull), stored through Room (`toEntity`/
+ * `toDomain`) and written back by `toFirestoreMap` with `set()` — the mappers in `PetMappers.kt`,
+ * top-level since MON-24 phase 2 (Task 8d), so this contract needs no repository and runs on the
+ * iPhone's simulator too.
+ *
+ * It reads in any zone: a pet's `updatedAt` is a UTC instant on the wire and a wall clock in the
+ * domain, so the current write's wall clock is made from that instant in the zone it runs in, and
+ * the read reports the instant. The app's run, in UTC, writes the same document as before.
  */
 internal object PetWireContract : WireContract {
-
-    private val repository by lazy { PetRepositoryImpl(mockk(), mockk(), mockk(), mockk()) }
 
     override val collection = "pets"
 
@@ -30,7 +36,7 @@ internal object PetWireContract : WireContract {
 
     override fun read(document: Map<String, Any?>): Map<String, Any?>? {
         if (Tombstone.isDeleted(document)) return mapOf("id" to document["id"], "deleted" to true)
-        val pet = runCatching { with(repository) { document.toPet() } }.getOrNull() ?: return null
+        val pet = runCatching { document.toPet() }.getOrNull() ?: return null
         return mapOf(
             "id" to pet.id,
             "name" to pet.name,
@@ -47,14 +53,14 @@ internal object PetWireContract : WireContract {
     override fun roundTrip(document: Map<String, Any?>): Map<String, Any?>? {
         if (Tombstone.isDeleted(document)) return null
         val audience = (document["sharedWith"] as? List<*>).orEmpty().filterIsInstance<String>()
-        return with(repository) { document.toPet().toEntity().toDomain().toFirestoreMap(audience) }
+        return document.toPet().toEntity().toDomain().toFirestoreMap(audience)
     }
 
     override fun currentWrites(): List<CurrentWrite> = listOf(
         CurrentWrite(
             case = "repository-save",
             about = "PetRepositoryImpl's upsert document: a medication, a dated vaccination, a photo.",
-            document = with(repository) { pet().toFirestoreMap(listOf("uidA", "uidB")) }
+            document = pet().toFirestoreMap(listOf("uidA", "uidB"))
         )
     )
 
@@ -72,7 +78,8 @@ internal object PetWireContract : WireContract {
                 "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
         ),
         createdAt = LocalDateTime(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime(2026, 5, 2, 18, 45, 10),
+        // 2026-05-02T18:45:10Z, as this phone's wall clock (see the KDoc).
+        updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire("2026-05-02T18:45:10")),
         createdByFirebaseUid = "uidA",
         lastModifiedBy = "uidA",
         familyId = "uidA__uidB"

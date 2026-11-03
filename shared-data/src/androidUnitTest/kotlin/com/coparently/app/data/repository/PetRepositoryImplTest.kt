@@ -105,14 +105,14 @@ class PetRepositoryImplTest {
     @Test
     fun `a pull keeps an edit that has not gone up instead of replacing it with the server's copy`() =
         runTest {
-            val edited = with(repository) { pet().copy(name = "Rex (edited)").toEntity() }
+            val edited = pet().copy(name = "Rex (edited)").toEntity()
             // The upload half runs first and fails, so the edit is still unsynced when the
             // download half meets the older document.
             coEvery { petDao.getUnsyncedPets() } returns listOf(edited)
             coEvery { firestorePetDataSource.upsertPet(any(), any()) } returns
                 Result.failure(IOException("offline"))
             coEvery { petDao.getPetById(PET_ID) } returns edited
-            val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+            val document = pet().toFirestoreMap(listOf(ALICE))
             every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
             repository.pullOnce()
@@ -125,14 +125,12 @@ class PetRepositoryImplTest {
         runTest {
             // The rules refuse an upload that blanks a stamped family, so without this the edit
             // would be refused on every pass and never leave the phone.
-            val edited = with(repository) { pet().copy(name = "Rex (edited)").toEntity() }
+            val edited = pet().copy(name = "Rex (edited)").toEntity()
             coEvery { petDao.getUnsyncedPets() } returns listOf(edited)
             coEvery { firestorePetDataSource.upsertPet(any(), any()) } returns
                 Result.failure(IOException("denied"))
             coEvery { petDao.getPetById(PET_ID) } returns edited
-            val document = with(repository) {
-                pet().copy(familyId = BOB_FAMILY).toFirestoreMap(listOf(ALICE, BOB))
-            }
+            val document = pet().copy(familyId = BOB_FAMILY).toFirestoreMap(listOf(ALICE, BOB))
             every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
             repository.pullOnce()
@@ -148,7 +146,7 @@ class PetRepositoryImplTest {
     fun `a pull skips a document that does not parse and takes the rest`() = runTest {
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
-        val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+        val document = pet().toFirestoreMap(listOf(ALICE))
         every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(
             listOf(document + ("name" to 42L), document + ("id" to "pet-2"))
         )
@@ -179,7 +177,7 @@ class PetRepositoryImplTest {
     fun `an existing pet with no family keeps none and names no co-parent while there are two`() =
         runTest {
             coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB, CAROL), selected = CAROL)
-            coEvery { petDao.getPetById(PET_ID) } returns with(repository) { pet().toEntity() }
+            coEvery { petDao.getPetById(PET_ID) } returns pet().toEntity()
             coEvery { firestorePetDataSource.upsertPet(any(), any()) } returns Result.success(Unit)
 
             repository.upsertPet(pet().copy(feedingNotes = "Twice a day"))
@@ -198,9 +196,7 @@ class PetRepositoryImplTest {
             coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB, CAROL), selected = CAROL)
             coEvery { petDao.getUnsyncedPets() } returns emptyList()
             coEvery { petDao.getPetById(any()) } returns null
-            val document = with(repository) {
-                pet().copy(familyId = BOB_FAMILY).toFirestoreMap(listOf(ALICE))
-            }
+            val document = pet().copy(familyId = BOB_FAMILY).toFirestoreMap(listOf(ALICE))
             every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
             repository.pullOnce()
@@ -219,7 +215,7 @@ class PetRepositoryImplTest {
             coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB, CAROL), selected = CAROL)
             coEvery { petDao.getUnsyncedPets() } returns emptyList()
             coEvery { petDao.getPetById(any()) } returns null
-            val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+            val document = pet().toFirestoreMap(listOf(ALICE))
             every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
             repository.pullOnce()
@@ -236,7 +232,7 @@ class PetRepositoryImplTest {
         coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB), selected = BOB)
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
-        val document = with(repository) { pet().toFirestoreMap(listOf(ALICE)) }
+        val document = pet().toFirestoreMap(listOf(ALICE))
         every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
         repository.pullOnce()
@@ -249,9 +245,7 @@ class PetRepositoryImplTest {
         coEvery { userDao.getUserById(ALICE) } returns inFamilies(listOf(BOB), selected = BOB)
         coEvery { petDao.getUnsyncedPets() } returns emptyList()
         coEvery { petDao.getPetById(any()) } returns null
-        val document = with(repository) {
-            pet().copy(familyId = FamilyKey.of(ALICE, BOB)).toFirestoreMap(listOf(ALICE))
-        }
+        val document = pet().copy(familyId = FamilyKey.of(ALICE, BOB)).toFirestoreMap(listOf(ALICE))
         every { firestorePetDataSource.getPetsForParent(ALICE) } returns flowOf(listOf(document))
 
         repository.pullOnce()

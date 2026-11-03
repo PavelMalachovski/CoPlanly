@@ -12,20 +12,22 @@ package com.coparently.app.wire
  * the reading phone's zone, and only the app's suite, on the JVM, can set that zone to UTC for the
  * fixtures; here the simulator's zone would decide.
  *
- * And one contract stays in the app although its writer moved: `PetWireContract` (Task 8c). Its
- * reader and writer are member extensions of `PetRepositoryImpl`, and building a repository in
- * common code would take fakes of the Room DAOs and of the data source, which the app's tests get
- * from MockK. It runs from the app's list until those mappers leave the repository.
+ * `PetWireContract` joined in Task 8d, once the pet mappers left `PetRepositoryImpl` for top-level
+ * functions; it reads its one wall clock in the zone it runs in (see its KDoc).
  */
 internal object WireContracts : WireSuite {
 
     override val all: List<WireContract> = listOf(
         CustodyWireContract,
+        PetWireContract,
         RequestDeadlineWireContract
     )
 
     override val complete: Boolean = false
 
-    /** These contracts read no wall clock: custody and clock times are UTC on the wire. */
+    /**
+     * These contracts read no wall clock: custody and clock times are UTC on the wire, and the pets
+     * contract makes its wall clock from a UTC instant in the zone it runs in.
+     */
     override fun <T> inReaderZone(block: () -> T): T = block()
 }
