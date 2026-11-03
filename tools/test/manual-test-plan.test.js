@@ -43,6 +43,8 @@ test('globs: ** spans segments, * stays within one, K/ is the Kotlin root', () =
   assert.ok(plan.globToRegExp('K/data/local/**').test(K + 'data/local/dao/EventDao.kt'));
   assert.ok(plan.globToRegExp('app/src/main/res/values*/**')
       .test('app/src/main/res/values-cs/chat_strings.xml'));
+  assert.ok(plan.globToRegExp('S/values*/**').test(plan.S + 'values-cs/chat_strings.xml'));
+  assert.ok(!plan.globToRegExp('S/values*/**').test('app/src/main/res/values-cs/chat_strings.xml'));
 });
 
 test('database and encryption changes need the SEC-2 upgrade run', () => {
@@ -61,7 +63,7 @@ test('maps the request clocks to 5.9', () => {
   assert.ok(sectionsFor([K + 'domain/changerequests/RequestCap.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'presentation/common/AnswerByField.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'presentation/changerequests/CardClock.kt']).includes('5.9'));
-  assert.ok(sectionsFor(['app/src/main/res/values-cs/request_deadline_strings.xml']).includes('5.9'));
+  assert.ok(sectionsFor([plan.S + 'values-cs/request_deadline_strings.xml']).includes('5.9'));
   assert.ok(!sectionsFor([K + 'presentation/home/HomeScreen.kt']).includes('5.9'));
 });
 
@@ -90,11 +92,17 @@ test('the Google Calendar connection and its import need the Google Calendar che
 });
 
 test('strings need both language-picker checks', () => {
-  assert.deepEqual(sectionsFor(['app/src/main/res/values-de/expenses_strings.xml']), ['3.6', '4.2']);
+  assert.deepEqual(sectionsFor([plan.S + 'values-de/expenses_strings.xml']), ['3.6', '4.2']);
+});
+
+test('shared-ui code is planned as the app source it was (MON-24 phase 2)', () => {
+  assert.equal(plan.asAppSource('shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/chat/ChatScreen.kt'),
+      K + 'presentation/chat/ChatScreen.kt');
+  assert.equal(plan.asAppSource(plan.S + 'values/chat_strings.xml'), plan.S + 'values/chat_strings.xml');
 });
 
 test('the push strings add the push check to the locale ones', () => {
-  assert.deepEqual(sectionsFor(['app/src/main/res/values/push_strings.xml']), ['3.6', '3.7', '4.2']);
+  assert.deepEqual(sectionsFor([plan.S + 'values/push_strings.xml']), ['3.6', '3.7', '4.2']);
 });
 
 test('docs, CI and JVM tests need no phone and are not reported as unmapped', () => {

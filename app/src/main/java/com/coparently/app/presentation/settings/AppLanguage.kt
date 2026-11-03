@@ -10,7 +10,9 @@ import com.coparently.app.R
  *
  * [SYSTEM] means "no per-app override": the UI follows the device locale, falling back
  * to English (the base resources) for unsupported device languages. The list must stay
- * in sync with `res/xml/locales_config.xml` and the `values-*` resource folders.
+ * in sync with `res/xml/locales_config.xml` and the `values-*` string folders in
+ * `shared-ui/src/commonMain/composeResources/` (MON-24; the app's Android copy is generated from
+ * them).
  *
  * @property tag BCP-47 language tag persisted by AppCompat (empty = follow the system).
  * @property labelRes Display label; language endonyms are intentionally not translated.

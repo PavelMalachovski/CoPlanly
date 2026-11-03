@@ -651,6 +651,71 @@ kotlin {
     }
 }
 
+// The strings live in `:shared-ui` as Compose Multiplatform resources since MON-24 phase 2 (Task 9):
+// `shared-ui/src/commonMain/composeResources/values*/`, the files that were `res/values*/` here,
+// with the same names. This task copies them, byte for byte, into a generated resource directory
+// of every variant of this app, so `R.string`/`R.plurals`, every Android-only reader (the widget,
+// pushes, notices, AppCompat's per-app locale) and the unit and screenshot tests keep Android's own
+// reading of the same text, while `:shared-ui`'s `Res` is generated from the originals. Nothing is
+// rewritten: where Android and Compose Multiplatform would read a text differently, the source text
+// changes (`StringsParityTest`, `PluralsParityTest`; check 7 of `tools/check-invariants.js`).
+//
+// Only `values*/*.xml`: fonts and drawables join `composeResources/` later and are read there.
+// Declared in this file, not in a script plugin under `tools/`, because a script applied with
+// `apply(from = …)` cannot see the Android Gradle plugin's classes (they are loaded by the
+// `plugins {}` blocks), and the wiring below needs them. One task serves every variant: AGP places
+// its output under `build/generated/res/stringsToAndroidRes/`, the same for each.
+@CacheableTask
+abstract class StringsToAndroidRes : DefaultTask() {
+    @get:Inject
+    abstract val fileSystem: FileSystemOperations
+
+    /** `shared-ui/src/commonMain/composeResources`. Only its string files are inputs. */
+    @get:Internal
+    abstract val composeResources: DirectoryProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:IgnoreEmptyDirectories
+    val strings: Provider<FileTree> = composeResources.map { dir ->
+        dir.asFileTree.matching { include(STRING_FILES) }
+    }
+
+    /** Set by AGP (`addGeneratedSourceDirectory`). */
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        fileSystem.sync {
+            from(composeResources) { include(STRING_FILES) }
+            into(outputDir)
+        }
+    }
+
+    private companion object {
+        const val STRING_FILES = "values*/*.xml"
+    }
+}
+
+val stringsToAndroidRes = tasks.register<StringsToAndroidRes>("stringsToAndroidRes") {
+    description = "Copies :shared-ui's string resources into this app's generated Android resources."
+    composeResources.set(rootProject.layout.projectDirectory.dir("shared-ui/src/commonMain/composeResources"))
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.res?.addGeneratedSourceDirectory(stringsToAndroidRes, StringsToAndroidRes::outputDir)
+    }
+}
+
+// Lint reads every resource directory of a variant, generated ones included; the dependency is
+// declared outright, as Compose Multiplatform's plugin does for the assets it generates, rather than
+// left to AGP's wiring of lint's model tasks.
+tasks.configureEach {
+    if (name.startsWith("lint") || name.contains("Lint")) dependsOn(stringsToAndroidRes)
+}
+
 // Room ran on KSP here until MON-24 phase 2 moved the database to `:shared-data`, which now runs
 // the processor for Android and the iPhone and writes the exported schema to this module's
 // `schemas/` as before (`room.schemaLocation` in shared-data/build.gradle.kts). Nothing in this

@@ -37,14 +37,22 @@ const CHECKLIST = 'docs/DEVICE-CHECKLIST.md';
 const K = 'app/src/main/java/com/coparently/app/';
 
 /**
+ * Where the strings live since MON-24 phase 2 (Task 9), abbreviated `S/` in the patterns below:
+ * `:shared-ui`'s Compose Multiplatform resources, the files that were the app's `res/values…`
+ * directories (all five), with the same names. The app's Android copy is generated from them.
+ */
+const S = 'shared-ui/src/commonMain/composeResources/';
+
+/**
  * The shared Kotlin Multiplatform modules' production source roots (MON-24): `commonMain`,
  * `androidMain`, `iosMain` and the like, never a `…Test` set, in `shared/` (the domain) and
  * `shared-data/` (the data layer, from phase 2: the school import's Bakaláři client and Google
- * Calendar's `events.list` first, with the HTTP plumbing under `data/http/`). Code moves there from
+ * Calendar's `events.list` first, with the HTTP plumbing under `data/http/`) and `shared-ui/` (the
+ * screens, from phase 2's Task 9; its strings are `S/`, below). Code moves there from
  * `K/` with its package unchanged, so a file under one of them is planned as the `K/` file it was —
  * the rules below keep naming the app's paths, and a move changes no check a phone needs.
  */
-const SHARED_MAIN = /^shared(-data)?\/src\/(?![A-Za-z]*Test\/)[A-Za-z]+\/kotlin\/com\/coparently\/app\//;
+const SHARED_MAIN = /^shared(-data|-ui)?\/src\/(?![A-Za-z]*Test\/)[A-Za-z]+\/kotlin\/com\/coparently\/app\//;
 
 /**
  * @param {string} file a changed path
@@ -58,7 +66,7 @@ function asAppSource(file) {
 /**
  * The mapping. `sections` are checklist section numbers ("2.1", or "7" for a top-level
  * section); `paths` are globs (`**` any depth, `*` within one segment), where a leading `K/`
- * stands for the app's Kotlin source root. Order is the order the checklist runs in.
+ * stands for the app's Kotlin source root and a leading `S/` for the strings' directory. Order is the order the checklist runs in.
  */
 const RULES = [
   {
@@ -87,7 +95,7 @@ const RULES = [
     sections: ['2.3'],
     why: 'what signing in agrees to: the age line, the terms and the policy links (L-12)',
     paths: ['K/presentation/auth/AuthLegalNotice.kt', 'K/presentation/common/TermsOfServiceLink.kt',
-      'K/presentation/common/PrivacyPolicyLink.kt', 'app/src/main/res/values*/legal_strings.xml'],
+      'K/presentation/common/PrivacyPolicyLink.kt', 'S/values*/legal_strings.xml'],
   },
   {
     sections: ['3.1'],
@@ -137,7 +145,7 @@ const RULES = [
     sections: ['3.15'],
     why: 'the Today widget, or the functions it computes the day with',
     paths: ['K/presentation/widget/**', 'app/src/main/res/xml/today_widget_info.xml',
-      'app/src/main/res/values*/widget_strings.xml',
+      'S/values*/widget_strings.xml',
       'app/src/main/res/drawable/widget_today_preview.xml', 'K/domain/home/HomeWeek.kt',
       'K/domain/custody/HandoverCalculator.kt'],
   },
@@ -185,21 +193,21 @@ const RULES = [
     why: 'the child-health consent or what withdrawing it clears (L-2)',
     paths: ['K/domain/consent/HealthConsent*', 'K/data/consent/**', 'K/presentation/consent/HealthConsent*',
       'K/presentation/childinfo/AddEditChildInfoScreen.kt',
-      'app/src/main/res/values*/health_consent_strings.xml'],
+      'S/values*/health_consent_strings.xml'],
   },
   {
     sections: ['3.20'],
     why: 'the calendar feed as an iPhone subscribes to it (MON-17)',
     paths: ['K/presentation/settings/CalendarFeed*', 'K/data/repository/CalendarFeedRepositoryImpl.kt',
       'K/domain/feed/**', 'K/domain/repository/CalendarFeedRepository.kt',
-      'app/src/main/res/values*/calendar_feed_strings.xml'],
+      'S/values*/calendar_feed_strings.xml'],
   },
   {
     sections: ['3.21'],
     why: 'voice dictation in the chat composer (on-device only)',
     paths: ['K/presentation/chat/ChatDictation.kt', 'K/presentation/chat/DictationViewModel.kt',
       'K/presentation/chat/MessageInput.kt', 'K/domain/dictation/**', 'K/data/dictation/**',
-      'K/presentation/common/MicrophonePermission.kt', 'app/src/main/res/values*/voice_strings.xml'],
+      'K/presentation/common/MicrophonePermission.kt', 'S/values*/voice_strings.xml'],
   },
   {
     sections: ['3.22'],
@@ -207,7 +215,7 @@ const RULES = [
     paths: ['K/domain/ai/**', 'K/data/ai/**', 'K/presentation/ai/**', 'K/di/koin/AiModule.kt',
       'K/presentation/chat/ReplySuggestion*', 'K/presentation/chat/MessageTemplatesBottomSheet.kt',
       'K/domain/review/**', 'K/presentation/review/**',
-      'app/src/main/res/values*/ai_strings.xml', 'app/src/main/res/values*/month_review_strings.xml'],
+      'S/values*/ai_strings.xml', 'S/values*/month_review_strings.xml'],
   },
   {
     sections: ['3.23'],
@@ -296,7 +304,7 @@ const RULES = [
   {
     sections: ['3.6', '4.2'],
     why: 'strings, locales or the language picker',
-    paths: ['app/src/main/res/values*/**', 'app/src/main/res/xml/locales_config.xml',
+    paths: ['S/values*/**', 'app/src/main/res/xml/locales_config.xml',
       'K/presentation/settings/AppLanguage.kt'],
   },
   {
@@ -304,7 +312,7 @@ const RULES = [
     why: 'push notifications',
     paths: ['K/data/remote/firebase/FcmService.kt', 'K/data/remote/firebase/PushPayload.kt',
       'K/data/remote/firebase/PushNotifier.kt', 'K/data/notification/**', 'K/domain/notification/**', '**/*MessagingService*',
-      'app/src/main/res/values*/push_strings.xml'],
+      'S/values*/push_strings.xml'],
   },
   {
     sections: ['3.8'],
@@ -366,14 +374,14 @@ const RULES = [
     why: 'the pairing link, its web page, or the name a code shows before linking',
     paths: ['K/domain/pairing/**', 'K/presentation/pairing/**', 'K/presentation/MainActivity.kt',
       'K/data/remote/firebase/PairingFunctions.kt', 'web/pair/**',
-      'app/src/main/res/values*/pairing_strings.xml'],
+      'S/values*/pairing_strings.xml'],
   },
   {
     sections: ['5.8'],
     why: 'requests: Home\'s Requests row, the co-parent\'s answers in its feed, or the inbox and its history',
     paths: ['K/presentation/changerequests/**', 'K/domain/changerequests/**',
       'K/presentation/home/Requests*', 'K/presentation/home/HomeFeed*',
-      'app/src/main/res/values*/change_requests_strings.xml'],
+      'S/values*/change_requests_strings.xml'],
   },
   {
     sections: ['5.9'],
@@ -384,20 +392,20 @@ const RULES = [
       'K/domain/changerequests/RequestCap*',
       'K/presentation/common/AnswerByField*',
       'K/presentation/changerequests/CardClock*',
-      'app/src/main/res/values*/request_deadline_strings.xml'],
+      'S/values*/request_deadline_strings.xml'],
   },
   {
     sections: ['5.6'],
     why: 'a calendar friend, whose grants are one per family',
     paths: ['K/presentation/friends/**', 'K/domain/friends/**', 'K/data/repository/Friend*',
-      'app/src/main/res/values*/friend_strings.xml'],
+      'S/values*/friend_strings.xml'],
   },
   {
     sections: ['5.5'],
     why: 'the document vault or chat attachments',
     paths: ['K/presentation/documents/**', 'K/domain/documents/**', 'K/data/documents/**',
       'K/domain/files/**', 'K/data/files/**', 'K/**/*Attachment*', 'storage.rules',
-      'app/src/main/res/values*/shared_files_strings.xml'],
+      'S/values*/shared_files_strings.xml'],
   },
   {
     sections: ['6'],
@@ -405,7 +413,7 @@ const RULES = [
     paths: ['K/presentation/export/**', 'K/domain/export/**', 'K/data/export/**',
       'K/data/versions/**', 'app/src/main/res/xml/file_paths.xml',
       'K/presentation/journal/**', 'K/domain/journal/**',
-      'app/src/main/res/values*/journal_strings.xml', 'web/verify/**'],
+      'S/values*/journal_strings.xml', 'web/verify/**'],
   },
   {
     sections: ['7'],
@@ -431,7 +439,7 @@ const NO_DEVICE = ['docs/**', '**/*.md', '.github/**', 'tools/**', 'firestore-te
  * @return {RegExp} the anchored regular expression it stands for
  */
 function globToRegExp(glob) {
-  const expanded = glob.startsWith('K/') ? K + glob.slice(2) : glob;
+  const expanded = glob.startsWith('K/') ? K + glob.slice(2) : glob.startsWith('S/') ? S + glob.slice(2) : glob;
   let re = '';
   for (let i = 0; i < expanded.length; i++) {
     const c = expanded[i];
@@ -629,4 +637,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = {RULES, NO_DEVICE, K, asAppSource, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};
+module.exports = {RULES, NO_DEVICE, K, S, asAppSource, globToRegExp, parseSections, anchorFor, planFor, toMarkdown, e2eBySection};

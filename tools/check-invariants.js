@@ -40,7 +40,10 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const RES = path.join(ROOT, 'app/src/main/res');
+// The string resources live in `:shared-ui` as Compose Multiplatform resources since MON-24
+// phase 2 (Task 9); the app's Android copy is generated from them unchanged.
+const RES_DIR = 'shared-ui/src/commonMain/composeResources';
+const RES = path.join(ROOT, RES_DIR);
 const BASE_DIR = 'values';
 const LOCALE_DIRS = ['values-cs', 'values-de', 'values-ru', 'values-uk'];
 
@@ -154,7 +157,7 @@ function checkLocales() {
 const PAYLOAD_KT = 'shared-data/src/commonMain/kotlin/com/coparently/app/data/remote/firebase/PushPayload.kt';
 const SERVICE_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushNotifier.kt';
 const RULES = 'firestore.rules';
-const PUSH_STRINGS = 'app/src/main/res/values/push_strings.xml';
+const PUSH_STRINGS = `${RES_DIR}/values/push_strings.xml`;
 
 /**
  * `chat_message` is composed by a branch of its own in `PushNotifier.compose()`,
