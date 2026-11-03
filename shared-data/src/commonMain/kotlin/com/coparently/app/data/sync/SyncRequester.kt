@@ -1,12 +1,11 @@
 package com.coparently.app.data.sync
 
-import android.content.Context
-
 /**
  * Asks for one sync run as soon as there is a network, without waiting for the periodic tick.
  *
- * An interface over [SyncWorker.syncNow] so that code without a `Context` — a repository, a
- * ViewModel — can ask for the run and a unit test can see that it asked. The request is
+ * An interface over the app's `SyncWorker.syncNow` so that code without a `Context` — a repository,
+ * a ViewModel — can ask for the run and a unit test can see that it asked. Here since MON-24 phase 2
+ * (Task 8b); the WorkManager implementation, `WorkManagerSyncRequester`, stays in the app. The request is
  * coalescing: several callers landing together (a push arriving as pairing is observed, say)
  * produce one run, because the worker behind it is enqueued as unique work with
  * `ExistingWorkPolicy.KEEP`.
@@ -23,12 +22,4 @@ interface SyncRequester {
 
     /** Requests one full sync as soon as there is a network. Safe to call repeatedly. */
     fun requestSyncNow()
-}
-
-/** The production [SyncRequester]: hands the request to WorkManager through [SyncWorker.syncNow]. */
-class WorkManagerSyncRequester(
-    private val context: Context
-) : SyncRequester {
-
-    override fun requestSyncNow() = SyncWorker.syncNow(context)
 }
