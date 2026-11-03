@@ -33,7 +33,7 @@ class NetworkMonitor(
     /**
      * Checks if the device is currently online.
      */
-    fun isOnline(): Boolean {
+    override fun isOnline(): Boolean {
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
 

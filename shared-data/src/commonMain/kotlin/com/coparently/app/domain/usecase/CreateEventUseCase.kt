@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.domain.usecase
 
 import com.coparently.app.data.platform.Analytics
@@ -16,8 +18,9 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import java.util.UUID
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Use case for creating a new event.
@@ -57,7 +60,7 @@ class CreateEventUseCase(
 
             // Ensure event has an ID
             val eventWithId = if (event.id.isEmpty()) {
-                event.copy(id = UUID.randomUUID().toString())
+                event.copy(id = Uuid.random().toString())
             } else {
                 event
             }
@@ -148,7 +151,7 @@ private fun Event.awaitedAnswer(): AwaitedAnswer? {
 private fun eventClock(stored: Event, answerBy: AnswerByPick): RequestStart? {
     val awaited = stored.awaitedAnswer() ?: return null
     val zone = TimeZone.currentSystemDefault()
-    val now = System.currentTimeMillis()
+    val now = Clock.System.now().toEpochMilliseconds()
     val cap = RequestCap.forEvent(stored.startDateTime, now, zone)
     val deadline = AnswerBy.resolve(answerBy, now, cap, zone) ?: return null
     return RequestStart(

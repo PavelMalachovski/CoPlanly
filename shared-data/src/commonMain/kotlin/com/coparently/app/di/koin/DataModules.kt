@@ -61,6 +61,7 @@ import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.error.ErrorHandler
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
@@ -77,6 +78,12 @@ import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.usecase.CreateEventUseCase
+import com.coparently.app.domain.usecase.DeleteEventUseCase
+import com.coparently.app.domain.usecase.EventUseCases
+import com.coparently.app.domain.usecase.EventValidator
+import com.coparently.app.domain.usecase.GetEventsUseCase
+import com.coparently.app.domain.usecase.UpdateEventUseCase
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -263,6 +270,23 @@ val moneyDataModule: Module = module {
 }
 
 /**
+ * The event use cases and the error boundary of the screen that runs them (MON-24 phase 2, Task
+ * 8f; the app's `useCaseModule` and `domainModule` before). Each use case is a `factory`: under
+ * Hilt they were `@ViewModelScoped`, one instance per ViewModel, and every one of them is
+ * stateless, so a new instance per resolution behaves the same and needs no ViewModel scope (the
+ * school import's writer builds them outside any ViewModel, through their constructors).
+ */
+val useCaseDataModule: Module = module {
+    factoryOf(::EventValidator)
+    factoryOf(::CreateEventUseCase)
+    factoryOf(::UpdateEventUseCase)
+    factoryOf(::DeleteEventUseCase)
+    factoryOf(::GetEventsUseCase)
+    factoryOf(::EventUseCases)
+    singleOf(::ErrorHandler)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -276,7 +300,8 @@ val dataModules: List<Module> = listOf(
     requestsDataModule,
     stickersDataModule,
     documentsDataModule,
-    moneyDataModule
+    moneyDataModule,
+    useCaseDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,
