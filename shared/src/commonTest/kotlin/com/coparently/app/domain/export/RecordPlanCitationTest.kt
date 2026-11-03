@@ -4,7 +4,7 @@ import com.coparently.app.domain.export.RecordFixtures.labels
 import com.coparently.app.domain.export.RecordFixtures.proposalCard
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -56,7 +56,7 @@ class RecordPlanCitationTest {
     }
 
     @Test
-    fun `the PDF prints the cited question under the message, and only there`() {
+    fun `the PDF prints the cited question under the message - and only there`() {
         val withCitation = RecordLayout.blocks(
             CommunicationRecordBuilder.build(sources(messages = listOf(proposalCard())), scope()),
             labels()
@@ -71,7 +71,7 @@ class RecordPlanCitationTest {
     }
 
     @Test
-    fun `a question the plan no longer asks is printed by its id, never dropped`() {
+    fun `a question the plan no longer asks is printed by its id - never dropped`() {
         val record = CommunicationRecordBuilder.build(
             sources(messages = listOf(proposalCard("p1|care_retired|0123456789abcdef"))),
             scope()

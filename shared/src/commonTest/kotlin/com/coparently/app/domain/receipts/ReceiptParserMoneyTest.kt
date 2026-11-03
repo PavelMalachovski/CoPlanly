@@ -1,6 +1,6 @@
 package com.coparently.app.domain.receipts
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 

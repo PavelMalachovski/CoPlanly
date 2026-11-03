@@ -1,7 +1,7 @@
 package com.coparently.app.domain.receipts
 
 import kotlinx.datetime.LocalDate
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 

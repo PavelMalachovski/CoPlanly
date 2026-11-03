@@ -10,7 +10,7 @@ import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.datetime.LocalDate
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -32,7 +32,7 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
-    fun `a comma, a quote or a line break wraps the field in quotes and doubles inner quotes`() {
+    fun `a comma - a quote or a line break wraps the field in quotes and doubles inner quotes`() {
         assertEquals("\"a,b\"", CommunicationRecordCsv.escape("a,b"))
         assertEquals("\"say \"\"hi\"\"\"", CommunicationRecordCsv.escape("say \"hi\""))
         assertEquals("\"line one\nline two\"", CommunicationRecordCsv.escape("line one\nline two"))
@@ -56,7 +56,7 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
-    fun `the guard goes inside the quotes, where a spreadsheet reads it`() {
+    fun `the guard goes inside the quotes - where a spreadsheet reads it`() {
         assertEquals(
             "\"'=HYPERLINK(\"\"http://x\"\",\"\"click\"\")\"",
             CommunicationRecordCsv.escape("=HYPERLINK(\"http://x\",\"click\")")
@@ -71,7 +71,7 @@ class CommunicationRecordCsvTest {
     // ---- The file -------------------------------------------------------------------------
 
     @Test
-    fun `the file starts with the byte-order mark and the title, and ends every record in CRLF`() {
+    fun `the file starts with the byte-order mark and the title - and ends every record in CRLF`() {
         val csv = render()
 
         assertTrue(csv.startsWith(CommunicationRecordCsv.BOM + "TITLE"))
@@ -80,7 +80,7 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
-    fun `the statement comes before the header row, on the face of the file`() {
+    fun `the statement comes before the header row - on the face of the file`() {
         val lines = records(render())
 
         val statement = lines.indexOfFirst { it.startsWith("NOT A TRUTH RECORD") }
@@ -89,7 +89,7 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
-    fun `every record has the same number of fields, the preamble included`() {
+    fun `every record has the same number of fields - the preamble included`() {
         val width = labels().columns.all().size
 
         records(render()).forEach { line ->
@@ -98,7 +98,7 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
-    fun `a revision row carries both clocks, labelled by its columns`() {
+    fun `a revision row carries both clocks - labelled by its columns`() {
         val row = records(render()).first { it.startsWith("Event,") }.let(::fields)
         val columns = labels().columns.all()
 
@@ -121,7 +121,7 @@ class CommunicationRecordCsvTest {
     }
 
     @Test
-    fun `a revision the server recorded says so, and has no device time`() {
+    fun `a revision the server recorded says so - and has no device time`() {
         val server = revision("srv_e1_1", deviceTime = null, byServer = true, writeKey = "saved|2026-03-10T08:00:00")
         val csv = CommunicationRecordCsv.render(
             CommunicationRecordBuilder.build(sources(revisions = listOf(server)), scope()),

@@ -12,7 +12,7 @@ import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -68,7 +68,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `the same revision from the server and the outbox is printed once, with the server time`() {
+    fun `the same revision from the server and the outbox is printed once - with the server time`() {
         val record = CommunicationRecordBuilder.build(
             sources(
                 revisions = listOf(
@@ -84,7 +84,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `a server revision of a save a phone also recorded is dropped, the phone's kept`() {
+    fun `a server revision of a save a phone also recorded is dropped - the phone's kept`() {
         val record = CommunicationRecordBuilder.build(
             sources(
                 revisions = listOf(
@@ -108,7 +108,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `a server revision of a save no phone recorded is printed as the server's, with no device time`() {
+    fun `a server revision of a save no phone recorded is printed as the server's - with no device time`() {
         val record = CommunicationRecordBuilder.build(
             sources(
                 revisions = listOf(
@@ -184,7 +184,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `another family's revisions are not in this family's record, unshared ones are`() {
+    fun `another family's revisions are not in this family's record - unshared ones are`() {
         val record = CommunicationRecordBuilder.build(
             sources(
                 revisions = listOf(
@@ -233,7 +233,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `an entry saved before revisions were kept is printed as its current state, never as a creation`() {
+    fun `an entry saved before revisions were kept is printed as its current state - never as a creation`() {
         val record = CommunicationRecordBuilder.build(
             sources(
                 currentEvents = listOf(
@@ -280,7 +280,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `a private event is never in the record, whatever the source hands over`() {
+    fun `a private event is never in the record - whatever the source hands over`() {
         val record = CommunicationRecordBuilder.build(
             sources(
                 currentEvents = listOf(
@@ -294,7 +294,7 @@ class CommunicationRecordBuilderTest {
     }
 
     @Test
-    fun `the custody slot is printed as the parent's name, never as a role`() {
+    fun `the custody slot is printed as the parent's name - never as a role`() {
         val record = CommunicationRecordBuilder.build(sources(revisions = listOf(revision("v1"))), scope())
 
         assertEquals("Alice", record.events.single().revisions.single().parentName)

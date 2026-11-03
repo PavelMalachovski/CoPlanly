@@ -4,7 +4,7 @@ import com.coparently.app.domain.export.RecordFixtures.labels
 import com.coparently.app.domain.export.RecordFixtures.revision
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -30,7 +30,7 @@ class RecordLayoutTest {
     }
 
     @Test
-    fun `sections come in reading order, and an empty one says so`() {
+    fun `sections come in reading order - and an empty one says so`() {
         val record = CommunicationRecordBuilder.build(sources(revisions = listOf(revision("v1"))), scope())
 
         val texts = RecordLayout.blocks(record, labels()).map { it.text }
@@ -63,7 +63,7 @@ class RecordLayoutTest {
     }
 
     @Test
-    fun `text wraps at spaces, and a word longer than the line is broken rather than lost`() {
+    fun `text wraps at spaces - and a word longer than the line is broken rather than lost`() {
         val lines = RecordLayout.wrap("aaaa bbbb cccccccccccc", width = 5 * CHAR_WIDTH) { it.length * CHAR_WIDTH }
 
         assertEquals(listOf("aaaa", "bbbb", "ccccc", "ccccc", "cc"), lines)

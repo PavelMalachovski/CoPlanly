@@ -121,6 +121,10 @@ object IsoText {
      * grammar, and the date and time as written, the offset read and checked but not applied. The
      * school import's wall clock (MON-8): a school writes its own zone's time with that zone's offset.
      *
+     * The oracle is JDK 9 and later, which read an hours-only offset (`+01`) leniently; Android
+     * releases whose `java.time` is OpenJDK 8's refused one, so on those phones the old reader gave
+     * nothing for `…+01`, and this reads it. Bakaláři writes `±HH:MM`, which every version reads.
+     *
      * @throws IllegalArgumentException when `java.time` would refuse the text.
      */
     fun parseOffsetWallClock(text: String): LocalDateTime {

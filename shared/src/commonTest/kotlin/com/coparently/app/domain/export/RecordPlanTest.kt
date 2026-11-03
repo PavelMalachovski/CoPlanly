@@ -9,7 +9,7 @@ import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.parentingplan.ParentingPlanCatalogue
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -57,7 +57,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `every catalogue question is listed in catalogue order, each parent's answer by name`() {
+    fun `every catalogue question is listed in catalogue order - each parent's answer by name`() {
         val plan = assertNotNull(recordWith(planOf(halves)).plan)
 
         assertEquals(ParentingPlanCatalogue.questions.map { it.id }, plan.questions.map { it.questionId })
@@ -70,7 +70,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `an answer under a retired question is kept, after the catalogue, never dropped`() {
+    fun `an answer under a retired question is kept - after the catalogue - never dropped`() {
         val plan = assertNotNull(recordWith(planOf(halves)).plan)
 
         assertEquals(listOf(RETIRED), plan.retired.map { it.questionId })
@@ -86,7 +86,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `a family with no plan says so rather than inventing one, and the record stays complete`() {
+    fun `a family with no plan says so rather than inventing one - and the record stays complete`() {
         val record = recordWith(planOf())
         val plan = assertNotNull(record.plan)
 
@@ -106,7 +106,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `a plan left out of the export is absent, and costs the record nothing`() {
+    fun `a plan left out of the export is absent - and costs the record nothing`() {
         val record = recordWith(null)
 
         assertNull(record.plan)
@@ -116,7 +116,7 @@ class RecordPlanTest {
     // ---- The CSV --------------------------------------------------------------------------
 
     @Test
-    fun `plan rows have the header's width and carry answer, question and agreement`() {
+    fun `plan rows have the header's width and carry answer - question and agreement`() {
         val csv = CommunicationRecordCsv.render(recordWith(planOf(halves)), labels())
         val width = labels().columns.all().size
         val columns = labels().columns.all()
@@ -129,7 +129,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `the plan's notes come before its answers, and a retired answer says so`() {
+    fun `the plan's notes come before its answers - and a retired answer says so`() {
         val lines = records(CommunicationRecordCsv.render(recordWith(planOf(halves)), labels()))
 
         val disclaimer = lines.indexOfFirst { it.contains("NOT THE MINISTRY FORM") }
@@ -149,7 +149,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `no plan is one line, and a phone's copy is labelled as one`() {
+    fun `no plan is one line - and a phone's copy is labelled as one`() {
         val none = records(CommunicationRecordCsv.render(recordWith(planOf()), labels()))
         val offlineRecord = recordWith(planOf(halves, serverReached = false))
         val offline = records(CommunicationRecordCsv.render(offlineRecord, labels()))
@@ -162,7 +162,7 @@ class RecordPlanTest {
     // ---- The PDF --------------------------------------------------------------------------
 
     @Test
-    fun `the plan is the last section, and says what it is before any answer`() {
+    fun `the plan is the last section - and says what it is before any answer`() {
         val texts = RecordLayout.blocks(recordWith(planOf(halves)), labels()).map { it.text }
 
         val expenses = texts.indexOf("Expense")
@@ -179,7 +179,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `a question nobody answered, and a retired one, are printed rather than skipped`() {
+    fun `a question nobody answered - and a retired one - are printed rather than skipped`() {
         val texts = RecordLayout.blocks(recordWith(planOf(halves)), labels()).map { it.text }
 
         // No wording in the fixture labels for this id: printed by its id, never left blank.
@@ -194,7 +194,7 @@ class RecordPlanTest {
     }
 
     @Test
-    fun `no plan, and a plan from this phone, each say so and still paginate`() {
+    fun `no plan - and a plan from this phone - each say so and still paginate`() {
         val none = RecordLayout.blocks(recordWith(planOf()), labels())
         val offline = RecordLayout.blocks(recordWith(planOf(halves, serverReached = false)), labels())
 

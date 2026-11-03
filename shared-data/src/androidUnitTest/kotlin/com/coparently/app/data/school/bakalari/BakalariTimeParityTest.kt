@@ -49,6 +49,15 @@ class BakalariTimeParityTest {
         assertTrue(read > SAMPLES / 10, "only $read of $SAMPLES read")
     }
 
+    @Test
+    fun `an hours-only offset reads as JDK 17 reads it`() {
+        // JDK 9 and later read `+01` (a lenient offset, JDK-8032051); Android releases on OpenJDK 8's
+        // java.time refused it. Bakaláři writes `+HH:MM`, so neither reading is reached in practice.
+        val text = "2020-03-02T08:00:00+01"
+        assertEquals(LocalDateTime.of(2020, 3, 2, 8, 0), oldWallClock(text))
+        assertEquals(LocalDateTime.of(2020, 3, 2, 8, 0), BakalariJson.wallClock(text)?.toJavaLocalDateTime())
+    }
+
     /** The parser's reading before MON-24. */
     private fun oldLessonTime(value: String): LocalTime? = try {
         LocalTime.parse(value, DateTimeFormatter.ofPattern("H:mm"))
@@ -93,7 +102,8 @@ class BakalariTimeParityTest {
             append(":" + field(0..59))
             if (random.nextBoolean()) append(orElse(".", ",") + digits(random.nextInt(0, 11)))
         }
-        append(pick("", "Z", "z", "+01:00", "+02:00", "-05:30", "+0100", "+18:00", "+19:00", "+01:00:30", "+1"))
+        append(pick("", "Z", "z", "+01:00", "+02:00", "-05:30", "+0100", "+01", "-05", "+18:00", "+19:00"))
+        if (!right()) append(pick("+01:00:30", "+1"))
         if (!right()) append(pick(" ", "x", "[Europe/Prague]"))
     }
 

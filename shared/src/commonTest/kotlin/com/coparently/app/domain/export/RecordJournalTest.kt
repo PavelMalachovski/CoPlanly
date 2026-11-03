@@ -14,7 +14,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -40,7 +40,7 @@ class RecordJournalTest {
     // ---- The builder ----------------------------------------------------------------------
 
     @Test
-    fun `entries about days in the period are kept, oldest first, each by its author's name`() {
+    fun `entries about days in the period are kept - oldest first - each by its author's name`() {
         val journal = assertNotNull(recordWith(listOf(march12, march5)).journal)
 
         assertEquals(listOf("j1", "j2"), journal.entries.map { it.entryId })
@@ -48,7 +48,7 @@ class RecordJournalTest {
     }
 
     @Test
-    fun `an entry about a day outside the period, or written in another family, is not in it`() {
+    fun `an entry about a day outside the period - or written in another family - is not in it`() {
         val before = entry("before", FROM.minus(1, DateTimeUnit.DAY), "February")
         val after = entry("after", TO.plus(1, DateTimeUnit.DAY), "April")
         val elsewhere = entry("elsewhere", LocalDate(2026, 3, 20), "Other family").copy(familyId = "alice__carol")
@@ -60,14 +60,14 @@ class RecordJournalTest {
     }
 
     @Test
-    fun `a journal left out is absent, and one asked for with no entries is an empty section`() {
+    fun `a journal left out is absent - and one asked for with no entries is an empty section`() {
         assertNull(recordWith(null).journal)
         assertTrue(assertNotNull(recordWith(emptyList()).journal).entries.isEmpty())
         assertTrue(recordWith(emptyList()).complete, "a journal read from this phone cannot make a record incomplete")
     }
 
     @Test
-    fun `an entry changed after it was written says so, and one that was not does not`() {
+    fun `an entry changed after it was written says so - and one that was not does not`() {
         val edited = march5.copy(updatedAtMillis = march5.createdAtMillis + HOUR)
         val journal = assertNotNull(recordWith(listOf(edited, march12)).journal)
 
@@ -78,7 +78,7 @@ class RecordJournalTest {
     // ---- The CSV --------------------------------------------------------------------------
 
     @Test
-    fun `journal rows have the header's width, the notes first, and the day in the starts column`() {
+    fun `journal rows have the header's width - the notes first - and the day in the starts column`() {
         val edited = march5.copy(updatedAtMillis = march5.createdAtMillis + HOUR)
         val lines = records(CommunicationRecordCsv.render(recordWith(listOf(edited)), labels()))
         val columns = labels().columns.all()
@@ -125,7 +125,7 @@ class RecordJournalTest {
     // ---- The PDF --------------------------------------------------------------------------
 
     @Test
-    fun `the journal follows the expenses, precedes the plan, and says whose notes these are first`() {
+    fun `the journal follows the expenses - precedes the plan - and says whose notes these are first`() {
         val texts = RecordLayout.blocks(recordWith(listOf(march5), plan = planOf()), labels()).map { it.text }
 
         val expenses = texts.indexOf("Expense")
@@ -143,7 +143,7 @@ class RecordJournalTest {
     }
 
     @Test
-    fun `an edited entry prints when, and an empty journal says there is nothing`() {
+    fun `an edited entry prints when - and an empty journal says there is nothing`() {
         val edited = march5.copy(updatedAtMillis = march5.createdAtMillis + HOUR)
         val withEdit = RecordLayout.blocks(recordWith(listOf(edited)), labels()).map { it.text }
         val empty = RecordLayout.blocks(recordWith(emptyList()), labels()).map { it.text }

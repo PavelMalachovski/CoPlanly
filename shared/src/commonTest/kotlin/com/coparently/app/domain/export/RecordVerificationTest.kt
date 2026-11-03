@@ -4,7 +4,7 @@ import com.coparently.app.domain.export.RecordFixtures.RECORD_ID
 import com.coparently.app.domain.export.RecordFixtures.labels
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -28,17 +28,17 @@ class RecordVerificationTest {
     // ---- The fingerprint ------------------------------------------------------------------
 
     @Test
-    fun `the fingerprint is SHA-256 in lowercase hex, as the callable requires`() {
+    fun `the fingerprint is SHA-256 in lowercase hex - as the callable requires`() {
         assertEquals(
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-            ExportFingerprint.sha256Hex("abc".toByteArray())
+            ExportFingerprint.sha256Hex("abc".encodeToByteArray())
         )
     }
 
     @Test
     fun `one changed byte is a different fingerprint`() {
-        val a = ExportFingerprint.sha256Hex("Pickup at six".toByteArray())
-        val b = ExportFingerprint.sha256Hex("Pickup at sex".toByteArray())
+        val a = ExportFingerprint.sha256Hex("Pickup at six".encodeToByteArray())
+        val b = ExportFingerprint.sha256Hex("Pickup at sex".encodeToByteArray())
 
         assertFalse(a == b)
         assertTrue(Regex("^[0-9a-f]{64}$").matches(a))
@@ -57,7 +57,7 @@ class RecordVerificationTest {
     // ---- CSV ------------------------------------------------------------------------------
 
     @Test
-    fun `a registered CSV prints the id, the address and the instruction before the table`() {
+    fun `a registered CSV prints the id - the address and the instruction before the table`() {
         val lines = csvLines(registered)
         val header = lines.indexOfFirst { it.startsWith("Section,") }
 
@@ -70,7 +70,7 @@ class RecordVerificationTest {
     }
 
     @Test
-    fun `with no verification page hosted, the CSV prints no address`() {
+    fun `with no verification page hosted - the CSV prints no address`() {
         val lines = csvLines(record(RecordVerification.Registered(RECORD_ID, "")))
 
         assertFalse(lines.any { it.startsWith("Verify at") })
@@ -79,7 +79,7 @@ class RecordVerificationTest {
     }
 
     @Test
-    fun `an unregistered CSV says it cannot be verified, and names no id`() {
+    fun `an unregistered CSV says it cannot be verified - and names no id`() {
         val csv = CommunicationRecordCsv.render(record(RecordVerification.Unregistered), labels())
 
         assertTrue(csv.contains("NOT REGISTERED, CANNOT BE VERIFIED"))
@@ -106,7 +106,7 @@ class RecordVerificationTest {
     }
 
     @Test
-    fun `every page's footer names the record, so a loose page still does`() {
+    fun `every page's footer names the record - so a loose page still does`() {
         assertEquals(
             listOf("TITLE · Page 3 / 7", "Record ID: 7K3Q-0ABC-DEFG-HJKM · Verify at: $URL"),
             RecordVerificationLayout.footerTexts(registered, labels(), 3, 7)
@@ -118,7 +118,7 @@ class RecordVerificationTest {
     }
 
     @Test
-    fun `the footer stays below the body, however far it wraps`() {
+    fun `the footer stays below the body - however far it wraps`() {
         val narrow = PageGeometry(width = 260f)
         val geometry = RecordVerificationLayout.withFooterRoom(registered, labels(), narrow, measure)
         val blocks = List(200) { RecordBlock("line $it", LineStyle.BODY) }

@@ -12,7 +12,7 @@ import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.YearMonth
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -112,7 +112,7 @@ class MonthStatsWireTest {
     }
 
     @Test
-    fun `holiday fairness is left out when the month had none, and names are cleaned`() {
+    fun `holiday fairness is left out when the month had none - and names are cleaned`() {
         // September without its one holiday, as a month with none would be.
         val result = review().copy(specialDaysBySlot = emptyMap(), specialDays = 0)
         val long = "<b>" + "x".repeat(80) + "</b>"

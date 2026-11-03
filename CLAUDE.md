@@ -1564,24 +1564,24 @@ file by file:
   `error/ErrorHandler.kt` (the connection through `Connectivity.isOnline`, which `NetworkMonitor`
   answers from the system as before; an I/O failure as `kotlinx.io.IOException`, which is
   `java.io.IOException` on Android; a permission failure through `isPermissionFailure`, an
-  `expect`/`actual` that is `SecurityException` on Android) in Task 8f;
-- `java.time` not yet converted — nothing since MON-24 phase 2's Task 8i, which converted and
-  moved to `shared/`, packages unchanged: the communication record's model, builder, CSV and
-  layouts in `export/` (`LocalDate`, `LocalDateTime` and `TimeZone` are kotlinx-datetime's; the
-  printed times were `RecordTimeText` already, an event document's times are read by
-  `IsoText.parseDateTime`/`parseDate`, the message window is `RecordWindow`), the school import's
-  `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems` (the event ids
-  hash `Utf8.encode` and a fingerprint's times are `IsoText.dateTimeShortest`, the bytes they hashed
-  before), `receipts/` (NFD through `canonicalDecomposition`), `chat/MessageReport.kt`, `ai/AiAssist.kt`
-  and `review/MonthStatsWire.kt` (the month as `IsoText.yearMonth`). Task 8f moved
-  `journal/JournalEntry.kt` with `repository/JournalRepository.kt` to `shared/`, the entry's day a
-  kotlinx-datetime `LocalDate` (the type its Room row already held). MON-24 phase 2's Task 8e converted and moved to
-  `shared/`, packages unchanged: `payments/Payment.kt` and `support/` (`YearMonth` and `LocalDate`
-  are kotlinx-datetime's, the month's text `IsoText.yearMonth`, which is `java.time.YearMonth`'s
-  byte for byte), `changerequests/RequestInbox.kt` and `FamilyAgreements.kt`, which read them,
-  `guests/GuestGrantPolicy.kt` with `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt`
-  (on `kotlin.time`), and `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`
-  (kotlinx-datetime's `LocalDate`).
+  `expect`/`actual` that is `SecurityException` on Android) in Task 8f.
+
+No domain file waits on `java.time` any more. Task 8e converted and moved to `shared/`, packages
+unchanged: `payments/Payment.kt` and `support/` (`YearMonth` and `LocalDate` are kotlinx-datetime's,
+the month's text `IsoText.yearMonth`, which is `java.time.YearMonth`'s byte for byte),
+`changerequests/RequestInbox.kt` and `FamilyAgreements.kt`, which read them,
+`guests/GuestGrantPolicy.kt` with `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt` (on
+`kotlin.time`), and `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`
+(kotlinx-datetime's `LocalDate`). Task 8f moved `journal/JournalEntry.kt` with
+`repository/JournalRepository.kt`, the entry's day a kotlinx-datetime `LocalDate` (the type its Room
+row already held). Task 8i moved the communication record's model, builder, CSV and layouts in
+`export/` (`LocalDate`, `LocalDateTime` and `TimeZone` are kotlinx-datetime's; the printed times were
+`RecordTimeText` already, an event document's times are read by `IsoText.parseDateTime`/`parseDate`,
+the message window is `RecordWindow`), the school import's `SchoolEvents`, `SchoolTimetable`,
+`SchoolImportPlanner` and `SchoolImportItems` (the event ids hash `Utf8.encode` and a fingerprint's
+times are `IsoText.dateTimeShortest`, the bytes they hashed before), `receipts/` (NFD through
+`canonicalDecomposition`), `chat/MessageReport.kt`, `ai/AiAssist.kt` and `review/MonthStatsWire.kt`
+(the month as `IsoText.yearMonth`).
 
 **Where a `data/…` path in this file lives** (MON-24 phase 2, from November 2026). The data layer
 moves to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`

@@ -10,7 +10,7 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.atTime
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -65,7 +65,7 @@ class SchoolImportPlannerTest {
     }
 
     @Test
-    fun `ids are deterministic and differ by account, kind and key`() {
+    fun `ids are deterministic and differ by account - kind and key`() {
         val one = SchoolImportPlanner.idOf(target, SchoolImportKind.HOURS, "2026-10-05")
 
         assertEquals(one, SchoolImportPlanner.idOf(target, SchoolImportKind.HOURS, "2026-10-05"))
@@ -76,7 +76,7 @@ class SchoolImportPlannerTest {
     }
 
     @Test
-    fun `each time block is its own event, and a whole day is an all-day event on its dates`() {
+    fun `each time block is its own event - and a whole day is an all-day event on its dates`() {
         val event = SchoolEvent(
             id = "OPEN",
             title = "Open day",
@@ -232,7 +232,7 @@ class SchoolImportPlannerTest {
     }
 
     @Test
-    fun `days off with one title are one event, across a weekend`() {
+    fun `days off with one title are one event - across a weekend`() {
         val friday = today.plusDays(4)
         val nextMonday = today.plusDays(7)
         val days = listOf(

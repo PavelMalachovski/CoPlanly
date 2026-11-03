@@ -10,8 +10,12 @@ import kotlin.test.assertEquals
 /**
  * [RecordWindow] against the `java.time` calls the export made before its model moved to
  * kotlinx-datetime (MON-24): `from.atStartOfDay(zone)` and `to.plusDays(1).atStartOfDay(zone)`, in
- * epoch milliseconds. Every day of 2010–2030 in zones whose day can start in a gap or move by
- * half an hour, and Samoa, which skipped 30 December 2011 altogether.
+ * epoch milliseconds, every day of 2010–2030 in zones whose day can start in a gap or move by half
+ * an hour, and Samoa, which skipped 30 December 2011.
+ *
+ * A smoke test on the JVM only: there kotlinx-datetime's `atStartOfDayIn` is `java.time`'s
+ * `atStartOfDay` itself, so this cannot tell the two apart. What holds the iPhone's own time zone
+ * code to `java.time` is `RecordWindowVectorsTest` in commonTest, on literal instants.
  */
 class RecordWindowParityTest {
 

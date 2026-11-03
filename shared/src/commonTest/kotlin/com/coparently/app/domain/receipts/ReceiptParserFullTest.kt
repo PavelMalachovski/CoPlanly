@@ -2,7 +2,7 @@ package com.coparently.app.domain.receipts
 
 import com.coparently.app.domain.model.ExpenseCategory
 import kotlinx.datetime.LocalDate
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
