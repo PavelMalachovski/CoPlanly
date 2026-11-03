@@ -19,11 +19,12 @@ One job in `.github/workflows/ci.yml`, `shared-ios` ("Shared — iOS simulator t
 (Mac)"):
 
 ```bash
-./gradlew :shared:iosSimulatorArm64Test :shared:linkDebugFrameworkIosSimulatorArm64
+./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
 ```
 
-It runs the shared module's `commonTest` on an iOS simulator and links the `Shared` framework the
-iPhone app will use. Its results appear as the check run **"Shared tests (iOS simulator)"** and in
+It runs the shared modules' `commonTest` on an iOS simulator and links the `Shared` framework the
+iPhone app will use (`:shared-ui`'s since MON-24 phase 2, Task 9, exporting `:shared` and
+`:shared-data`). Its results appear as the check run **"Shared tests (iOS simulator)"** and in
 the "CI summary" comment.
 
 The job asks for a runner with the labels `self-hosted`, `macOS`, `ARM64` and `coplanly`. It runs

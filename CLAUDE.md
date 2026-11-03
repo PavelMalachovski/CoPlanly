@@ -535,7 +535,14 @@ When touching the UI, keep these invariants:
    at the same version; MON-24, November 2026),
    Compose BOM 2025.10 (Material 3 1.4 — whose public API has none of M3 Expressive:
    `ButtonGroup`, `LoadingIndicator`, `MotionScheme` and the rest are still alpha, in 1.5; this line
-   used to say the BOM shipped them), Room 2.7.2 (2.6.x breaks on
+   used to say the BOM shipped them), **Compose Multiplatform 1.9.3** in `:shared-ui` (MON-24 phase
+   2, Task 9: plugin `org.jetbrains.compose`, the Compose compiler still
+   `org.jetbrains.kotlin.plugin.compose` at the Kotlin version; its Android artifacts ask for
+   androidx Compose runtime and foundation 1.9.4, so the app's Compose resolves one patch above the
+   BOM's 1.9.3, while material3 stays 1.4.0, which CMP material3 1.9.0 asks for; not 1.10, which
+   lifts Compose to 1.10 past the BOM, the reason Koin waits at 4.1.1 below; no multiplatform
+   Lifecycle, Navigation, Coil 3 or kizitonwose yet — each arrives with the task that first needs
+   it in common code), Room 2.7.2 (2.6.x breaks on
    Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone) — **Room for Kotlin
    Multiplatform in `:shared-data` since MON-24 phase 2**, its processor run there for Android and
    both iPhone targets and the app running none, with androidx.sqlite 2.5.2's bundled driver
@@ -638,8 +645,9 @@ When touching the UI, keep these invariants:
    `EventListScreen` this line used to cite was deleted in September 2026.
    Danger actions (e.g. "Sign out of app") live at the bottom of their screen, not
    mid-list.
-9. **User-facing strings** live in tracked, feature-named `res/values/*_strings.xml`
-   files (`chat_strings.xml`, `expenses_strings.xml`, `settings_account_strings.xml`,
+9. **User-facing strings** live in tracked, feature-named `values/*_strings.xml`
+   files under `shared-ui/src/commonMain/composeResources/` since MON-24 phase 2 (the app's
+   `res/values/` copy is generated from them; see "Localization (i18n)") (`chat_strings.xml`, `expenses_strings.xml`, `settings_account_strings.xml`,
    `navigation.xml`, `event_preview.xml`, …). All `strings.xml` files are tracked too
    (secrets were moved to BuildConfig long ago); prefer the feature files for new keys.
    Never hardcode user-visible text in composables — see "Localization (i18n)" below.
@@ -660,7 +668,7 @@ crash with "migration from 3 to 9 required but not found".
 ./gradlew :shared:testDebugUnitTest                # the shared module's commonTest on the JVM
 ./gradlew :shared:compileKotlinIosSimulatorArm64   # its iOS klib; any host, no Mac (Kotlin 2.2.20+)
 ./gradlew :shared:iosSimulatorArm64Test            # commonTest on an iOS simulator: a Mac with Xcode
-./gradlew :shared:linkDebugFrameworkIosSimulatorArm64  # Shared.framework for the iPhone app: the Mac too
+./gradlew :shared-ui:linkDebugFrameworkIosSimulatorArm64  # Shared.framework for the iPhone app: the Mac too
 ```
 
 ```bash
@@ -704,7 +712,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   dependencies and no Android SDK: locale completeness, format-argument agreement across the
   five locales, the four-way push-type agreement item 15 states, that no production code imports
   Gson (check 4), and that every `@Serializable` model — a model whose JSON `StoredJson` writes —
-  has a case in the R8 runtime probe (check 5)). Until MON-24 check 4 was "every type Gson reflects
+  has a case in the R8 runtime probe (check 5), the disclosed Google scope (check 6), and that every
+  string reads alike to aapt2 and to Compose Multiplatform (check 7, see "Localization")). Until
+  MON-24 check 4 was "every type Gson reflects
   over is covered by a `-keepclassmembers ... { <fields>; }` rule", and it and the mapping check
   were one defect from two sides — the source said a rule existed, the mapping said it worked, and
   a typo in a package name passed the first and failed the second. `StoredJson`'s generated
@@ -1026,9 +1036,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   And it is gated on `changes`' `r8runtime` (Android changes outside screens, resources and tests,
   plus the build, rules, workflow and the probe); `main` always runs it.
 - **The shared modules have two jobs of their own** (MON-24, November 2026), both gated on
-  `changes`' `shared` output: `shared/**` and `shared-data/**`, the root and module build files and
-  the workflow — and a path in either module is also an Android path for every other output,
-  treated as the build is (every Android job, every emulator leg), because the app compiles both.
+  `changes`' `shared` output: `shared/**`, `shared-data/**` and `shared-ui/**`, the root and module
+  build files and the workflow — and a path in `shared/` or `shared-data/` is also an Android path
+  for every other output, treated as the build is (every Android job, every emulator leg), because
+  the app compiles both. A `shared-ui/` string (`composeResources/`), screen (`presentation/`) or
+  test is decided as the app path it stands for (`res/`, `presentation/`, the unit tests:
+  `asAppPath` in `tools/ci-changes.js`), so a string-only change still skips e2e, the upgrade job
+  and the R8 probe; the rest of `shared-ui/` is the build.
   **`shared`** (Linux) runs, for `:shared` and `:shared-data` (phase 2's data layer) alike,
   `testDebugUnitTest` (check run "Shared tests (JVM)"), `compileKotlinIosSimulatorArm64`,
   the iOS klib, which Kotlin cross-compiles on Linux without a flag since 2.2.20 — so commonMain
@@ -1042,9 +1056,12 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
   same tests once more, because Kover merges `:shared` and `:shared-data` into the app's coverage
-  report. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
-  `:shared:linkDebugFrameworkIosSimulatorArm64` and `:shared-data:iosSimulatorArm64Test` (`:shared-data`
-  makes no framework of its own; `:shared-ui` will make the one the iPhone app links)
+  report. `shared` also compiles `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with
+  `Res`; the module has no tests of its own yet (the strings' parity tests run in the app, in
+  `build-test`). **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
+  `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
+  iPhone app's one framework, `Shared`, static, exporting `:shared` and `:shared-data`, which make
+  none of their own since Task 9)
   (check run "Shared tests (iOS simulator)", `require_tests`) on a **GitHub-hosted** `macos-latest`
   runner, gated on `shared` like the Linux job (owner decision, 1 November 2026). The repository is
   public, so macOS runners are free, and a fork's code runs on GitHub's machine, never on anybody's
@@ -1061,9 +1078,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   Xcode version and on the three lines of `shared-data/build.gradle.kts` that decide the pods
   (`firebaseIosVersion`, `ios.deploymentTarget`, the pod list), with prefix `restore-keys`, and is
   saved only when that step succeeded, so a run that stopped before the pods never saves a cache
-  without them. `:shared:detekt` and `:shared-data:detekt` run in the `detekt` job against
-  the app's config and the app's baseline file — one baseline for every module, which
-  `:app:detektBaseline` writes because it also reads `shared/src` and `shared-data/src` (the other
+  without them. `:shared:detekt`, `:shared-data:detekt` and `:shared-ui:detekt` run in the `detekt`
+  job against the app's config and the app's baseline file — one baseline for every module, which
+  `:app:detektBaseline` writes because it also reads `shared/src`, `shared-data/src` and
+  `shared-ui/src` (the other
   modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with
   its own run's, so a second writer would erase the first's).
 - **The `web` job tests what a court and an iPhone see** ("Web — verification page and calendar
@@ -1535,6 +1553,12 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
              di/koin/IosUnavailable.kt where the iPhone has nothing yet).
              Depends on shared/; no iOS framework of its own
+shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phase 2, from Task 9):
+             the UI both apps will run. So far the strings: composeResources/values*/ (every
+             string, plural and string array, five locales), from which Res
+             (com.coparently.app.resources) is generated, and from which the app generates its
+             R.string copy. The theme, common components, ViewModels and screens follow. It makes
+             the iPhone's one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
              except the phase-1 stay list below (one file), which is still in app/
@@ -1545,7 +1569,7 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature + ViewModels + theme
+presentation/ — Compose screens per feature + ViewModels + theme (their strings in shared-ui/)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -3959,6 +3983,32 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
 The app ships in 5 languages: **English (base `values/`), Czech, German, Russian,
 Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
 
+- **The strings live in `shared-ui/src/commonMain/composeResources/values*/`** (MON-24 phase 2,
+  Task 9): the 63 feature files of each locale that were `app/src/main/res/values*/`, same names,
+  moved with `git mv`. Compose Multiplatform 1.9.3's resource plugin generates `Res` from them
+  (`com.coparently.app.resources`, public), and the app's `stringsToAndroidRes` task
+  (`app/build.gradle.kts`) copies them **byte for byte** into a generated resource directory of
+  every variant (`app/build/generated/res/stringsToAndroidRes/`, through AGP's
+  `addGeneratedSourceDirectory`), so `R.string`/`R.plurals` keep Android's own reading for the
+  app, its unit and screenshot tests, the widget, pushes and notices. `app/src/main/res/values/`
+  keeps only `colors.xml` and `themes.xml`; `values-night/` and `xml/` stay too. Don't add a
+  string under `app/src/main/res/` again, and don't edit the generated copy. The task lives in the
+  app's build file, not in a `tools/` script plugin, because a script applied with
+  `apply(from = …)` cannot see AGP's classes.
+- **One text, two readers, read alike.** aapt2 (with `String.format`) and Compose
+  Multiplatform's plugin (with its own formatter) unescape and format differently: CMP 1.9.3
+  unescapes only `\n`, `\t`, `\uXXXX` and `\\`, keeps whitespace and an unescaped `"` as written,
+  and replaces only `%<n>$s` and `%<n>$d`. So an apostrophe is written **`\u0027`** and a straight
+  quote **`\u0022`** (never `\'`, `\"`), a line break `\n`, no whitespace run or edge, no `%s`,
+  `%d` or `%.1f`, and no markup. Check 7 of `node tools/check-invariants.js` refuses each of those
+  offline, and `StringsParityTest`/`PluralsParityTest` (`app/src/test/.../resources/`, Robolectric)
+  compare both readings of every string, array and plural (counts 0–200) in the five languages.
+  Where they differ, the **source text** changes so both read it alike, never one consumer. One
+  difference stands, pinned by both: a literal `%%` beside arguments
+  (`expenses_split_shares_*`), which `String.format` prints as `%` and CMP as `%%`, and which no
+  spelling fixes; those keys are read through `R.string` only, and need a wording both read alike
+  before `SplitShares.kt` moves to `shared-ui` (Task 11).
+
 - **Language selection**: device locale by default, plus a manual per-app override — the
   "Language" card in Settings (`presentation/settings/AppLanguage.kt`,
   `AppCompatDelegate.setApplicationLocales`). The choice is persisted by the
@@ -3970,14 +4020,16 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   locales silently stop working otherwise. (It is `Theme.AppCompat.DayNight.NoActionBar` since
   UX-13, with a per-theme `@color/window_background` so a dark cold start does not flash white;
   `values-night/` is a night qualifier holding that colour, not a locale, and holds no strings.)
-  `res/xml/locales_config.xml`, the `AppLanguage` enum, and the `values-<language>` folders must
-  list the same locale set.
-- **Adding a string** = add the key to the feature's base `values/<feature>_strings.xml`
-  AND to all four locale variants of that file. Missing translations fall back to English
+  `res/xml/locales_config.xml`, the `AppLanguage` enum, and the `values-<language>` folders under
+  `shared-ui/src/commonMain/composeResources/` must list the same locale set.
+- **Adding a string** = add the key to the feature's base
+  `shared-ui/src/commonMain/composeResources/values/<feature>_strings.xml` AND to all four locale
+  variants of that file; `R.string.<key>` and `Res.string.<key>` are both generated from it. Missing translations fall back to English
   at runtime. **Lint will not catch a missing one**: `MissingTranslation` is switched off
   outright in `app/build.gradle.kts` (`disable += "MissingTranslation"`), not demoted to a
   warning — a disabled check does not run, so it reports nothing under any severity. Verify
-  locale completeness by grep instead, e.g. `git grep -c 'name="your_key"' -- app/src/main/res/values*/*.xml`,
+  locale completeness by grep instead, e.g.
+  `git grep -c 'name="your_key"' -- 'shared-ui/src/commonMain/composeResources/values*/*.xml'`,
   which should return five files and also catches a duplicate the lint check never would.
   `node tools/check-invariants.js` does that sweep over every key at once — and compares each
   translation's format arguments, since a dropped `%1$s` throws `IllegalFormatException` only on
@@ -3998,7 +4050,8 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   on purpose. The Day and Week views' hour gutter follows the same clock through `hourLabel`
   (L-7: "09" on 24 hours, "9 AM" on 12), and only a 12-hour clock widens it
   (`Dimensions.hourGutterWidthFor`), so the 24-hour layout never moves.
-- There is no `values-en/` — base `values/` IS English; don't recreate it.
+- There is no `values-en/` — base `values/` IS English; don't recreate it (in
+  `composeResources/`, where Compose Multiplatform falls back to it the way Android does).
 - **English is written in sentence case** (October 2026 audit, D-21): "Event title", "Week on /
   week off", "Save changes" — only the first word and proper names (Google Calendar, CoPlanly)
   are capitalised, as Material 3 and the rest of the app do. Title Case crept into 101 labels

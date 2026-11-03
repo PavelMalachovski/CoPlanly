@@ -564,6 +564,25 @@ a repository's public API.
   `sealed interface UiText { Res(StringResource, args), Plural(PluralStringResource, count, args), Date(...), Raw(String) }`,
   with the same four cases and resolved through `asString()` in composition.
 
+**Slice 9a notes (November 2026).** Done in slice 9a: the module, the string move, the generator,
+both parity tests and Steps 1–3; Steps 4–6 are slice 9b.
+- Versions: Compose Multiplatform **1.9.3**, not 1.10 (which lifts Compose past BOM 2025.10.00);
+  its Android artifacts ask for androidx Compose runtime and foundation 1.9.4, one patch above the
+  BOM. The multiplatform Lifecycle ViewModel, Navigation, Coil 3 and kizitonwose listed under Files
+  are **not** added yet: each arrives with the task that first needs it in common code (Tasks
+  10–11), rather than as an unused dependency now.
+- The generator is the `stringsToAndroidRes` task in `app/build.gradle.kts`, not
+  `tools/strings-to-android-res.gradle.kts`: a script applied with `apply(from = …)` cannot see the
+  Android Gradle plugin's classes, which the `addGeneratedSourceDirectory` wiring needs (tried on a
+  scratch build). Its output is `app/build/generated/res/stringsToAndroidRes/values*/`.
+- 63 files per locale moved (every `*_strings.xml`, `strings.xml`, `navigation.xml`,
+  `event_preview.xml`, `reminders.xml`), not 65: `colors.xml` and `themes.xml` stay.
+- Source fixes (Step 3): `\'` → `\u0027` (126), `\"` → `\u0022` (2), and the straight quotes of
+  `settings_language_description` → `\u0022`. The `%%` beside arguments in the three
+  `expenses_split_shares_*` keys cannot be fixed in the text; `StringsParityTest` and check 7 of
+  `tools/check-invariants.js` name them, and they need a new wording before Task 11 moves
+  `SplitShares.kt`.
+
 - [ ] **Step 1: Write `StringsParityTest`** (Robolectric). For every key in every locale, the
   value from Android resources equals CMP's `getString` for that locale, with the same arguments.
   Use `"A"`/`7` per position and a key with `%%`.

@@ -2817,6 +2817,27 @@ bytes are identical on Android):
   `@InternalSharedApi`, because the app's tests compile `wire/` and `ChatEventCardViewModelTest`
   uses it; and the iOS test that signs in on the Auth emulator and reads an event written from the
   JVM (Task 8 Step 4) waits for the iPhone app's sign-in in phase 3.
+- **`:shared-ui` and the strings** — **slice 9a done (phase 2, Task 9, November 2026)**: a new
+  module on Compose Multiplatform 1.9.3 (not 1.10, which lifts Compose past the BOM; 1.9.3's Android
+  artifacts already lift androidx Compose runtime and foundation one patch, to 1.9.4) holds every
+  string, plural and string array in `composeResources/values*/` — the 63 files of each locale moved
+  from `app/src/main/res/` with `git mv` — and generates `Res` (`com.coparently.app.resources`). The
+  app's `stringsToAndroidRes` task copies the same files byte for byte into a generated resource
+  directory of every variant, so `R.string` and every Android-only reader keep Android's reading.
+  `:shared-ui` makes the iPhone's one framework, `Shared` (static, exporting `:shared` and
+  `:shared-data`); `:shared`'s own is gone. Reading CMP 1.9.3's resource plugin (and running its
+  conversion over the real files on a scratch build) showed it unescapes only `\n`, `\t`,
+  `\uXXXX` and `\\`, keeps whitespace and an unescaped `"`, and formats only `%<n>$s`/`%<n>$d`:
+  the 126 apostrophes written `\'` and two quotes written `\"` are now `\u0027`/`\u0022` (the
+  same text to aapt2), and an English line whose straight quotes aapt2 silently dropped
+  (`settings_language_description`, unused) now shows them on both. `StringsParityTest` and
+  `PluralsParityTest` (Robolectric) compare both readings of every key in five languages, plural
+  counts 0–200, and check 7 of `check-invariants.js` refuses the differences offline. **One stands**:
+  `%%` beside arguments in the three `expenses_split_shares_*` keys, which `String.format` prints as
+  `%` and CMP as `%%`, and which no spelling fixes; they stay `R.string`-only and need a wording both
+  read alike before `SplitShares.kt` moves (Task 11). Slice 9b moves the theme, `presentation/common/`,
+  the fonts and `UiText`. Not yet run anywhere: the CMP Gradle plugin on this build, `Res` on Android
+  and iOS, and the parity tests — CI's first run.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call
