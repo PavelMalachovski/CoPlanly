@@ -2,19 +2,15 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentQuery
+import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.firebase.StoredDocument
 import com.coparently.app.domain.professionals.ProfessionalGrant
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.EventListener
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.QuerySnapshot
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -34,21 +30,20 @@ import kotlin.test.assertEquals
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfessionalRepositoryImplTest {
 
-    private var listener: EventListener<QuerySnapshot>? = null
+    /** The grants query's listener: what the test sends, the repository receives. */
+    private val snapshots = MutableSharedFlow<List<StoredDocument>>(replay = 1)
     private val family = MutableStateFlow<FamilyOption?>(FamilyOption(BOB_FAMILY, "bob"))
 
-    private val firestore = mockk<FirebaseFirestore>().also { firestore ->
-        val grants = mockk<CollectionReference>()
-        val query = mockk<Query>()
-        every { firestore.collection("professional_grants") } returns grants
-        every { grants.whereArrayContains("familyParents", ME) } returns query
-        every { query.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers {
-            listener = firstArg()
-            mockk<ListenerRegistration>(relaxed = true)
+    private val firestore = RecordingFirestoreClient().apply {
+        queryFlow = { query ->
+            check(query == DocumentQuery("professional_grants").whereArrayContains("familyParents", ME)) {
+                "unexpected query $query"
+            }
+            snapshots
         }
     }
-    private val authService = mockk<FirebaseAuthService> {
-        every { getCurrentUser() } returns mockk<FirebaseUser> { every { uid } returns ME }
+    private val authService = mockk<SignedInUser> {
+        every { getCurrentUid() } returns ME
     }
     private val selectedFamilySource = mockk<SelectedFamilySource> {
         every { observe(ME) } returns family
@@ -69,7 +64,7 @@ class ProfessionalRepositoryImplTest {
         backgroundScope.launch { repository.observeFamilyGrants().toList(seen) }
         runCurrent()
 
-        checkNotNull(listener).onEvent(snapshotOf(grant(BOB_FAMILY, "mediator"), grant(CAROL_FAMILY, "lawyer")), null)
+        snapshots.emit(listOf(grant(BOB_FAMILY, "mediator"), grant(CAROL_FAMILY, "lawyer")))
         runCurrent()
         assertEquals(listOf("mediator"), seen.last().map { it.proUid })
 
@@ -85,13 +80,13 @@ class ProfessionalRepositoryImplTest {
         backgroundScope.launch { repository.observeFamilyGrants().toList(seen) }
         runCurrent()
 
-        checkNotNull(listener).onEvent(snapshotOf(grant(BOB_FAMILY, "mediator")), null)
+        snapshots.emit(listOf(grant(BOB_FAMILY, "mediator")))
         runCurrent()
 
         assertEquals(emptyList(), seen.last())
     }
 
-    private fun grant(familyId: String, proUid: String): DocumentSnapshot {
+    private fun grant(familyId: String, proUid: String): StoredDocument {
         val partner = familyId.substringAfter("__")
         val data = mapOf<String, Any>(
             "familyId" to familyId,
@@ -104,14 +99,7 @@ class ProfessionalRepositoryImplTest {
             "expiresAtMillis" to Long.MAX_VALUE,
             "consents" to mapOf(ME to 1L)
         )
-        return mockk {
-            every { id } returns "${familyId}__$proUid"
-            every { this@mockk.data } returns data
-        }
-    }
-
-    private fun snapshotOf(vararg documents: DocumentSnapshot): QuerySnapshot = mockk {
-        every { this@mockk.documents } returns documents.toList()
+        return StoredDocument("${familyId}__$proUid", data)
     }
 
     private companion object {

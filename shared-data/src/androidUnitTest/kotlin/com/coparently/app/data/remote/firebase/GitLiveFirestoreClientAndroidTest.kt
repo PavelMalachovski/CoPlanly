@@ -266,6 +266,29 @@ class GitLiveFirestoreClientAndroidTest {
         verify(exactly = 1) { third.orderBy("timestamp", Query.Direction.ASCENDING) }
     }
 
+    @Test
+    fun `an in filter is the SDK's inArray over the same values`() = runTest {
+        mockkStatic(Filter::class)
+        val filtered = mockk<Query>()
+        val narrowed = mockk<Query>()
+        val none = mockk<QuerySnapshot>()
+        every { none.documents } returns emptyList()
+        every { collection.where(any()) } returns filtered
+        every { filtered.where(any()) } returns narrowed
+        every { narrowed.get(Source.DEFAULT) } returns Tasks.forResult(none)
+
+        client.get(
+            DocumentQuery(COLLECTION)
+                .whereEqualTo("familyId", "a__b")
+                .whereIn("createdByFirebaseUid", listOf("a", "b"))
+        )
+
+        verifyOrder {
+            Filter.equalTo("familyId", "a__b")
+            Filter.inArray("createdByFirebaseUid", listOf("a", "b"))
+        }
+    }
+
     // ---- transactions and failures ------------------------------------------------------------
 
     @Test

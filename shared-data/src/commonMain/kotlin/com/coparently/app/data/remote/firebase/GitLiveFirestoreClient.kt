@@ -103,6 +103,7 @@ class GitLiveFirestoreClient(private val firestore: FirebaseFirestore) : Firesto
                 when (filter.op) {
                     FilterOp.EQUAL_TO -> field equalTo value
                     FilterOp.ARRAY_CONTAINS -> field contains requireNotNull(value) { "array-contains on null" }
+                    FilterOp.IN -> field inArray inValues(value)
                     FilterOp.GREATER_THAN -> field greaterThan requireNotNull(value) { "> null" }
                     FilterOp.GREATER_THAN_OR_EQUAL_TO -> field greaterThanOrEqualTo requireNotNull(value) { ">= null" }
                     FilterOp.LESS_THAN -> field lessThan requireNotNull(value) { "< null" }
@@ -154,6 +155,10 @@ class GitLiveFirestoreClient(private val firestore: FirebaseFirestore) : Firesto
             is Set<*> -> value.map(::toGitLive)
             else -> value
         }
+
+        /** An `in` filter's values as GitLive's `inArray` takes them: a list, no null in it. */
+        private fun inValues(value: Any?): List<Any> =
+            requireNotNull(value as? List<*>) { "in needs a list" }.map { requireNotNull(it) { "in on null" } }
 
         private fun ReadSource.toGitLive(): Source = when (this) {
             ReadSource.DEFAULT -> Source.DEFAULT

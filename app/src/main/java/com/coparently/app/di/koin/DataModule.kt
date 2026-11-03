@@ -45,11 +45,9 @@ import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
-import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
 import com.coparently.app.data.repository.FriendRepositoryImpl
-import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.JournalRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentSlotMigrator
@@ -155,11 +153,9 @@ val dataModule = module {
     singleOf(::CredentialManagerService)
     singleOf(::CredentialProviderImpl)
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
-    singleOf(::CalendarFeedRepositoryImpl)
     singleOf(::ChildInfoRepositoryImpl)
     single { ExpenseRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     singleOf(::FriendRepositoryImpl)
-    singleOf(::GuestRepositoryImpl)
     singleOf(::JournalRepositoryImpl)
     singleOf(::PairingRepositoryImpl)
     singleOf(::ParentSlotMigrator)

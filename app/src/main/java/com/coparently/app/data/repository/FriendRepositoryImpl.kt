@@ -2,9 +2,14 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.DocumentQuery
+import com.coparently.app.data.remote.firebase.FirestoreClient
+import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.firebase.StoredDocument
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.friends.AcceptCalendarFriendResult
 import com.coparently.app.domain.friends.CalendarFriendGrant
@@ -15,18 +20,14 @@ import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.repository.FriendRepository
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.util.UUID
 
@@ -41,10 +42,14 @@ import java.util.UUID
  * so a lapsed grant disappears from the parents' list the moment it lapses, with no sweep in the
  * path. The security rule enforces the same instant server-side, so this is presentation, not the
  * gate.
+ *
+ * On [FirestoreClient] and [SignedInUser] since MON-24 phase 2 (Task 8d): the same documents,
+ * queries and listeners as the Android SDK calls it made. It stays in the app while
+ * [FriendRepository] and `ProfessionalEvents` take a `java.time.LocalDate`.
  */
 class FriendRepositoryImpl(
-    private val firestore: FirebaseFirestore,
-    private val authService: FirebaseAuthService,
+    private val firestore: FirestoreClient,
+    private val authService: SignedInUser,
     private val pairingFunctions: PairingFunctions,
     private val selectedFamilySource: SelectedFamilySource
 ) : FriendRepository {
@@ -58,9 +63,10 @@ class FriendRepositoryImpl(
             return Result.failure(PairingException(PairingError.GrantEnded))
         }
         return runFriend {
-            val user = authService.getCurrentUser()
+            val uid = authService.getCurrentUid()
                 ?: throw PairingException(PairingError.Unknown("Not signed in"))
-            val profile = firestore.collection(USERS).document(user.uid).get().await()
+            val email = authService.getCurrentEmail().orEmpty()
+            val profile = firestore.get(DocumentPath(USERS, uid))
             val invite = GuestInvite(
                 id = UUID.randomUUID().toString(),
                 code = InviteCodeGenerator.generate(),
@@ -69,13 +75,14 @@ class FriendRepositoryImpl(
                 inviteExpiresAtMillis = System.currentTimeMillis() + INVITE_TTL_MILLIS,
                 grantExpiresAtMillis = grantExpiresAtMillis
             )
-            firestore.collection(INVITATIONS).document(invite.id).set(
+            firestore.set(
+                DocumentPath(INVITATIONS, invite.id),
                 mapOf(
                     "id" to invite.id,
                     "code" to invite.code,
-                    "fromUserId" to user.uid,
-                    "fromUserName" to (profile.getString("name") ?: user.email.orEmpty()),
-                    "fromUserEmail" to user.email.orEmpty(),
+                    "fromUserId" to uid,
+                    "fromUserName" to (profile.string("name") ?: email),
+                    "fromUserEmail" to email,
                     // Empty, like the guest invite's: a parent generally does not know which
                     // account their child's grandmother signs in with.
                     "toEmail" to "",
@@ -97,7 +104,7 @@ class FriendRepositoryImpl(
                     // anyway) costs nothing.
                     "familyId" to (selectedFamilySource.selected()?.familyId.orEmpty())
                 )
-            ).await()
+            )
             invite
         }
     }
@@ -111,12 +118,12 @@ class FriendRepositoryImpl(
     }
 
     override fun observeFamilyFriends(): Flow<List<CalendarFriendGrant>> {
-        val myUid = authService.getCurrentUser()?.uid ?: return flowOf(emptyList())
+        val myUid = authService.getCurrentUid() ?: return flowOf(emptyList())
         // Every grant naming this parent — the one list query the rule admits a parent — kept to
         // the family on screen. A parent in two families sees each family's friends under that
         // family (L-5 keys a grant per family), and a friend admitted by both appears in both.
         val grantsNamingMe = observeGrants(
-            firestore.collection(CALENDAR_FRIENDS).whereArrayContains("familyParents", myUid)
+            DocumentQuery(CALENDAR_FRIENDS).whereArrayContains("familyParents", myUid)
         )
         return combine(grantsNamingMe, selectedFamilySource.observe(myUid)) { grants, family ->
             val familyId = family?.familyId
@@ -132,27 +139,24 @@ class FriendRepositoryImpl(
     }
 
     override suspend fun revokeFriend(friendUid: String): Result<Unit> = runFriend {
-        val myUid = authService.getCurrentUser()?.uid
+        val myUid = authService.getCurrentUid()
             ?: throw PairingException(PairingError.Unknown("Not signed in"))
         // The family on screen, the one the list this revoke was chosen from is kept to. The
         // same friend's grant in another family is a different document and stays (L-5).
         val familyId = selectedFamilySource.observe(myUid).first()?.familyId
             ?: throw PairingException(PairingError.Unknown("No family on screen"))
-        firestore.collection(CALENDAR_FRIENDS)
-            .document(CalendarFriendGrant.documentId(familyId, friendUid))
-            .delete()
-            .await()
+        firestore.delete(DocumentPath(CALENDAR_FRIENDS, CalendarFriendGrant.documentId(familyId, friendUid)))
     }
 
     override fun observeMyGrants(): Flow<List<CalendarFriendGrant>> {
-        val myUid = authService.getCurrentUser()?.uid ?: return flowOf(emptyList())
+        val myUid = authService.getCurrentUid() ?: return flowOf(emptyList())
         return observeGrants(myGrantsQuery(myUid)).map { grants -> liveSoonestFirst(grants) }
     }
 
     override suspend fun myGrants(): List<CalendarFriendGrant> {
-        val myUid = authService.getCurrentUser()?.uid ?: return emptyList()
+        val myUid = authService.getCurrentUid() ?: return emptyList()
         val documents = try {
-            myGrantsQuery(myUid).get().await().documents
+            firestore.get(myGrantsQuery(myUid))
         } catch (e: CancellationException) {
             // Never swallowed: `runFriend` in this same file rethrows it for the same reason —
             // a cancelled coroutine that reports itself as a failed read is a lie about why.
@@ -168,8 +172,8 @@ class FriendRepositoryImpl(
      * The friend's own grants, one per family (L-5). Filtered on `friendUid`, the field the read
      * rule keys the friend's side on — an unfiltered read of the collection is refused outright.
      */
-    private fun myGrantsQuery(myUid: String): Query =
-        firestore.collection(CALENDAR_FRIENDS).whereEqualTo("friendUid", myUid)
+    private fun myGrantsQuery(myUid: String): DocumentQuery =
+        DocumentQuery(CALENDAR_FRIENDS).whereEqualTo("friendUid", myUid)
 
     private fun liveSoonestFirst(grants: List<CalendarFriendGrant>): List<CalendarFriendGrant> =
         CalendarFriendPolicy.active(grants, System.currentTimeMillis()).sortedBy { it.expiresAtMillis }
@@ -177,42 +181,38 @@ class FriendRepositoryImpl(
     /**
      * A grant query as a flow of decoded grants. Not closed on error: a denied or dropped
      * listener must not take the screen's whole flow down, and an empty list is the honest
-     * reading of "this device cannot see any grants right now".
+     * reading of "this device cannot see any grants right now". The failed listener says nothing
+     * more, and the flow stays open until its collector leaves, as the SDK listener it replaced
+     * did.
      */
-    private fun observeGrants(query: Query): Flow<List<CalendarFriendGrant>> = callbackFlow {
-        val registration = query.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                trySend(emptyList())
-                return@addSnapshotListener
+    private fun observeGrants(query: DocumentQuery): Flow<List<CalendarFriendGrant>> =
+        firestore.observe(query)
+            .map { documents -> documents.mapNotNull { doc -> FriendMappers.grantFrom(doc.id, doc.data) } }
+            .catch {
+                emit(emptyList())
+                awaitCancellation()
             }
-            trySend(
-                snapshot?.documents.orEmpty().mapNotNull { doc ->
-                    FriendMappers.grantFrom(doc.id, doc.data)
-                }
-            )
-        }
-        awaitClose { registration.remove() }
-    }
 
     override fun observeMyProfile(): Flow<FriendProfile?> {
-        val myUid = authService.getCurrentUser()?.uid ?: return flowOf(null)
+        val myUid = authService.getCurrentUid() ?: return flowOf(null)
         return observeFriendProfile(myUid)
     }
 
     override suspend fun saveMyProfile(profile: FriendProfile): Result<Unit> = runFriend {
-        val user = authService.getCurrentUser()
+        val uid = authService.getCurrentUid()
             ?: throw PairingException(PairingError.Unknown("Not signed in"))
         // The Google account's own picture, when the profile carries none. The rule
         // `ProfileIdentity` applies to a parent's avatar, applied here: take the strongest
         // source that actually has a value, and never let it overwrite something already
         // stored — a friend who has set a picture of their own keeps it.
         val photoUrl = profile.photoUrl?.takeIf { it.isNotBlank() }
-            ?: user.photoUrl?.toString()?.takeIf { it.isNotBlank() }
+            ?: authService.getCurrentPhotoUrl()?.takeIf { it.isNotBlank() }
         // The document id is always this account's own uid: the rule refuses any other, and
         // writing one would be an attempt to author somebody else's profile.
-        firestore.collection(FRIEND_PROFILES).document(user.uid)
-            .set(FriendMappers.profileToMap(profile.copy(uid = user.uid, photoUrl = photoUrl)))
-            .await()
+        firestore.set(
+            DocumentPath(FRIEND_PROFILES, uid),
+            FriendMappers.profileToMap(profile.copy(uid = uid, photoUrl = photoUrl))
+        )
     }
 
     override fun observeFriendProfile(friendUid: String): Flow<FriendProfile?> =
@@ -225,37 +225,36 @@ class FriendRepositoryImpl(
         to: LocalDate
     ): Flow<FriendCalendarRead> {
         val parents = FamilyKey.membersOf(familyId) ?: return flowOf(FriendCalendarRead.Failed)
-        return callbackFlow {
-            // The query `firestore-tests/rules/friend-calendar.test.js` pins: `familyId` is what
-            // the rule builds the grant's path from, and the creator filter is what lets Firestore
-            // prove the creator is one of that family's parents from the query alone (M-6). The
-            // by-creator query alone is refused outright.
-            val registration = firestore.collection(EVENTS)
-                .whereEqualTo(FIELD_FAMILY_ID, familyId)
-                .whereIn(FIELD_CREATOR, parents.toList())
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        logger.w(TAG, "The family's events could not be read", error)
-                        trySend(friendCalendarReadFor(error))
-                        close()
-                        return@addSnapshotListener
-                    }
-                    val documents = snapshot?.documents.orEmpty().map { it.data.orEmpty() }
-                    trySend(FriendCalendarRead.Events(ProfessionalEvents.from(documents, from, to)))
-                }
-            awaitClose { registration.remove() }
-        }
+        // The query `firestore-tests/rules/friend-calendar.test.js` pins: `familyId` is what the
+        // rule builds the grant's path from, and the creator filter is what lets Firestore prove
+        // the creator is one of that family's parents from the query alone (M-6). The by-creator
+        // query alone is refused outright.
+        val query = DocumentQuery(EVENTS)
+            .whereEqualTo(FIELD_FAMILY_ID, familyId)
+            .whereIn(FIELD_CREATOR, parents.toList())
+        return firestore.observe(query)
+            .map<List<StoredDocument>, FriendCalendarRead> { snapshot ->
+                val documents = snapshot.map { it.data.orEmpty() }
+                FriendCalendarRead.Events(ProfessionalEvents.from(documents, from, to))
+            }
+            // A failed read ends the flow with what it means, as the listener closed itself.
+            .catch { error ->
+                logger.w(TAG, "The family's events could not be read", error)
+                emit(friendCalendarReadFor(firestore.errorCodeOf(error)))
+            }
     }
 
-    /** One document as a flow, degrading a failed listener to null rather than closing. */
+    /**
+     * One document as a flow, degrading a failed listener to null rather than closing: the flow
+     * stays open until its collector leaves, as the SDK listener it replaced did.
+     */
     private fun observeDocument(collection: String, id: String): Flow<Map<String, Any?>?> =
-        callbackFlow {
-            val registration = firestore.collection(collection).document(id)
-                .addSnapshotListener { snapshot, error ->
-                    trySend(if (error != null) null else snapshot?.data)
-                }
-            awaitClose { registration.remove() }
-        }
+        firestore.observe(DocumentPath(collection, id))
+            .map<StoredDocument, Map<String, Any?>?> { it.data }
+            .catch {
+                emit(null)
+                awaitCancellation()
+            }
 
     /**
      * Runs a Firestore block and normalizes any failure into a [PairingException], the shape
@@ -300,14 +299,13 @@ class FriendRepositoryImpl(
 }
 
 /**
- * What a failed read of the family's events means to a calendar friend (phase 2). The rules
- * refusing her is the one failure a retry cannot fix — her grant was revoked or it lapsed — so it
- * is told apart from every other, which she can retry.
+ * What a failed read of the family's events means to a calendar friend (phase 2), from the
+ * failure's Firestore status ([FirestoreClient.errorCodeOf]; null for a failure that is not
+ * Firestore's). The rules refusing her is the one failure a retry cannot fix — her grant was
+ * revoked or it lapsed — so it is told apart from every other, which she can retry.
  */
-internal fun friendCalendarReadFor(error: Throwable): FriendCalendarRead =
-    if (error is FirebaseFirestoreException &&
-        error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
-    ) {
+internal fun friendCalendarReadFor(code: FirestoreErrorCode?): FriendCalendarRead =
+    if (code == FirestoreErrorCode.PERMISSION_DENIED) {
         FriendCalendarRead.AccessEnded
     } else {
         FriendCalendarRead.Failed

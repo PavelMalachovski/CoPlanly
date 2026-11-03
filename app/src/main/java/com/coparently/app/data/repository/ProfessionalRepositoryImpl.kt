@@ -2,11 +2,15 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.DocumentQuery
+import com.coparently.app.data.remote.firebase.FieldPath
+import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.Event
@@ -17,16 +21,13 @@ import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository
-import com.google.firebase.firestore.FieldPath
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.util.UUID
 
@@ -40,30 +41,35 @@ import java.util.UUID
  * Each listener degrades a failure to an empty answer rather than closing its flow: a denial is
  * what an unconsented or expired grant *should* produce on the professional's side, and a screen
  * must show "nothing to read" then, not crash or spin.
+ *
+ * On [FirestoreClient] and [SignedInUser] since MON-24 phase 2 (Task 8d): the same documents,
+ * queries and listeners as the Android SDK calls it made. It stays in the app while
+ * [ProfessionalRepository] and `ProfessionalEvents` take a `java.time.LocalDate`.
  */
 class ProfessionalRepositoryImpl(
-    private val firestore: FirebaseFirestore,
-    private val authService: FirebaseAuthService,
+    private val firestore: FirestoreClient,
+    private val authService: SignedInUser,
     private val pairingFunctions: PairingFunctions,
     private val selectedFamilySource: SelectedFamilySource,
     private val custodyDataSource: FirestoreCustodyDataSource,
     private val planDataSource: FirestoreParentingPlanDataSource
 ) : ProfessionalRepository {
 
-    override fun currentUid(): String? = authService.getCurrentUser()?.uid
+    override fun currentUid(): String? = authService.getCurrentUid()
 
     override suspend fun invite(role: ProfessionalRole, grantExpiresAtMillis: Long): Result<GuestInvite> {
         if (grantExpiresAtMillis <= System.currentTimeMillis()) {
             return Result.failure(PairingException(PairingError.GrantEnded))
         }
         return runProfessional {
-            val user = authService.getCurrentUser()
+            val uid = authService.getCurrentUid()
                 ?: throw PairingException(PairingError.Unknown("Not signed in"))
+            val email = authService.getCurrentEmail().orEmpty()
             // The family on screen, and no fallback: a professional is admitted to one named
             // family, and the rule refuses an invitation that names none.
             val familyId = selectedFamilySource.selected()?.familyId?.takeIf { it.isNotBlank() }
                 ?: throw PairingException(PairingError.Unknown("No family selected"))
-            val profile = firestore.collection(USERS).document(user.uid).get().await()
+            val profile = firestore.get(DocumentPath(USERS, uid))
             val invite = GuestInvite(
                 id = UUID.randomUUID().toString(),
                 code = InviteCodeGenerator.generate(),
@@ -71,13 +77,14 @@ class ProfessionalRepositoryImpl(
                 inviteExpiresAtMillis = System.currentTimeMillis() + INVITE_TTL_MILLIS,
                 grantExpiresAtMillis = grantExpiresAtMillis
             )
-            firestore.collection(INVITATIONS).document(invite.id).set(
+            firestore.set(
+                DocumentPath(INVITATIONS, invite.id),
                 mapOf(
                     "id" to invite.id,
                     "code" to invite.code,
-                    "fromUserId" to user.uid,
-                    "fromUserName" to (profile.getString("name") ?: user.email.orEmpty()),
-                    "fromUserEmail" to user.email.orEmpty(),
+                    "fromUserId" to uid,
+                    "fromUserName" to (profile.string("name") ?: email),
+                    "fromUserEmail" to email,
                     "toEmail" to "",
                     "status" to STATUS_PENDING,
                     "createdAt" to System.currentTimeMillis(),
@@ -88,7 +95,7 @@ class ProfessionalRepositoryImpl(
                     "professionalExpiresAt" to invite.grantExpiresAtMillis,
                     "familyId" to familyId
                 )
-            ).await()
+            )
             invite
         }
     }
@@ -126,36 +133,32 @@ class ProfessionalRepositoryImpl(
         val myUid = currentUid() ?: throw PairingException(PairingError.Unknown("Not signed in"))
         // A field path rather than a dotted string: a uid is alphanumeric today, and a path built
         // from segments stays one key whatever it contains.
-        firestore.collection(GRANTS).document(grantId)
-            .update(FieldPath.of(FIELD_CONSENTS, myUid), System.currentTimeMillis())
-            .await()
+        firestore.update(DocumentPath(GRANTS, grantId), FieldPath(FIELD_CONSENTS, myUid), System.currentTimeMillis())
     }
 
     override suspend fun revoke(grantId: String): Result<Unit> = runProfessional {
-        firestore.collection(GRANTS).document(grantId).delete().await()
+        firestore.delete(DocumentPath(GRANTS, grantId))
     }
 
     override fun observeFamilyEvents(
         grant: ProfessionalGrant,
         from: LocalDate,
         to: LocalDate
-    ): Flow<List<Event>> = callbackFlow {
+    ): Flow<List<Event>> {
         // Both filters, and in this shape: `familyId` is what the rule keys the grant on, and the
         // creator filter is what lets Firestore prove `ownerUid in familyParents` from the query's
         // structure alone (item 12). Without either the query is refused outright.
-        val registration = firestore.collection(EVENTS)
+        val query = DocumentQuery(EVENTS)
             .whereEqualTo(FIELD_FAMILY_ID, grant.familyId)
             .whereIn(FIELD_CREATOR, grant.familyParents)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logger.w(TAG, "Professional events listener failed", error)
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                val documents = snapshot?.documents.orEmpty().mapNotNull { it.data }
-                trySend(ProfessionalEvents.from(documents, from, to))
+        return firestore.observe(query)
+            .map { snapshot -> ProfessionalEvents.from(snapshot.mapNotNull { it.data }, from, to) }
+            .catch { error ->
+                logger.w(TAG, "Professional events listener failed", error)
+                emit(emptyList())
+                // Not closed, as the SDK listener it replaced was not: nothing more arrives.
+                awaitCancellation()
             }
-        awaitClose { registration.remove() }
     }
 
     override fun observeCustody(grant: ProfessionalGrant): Flow<SharedCustody?> =
@@ -177,27 +180,26 @@ class ProfessionalRepositoryImpl(
         uid: String,
         arrayContains: Boolean,
         familyId: String? = null
-    ): Flow<List<ProfessionalGrant>> = callbackFlow {
-        val collection = firestore.collection(GRANTS)
+    ): Flow<List<ProfessionalGrant>> {
+        val collection = DocumentQuery(GRANTS)
         val byPerson = if (arrayContains) {
             collection.whereArrayContains(field, uid)
         } else {
             collection.whereEqualTo(field, uid)
         }
         val query = familyId?.let { byPerson.whereEqualTo(FIELD_FAMILY_ID, it) } ?: byPerson
-        val registration = query.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                logger.w(TAG, "Professional grants listener failed", error)
-                trySend(emptyList())
-                return@addSnapshotListener
-            }
-            trySend(
-                snapshot?.documents.orEmpty()
+        return firestore.observe(query)
+            .map { documents ->
+                documents
                     .mapNotNull { ProfessionalMappers.grantFrom(it.id, it.data) }
                     .sortedBy { it.expiresAtMillis }
-            )
-        }
-        awaitClose { registration.remove() }
+            }
+            .catch { error ->
+                logger.w(TAG, "Professional grants listener failed", error)
+                emit(emptyList())
+                // Not closed, as the SDK listener it replaced was not: nothing more arrives.
+                awaitCancellation()
+            }
     }
 
     /** Normalizes a failure into a [PairingException]; cancellation propagates. */

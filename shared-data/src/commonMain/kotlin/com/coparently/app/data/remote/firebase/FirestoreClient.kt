@@ -203,6 +203,20 @@ class StoredDocument(
         is FirestoreTimestamp -> value
         else -> throw IllegalStateException("Field '$field' is not a Timestamp")
     }
+
+    /**
+     * The text in [field], or null when the field is absent or null. Throws when it holds
+     * something else, as the SDK's `getString` does, with the SDK's own message (a caller that
+     * wraps a failure's message into what it reports gets the same words).
+     */
+    // The SDK's own exception type, so a caller's `catch` and its message stay what they were.
+    @Suppress("TooGenericExceptionThrown")
+    fun string(field: String): String? = when (val value = data?.get(field)) {
+        null -> null
+        is String -> value
+        // The SDK names the JVM class; this is that text, not a JVM call.
+        else -> throw RuntimeException("Field '$field' is not a java.lang.String")
+    }
 }
 
 /** A Firestore status code, by the names both SDKs use. */

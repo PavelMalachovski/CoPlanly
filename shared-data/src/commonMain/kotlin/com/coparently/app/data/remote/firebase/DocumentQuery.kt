@@ -19,6 +19,12 @@ data class DocumentQuery(
     /** Documents whose array [field] contains [value]. */
     fun whereArrayContains(field: String, value: Any): DocumentQuery = where(field, FilterOp.ARRAY_CONTAINS, value)
 
+    /**
+     * Documents whose [field] equals one of [values] (Firestore's `in`, the SDK's `whereIn`); at
+     * most thirty values, as Firestore allows.
+     */
+    fun whereIn(field: String, values: List<Any>): DocumentQuery = where(field, FilterOp.IN, values)
+
     /** Documents whose [field] is greater than [value]. */
     fun whereGreaterThan(field: String, value: Any): DocumentQuery = where(field, FilterOp.GREATER_THAN, value)
 
@@ -47,6 +53,9 @@ data class QueryFilter(val field: String, val op: FilterOp, val value: Any?)
 enum class FilterOp {
     EQUAL_TO,
     ARRAY_CONTAINS,
+
+    /** The field equals one of the values, which the filter holds as a [List]. */
+    IN,
     GREATER_THAN,
     GREATER_THAN_OR_EQUAL_TO,
     LESS_THAN

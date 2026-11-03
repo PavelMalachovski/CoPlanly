@@ -24,12 +24,14 @@ import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChatSearchRepositoryImpl
 import com.coparently.app.data.repository.ConversationMigrator
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
@@ -41,9 +43,11 @@ import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.family.FamilySlotsSource
+import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -125,6 +129,12 @@ val repositoryDataModule: Module = module {
     single<EventRepository> { get<EventRepositoryImpl>() }
     singleOf(::PetRepositoryImpl)
     single<PetRepository> { get<PetRepositoryImpl>() }
+    // The read-only calendar links (MON-17) and a child's guest invitations (item 16), on the
+    // callables and the Firestore seam since Task 8d.
+    singleOf(::CalendarFeedRepositoryImpl)
+    single<CalendarFeedRepository> { get<CalendarFeedRepositoryImpl>() }
+    singleOf(::GuestRepositoryImpl)
+    single<GuestRepository> { get<GuestRepositoryImpl>() }
     singleOf(::PostPairingConversationSetup)
     singleOf(::ParentingPlanRepository)
     singleOf(::RequestDeadlineRepositoryImpl)

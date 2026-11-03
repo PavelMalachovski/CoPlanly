@@ -430,14 +430,14 @@ class EmulatorParent private constructor(
     )
 
     val friendRepository = FriendRepositoryImpl(
-        firestore = firestore,
+        firestore = documents,
         authService = authService,
         pairingFunctions = pairingFunctions,
         selectedFamilySource = selectedFamilySource
     )
 
     val professionalRepository = ProfessionalRepositoryImpl(
-        firestore = firestore,
+        firestore = documents,
         authService = authService,
         pairingFunctions = pairingFunctions,
         selectedFamilySource = selectedFamilySource,
@@ -445,7 +445,7 @@ class EmulatorParent private constructor(
         planDataSource = planDataSource
     )
 
-    val guestRepository = GuestRepositoryImpl(firestore, authService, pairingFunctions)
+    val guestRepository = GuestRepositoryImpl(documents, authService, pairingFunctions)
 
     /**
      * The sync `SyncWorker` runs, over this phone's repositories — `performFullSync()` is the one
@@ -500,7 +500,7 @@ class EmulatorParent private constructor(
         knownFamilies = knownFamilies
     )
 
-    val calendarFeedRepository = CalendarFeedRepositoryImpl(functions)
+    val calendarFeedRepository = CalendarFeedRepositoryImpl(callables)
 
     val exportReceipts = ExportReceipts(functions)
 
