@@ -1,14 +1,13 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.requests.RequestDeadlineDocument
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.notification.RequestClockScheduler
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.FirebaseFirestoreException.Code
 import io.mockk.Runs
@@ -44,7 +43,7 @@ import org.junit.Test
 class RequestDeadlineRepositoryImplTest {
 
     private lateinit var dataSource: FirestoreRequestDeadlineDataSource
-    private lateinit var authService: FirebaseAuthService
+    private lateinit var authService: SignedInUser
     private lateinit var scheduler: RecordingScheduler
     private lateinit var repository: RequestDeadlineRepositoryImpl
 
@@ -68,7 +67,7 @@ class RequestDeadlineRepositoryImplTest {
         authService = mockk()
         scheduler = RecordingScheduler(events)
         repository = RequestDeadlineRepositoryImpl(dataSource, authService, scheduler)
-        every { authService.getCurrentUser() } returns mockk<FirebaseUser> { every { uid } returns ME }
+        every { authService.getCurrentUid() } returns ME
     }
 
     // ---- starting a clock --------------------------------------------------------------------
@@ -119,7 +118,7 @@ class RequestDeadlineRepositoryImplTest {
         assertEquals("a refused clock schedules nothing", emptyList<String>(), events)
         coVerify(exactly = 1) { dataSource.create(any(), any()) }
 
-        every { authService.getCurrentUser() } returns null
+        every { authService.getCurrentUid() } returns null
 
         assertNull("nobody is signed in", repository.start(swapStart))
         coVerify(exactly = 1) { dataSource.create(any(), any()) }
@@ -272,7 +271,7 @@ class RequestDeadlineRepositoryImplTest {
     fun `the signed-in uid is the auth service's, and null when nobody is signed in`() {
         assertEquals(ME, repository.signedInUid())
 
-        every { authService.getCurrentUser() } returns null
+        every { authService.getCurrentUid() } returns null
 
         assertNull(repository.signedInUid())
     }

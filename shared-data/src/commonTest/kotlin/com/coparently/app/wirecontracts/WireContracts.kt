@@ -6,6 +6,11 @@ package com.coparently.app.wire
  * every writer has moved, the app's own `WireContracts` runs all of them, these included.
  *
  * Kept outside `wire/`, which the app's unit tests compile too, so each module has its own.
+ *
+ * One exception: `MessageWireContract` moved to `wire/` with its writer (Task 8b) but runs from the
+ * app's list alone. A message written by an older build carries a naive timestamp that is read in
+ * the reading phone's zone, and only the app's suite, on the JVM, can set that zone to UTC for the
+ * fixtures; here the simulator's zone would decide.
  */
 internal object WireContracts : WireSuite {
 

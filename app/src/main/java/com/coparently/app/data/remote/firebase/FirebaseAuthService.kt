@@ -13,11 +13,14 @@ import kotlinx.coroutines.tasks.await
  * Service for Firebase Authentication.
  * Handles user authentication using email/password and provides Firebase UID.
  *
+ * It is also the Android [SignedInUser], the one question the repositories in `:shared-data` ask
+ * of the signed-in account.
+ *
  * @property firebaseAuth Firebase Authentication instance
  */
 class FirebaseAuthService(
     private val firebaseAuth: FirebaseAuth
-) {
+) : SignedInUser {
     /**
      * Gets the current Firebase user.
      */
@@ -28,7 +31,7 @@ class FirebaseAuthService(
     /**
      * Gets the current user's Firebase UID.
      */
-    fun getCurrentUid(): String? {
+    override fun getCurrentUid(): String? {
         return firebaseAuth.currentUser?.uid
     }
 

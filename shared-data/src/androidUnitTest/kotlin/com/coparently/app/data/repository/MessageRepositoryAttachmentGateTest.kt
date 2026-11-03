@@ -2,14 +2,13 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.entity.MessageEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -34,7 +33,7 @@ import kotlin.test.assertFailsWith
 class MessageRepositoryAttachmentGateTest {
 
     private val messageDao = mockk<MessageDao>(relaxed = true)
-    private val authService = mockk<FirebaseAuthService>()
+    private val authService = mockk<SignedInUser>()
     private val dataSource = mockk<FirestoreMessageDataSource>(relaxed = true)
     private val gate = mockk<AttachmentUploadGate>()
     private val stored = mutableListOf<MessageEntity>()
@@ -43,7 +42,7 @@ class MessageRepositoryAttachmentGateTest {
     fun setUp() {
         mockkStatic(android.util.Log::class)
         every { android.util.Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
-        every { authService.getCurrentUser() } returns mockk<FirebaseUser> { every { uid } returns UID }
+        every { authService.getCurrentUid() } returns UID
         coEvery { messageDao.insertMessage(capture(stored)) } returns Unit
         coEvery { messageDao.getConversationById(any()) } returns null
     }

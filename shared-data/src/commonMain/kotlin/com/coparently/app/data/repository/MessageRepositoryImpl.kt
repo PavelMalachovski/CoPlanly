@@ -1,9 +1,12 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
@@ -49,7 +52,7 @@ import kotlinx.coroutines.flow.transform
  */
 class MessageRepositoryImpl(
     private val messageDao: MessageDao,
-    private val firebaseAuthService: FirebaseAuthService,
+    private val signedInUser: SignedInUser,
     private val firestoreMessageDataSource: FirestoreMessageDataSource,
     private val attachmentGate: AttachmentUploadGate = AttachmentUploadGate.None
 ) : MessageRepository {
@@ -184,8 +187,7 @@ class MessageRepositoryImpl(
         }
         messageDao.insertMessage(sendingMessage.toEntity())
 
-        val firebaseUser = firebaseAuthService.getCurrentUser()
-        if (firebaseUser == null) {
+        if (signedInUser.getCurrentUid() == null) {
             messageDao.insertMessage(message.copy(status = MessageSendStatus.ERROR).toEntity())
             return
         }
@@ -305,7 +307,7 @@ class MessageRepositoryImpl(
         for (entity in messageDao.getUnsyncedMessages()) {
             val message = entity.toDomain()
             // Somebody else's message that arrived over the mirror is not this device's to send.
-            if (message.senderId != firebaseAuthService.getCurrentUser()?.uid) continue
+            if (message.senderId != signedInUser.getCurrentUid()) continue
             try {
                 deliver(message)
             } catch (e: CancellationException) {

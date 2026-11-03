@@ -1,5 +1,8 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind

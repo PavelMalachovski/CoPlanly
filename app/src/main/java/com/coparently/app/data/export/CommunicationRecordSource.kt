@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.export
 
 import com.coparently.app.data.local.dao.MessageDao
@@ -8,6 +10,7 @@ import com.coparently.app.data.repository.toDomain
 import com.coparently.app.data.repository.toMessageOrNull
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.export.CommunicationRecordBuilder

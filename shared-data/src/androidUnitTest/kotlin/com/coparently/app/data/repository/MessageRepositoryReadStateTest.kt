@@ -4,15 +4,14 @@ import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.MessageEntity
 import com.coparently.app.data.remote.firebase.DocumentPath
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
 import com.coparently.app.data.remote.firebase.SetMerge
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -54,7 +53,7 @@ import java.time.LocalDateTime
 class MessageRepositoryReadStateTest {
 
     private lateinit var messageDao: MessageDao
-    private lateinit var firebaseAuthService: FirebaseAuthService
+    private lateinit var signedInUser: SignedInUser
     private lateinit var firestoreMessageDataSource: FirestoreMessageDataSource
     private lateinit var repository: MessageRepositoryImpl
 
@@ -67,12 +66,11 @@ class MessageRepositoryReadStateTest {
         every { android.util.Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
         messageDao = mockk(relaxed = true)
-        firebaseAuthService = mockk()
+        signedInUser = mockk()
         firestoreMessageDataSource = mockk(relaxed = true)
-        repository = MessageRepositoryImpl(messageDao, firebaseAuthService, firestoreMessageDataSource)
+        repository = MessageRepositoryImpl(messageDao, signedInUser, firestoreMessageDataSource)
 
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns UID_A }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { signedInUser.getCurrentUid() } returns UID_A
         coEvery { messageDao.getConversationById(any()) } returns null
         every { messageDao.getMessages(any(), any()) } returns flowOf(emptyList())
         every { messageDao.observeConversationById(any()) } returns flowOf(null)

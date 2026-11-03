@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.wire
 
 import com.coparently.app.data.repository.toFirestoreMap
 import com.coparently.app.data.repository.toMessageOrNull
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind

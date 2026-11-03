@@ -4,9 +4,8 @@ import app.cash.turbine.test
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.MessageEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
-import com.google.firebase.auth.FirebaseUser
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -51,7 +50,7 @@ import java.time.LocalDateTime
 class MessageRepositorySyncFailureTest {
 
     private lateinit var messageDao: MessageDao
-    private lateinit var firebaseAuthService: FirebaseAuthService
+    private lateinit var signedInUser: SignedInUser
     private lateinit var firestoreMessageDataSource: FirestoreMessageDataSource
     private lateinit var repository: MessageRepositoryImpl
 
@@ -61,12 +60,11 @@ class MessageRepositorySyncFailureTest {
         every { android.util.Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
         messageDao = mockk(relaxed = true)
-        firebaseAuthService = mockk()
+        signedInUser = mockk()
         firestoreMessageDataSource = mockk()
-        repository = MessageRepositoryImpl(messageDao, firebaseAuthService, firestoreMessageDataSource)
+        repository = MessageRepositoryImpl(messageDao, signedInUser, firestoreMessageDataSource)
 
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns UID }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { signedInUser.getCurrentUid() } returns UID
         coEvery { messageDao.getConversationById(any()) } returns null
         every { messageDao.getMessages(CONVERSATION_ID, any()) } returns flowOf(localMessages())
         every { messageDao.observeConversationById(CONVERSATION_ID) } returns flowOf(localConversation())

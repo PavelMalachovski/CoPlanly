@@ -48,15 +48,14 @@ import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
-import com.coparently.app.data.repository.ChatSearchRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
-import com.coparently.app.data.repository.ConversationMigrator
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
@@ -64,14 +63,11 @@ import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.JournalRepositoryImpl
-import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.PetRepositoryImpl
-import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
-import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.requests.AgreementWithdrawals
 import com.coparently.app.data.requests.FamilyAgreementsSource
@@ -172,6 +168,8 @@ val dataModule = module {
     factoryOf(::SettleUpMessages)
     singleOf(::FcmService)
     singleOf(::FirebaseAuthService)
+    // The one question the repositories in `:shared-data` ask of the signed-in account.
+    single<SignedInUser> { get<FirebaseAuthService>() }
     singleOf(::FirebaseImageStorage)
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)
@@ -179,9 +177,7 @@ val dataModule = module {
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     singleOf(::CalendarFeedRepositoryImpl)
     singleOf(::ChangeRequestRepositoryImpl)
-    singleOf(::ChatSearchRepositoryImpl)
     singleOf(::ChildInfoRepositoryImpl)
-    singleOf(::ConversationMigrator)
     single {
         CustodyModelRepository(
             get<CustodyModelDao>(),
@@ -198,14 +194,11 @@ val dataModule = module {
     singleOf(::FriendRepositoryImpl)
     singleOf(::GuestRepositoryImpl)
     singleOf(::JournalRepositoryImpl)
-    single { MessageRepositoryImpl(get(), get(), get(), get()) }
     singleOf(::PairingRepositoryImpl)
     singleOf(::ParentSlotMigrator)
     singleOf(::PetRepositoryImpl)
-    singleOf(::PostPairingConversationSetup)
     singleOf(::PreferencesRepositoryImpl)
     singleOf(::ProfessionalRepositoryImpl)
-    singleOf(::RequestDeadlineRepositoryImpl)
     singleOf(::UserRepositoryImpl)
     factoryOf(::AgreementWithdrawals)
     factoryOf(::FamilyAgreementsSource)

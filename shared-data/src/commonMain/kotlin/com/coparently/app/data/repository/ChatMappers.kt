@@ -2,6 +2,7 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.MessageEntity
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message
@@ -10,10 +11,10 @@ import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * Mapping between the chat domain models, their Room entities and their Firestore
@@ -22,15 +23,18 @@ import java.time.format.DateTimeFormatter
  * Extracted from `MessageRepositoryImpl` so the repository body reads as behaviour rather
  * than as translation, and so the legacy-conversation merge can reuse exactly the same
  * conversions instead of writing a second, subtly different set.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8b). The mappers a caller still in the app reads —
+ * the export, the other families' signals, the R8 probe and the messages wire contract — are
+ * public behind [InternalSharedApi] until those callers move; the rest stay `internal`.
  */
-
-private val chatDateFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
 /** A read or delivery mark map: uid -> epoch millis. */
 private val markMap = MapSerializer(String.serializer(), Long.serializer())
 
 /** The stored row as a domain conversation, with both mark maps decoded. */
-internal fun ConversationEntity.toDomain(): Conversation = Conversation(
+@InternalSharedApi
+fun ConversationEntity.toDomain(): Conversation = Conversation(
     id = id,
     participants = StoredJson.decodeOrNull(StoredJson.strings, participantsJson) ?: emptyList(),
     title = title,
@@ -43,7 +47,8 @@ internal fun ConversationEntity.toDomain(): Conversation = Conversation(
 )
 
 /** The domain conversation as a storable row, with both mark maps encoded. */
-internal fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
+@InternalSharedApi
+fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     id = id,
     participantsJson = StoredJson.encode(StoredJson.strings, participants),
     title = title,
@@ -62,7 +67,8 @@ internal fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
  * column existed carry none, and a row is only ever asked what *this* device's own write
  * achieved.
  */
-internal fun MessageEntity.toDomain(): Message = Message(
+@InternalSharedApi
+fun MessageEntity.toDomain(): Message = Message(
     id = id,
     conversationId = conversationId,
     senderId = senderId,
@@ -87,7 +93,8 @@ internal fun MessageEntity.toDomain(): Message = Message(
 )
 
 /** The domain message as a storable row. */
-internal fun Message.toEntity(): MessageEntity = MessageEntity(
+@InternalSharedApi
+fun Message.toEntity(): MessageEntity = MessageEntity(
     id = id,
     conversationId = conversationId,
     senderId = senderId,
@@ -115,7 +122,8 @@ internal fun Message.toEntity(): MessageEntity = MessageEntity(
  * of its promoted values (`DELIVERED`, `READ`) are derived at render time from the
  * conversation's marks rather than stored anywhere.
  */
-internal fun Message.toFirestoreMap(): Map<String, Any> = mapOf(
+@InternalSharedApi
+fun Message.toFirestoreMap(): Map<String, Any> = mapOf(
     "id" to id,
     "conversationId" to conversationId,
     "senderId" to senderId,
@@ -133,7 +141,8 @@ internal fun Message.toFirestoreMap(): Map<String, Any> = mapOf(
  * domain requires — a malformed document is skipped rather than allowed to fail the
  * whole batch.
  */
-internal fun Map<String, Any>.toMessageOrNull(): Message? {
+@InternalSharedApi
+fun Map<String, Any>.toMessageOrNull(): Message? {
     val id = this["id"] as? String
     val conversationId = this["conversationId"] as? String
     if (id == null || conversationId == null) return null
@@ -167,7 +176,8 @@ internal fun Map<String, Any>.stringList(key: String): List<String> =
     (this[key] as? List<*>)?.filterIsInstance<String>().orEmpty()
 
 /** The document's [key] as a `{uid: epochMillis}` map, dropping entries of another shape. */
-internal fun Map<String, Any>.markMap(key: String): Map<String, Long> =
+@InternalSharedApi
+fun Map<String, Any>.markMap(key: String): Map<String, Long> =
     (this[key] as? Map<*, *>)
         ?.mapNotNull { (uid, mark) ->
             val id = uid as? String ?: return@mapNotNull null
@@ -178,7 +188,8 @@ internal fun Map<String, Any>.markMap(key: String): Map<String, Long> =
         .orEmpty()
 
 /** The document's [key] as a Long, or `null` when absent or not a number. */
-internal fun Map<String, Any>.longOrNull(key: String): Long? = (this[key] as? Number)?.toLong()
+@InternalSharedApi
+fun Map<String, Any>.longOrNull(key: String): Long? = (this[key] as? Number)?.toLong()
 
 /** The document's [key] as an ISO local date-time, or `null` when absent or unparseable. */
 internal fun Map<String, Any>.dateTimeOrNull(key: String): LocalDateTime? =
@@ -198,17 +209,18 @@ internal fun Map<String, Any>.dateTimeOrNull(key: String): LocalDateTime? =
  * Both branches are needed because both exist: documents written before this change, and
  * documents a co-parent's phone is still writing while it runs an older build.
  *
- * The legacy branch stays on `java.time` (MON-24): it reads no domain type, only turns old text
- * into a number, and keeping the very parse and zone resolution it always used is what keeps an
- * old message at the time it always showed.
+ * The legacy branch reads what `java.time` read here until MON-24 phase 2 (Task 8b): [IsoText]
+ * parses exactly the text `ISO_LOCAL_DATE_TIME` accepted, and kotlinx-datetime places a wall
+ * clock in the device's zone as `atZone(ZoneId.systemDefault())` did — a time in a spring gap
+ * moved forward by the gap, one in an autumn overlap at the earlier offset — so an old message
+ * keeps the time it always showed. `ChatMappersWireFormatTest` holds both, across zones.
  */
 internal fun Map<String, Any>.sentAtMillisOrNull(key: String): Long? = when (val value = this[key]) {
     is Number -> value.toLong()
     is String -> runCatching {
-        java.time.LocalDateTime.parse(value, chatDateFormatter)
-            .atZone(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
+        IsoText.parseDateTime(value)
+            .toInstant(TimeZone.currentSystemDefault())
+            .toEpochMilliseconds()
     }.getOrNull()
     else -> null
 }

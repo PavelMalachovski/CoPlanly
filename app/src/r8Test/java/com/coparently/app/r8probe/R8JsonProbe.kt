@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.r8probe
 
 import android.content.Context
@@ -14,6 +16,7 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.toDomain
 import com.coparently.app.data.repository.toEntity
 import com.coparently.app.data.versions.EventVersionDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.presentation.event.EventDraft
 import com.google.firebase.FirebaseApp

@@ -220,6 +220,8 @@ kotlin {
             // `GitLiveFirestoreClientAndroidTest` drives the GitLive client over a mocked Android
             // Firestore and checks each SDK call it makes. The app's version.
             implementation("io.mockk:mockk:1.13.13")
+            // The chat repository's tests read its flows with it (Task 8b). The app's version.
+            implementation("app.cash.turbine:turbine:1.2.0")
         }
     }
 }

@@ -1,8 +1,11 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.ConversationKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first

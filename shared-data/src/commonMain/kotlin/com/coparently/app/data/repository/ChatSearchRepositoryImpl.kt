@@ -1,6 +1,9 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.MessageDao
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.ChatSearch
 import com.coparently.app.domain.chat.ChatSearchResult
 import com.coparently.app.domain.repository.ChatSearchRepository

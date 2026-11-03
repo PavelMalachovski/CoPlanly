@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.requests.RequestDeadlineDocument
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestDeadline
@@ -38,11 +38,11 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class RequestDeadlineRepositoryImpl(
     private val dataSource: FirestoreRequestDeadlineDataSource,
-    private val authService: FirebaseAuthService,
+    private val authService: SignedInUser,
     private val scheduler: RequestClockScheduler
 ) : RequestDeadlineRepository {
 
-    override fun signedInUid(): String? = authService.getCurrentUser()?.uid
+    override fun signedInUid(): String? = authService.getCurrentUid()
 
     override fun observeFamily(myUid: String, familyId: String): Flow<List<RequestDeadline>> =
         dataSource.observeFamily(myUid, familyId)
