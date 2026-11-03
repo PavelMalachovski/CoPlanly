@@ -29,18 +29,18 @@ class FirestoreEventVersionDataSource(
     }
 
     /**
-     * Whether the server already holds [versionId] — asked of the server, never the cache.
-     *
-     * The cache would answer yes for a write this device queued a moment ago and the server
-     * refused, which is exactly the case this question exists to tell apart.
-     */
-    /**
      * The Firestore code [failure] carries, or null when it is not a Firestore failure: what
      * `EventVersionRecorder` tells a refusal from an outage by (MON-24 phase 2, Task 8b, which moved
      * it off the Android SDK's exception type).
      */
     fun errorCodeOf(failure: Throwable): FirestoreErrorCode? = firestore.errorCodeOf(failure)
 
+    /**
+     * Whether the server already holds [versionId] — asked of the server, never the cache.
+     *
+     * The cache would answer yes for a write this device queued a moment ago and the server
+     * refused, which is exactly the case this question exists to tell apart.
+     */
     suspend fun exists(versionId: String): Boolean =
         firestore.get(revision(versionId), ReadSource.SERVER).exists
 

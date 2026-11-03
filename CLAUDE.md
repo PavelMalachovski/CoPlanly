@@ -1499,13 +1499,18 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              Converters in commonMain; the migrations, SQLCipher and the Android builder in
              androidMain; the iPhone's builder in iosMain) and the Firestore data sources and
              the callables' wrappers on GitLive's firebase-kotlin-sdk (data/remote/, behind
-             FirestoreClient and CallableFunctions; the platform halves in androidMain/iosMain).
+             FirestoreClient and CallableFunctions; the platform halves in androidMain/iosMain),
+             and (Task 8b) the chat, change-request, request-clock and parenting-plan
+             repositories (data/repository/, behind SignedInUser and PushQueue), the sync's pure
+             parts (data/sync/: EventDocument, ConflictResolver, FamilyIdBackfill, …) and the
+             revision outbox (data/versions/EventVersionRecorder).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
-             except what has moved to shared-data/ (below), the Room database included
+             except what has moved to shared-data/ (below): the Room database, the Firestore data
+             sources, and some of the repositories and of the sync
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1596,8 +1601,10 @@ custody document's Room codecs (`ChildOverrideJson`, `ContactWindowJson`, `DayOv
 `data/remote/firebase/` carry what they asked of the app: **`SignedInUser`** (the signed-in uid and
 display name; `FirebaseAuthService` implements it) and **`PushQueue`** (`queueNotificationForUser`;
 `FcmService` implements it), each bound in the app's `dataModule`. A moved repository takes those,
-never `FirebaseAuthService` or `FcmService`, and kept its parameter names, so the e2e parents' calls
-did not change. The rest of `data/repository/` and `data/sync/` is still in the app, each for what it
+never `FirebaseAuthService` or `FcmService`. `ChangeRequestRepositoryImpl` and
+`RequestDeadlineRepositoryImpl` kept their parameter names (`firebaseAuthService`, `fcmService`,
+`authService`), so the e2e parents' named arguments did not change; `MessageRepositoryImpl`'s became
+`signedInUser`, and the e2e parent passes it by position. The rest of `data/repository/` and `data/sync/` is still in the app, each for what it
 needs: the custody repository and its helpers (`ActiveCustodyRow`, `CustodyRows`,
 `SignedInFamilies`, `SwapPush`), `FamilySettingsRepository` and the event, expense, child and pet
 repositories (`ActivityAnnouncer` and `data/family/`'s `FamilyView`, still in the app; `java.time` in

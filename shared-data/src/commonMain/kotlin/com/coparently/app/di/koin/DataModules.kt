@@ -97,11 +97,19 @@ val repositoryDataModule: Module = module {
  */
 val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule, versionsDataModule, repositoryDataModule)
 
+// TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,
+//  AttachmentUploadGate and RequestClockScheduler on the iPhone before its app starts Koin.
 /**
- * What each platform binds for [dataModules]: the
+ * The Firestore and callable seams [dataModules] needs: the
  * [com.coparently.app.data.remote.firebase.FirestoreClient] and the
  * [com.coparently.app.data.remote.firebase.CallableFunctions]. On Android they wrap the Firebase
  * SDK instances the app's `firebaseModule` builds, so an instrumented test's replacement of those
  * reaches the data sources; on the iPhone they are GitLive's default instances.
+ *
+ * It is not all that [dataModules] needs from the platform. Since Task 8b its definitions also take
+ * the Room DAOs, `SecurePreferences`, `CrashReporter`, `SignedInUser`, `PushQueue`,
+ * `AttachmentUploadGate` and `RequestClockScheduler`, which the app's own modules bind on Android.
+ * The iPhone's module binds none of them yet; nothing starts Koin there, and the first resolution
+ * would fail until it does.
  */
 expect val platformDataModule: Module

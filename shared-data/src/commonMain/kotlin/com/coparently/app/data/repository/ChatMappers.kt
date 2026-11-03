@@ -209,17 +209,24 @@ internal fun Map<String, Any>.dateTimeOrNull(key: String): LocalDateTime? =
  * Both branches are needed because both exist: documents written before this change, and
  * documents a co-parent's phone is still writing while it runs an older build.
  *
- * The legacy branch reads what `java.time` read here until MON-24 phase 2 (Task 8b): [IsoText]
- * parses exactly the text `ISO_LOCAL_DATE_TIME` accepted, and kotlinx-datetime places a wall
- * clock in the device's zone as `atZone(ZoneId.systemDefault())` did — a time in a spring gap
- * moved forward by the gap, one in an autumn overlap at the earlier offset — so an old message
- * keeps the time it always showed. `ChatMappersWireFormatTest` holds both, across zones.
+ * The legacy branch read with `java.time` until MON-24 phase 2 (Task 8b): [IsoText] parses the
+ * text `ISO_LOCAL_DATE_TIME` accepted, and kotlinx-datetime places the wall clock in the device's
+ * zone. On Android that is `atZone(ZoneId.systemDefault())` itself, because kotlinx-datetime's JVM
+ * implementation delegates to it. On every platform, `ChatMappersLegacyTimeTest` (commonTest, so
+ * the iOS simulator runs it too) holds the two cases a wall clock cannot name an instant for, in
+ * Europe/Prague through the overload below: a time in the spring gap moves forward by the gap, and
+ * one in the autumn overlap takes the earlier offset — `atZone`'s answers. `ChatMappersWireFormatTest`
+ * holds the device's zone being used, at a fixed offset.
  */
-internal fun Map<String, Any>.sentAtMillisOrNull(key: String): Long? = when (val value = this[key]) {
+internal fun Map<String, Any>.sentAtMillisOrNull(key: String): Long? =
+    sentAtMillisOrNull(key, TimeZone.currentSystemDefault())
+
+/** [sentAtMillisOrNull] with a legacy string read in [zone] rather than the device's zone. */
+internal fun Map<String, Any>.sentAtMillisOrNull(key: String, zone: TimeZone): Long? = when (val value = this[key]) {
     is Number -> value.toLong()
     is String -> runCatching {
         IsoText.parseDateTime(value)
-            .toInstant(TimeZone.currentSystemDefault())
+            .toInstant(zone)
             .toEpochMilliseconds()
     }.getOrNull()
     else -> null
