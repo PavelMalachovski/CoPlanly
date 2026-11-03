@@ -1,18 +1,19 @@
 package com.coparently.app.data.stickers
 
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.DocumentPath
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.FirestoreClient
+import com.coparently.app.data.remote.firebase.SetMerge
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.map
 
 /**
  * How each parent's stickers address them: `users/{uid}.parentRole`, "dad", "mom" or "parent",
@@ -24,7 +25,7 @@ import kotlinx.coroutines.tasks.await
  * person's name (CLAUDE.md, "Parent colours identify a person, not a role").
  */
 class ParentRoles(
-    private val firestore: FirebaseFirestore,
+    private val firestore: FirestoreClient,
     private val auth: FirebaseAuthService
 ) {
 
@@ -35,25 +36,24 @@ class ParentRoles(
      */
     fun observeMine(): Flow<ParentRoleAnswer> {
         val uid = auth.getCurrentUser()?.uid ?: return flowOf(ParentRoleAnswer.Loading)
-        return callbackFlow {
-            val registration = firestore.collection(USERS).document(uid).addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logger.w(TAG, "The parent role could not be read", error)
-                    trySend(ParentRoleAnswer.Loading)
-                    return@addSnapshotListener
+        return firestore.observe(DocumentPath(USERS, uid))
+            .map { snapshot ->
+                // `as? String`: a number there must not throw inside the listener.
+                val role = ParentRole.fromWire(snapshot.data?.get(FIELD) as? String)
+                when {
+                    role != null -> ParentRoleAnswer.Answered(role)
+                    snapshot.isFromCache -> ParentRoleAnswer.Loading
+                    else -> ParentRoleAnswer.Unanswered
                 }
-                // `as? String`, never `getString`: a number there would throw inside the listener.
-                val role = ParentRole.fromWire(snapshot?.get(FIELD) as? String)
-                trySend(
-                    when {
-                        role != null -> ParentRoleAnswer.Answered(role)
-                        snapshot == null || snapshot.metadata.isFromCache -> ParentRoleAnswer.Loading
-                        else -> ParentRoleAnswer.Unanswered
-                    }
-                )
             }
-            awaitClose { registration.remove() }
-        }.distinctUntilChanged()
+            .catch { error ->
+                logger.w(TAG, "The parent role could not be read", error)
+                emit(ParentRoleAnswer.Loading)
+                // A failed listener says nothing more, and the question stays unasked until the
+                // collector goes away — as the SDK listener it replaced did.
+                awaitCancellation()
+            }
+            .distinctUntilChanged()
     }
 
     /**
@@ -65,7 +65,7 @@ class ParentRoles(
     suspend fun setMine(role: ParentRole): Boolean {
         val uid = auth.getCurrentUser()?.uid ?: return false
         return try {
-            firestore.collection(USERS).document(uid).set(mapOf(FIELD to role.wire), SetOptions.merge()).await()
+            firestore.set(DocumentPath(USERS, uid), mapOf(FIELD to role.wire), SetMerge.Merge)
             true
         } catch (e: CancellationException) {
             throw e

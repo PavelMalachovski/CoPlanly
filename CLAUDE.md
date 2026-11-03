@@ -736,7 +736,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   a job that died before writing results cannot publish a green check. One caveat on 26:
   mockk mocks *final* classes only on API 28+, so if a Firebase type `fakeFirebaseModule` mocks is
   final, the UI tests that load it fail on that leg alone — replace that mock with an open fake, do not
-  drop the leg. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
+  drop the leg The data layer's `FirestoreClient` is one since MON-24 phase 2: GitLive's wrapper over the
+  relaxed `FirebaseFirestore` handed out real `DocumentReference`s with no key there, and the first
+  listener threw; `fakeFirebaseModule` gives it `testing/SilentFirestore`, which never answers. When the job ran at API 30 alone, its first attempt failed for two unrelated reasons, both older than the job and neither previously observed.
   **(1) Firebase.** `AuthScreenTest` and `SettingsScreenTest` start the real `MainActivity`,
   whose Hilt graph (Koin's since MON-24 phase 2) reaches the `FirebaseMessaging` definition →
   `FirebaseMessaging.getInstance()`, and CI has no `google-services.json` (it is gitignored), so
@@ -839,7 +841,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   and a photo taken before pairing moved into the family by the real `onFamilyCreated`. Each
   `EmulatorParent` has `files`, `cache`, `no_backup` and preference names of its own
   (`PhoneDirectories`) — shared, Bob would "open" Alice's file from her leftover copy, and two
-  `EncryptedPreferences` over one file overwrite each other (SEC-5). And **one parent on screen**
+  `EncryptedPreferences` over one file overwrite each other (SEC-5). **A phone's named `FirebaseApp` is never
+  deleted** (`EmulatorParent.close` terminates its Firestore instead): Firebase Auth 24.2 keeps the
+  first app that called `useEmulator` in a static cache, so a deleted one failed every later test
+  with "FirebaseApp was deleted" (72 of 73 on the first run with BoM 34.18). And **one parent on screen**
   (`OneParentOnScreenTest`): `MainActivity` as Alice, signed up on the Auth emulator and paired
   with Bob through the callable — Bob's event is drawn on her Home after one
   `SyncService.performFullSync()` (the call `SyncWorker` makes), his message in her thread, and

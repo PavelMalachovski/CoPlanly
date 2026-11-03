@@ -89,6 +89,7 @@ import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.testing.NoFcm
 import com.coparently.app.testing.NoReminders
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
@@ -110,6 +111,7 @@ import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * One parent's phone, in one process: a Firebase app of its own, a Room database of its own, and
@@ -402,7 +404,7 @@ class EmulatorParent private constructor(
     val stickerStore = StickerStore(firestore, authService, userRepository, fcmService, announcer)
 
     /** How this parent's stickers address them: `users/{uid}.parentRole`. */
-    val parentRoles = ParentRoles(firestore, authService)
+    val parentRoles = ParentRoles(documents, authService)
 
     /** Payments between the parents: "I paid" and "Money arrived" (25 October 2026). */
     val paymentStore = PaymentStore(firestore, authService, userRepository, announcer)
@@ -554,12 +556,22 @@ class EmulatorParent private constructor(
         }
     }
 
-    /** Signs out, closes Room, deletes the named Firebase app and this phone's directories. */
+    /**
+     * Signs out, closes Room, ends this phone's Firestore and deletes its directories.
+     *
+     * The named Firebase app is **not** deleted. Firebase Auth 24.2 (BoM 34.18) keeps the first
+     * app that called `useEmulator` in a static cache and checks it on every later call, so once
+     * the first test deleted its apps, every test after it failed in
+     * [EmulatorEnvironment.startFirebaseApp] with "FirebaseApp was deleted" — the e2e job lost 72
+     * of 73 tests that way. Terminating Firestore releases what the app held that matters (its
+     * listeners, threads and memory cache); the rest is a few objects per phone for the life of
+     * the test process.
+     */
     override fun close() {
         scope.cancel()
         runCatching { auth.signOut() }
         runCatching { database.close() }
-        runCatching { app.delete() }
+        runCatching { Tasks.await(firestore.terminate(), TERMINATE_SECONDS, TimeUnit.SECONDS) }
         runCatching { fileContext.filesDir.parentFile?.deleteRecursively() }
     }
 
@@ -606,6 +618,9 @@ class EmulatorParent private constructor(
 
         /** How long any single cross-device wait may take before the test fails. */
         const val WAIT_MS = 30_000L
+
+        /** How long [close] waits for this phone's Firestore to shut down. */
+        private const val TERMINATE_SECONDS = 10L
 
         private const val PASSWORD = "e2e-password-1"
 

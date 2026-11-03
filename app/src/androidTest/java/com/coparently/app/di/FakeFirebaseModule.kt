@@ -1,9 +1,12 @@
 package com.coparently.app.di
 
+import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.QRCodeService
+import com.coparently.app.data.remote.firebase.firestoreClientOf
 import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.e2e.EmulatorEnvironment
 import com.coparently.app.testing.NoFcm
+import com.coparently.app.testing.SilentFirestore
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -54,6 +57,14 @@ val fakeFirebaseModule = module {
 
     single<FirebaseFirestore> {
         EmulatorEnvironment.appUnderTest?.let { FirebaseFirestore.getInstance(it) } ?: mockk(relaxed = true)
+    }
+
+    // The data layer's Firestore (`platformDataModule` wraps the `FirebaseFirestore` above): over
+    // the emulator app's SDK on the emulators, and otherwise a client that never answers, rather
+    // than GitLive's wrapper over the relaxed mock, whose `DocumentReference`s are not mocks on
+    // API 26 (see `SilentFirestore`).
+    single<FirestoreClient> {
+        EmulatorEnvironment.appUnderTest?.let { firestoreClientOf(get()) } ?: SilentFirestore
     }
 
     single<FirebaseStorage> {
