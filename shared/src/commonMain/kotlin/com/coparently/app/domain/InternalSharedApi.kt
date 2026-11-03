@@ -11,10 +11,9 @@ package com.coparently.app.domain
  * is a visible decision rather than an accident.
  *
  * Remove the marker, and make the declaration `internal` again, once its last `:app` caller moves.
- * Today: `UnansweredRows` and `ClocksAt.governing`, for `RequestInbox` (it reads the payments'
- * `SupportProposal`, still `java.time`) and `OtherFamiliesSignals` (data layer, phase 2); and, in
- * `:shared-data`, `BakalariJson`, for the school import's three parsers, which build the
- * `java.time` school domain, and the engine overload of `httpClient`, for the app's R8 probe.
+ * The current list of marked declarations and the callers each waits for is kept in one place,
+ * CLAUDE.md's paragraph on `@InternalSharedApi` (under "Where a `data/…` path in this file
+ * lives"), so that it is not stale in two.
  */
 @RequiresOptIn(
     message = "Public only for a caller still in the app module (MON-24); not API for new callers.",

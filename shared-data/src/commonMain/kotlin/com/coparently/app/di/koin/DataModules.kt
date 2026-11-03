@@ -177,7 +177,8 @@ val dataModules: List<Module> = listOf(
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,
-//  AttachmentUploadGate and RequestClockScheduler on the iPhone before its app starts Koin.
+//  AttachmentUploadGate, RequestClockScheduler, UserRepository and PairingRepository on the iPhone
+//  before its app starts Koin.
 /**
  * The Firestore and callable seams [dataModules] needs: the
  * [com.coparently.app.data.remote.firebase.FirestoreClient] and the
@@ -187,7 +188,9 @@ val dataModules: List<Module> = listOf(
  *
  * It is not all that [dataModules] needs from the platform. Since Task 8b its definitions also take
  * the Room DAOs, `SecurePreferences`, `CrashReporter`, `SignedInUser`, `PushQueue`,
- * `AttachmentUploadGate` and `RequestClockScheduler`, which the app's own modules bind on Android.
+ * `AttachmentUploadGate` and `RequestClockScheduler`, and since Task 8c `UserRepository` (the
+ * announcer, the family selection, the chat sources and the custody and split repositories) and
+ * `PairingRepository` (`ChatPartnerSource`), which the app's own modules bind on Android.
  * The iPhone's module binds none of them yet; nothing starts Koin there, and the first resolution
  * would fail until it does.
  */

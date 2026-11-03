@@ -1527,7 +1527,9 @@ to the shared module with every package unchanged, so a path this file writes as
 `domain/<package>/<File>.kt` is `shared/src/commonMain/kotlin/com/coparently/app/domain/<package>/<File>.kt`,
 and its test is under `shared/src/commonTest/` (or `shared/src/androidUnitTest/` when it compares
 with a JVM API or mocks). The rules and items that name those paths were not reworded; only the
-root changed. **The exceptions are the phase-1 stay list**, still under
+root changed. `domain/activity/ActivityAnnouncer.kt` is the exception the other way: it is in
+`shared-data/src/commonMain/`, not `shared/` (MON-24 phase 2, Task 8c), because it posts through the
+data layer's `MessageRepository` and logger. **The exceptions are the phase-1 stay list**, still under
 `app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
 file by file:
 - dependency injection, Android or the data layer — the event use cases and `EventValidator` in
@@ -1654,8 +1656,10 @@ opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`
 `StampedFamily` (`SyncService` and the event, pet, professional and request readers), and
 `ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
 probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
-`PetRepositoryImpl`'s four mappers (the pets wire contract) and `ChatMirror.mirror` (the on-screen
-e2e tests, which start the mirror themselves).
+`PetRepositoryImpl`'s four mappers (the pets wire contract), `ChatMirror.mirror` (the on-screen
+e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
+`GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe). This list is the one place they are
+recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 
