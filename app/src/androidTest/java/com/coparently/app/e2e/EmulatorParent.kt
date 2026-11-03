@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.room.Room
+import com.coparently.app.BuildConfig
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.documents.FamilyDocumentIndex
@@ -504,7 +505,7 @@ class EmulatorParent private constructor(
 
     val calendarFeedRepository = CalendarFeedRepositoryImpl(callables)
 
-    val exportReceipts = ExportReceipts(functions)
+    val exportReceipts = ExportReceipts(callables) { BuildConfig.EXPORT_VERIFY_URL }
 
     /**
      * The pushes queued for [targetUid] from this phone, as their payload maps — read as the

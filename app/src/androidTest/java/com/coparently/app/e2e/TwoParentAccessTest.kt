@@ -423,8 +423,9 @@ class TwoParentAccessTest : TwoParentTest() {
     @Test
     fun anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount() = runBlocking<Unit> {
         val familyId = FamilyKey.of(alice.uid, bob.uid)
-        val from = LocalDate.now().minusDays(PERIOD_DAYS)
-        val recordId = checkNotNull(alice.exportReceipts.reserve(familyId, from, LocalDate.now(), ExportFormat.PDF)) {
+        val from = LocalDate.now().minusDays(PERIOD_DAYS).toKotlinLocalDate()
+        val to = LocalDate.now().toKotlinLocalDate()
+        val recordId = checkNotNull(alice.exportReceipts.reserve(familyId, from, to, ExportFormat.PDF)) {
             "reserveExportRecordId returned no id"
         }
         val bytes = "%PDF-1.4 e2e ${UUID.randomUUID()}".toByteArray()

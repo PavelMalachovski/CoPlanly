@@ -1,13 +1,12 @@
 package com.coparently.app.data.export
 
-import com.coparently.app.BuildConfig
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.CallableFunctions
 import com.coparently.app.domain.export.ExportFormat
-import com.google.firebase.functions.FirebaseFunctions
+import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The client half of MON-16: reserving the record id an export prints, and registering the
@@ -18,9 +17,15 @@ import java.time.LocalDate
  * the export flow prints "not registered" instead of an id. The worst outcome is a file that
  * honestly says it cannot be checked; the one outcome this class must never allow is a file that
  * names an id the server holds no hash for.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8j), on [CallableFunctions] (the Functions SDK's
+ * `getHttpsCallable(name).call(payload)` on Android, as before), with the verification page's
+ * address from the platform's [verifyAddress] (the app's `BuildConfig.EXPORT_VERIFY_URL`). The
+ * period's dates are written as `LocalDate.toString()` wrote them (`IsoText.date`).
  */
 class ExportReceipts(
-    private val functions: FirebaseFunctions
+    private val functions: CallableFunctions,
+    private val verifyAddress: ExportVerifyAddress
 ) {
 
     /**
@@ -28,7 +33,7 @@ class ExportReceipts(
      * from the file rather than printing one that does not resolve (design item 8).
      */
     val verifyUrl: String
-        get() = BuildConfig.EXPORT_VERIFY_URL.trim()
+        get() = verifyAddress.configured().trim()
 
     /**
      * Asks the server for a record id for an export about to be rendered.
@@ -40,8 +45,8 @@ class ExportReceipts(
     suspend fun reserve(familyId: String, from: LocalDate, to: LocalDate, format: ExportFormat): String? {
         val payload = mapOf(
             "familyId" to familyId,
-            "fromDate" to from.toString(),
-            "toDate" to to.toString(),
+            "fromDate" to IsoText.date(from),
+            "toDate" to IsoText.date(to),
             "format" to format.wireName
         )
         return call(RESERVE, payload)?.get("recordId") as? String
@@ -60,7 +65,7 @@ class ExportReceipts(
 
     private suspend fun call(name: String, payload: Map<String, Any>): Map<*, *>? = try {
         withTimeoutOrNull(CALL_TIMEOUT_MS) {
-            functions.getHttpsCallable(name).call(payload).await().getData() as? Map<*, *>
+            functions.call(name, payload) as? Map<*, *>
         }
     } catch (e: CancellationException) {
         throw e
@@ -81,4 +86,15 @@ class ExportReceipts(
         /** Long enough for a slow network, short enough that a parent is not left waiting offline. */
         const val CALL_TIMEOUT_MS = 10_000L
     }
+}
+
+/**
+ * Where an export's verification page is hosted, as the platform's build configures it (MON-16;
+ * MON-24 phase 2, Task 8j): the app's `BuildConfig.EXPORT_VERIFY_URL`, blank while `web/verify/` is
+ * not hosted. The iPhone's says blank until it has one, which leaves the line off the file.
+ */
+fun interface ExportVerifyAddress {
+
+    /** The configured address, possibly blank or padded; [ExportReceipts.verifyUrl] trims it. */
+    fun configured(): String
 }

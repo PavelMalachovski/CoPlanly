@@ -8,6 +8,7 @@ import com.coparently.app.data.documents.FamilyDocumentIndex
 import com.coparently.app.data.documents.FamilyDocumentIndexCache
 import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.CommunicationRecordSource
+import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.data.family.AgreementSignalSources
@@ -376,12 +377,14 @@ val moneyDataModule: Module = module {
 /**
  * What a communication record is gathered from (MON-3, CLAUDE.md item 26; MON-24 phase 2, Task
  * 8i): the server's revisions and messages and this phone's copies, the parenting plan and the
- * private journal. The file writer (`PdfDocument`) and the record ids' callables are the app's.
+ * private journal; and since Task 8j the record ids' callables (MON-16), whose verification
+ * address is the platform's (`ExportVerifyAddress`). The file writer (`PdfDocument`) is the app's.
  */
 val exportDataModule: Module = module {
     singleOf(::CommunicationRecordSource)
     singleOf(::ParentingPlanRecordSource)
     singleOf(::OptionalRecordSections)
+    singleOf(::ExportReceipts)
 }
 
 /**

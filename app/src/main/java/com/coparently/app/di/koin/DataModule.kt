@@ -1,6 +1,7 @@
 package com.coparently.app.di.koin
 
 import android.content.Context
+import com.coparently.app.BuildConfig
 import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.data.ai.FunctionsAiAssistRepository
 import com.coparently.app.data.analytics.AnalyticsManager
@@ -8,7 +9,7 @@ import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
 import com.coparently.app.data.export.ExportFileWriter
-import com.coparently.app.data.export.ExportReceipts
+import com.coparently.app.data.export.ExportVerifyAddress
 import com.coparently.app.data.files.AndroidPickedFiles
 import com.coparently.app.data.files.FirebaseStorageBucket
 import com.coparently.app.data.files.PickedFiles
@@ -72,7 +73,8 @@ val dataModule = module {
     singleOf(::CrashlyticsManager)
     singleOf(::OnDeviceSpeechDictation)
     singleOf(::ExportFileWriter)
-    singleOf(::ExportReceipts)
+    // Where the export receipts in `:shared-data` say a file can be checked (MON-16).
+    single<ExportVerifyAddress> { ExportVerifyAddress { BuildConfig.EXPORT_VERIFY_URL } }
     singleOf(::RecordPhotoImageLoader)
     singleOf(::FirebaseStorageBucket)
     // The Storage SDK and the picker's `ContentResolver`, which the shared files in `:shared-data`

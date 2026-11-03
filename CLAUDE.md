@@ -1528,8 +1528,9 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              the export's record sources (data/export/ but ExportFileWriter and ExportReceipts)
              and data/family/UnassignedRecords, and (Task 8j) the shared files (data/files/ but
              RecordPhotoFetcher, behind StorageBucket and PickedFiles), the chat attachment
-             outbox and the vault's repository (data/documents/), and data/session/'s
-             SessionProfileSynchronizer and SignedInAccountSource.
+             outbox and the vault's repository (data/documents/), data/session/'s
+             SessionProfileSynchronizer and SignedInAccountSource, and the export's
+             ExportReceipts (on CallableFunctions, behind ExportVerifyAddress).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1541,7 +1542,7 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              photo fetcher and the Android halves of its seams, the
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
-             writer and record ids, and some of data/chat/, data/support/ and data/session/
+             writer, and some of data/chat/, data/support/ and data/session/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1793,8 +1794,8 @@ from `data/family/`, `UnassignedRecords` (a record's day kotlinx-datetime's `Loc
 formatting it at its edge). They are bound in `schoolDataModule`, `exportDataModule` and
 `familyDataModule`; the app binds `SchoolImportWordings`. Still in the app: `SchoolImportWorker`
 and `WorkManagerSchoolImportScheduler` (WorkManager), `SchoolImportWordingSource`, the Bakaláři
-client's Koin definitions (the app's named HTTP client), `ExportFileWriter` (`PdfDocument`) and
-`ExportReceipts` (`FirebaseFunctions` and `BuildConfig`). Task 8j, the files the parents share
+client's Koin definitions (the app's named HTTP client), `ExportFileWriter` (`PdfDocument`) and,
+until Task 8j, `ExportReceipts` (`FirebaseFunctions` and `BuildConfig`). Task 8j, the files the parents share
 (MON-23, item 31 and Legal item 8): in `commonMain`, `data/files/`'s `SharedFileStorage`,
 `SharedFileCache`, `SharedFileStager` (with `StagedFile` and the two exceptions) and
 `StoredRecordFamilies`, on kotlinx-io paths under `AppDirectories` where they took `java.io.File`
@@ -1824,15 +1825,23 @@ reads when the profile row arrives, as reading the `FirebaseUser` the state repo
 the new `sessionDataModule`, their parameter names unchanged. Still in the app from `data/session/`:
 `AccountSwitchGuard` (a plain `SharedPreferences` file and `DeviceTraces`), `AccountDeletionService`
 (the Functions SDK, `FcmService.unregisterToken` and `DeviceTraces`) and `DeviceTraces` (a `Context`'s
-directories and the notification manager). Every other
+directories and the notification manager). And `data/export/ExportReceipts` (MON-16, item 26), on
+`CallableFunctions` where it called the Functions SDK, its period's dates kotlinx-datetime's written
+by `IsoText.date` (what `LocalDate.toString()` wrote), and the verification page's address from the
+new **`ExportVerifyAddress`** (`data/export/`, a `fun interface`; the app answers it with
+`BuildConfig.EXPORT_VERIFY_URL`); every failure is still an answer, never an exception, and the six
+receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent builds it on its
+`AndroidCallableFunctions`. Every other
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
 `Analytics`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockNotices`,
-`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket` or `PickedFiles` rather
+`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles` or
+`ExportVerifyAddress` rather
 than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `AnalyticsManager`,
 `FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`, `RequestNotices`,
-`WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage` or a `ContentResolver`,
+`WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage`, a `ContentResolver` or
+`BuildConfig`,
 and logs with
 `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 

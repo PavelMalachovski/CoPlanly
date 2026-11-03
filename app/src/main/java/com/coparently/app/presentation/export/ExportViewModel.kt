@@ -248,7 +248,8 @@ class ExportViewModel(
         // bytes are rendered: nothing may be added between the hash and the save (MON-16).
         val record = buildRecord(myUid, counterpart, request, fallbacks)
         val family = FamilyKey.orNull(myUid, partnerUid).orEmpty()
-        val recordId = receipts.reserve(family, request.from, request.to, format)
+        val recordId =
+            receipts.reserve(family, request.from.toKotlinLocalDate(), request.to.toKotlinLocalDate(), format)
         val registered = recordId?.let { registeredBytes(record, labels, format, it) }
         val bytes = registered
             ?: writer.render(record.copy(verification = RecordVerification.Unregistered), labels, format)
