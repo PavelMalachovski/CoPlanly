@@ -1594,9 +1594,12 @@ times are `IsoText.dateTimeShortest`, the bytes they hashed before), `receipts/`
 (the month as `IsoText.yearMonth`).
 
 **Where a `data/…` path in this file lives** (MON-24 phase 2, from November 2026). The data layer
-moves to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`
+moved to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`
 is `shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.kt` (its test under
-`shared-data/src/commonTest/`). Moved so far (Task 5, the HTTP clients on Ktor): `data/http/` (new:
+`shared-data/src/commonTest/`). **Task 8, the data layer, is complete with slice 8j**: what is still
+under `app/src/main/java/com/coparently/app/data/` stays on purpose (a `Worker`, a notification, a
+string resource, the Android SDK a seam's Android half calls, Coil, `PdfDocument`, ML Kit, dictation,
+or the `upgrade` seed's constructors), and `docs/ROADMAP.md` MON-24 lists it. Moved (Task 5, the HTTP clients on Ktor): `data/http/` (new:
 `httpClient(HttpTimeouts)`, OkHttp on Android and Darwin on iOS, and the address and form encodings,
 the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
 `BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and

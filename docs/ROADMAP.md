@@ -2680,7 +2680,7 @@ converts their dates.
 | ~~`error/ErrorHandler.kt`~~ | moved to `shared-data` in Task 8f: `Connectivity.isOnline()` (which `NetworkMonitor` answers from the system, as before), `kotlinx.io.IOException` (`java.io.IOException` on Android) and an `expect`/`actual` `isPermissionFailure` (`SecurityException` on Android) |
 | ~~`activity/ActivityAnnouncer.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8c (Koin, the common `logger`, `kotlin.uuid.Uuid`) |
 | `model/MessageTemplate.kt` | `@StringRes` and the app's `R` (strings move in phase 2) |
-| `repository/FamilyDocumentRepository.kt` | `java.io.File` in its signatures |
+| ~~`repository/FamilyDocumentRepository.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8j (not `shared/`, which has no kotlinx-io): a local copy is a kotlinx-io `Path` where it was a `java.io.File` |
 | ~~`review/MonthStatsWire.kt`~~ | moved to `shared/` in phase 2's Task 8i; the month is `IsoText.yearMonth`, `java.time.YearMonth`'s text for every year |
 | ~~`export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt`~~ | moved to `shared/` in Task 8i on kotlinx-datetime: the printed times were `RecordTimeText` already, an event document is read by `IsoText.parseDateTime`/`parseDate` (`ISO_LOCAL_DATE_TIME`, `LocalDate.parse`), and the message window is `RecordWindow`, held on the iOS simulator by `RecordWindowVectorsTest`'s literal `java.time` instants for midnight-gap days (on the JVM kotlinx-datetime is `java.time` itself) |
 | ~~`export/RecordLayout.kt`, `RecordVerificationLayout.kt`~~ | moved to `shared/` in Task 8i with the record |
@@ -2790,7 +2790,34 @@ bytes are identical on Android):
   Google's Maven repository is unreachable from the cloud sessions. Still to run on a phone: an install
   over the previous build (`docs/DEVICE-CHECKLIST.md` §2.1), and on an iPhone, that the database
   is unreadable while the phone is locked.
-- **Firebase on GitLive, first slice** — **in progress (phase 2, Task 8a, November 2026)**: the
+- ~~**The data layer to `shared-data`**~~ **Done (phase 2, Task 8, slices 8a–8j, November 2026)**:
+  every data-layer class both apps need is in `:shared-data` with its package, name and constructor
+  parameter names, on seams the platform answers (`FirestoreClient`, `CallableFunctions`,
+  `SignedInUser`, `PushQueue`/`PushDevice`, `AccountConsistency`, `RequestClockNotices`,
+  `SchoolImportWordings`/`SchoolImportScheduler`, `GoogleCalendarConnectionSource`, and in Task 8j
+  `StorageBucket`, `PickedFiles` and `ExportVerifyAddress`), and the wire contracts ran with no
+  fixture diff at every slice (all but the messages' contract now in both modules' lists). Task 8j,
+  the last: the shared files (`data/files/` on kotlinx-io, hashed a buffer at a time through
+  `Sha256.digestOf`), the chat outbox and the vault's repository, the session's profile
+  synchronizer and account source, `ExportReceipts` on `CallableFunctions`, the events and
+  revisions wire contracts, and the iPhone's `platformDataModule`, which binds every seam (stand-ins
+  where the iPhone has nothing yet; a Koin `verify()` of `dataModules` with those types resolves).
+  **What stays in the app, on purpose**: every `Worker` and WorkManager scheduler, the notification
+  managers and `PushNotifier`, `CoPlanlyMessagingService`, `FcmService` and `FirebaseAuthService`
+  (they implement the seams), the Credential Manager classes, `FirebaseImageStorage` (a `Bitmap`'s
+  re-encoding), `RecordPhotoFetcher` (Coil), the two Android halves of the file seams,
+  `ExportFileWriter` (`PdfDocument`), `data/mlkit/`, `data/dictation/`, the string-resource wordings,
+  `EncryptedPreferences` (the `upgrade` seed builds it), `AccountSwitchGuard`,
+  `AccountDeletionService` and `DeviceTraces` (a plain `SharedPreferences` file, the Functions SDK,
+  the push token, a `Context` and the notification manager), the AI assist's repository, the install
+  referrer and `MinorUnits` (`BigDecimal` for the screens). Not done in Task 8, and carried: the
+  school data tests still run in the app over `EncryptedPreferences` (a `SecurePreferences` fake would
+  let them move and `BakalariAuthorizer.on`/`SchoolImporter.on` become `internal`, but their
+  Bakaláři samples are the app's test resources, shared with the parser tests); `EventDocument` keeps
+  `@InternalSharedApi`, because the app's tests compile `wire/` and `ChatEventCardViewModelTest`
+  uses it; and the iOS test that signs in on the Auth emulator and reads an event written from the
+  JVM (Task 8 Step 4) waits for the iPhone app's sign-in in phase 3.
+- **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call
   `FirestoreClient`, a seam of plain values that names each operation (an update is never a set, a
@@ -2814,7 +2841,8 @@ bytes are identical on Android):
   `FirestoreWriteProbe`, the `e2e` job and `shared-ios` are what prove it, on the minified Android
   encoder, against the emulators and in the iOS link. Left for the next slices: `FcmService`,
   `FirebaseAuthService`, `FirebaseImageStorage` and the Credential Manager classes, then
-  `data/repository/` and the rest of Task 8's list.
+  `data/repository/` and the rest of Task 8's list — done in slices 8b–8j (above), the four classes
+  named staying in the app behind the interfaces they implement.
 - ~~**Before `SchoolImportItems` moves**~~ (done in phase 2's Task 8i): its derived event ids hashed `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
   platforms would derive different `school-…` ids from the same school data. They hash
