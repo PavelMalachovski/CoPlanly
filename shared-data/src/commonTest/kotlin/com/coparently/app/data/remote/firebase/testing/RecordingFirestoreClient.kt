@@ -28,6 +28,9 @@ class RecordingFirestoreClient : FirestoreClient {
         /** A listener on [query]. */
         data class ObserveQuery(val query: DocumentQuery) : Operation
 
+        /** A listener on [query] that delivers each snapshot's metadata and metadata-only changes. */
+        data class ObserveQueryWithMetadata(val query: DocumentQuery) : Operation
+
         /** A `set()`; [inTransaction] when a transaction made it. */
         data class Set(
             val path: DocumentPath,
@@ -154,6 +157,20 @@ class RecordingFirestoreClient : FirestoreClient {
         return queryFlow?.invoke(query) ?: flow {
             takeFailure()?.let { throw it }
             emit(queryAnswer(query))
+        }
+    }
+
+    /**
+     * What a listener with its metadata emits: by default [queryAnswer] once, as a snapshot the
+     * server confirmed.
+     */
+    var queryResultFlow: ((DocumentQuery) -> Flow<QueryResult>)? = null
+
+    override fun observeWithMetadata(query: DocumentQuery): Flow<QueryResult> {
+        operations += Operation.ObserveQueryWithMetadata(query)
+        return queryResultFlow?.invoke(query) ?: flow {
+            takeFailure()?.let { throw it }
+            emit(QueryResult(queryAnswer(query), hasPendingWrites = false, isFromCache = false))
         }
     }
 

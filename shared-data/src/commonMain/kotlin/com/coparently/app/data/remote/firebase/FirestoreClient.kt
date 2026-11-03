@@ -69,6 +69,14 @@ interface FirestoreClient {
     fun observe(query: DocumentQuery): Flow<List<StoredDocument>>
 
     /**
+     * [query]'s snapshots, live, each with its own metadata, and with metadata-only changes
+     * delivered too (the SDK's `MetadataChanges.INCLUDE`): a snapshot that only says the server
+     * confirmed what the cache showed arrives as one more [QueryResult]. The flow fails with the
+     * listener's error.
+     */
+    fun observeWithMetadata(query: DocumentQuery): Flow<QueryResult>
+
+    /**
      * Runs [block] as one Firestore transaction: its reads come from the server, and Firestore runs
      * it again when a document it read changed before the commit, so it must be pure.
      */
@@ -224,6 +232,20 @@ class StoredDocument(
         else -> throw RuntimeException("Field '$field' is not a java.lang.String")
     }
 }
+
+/**
+ * One snapshot of a query, as [FirestoreClient.observeWithMetadata] delivers it.
+ *
+ * @property documents Its documents, in the query's order.
+ * @property hasPendingWrites Whether it holds a write of this phone's the server has not confirmed
+ *   (the snapshot's own metadata, as the SDK's `QuerySnapshot.getMetadata()` gives it).
+ * @property isFromCache Whether it was answered from the local cache rather than by the server.
+ */
+class QueryResult(
+    val documents: List<StoredDocument>,
+    val hasPendingWrites: Boolean,
+    val isFromCache: Boolean
+)
 
 /** A Firestore status code, by the names both SDKs use. */
 enum class FirestoreErrorCode {

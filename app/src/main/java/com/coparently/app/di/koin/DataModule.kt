@@ -8,8 +8,6 @@ import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
-import com.coparently.app.data.documents.FamilyDocumentIndex
-import com.coparently.app.data.documents.FamilyDocumentIndexCache
 import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
@@ -112,8 +110,6 @@ val dataModule = module {
     singleOf(::HealthConsentManager)
     singleOf(::CrashlyticsManager)
     singleOf(::OnDeviceSpeechDictation)
-    singleOf(::FamilyDocumentIndex)
-    singleOf(::FamilyDocumentIndexCache)
     singleOf(::FamilyDocumentRepositoryImpl)
     singleOf(::CommunicationRecordSource)
     singleOf(::ExportFileWriter)

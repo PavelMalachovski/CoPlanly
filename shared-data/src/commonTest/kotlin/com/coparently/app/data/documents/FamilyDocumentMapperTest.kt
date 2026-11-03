@@ -3,7 +3,7 @@ package com.coparently.app.data.documents
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.documents.FamilyDocumentPaths
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -28,7 +28,7 @@ class FamilyDocumentMapperTest {
     )
 
     @Test
-    fun `a create writes exactly the keys the rule admits, with the family as its audience`() {
+    fun `a create writes exactly the keys the rule admits - with the family as its audience`() {
         val map = FamilyDocumentMapper.toFirestoreMap(document)
         assertEquals(
             setOf(
@@ -55,7 +55,7 @@ class FamilyDocumentMapperTest {
     }
 
     @Test
-    fun `the index entry keeps a tombstone, with the time it was deleted, for the cache`() {
+    fun `the index entry keeps a tombstone - with the time it was deleted - for the cache`() {
         val written = FamilyDocumentMapper.toFirestoreMap(document)
         assertEquals(
             FamilyDocumentMapper.IndexEntry(document, deletedAtMillis = null),
@@ -68,7 +68,7 @@ class FamilyDocumentMapperTest {
     }
 
     @Test
-    fun `a category a newer build wrote reads as other, and a missing path drops the row`() {
+    fun `a category a newer build wrote reads as other - and a missing path drops the row`() {
         val map = FamilyDocumentMapper.toFirestoreMap(document)
         assertEquals(
             DocumentCategory.OTHER,
@@ -78,7 +78,7 @@ class FamilyDocumentMapperTest {
     }
 
     @Test
-    fun `the vault lists by category, newest first within one`() {
+    fun `the vault lists by category - newest first within one`() {
         val older = document.copy(id = "a", createdAtMillis = 1)
         val newer = document.copy(id = "b", createdAtMillis = 2)
         val school = document.copy(id = "c", category = DocumentCategory.SCHOOL, createdAtMillis = 3)

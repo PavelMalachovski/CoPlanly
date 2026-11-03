@@ -6,6 +6,7 @@ import com.coparently.app.data.remote.firebase.FieldPath
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.data.remote.firebase.FirestoreTransaction
+import com.coparently.app.data.remote.firebase.QueryResult
 import com.coparently.app.data.remote.firebase.ReadSource
 import com.coparently.app.data.remote.firebase.SetMerge
 import com.coparently.app.data.remote.firebase.StoredDocument
@@ -61,6 +62,8 @@ object SilentFirestore : FirestoreClient {
         awaitCancellation()
 
     override fun observe(query: DocumentQuery): Flow<List<StoredDocument>> = flow { awaitCancellation() }
+
+    override fun observeWithMetadata(query: DocumentQuery): Flow<QueryResult> = flow { awaitCancellation() }
 
     override suspend fun <T> transaction(block: suspend FirestoreTransaction.() -> T): T = awaitCancellation()
 

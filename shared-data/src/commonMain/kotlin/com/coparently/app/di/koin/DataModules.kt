@@ -3,6 +3,8 @@ package com.coparently.app.di.koin
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
+import com.coparently.app.data.documents.FamilyDocumentIndex
+import com.coparently.app.data.documents.FamilyDocumentIndexCache
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
@@ -184,6 +186,16 @@ val stickersDataModule: Module = module {
 }
 
 /**
+ * The vault's index in Firestore and its read-through Room cache (MON-23, CLAUDE.md item 31;
+ * MON-24 phase 2, Task 8d). The repository over them, which stages and opens files, is still the
+ * app's.
+ */
+val documentsDataModule: Module = module {
+    singleOf(::FamilyDocumentIndex)
+    singleOf(::FamilyDocumentIndexCache)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -195,7 +207,8 @@ val dataModules: List<Module> = listOf(
     familyDataModule,
     chatDataModule,
     requestsDataModule,
-    stickersDataModule
+    stickersDataModule,
+    documentsDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,

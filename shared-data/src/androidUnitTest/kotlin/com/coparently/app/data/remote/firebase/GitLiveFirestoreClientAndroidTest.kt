@@ -5,10 +5,13 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
@@ -22,6 +25,7 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import io.mockk.verifyOrder
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -297,6 +301,33 @@ class GitLiveFirestoreClientAndroidTest {
             Filter.equalTo("familyId", "a__b")
             Filter.inArray("createdByFirebaseUid", listOf("a", "b"))
         }
+    }
+
+    @Test
+    fun `a listener with metadata includes metadata changes and hands over the snapshot's own`() = runTest {
+        mockkStatic(Filter::class)
+        val filtered = mockk<Query>()
+        val listener = slot<EventListener<QuerySnapshot>>()
+        val registration = mockk<ListenerRegistration>(relaxed = true)
+        val results = mockk<QuerySnapshot>()
+        val queryMetadata = mockk<SnapshotMetadata>()
+        every { collection.where(any()) } returns filtered
+        every { filtered.addSnapshotListener(MetadataChanges.INCLUDE, capture(listener)) } answers {
+            listener.captured.onEvent(results, null)
+            registration
+        }
+        every { results.documents } returns listOf(snapshot)
+        every { results.metadata } returns queryMetadata
+        every { queryMetadata.hasPendingWrites() } returns true
+        every { queryMetadata.isFromCache } returns true
+
+        val first = client.observeWithMetadata(DocumentQuery(COLLECTION).whereEqualTo("familyId", "a__b")).first()
+
+        assertEquals(listOf(ID), first.documents.map { it.id })
+        assertTrue(first.hasPendingWrites)
+        assertTrue(first.isFromCache)
+        verify(exactly = 1) { filtered.addSnapshotListener(MetadataChanges.INCLUDE, any()) }
+        verify(exactly = 1) { registration.remove() }
     }
 
     // ---- transactions and failures ------------------------------------------------------------

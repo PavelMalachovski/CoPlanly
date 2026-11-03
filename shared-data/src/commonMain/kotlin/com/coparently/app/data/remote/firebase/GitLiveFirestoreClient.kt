@@ -86,6 +86,15 @@ class GitLiveFirestoreClient(private val firestore: FirebaseFirestore) : Firesto
     override fun observe(query: DocumentQuery): Flow<List<StoredDocument>> =
         build(query).snapshots.map { snapshot -> snapshot.documents.map { it.toStoredDocument() } }
 
+    override fun observeWithMetadata(query: DocumentQuery): Flow<QueryResult> =
+        build(query).snapshots(includeMetadataChanges = true).map { snapshot ->
+            QueryResult(
+                documents = snapshot.documents.map { it.toStoredDocument() },
+                hasPendingWrites = snapshot.metadata.hasPendingWrites,
+                isFromCache = snapshot.metadata.isFromCache
+            )
+        }
+
     override suspend fun <T> transaction(block: suspend FirestoreTransaction.() -> T): T =
         firestore.runTransaction { GitLiveTransaction(this).block() }
 

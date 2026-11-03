@@ -8,7 +8,7 @@ import com.coparently.app.domain.documents.VaultListing
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -33,7 +33,7 @@ class FamilyDocumentIndexCacheTest {
     }
 
     @Test
-    fun `a failed listener shows the last server answer, marked as possibly out of date`() = runTest {
+    fun `a failed listener shows the last server answer - marked as possibly out of date`() = runTest {
         val emitted = cache.listing(
             FAMILY,
             flowOf(VaultIndexEvent.FromServer(listOf(live(ORDER))), VaultIndexEvent.Failed)
@@ -46,7 +46,7 @@ class FamilyDocumentIndexCacheTest {
     }
 
     @Test
-    fun `with nothing cached a failed listener is unavailable, never an empty vault`() = runTest {
+    fun `with nothing cached a failed listener is unavailable - never an empty vault`() = runTest {
         val emitted = cache.listing(FAMILY, flowOf(VaultIndexEvent.Failed)).toList()
 
         assertEquals(1, emitted.size)
@@ -54,7 +54,7 @@ class FamilyDocumentIndexCacheTest {
     }
 
     @Test
-    fun `Firestore's own cache shows the stored copy, and says nothing when there is none`() = runTest {
+    fun `Firestore's own cache shows the stored copy - and says nothing when there is none`() = runTest {
         assertTrue(cache.listing(FAMILY, flowOf(VaultIndexEvent.FromLocalCache)).toList().isEmpty())
 
         dao.upsertAll(listOf(live(ORDER).toCacheRow()))
@@ -65,7 +65,7 @@ class FamilyDocumentIndexCacheTest {
     }
 
     @Test
-    fun `a tombstone is stored as deleted and never listed, live or cached`() = runTest {
+    fun `a tombstone is stored as deleted and never listed - live or cached`() = runTest {
         val tombstoned = FamilyDocumentMapper.IndexEntry(document("letter"), deletedAtMillis = 5L)
 
         val emitted = cache.listing(

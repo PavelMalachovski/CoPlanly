@@ -214,7 +214,7 @@ class EmulatorParent private constructor(
     /** The production vault: Firestore index, Storage bytes, Room cache of the index. */
     val documentRepository = FamilyDocumentRepositoryImpl(
         directories = directories,
-        index = FamilyDocumentIndex(firestore, FamilyDocumentIndexCache(database.familyDocumentCacheDao())),
+        index = FamilyDocumentIndex(documents, FamilyDocumentIndexCache(database.familyDocumentCacheDao())),
         authService = authService,
         stager = stager,
         storage = sharedFileStorage,
