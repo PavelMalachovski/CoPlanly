@@ -2674,10 +2674,10 @@ converts their dates.
 
 | File | Why it stays |
 | --- | --- |
-| `usecase/CreateEventUseCase.kt`, `UpdateEventUseCase.kt`, `DeleteEventUseCase.kt` | `@Inject`; analytics and Crashlytics (`data/`); `android.util.Log` and `java.util.UUID` (Create only) |
-| `usecase/GetEventsUseCase.kt`, `EventValidator.kt` | `@Inject` |
-| `usecase/EventUseCases.kt` | bundles the four use cases above |
-| `error/ErrorHandler.kt` | `@Inject`; Crashlytics and `NetworkMonitor`; `java.io.IOException` |
+| ~~`usecase/CreateEventUseCase.kt`, `UpdateEventUseCase.kt`, `DeleteEventUseCase.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8f (the data layer's `Analytics`, `CrashReporter` and `logger`; `kotlin.uuid.Uuid` for the new id) |
+| ~~`usecase/GetEventsUseCase.kt`, `EventValidator.kt`~~ | moved to `shared-data` in Task 8f with the use cases |
+| ~~`usecase/EventUseCases.kt`~~ | moved to `shared-data` in Task 8f |
+| ~~`error/ErrorHandler.kt`~~ | moved to `shared-data` in Task 8f: `Connectivity.isOnline()` (which `NetworkMonitor` answers from the system, as before), `kotlinx.io.IOException` (`java.io.IOException` on Android) and an `expect`/`actual` `isPermissionFailure` (`SecurityException` on Android) |
 | ~~`activity/ActivityAnnouncer.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8c (Koin, the common `logger`, `kotlin.uuid.Uuid`) |
 | `model/MessageTemplate.kt` | `@StringRes` and the app's `R` (strings move in phase 2) |
 | `repository/FamilyDocumentRepository.kt` | `java.io.File` in its signatures |
@@ -2689,7 +2689,7 @@ converts their dates.
 | ~~`support/SupportAgreement.kt`, `SupportReminderRule.kt`~~ | moved to `shared/` in Task 8e on kotlinx-datetime (`onDay`, `minusMonth`, `yearMonth`) |
 | ~~`changerequests/RequestInbox.kt`, `FamilyAgreements.kt`~~ | moved to `shared/` in Task 8e, with `SupportProposal` |
 | ~~`guests/GuestGrantPolicy.kt`, `GuestAccessDuration.kt`, `friends/FriendAccessDuration.kt`~~ | moved to `shared/` in Task 8e on `kotlin.time`'s `Instant` and `Duration`; an expiry is `toEpochMillisExact`, which throws where `Instant.toEpochMilli` threw |
-| `journal/JournalEntry.kt`, `repository/JournalRepository.kt` | `java.time.LocalDate` |
+| ~~`journal/JournalEntry.kt`, `repository/JournalRepository.kt`~~ | moved to `shared/` in Task 8f on kotlinx-datetime's `LocalDate`, the type the journal's Room row already held |
 | `receipts/ReceiptScan.kt`, `ReceiptParser.kt` | `java.time.LocalDate`; the parser also `java.text.Normalizer` (the `canonicalDecomposition` seam would replace it) |
 | `chat/MessageReport.kt` | `java.time.Instant` text in the report it writes |
 | `ai/AiAssist.kt` | `java.time.YearMonth` |

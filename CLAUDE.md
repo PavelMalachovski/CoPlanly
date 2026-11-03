@@ -1512,15 +1512,17 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              and the vault's index and its cache (data/documents/), and (Task 8e) the money
              between the parents (data/payment/, and data/support/ but for its reminder's
              Worker), the agreements' sources and withdrawals, and the child info, friend and
-             professional repositories.
+             professional repositories, and (Task 8f) the expense, user, pairing and journal
+             repositories, ProfileIdentity (data/session/), and the event use cases with
+             EventValidator and ErrorHandler (domain/usecase/, domain/error/).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, data/payment/, and some of the repositories, of the sync, of data/family/,
-             data/chat/, data/requests/ and data/support/
+             sources, data/payment/, and most of the repositories, and some of the sync, of
+             data/family/, data/chat/, data/requests/, data/support/ and data/session/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1534,21 +1536,26 @@ and its test is under `shared/src/commonTest/` (or `shared/src/androidUnitTest/`
 with a JVM API or mocks). The rules and items that name those paths were not reworded; only the
 root changed. `domain/activity/ActivityAnnouncer.kt` is the exception the other way: it is in
 `shared-data/src/commonMain/`, not `shared/` (MON-24 phase 2, Task 8c), because it posts through the
-data layer's `MessageRepository` and logger. **The exceptions are the phase-1 stay list**, still under
+data layer's `MessageRepository` and logger; and so, since Task 8f, are the event use cases and
+`EventValidator` in `domain/usecase/` and `domain/error/ErrorHandler.kt`, which report and log
+through the data layer's `Analytics`, `CrashReporter`, `logger` and `Connectivity` (their tests in
+`shared-data/src/androidUnitTest/`). **The exceptions are the phase-1 stay list**, still under
 `app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
 file by file:
-- dependency injection, Android or the data layer — the event use cases and `EventValidator` in
-  `usecase/` (since MON-24 phase 2's Task 6 they report through `shared-data`'s `Analytics` and
-  `CrashReporter` and log through its `logger`, so they move with the data layer to `shared-data`,
-  not to `shared`; `java.util.UUID` is left; `RecurrenceExpander` moved),
-  `error/ErrorHandler.kt` (`NetworkMonitor`), `model/MessageTemplate.kt`
+- dependency injection, Android or the data layer — `model/MessageTemplate.kt`
   (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`); `activity/ActivityAnnouncer.kt`
-  left the list for `shared-data`'s `commonMain`, same package, in MON-24 phase 2's Task 8c;
+  left the list for `shared-data`'s `commonMain`, same package, in MON-24 phase 2's Task 8c, and the
+  event use cases with `EventValidator` (`usecase/`, the new id from `kotlin.uuid.Uuid`) and
+  `error/ErrorHandler.kt` (the connection through `Connectivity.isOnline`, which `NetworkMonitor`
+  answers from the system as before; an I/O failure as `kotlinx.io.IOException`, which is
+  `java.io.IOException` on Android; a permission failure through `isPermissionFailure`, an
+  `expect`/`actual` that is `SecurityException` on Android) in Task 8f;
 - `java.time` not yet converted — the communication record's builder, CSV and layouts in
   `export/` (`RecordLabels`, `RecordPlan`, `RecordTimeText` and `RecordVerification` moved), the
   school import's `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems`,
-  `journal/JournalEntry.kt` with `repository/JournalRepository.kt`, `receipts/`,
-  `chat/MessageReport.kt` and `ai/AiAssist.kt`. MON-24 phase 2's Task 8e converted and moved to
+  `receipts/`, `chat/MessageReport.kt` and `ai/AiAssist.kt`. Task 8f moved
+  `journal/JournalEntry.kt` with `repository/JournalRepository.kt` to `shared/`, the entry's day a
+  kotlinx-datetime `LocalDate` (the type its Room row already held). MON-24 phase 2's Task 8e converted and moved to
   `shared/`, packages unchanged: `payments/Payment.kt` and `support/` (`YearMonth` and `LocalDate`
   are kotlinx-datetime's, the month's text `IsoText.yearMonth`, which is `java.time.YearMonth`'s
   byte for byte), `changerequests/RequestInbox.kt` and `FamilyAgreements.kt`, which read them,
@@ -1583,8 +1590,8 @@ constructors the `upgrade` seed calls) and `di/DatabaseBuilder.kt`; in `iosMain`
 `data/local/IosDatabase.kt`. **The entities' date columns are `kotlinx.datetime`** since then, and
 `Converters` writes them through `IsoText`, the same text `java.time`'s ISO formatters wrote
 (`ConvertersParityTest`, `shared-data/src/androidUnitTest/`); a mapper converts nothing between an
-entity and the domain, and the journal's entry, still `java.time` (phase-1 stay list), is bridged
-in `JournalRepositoryImpl`. Task 8a, Firebase on GitLive: in `commonMain`, `data/remote/firebase/`'s
+entity and the domain (the journal's entry, the last to bridge `java.time` there, is kotlinx-datetime
+since Task 8f). Task 8a, Firebase on GitLive: in `commonMain`, `data/remote/firebase/`'s
 Firestore data sources (`Firestore*DataSource`), `PairingFunctions`, `GoogleOAuthFunctions` and
 `PushPayload.kt`, with the seam they call — `FirestoreClient` (plain values: a `StoredDocument` with
 its pending-writes flag, `ReadSource.SERVER`, `SetMerge`, `ServerValue.ServerTimestamp`/`Delete`,
@@ -1635,17 +1642,16 @@ R8 probe build them unchanged. They are bound in `shared-data`'s `repositoryData
 `requestsDataModule`. Task 8d, the readers that called the Android SDK directly: in `commonMain`,
 from `data/repository/`, `CalendarFeedRepositoryImpl` (on `CallableFunctions`; a refusal is a
 `CallableException`, the limit still `CalendarFeedLimitException`), `GuestRepositoryImpl`,
-`PartnerProfileFlow` (`FirestoreClient.partnerProfile`, which `PairingRepositoryImpl` calls through
-the `FirestoreClient` it now takes beside its `FirebaseFirestore`) and `PetMappers.kt` (the pet
+`PartnerProfileFlow` (`FirestoreClient.partnerProfile`, which `PairingRepositoryImpl` calls) and `PetMappers.kt` (the pet
 document's four mappers, lifted out of `PetRepositoryImpl`, so `PetWireContract` runs in
 `shared-data` too); `data/stickers/` (`ParentRoles`, `StickerDocument`, `StickerStore`); and from
 `data/documents/`, `FamilyDocumentIndex`, `FamilyDocumentIndexCache` and `FamilyDocumentMapper`. They
 are bound in `repositoryDataModule`, `stickersDataModule` and `documentsDataModule`. The friend and
 professional repositories went onto `FirestoreClient` and `SignedInUser` then, and moved in Task 8e
 (below). `FamilyDocumentRepositoryImpl` stays in the app (`java.io.File` and `data/files/`), and so
-does `data/session/` as a whole
+does `data/session/` but for `ProfileIdentity`, which moved in Task 8f (below)
 (Auth's `FirebaseUser` and its state flow, a `Context`, the Functions SDK and `FcmService`'s token in
-account deletion; `ProfileIdentity` has callers in the app alone). The seams grew for them:
+account deletion). The seams grew for them:
 `SignedInUser` also answers the account's e-mail address and picture, `DocumentQuery.whereIn` is the
 SDK's `whereIn`, `StoredDocument.string` throws as `getString` did, `FirestoreClient.newDocumentId` is
 `collection.document().id`, and `FirestoreClient.observeWithMetadata` is a query listener with
@@ -1674,12 +1680,28 @@ request clocks), `UnassignedRecords` (records dated in `java.time` for its scree
 `ChatAttachmentOutbox` (`java.io.File` and `data/files/`), and the request clocks' keeper, steps,
 records, notices, worker, `RequestClocks` and `RequestTime` (the Android notification manager,
 WorkManager and a `java.time.ZoneId`). `data/money/` stays too (`BigDecimal` for the screens'
-`NumberFormat`). The rest of `data/repository/` and `data/sync/` is still in the app, each for what
-it needs: the expense repository (`BigDecimal`);
-`UserRepositoryImpl`, `PairingRepositoryImpl` and `PreferencesRepositoryImpl` (Auth's `FirebaseUser`,
-a `Context` and string resources, the currency hints); `JournalRepositoryImpl` (the phase-1 stay
-list's `java.time`); `ParentSlotMigrator` (Room's
-Android-only `withTransaction`); and `SyncService`, `SyncWorker`, `CalendarSyncRepository` and
+`NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
+the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
+`ExpenseRepositoryImpl` with `ExpenseMappers.kt` (the expense's four mappers, lifted out as the
+pets' were, so `ExpenseWireContract` moved to `shared-data`'s `wire/` and its list), whose push
+writes `amount` and `share` through `DecimalText.halfUp` (`BigDecimal.valueOf(x).setScale(2,
+HALF_UP).toPlainString()`, held by `DecimalTextParityTest`) and whose chat card writes the amount
+through `JvmDoubleText` (the JVM's `Double.toString`, unchanged on Android and the same text on the
+iPhone); `UserRepositoryImpl`, with `data/session/ProfileIdentity.kt`, asking `SignedInUser`'s new
+`observeCurrentUid` and `getCurrentAccount` (`SignedInAccount`: the uid, name, address, picture,
+anonymity and linked providers `FirebaseUser` carried, read at one moment) for what it read of
+`FirebaseUser`; `PairingRepositoryImpl` on `FirestoreClient` (the same documents, queries, listeners,
+fields and fallbacks as the SDK calls, `StoredDocument.string` and a local `long` throwing as
+`getString` and `getLong` did), with `PairingWording` for its thread title (the app's
+`AndroidPairingWording`, the string resource) and `kotlin.concurrent.atomics` for its applied
+marker; and `JournalRepositoryImpl`. Their constructors kept their parameter names but for the
+pairing repository's, which no longer takes `firestore` or `context` but `wording`, so the e2e
+parent changed there alone; the R8 probe builds none of them. They are bound in
+`repositoryDataModule`, and the use cases and `ErrorHandler` in the new `useCaseDataModule`; the
+app's `firebaseRepositoryModule`, `journalModule`, `useCaseModule` and `domainModule` went with
+them. The rest of `data/repository/` and `data/sync/` is still in the app, each for what it needs:
+`PreferencesRepositoryImpl` (the currency hints); `ParentSlotMigrator` (Room's Android-only
+`withTransaction`); and `SyncService`, `SyncWorker`, `CalendarSyncRepository` and
 `GoogleCalendarAutoImport`. Every other `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
@@ -1698,8 +1720,8 @@ opt-in) until that caller moves; today `ClocksAt.governing` (`OtherFamiliesSigna
 probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
 the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
 compiled by the app's tests too), the four child mappers in `ChildInfoMappers.kt` (the `child_info`
-wire contract and `ChildInfoRepositoryImplTest`, both in the app), `FirestoreClient.partnerProfile`
-(`PairingRepositoryImpl`),
+wire contract and `ChildInfoRepositoryImplTest`, both in the app), the four expense mappers in
+`ExpenseMappers.kt` (the expenses wire contract, in `wire/` like the pets'),
 `ChatMirror.mirror` (the on-screen
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe). This list is the one place they are
@@ -1789,8 +1811,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
    and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
    to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
-   and pets so far — `PetWireContract` joined in Task 8d, once the pet mappers became top-level
-   functions, and makes its one wall clock from a UTC instant so it reads in any zone;
+   and pets and expenses so far — `PetWireContract` joined in Task 8d, once the pet mappers became
+   top-level functions, and makes its one wall clock from a UTC instant so it reads in any zone, and
+   `ExpenseWireContract` in Task 8f, the same way, reading no wall clock at all;
    `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
    in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
    JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
