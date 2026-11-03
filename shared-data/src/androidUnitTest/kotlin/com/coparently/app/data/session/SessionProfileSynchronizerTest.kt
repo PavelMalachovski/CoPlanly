@@ -1,8 +1,7 @@
 package com.coparently.app.data.session
 
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.repository.UserRepository
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -24,14 +23,14 @@ import org.junit.Test
 class SessionProfileSynchronizerTest {
 
     private val userRepository: UserRepository = mockk(relaxed = true)
-    private val authService: FirebaseAuthService = mockk(relaxed = true)
-    private val accountSwitchGuard: AccountSwitchGuard = mockk(relaxed = true)
+    private val authService: SignedInUser = mockk(relaxed = true)
+    private val accountSwitchGuard: AccountConsistency = mockk(relaxed = true)
 
     @Test
     fun `repairs the profile for a session that is already signed in`() = runTest {
         // AuthStateListener fires immediately on registration, so this is what a cold start
         // with a restored session looks like — no sign-in event required.
-        every { authService.getAuthStateFlow() } returns flowOf(user("user-a"))
+        every { authService.observeCurrentUid() } returns flowOf("user-a")
 
         synchronizer().observeSessions()
 
@@ -40,8 +39,7 @@ class SessionProfileSynchronizerTest {
 
     @Test
     fun `repairs the profile again when a different account signs in`() = runTest {
-        every { authService.getAuthStateFlow() } returns
-            flowOf(user("user-a"), null, user("user-b"))
+        every { authService.observeCurrentUid() } returns flowOf("user-a", null, "user-b")
 
         synchronizer().observeSessions()
 
@@ -51,8 +49,7 @@ class SessionProfileSynchronizerTest {
     @Test
     fun `does not repeat the work when the same user is re-emitted`() = runTest {
         // Firebase re-emits the current user on every token refresh.
-        every { authService.getAuthStateFlow() } returns
-            flowOf(user("user-a"), user("user-a"), user("user-a"))
+        every { authService.observeCurrentUid() } returns flowOf("user-a", "user-a", "user-a")
 
         synchronizer().observeSessions()
 
@@ -61,7 +58,7 @@ class SessionProfileSynchronizerTest {
 
     @Test
     fun `writes nothing while signed out`() = runTest {
-        every { authService.getAuthStateFlow() } returns flowOf(null)
+        every { authService.observeCurrentUid() } returns flowOf(null)
 
         synchronizer().observeSessions()
 
@@ -70,10 +67,4 @@ class SessionProfileSynchronizerTest {
 
     private fun synchronizer() =
         SessionProfileSynchronizer(authService, userRepository, accountSwitchGuard)
-
-    private fun user(uid: String): FirebaseUser {
-        val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-        every { firebaseUser.uid } returns uid
-        return firebaseUser
-    }
 }

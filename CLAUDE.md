@@ -1528,7 +1528,8 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              the export's record sources (data/export/ but ExportFileWriter and ExportReceipts)
              and data/family/UnassignedRecords, and (Task 8j) the shared files (data/files/ but
              RecordPhotoFetcher, behind StorageBucket and PickedFiles), the chat attachment
-             outbox and the vault's repository (data/documents/).
+             outbox and the vault's repository (data/documents/), and data/session/'s
+             SessionProfileSynchronizer and SignedInAccountSource.
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1675,7 +1676,8 @@ are bound in `repositoryDataModule`, `stickersDataModule` and `documentsDataModu
 professional repositories went onto `FirestoreClient` and `SignedInUser` then, and moved in Task 8e
 (below). `FamilyDocumentRepositoryImpl` stayed in the app (`java.io.File` and `data/files/`) until
 Task 8j (below), and so
-does `data/session/` but for `ProfileIdentity`, which moved in Task 8f (below)
+does `data/session/` but for `ProfileIdentity`, which moved in Task 8f (below), and the
+profile's synchronizer and the signed-in account's source, which moved in Task 8j
 (Auth's `FirebaseUser` and its state flow, a `Context`, the Functions SDK and `FcmService`'s token in
 account deletion). The seams grew for them:
 `SignedInUser` also answers the account's e-mail address and picture, `DocumentQuery.whereIn` is the
@@ -1815,7 +1817,14 @@ the outbox's and the repository's parameter names did not change. They are bound
 `filesDataModule` (with `AttachmentUploadGate`) and `documentsDataModule` (with
 `FamilyDocumentRepository`); the app binds the two seams, and its `sharedFilesModule` is gone. Still
 in the app from `data/files/`: `RecordPhotoFetcher` (Coil) and the two seams' Android halves; and
-`FirebaseImageStorage` (a `Bitmap`'s re-encoding). Every other
+`FirebaseImageStorage` (a `Bitmap`'s re-encoding). From `data/session/`, in `commonMain`,
+`SessionProfileSynchronizer` (the uid from `SignedInUser.observeCurrentUid`, distinct as before, and
+the wipe through `AccountConsistency`) and `SignedInAccountSource` (the account `getCurrentAccount`
+reads when the profile row arrives, as reading the `FirebaseUser` the state reported did), bound in
+the new `sessionDataModule`, their parameter names unchanged. Still in the app from `data/session/`:
+`AccountSwitchGuard` (a plain `SharedPreferences` file and `DeviceTraces`), `AccountDeletionService`
+(the Functions SDK, `FcmService.unregisterToken` and `DeviceTraces`) and `DeviceTraces` (a `Context`'s
+directories and the notification manager). Every other
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,

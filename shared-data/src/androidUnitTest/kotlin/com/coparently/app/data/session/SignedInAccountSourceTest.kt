@@ -1,11 +1,9 @@
 package com.coparently.app.data.session
 
-import android.net.Uri
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.UserInfo
+import com.coparently.app.data.remote.firebase.SignedInAccount
+import com.coparently.app.data.remote.firebase.SignedInUser
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,7 +30,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SignedInAccountSourceTest {
 
-    private val authService: FirebaseAuthService = mockk(relaxed = true)
+    private val authService: SignedInUser = mockk(relaxed = true)
     private val userDao: UserDao = mockk(relaxed = true)
 
     @Test
@@ -98,7 +96,7 @@ class SignedInAccountSourceTest {
 
     @Test
     fun `reports nothing while signed out`() = runTest {
-        every { authService.getAuthStateFlow() } returns flowOf(null)
+        every { authService.observeCurrentUid() } returns flowOf(null)
 
         assertNull(source().observe().first())
     }
@@ -126,42 +124,53 @@ class SignedInAccountSourceTest {
         assertEquals(listOf("alice", "Alice Novak"), names)
     }
 
+    @Test
+    fun `says nothing for a report another account has already replaced`() = runTest {
+        // The row arrives after a switch: the account signed in now is not the one reported.
+        signedIn(displayName = "Alice Novak", email = "alice@example.com", photoUrl = null)
+        every { authService.getCurrentAccount() } returns SignedInAccount(
+            uid = "user-b",
+            displayName = "Bob",
+            email = "bob@example.com",
+            photoUrl = null,
+            isAnonymous = false,
+            providers = emptyList()
+        )
+        storedRow(row(name = "Alice Novak", photoUrl = null))
+
+        assertNull(source().observe().first())
+    }
+
     private fun source() = SignedInAccountSource(authService, userDao)
 
     private fun signedIn(
         displayName: String?,
         email: String?,
         photoUrl: String?,
-        providers: List<UserInfo> = emptyList()
+        providers: List<ProfileIdentity.ProviderIdentity> = emptyList()
     ) {
-        val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-        every { firebaseUser.uid } returns UID
-        every { firebaseUser.displayName } returns displayName
-        every { firebaseUser.email } returns email
-        // Explicit even when null: a relaxed mock would return a stub Uri whose toString()
-        // is a mock identifier, which would read as a perfectly valid photo URL.
-        every { firebaseUser.photoUrl } returns photoUrl?.let { url ->
-            mockk<Uri>(relaxed = true).also { uri -> every { uri.toString() } returns url }
-        }
-        every { firebaseUser.providerData } returns providers.toMutableList()
-        every { authService.getAuthStateFlow() } returns flowOf(firebaseUser)
+        every { authService.observeCurrentUid() } returns flowOf(UID)
+        every { authService.getCurrentAccount() } returns SignedInAccount(
+            uid = UID,
+            displayName = displayName,
+            email = email,
+            photoUrl = photoUrl,
+            isAnonymous = false,
+            providers = providers
+        )
     }
 
-    /** A `UserInfo` entry as `google.com` reports it — see [ProfileIdentity.bestProvider]. */
+    /** A `providerData` entry as `google.com` reports it — see [ProfileIdentity.bestProvider]. */
     private fun googleProviderInfo(
         displayName: String? = null,
         email: String? = null,
         photoUrl: String? = null
-    ): UserInfo {
-        val info = mockk<UserInfo>(relaxed = true)
-        every { info.providerId } returns "google.com"
-        every { info.displayName } returns displayName
-        every { info.email } returns email
-        every { info.photoUrl } returns photoUrl?.let { url ->
-            mockk<Uri>(relaxed = true).also { uri -> every { uri.toString() } returns url }
-        }
-        return info
-    }
+    ) = ProfileIdentity.ProviderIdentity(
+        providerId = "google.com",
+        displayName = displayName,
+        email = email,
+        photoUrl = photoUrl
+    )
 
     private fun storedRow(entity: UserEntity?) {
         every { userDao.observeUserById(UID) } returns flowOf(entity)

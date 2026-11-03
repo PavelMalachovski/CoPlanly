@@ -47,8 +47,6 @@ import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletionService
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.session.DeviceTraces
-import com.coparently.app.data.session.SessionProfileSynchronizer
-import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
@@ -121,8 +119,6 @@ val dataModule = module {
     // The check the sync in `:shared-data` runs before its first upload.
     single<AccountConsistency> { get<AccountSwitchGuard>() }
     singleOf(::DeviceTraces)
-    singleOf(::SessionProfileSynchronizer)
-    singleOf(::SignedInAccountSource)
     singleOf(::WorkManagerSupportReminderScheduler)
     singleOf(::WorkManagerSyncRequester)
     singleOf(::TelemetryConsentApplier)

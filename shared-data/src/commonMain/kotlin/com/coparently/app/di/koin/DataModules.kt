@@ -80,6 +80,8 @@ import com.coparently.app.data.school.SchoolEventWriter
 import com.coparently.app.data.school.SchoolImporter
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
+import com.coparently.app.data.session.SessionProfileSynchronizer
+import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.support.SupportAgreementStore
@@ -406,6 +408,17 @@ val schoolDataModule: Module = module {
 }
 
 /**
+ * The session (MON-24 phase 2, Task 8j): the profile kept in existence for every signed-in account,
+ * after the platform's account-switch check (`AccountConsistency`), and "who am I signed in as" for
+ * the pairing and Settings screens. Account deletion, the switch's wipe and the device's traces are
+ * still the app's (the Functions SDK, a `Context` and the notification manager).
+ */
+val sessionDataModule: Module = module {
+    singleOf(::SessionProfileSynchronizer)
+    singleOf(::SignedInAccountSource)
+}
+
+/**
  * The event use cases and the error boundary of the screen that runs them (MON-24 phase 2, Task
  * 8f; the app's `useCaseModule` and `domainModule` before). Each use case is a `factory`: under
  * Hilt they were `@ViewModelScoped`, one instance per ViewModel, and every one of them is
@@ -440,6 +453,7 @@ val dataModules: List<Module> = listOf(
     moneyDataModule,
     exportDataModule,
     schoolDataModule,
+    sessionDataModule,
     useCaseDataModule
 )
 

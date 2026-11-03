@@ -1,14 +1,13 @@
 package com.coparently.app.data.session
 
-import androidx.annotation.VisibleForTesting
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -34,11 +33,16 @@ import kotlinx.coroutines.launch
  * The earlier version of this logic lived in the pairing ViewModel and therefore only ever
  * ran for a user who opened the pairing screen; the pairing rewrite dropped it, which is how
  * the underlying gap became visible.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8j): the sign-in state is [SignedInUser]'s
+ * `observeCurrentUid` (the app's `FirebaseAuthService` reports it from its `AuthStateListener`, as
+ * `getAuthStateFlow` did), and the wipe before the profile write is the platform's
+ * [AccountConsistency] (the app's `AccountSwitchGuard`). The parameters kept their names.
  */
 class SessionProfileSynchronizer(
-    private val authService: FirebaseAuthService,
+    private val authService: SignedInUser,
     private val userRepository: UserRepository,
-    private val accountSwitchGuard: AccountSwitchGuard
+    private val accountSwitchGuard: AccountConsistency
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -55,14 +59,11 @@ class SessionProfileSynchronizer(
     /**
      * Collects distinct signed-in UIDs and repairs the profile for each.
      *
-     * Distinct on the UID rather than on the [com.google.firebase.auth.FirebaseUser]
-     * instance: Firebase re-emits the same user on token refresh, and there is no point
-     * re-reading the profile for that.
+     * Distinct on the UID: Firebase re-emits the same user on token refresh, and there is no
+     * point re-reading the profile for that. Internal for the tests.
      */
-    @VisibleForTesting
     internal suspend fun observeSessions() {
-        authService.getAuthStateFlow()
-            .map { it?.uid }
+        authService.observeCurrentUid()
             .distinctUntilChanged()
             .collect { uid ->
                 if (uid == null) return@collect

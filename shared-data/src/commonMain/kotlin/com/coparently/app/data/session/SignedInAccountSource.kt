@@ -2,10 +2,9 @@ package com.coparently.app.data.session
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInAccount
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.model.AccountSummary
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.UserInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -32,9 +31,14 @@ import kotlinx.coroutines.flow.map
  *
  * The preference between them is [ProfileIdentity]'s, the same one the write path uses, so
  * what this shows and what the co-parent reads out of Firestore cannot drift apart.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8j). The session is [SignedInUser]'s: the uid each
+ * time the sign-in state is reported, and the account read when the row arrives, which is what
+ * reading the `FirebaseUser` the state reported did, since Firebase keeps one `FirebaseUser` per
+ * account and updates it in place. The parameters kept their names.
  */
 class SignedInAccountSource(
-    private val authService: FirebaseAuthService,
+    private val authService: SignedInUser,
     private val userDao: UserDao
 ) {
 
@@ -45,12 +49,16 @@ class SignedInAccountSource(
      * Re-emits on sign-in, sign-out, account switch and any local profile change.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun observe(): Flow<AccountSummary?> = authService.getAuthStateFlow()
-        .flatMapLatest { user ->
-            if (user == null) {
+    fun observe(): Flow<AccountSummary?> = authService.observeCurrentUid()
+        .flatMapLatest { uid ->
+            if (uid == null) {
                 flowOf(null)
             } else {
-                userDao.observeUserById(user.uid).map { row -> summarize(user, row) }
+                userDao.observeUserById(uid).map { row ->
+                    // Another account signed in between the report and the row: that one's
+                    // summary follows its own report, so this one says nothing.
+                    authService.getCurrentAccount()?.takeIf { it.uid == uid }?.let { summarize(it, row) }
+                }
             }
         }
         // Firebase re-emits the same user on every token refresh, and Room re-emits the
@@ -62,10 +70,10 @@ class SignedInAccountSource(
      * carries a name or an email — a state with nothing to show, where a "signed in as"
      * block would be worse than no block at all.
      */
-    private fun summarize(user: FirebaseUser, row: UserEntity?): AccountSummary? {
-        // Same gap [UserRepositoryImpl.ensureProfile] fills in: a real Google session whose
+    private fun summarize(user: SignedInAccount, row: UserEntity?): AccountSummary? {
+        // Same gap `UserRepositoryImpl.ensureProfile` fills in: a real Google session whose
         // account record predates linking the provider has nothing at the top level.
-        val providers = user.providerData.map { it.toProviderIdentity() }
+        val providers = user.providers
         val email = ProfileIdentity.resolveEmail(
             topLevelEmail = user.email,
             storedRemoteEmail = null,
@@ -86,24 +94,11 @@ class SignedInAccountSource(
             name = name,
             email = email,
             photoUrl = ProfileIdentity.resolvePhotoUrl(
-                authPhotoUrl = user.photoUrl?.toString(),
+                authPhotoUrl = user.photoUrl,
                 storedRemoteUrl = null,
                 storedLocalUrl = row?.profilePhotoUrl,
                 providers = providers
             )
         )
     }
-
-    /**
-     * Projects one `FirebaseUser.providerData` entry into the plain-string shape
-     * [ProfileIdentity] works with. Mirrors
-     * `UserRepositoryImpl.toProviderIdentity` — kept as a small private duplicate rather
-     * than a shared helper, the same way `nonBlank()` is duplicated across this data layer.
-     */
-    private fun UserInfo.toProviderIdentity() = ProfileIdentity.ProviderIdentity(
-        providerId = providerId,
-        displayName = displayName,
-        email = email,
-        photoUrl = photoUrl?.toString()
-    )
 }
