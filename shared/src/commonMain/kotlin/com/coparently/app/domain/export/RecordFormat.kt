@@ -3,12 +3,9 @@ package com.coparently.app.domain.export
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.versions.EventVersionKind
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import kotlinx.datetime.toKotlinTimeZone
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 
 /**
  * How a record prints its values — one definition, shared by the CSV and the PDF so the two
@@ -17,23 +14,23 @@ import java.time.ZoneId
  * Every format is fixed and locale-independent (`Locale.ROOT`): this is evidence, and a date a
  * reader in another country could misread (`03/04`) is worse than one that looks foreign.
  *
- * The times are printed by the shared [RecordTimeText] (`yyyy-MM-dd HH:mm:ss xxx` and
- * `yyyy-MM-dd HH:mm`, as before) and the amount by [DecimalText]; this object takes the app's
- * `java.time` values and converts them until the record's model moves to kotlinx-datetime.
+ * The times are printed by [RecordTimeText] (`yyyy-MM-dd HH:mm:ss xxx` and `yyyy-MM-dd HH:mm`,
+ * the bytes `java.time` printed for those patterns) and the amount by [DecimalText], in common
+ * code, so a record made on an iPhone reads exactly as one made on an Android phone (MON-24).
  */
 object RecordFormat {
 
     private const val MONEY_SCALE = 2
 
     /** An instant in [zone], with its offset printed, so it cannot be read in the wrong zone. */
-    fun instant(millis: Long, zone: ZoneId): String = RecordTimeText.instant(millis, zone.toKotlinTimeZone())
+    fun instant(millis: Long, zone: TimeZone): String = RecordTimeText.instant(millis, zone)
 
     /** A wall-clock time as the parent entered it — no zone, because none was stored. */
     fun wallClock(value: LocalDateTime?): String =
-        value?.let { RecordTimeText.wallClock(it.toKotlinLocalDateTime()) }.orEmpty()
+        value?.let { RecordTimeText.wallClock(it) }.orEmpty()
 
     /** A date, ISO. */
-    fun date(value: LocalDate?): String = value?.let { RecordTimeText.date(it.toKotlinLocalDate()) }.orEmpty()
+    fun date(value: LocalDate?): String = value?.let { RecordTimeText.date(it) }.orEmpty()
 
     /**
      * An amount with two decimals and a point, never a grouping separator:
@@ -59,7 +56,7 @@ object RecordFormat {
     }
 
     /** The server-time cell: the time, "not yet received", or "none kept" for a current state. */
-    fun serverTime(revision: RecordRevision, zone: ZoneId, labels: RecordLabels): String = when {
+    fun serverTime(revision: RecordRevision, zone: TimeZone, labels: RecordLabels): String = when {
         revision.recordedAtMillis != null -> instant(revision.recordedAtMillis, zone)
         revision.kind == null -> labels.noServerTime
         else -> labels.notYetOnServer

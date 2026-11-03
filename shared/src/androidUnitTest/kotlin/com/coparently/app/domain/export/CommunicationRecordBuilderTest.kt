@@ -10,9 +10,9 @@ import com.coparently.app.domain.export.RecordFixtures.revision
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.versions.EventVersionKind
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -141,8 +141,8 @@ class CommunicationRecordBuilderTest {
         val record = CommunicationRecordBuilder.build(
             sources(
                 revisions = listOf(
-                    revision("v1", recordedAt = 1_000L, facts = facts(start = LocalDateTime.of(2026, 3, 20, 10, 0))),
-                    revision("v2", recordedAt = 2_000L, facts = facts(start = LocalDateTime.of(2026, 5, 2, 10, 0)))
+                    revision("v1", recordedAt = 1_000L, facts = facts(start = LocalDateTime(2026, 3, 20, 10, 0))),
+                    revision("v2", recordedAt = 2_000L, facts = facts(start = LocalDateTime(2026, 5, 2, 10, 0)))
                 )
             ),
             scope()
@@ -154,7 +154,7 @@ class CommunicationRecordBuilderTest {
     @Test
     fun `an entry never inside the period is left out`() {
         val record = CommunicationRecordBuilder.build(
-            sources(revisions = listOf(revision("v1", facts = facts(start = LocalDateTime.of(2026, 6, 1, 10, 0))))),
+            sources(revisions = listOf(revision("v1", facts = facts(start = LocalDateTime(2026, 6, 1, 10, 0))))),
             scope()
         )
 
@@ -164,11 +164,11 @@ class CommunicationRecordBuilderTest {
     @Test
     fun `a series that began before the period and still runs is in it`() {
         val weekly = facts(
-            start = LocalDateTime.of(2025, 9, 1, 16, 0),
-            end = LocalDateTime.of(2025, 9, 1, 17, 0),
+            start = LocalDateTime(2025, 9, 1, 16, 0),
+            end = LocalDateTime(2025, 9, 1, 17, 0),
             recurrence = "WEEKLY"
         )
-        val ended = weekly.copy(recurrenceEnd = LocalDate.of(2026, 1, 31))
+        val ended = weekly.copy(recurrenceEnd = LocalDate(2026, 1, 31))
 
         val running = CommunicationRecordBuilder.build(
             sources(revisions = listOf(revision("v1", facts = weekly))),
@@ -218,10 +218,10 @@ class CommunicationRecordBuilderTest {
                     CurrentEventInput("mine-old", "", isPrivate = false, creatorUid = ALICE, facts = facts())
                 ),
                 expenses = listOf(
-                    expense("x1", LocalDate.of(2026, 3, 5), familyId = null),
-                    expense("x2", LocalDate.of(2026, 3, 5), familyId = null)
+                    expense("x1", LocalDate(2026, 3, 5), familyId = null),
+                    expense("x2", LocalDate(2026, 3, 5), familyId = null)
                         .copy(createdByFirebaseUid = CAROL, paidBy = CAROL),
-                    expense("x3", LocalDate.of(2026, 3, 5), familyId = null)
+                    expense("x3", LocalDate(2026, 3, 5), familyId = null)
                         .copy(createdByFirebaseUid = null, paidBy = CAROL)
                 )
             ),
@@ -325,10 +325,10 @@ class CommunicationRecordBuilderTest {
         val record = CommunicationRecordBuilder.build(
             sources(
                 expenses = listOf(
-                    expense("x1", LocalDate.of(2026, 3, 31)),
-                    expense("x2", LocalDate.of(2026, 4, 1)),
-                    expense("x3", LocalDate.of(2026, 3, 5), familyId = null),
-                    expense("x4", LocalDate.of(2026, 3, 5), familyId = "alice-uid__carol-uid")
+                    expense("x1", LocalDate(2026, 3, 31)),
+                    expense("x2", LocalDate(2026, 4, 1)),
+                    expense("x3", LocalDate(2026, 3, 5), familyId = null),
+                    expense("x4", LocalDate(2026, 3, 5), familyId = "alice-uid__carol-uid")
                 )
             ),
             scope()
@@ -359,7 +359,7 @@ class CommunicationRecordBuilderTest {
             )
         )
 
-        assertEquals(LocalDateTime.of(2026, 3, 12, 16, 0), facts.start)
+        assertEquals(LocalDateTime(2026, 3, 12, 16, 0), facts.start)
         assertNull(facts.end)
         assertEquals("WEEKLY", facts.recurrence)
         assertNull(facts.recurrenceEnd)

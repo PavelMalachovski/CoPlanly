@@ -3,8 +3,7 @@ package com.coparently.app.data.export
 import com.coparently.app.domain.export.PlanSource
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * The sections a parent may add to a communication record, each behind its own checkbox: the
@@ -28,5 +27,5 @@ class OptionalRecordSections(
      * the way a server read can, and why only the signed-in parent's entries can ever be in it.
      */
     suspend fun journal(myUid: String, from: LocalDate, to: LocalDate): List<JournalEntry> =
-        journal.entriesBetween(myUid, from.toKotlinLocalDate(), to.toKotlinLocalDate())
+        journal.entriesBetween(myUid, from, to)
 }

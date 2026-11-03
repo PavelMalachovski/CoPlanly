@@ -39,6 +39,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinTimeZone
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -172,6 +175,9 @@ class ExportViewModel(
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
+    /** [zone] as the record's model holds it (kotlinx-datetime, MON-24): the same zone. */
+    private val recordZone: TimeZone = zone.toKotlinTimeZone()
+
     private val _state = MutableStateFlow(
         LocalDate.now(zone).let { today -> ExportUiState(from = today.minusMonths(DEFAULT_MONTHS), to = today) }
     )
@@ -293,8 +299,8 @@ class ExportViewModel(
         request: ExportUiState,
         fallbacks: NameFallbacks
     ): CommunicationRecord {
-        val from = request.from
-        val to = request.to
+        val from = request.from.toKotlinLocalDate()
+        val to = request.to.toKotlinLocalDate()
         val partnerUid = counterpart.uid
         val departed = counterpart.departed
         val earlier = counterpart.earlier
@@ -323,7 +329,7 @@ class ExportViewModel(
             conversationId = partnerUid?.let { ConversationKey.of(myUid, it) },
             from = from,
             to = to,
-            zone = zone
+            zone = recordZone
         )
         val sources = gathered.copy(
             plan = if (request.includePlan) sections.plan(myUid, partnerUid) else null,
@@ -347,9 +353,9 @@ class ExportViewModel(
         val departed = counterpart.departed
         val earlier = counterpart.earlier
         return RecordScope(
-            from = request.from,
-            to = request.to,
-            zone = zone,
+            from = request.from.toKotlinLocalDate(),
+            to = request.to.toKotlinLocalDate(),
+            zone = recordZone,
             generatedAtMillis = System.currentTimeMillis(),
             families = setOfNotNull(FamilyKey.orNull(myUid, partnerUid)),
             parents = listOfNotNull(parents.me, parents.coParent).map { nameForUid(it.uid, parents, fallbacks) } +

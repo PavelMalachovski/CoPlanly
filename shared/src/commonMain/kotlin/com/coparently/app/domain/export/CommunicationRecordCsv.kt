@@ -1,6 +1,6 @@
 package com.coparently.app.domain.export
 
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 
 /**
  * Renders a [CommunicationRecord] as CSV (MON-3).
@@ -94,7 +94,7 @@ object CommunicationRecordCsv {
     private fun eventRow(
         event: RecordEvent,
         revision: RecordRevision,
-        zone: ZoneId,
+        zone: TimeZone,
         labels: RecordLabels
     ): List<String> = listOf(
         labels.sectionEvents,
@@ -113,7 +113,7 @@ object CommunicationRecordCsv {
         ""
     )
 
-    private fun messageRow(message: RecordMessage, zone: ZoneId, labels: RecordLabels): List<String> = listOf(
+    private fun messageRow(message: RecordMessage, zone: TimeZone, labels: RecordLabels): List<String> = listOf(
         labels.sectionMessages,
         message.messageId,
         "",

@@ -10,9 +10,11 @@ import com.coparently.app.domain.export.RecordFixtures.planOf
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.journal.JournalEntry
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -29,8 +31,8 @@ import kotlin.test.assertTrue
  */
 class RecordJournalTest {
 
-    private val march12 = entry("j2", LocalDate.of(2026, 3, 12), "Handover was an hour late")
-    private val march5 = entry("j1", LocalDate.of(2026, 3, 5), "Child came back without the inhaler")
+    private val march12 = entry("j2", LocalDate(2026, 3, 12), "Handover was an hour late")
+    private val march5 = entry("j1", LocalDate(2026, 3, 5), "Child came back without the inhaler")
 
     private fun recordWith(journal: List<JournalEntry>?, plan: PlanSource? = null) =
         CommunicationRecordBuilder.build(sources().copy(journal = journal, plan = plan), scope())
@@ -47,10 +49,10 @@ class RecordJournalTest {
 
     @Test
     fun `an entry about a day outside the period, or written in another family, is not in it`() {
-        val before = entry("before", FROM.minusDays(1), "February")
-        val after = entry("after", TO.plusDays(1), "April")
-        val elsewhere = entry("elsewhere", LocalDate.of(2026, 3, 20), "Other family").copy(familyId = "alice__carol")
-        val unpaired = entry("unpaired", LocalDate.of(2026, 3, 21), "Before pairing").copy(familyId = null)
+        val before = entry("before", FROM.minus(1, DateTimeUnit.DAY), "February")
+        val after = entry("after", TO.plus(1, DateTimeUnit.DAY), "April")
+        val elsewhere = entry("elsewhere", LocalDate(2026, 3, 20), "Other family").copy(familyId = "alice__carol")
+        val unpaired = entry("unpaired", LocalDate(2026, 3, 21), "Before pairing").copy(familyId = null)
 
         val journal = assertNotNull(recordWith(listOf(before, after, elsewhere, unpaired, march5)).journal)
 
@@ -96,7 +98,7 @@ class RecordJournalTest {
 
     @Test
     fun `an entry written as a formula arrives as text`() {
-        val formula = entry("f", LocalDate.of(2026, 3, 8), "=HYPERLINK(\"http://x\")")
+        val formula = entry("f", LocalDate(2026, 3, 8), "=HYPERLINK(\"http://x\")")
 
         val csv = CommunicationRecordCsv.render(recordWith(listOf(formula)), labels())
 
@@ -153,7 +155,7 @@ class RecordJournalTest {
 
     private fun entry(id: String, date: LocalDate, text: String) = JournalEntry(
         id = id,
-        entryDate = date.toKotlinLocalDate(),
+        entryDate = date,
         text = text,
         createdAtMillis = MARCH_10_0900,
         updatedAtMillis = MARCH_10_0900,

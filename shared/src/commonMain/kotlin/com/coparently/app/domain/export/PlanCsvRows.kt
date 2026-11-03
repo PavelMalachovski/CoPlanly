@@ -1,6 +1,6 @@
 package com.coparently.app.domain.export
 
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 
 /**
  * The parenting plan's rows in the CSV record ([CommunicationRecordCsv]), kept apart so the renderer
@@ -13,7 +13,7 @@ internal object PlanCsvRows {
      * parent per question — the answer in the text column, the question's wording in the notes, the
      * agreement in the action column. A retired question has no wording left, so its notes say so.
      */
-    fun rows(plan: RecordPlan, zone: ZoneId, words: PlanLabels): List<List<String>> {
+    fun rows(plan: RecordPlan, zone: TimeZone, words: PlanLabels): List<List<String>> {
         val note = { text: String -> listOf(words.section, "", "", "", "", "", "", text) }
         val notes = listOfNotNull(
             words.disclaimer,

@@ -1,6 +1,6 @@
 package com.coparently.app.domain.export
 
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 
 /**
  * How a printed record lays out the parenting plan (MON-5 in MON-3's record).
@@ -17,7 +17,7 @@ import java.time.ZoneId
 object RecordPlanLayout {
 
     /** The plan section as paragraphs, in reading order. */
-    fun blocks(plan: RecordPlan, zone: ZoneId, words: PlanLabels): List<RecordBlock> {
+    fun blocks(plan: RecordPlan, zone: TimeZone, words: PlanLabels): List<RecordBlock> {
         val heading = RecordBlock(words.section, LineStyle.HEADING, spaceBefore = RecordLayout.SECTION_GAP)
         val notes = listOfNotNull(
             RecordBlock(words.disclaimer, LineStyle.SMALL),

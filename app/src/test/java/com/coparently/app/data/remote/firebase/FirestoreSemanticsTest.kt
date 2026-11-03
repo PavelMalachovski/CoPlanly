@@ -17,12 +17,12 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
-import java.time.ZoneOffset
 
 /**
  * The four things about Firestore the data layer must keep meaning when the SDK under it changes
@@ -56,7 +56,7 @@ class FirestoreSemanticsTest {
             emptyList()
         }
 
-        val sources = recordSource().gather(ME, CONVERSATION, FROM, TO, ZoneOffset.UTC)
+        val sources = recordSource().gather(ME, CONVERSATION, FROM, TO, TimeZone.UTC)
 
         assertFalse("a record built without the server must say so", sources.serverReached)
         val reads = client.operations.filterIsInstance<Operation.Query>()
@@ -66,7 +66,7 @@ class FirestoreSemanticsTest {
 
     @Test
     fun `a server read that answers leaves the record complete`() = runTest {
-        val sources = recordSource().gather(ME, CONVERSATION, FROM, TO, ZoneOffset.UTC)
+        val sources = recordSource().gather(ME, CONVERSATION, FROM, TO, TimeZone.UTC)
 
         assertTrue(sources.serverReached)
     }
@@ -194,7 +194,7 @@ class FirestoreSemanticsTest {
         const val CO_PARENT = "u2"
         const val CONVERSATION = "u1__u2"
         const val DELETED_AT = 1_778_000_000_000L
-        val FROM: LocalDate = LocalDate.of(2026, 10, 1)
-        val TO: LocalDate = LocalDate.of(2026, 10, 31)
+        val FROM: LocalDate = LocalDate(2026, 10, 1)
+        val TO: LocalDate = LocalDate(2026, 10, 31)
     }
 }

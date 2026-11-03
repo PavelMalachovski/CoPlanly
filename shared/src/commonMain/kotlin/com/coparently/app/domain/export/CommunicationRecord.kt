@@ -1,9 +1,9 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.domain.versions.EventVersionKind
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 
 /**
  * What an export holds, before it is a CSV or a PDF (MON-3).
@@ -40,7 +40,7 @@ import java.time.ZoneId
 data class CommunicationRecord(
     val from: LocalDate,
     val to: LocalDate,
-    val zone: ZoneId,
+    val zone: TimeZone,
     val generatedAtMillis: Long,
     val parents: List<String>,
     val complete: Boolean,
@@ -116,12 +116,13 @@ data class EventFacts(
 ) {
     /** Whether any day of this entry falls in [from]…[to], a repeating one included. */
     fun touches(from: LocalDate, to: LocalDate): Boolean {
-        val first = start?.toLocalDate() ?: return false
+        val first = start?.date ?: return false
+        // A repetition with no end runs on for ever: never before [from].
         val last = when {
-            recurrence.isNotBlank() -> recurrenceEnd ?: LocalDate.MAX
-            else -> end?.toLocalDate() ?: first
+            recurrence.isNotBlank() -> recurrenceEnd ?: return first <= to
+            else -> end?.date ?: first
         }
-        return !first.isAfter(to) && !last.isBefore(from)
+        return first <= to && last >= from
     }
 }
 

@@ -1,9 +1,8 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.domain.journal.JournalEntry
-import kotlinx.datetime.toJavaLocalDate
-import java.time.LocalDate
-import java.time.ZoneId
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 
 /**
  * The exporting parent's private journal in a record (MON-22 in MON-3's export).
@@ -52,10 +51,7 @@ object RecordJournalBuilder {
     fun build(entries: List<JournalEntry>, scope: RecordScope): RecordJournal = RecordJournal(
         entries = entries
             .filter { it.familyId.isNullOrEmpty() || it.familyId in scope.families }
-            .filter { entry ->
-                val day = entry.entryDate.toJavaLocalDate()
-                !day.isBefore(scope.from) && !day.isAfter(scope.to)
-            }
+            .filter { entry -> entry.entryDate >= scope.from && entry.entryDate <= scope.to }
             .distinctBy { it.id }
             .sortedWith(
                 compareBy<JournalEntry> { it.entryDate }.thenBy { it.createdAtMillis }.thenBy { it.id }
@@ -63,7 +59,7 @@ object RecordJournalBuilder {
             .map {
                 RecordJournalEntry(
                     entryId = it.id,
-                    entryDate = it.entryDate.toJavaLocalDate(),
+                    entryDate = it.entryDate,
                     authorName = scope.nameForUid(it.createdByFirebaseUid),
                     text = it.text,
                     createdAtMillis = it.createdAtMillis,
@@ -83,7 +79,7 @@ object RecordJournalBuilder {
 object RecordJournalLayout {
 
     /** The section as PDF paragraphs; [byLabel] is the record's own "By" column header. */
-    fun blocks(journal: RecordJournal, zone: ZoneId, words: JournalLabels, byLabel: String): List<RecordBlock> {
+    fun blocks(journal: RecordJournal, zone: TimeZone, words: JournalLabels, byLabel: String): List<RecordBlock> {
         val heading = RecordBlock(words.section, LineStyle.HEADING, spaceBefore = RecordLayout.SECTION_GAP)
         val notes = listOf(
             RecordBlock(words.privateNote, LineStyle.EMPHASIS),
@@ -117,7 +113,7 @@ object RecordJournalLayout {
      * one row per entry — its id, "written", the author, when it was written, the text, the day it
      * is about in the "starts" column, and when it was last edited in the notes.
      */
-    fun csvRows(journal: RecordJournal, zone: ZoneId, words: JournalLabels): List<List<String>> {
+    fun csvRows(journal: RecordJournal, zone: TimeZone, words: JournalLabels): List<List<String>> {
         val note = { text: String -> listOf(words.section, "", "", "", "", "", "", text) }
         val notes = listOf(note(words.privateNote), note(words.clockNote))
         if (journal.entries.isEmpty()) return notes + listOf(note(words.none))
@@ -139,6 +135,6 @@ object RecordJournalLayout {
         }
     }
 
-    private fun editedLine(entry: RecordJournalEntry, zone: ZoneId, words: JournalLabels): String? =
+    private fun editedLine(entry: RecordJournalEntry, zone: TimeZone, words: JournalLabels): String? =
         if (entry.edited) "${words.edited}: ${RecordFormat.instant(entry.updatedAtMillis, zone)}" else null
 }

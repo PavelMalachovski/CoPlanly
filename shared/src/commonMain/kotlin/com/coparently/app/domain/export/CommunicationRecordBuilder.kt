@@ -5,12 +5,14 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.parentingplan.PlanCitationCodec
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.domain.versions.EventVersionKind
-import kotlinx.datetime.toJavaLocalDate
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
 
 /**
  * One saved revision as the export reads it — from the server, or still in this phone's outbox.
@@ -110,7 +112,7 @@ data class RecordSources(
 data class RecordScope(
     val from: LocalDate,
     val to: LocalDate,
-    val zone: ZoneId,
+    val zone: TimeZone,
     val generatedAtMillis: Long,
     val families: Set<String>,
     val parents: List<String>,
@@ -212,7 +214,8 @@ object CommunicationRecordBuilder {
                 )
             }
         return (withHistory + withoutHistory).sortedWith(
-            compareBy<RecordEvent> { it.revisions.last().facts.start ?: LocalDateTime.MAX }
+            // An entry with no start sorts after every dated one, as `LocalDateTime.MAX` did.
+            compareBy<RecordEvent, LocalDateTime?>(nullsLast()) { it.revisions.last().facts.start }
                 .thenBy { it.eventId }
         )
     }
@@ -257,8 +260,8 @@ object CommunicationRecordBuilder {
     }
 
     private fun messages(messages: List<MessageInput>, scope: RecordScope): List<RecordMessage> {
-        val start = scope.from.atStartOfDay(scope.zone).toInstant().toEpochMilli()
-        val end = scope.to.plusDays(1).atStartOfDay(scope.zone).toInstant().toEpochMilli()
+        val start = RecordWindow.startMillis(scope.from, scope.zone)
+        val end = RecordWindow.endMillis(scope.to, scope.zone)
         return messages
             .filter { it.sentAtMillis in start until end }
             .distinctBy { it.messageId }
@@ -277,13 +280,12 @@ object CommunicationRecordBuilder {
 
     private fun expenses(expenses: List<Expense>, scope: RecordScope): List<RecordExpense> = expenses
         .filter { scope.admits(it.familyId, it.createdByFirebaseUid ?: it.paidBy) }
-        // The record's dates are java.time until the export moves; an expense's are kotlinx-datetime.
-        .filter { it.date.toJavaLocalDate() in scope.from..scope.to }
+        .filter { it.date in scope.from..scope.to }
         .sortedWith(compareBy<Expense> { it.date }.thenBy { it.id })
         .map {
             RecordExpense(
                 expenseId = it.id,
-                date = it.date.toJavaLocalDate(),
+                date = it.date,
                 title = it.title,
                 amount = it.amount,
                 currency = it.currency,
@@ -310,10 +312,28 @@ object CommunicationRecordBuilder {
             parentSlot = (document["parentOwner"] as? String).orEmpty(),
             recurrence = if (recurring) (document["recurrencePattern"] as? String).orEmpty() else "",
             recurrenceEnd = (document["recurrenceEndDate"] as? String)?.takeIf { it.isNotBlank() }
-                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                ?.let { runCatching { IsoText.parseDate(it) }.getOrNull() }
         )
     }
 
     private fun dateTime(value: Any?): LocalDateTime? = (value as? String)?.takeIf { it.isNotBlank() }
-        ?.let { runCatching { LocalDateTime.parse(it, DateTimeFormatter.ISO_LOCAL_DATE_TIME) }.getOrNull() }
+        ?.let { runCatching { IsoText.parseDateTime(it) }.getOrNull() }
+}
+
+/**
+ * The instants a record's period covers in its zone: from the first moment of its first day to
+ * the first moment of the day after its last, as `LocalDate.atStartOfDay(zone)` placed them — a
+ * day that starts in a gap (a summer-time change at midnight) starts at the gap's end.
+ *
+ * The message window of [CommunicationRecordBuilder] and of the data layer that reads the thread,
+ * so the two can never cut the period at different instants.
+ */
+object RecordWindow {
+
+    /** The first instant of [from] in [zone], in epoch milliseconds. */
+    fun startMillis(from: LocalDate, zone: TimeZone): Long = from.atStartOfDayIn(zone).toEpochMilliseconds()
+
+    /** The first instant of the day after [to] in [zone], in epoch milliseconds: the end, exclusive. */
+    fun endMillis(to: LocalDate, zone: TimeZone): Long =
+        to.plus(1, DateTimeUnit.DAY).atStartOfDayIn(zone).toEpochMilliseconds()
 }

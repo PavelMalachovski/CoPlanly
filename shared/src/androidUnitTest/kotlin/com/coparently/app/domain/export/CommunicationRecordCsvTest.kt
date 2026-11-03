@@ -9,8 +9,8 @@ import com.coparently.app.domain.export.RecordFixtures.revision
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.versions.EventVersionKind
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -174,7 +174,7 @@ class CommunicationRecordCsvTest {
             sources(
                 revisions = listOf(revision("v1", kind = EventVersionKind.UPDATED, editor = ALICE)),
                 messages = listOf(MessageInput("m1", BOB, MARCH_10_0900, "Pickup at six, \"not\" five", true)),
-                expenses = listOf(expense("x1", LocalDate.of(2026, 3, 3)))
+                expenses = listOf(expense("x1", LocalDate(2026, 3, 3)))
             ),
             scope()
         ),

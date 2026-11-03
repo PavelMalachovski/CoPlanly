@@ -4,10 +4,9 @@ import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.parentingplan.ParentingPlanEntry
 import com.coparently.app.domain.versions.EventVersionKind
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 
 /** Shared fixtures for the export tests. Words are English and distinctive, so a test can find them. */
 internal object RecordFixtures {
@@ -18,9 +17,9 @@ internal object RecordFixtures {
     /** Alice's co-parent in her other family, whose records are never in the family with Bob's. */
     const val CAROL = "carol-uid"
     const val FAMILY = "alice-uid__bob-uid"
-    val ZONE: ZoneId = ZoneId.of("Europe/Prague")
-    val FROM: LocalDate = LocalDate.of(2026, 3, 1)
-    val TO: LocalDate = LocalDate.of(2026, 3, 31)
+    val ZONE: TimeZone = TimeZone.of("Europe/Prague")
+    val FROM: LocalDate = LocalDate(2026, 3, 1)
+    val TO: LocalDate = LocalDate(2026, 3, 31)
 
     /** 2026-03-10 09:00 in Prague (UTC+1). */
     const val MARCH_10_0900 = 1_773_129_600_000L
@@ -131,8 +130,8 @@ internal object RecordFixtures {
 
     fun facts(
         title: String = "Dentist",
-        start: LocalDateTime? = LocalDateTime.of(2026, 3, 12, 15, 0),
-        end: LocalDateTime? = LocalDateTime.of(2026, 3, 12, 16, 0),
+        start: LocalDateTime? = LocalDateTime(2026, 3, 12, 15, 0),
+        end: LocalDateTime? = LocalDateTime(2026, 3, 12, 16, 0),
         recurrence: String = "",
         recurrenceEnd: LocalDate? = null
     ) = EventFacts(
@@ -178,7 +177,7 @@ internal object RecordFixtures {
         currency = "CZK",
         category = ExpenseCategory.entries.first(),
         paidBy = BOB,
-        date = date.toKotlinLocalDate(),
+        date = date,
         createdByFirebaseUid = BOB,
         familyId = familyId
     )

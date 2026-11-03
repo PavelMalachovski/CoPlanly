@@ -19,7 +19,7 @@ import com.coparently.app.domain.export.CommunicationRecord
 import com.coparently.app.domain.export.ExportFingerprint
 import com.coparently.app.domain.export.ExportFormat
 import com.coparently.app.domain.export.PlanSource
-import com.coparently.app.domain.export.RecordFixtures
+import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.RecordSources
 import com.coparently.app.domain.export.RecordVerification
 import com.coparently.app.domain.journal.JournalEntry
@@ -83,6 +83,9 @@ class ExportViewModelTest {
     private val departedThreads = mockk<DepartedThreadSource>()
     private val knownFamilies = mockk<KnownFamilyDao>()
     private val fallbacks = NameFallbacks(you = "You", coParent = "Co-parent", unknown = "Parent")
+
+    /** The words the file prints: only the writer reads them, and the writer is a mock here. */
+    private val labels = mockk<RecordLabels>(relaxed = true)
 
     /** Every ViewModel a test made, so tear-down can stop what it left running. */
     private val viewModels = mutableListOf<ExportViewModel>()
@@ -199,7 +202,7 @@ class ExportViewModelTest {
         val vm = viewModel(parents = parents)
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             assertEquals(file, awaitItem().file)
         }
 
@@ -235,7 +238,7 @@ class ExportViewModelTest {
         val vm = viewModel(partnerOnScreen = carol, serverPartner = partner, parents = parents)
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -251,7 +254,7 @@ class ExportViewModelTest {
         val vm = viewModel()
 
         vm.files.test {
-            vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.PDF, labels, fallbacks)
             assertEquals(file, awaitItem().file)
         }
         coVerify { writer.render(any(), any(), ExportFormat.PDF) }
@@ -262,7 +265,7 @@ class ExportViewModelTest {
         coEvery { writer.save(any(), any(), any()) } throws IllegalStateException("disk full")
         val vm = viewModel()
 
-        vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+        vm.export(ExportFormat.CSV, labels, fallbacks)
         val state = vm.state.first { it.error != null && it.working == null }
 
         assertEquals(UiText.Res(R.string.export_error_failed), state.error)
@@ -275,7 +278,7 @@ class ExportViewModelTest {
         coEvery { userRepository.getCurrentUserId() } returns null
         val vm = viewModel()
 
-        vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+        vm.export(ExportFormat.PDF, labels, fallbacks)
         val state = vm.state.first { it.error != null && it.working == null }
 
         assertEquals(UiText.Res(R.string.export_error_signed_out), state.error)
@@ -291,12 +294,12 @@ class ExportViewModelTest {
         }
         val vm = viewModel()
 
-        vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+        vm.export(ExportFormat.CSV, labels, fallbacks)
         // `working` is set before the export's coroutine starts, so waiting on it alone let this
         // test finish while the export still waited for the parents' names on another thread.
         // Wait until it is really running — parked in the save — before the second tap.
         saving.await()
-        vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+        vm.export(ExportFormat.PDF, labels, fallbacks)
 
         assertEquals(ExportFormat.CSV, vm.state.value.working)
         assertFalse(vm.state.value.error != null)
@@ -312,7 +315,7 @@ class ExportViewModelTest {
         assertEquals(true, vm.state.value.includePlan)
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -328,7 +331,7 @@ class ExportViewModelTest {
 
         vm.setIncludePlan(false)
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -346,7 +349,7 @@ class ExportViewModelTest {
         assertFalse(vm.state.value.includeJournal)
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -375,7 +378,7 @@ class ExportViewModelTest {
 
         vm.setIncludeJournal(true)
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -397,7 +400,7 @@ class ExportViewModelTest {
         val vm = viewModel()
 
         vm.files.test {
-            vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.PDF, labels, fallbacks)
             assertEquals(FinishedExport(file, RECORD_ID), awaitItem())
         }
 
@@ -414,7 +417,7 @@ class ExportViewModelTest {
         val vm = viewModel()
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             assertEquals(FinishedExport(file, null), awaitItem())
         }
 
@@ -432,7 +435,7 @@ class ExportViewModelTest {
         val vm = viewModel()
 
         vm.files.test {
-            vm.export(ExportFormat.PDF, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.PDF, labels, fallbacks)
             assertEquals(FinishedExport(file, null), awaitItem())
         }
 
@@ -446,7 +449,7 @@ class ExportViewModelTest {
         val vm = viewModel(partnerOnScreen = null)
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -463,7 +466,7 @@ class ExportViewModelTest {
         val vm = viewModel(partnerOnScreen = null)
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -482,7 +485,7 @@ class ExportViewModelTest {
         val vm = viewModel(thread = "u1__u9")
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -502,7 +505,7 @@ class ExportViewModelTest {
         val vm = viewModel(family = "u1__u7")
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 
@@ -518,7 +521,7 @@ class ExportViewModelTest {
         val vm = viewModel()
 
         vm.files.test {
-            vm.export(ExportFormat.CSV, RecordFixtures.labels(), fallbacks)
+            vm.export(ExportFormat.CSV, labels, fallbacks)
             awaitItem()
         }
 

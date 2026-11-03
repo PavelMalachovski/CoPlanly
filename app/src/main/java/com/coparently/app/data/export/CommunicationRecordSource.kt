@@ -19,6 +19,7 @@ import com.coparently.app.domain.export.EventFacts
 import com.coparently.app.domain.export.EventRevisionInput
 import com.coparently.app.domain.export.MessageInput
 import com.coparently.app.domain.export.RecordSources
+import com.coparently.app.domain.export.RecordWindow
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
@@ -27,10 +28,8 @@ import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalDateTime
-import java.time.LocalDate
-import java.time.ZoneId
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 
 /**
  * Gathers what a communication record is built from (MON-3).
@@ -64,7 +63,7 @@ class CommunicationRecordSource(
         conversationId: String?,
         from: LocalDate,
         to: LocalDate,
-        zone: ZoneId
+        zone: TimeZone
     ): RecordSources {
         val remoteRevisions = fromServer("revisions") { versions.readableBy(myUid) }
         val pending = recorder.undelivered(myUid).mapNotNull { row ->
@@ -94,7 +93,7 @@ class CommunicationRecordSource(
                 .map { it.toCurrentInput() },
             messages = threadMessages?.first.orEmpty(),
             expenses = expenseRepository.getAllExpensesInEveryFamily().first()
-                .filter { it.date.toJavaLocalDate() in from..to },
+                .filter { it.date in from..to },
             serverReached = remoteRevisions != null && threadMessages?.second != false
         )
     }
@@ -107,10 +106,10 @@ class CommunicationRecordSource(
         conversationId: String,
         from: LocalDate,
         to: LocalDate,
-        zone: ZoneId
+        zone: TimeZone
     ): Pair<List<MessageInput>, Boolean> {
-        val start = from.atStartOfDay(zone).toInstant().toEpochMilli()
-        val end = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val start = RecordWindow.startMillis(from, zone)
+        val end = RecordWindow.endMillis(to, zone)
         val remote = fromServer("messages") { messages.fetchBetween(conversationId, start, end) }
             ?.mapNotNull { it.toMessageOrNull() }
             ?.filterNot { it.isSticker() }
@@ -188,12 +187,11 @@ class CommunicationRecordSource(
         facts = EventFacts(
             title = title,
             description = description.orEmpty(),
-            // The record's facts stay java.time until the export moves (MON-24).
-            start = startDateTime.toJavaLocalDateTime(),
-            end = endDateTime?.toJavaLocalDateTime(),
+            start = startDateTime,
+            end = endDateTime,
             parentSlot = parentOwner,
             recurrence = if (isRecurring) recurrencePattern.orEmpty() else "",
-            recurrenceEnd = recurrenceEndDate?.toJavaLocalDate()
+            recurrenceEnd = recurrenceEndDate
         )
     )
 
