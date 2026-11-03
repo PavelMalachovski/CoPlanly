@@ -5,6 +5,9 @@ import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.documents.FamilyDocumentIndex
 import com.coparently.app.data.documents.FamilyDocumentIndexCache
+import com.coparently.app.data.export.CommunicationRecordSource
+import com.coparently.app.data.export.OptionalRecordSections
+import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.data.family.AgreementSignalSources
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.KnownFamilies
@@ -339,6 +342,17 @@ val moneyDataModule: Module = module {
 }
 
 /**
+ * What a communication record is gathered from (MON-3, CLAUDE.md item 26; MON-24 phase 2, Task
+ * 8i): the server's revisions and messages and this phone's copies, the parenting plan and the
+ * private journal. The file writer (`PdfDocument`) and the record ids' callables are the app's.
+ */
+val exportDataModule: Module = module {
+    singleOf(::CommunicationRecordSource)
+    singleOf(::ParentingPlanRecordSource)
+    singleOf(::OptionalRecordSections)
+}
+
+/**
  * The school import (MON-8, CLAUDE.md item 35; MON-24 phase 2, Task 8i): the sealed connection
  * store, the connect flow, the sign-in keeper, the calendar writer and the importer. The Bakaláři
  * client and directory, the titles' wording and the daily job's scheduler are the app's (its named
@@ -393,6 +407,7 @@ val dataModules: List<Module> = listOf(
     stickersDataModule,
     documentsDataModule,
     moneyDataModule,
+    exportDataModule,
     schoolDataModule,
     useCaseDataModule
 )

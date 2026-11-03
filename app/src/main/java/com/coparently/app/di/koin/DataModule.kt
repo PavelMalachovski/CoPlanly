@@ -9,11 +9,8 @@ import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
 import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
-import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
-import com.coparently.app.data.export.OptionalRecordSections
-import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.files.RecordPhotoImageLoader
 import com.coparently.app.data.files.SharedFileCache
@@ -82,11 +79,8 @@ val dataModule = module {
     singleOf(::CrashlyticsManager)
     singleOf(::OnDeviceSpeechDictation)
     singleOf(::FamilyDocumentRepositoryImpl)
-    singleOf(::CommunicationRecordSource)
     singleOf(::ExportFileWriter)
     singleOf(::ExportReceipts)
-    singleOf(::OptionalRecordSections)
-    singleOf(::ParentingPlanRecordSource)
     singleOf(::UnassignedRecords)
     singleOf(::RecordPhotoImageLoader)
     singleOf(::SharedFileCache)
