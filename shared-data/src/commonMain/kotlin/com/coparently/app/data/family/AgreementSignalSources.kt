@@ -5,8 +5,9 @@ import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.domain.repository.ProfessionalRepository
 
 /**
- * The three listeners [OtherFamiliesSignals] adds per other family for board SW-7 — child support,
- * professional grants and the parenting plan — each read for one family by its id.
+ * The three listeners `OtherFamiliesSignals` (still in the app) adds per other family for board
+ * SW-7 — child support, professional grants and the parenting plan — each read for one family by
+ * its id.
  *
  * @property supportStore `support_agreements/{familyId}`, by id.
  * @property professionalRepository The family's grants naming this parent, keyed by family.

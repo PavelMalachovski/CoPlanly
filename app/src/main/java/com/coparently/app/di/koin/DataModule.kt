@@ -14,7 +14,6 @@ import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
-import com.coparently.app.data.family.AgreementSignalSources
 import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.files.RecordPhotoImageLoader
@@ -46,8 +45,6 @@ import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
-import com.coparently.app.data.requests.AgreementWithdrawals
-import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClockSteps
@@ -108,7 +105,6 @@ val dataModule = module {
     singleOf(::ExportReceipts)
     singleOf(::OptionalRecordSections)
     singleOf(::ParentingPlanRecordSource)
-    factoryOf(::AgreementSignalSources)
     singleOf(::OtherFamiliesSignals)
     singleOf(::UnassignedRecords)
     singleOf(::RecordPhotoImageLoader)
@@ -142,8 +138,6 @@ val dataModule = module {
     singleOf(::ParentSlotMigrator)
     singleOf(::PreferencesRepositoryImpl)
     singleOf(::UserRepositoryImpl)
-    factoryOf(::AgreementWithdrawals)
-    factoryOf(::FamilyAgreementsSource)
     singleOf(::RequestClockActions)
     single {
         RequestClockKeeper(

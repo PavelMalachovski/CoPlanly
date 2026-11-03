@@ -5,6 +5,7 @@ import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.documents.FamilyDocumentIndex
 import com.coparently.app.data.documents.FamilyDocumentIndexCache
+import com.coparently.app.data.family.AgreementSignalSources
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
@@ -45,6 +46,8 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
+import com.coparently.app.data.requests.AgreementWithdrawals
+import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
@@ -173,6 +176,8 @@ val repositoryDataModule: Module = module {
  * slots as this phone last read them.
  */
 val familyDataModule: Module = module {
+    // The three agreements' listeners the other families' signals add per family (board SW-7).
+    factoryOf(::AgreementSignalSources)
     singleOf(::FamilyViewSource)
     singleOf(::KnownFamilies)
     singleOf(::KnownFamilySlots)
@@ -196,6 +201,10 @@ val chatDataModule: Module = module {
  */
 val requestsDataModule: Module = module {
     singleOf(::RequestTelling)
+    // The three agreements beside the requests, read and withdrawn for the family on screen
+    // (board SW-7; Task 8e).
+    factoryOf(::FamilyAgreementsSource)
+    factoryOf(::AgreementWithdrawals)
 }
 
 /**
