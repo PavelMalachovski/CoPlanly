@@ -2681,18 +2681,18 @@ converts their dates.
 | ~~`activity/ActivityAnnouncer.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8c (Koin, the common `logger`, `kotlin.uuid.Uuid`) |
 | `model/MessageTemplate.kt` | `@StringRes` and the app's `R` (strings move in phase 2) |
 | `repository/FamilyDocumentRepository.kt` | `java.io.File` in its signatures |
-| `review/MonthStatsWire.kt` | writes the AI summary's month as `java.time.YearMonth` text (kotlinx's JVM converter); moving it means pinning that text for every year |
-| `export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt` | `java.time` (`LocalDate`, `LocalDateTime`, `ZoneId`, a `DateTimeFormatter` parse in the builder) |
-| `export/RecordLayout.kt`, `RecordVerificationLayout.kt` | date-free, but they lay out `CommunicationRecord` |
-| `school/SchoolEvents.kt`, `SchoolTimetable.kt`, `SchoolImportPlanner.kt`, `SchoolImportItems.kt` | `java.time`; the Bakaláři parsers in `data/` hand them `java.time` values. When `SchoolImportItems` moves, its id hash must switch from `encodeToByteArray()` to `Utf8.encode` (see "Carried into phase 2") |
+| ~~`review/MonthStatsWire.kt`~~ | moved to `shared/` in phase 2's Task 8i; the month is `IsoText.yearMonth`, `java.time.YearMonth`'s text for every year |
+| ~~`export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt`~~ | moved to `shared/` in Task 8i on kotlinx-datetime: the printed times were `RecordTimeText` already, an event document is read by `IsoText.parseDateTime`/`parseDate` (`ISO_LOCAL_DATE_TIME`, `LocalDate.parse`), and the message window is `RecordWindow` (`RecordWindowParityTest`) |
+| ~~`export/RecordLayout.kt`, `RecordVerificationLayout.kt`~~ | moved to `shared/` in Task 8i with the record |
+| ~~`school/SchoolEvents.kt`, `SchoolTimetable.kt`, `SchoolImportPlanner.kt`, `SchoolImportItems.kt`~~ | moved to `shared/` in Task 8i; the event ids hash `Utf8.encode` and a fingerprint's times are `IsoText.dateTimeShortest` (`SchoolImportParityTest` against `MessageDigest` and `java.time`), and the Bakaláři parsers followed to `shared-data` |
 | ~~`payments/Payment.kt`~~ | moved to `shared/` in phase 2's Task 8e on kotlinx-datetime's `YearMonth`; the month's text is `IsoText.yearMonth`, `java.time.YearMonth.toString`'s byte for byte (no `+` above 9999) |
 | ~~`support/SupportAgreement.kt`, `SupportReminderRule.kt`~~ | moved to `shared/` in Task 8e on kotlinx-datetime (`onDay`, `minusMonth`, `yearMonth`) |
 | ~~`changerequests/RequestInbox.kt`, `FamilyAgreements.kt`~~ | moved to `shared/` in Task 8e, with `SupportProposal` |
 | ~~`guests/GuestGrantPolicy.kt`, `GuestAccessDuration.kt`, `friends/FriendAccessDuration.kt`~~ | moved to `shared/` in Task 8e on `kotlin.time`'s `Instant` and `Duration`; an expiry is `toEpochMillisExact`, which throws where `Instant.toEpochMilli` threw |
 | ~~`journal/JournalEntry.kt`, `repository/JournalRepository.kt`~~ | moved to `shared/` in Task 8f on kotlinx-datetime's `LocalDate`, the type the journal's Room row already held |
-| `receipts/ReceiptScan.kt`, `ReceiptParser.kt` | `java.time.LocalDate`; the parser also `java.text.Normalizer` (the `canonicalDecomposition` seam would replace it) |
-| `chat/MessageReport.kt` | `java.time.Instant` text in the report it writes |
-| `ai/AiAssist.kt` | `java.time.YearMonth` |
+| ~~`receipts/ReceiptScan.kt`, `ReceiptParser.kt`~~ | moved to `shared/` in Task 8i on kotlinx-datetime's `LocalDate`, NFD through `canonicalDecomposition` |
+| ~~`chat/MessageReport.kt`~~ | moved to `shared/` in Task 8i; the time is `IsoText.dateTime` of the whole second plus `Z`, `Instant.truncatedTo(SECONDS).toString()`'s text (`MessageReportTest`) |
+| ~~`ai/AiAssist.kt`~~ | moved to `shared/` in Task 8i on kotlinx-datetime's `YearMonth`; the callable's month is `IsoText.yearMonth` |
 | ~~`repository/FriendRepository.kt`, `repository/ProfessionalRepository.kt`~~ | moved to `shared/` in Task 8e with kotlinx-datetime's `LocalDate` windows |
 
 **Two decisions the code cites** (phase 1, recorded here because the working ledger is not in
@@ -2815,10 +2815,10 @@ bytes are identical on Android):
   encoder, against the emulators and in the iOS link. Left for the next slices: `FcmService`,
   `FirebaseAuthService`, `FirebaseImageStorage` and the Credential Manager classes, then
   `data/repository/` and the rest of Task 8's list.
-- **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
+- ~~**Before `SchoolImportItems` moves**~~ (done in phase 2's Task 8i): its derived event ids hashed `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
-  platforms would derive different `school-…` ids from the same school data. It must hash
-  `Utf8.encode` (the JVM's bytes on every platform), as `PlanCitation` and `PaymentQr` already do.
+  platforms would derive different `school-…` ids from the same school data. They hash
+  `Utf8.encode` now (the JVM's bytes on every platform), as `PlanCitation` and `PaymentQr` do.
 - **Tests to add**: a literal for the `conversations.createdAt` text (`ChatMappers`); commonTest
   vectors for a preset landing in a DST gap and for the quiet hours' exact edges (the request-clock
   parity test reaches them only by chance), including Havana's midnight gap with `TOMORROW` and an

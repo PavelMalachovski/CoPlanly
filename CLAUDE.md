@@ -1522,18 +1522,22 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              (Task 8h) the request clocks (data/requests/: RequestTime, RequestClocks, the
              keeper, the steps, the records and the actions, behind RequestClockNotices and
              the domain's RequestClockScheduler) and the switcher's dot
-             (data/family/OtherFamiliesSignals).
+             (data/family/OtherFamiliesSignals), and (Task 8i) the school import (data/school/:
+             the Bakaláři parsers, the authorizer, the connection store, the connect flow, the
+             writer and the importer, behind SchoolImportWordings and SchoolImportScheduler),
+             the export's record sources (data/export/ but ExportFileWriter and ExportReceipts)
+             and data/family/UnassignedRecords.
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
-             ReminderScheduler — in shared/, except the phase-1 stay list below, which is still
-             in app/
+             ReminderScheduler, the export's record and the school import's plan — in shared/,
+             except the phase-1 stay list below (two files), which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
              sources, data/payment/, every repository but the vault's and the AI assist's, the
              sync but its WorkManager classes, the request clocks but their notices and worker,
-             data/family/ but UnassignedRecords, and some of data/chat/, data/support/ and
-             data/session/
+             data/family/, the school import but its wording and worker, the export but its file
+             writer and record ids, and some of data/chat/, data/support/ and data/session/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1561,10 +1565,15 @@ file by file:
   answers from the system as before; an I/O failure as `kotlinx.io.IOException`, which is
   `java.io.IOException` on Android; a permission failure through `isPermissionFailure`, an
   `expect`/`actual` that is `SecurityException` on Android) in Task 8f;
-- `java.time` not yet converted — the communication record's builder, CSV and layouts in
-  `export/` (`RecordLabels`, `RecordPlan`, `RecordTimeText` and `RecordVerification` moved), the
-  school import's `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems`,
-  `receipts/`, `chat/MessageReport.kt` and `ai/AiAssist.kt`. Task 8f moved
+- `java.time` not yet converted — nothing since MON-24 phase 2's Task 8i, which converted and
+  moved to `shared/`, packages unchanged: the communication record's model, builder, CSV and
+  layouts in `export/` (`LocalDate`, `LocalDateTime` and `TimeZone` are kotlinx-datetime's; the
+  printed times were `RecordTimeText` already, an event document's times are read by
+  `IsoText.parseDateTime`/`parseDate`, the message window is `RecordWindow`), the school import's
+  `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems` (the event ids
+  hash `Utf8.encode` and a fingerprint's times are `IsoText.dateTimeShortest`, the bytes they hashed
+  before), `receipts/` (NFD through `canonicalDecomposition`), `chat/MessageReport.kt`, `ai/AiAssist.kt`
+  and `review/MonthStatsWire.kt` (the month as `IsoText.yearMonth`). Task 8f moved
   `journal/JournalEntry.kt` with `repository/JournalRepository.kt` to `shared/`, the entry's day a
   kotlinx-datetime `LocalDate` (the type its Room row already held). MON-24 phase 2's Task 8e converted and moved to
   `shared/`, packages unchanged: `payments/Payment.kt` and `support/` (`YearMonth` and `LocalDate`
@@ -1572,8 +1581,7 @@ file by file:
   byte for byte), `changerequests/RequestInbox.kt` and `FamilyAgreements.kt`, which read them,
   `guests/GuestGrantPolicy.kt` with `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt`
   (on `kotlin.time`), and `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`
-  (kotlinx-datetime's `LocalDate`);
-- `review/MonthStatsWire.kt`, which writes the AI summary's month as `java.time.YearMonth` text.
+  (kotlinx-datetime's `LocalDate`).
 
 **Where a `data/…` path in this file lives** (MON-24 phase 2, from November 2026). The data layer
 moves to `shared-data/` a task at a time, package unchanged, so a moved `data/<package>/<File>.kt`
@@ -1582,7 +1590,7 @@ is `shared-data/src/commonMain/kotlin/com/coparently/app/data/<package>/<File>.k
 `httpClient(HttpTimeouts)`, OkHttp on Android and Darwin on iOS, and the address and form encodings,
 the timeouts and the redirect rules (`FollowUps.kt`) the old clients had); in `data/school/bakalari/`, `BakalariClient`, `BakalariSchoolDirectory` (with
 `BakalariUrls`), `BakalariException` and `BakalariJson` — the parsers, `BakalariAccount` and
-`BakalariAuthorizer` stay in the app; and in `data/remote/google/`, `GoogleCalendarApi`,
+`BakalariAuthorizer` followed in Task 8i; and in `data/remote/google/`, `GoogleCalendarApi`,
 `CalendarPaging` and the new `GoogleCalendarEvents` — `GoogleCalendarAccess`, `CredentialProvider`
 and the rest stay. Task 6, the platform services: `data/platform/` (new: `Logger` and the ambient
 `logger`, `AppDirectories`, `SecurePreferences` with the iPhone's `SealedSecurePreferences` over a
@@ -1689,7 +1697,7 @@ app (WorkManager, the notification manager, `currencyFormat`). The rest of `data
 `data/chat/` and `data/requests/` stayed in the app then: `OtherFamiliesSignals` (`java.time` and the
 request clocks) and the request clocks' keeper, steps, records, `RequestClocks` and `RequestTime`
 (the Android notification manager, WorkManager and a `java.time.ZoneId`) until Task 8h (below);
-`UnassignedRecords` (records dated in `java.time` for its screen), `ChatAttachmentOutbox`
+`UnassignedRecords` (records dated in `java.time` for its screen) until Task 8i, `ChatAttachmentOutbox`
 (`java.io.File` and `data/files/`), and the clocks' notices and worker still. `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
 the screens' `NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
 the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
@@ -1756,7 +1764,28 @@ build them unchanged. They are bound in `requestsDataModule` (with `RequestClock
 app bound in Task 8g) and `familyDataModule`, and the app binds `RequestClockNotices`. Still in the
 app from `data/requests/` and `data/notification/`: `RequestNotices` (the notification manager, the
 strings and the `BigTextStyle` of item 15), `RequestClockWorker`, `RequestClockWork` and
-`WorkRequestClockScheduler` (WorkManager: the `KEEP` names and `needsNetwork`). Every other
+`WorkRequestClockScheduler` (WorkManager: the `KEEP` names and `needsNetwork`). Task 8i, the
+school import (item 35), the export's sources (item 26) and the records of no family (item 46),
+once their domain had left the stay list: in `commonMain`, from `data/school/`, `SchoolAccounts`,
+`SchoolConnectionStore` (its `@Synchronized` methods under the data layer's reentrant `Monitor`,
+`synchronized` on Android; the ledger's day `IsoText.date`/`parseDate`), `SchoolEventWriter` and
+`SchoolImporter` (on `kotlin.time`'s `Clock` in the zone it was built in, what
+`Clock.systemDefaultZone()` gave it; its tests build one through `SchoolImporter.on`), and from
+`data/school/bakalari/`, the three parsers and `BakalariWallClock` (the school's wall clock through
+`IsoText.parseOffsetWallClock` and `parseDateTime`, a lesson's time through the new `BakalariTime`,
+`H:mm` then `ISO_LOCAL_TIME` as `java.time` read them; `BakalariTimeParityTest`), `BakalariAccount`,
+`BakalariReads` and `BakalariAuthorizer` (`BakalariAuthorizer.on` for the tests); the connection id
+is the domain's `SchoolConnectionId`, the same SHA-256 over the JVM's UTF-8 bytes. They take two
+new seams in `data/school/`: **`SchoolImportWordings`** (the titles; the app's
+`SchoolImportWordingSource` implements it from string resources) and **`SchoolImportScheduler`**
+(moved out of the worker's file; `WorkManagerSchoolImportScheduler` implements it). From
+`data/export/`, `CommunicationRecordSource`, `ParentingPlanRecordSource` and `OptionalRecordSections`;
+from `data/family/`, `UnassignedRecords` (a record's day kotlinx-datetime's `LocalDate`, the screen
+formatting it at its edge). They are bound in `schoolDataModule`, `exportDataModule` and
+`familyDataModule`; the app binds `SchoolImportWordings`. Still in the app: `SchoolImportWorker`
+and `WorkManagerSchoolImportScheduler` (WorkManager), `SchoolImportWordingSource`, the Bakaláři
+client's Koin definitions (the app's named HTTP client), `ExportFileWriter` (`PdfDocument`) and
+`ExportReceipts` (`FirebaseFunctions` and `BuildConfig`). Every other
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
@@ -1773,14 +1802,17 @@ still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an
 opt-in) until that caller moves; today none in `shared/` (`UnansweredRows` is `internal` again
 since `RequestInbox` moved, Task 8e, and `ClocksAt.governing` lost its marker when
 `OtherFamiliesSignals` moved to `shared-data`, Task 8h — public, since that is another module), and
-in `shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument`
-(the export, and the events and revisions wire contracts and their tests, all in the app;
+in `shared-data/` `EventDocument`
+(the events and revisions wire contracts and their tests, all in the app;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
 (`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app; `minuteTicks` beside it is
 public without the marker, because its caller, `AnswerByField`, is presentation code that stays in
 another module and so it never becomes `internal` again, as `governing`), and
-`ChatMappers`' entity and document mappers (the export, the R8 probe and the messages wire
-contract; the mark mappers are `internal` again since the other families' signals moved, Task 8h), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
+`ChatMappers`' entity and document mappers (the R8 probe and the messages wire contract; the mark
+mappers are `internal` again since the other families' signals moved, Task 8h, and the export's
+reader moved in Task 8i), `SchoolConnectionCodec` (the app's `GsonParityTest` and
+`SchoolConnectionStoreTest`), `BakalariAuthorizer.on` and `SchoolImporter.on` (the school tests, in
+the app, over the app's `EncryptedPreferences`),
 the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
 compiled by the app's tests too), the four child mappers in `ChildInfoMappers.kt` (the `child_info`
 wire contract, in `wire/` like the pets' since Task 8g, and `ChildInfoRepositoryImplTest`, in the
@@ -2788,8 +2820,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `sluzby.bakalari.cz`), parsed by hand over a JSON tree (kotlinx.serialization's `JsonElement`
     since MON-24, read as leniently as Gson's tree was) — no reflected DTO, so R8 has nothing to
     rename. `SchoolImportPlanner` is the pure decision. **The client and the directory are on
-    Ktor in `shared-data/` since MON-24 phase 2** (OkHttp before; the parsers and the authorizer
-    stay in the app — see "Where a `data/…` path lives"), and send what OkHttp 4.12 sent, form
+    Ktor in `shared-data/` since MON-24 phase 2** (OkHttp before; the parsers, the authorizer,
+    the store and the importer followed in Task 8i — see "Where a `data/…` path lives"), and send what OkHttp 4.12 sent, form
     encoding and address included: `BakalariRequestShapeTest` and `WebAddressVectorsTest` hold the
     bytes, because the event ids below hash the address `BakalariUrls.normalize` writes. It also
     waits and follows redirects as OkHttp did (`HttpTimeouts.SCHOOL`, `Redirects.OKHTTP_4`: a sign-in
