@@ -2685,15 +2685,15 @@ converts their dates.
 | `export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt` | `java.time` (`LocalDate`, `LocalDateTime`, `ZoneId`, a `DateTimeFormatter` parse in the builder) |
 | `export/RecordLayout.kt`, `RecordVerificationLayout.kt` | date-free, but they lay out `CommunicationRecord` |
 | `school/SchoolEvents.kt`, `SchoolTimetable.kt`, `SchoolImportPlanner.kt`, `SchoolImportItems.kt` | `java.time`; the Bakaláři parsers in `data/` hand them `java.time` values. When `SchoolImportItems` moves, its id hash must switch from `encodeToByteArray()` to `Utf8.encode` (see "Carried into phase 2") |
-| `payments/Payment.kt` | `java.time.YearMonth` |
-| `support/SupportAgreement.kt`, `SupportReminderRule.kt` | `java.time` (`LocalDate`, `YearMonth`) |
-| `changerequests/RequestInbox.kt`, `FamilyAgreements.kt` | date-free, but they read `SupportProposal` |
-| `guests/GuestGrantPolicy.kt`, `GuestAccessDuration.kt`, `friends/FriendAccessDuration.kt` | `java.time.Instant` and `Duration` |
+| ~~`payments/Payment.kt`~~ | moved to `shared/` in phase 2's Task 8e on kotlinx-datetime's `YearMonth`; the month's text is `IsoText.yearMonth`, `java.time.YearMonth.toString`'s byte for byte (no `+` above 9999) |
+| ~~`support/SupportAgreement.kt`, `SupportReminderRule.kt`~~ | moved to `shared/` in Task 8e on kotlinx-datetime (`onDay`, `minusMonth`, `yearMonth`) |
+| ~~`changerequests/RequestInbox.kt`, `FamilyAgreements.kt`~~ | moved to `shared/` in Task 8e, with `SupportProposal` |
+| ~~`guests/GuestGrantPolicy.kt`, `GuestAccessDuration.kt`, `friends/FriendAccessDuration.kt`~~ | moved to `shared/` in Task 8e on `kotlin.time`'s `Instant` and `Duration`; an expiry is `toEpochMillisExact`, which throws where `Instant.toEpochMilli` threw |
 | `journal/JournalEntry.kt`, `repository/JournalRepository.kt` | `java.time.LocalDate` |
 | `receipts/ReceiptScan.kt`, `ReceiptParser.kt` | `java.time.LocalDate`; the parser also `java.text.Normalizer` (the `canonicalDecomposition` seam would replace it) |
 | `chat/MessageReport.kt` | `java.time.Instant` text in the report it writes |
 | `ai/AiAssist.kt` | `java.time.YearMonth` |
-| `repository/FriendRepository.kt`, `repository/ProfessionalRepository.kt` | `java.time.LocalDate` windows |
+| ~~`repository/FriendRepository.kt`, `repository/ProfessionalRepository.kt`~~ | moved to `shared/` in Task 8e with kotlinx-datetime's `LocalDate` windows |
 
 **Two decisions the code cites** (phase 1, recorded here because the working ledger is not in
 the repository):
@@ -2713,7 +2713,8 @@ the repository):
 
 `UnansweredRows` and `ClocksAt.governing` are public in `:shared` only for `RequestInbox` and
 `OtherFamiliesSignals`, and carry `@InternalSharedApi` (an error-level opt-in) until those move;
-then they become `internal` again and the marker goes.
+then they become `internal` again and the marker goes. `UnansweredRows` did when `RequestInbox`
+moved (phase 2, Task 8e); `governing` waits for `OtherFamiliesSignals`.
 
 **Carried into phase 2** (found in phase 1's reviews; none changes what a parent sees, and the
 bytes are identical on Android):

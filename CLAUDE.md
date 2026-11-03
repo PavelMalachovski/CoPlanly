@@ -1509,15 +1509,18 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              request clocks' RequestTelling, and the custody, expense-split, event and pet
              repositories, and (Task 8d) the calendar-feed and guest repositories, the
              co-parent's profile listener (PartnerProfileFlow), the stickers (data/stickers/)
-             and the vault's index and its cache (data/documents/).
+             and the vault's index and its cache (data/documents/), and (Task 8e) the money
+             between the parents (data/payment/, and data/support/ but for its reminder's
+             Worker), the agreements' sources and withdrawals, and the child info, friend and
+             professional repositories.
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, and some of the repositories, of the sync, of data/family/, data/chat/ and
-             data/requests/
+             sources, data/payment/, and some of the repositories, of the sync, of data/family/,
+             data/chat/, data/requests/ and data/support/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1544,11 +1547,14 @@ file by file:
 - `java.time` not yet converted — the communication record's builder, CSV and layouts in
   `export/` (`RecordLabels`, `RecordPlan`, `RecordTimeText` and `RecordVerification` moved), the
   school import's `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems`,
-  `payments/Payment.kt` and `support/` (and so `changerequests/RequestInbox.kt` and
-  `FamilyAgreements.kt`, which read them), `guests/GuestGrantPolicy.kt` with
-  `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt`, `journal/JournalEntry.kt` with
-  `repository/JournalRepository.kt`, `receipts/`, `chat/MessageReport.kt`, `ai/AiAssist.kt`,
-  `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`;
+  `journal/JournalEntry.kt` with `repository/JournalRepository.kt`, `receipts/`,
+  `chat/MessageReport.kt` and `ai/AiAssist.kt`. MON-24 phase 2's Task 8e converted and moved to
+  `shared/`, packages unchanged: `payments/Payment.kt` and `support/` (`YearMonth` and `LocalDate`
+  are kotlinx-datetime's, the month's text `IsoText.yearMonth`, which is `java.time.YearMonth`'s
+  byte for byte), `changerequests/RequestInbox.kt` and `FamilyAgreements.kt`, which read them,
+  `guests/GuestGrantPolicy.kt` with `GuestAccessDuration.kt` and `friends/FriendAccessDuration.kt`
+  (on `kotlin.time`), and `repository/FriendRepository.kt` and `repository/ProfessionalRepository.kt`
+  (kotlinx-datetime's `LocalDate`);
 - `review/MonthStatsWire.kt`, which writes the AI summary's month as `java.time.YearMonth` text.
 
 **Where a `data/…` path in this file lives** (MON-24 phase 2, from November 2026). The data layer
@@ -1635,29 +1641,43 @@ document's four mappers, lifted out of `PetRepositoryImpl`, so `PetWireContract`
 `shared-data` too); `data/stickers/` (`ParentRoles`, `StickerDocument`, `StickerStore`); and from
 `data/documents/`, `FamilyDocumentIndex`, `FamilyDocumentIndexCache` and `FamilyDocumentMapper`. They
 are bound in `repositoryDataModule`, `stickersDataModule` and `documentsDataModule`. The friend and
-professional repositories went onto `FirestoreClient` and `SignedInUser` and stay in the app, because
-their interfaces and `ProfessionalEvents` take the stay list's `java.time.LocalDate`; so does
-`FamilyDocumentRepositoryImpl` (`java.io.File` and `data/files/`), and `data/session/` as a whole
+professional repositories went onto `FirestoreClient` and `SignedInUser` then, and moved in Task 8e
+(below). `FamilyDocumentRepositoryImpl` stays in the app (`java.io.File` and `data/files/`), and so
+does `data/session/` as a whole
 (Auth's `FirebaseUser` and its state flow, a `Context`, the Functions SDK and `FcmService`'s token in
 account deletion; `ProfileIdentity` has callers in the app alone). The seams grew for them:
 `SignedInUser` also answers the account's e-mail address and picture, `DocumentQuery.whereIn` is the
 SDK's `whereIn`, `StoredDocument.string` throws as `getString` did, `FirestoreClient.newDocumentId` is
 `collection.document().id`, and `FirestoreClient.observeWithMetadata` is a query listener with
-`MetadataChanges.INCLUDE` whose snapshots carry their own `hasPendingWrites` and `isFromCache`. The rest of `data/family/`, `data/chat/` and `data/requests/` is still in the
-app: `AgreementSignalSources`, `OtherFamiliesSignals`, `FamilyAgreementsSource` and
-`AgreementWithdrawals` (the professional repository, the support store and `java.time`),
-`UnassignedRecords` (records dated in `java.time` for its screen), `ChatAttachmentOutbox`
-(`java.io.File` and `data/files/`), and the request clocks' keeper, steps, records, notices, worker,
-`RequestClocks` and `RequestTime` (the Android notification manager, WorkManager and a
-`java.time.ZoneId`). `data/payment/` and `data/support/` are still in the app as a whole: their
-records are the phase-1 stay list's `Payment` and `SupportAgreement` on `java.time.YearMonth`, their
-stores call the Android Firestore SDK directly, and the reminder is a `Worker`. The rest of
-`data/repository/` and `data/sync/` is still in the app, each for what it needs: the expense and
-child repositories (`BigDecimal` in expenses; `GuestGrantPolicy` and `java.time` in the child
-record); the friend and professional repositories (above);
+`MetadataChanges.INCLUDE` whose snapshots carry their own `hasPendingWrites` and `isFromCache`. Task
+8e, what the stay list's `java.time` held back, once `Payment`, `support/`, the guest and friend
+access and the friend and professional interfaces were converted (see the stay list): in
+`commonMain`, `data/payment/` (`PaymentDocument`, `PaymentStore`, `PaymentAccounts`,
+`SettleUpMessages`) and, from `data/support/`, `SupportAgreementDocument`, `SupportAgreementStore`
+(with `SupportRead`) and `SupportReminders`; from `data/requests/`, `FamilyAgreementsSource` and
+`AgreementWithdrawals`; from `data/family/`, `AgreementSignalSources`; and from `data/repository/`,
+`FriendRepositoryImpl`, `ProfessionalRepositoryImpl`, `ProfessionalEvents`, `ChildInfoRepositoryImpl`
+and `ChildInfoMappers.kt` (the child record's four mappers, lifted out of the repository as the
+pets' were). The stores run on `FirestoreClient` and `SignedInUser`, with the same queries, reads
+and writes the Android SDK calls made; a timestamp is read as a `FirestoreTimestamp`, and an amount
+through `DecimalText.parseHalfUp`, which reads it as the app's `MinorUnits.fromText` read it through
+`BigDecimal` (`MinorUnits.fromText` now delegates to it). Their constructors kept their parameter
+names, so the e2e parents and the R8 probe build them unchanged (`ChildInfoRepositoryImpl`'s
+`firebaseAuthService` is a `SignedInUser` now). They are bound in `moneyDataModule`,
+`repositoryDataModule`, `requestsDataModule` and `familyDataModule`. The `child_info` wire contract
+stays in `app/src/test/…/wire/` and the app's list alone: `SyncService`, still in the app, writes
+`child_info` too. The child support reminder's `SupportReminderWorker` and its scheduler stay in the
+app (WorkManager, the notification manager, `currencyFormat`). The rest of `data/family/`,
+`data/chat/` and `data/requests/` is still in the app: `OtherFamiliesSignals` (`java.time` and the
+request clocks), `UnassignedRecords` (records dated in `java.time` for its screen),
+`ChatAttachmentOutbox` (`java.io.File` and `data/files/`), and the request clocks' keeper, steps,
+records, notices, worker, `RequestClocks` and `RequestTime` (the Android notification manager,
+WorkManager and a `java.time.ZoneId`). `data/money/` stays too (`BigDecimal` for the screens'
+`NumberFormat`). The rest of `data/repository/` and `data/sync/` is still in the app, each for what
+it needs: the expense repository (`BigDecimal`);
 `UserRepositoryImpl`, `PairingRepositoryImpl` and `PreferencesRepositoryImpl` (Auth's `FirebaseUser`,
-a `Context` and string resources, the currency hints); `JournalRepositoryImpl` and
-`ProfessionalEvents` (the phase-1 stay list's `java.time`); `ParentSlotMigrator` (Room's
+a `Context` and string resources, the currency hints); `JournalRepositoryImpl` (the phase-1 stay
+list's `java.time`); `ParentSlotMigrator` (Room's
 Android-only `withTransaction`); and `SyncService`, `SyncWorker`, `CalendarSyncRepository` and
 `GoogleCalendarAutoImport`. Every other `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
@@ -1669,13 +1689,16 @@ interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
 still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
-opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`, and in
+opt-in) until that caller moves; today `ClocksAt.governing` (`OtherFamiliesSignals`;
+`UnansweredRows` is `internal` again since `RequestInbox` moved, Task 8e), and in
 `shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument` and
 `StampedFamily` (`SyncService` and the event, pet, professional and request readers), and
 `ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
 probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
 the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
-compiled by the app's tests too), `FirestoreClient.partnerProfile` (`PairingRepositoryImpl`),
+compiled by the app's tests too), the four child mappers in `ChildInfoMappers.kt` (the `child_info`
+wire contract and `ChildInfoRepositoryImplTest`, both in the app), `FirestoreClient.partnerProfile`
+(`PairingRepositoryImpl`),
 `ChatMirror.mirror` (the on-screen
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe). This list is the one place they are
