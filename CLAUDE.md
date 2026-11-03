@@ -1580,17 +1580,48 @@ settings, an e2e parent's named app and a test's replacement still reach the dat
 Firestore or Functions type appears in a data source's signature: a caller passes `ReadSource`, not
 `Source`, and `ServerValue`, not `FieldValue`. The rest of `data/remote/` — `FcmService`,
 `FirebaseAuthService`, `FirebaseImageStorage`, the messaging service, `PushNotifier`, `PushRouting`,
-`SwapPushWording`, `QRCodeService` and the Credential Manager classes — is still in the app. Every
-other `data/…` path is still under `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
-interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter` or
-`Analytics` rather than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager` or
-`AnalyticsManager`, and logs with `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
+`SwapPushWording`, `QRCodeService` and the Credential Manager classes — is still in the app. Task
+8b, the repositories, the sync and the revisions, as far as each could go: in `commonMain`, from
+`data/sync/`, `EventDocument`, `ConflictResolver`, `FamilyIdBackfill`, `ChildInfoAudience`,
+`ChildInfoGuests`, `ChildInfoPhotos`, `PetAudience`, `EventSyncWindow`, `StampedFamily` and the
+`SyncRequester` interface (its WorkManager implementation, `WorkManagerSyncRequester`, stays);
+`data/versions/EventVersionRecorder.kt`, which tells a refusal from an outage by
+`FirestoreEventVersionDataSource.errorCodeOf`; and from `data/repository/`, `MessageRepositoryImpl`,
+`ChatMappers`, `ChatSearchRepositoryImpl`, `ConversationMigrator`, `PostPairingConversationSetup`,
+`RequestDeadlineRepositoryImpl`, `ChangeRequestRepositoryImpl`, `ParentingPlanRepository`, the
+custody document's Room codecs (`ChildOverrideJson`, `ContactWindowJson`, `DayOverrideJson`,
+`SeasonalLayerJson`), `FriendMappers`, `ProfessionalMappers`, `ProfileDate.kt` and
+`MedicalProfileSanitizer.kt`. They are bound in `shared-data`'s `syncDataModule`,
+`versionsDataModule` and `repositoryDataModule`, interfaces included. Two narrow seams in
+`data/remote/firebase/` carry what they asked of the app: **`SignedInUser`** (the signed-in uid and
+display name; `FirebaseAuthService` implements it) and **`PushQueue`** (`queueNotificationForUser`;
+`FcmService` implements it), each bound in the app's `dataModule`. A moved repository takes those,
+never `FirebaseAuthService` or `FcmService`, and kept its parameter names, so the e2e parents' calls
+did not change. The rest of `data/repository/` and `data/sync/` is still in the app, each for what it
+needs: the custody repository and its helpers (`ActiveCustodyRow`, `CustodyRows`,
+`SignedInFamilies`, `SwapPush`), `FamilySettingsRepository` and the event, expense, child and pet
+repositories (`ActivityAnnouncer` and `data/family/`'s `FamilyView`, still in the app; `java.time` in
+the custody repository; `BigDecimal` in expenses); the friend, guest, professional and partner-profile
+readers and `CalendarFeedRepositoryImpl` (the Android Firestore or Functions SDK called directly);
+`UserRepositoryImpl`, `PairingRepositoryImpl` and `PreferencesRepositoryImpl` (Auth's `FirebaseUser`,
+a `Context` and string resources, the currency hints); `JournalRepositoryImpl` and
+`ProfessionalEvents` (the phase-1 stay list's `java.time`); `ParentSlotMigrator` (Room's
+Android-only `withTransaction`); and `SyncService`, `SyncWorker`, `CalendarSyncRepository` and
+`GoogleCalendarAutoImport`. Every other `data/…` path is still under
+`app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
+interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
+`Analytics`, `SignedInUser` or `PushQueue` rather than `EncryptedPreferences`, a `Context` directory,
+`CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService` or `FcmService`, and logs with
+`logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
 still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
 opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`, and in
-`shared-data/` `BakalariJson`, which the school import's parsers in the app read.
+`shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument` and
+`StampedFamily` (`SyncService` and the event, pet, professional and request readers), and
+`ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
+probe and the messages wire contract).
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 
@@ -1676,7 +1707,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
    and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
    to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
-   so far), and the app's unit tests compile the same harness files and run every contract through
+   so far; `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
+   in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
+   JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
    the app's own `WireContracts` — which is what the command above regenerates and what the
    `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. A contract is in the
    app's list until every writer has moved. **The other direction runs in the `upgrade` job**:
