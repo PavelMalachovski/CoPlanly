@@ -8,7 +8,8 @@ import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Tells the co-parent what changed, from the place the change became durable.
@@ -55,6 +56,7 @@ class ActivityAnnouncer(
      *   rules refuse a message once it has ended. An invalid uid (blank, or this parent's own)
      *   posts nothing, like any other failure here.
      */
+    @OptIn(ExperimentalUuidApi::class)
     suspend fun announce(
         announcement: ActivityAnnouncement,
         senderName: String = "",
@@ -81,7 +83,7 @@ class ActivityAnnouncer(
 
             messageRepository.sendMessage(
                 Message(
-                    id = UUID.randomUUID().toString(),
+                    id = Uuid.random().toString(),
                     conversationId = conversationId,
                     senderId = myUid,
                     senderName = senderName,

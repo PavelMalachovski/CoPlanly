@@ -25,6 +25,7 @@ import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.MessageRepository
@@ -77,6 +78,8 @@ val versionsDataModule: Module = module {
  * attachment gate, the request clocks' scheduler — each platform binds.
  */
 val repositoryDataModule: Module = module {
+    // How a repository tells the co-parent what changed (MON-24 phase 2, Task 8c).
+    singleOf(::ActivityAnnouncer)
     singleOf(::ChangeRequestRepositoryImpl)
     single<ChangeRequestRepository> { get<ChangeRequestRepositoryImpl>() }
     single { MessageRepositoryImpl(get(), get(), get(), get()) }
