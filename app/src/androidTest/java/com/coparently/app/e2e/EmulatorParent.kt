@@ -281,6 +281,7 @@ class EmulatorParent private constructor(
 
     val pairingRepository = PairingRepositoryImpl(
         firestore = firestore,
+        firestoreClient = documents,
         authService = authService,
         pairingFunctions = PairingFunctions(callables),
         postPairingConversationSetup = PostPairingConversationSetup(

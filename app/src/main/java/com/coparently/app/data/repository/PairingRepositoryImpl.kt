@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import android.content.Context
@@ -6,9 +8,11 @@ import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.sync.SyncRequester
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingInvite
@@ -44,6 +48,9 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class PairingRepositoryImpl(
     private val firestore: FirebaseFirestore,
+    // The co-parent's profile listener ([partnerProfile]), on the seam since MON-24 phase 2
+    // (Task 8d); the rest of this class still calls the Android SDK through [firestore].
+    private val firestoreClient: FirestoreClient,
     private val authService: FirebaseAuthService,
     private val pairingFunctions: PairingFunctions,
     private val postPairingConversationSetup: PostPairingConversationSetup,
@@ -142,7 +149,7 @@ class PairingRepositoryImpl(
             .catch { emit(PairingState.Loading) }
 
     override fun observeCoParentProfile(partnerUid: String): Flow<PartnerSummary> =
-        firestore.partnerProfile(partnerUid, pairedAt = null)
+        firestoreClient.partnerProfile(partnerUid, pairedAt = null)
 
     override suspend fun createOrReuseInviteCode(): Result<PairingInvite> = runPairing {
         val user = requireUser()
@@ -365,7 +372,7 @@ class PairingRepositoryImpl(
                 if (link.partnerId.isEmpty()) {
                     flowOf(LinkedPartner(partner = null, coParents = link.coParents))
                 } else {
-                    firestore.partnerProfile(link.partnerId, link.pairedAt)
+                    firestoreClient.partnerProfile(link.partnerId, link.pairedAt)
                         .map { LinkedPartner(partner = it, coParents = link.coParents) }
                 }
             }

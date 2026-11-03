@@ -3,15 +3,10 @@ package com.coparently.app.data.repository
 import app.cash.turbine.test
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
@@ -190,14 +185,11 @@ class PairingRepositoryImplTest : PairingRepositoryImplFixture() {
     @Test
     fun `a co-parent the pairing state does not carry is read from their own document`() = runTest {
         // What a screen showing the second family names: their profile, live, never the first's.
-        val listener = slot<EventListener<DocumentSnapshot>>()
-        val document = mockk<DocumentReference>(relaxed = true)
-        every { usersCollection.document("u3") } returns document
-        every { document.addSnapshotListener(capture(listener)) } returns mockk(relaxed = true)
+        val listener = profileListener("u3")
 
         repository.observeCoParentProfile("u3").test {
             runCurrent()
-            listener.captured.onEvent(partnerDoc(name = "Pavel", role = "dad", colorCode = "hue1|200"), null)
+            listener.emit(partnerDoc(name = "Pavel", role = "dad", colorCode = "hue1|200"))
 
             assertEquals(
                 PartnerSummary(
@@ -378,7 +370,7 @@ class PairingRepositoryImplTest : PairingRepositoryImplFixture() {
 
             assertEquals(PairingState.NotPaired(activeInvite = null, incoming = emptyList()), awaitItem())
             runCurrent()
-            verify(exactly = 1) { listeners.partnerRegistration.remove() }
+            assertEquals(1, listeners.partnerRemovals())
             cancelAndIgnoreRemainingEvents()
         }
     }

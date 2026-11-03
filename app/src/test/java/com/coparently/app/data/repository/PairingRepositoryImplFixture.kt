@@ -6,6 +6,8 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
+import com.coparently.app.data.remote.firebase.StoredDocument
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.repository.MessageRepository
 import com.google.android.gms.tasks.Tasks
@@ -16,12 +18,14 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Before
 
@@ -33,6 +37,14 @@ import org.junit.Before
 abstract class PairingRepositoryImplFixture {
 
     protected lateinit var firestore: FirebaseFirestore
+
+    /**
+     * The seam the co-parent's profile listener goes through (MON-24 phase 2, Task 8d): a listener
+     * on `users/{uid}` there is the one [profileListener] holds for that uid, and silent for any
+     * other, as a relaxed SDK mock's listener was.
+     */
+    protected lateinit var firestoreClient: RecordingFirestoreClient
+    private val profileListeners = mutableMapOf<String, ProfileListener>()
     protected lateinit var authService: FirebaseAuthService
     protected lateinit var pairingFunctions: PairingFunctions
     protected lateinit var messageRepository: MessageRepository
@@ -53,6 +65,16 @@ abstract class PairingRepositoryImplFixture {
     @Before
     fun setUp() {
         firestore = mockk(relaxed = true)
+        profileListeners.clear()
+        firestoreClient = RecordingFirestoreClient().apply {
+            documentFlow = { path ->
+                callbackFlow {
+                    val listener = profileListeners[path.id].takeIf { path.collection == "users" }
+                    listener?.attached?.add(this)
+                    awaitClose { listener?.let { it.removed++ } }
+                }
+            }
+        }
         authService = mockk(relaxed = true)
         pairingFunctions = mockk(relaxed = true)
         messageRepository = mockk(relaxed = true)
@@ -94,6 +116,7 @@ abstract class PairingRepositoryImplFixture {
 
         repository = PairingRepositoryImpl(
             firestore = firestore,
+            firestoreClient = firestoreClient,
             authService = authService,
             pairingFunctions = pairingFunctions,
             postPairingConversationSetup = PostPairingConversationSetup(messageRepository, conversationMigrator),
@@ -120,17 +143,19 @@ abstract class PairingRepositoryImplFixture {
         val user: () -> EventListener<DocumentSnapshot>,
         val ownInvites: () -> EventListener<QuerySnapshot>,
         val incomingInvites: () -> EventListener<QuerySnapshot>,
-        val partner: () -> EventListener<DocumentSnapshot>,
-        val partnerRegistration: ListenerRegistration
+        val partner: ProfileListener
     ) {
         fun emitUser(snapshot: DocumentSnapshot) = user().onEvent(snapshot, null)
 
         fun failUser(error: FirebaseFirestoreException) = user().onEvent(null, error)
 
         /** The co-parent's own `users/u2` document, as their listener delivers it. */
-        fun emitPartner(snapshot: DocumentSnapshot) = partner().onEvent(snapshot, null)
+        fun emitPartner(snapshot: StoredDocument) = partner.emit(snapshot)
 
-        fun failPartner(error: FirebaseFirestoreException) = partner().onEvent(null, error)
+        fun failPartner(error: Throwable) = partner.fail(error)
+
+        /** How many co-parent listeners were detached. */
+        fun partnerRemovals(): Int = partner.removed
 
         fun emitInvites() {
             val empty = mockk<QuerySnapshot>(relaxed = true)
@@ -166,23 +191,38 @@ abstract class PairingRepositoryImplFixture {
         every { ownQuery.addSnapshotListener(capture(ownListener)) } returns mockk(relaxed = true)
         every { incomingQuery.addSnapshotListener(capture(incomingListener)) } returns mockk(relaxed = true)
 
-        // The co-parent "u2" has a listener of their own. Their document's one-shot `get()` stays
-        // stubbed as well: the post-pairing conversation still reads their name that way, and a
-        // relaxed Task never completes.
-        val partnerListener = slot<EventListener<DocumentSnapshot>>()
-        val partnerRegistration = mockk<ListenerRegistration>(relaxed = true)
+        // The co-parent "u2" has a listener of their own, through the seam. Their document's
+        // one-shot `get()` stays stubbed as well: the post-pairing conversation still reads their
+        // name that way, and a relaxed Task never completes.
         val partnerDocument = mockk<DocumentReference>(relaxed = true)
         every { usersCollection.document("u2") } returns partnerDocument
         every { partnerDocument.get() } returns Tasks.forResult(userSnapshot)
-        every { partnerDocument.addSnapshotListener(capture(partnerListener)) } returns partnerRegistration
 
         return RealtimeListeners(
             user = { userListener.captured },
             ownInvites = { ownListener.captured },
             incomingInvites = { incomingListener.captured },
-            partner = { partnerListener.captured },
-            partnerRegistration = partnerRegistration
+            partner = profileListener("u2")
         )
+    }
+
+    /** The listener [firestoreClient] attaches to `users/[uid]`; attach it before the flow runs. */
+    protected fun profileListener(uid: String): ProfileListener = profileListeners.getOrPut(uid) { ProfileListener() }
+
+    /** One profile's listeners, in order — a re-attachment adds one — and how many were detached. */
+    protected class ProfileListener {
+        val attached = mutableListOf<ProducerScope<StoredDocument>>()
+        var removed = 0
+
+        /** The document as the newest listener delivers it. */
+        fun emit(snapshot: StoredDocument) {
+            attached.last().trySend(snapshot)
+        }
+
+        /** The newest listener failing with [error], as the client's flow fails. */
+        fun fail(error: Throwable) {
+            attached.last().close(error)
+        }
     }
 
     /**
@@ -208,7 +248,8 @@ abstract class PairingRepositoryImplFixture {
         photoUrl: String? = null,
         role: String? = null,
         colorCode: String? = null
-    ): DocumentSnapshot = fakeDocument(
+    ): StoredDocument = StoredDocument(
+        "u2",
         mapOf(
             "name" to name,
             "email" to email,

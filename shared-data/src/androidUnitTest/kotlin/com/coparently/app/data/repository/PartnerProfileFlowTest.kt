@@ -1,18 +1,18 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import app.cash.turbine.test
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.FirestoreErrorCode
+import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
+import com.coparently.app.data.remote.firebase.StoredDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.PartnerSummary
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.EventListener
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.ListenerRegistration
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -25,35 +25,39 @@ import kotlin.test.assertNull
  * so the co-parent's new colour or name waited for the app to be opened again. These tests pin
  * the listener's three promises: every change is delivered, a failure never blanks what was
  * already read, and nothing is left attached when the caller leaves.
+ *
+ * Over a [RecordingFirestoreClient] since MON-24 phase 2 (Task 8d), whose listener stands for the
+ * SDK's: a snapshot is a send, a failure closes it with the error, as the client's flow fails.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PartnerProfileFlowTest {
 
     /** Every listener attached to `users/u2`, in order — a re-attachment adds one. */
-    private val listeners = mutableListOf<EventListener<DocumentSnapshot>>()
-    private val registration = mockk<ListenerRegistration>(relaxed = true)
+    private val listeners = mutableListOf<ProducerScope<StoredDocument>>()
 
-    private val firestore = mockk<FirebaseFirestore>().also { firestore ->
-        val users = mockk<CollectionReference>()
-        val partnerDocument = mockk<DocumentReference>()
-        every { firestore.collection("users") } returns users
-        every { users.document(PARTNER) } returns partnerDocument
-        every { partnerDocument.addSnapshotListener(any<EventListener<DocumentSnapshot>>()) } answers {
-            listeners += firstArg<EventListener<DocumentSnapshot>>()
-            registration
+    /** How many of them were removed. */
+    private var removed = 0
+
+    private val firestore = RecordingFirestoreClient().apply {
+        documentFlow = { path ->
+            check(path == DocumentPath("users", PARTNER)) { "unexpected listener on $path" }
+            callbackFlow {
+                listeners += this
+                awaitClose { removed++ }
+            }
         }
     }
 
     @Test
     fun `every change to the co-parent's profile is delivered`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
-            listeners.last().onEvent(profile(name = "Bob", colorCode = "#1976D2"), null)
+            listeners.last().trySend(profile(name = "Bob", colorCode = "#1976D2"))
             assertEquals("#1976D2", awaitItem().colorCode)
 
-            listeners.last().onEvent(profile(name = "Bob", colorCode = "hue1|30"), null)
+            listeners.last().trySend(profile(name = "Bob", colorCode = "hue1|30"))
             assertEquals("hue1|30", awaitItem().colorCode)
 
-            listeners.last().onEvent(profile(name = "Robert", colorCode = "hue1|30"), null)
+            listeners.last().trySend(profile(name = "Robert", colorCode = "hue1|30"))
             assertEquals("Robert", awaitItem().name)
             cancelAndIgnoreRemainingEvents()
         }
@@ -62,9 +66,8 @@ class PartnerProfileFlowTest {
     @Test
     fun `a profile is read field by field, blanks as absent`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
-            listeners.last().onEvent(
-                profile(name = "Bob", email = "bob@example.com", photoUrl = "", role = "dad", colorCode = ""),
-                null
+            listeners.last().trySend(
+                profile(name = "Bob", email = "bob@example.com", photoUrl = "", role = "dad", colorCode = "")
             )
 
             assertEquals(
@@ -89,9 +92,8 @@ class PartnerProfileFlowTest {
             // The co-parent writes their own profile, and the rules type only its name: a number
             // where the colour belongs must read as "not chosen" — read with `getString`, it threw
             // inside the listener, on the main thread, on every launch.
-            listeners.last().onEvent(
-                fakeDocument(mapOf("name" to "Bob", "colorCode" to 42L, "email" to true)),
-                null
+            listeners.last().trySend(
+                fakeDocument(mapOf("name" to "Bob", "colorCode" to 42L, "email" to true))
             )
 
             val summary = awaitItem()
@@ -105,7 +107,7 @@ class PartnerProfileFlowTest {
     @Test
     fun `a failure before anything was read reports the bare partner`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
-            listeners.last().onEvent(null, failure())
+            listeners.last().close(failure())
 
             assertEquals(BARE, awaitItem())
             cancelAndIgnoreRemainingEvents()
@@ -115,17 +117,17 @@ class PartnerProfileFlowTest {
     @Test
     fun `a failure after a read keeps the profile, and the listener is attached again`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
-            listeners.last().onEvent(profile(name = "Bob"), null)
+            listeners.last().trySend(profile(name = "Bob"))
             assertEquals("Bob", awaitItem().name)
 
-            listeners.last().onEvent(null, failure())
+            listeners.last().close(failure())
             expectNoEvents()
 
             testScheduler.advanceTimeBy(FIRST_BACKOFF_MILLIS + 1)
             testScheduler.runCurrent()
             assertEquals(2, listeners.size, "re-attached after the first backoff")
 
-            listeners.last().onEvent(profile(name = "Robert"), null)
+            listeners.last().trySend(profile(name = "Robert"))
             assertEquals("Robert", awaitItem().name)
             cancelAndIgnoreRemainingEvents()
         }
@@ -134,12 +136,12 @@ class PartnerProfileFlowTest {
     @Test
     fun `after the last re-attachment fails the stream ends quietly with what it had`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
-            listeners.last().onEvent(null, failure())
+            listeners.last().close(failure())
             assertEquals(BARE, awaitItem())
 
             repeat(RETRIES) {
                 testScheduler.advanceUntilIdle()
-                listeners.last().onEvent(null, failure())
+                listeners.last().close(failure())
             }
             testScheduler.advanceUntilIdle()
 
@@ -151,13 +153,13 @@ class PartnerProfileFlowTest {
     @Test
     fun `the listener is removed when the collector leaves`() = runTest {
         firestore.partnerProfile(PARTNER, PAIRED_AT).test {
-            listeners.last().onEvent(profile(name = "Bob"), null)
+            listeners.last().trySend(profile(name = "Bob"))
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
         testScheduler.runCurrent()
 
-        verify(exactly = 1) { registration.remove() }
+        assertEquals(1, removed)
     }
 
     /** A profile document; a field not given is absent. */
@@ -167,7 +169,7 @@ class PartnerProfileFlowTest {
         photoUrl: String? = null,
         role: String? = null,
         colorCode: String? = null
-    ): DocumentSnapshot = fakeDocument(
+    ): StoredDocument = fakeDocument(
         mapOf(
             "name" to name,
             "email" to email,
@@ -177,7 +179,10 @@ class PartnerProfileFlowTest {
         )
     )
 
-    private fun failure() = mockk<FirebaseFirestoreException>(relaxed = true)
+    private fun failure() = RecordingFirestoreClient.Failure(FirestoreErrorCode.PERMISSION_DENIED)
+
+    /** A profile document holding exactly [fields]. */
+    private fun fakeDocument(fields: Map<String, Any?>) = StoredDocument(PARTNER, fields)
 
     private companion object {
         const val PARTNER = "u2"

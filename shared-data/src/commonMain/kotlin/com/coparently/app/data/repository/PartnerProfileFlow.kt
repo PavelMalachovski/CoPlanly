@@ -1,18 +1,22 @@
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.FirestoreClient
+import com.coparently.app.data.remote.firebase.StoredDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.PartnerSummary
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * [partnerId]'s profile as a [PartnerSummary], every time their `users/{uid}` document changes —
@@ -32,30 +36,33 @@ import java.util.concurrent.atomic.AtomicBoolean
  * which is what the one-shot read answered when it failed. The listener is then re-attached a few
  * times with a backoff, and after that the last answer stands until the link moves.
  *
+ * The listener is [FirestoreClient.observe] since MON-24 phase 2 (Task 8d), which on Android is
+ * the same snapshot listener this attached itself: its failure ends the flow with the listener's
+ * error, which is what the retry below reads.
+ *
+ * Public for `PairingRepositoryImpl`, which stays in the app until it moves too.
+ *
  * @param partnerId The co-parent's uid.
  * @param pairedAt When the link was made, carried into every summary unchanged.
  */
-internal fun FirebaseFirestore.partnerProfile(partnerId: String, pairedAt: Long?): Flow<PartnerSummary> {
+@InternalSharedApi
+fun FirestoreClient.partnerProfile(partnerId: String, pairedAt: Long?): Flow<PartnerSummary> {
     // Whether anything has been sent — a profile or the bare partner. Shared across re-attachments
-    // and set on the listener's own thread before the send, so an error arriving right behind a
-    // snapshot cannot overwrite it, and a re-attachment that fails again says nothing new.
+    // and set before the send, so an error arriving right behind a snapshot cannot overwrite it,
+    // and a re-attachment that fails again says nothing new.
     val answered = AtomicBoolean(false)
-    return callbackFlow {
-        val registration = collection(USERS).document(partnerId)
-            .addSnapshotListener { snapshot, error ->
-                if (error == null) {
-                    answered.set(true)
-                    trySend(snapshot.toPartnerSummary(partnerId, pairedAt))
-                    return@addSnapshotListener
-                }
-                // The UI renders a blank name identically whether the profile could not be read
-                // or genuinely has none; the log is what tells the two apart after the fact.
-                logger.w(TAG, "Partner profile listener failed", error)
-                if (answered.compareAndSet(false, true)) trySend(bareSummary(partnerId, pairedAt))
-                close(error)
-            }
-        awaitClose { registration.remove() }
-    }
+    return observe(DocumentPath(USERS, partnerId))
+        .map { snapshot ->
+            answered.store(true)
+            snapshot.toPartnerSummary(partnerId, pairedAt)
+        }
+        .catch { error ->
+            // The UI renders a blank name identically whether the profile could not be read or
+            // genuinely has none; the log is what tells the two apart after the fact.
+            logger.w(TAG, "Partner profile listener failed", error)
+            if (answered.compareAndSet(false, true)) emit(bareSummary(partnerId, pairedAt))
+            throw error
+        }
         .retryWhen { cause, attempt ->
             val retry = cause !is CancellationException && attempt < RETRY_ATTEMPTS
             if (retry) delay(RETRY_BASE_MILLIS shl attempt.toInt())
@@ -70,7 +77,7 @@ internal fun FirebaseFirestore.partnerProfile(partnerId: String, pairedAt: Long?
  * exist — an offline first read with nothing cached — reads as the bare partner, every field
  * absent, and so does a field of the wrong type (see [text]).
  */
-internal fun DocumentSnapshot?.toPartnerSummary(partnerId: String, pairedAt: Long?): PartnerSummary =
+internal fun StoredDocument?.toPartnerSummary(partnerId: String, pairedAt: Long?): PartnerSummary =
     PartnerSummary(
         id = partnerId,
         name = text("name").orEmpty(),
@@ -102,12 +109,12 @@ internal fun DocumentSnapshot?.toPartnerSummary(partnerId: String, pairedAt: Lon
 /**
  * [field] as text, or null when it is absent or holds anything but a string.
  *
- * Not `getString`, which throws on a value of another type: this runs inside the snapshot
- * listener, on the main thread, over a document the co-parent writes, and `firestore.rules` types
+ * Not `getString` (or [StoredDocument.string]), which throws on a value of another type: this runs
+ * on every snapshot of a document the co-parent writes, and `firestore.rules` types
  * only its name. A number where the colour belongs read that way took the other parent's app down
  * on every launch while they were paired; read this way it is a colour not chosen.
  */
-private fun DocumentSnapshot?.text(field: String): String? = this?.get(field) as? String
+private fun StoredDocument?.text(field: String): String? = this?.data?.get(field) as? String
 
 /** The partner known only by the link: no name, no photo, no slot, no colour. */
 private fun bareSummary(partnerId: String, pairedAt: Long?) =
