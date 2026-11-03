@@ -2,10 +2,10 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.ChangeRequestDao
 import com.coparently.app.data.local.entity.ChangeRequestEntity
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestDeadline
@@ -14,7 +14,6 @@ import com.coparently.app.domain.changerequests.RequestStart
 import com.coparently.app.domain.model.ChangeRequest
 import com.coparently.app.domain.model.ChangeRequestStatus
 import com.coparently.app.domain.repository.RequestDeadlineRepository
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -64,18 +63,18 @@ class ChangeRequestRepositoryImplTest {
         coEvery { getUnsyncedChangeRequests() } answers { stored.values.filter { !it.syncedToFirestore } }
     }
     private val dataSource = mockk<FirestoreChangeRequestDataSource>()
-    private val olya = mockk<FirebaseUser> {
-        every { uid } returns MY_UID
-        every { displayName } returns "Olya"
+    private val olya = mockk<SignedInUser> {
+        every { getCurrentUid() } returns MY_UID
+        every { getCurrentDisplayName() } returns "Olya"
     }
-    private val fcmService = mockk<FcmService>(relaxed = true)
+    private val fcmService = mockk<PushQueue>(relaxed = true)
 
     /** Strict: a clock started where none should be fails the test by itself, not only by a verify. */
     private val requestDeadlines = mockk<RequestDeadlineRepository>()
     private val repository = ChangeRequestRepositoryImpl(
         changeRequestDao = dao,
         firestoreDataSource = dataSource,
-        firebaseAuthService = mockk<FirebaseAuthService> { every { getCurrentUser() } returns olya },
+        firebaseAuthService = olya,
         fcmService = fcmService,
         requestDeadlines = requestDeadlines
     )

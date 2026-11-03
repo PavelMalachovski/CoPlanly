@@ -12,7 +12,6 @@ import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -166,12 +165,11 @@ class FirestoreSemanticsTest {
             val answer = StoredDocument("r1", answered(), hasPendingWrites = pendingWrites)
             flowOf(if (mine) listOf(answer) else emptyList())
         }
-        val me = mockk<FirebaseUser> { every { uid } returns ME }
         ChangeRequestRepositoryImpl(
             changeRequestDao = dao,
             firestoreDataSource = FirestoreChangeRequestDataSource(client),
-            firebaseAuthService = mockk<FirebaseAuthService> { every { getCurrentUser() } returns me },
-            fcmService = mockk<FcmService>(relaxed = true),
+            firebaseAuthService = mockk<SignedInUser> { every { getCurrentUid() } returns ME },
+            fcmService = mockk<PushQueue>(relaxed = true),
             requestDeadlines = mockk<RequestDeadlineRepository>()
         ).observeRemote()
         return stored.getValue("r1")

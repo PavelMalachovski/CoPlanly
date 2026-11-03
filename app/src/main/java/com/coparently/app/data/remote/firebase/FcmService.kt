@@ -11,13 +11,16 @@ import kotlinx.coroutines.tasks.await
 /**
  * Service for managing Firebase Cloud Messaging tokens and notifications.
  * Handles token registration, updates, and notification payload creation.
+ *
+ * It is also the Android [PushQueue], through which the repositories in `:shared-data` queue a
+ * push (MON-24 phase 2, Task 8b).
  */
 class FcmService(
     private val firebaseMessaging: FirebaseMessaging,
     private val firestore: FirebaseFirestore,
     private val firebaseAuthService: FirebaseAuthService,
     private val encryptedPreferences: SecurePreferences
-) {
+) : PushQueue {
     /** Whether this person has left push notifications on. On unless they switched it off. */
     fun isPushEnabled(): Boolean =
         encryptedPreferences.getString(PreferenceKeys.PUSH_ENABLED, null) != false.toString()
@@ -177,7 +180,7 @@ class FcmService(
      * @param targetUserId The Firebase UID of the user to notify
      * @param notificationData The notification payload
      */
-    suspend fun queueNotificationForUser(
+    override suspend fun queueNotificationForUser(
         targetUserId: String,
         notificationData: Map<String, String>
     ): Result<Unit> {

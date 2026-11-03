@@ -3,10 +3,10 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.ChangeRequestDao
 import com.coparently.app.data.local.entity.ChangeRequestEntity
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.changerequests.AnswerBy
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
@@ -26,12 +26,21 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
+import kotlin.time.Clock
 
+/**
+ * Room-backed [ChangeRequestRepository], mirrored to `change_requests` in Firestore.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8b). Its two platform collaborators keep the names
+ * they had while they were the app's `FirebaseAuthService` and `FcmService`, so the e2e parents'
+ * named arguments still read the same: [firebaseAuthService] is only asked who is signed in, and
+ * [fcmService] only queues a push.
+ */
 class ChangeRequestRepositoryImpl(
     private val changeRequestDao: ChangeRequestDao,
     private val firestoreDataSource: FirestoreChangeRequestDataSource,
-    private val firebaseAuthService: FirebaseAuthService,
-    private val fcmService: FcmService,
+    private val firebaseAuthService: SignedInUser,
+    private val fcmService: PushQueue,
     private val requestDeadlines: RequestDeadlineRepository
 ) : ChangeRequestRepository {
 
@@ -63,7 +72,7 @@ class ChangeRequestRepositoryImpl(
                 ?: FamilyKey.orNull(request.requestedBy, request.requestedTo)
         )
         changeRequestDao.insertChangeRequest(owned.toEntity())
-        if (firebaseAuthService.getCurrentUser() == null) return
+        if (firebaseAuthService.getCurrentUid() == null) return
         publish(owned, targetUserId = owned.requestedTo, action = "created", answerBy = answerBy)
     }
 
@@ -75,7 +84,7 @@ class ChangeRequestRepositoryImpl(
         val updated = request.copy(status = status, respondedAt = wallClockNow(), syncedToFirestore = false)
         changeRequestDao.insertChangeRequest(updated.toEntity())
 
-        if (firebaseAuthService.getCurrentUser() == null) return
+        if (firebaseAuthService.getCurrentUid() == null) return
         // Cancellation notifies the addressee; accept/decline notify the requester.
         val target = if (status == ChangeRequestStatus.CANCELLED) {
             updated.requestedTo
@@ -152,7 +161,7 @@ class ChangeRequestRepositoryImpl(
     }
 
     override suspend fun flushOutbox() {
-        val userId = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val userId = firebaseAuthService.getCurrentUid() ?: return
         for (entity in changeRequestDao.getUnsyncedChangeRequests()) {
             val request = entity.toDomain()
             // Only this device's own writes. A request mirrored down from the co-parent that
@@ -175,7 +184,7 @@ class ChangeRequestRepositoryImpl(
     }
 
     override suspend fun observeRemote() {
-        val userId = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val userId = firebaseAuthService.getCurrentUid() ?: return
         firestoreDataSource.observeChangeRequestsForUser(userId)
             // Offline-first: a Firestore failure (missing index, denied read, no network)
             // must not crash the app — Room stays the source of truth. Swallow and log.
@@ -209,12 +218,12 @@ class ChangeRequestRepositoryImpl(
         action: String,
         answerByMillis: Long?
     ) {
-        if (targetUserId.isEmpty() || targetUserId == firebaseAuthService.getCurrentUser()?.uid) return
+        if (targetUserId.isEmpty() || targetUserId == firebaseAuthService.getCurrentUid()) return
         // Null for an action nothing announces — see `FcmService.createEventNotificationPayload`.
         val type = PushPayload.changeRequestType(action) ?: return
         // Empty rather than "Your co-parent": the receiving device holds a translated fallback
         // for a missing name, and an English one written here would win over it.
-        val performedBy = firebaseAuthService.getCurrentUser()?.displayName.orEmpty()
+        val performedBy = firebaseAuthService.getCurrentDisplayName().orEmpty()
         val payload = buildMap {
             put(PushPayload.TYPE, type)
             put(PushPayload.CHANGE_REQUEST_ID, request.id)
@@ -328,7 +337,7 @@ private fun changeClock(request: ChangeRequest, answerBy: AnswerByPick?): Reques
     val familyId = request.familyId
     if (answerBy == null || familyId == null) return null
     val zone = TimeZone.currentSystemDefault()
-    val now = System.currentTimeMillis()
+    val now = Clock.System.now().toEpochMilliseconds()
     val cap = RequestCap.forChange(request.currentStartDateTime, request.proposedStartDateTime, now, zone)
     val deadline = AnswerBy.resolve(answerBy, now, cap, zone) ?: return null
     return RequestStart(

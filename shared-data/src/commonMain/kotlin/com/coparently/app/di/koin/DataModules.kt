@@ -15,6 +15,7 @@ import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSourc
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChatSearchRepositoryImpl
 import com.coparently.app.data.repository.ConversationMigrator
 import com.coparently.app.data.repository.MessageRepositoryImpl
@@ -24,6 +25,7 @@ import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -71,10 +73,12 @@ val versionsDataModule: Module = module {
 /**
  * The repositories that have moved here (MON-24 phase 2, Task 8b), with the interfaces they answer;
  * the rest are still bound in the app's `dataModule` and `repositoryModule`. What they take from
- * the platform — the signed-in account (`SignedInUser`), the attachment gate, the request clocks'
- * scheduler — each platform binds.
+ * the platform — the signed-in account (`SignedInUser`), the push queue (`PushQueue`), the
+ * attachment gate, the request clocks' scheduler — each platform binds.
  */
 val repositoryDataModule: Module = module {
+    singleOf(::ChangeRequestRepositoryImpl)
+    single<ChangeRequestRepository> { get<ChangeRequestRepositoryImpl>() }
     single { MessageRepositoryImpl(get(), get(), get(), get()) }
     single<MessageRepository> { get<MessageRepositoryImpl>() }
     // The Room-only chat search (MON-15).

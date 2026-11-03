@@ -36,6 +36,11 @@ class FirebaseAuthService(
     }
 
     /**
+     * Gets the current user's display name, as the account carries it.
+     */
+    override fun getCurrentDisplayName(): String? = firebaseAuth.currentUser?.displayName
+
+    /**
      * Checks if user is authenticated.
      */
     fun isAuthenticated(): Boolean {

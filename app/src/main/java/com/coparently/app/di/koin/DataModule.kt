@@ -48,13 +48,13 @@ import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
-import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.EventRepositoryImpl
@@ -167,6 +167,8 @@ val dataModule = module {
     singleOf(::PaymentStore)
     factoryOf(::SettleUpMessages)
     singleOf(::FcmService)
+    // Where the repositories in `:shared-data` queue a push.
+    single<PushQueue> { get<FcmService>() }
     singleOf(::FirebaseAuthService)
     // The one question the repositories in `:shared-data` ask of the signed-in account.
     single<SignedInUser> { get<FirebaseAuthService>() }
@@ -176,7 +178,6 @@ val dataModule = module {
     singleOf(::CredentialProviderImpl)
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     singleOf(::CalendarFeedRepositoryImpl)
-    singleOf(::ChangeRequestRepositoryImpl)
     singleOf(::ChildInfoRepositoryImpl)
     single {
         CustodyModelRepository(

@@ -2,7 +2,6 @@ package com.coparently.app.di.koin
 
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
-import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
@@ -13,7 +12,6 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.domain.repository.CalendarFeedRepository
-import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
@@ -28,14 +26,14 @@ import org.koin.dsl.module
 
 /**
  * The repositories, each bound to its domain interface. The implementations are built in
- * [dataModule]; a binding here resolves the same single instance.
+ * [dataModule]; a binding here resolves the same single instance. The repositories that moved to
+ * `:shared-data` are built and bound there, in `repositoryDataModule` (MON-24 phase 2, Task 8b).
  */
 val repositoryModule = module {
     single<EventRepository> { get<EventRepositoryImpl>() }
     single<ChildInfoRepository> { get<ChildInfoRepositoryImpl>() }
     single<PreferencesRepository> { get<PreferencesRepositoryImpl>() }
     single<ExpenseRepository> { get<ExpenseRepositoryImpl>() }
-    single<ChangeRequestRepository> { get<ChangeRequestRepositoryImpl>() }
     // Medical, pet, receipt and event photographs, all under family-keyed paths and read without
     // download URLs (L-4).
     single<RecordPhotoStorage> { get<FirebaseImageStorage>() }
