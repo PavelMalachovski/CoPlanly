@@ -22,9 +22,10 @@ import com.coparently.app.domain.time.IsoText
  * fixtures in `app/src/test/resources/wire/`) run the production mappers on the JVM.
  *
  * In `:shared-data` since MON-24 phase 2 (Task 8b). `EventRepositoryImpl` (Task 8c), `SyncService`
- * (Task 8g) and the request clocks' `RequestRecords` (Task 8h) moved with it; the export's
- * `CommunicationRecordSource` and the events wire contract stay in the app, so [InternalSharedApi]
- * marks it public only for them until they move and it is `internal` again.
+ * (Task 8g), the request clocks' `RequestRecords` (Task 8h) and the events and revisions wire
+ * contracts (Task 8j) moved with it. It stays public under [InternalSharedApi] all the same: the
+ * contracts sit in `wire/`, which the app's unit tests compile too (CLAUDE.md item 5), and the
+ * app's `ChatEventCardViewModelTest` builds a document with it.
  */
 @InternalSharedApi
 object EventDocument {

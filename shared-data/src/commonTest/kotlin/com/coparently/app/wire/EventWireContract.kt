@@ -10,13 +10,10 @@ import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
-import com.google.gson.Gson
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import com.coparently.app.domain.serialization.StoredJson
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * `events`: read by `EventDocument.toEntity` (the sync's download and the change-request inbox),
@@ -24,11 +21,16 @@ import java.time.format.DateTimeFormatter
  * that replaces the whole document, so it is the one that can lose something. A save through the
  * repository writes `EventDocument.fromEvent`, pinned as a current fixture; its edits go out as
  * `update()`, which merges and cannot drop a key.
+ *
+ * In `:shared-data`'s `wire/` and its list since MON-24 phase 2 (Task 8j), on kotlinx-datetime and
+ * `StoredJson` where it read the text with `java.time` and Gson: a time is reported as `IsoText.dateTime`,
+ * which is `ISO_LOCAL_DATE_TIME`'s text, and the stored audience is read as the repositories read it.
+ * It reads in any zone, as the pets' contract does: an event's `updatedAt` is a UTC instant on the
+ * wire and a wall clock in the domain, so a current write's wall clock is made from that instant in
+ * the zone it runs in, and the read reports the instant. The app's run, in UTC, writes the same
+ * documents as before.
  */
 internal object EventWireContract : WireContract {
-
-    private val gson = Gson()
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     override val collection = "events"
 
@@ -57,8 +59,8 @@ internal object EventWireContract : WireContract {
             "id" to entity.id,
             "title" to entity.title,
             "description" to entity.description,
-            "startDateTime" to entity.startDateTime.toJavaLocalDateTime().format(formatter),
-            "endDateTime" to entity.endDateTime?.toJavaLocalDateTime()?.format(formatter),
+            "startDateTime" to IsoText.dateTime(entity.startDateTime),
+            "endDateTime" to entity.endDateTime?.let(IsoText::dateTime),
             "eventType" to entity.eventType,
             "parentOwner" to entity.parentOwner,
             "isRecurring" to entity.isRecurring,
@@ -107,31 +109,34 @@ internal object EventWireContract : WireContract {
     )
 
     private fun sharedWith(entity: EventEntity): List<String> =
-        gson.fromJson(entity.sharedWithJson, Array<String>::class.java)?.toList().orEmpty()
+        StoredJson.decodeOrNull(StoredJson.strings, entity.sharedWithJson).orEmpty()
+
+    /** The wall clock, in the zone this runs in, of the UTC instant [utc] names. */
+    private fun wallClockOfUtc(utc: String): LocalDateTime = EventTimestamp.toWallClock(EventTimestamp.fromWire(utc))
 
     private fun savedEvent() = Event(
         id = "evt-current-1",
         title = "Dentist",
         description = "Bring the card",
-        startDateTime = LocalDateTime.of(2026, 5, 12, 9, 30).toKotlinLocalDateTime(),
-        endDateTime = LocalDateTime.of(2026, 5, 12, 10, 15).toKotlinLocalDateTime(),
+        startDateTime = LocalDateTime(2026, 5, 12, 9, 30),
+        endDateTime = LocalDateTime(2026, 5, 12, 10, 15),
         eventType = "medical",
         parentOwner = "mom",
         isRecurring = true,
         recurrencePattern = "WEEKLY",
-        recurrenceEndDate = LocalDate.of(2026, 6, 30).toKotlinLocalDate(),
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime(),
-        updatedAt = LocalDateTime.of(2026, 5, 2, 18, 45, 10).toKotlinLocalDateTime(),
+        recurrenceEndDate = LocalDate(2026, 6, 30),
+        createdAt = LocalDateTime(2026, 5, 1, 8, 0),
+        updatedAt = wallClockOfUtc("2026-05-02T18:45:10"),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = BOB,
         pickupConfirmedBy = BOB,
-        pickupConfirmedAt = LocalDateTime.of(2026, 5, 12, 8, 55).toKotlinLocalDateTime(),
+        pickupConfirmedAt = LocalDateTime(2026, 5, 12, 8, 55),
         reminderMinutes = 30,
         imageUrl = "ph1|event_images/uidA__uidB/evt-current-1/c83d2e5f.jpg|image/jpeg|48213|" +
             "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
         acceptance = EventAcceptance.ACCEPTED,
         acceptedBy = BOB,
-        acceptedAt = LocalDateTime.of(2026, 5, 3, 7, 0).toKotlinLocalDateTime(),
+        acceptedAt = LocalDateTime(2026, 5, 3, 7, 0),
         isImportant = true,
         forMembers = listOf(
             FamilyMemberRef.Child("c1"),
@@ -145,23 +150,23 @@ internal object EventWireContract : WireContract {
     private fun minimalEvent() = Event(
         id = "evt-current-2",
         title = "Swim",
-        startDateTime = LocalDateTime.of(2026, 5, 14, 16, 0).toKotlinLocalDateTime(),
+        startDateTime = LocalDateTime(2026, 5, 14, 16, 0),
         eventType = "activity",
         parentOwner = "dad",
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime(),
-        updatedAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime()
+        createdAt = LocalDateTime(2026, 5, 1, 8, 0),
+        updatedAt = wallClockOfUtc("2026-05-01T08:00:00")
     )
 
     private fun queuedRow() = EventEntity(
         id = "evt-current-3",
         title = "Handover",
         description = null,
-        startDateTime = LocalDateTime.of(2026, 5, 15, 17, 0).toKotlinLocalDateTime(),
-        endDateTime = LocalDateTime.of(2026, 5, 15, 17, 30).toKotlinLocalDateTime(),
+        startDateTime = LocalDateTime(2026, 5, 15, 17, 0),
+        endDateTime = LocalDateTime(2026, 5, 15, 17, 30),
         eventType = "handover",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 5, 1, 8, 0).toKotlinLocalDateTime(),
-        updatedAt = LocalDateTime.of(2026, 5, 4, 12, 0).toKotlinLocalDateTime(),
+        createdAt = LocalDateTime(2026, 5, 1, 8, 0),
+        updatedAt = LocalDateTime(2026, 5, 4, 12, 0),
         updatedAtMillis = EventTimestamp.fromWire("2026-05-04T10:00:00"),
         createdByFirebaseUid = ALICE,
         sharedWithJson = "[\"$ALICE\",\"$BOB\"]",

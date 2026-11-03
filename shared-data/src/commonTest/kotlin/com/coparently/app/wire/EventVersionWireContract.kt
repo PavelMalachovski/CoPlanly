@@ -5,6 +5,7 @@ package com.coparently.app.wire
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.domain.InternalSharedApi
+import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.datetime.LocalDateTime
@@ -15,6 +16,10 @@ import kotlinx.datetime.LocalDateTime
  * client (CLAUDE.md item 25), so there is no round trip: no build ever writes back a revision it
  * read. What [invariants] pins instead is the outbox — the event snapshot survives
  * `encodeSnapshot`/`decodeSnapshot` through Room unchanged, numbers included.
+ *
+ * In `:shared-data`'s `wire/` and its list since MON-24 phase 2 (Task 8j). Its snapshot's
+ * `updatedAt` wall clock is made from a UTC instant in the zone it runs in, as the events'
+ * contract's is, so the current write is the same in every zone.
  */
 internal object EventVersionWireContract : WireContract {
 
@@ -77,7 +82,7 @@ internal object EventVersionWireContract : WireContract {
                         eventType = "medical",
                         parentOwner = "mom",
                         createdAt = LocalDateTime(2026, 5, 1, 8, 0),
-                        updatedAt = LocalDateTime(2026, 5, 5, 16, 53, 20),
+                        updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire("2026-05-05T16:53:20")),
                         reminderMinutes = 15,
                         familyId = "uidA__uidB"
                     ),

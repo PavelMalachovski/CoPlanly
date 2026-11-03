@@ -1852,7 +1852,8 @@ opt-in) until that caller moves; today none in `shared/` (`UnansweredRows` is `i
 since `RequestInbox` moved, Task 8e, and `ClocksAt.governing` lost its marker when
 `OtherFamiliesSignals` moved to `shared-data`, Task 8h — public, since that is another module), and
 in `shared-data/` `EventDocument`
-(the events and revisions wire contracts and their tests, all in the app;
+(the events and revisions wire contracts, in `shared-data`'s `wire/` since Task 8j and so compiled
+by the app's tests too, and the app's `ChatEventCardViewModelTest`;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
 (`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app; `minuteTicks` beside it is
 public without the marker, because its caller, `AnswerByField`, is presentation code that stays in
@@ -1960,8 +1961,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    became top-level functions, and makes its one wall clock from a UTC instant so it reads in any
    zone, `ExpenseWireContract` in Task 8f, the same way, reading no wall clock at all, and
    `ChildInfoWireContract` in Task 8g, once `SyncService`, the second writer of `child_info`, moved,
-   with its wall clock made as the pets' is; the events contract, written over Gson and `java.time`,
-   and the revisions' stay in the app, though their writers have moved;
+   with its wall clock made as the pets' is, and the events and revisions contracts in Task 8j, once
+   they read through kotlinx-datetime and `StoredJson` rather than Gson and `java.time`, with their
+   `updatedAt` wall clocks made as the pets' are; so every contract but the messages' runs in both;
    `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
    in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
    JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through

@@ -16,13 +16,18 @@ package com.coparently.app.wire
  * functions; it reads its one wall clock in the zone it runs in (see its KDoc). `ExpenseWireContract`
  * joined in Task 8f, with the expense mappers. `ChildInfoWireContract` joined in Task 8g, once
  * `SyncService`, the second writer of `child_info`, moved; it reads its wall clock as the pets'
- * contract does.
+ * contract does. `EventWireContract` and `EventVersionWireContract` joined in Task 8j, the last of
+ * the app's own, once they read and wrote through kotlinx-datetime and `StoredJson` rather than
+ * `java.time` and Gson; their writers had moved in Tasks 8b and 8c. So every contract runs here but
+ * the messages', for the reason above.
  */
 internal object WireContracts : WireSuite {
 
     override val all: List<WireContract> = listOf(
         ChildInfoWireContract,
         CustodyWireContract,
+        EventWireContract,
+        EventVersionWireContract,
         ExpenseWireContract,
         PetWireContract,
         RequestDeadlineWireContract
@@ -32,8 +37,8 @@ internal object WireContracts : WireSuite {
 
     /**
      * These contracts read no wall clock: custody and clock times are UTC on the wire, an expense's
-     * dates are naive on both sides, and the pets and child-info contracts make their wall clock
-     * from a UTC instant in the zone they run in.
+     * and an event's dates are naive on both sides, and the pets, child-info, events and revisions
+     * contracts make their wall clock from a UTC instant in the zone they run in.
      */
     override fun <T> inReaderZone(block: () -> T): T = block()
 }
