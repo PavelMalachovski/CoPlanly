@@ -11,6 +11,7 @@ import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.CustodyModelDao
+import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.data.payment.PaymentAccounts
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.payment.SettleUpMessages
@@ -48,6 +49,7 @@ import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
+import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
@@ -77,6 +79,7 @@ import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -214,6 +217,12 @@ val repositoryDataModule: Module = module {
     // Moves this phone's records between the two parent slots when a pairing or a server backfill
     // moves this parent's (Task 8g).
     singleOf(::ParentSlotMigrator)
+    // This phone's settings in the sealed store, and the facts a new expense's default currency is
+    // guessed from (Task 8g). The hints take their two repositories lazily: the preferences are
+    // below both in the graph.
+    single { CurrencyHints(inject(), inject()) }
+    singleOf(::PreferencesRepositoryImpl)
+    single<PreferencesRepository> { get<PreferencesRepositoryImpl>() }
 }
 
 /**

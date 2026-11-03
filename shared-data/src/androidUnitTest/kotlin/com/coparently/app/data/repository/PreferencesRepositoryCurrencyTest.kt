@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.money.SupportedCurrency
 import io.mockk.every
 import io.mockk.mockk
@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 /** Tests for the region-seeded default currency preference. */
 class PreferencesRepositoryCurrencyTest {
 
-    private fun prefs(storedCurrency: String?): EncryptedPreferences = mockk(relaxed = true) {
+    private fun prefs(storedCurrency: String?): SecurePreferences = mockk(relaxed = true) {
         every { getDarkTheme() } returns null
         every { getDefaultCurrency() } returns storedCurrency
     }

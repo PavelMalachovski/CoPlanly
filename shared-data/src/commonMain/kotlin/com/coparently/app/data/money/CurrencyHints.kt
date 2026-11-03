@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.map
  *
  * The repositories are [Lazy] because the preferences repository is below both in the graph —
  * reading them on first collection keeps construction free of the question of who needs whom.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8g), with the preferences repository; the rest of
+ * `data/money/` (`MinorUnits`, for the screens' `NumberFormat`) stays in the app.
  */
 open class CurrencyHints(
     private val users: Lazy<UserRepository>,

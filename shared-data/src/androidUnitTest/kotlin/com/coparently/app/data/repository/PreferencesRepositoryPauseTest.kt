@@ -1,8 +1,8 @@
 package com.coparently.app.data.repository
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
+import com.coparently.app.data.platform.SecurePreferences
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
@@ -25,7 +25,7 @@ class PreferencesRepositoryPauseTest {
     }
 
     /** A store holding [stored] for the pause, or nothing, in which case a read gets its default. */
-    private fun prefs(stored: Boolean?): EncryptedPreferences = mockk(relaxed = true) {
+    private fun prefs(stored: Boolean?): SecurePreferences = mockk(relaxed = true) {
         every { getDarkTheme() } returns null
         every { getDefaultCurrency() } returns "CZK"
         every { getBoolean(PreferenceKeys.CHAT_PAUSE_BEFORE_SENDING, any()) } answers { stored ?: secondArg() }

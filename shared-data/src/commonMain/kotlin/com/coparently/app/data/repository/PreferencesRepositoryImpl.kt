@@ -3,6 +3,7 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.deviceRegionCode
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.money.defaultCurrencyForRegion
 import com.coparently.app.domain.money.resolveDefaultCurrency
@@ -15,11 +16,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import java.util.Locale
 
 /**
  * Implementation of PreferencesRepository.
  * Manages user preferences using EncryptedPreferences.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8g), with [CurrencyHints]; the device region it
+ * falls back to is [deviceRegionCode], which is `Locale.getDefault().country` on Android.
  */
 class PreferencesRepositoryImpl(
     private val encryptedPreferences: SecurePreferences,
@@ -61,7 +64,7 @@ class PreferencesRepositoryImpl(
      */
     private fun resolveInitialCurrency(): SupportedCurrency {
         SupportedCurrency.fromCode(encryptedPreferences.getDefaultCurrency())?.let { return it }
-        val resolved = defaultCurrencyForRegion(Locale.getDefault().country)
+        val resolved = defaultCurrencyForRegion(deviceRegionCode())
         encryptedPreferences.putDefaultCurrency(resolved.code)
         return resolved
     }
