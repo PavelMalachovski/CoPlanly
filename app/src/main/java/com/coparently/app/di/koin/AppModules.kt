@@ -18,7 +18,6 @@ val appModules: List<Module> = listOf(
     databaseModule,
     dictationModule,
     firebaseModule,
-    firebaseRepositoryModule,
     googleModule,
     installReferrerModule,
     journalDaoModule,

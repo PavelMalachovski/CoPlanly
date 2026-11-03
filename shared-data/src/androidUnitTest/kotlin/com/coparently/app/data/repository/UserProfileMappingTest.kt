@@ -2,9 +2,9 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.User
@@ -96,13 +96,13 @@ class UserProfileMappingTest {
     @Test
     fun `a filled profile round-trips through the repository's real entity mapping`() = runTest {
         val userDao = mockk<UserDao>(relaxed = true)
-        val authService = mockk<FirebaseAuthService>(relaxed = true)
+        val authService = mockk<SignedInUser>(relaxed = true)
         val firestoreUserDataSource = mockk<FirestoreUserDataSource>(relaxed = true)
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         // No signed-in user: isolates the Room round trip (toEntity/toDomain) from the
         // Firestore push, which is covered separately by the "role" grep and the tests in
         // UserRepositoryEnsureProfileTest.
-        every { authService.getCurrentUser() } returns null
+        every { authService.getCurrentUid() } returns null
         val repository = UserRepositoryImpl(
             userDao,
             authService,

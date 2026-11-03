@@ -18,8 +18,12 @@ package com.coparently.app.data.session
  * a gap in the top-level fields (a real, non-anonymous Google session whose account record
  * predates linking the provider carries the name/email/photo only under `providerData`,
  * not at the top level), not to compete with a value this app already has stored.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8f), public because the app's
+ * `SignedInAccountSource` reads it too and because [ProviderIdentity] is part of what
+ * `SignedInUser.getCurrentAccount` answers.
  */
-internal object ProfileIdentity {
+object ProfileIdentity {
 
     /** Firebase's fixed provider constant for the synthetic entry every account carries. */
     private const val SYNTHETIC_PROVIDER_ID = "firebase"

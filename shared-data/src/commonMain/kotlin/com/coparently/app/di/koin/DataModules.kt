@@ -48,6 +48,7 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
+import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.requests.AgreementWithdrawals
 import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestTelling
@@ -179,6 +180,10 @@ val repositoryDataModule: Module = module {
     singleOf(::ParentingPlanRepository)
     singleOf(::RequestDeadlineRepositoryImpl)
     single<RequestDeadlineRepository> { get<RequestDeadlineRepositoryImpl>() }
+    // The signed-in parent's profile, in Room and in `users/{uid}` (Task 8f): what the announcer,
+    // the family selection, the chat sources and the custody and split repositories read.
+    singleOf(::UserRepositoryImpl)
+    single<UserRepository> { get<UserRepositoryImpl>() }
 }
 
 /**

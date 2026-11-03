@@ -1,14 +1,17 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreTimestamp
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.ServerValue
+import com.coparently.app.data.remote.firebase.SignedInAccount
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.session.ProfileIdentity
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.domain.consent.HealthConsent
@@ -19,12 +22,11 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.UserInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Implementation of UserRepository.
@@ -40,10 +42,10 @@ import java.util.UUID
 @Suppress("TooManyFunctions")
 class UserRepositoryImpl(
     private val userDao: UserDao,
-    private val firebaseAuthService: FirebaseAuthService,
+    private val firebaseAuthService: SignedInUser,
     private val firestoreUserDataSource: FirestoreUserDataSource,
     private val firestoreFamilyDataSource: FirestoreFamilyDataSource,
-    private val fcmService: FcmService
+    private val fcmService: PushQueue
 ) : UserRepository {
 
     override fun getAllUsers(): Flow<List<User>> {
@@ -64,20 +66,19 @@ class UserRepositoryImpl(
     }
 
     override suspend fun getCurrentUser(): User? {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return null
+        val uid = firebaseAuthService.getCurrentUid() ?: return null
 
         return try {
-            getUserById(firebaseUser.uid)
+            getUserById(uid)
         } catch (e: Exception) {
             logger.e("UserRepository", "Failed to get current user data", e)
             null
         }
     }
 
-    override suspend fun getCurrentUserId(): String? = firebaseAuthService.getCurrentUser()?.uid
+    override suspend fun getCurrentUserId(): String? = firebaseAuthService.getCurrentUid()
 
-    override fun observeCurrentUserId(): Flow<String?> = firebaseAuthService.getAuthStateFlow()
-        .map { it?.uid }
+    override fun observeCurrentUserId(): Flow<String?> = firebaseAuthService.observeCurrentUid()
         // Firebase re-emits the same user on every token refresh; only a real session
         // change is interesting to a subscriber.
         .distinctUntilChanged()
@@ -111,8 +112,8 @@ class UserRepositoryImpl(
      * retries. Failures are logged and swallowed.
      */
     override suspend fun ensureProfile() {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        val uid = firebaseUser.uid
+        val account = firebaseAuthService.getCurrentAccount() ?: return
+        val uid = account.uid
 
         try {
             // Null here means either "no document" or "the read failed"; both are safe,
@@ -127,32 +128,32 @@ class UserRepositoryImpl(
             val snapshot = ProfileSnapshot(
                 remote = firestoreUserDataSource.getUserById(uid),
                 local = userDao.getUserById(uid),
-                providers = firebaseUser.providerData.map { it.toProviderIdentity() }
+                providers = account.providers
             )
             val (remote, local, providers) = snapshot
 
             val email = ProfileIdentity.resolveEmail(
-                topLevelEmail = firebaseUser.email,
+                topLevelEmail = account.email,
                 storedRemoteEmail = remote?.string("email"),
                 storedLocalEmail = local?.email,
                 providers = providers
             )
             val name = ProfileIdentity.resolveName(
-                displayName = firebaseUser.displayName,
+                displayName = account.displayName,
                 storedRemoteName = remote?.string("name"),
                 storedLocalName = local?.name,
                 email = email,
                 providers = providers
             )
             if (name == null) {
-                writeIdentityWithoutName(uid, firebaseUser, snapshot, email)
+                writeIdentityWithoutName(uid, account, snapshot, email)
                 return
             }
             val identity = ResolvedIdentity(
                 name = name,
                 email = email.orEmpty(),
                 photoUrl = ProfileIdentity.resolvePhotoUrl(
-                    authPhotoUrl = firebaseUser.photoUrl?.toString(),
+                    authPhotoUrl = account.photoUrl,
                     storedRemoteUrl = remote?.string("profilePhotoUrl"),
                     storedLocalUrl = local?.profilePhotoUrl,
                     providers = providers
@@ -207,25 +208,25 @@ class UserRepositoryImpl(
      */
     private suspend fun writeIdentityWithoutName(
         uid: String,
-        firebaseUser: FirebaseUser,
+        account: SignedInAccount,
         snapshot: ProfileSnapshot,
         email: String?
     ) {
         val (remote, local, providers) = snapshot
         val photoUrl = ProfileIdentity.resolvePhotoUrl(
-            authPhotoUrl = firebaseUser.photoUrl?.toString(),
+            authPhotoUrl = account.photoUrl,
             storedRemoteUrl = remote?.string("profilePhotoUrl"),
             storedLocalUrl = local?.profilePhotoUrl,
             providers = providers
         )
         val sources = ProfileIdentity.describeNameSources(
-            hasDisplayName = firebaseUser.displayName?.nonBlank() != null,
+            hasDisplayName = account.displayName?.nonBlank() != null,
             hasRemoteName = remote?.string("name") != null,
             hasLocalName = local?.name?.nonBlank() != null,
             hasProviderName = ProfileIdentity.bestProvider(providers)?.displayName?.nonBlank() != null,
             hasEmail = email != null,
             hasRemoteProfile = remote != null,
-            isAnonymous = firebaseUser.isAnonymous,
+            isAnonymous = account.isAnonymous,
             providerIds = providers.map { it.providerId }
         )
         val outcome = if (remote == null) {
@@ -393,8 +394,8 @@ class UserRepositoryImpl(
         }
 
         // Also sync to Firestore
-        val firebaseUser = firebaseAuthService.getCurrentUser()
-        if (firebaseUser != null) {
+        val signedInUid = firebaseAuthService.getCurrentUid()
+        if (signedInUid != null) {
             try {
                 // `role` is deliberately absent, and this is load-bearing rather than tidy.
                 //
@@ -426,7 +427,7 @@ class UserRepositoryImpl(
                 // omitting the key leaves the stored slot untouched rather than clearing it.
                 val userData = mapOf(
                     "id" to user.id,
-                    "firebaseUid" to firebaseUser.uid, // Required by Firestore security rules
+                    "firebaseUid" to signedInUid, // Required by Firestore security rules
                     "email" to user.email,
                     "name" to user.name,
                     "colorCode" to user.colorCode,
@@ -457,8 +458,8 @@ class UserRepositoryImpl(
                     // the parent has since cleared in place for the next reinstall to restore.
                     "regionCode" to (user.regionCode ?: "")
                 )
-                firestoreUserDataSource.updateUser(firebaseUser.uid, userData).getOrThrow()
-                mirrorCaresForToFamily(firebaseUser.uid, user)
+                firestoreUserDataSource.updateUser(signedInUid, userData).getOrThrow()
+                mirrorCaresForToFamily(signedInUid, user)
             } catch (e: Exception) {
                 logger.e("UserRepository", "Failed to sync user update to Firestore", e)
                 // Don't throw here - local update succeeded, Firestore sync failed
@@ -512,7 +513,7 @@ class UserRepositoryImpl(
      * thrown: the local answer stands and the next call retries.
      */
     override suspend fun setHealthConsent(consent: HealthConsent?) {
-        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val uid = firebaseAuthService.getCurrentUid() ?: return
         val changed = userDao.setHealthConsent(uid, consent?.version, consent?.atMillis)
         if (changed == 0) logger.w(TAG, "No local profile row to record the health consent on")
         val value: Any = consent?.let {
@@ -523,7 +524,7 @@ class UserRepositoryImpl(
     }
 
     override suspend fun getAiConsent(): AiConsent? {
-        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return null
+        val uid = firebaseAuthService.getCurrentUid() ?: return null
         return firestoreUserDataSource.getUserById(uid)?.aiConsent()
     }
 
@@ -533,7 +534,7 @@ class UserRepositoryImpl(
      * that key alone, like [setHealthConsent]'s, so no profile field moves with it.
      */
     override suspend fun setAiConsent(version: Int?): Boolean {
-        val uid = firebaseAuthService.getCurrentUser()?.uid ?: return false
+        val uid = firebaseAuthService.getCurrentUid() ?: return false
         val value: Any = version?.let {
             mapOf(AI_CONSENT_VERSION_KEY to it, AI_CONSENT_AT_KEY to ServerValue.ServerTimestamp)
         } ?: ServerValue.Delete
@@ -547,8 +548,8 @@ class UserRepositoryImpl(
     }
 
     override suspend fun updateFcmToken(token: String) {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        val currentUser = getUserById(firebaseUser.uid) ?: return
+        val uid = firebaseAuthService.getCurrentUid() ?: return
+        val currentUser = getUserById(uid) ?: return
 
         val updatedUser = currentUser.copy(fcmToken = token)
         updateUser(updatedUser)
@@ -648,7 +649,7 @@ class UserRepositoryImpl(
      */
     private fun Map<String, Any?>.toUser(): User {
         return User(
-            id = this["id"] as? String ?: UUID.randomUUID().toString(),
+            id = this["id"] as? String ?: Uuid.random().toString(),
             email = this["email"] as? String ?: "",
             name = this["name"] as? String ?: "",
             role = this["role"] as? String ?: "mom",
@@ -715,19 +716,3 @@ class UserRepositoryImpl(
         const val HEALTH_CONSENT_AT_KEY = "atMillis"
     }
 }
-
-/**
- * Projects one `FirebaseUser.providerData` entry into the plain-string shape
- * [ProfileIdentity] works with, so that pure object never has to depend on the Firebase
- * `UserInfo`/`android.net.Uri` types.
- *
- * Kept as a top-level function rather than a member of [UserRepositoryImpl]: it needs no
- * access to that class's state, and [UserRepositoryImpl] is already at detekt's
- * function-count limit.
- */
-private fun UserInfo.toProviderIdentity() = ProfileIdentity.ProviderIdentity(
-    providerId = providerId,
-    displayName = displayName,
-    email = email,
-    photoUrl = photoUrl?.toString()
-)

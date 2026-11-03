@@ -1,8 +1,6 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.remote.firebase.QRCodeService
-import com.coparently.app.data.repository.UserRepositoryImpl
-import com.coparently.app.domain.repository.UserRepository
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -71,9 +69,4 @@ val firebaseModule = module {
 
     // Encodes the pairing QR with ZXing; it touches no Firebase despite its package.
     single { QRCodeService() }
-}
-
-/** The Firebase-backed user repository, bound to its domain interface. */
-val firebaseRepositoryModule = module {
-    single<UserRepository> { get<UserRepositoryImpl>() }
 }

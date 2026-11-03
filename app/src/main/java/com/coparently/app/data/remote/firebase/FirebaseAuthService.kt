@@ -1,12 +1,14 @@
 package com.coparently.app.data.remote.firebase
 
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.session.ProfileIdentity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -49,6 +51,31 @@ class FirebaseAuthService(
      * Gets the address of the current user's own picture, as the account carries it.
      */
     override fun getCurrentPhotoUrl(): String? = firebaseAuth.currentUser?.photoUrl?.toString()
+
+    /** The signed-in uid each time [getAuthStateFlow] reports the sign-in state. */
+    override fun observeCurrentUid(): Flow<String?> = getAuthStateFlow().map { it?.uid }
+
+    /**
+     * The current user's identity as plain values, read from one [FirebaseUser], with each
+     * `providerData` entry projected as [ProfileIdentity] reads it.
+     */
+    override fun getCurrentAccount(): SignedInAccount? = firebaseAuth.currentUser?.let { user ->
+        SignedInAccount(
+            uid = user.uid,
+            displayName = user.displayName,
+            email = user.email,
+            photoUrl = user.photoUrl?.toString(),
+            isAnonymous = user.isAnonymous,
+            providers = user.providerData.map { info ->
+                ProfileIdentity.ProviderIdentity(
+                    providerId = info.providerId,
+                    displayName = info.displayName,
+                    email = info.email,
+                    photoUrl = info.photoUrl?.toString()
+                )
+            }
+        )
+    }
 
     /**
      * Checks if user is authenticated.

@@ -1,8 +1,8 @@
 package com.coparently.app.data.session
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /**
  * Unit tests for [ProfileIdentity.describeNameSources].

@@ -42,7 +42,6 @@ import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
-import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClockSteps
@@ -133,7 +132,6 @@ val dataModule = module {
     singleOf(::PairingRepositoryImpl)
     singleOf(::ParentSlotMigrator)
     singleOf(::PreferencesRepositoryImpl)
-    singleOf(::UserRepositoryImpl)
     singleOf(::RequestClockActions)
     single {
         RequestClockKeeper(

@@ -8,9 +8,12 @@ import com.coparently.app.data.remote.firebase.RecordingCallableFunctions
 import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
 import com.coparently.app.data.remote.firebase.RecordingFirestoreClient.Operation
 import com.coparently.app.data.remote.firebase.SetMerge
+import com.coparently.app.data.remote.firebase.SignedInAccount
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.pairing.InviteCodeGenerator
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -121,6 +124,17 @@ class GuestRepositoryImplTest {
         override fun getCurrentDisplayName(): String? = null
         override fun getCurrentEmail(): String? = email
         override fun getCurrentPhotoUrl(): String? = null
+        override fun observeCurrentUid(): Flow<String?> = flowOf(uid)
+        override fun getCurrentAccount(): SignedInAccount? = uid?.let {
+            SignedInAccount(
+                uid = it,
+                displayName = null,
+                email = email,
+                photoUrl = null,
+                isAnonymous = false,
+                providers = emptyList()
+            )
+        }
     }
 
     private companion object {

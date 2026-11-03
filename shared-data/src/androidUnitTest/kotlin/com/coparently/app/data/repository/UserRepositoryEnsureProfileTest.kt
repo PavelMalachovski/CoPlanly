@@ -1,16 +1,15 @@
 package com.coparently.app.data.repository
 
-import android.net.Uri
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.ServerValue
+import com.coparently.app.data.remote.firebase.SignedInAccount
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.session.ProfileIdentity
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.User
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.UserInfo
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -42,9 +41,9 @@ import org.junit.Test
 class UserRepositoryEnsureProfileTest {
 
     private lateinit var userDao: UserDao
-    private lateinit var authService: FirebaseAuthService
+    private lateinit var authService: SignedInUser
     private lateinit var firestoreUserDataSource: FirestoreUserDataSource
-    private lateinit var fcmService: FcmService
+    private lateinit var fcmService: PushQueue
     private lateinit var repository: UserRepositoryImpl
 
     @Before
@@ -408,7 +407,8 @@ class UserRepositoryEnsureProfileTest {
 
     @Test
     fun `writes nothing when nobody is signed in`() = runTest {
-        every { authService.getCurrentUser() } returns null
+        every { authService.getCurrentAccount() } returns null
+        every { authService.getCurrentUid() } returns null
 
         repository.ensureProfile()
 
@@ -511,27 +511,24 @@ class UserRepositoryEnsureProfileTest {
      * @param photoUrl What `FirebaseUser.photoUrl` reports. Google sign-in populates it;
      *   an email/password account never does, which is why the default here is null.
      * @param providers What `FirebaseUser.providerData` reports. Empty by default — an
-     *   explicit empty list, not a relaxed-mock stub, so the name-less diagnostic's
-     *   provider ids never carry a mock identifier by accident.
+     *   explicit empty list, so the name-less diagnostic's provider ids are only those a test
+     *   names.
      */
     private fun signedIn(
         displayName: String?,
         email: String?,
         photoUrl: String? = null,
-        providers: List<UserInfo> = emptyList()
+        providers: List<ProfileIdentity.ProviderIdentity> = emptyList()
     ) {
-        val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-        every { firebaseUser.uid } returns UID
-        every { firebaseUser.displayName } returns displayName
-        every { firebaseUser.email } returns email
-        // Explicit even when null: a relaxed mock would hand back a stub Uri whose
-        // toString() is a mock identifier, and that would be written as a photo URL.
-        every { firebaseUser.photoUrl } returns photoUrl?.let { url ->
-            mockk<Uri>(relaxed = true).also { uri -> every { uri.toString() } returns url }
-        }
-        every { firebaseUser.providerData } returns providers.toMutableList()
-        every { firebaseUser.isAnonymous } returns false
-        every { authService.getCurrentUser() } returns firebaseUser
+        every { authService.getCurrentUid() } returns UID
+        every { authService.getCurrentAccount() } returns SignedInAccount(
+            uid = UID,
+            displayName = displayName,
+            email = email,
+            photoUrl = photoUrl,
+            isAnonymous = false,
+            providers = providers
+        )
     }
 
     /**
@@ -544,28 +541,20 @@ class UserRepositoryEnsureProfileTest {
         displayName: String? = null,
         email: String? = null,
         photoUrl: String? = null
-    ): UserInfo {
-        val info = mockk<UserInfo>(relaxed = true)
-        every { info.providerId } returns "google.com"
-        every { info.displayName } returns displayName
-        every { info.email } returns email
-        every { info.photoUrl } returns photoUrl?.let { url ->
-            mockk<Uri>(relaxed = true).also { uri -> every { uri.toString() } returns url }
-        }
-        return info
-    }
+    ) = ProfileIdentity.ProviderIdentity(
+        providerId = "google.com",
+        displayName = displayName,
+        email = email,
+        photoUrl = photoUrl
+    )
 
     /** The synthetic `firebase` entry every account carries — never a source of identity. */
-    private fun syntheticProviderInfo(): UserInfo {
-        val info = mockk<UserInfo>(relaxed = true)
-        every { info.providerId } returns "firebase"
-        every { info.displayName } returns "should never surface"
-        every { info.email } returns "synthetic@example.com"
-        every { info.photoUrl } returns mockk<Uri>(relaxed = true).also { uri ->
-            every { uri.toString() } returns "https://example.com/synthetic.png"
-        }
-        return info
-    }
+    private fun syntheticProviderInfo() = ProfileIdentity.ProviderIdentity(
+        providerId = "firebase",
+        displayName = "should never surface",
+        email = "synthetic@example.com",
+        photoUrl = "https://example.com/synthetic.png"
+    )
 
     @Test
     fun `a token refresh must not push the locally-held parent slot back to Firestore`() =
@@ -577,9 +566,7 @@ class UserRepositoryEnsureProfileTest {
             // stale `mom`. The next sync read that value, Room agreed, and nothing ever
             // corrected it. `momDayIndices` means "the days slot 1 has custody", so a pair in
             // that state has a custody pattern that distinguishes nobody.
-            val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-            every { firebaseUser.uid } returns UID
-            every { authService.getCurrentUser() } returns firebaseUser
+            every { authService.getCurrentUid() } returns UID
             coEvery { userDao.getUserById(UID) } returns localRow("Alice")
 
             val written = slot<Map<String, Any?>>()

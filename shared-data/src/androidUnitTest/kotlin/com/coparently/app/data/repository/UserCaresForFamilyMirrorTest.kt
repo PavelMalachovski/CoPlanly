@@ -1,13 +1,12 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.UserDao
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.User
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -31,7 +30,7 @@ import org.junit.Test
 class UserCaresForFamilyMirrorTest {
 
     private lateinit var userDao: UserDao
-    private lateinit var authService: FirebaseAuthService
+    private lateinit var authService: SignedInUser
     private lateinit var firestoreUserDataSource: FirestoreUserDataSource
     private lateinit var firestoreFamilyDataSource: FirestoreFamilyDataSource
     private lateinit var repository: UserRepositoryImpl
@@ -42,15 +41,14 @@ class UserCaresForFamilyMirrorTest {
         authService = mockk(relaxed = true)
         firestoreUserDataSource = mockk(relaxed = true)
         firestoreFamilyDataSource = mockk(relaxed = true)
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns ALICE }
-        every { authService.getCurrentUser() } returns firebaseUser
+        every { authService.getCurrentUid() } returns ALICE
         coEvery { firestoreUserDataSource.updateUser(any(), any()) } returns Result.success(Unit)
         repository = UserRepositoryImpl(
             userDao,
             authService,
             firestoreUserDataSource,
             firestoreFamilyDataSource,
-            mockk<FcmService>(relaxed = true)
+            mockk<PushQueue>(relaxed = true)
         )
     }
 
