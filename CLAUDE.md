@@ -1771,8 +1771,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
    JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
    the app's own `WireContracts` — which is what the command above regenerates and what the
-   `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. A contract is in the
-   app's list until every writer has moved. **The other direction runs in the `upgrade` job**:
+   `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. Every contract stays in the
+   app's list, moved writers included: that list is `complete = true` and is the one the `upgrade` job runs. **The other direction runs in the `upgrade` job**:
    it copies this branch's `wire/current/` into the base checkout and runs the *base's own*
    `WireContractTest` over it, so the previous build's code reads what this one writes and writes it
    back; a key an older build may lose that way must be declared in `CurrentWrite.olderBuildsMayDrop`.
