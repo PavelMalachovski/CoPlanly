@@ -214,7 +214,7 @@ class PetRepositoryImpl(
                 logger.w(
                     "PetRepo",
                     "Pet document ${firestoreData["id"]} could not be read " +
-                        "(${e.javaClass.simpleName}); skipped"
+                        "(${e::class.simpleName}); skipped"
                 )
             }
             .getOrNull() ?: return false
