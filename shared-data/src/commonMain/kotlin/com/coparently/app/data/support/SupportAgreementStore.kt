@@ -1,7 +1,11 @@
 package com.coparently.app.data.support
 
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.FirestoreClient
+import com.coparently.app.data.remote.firebase.ReadSource
+import com.coparently.app.data.remote.firebase.ServerValue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -12,15 +16,13 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.map
+import kotlin.time.Clock
 
 /** What [SupportAgreementStore.observe] knows of a family's child support. */
 sealed interface SupportRead {
@@ -40,39 +42,42 @@ sealed interface SupportRead {
  * Every change is a proposal the other parent answers, never an overwrite: the first terms too.
  * Each step posts a card in the family's thread, pushed like any message — no push type of its
  * own — and the months paid are `payments` of kind `support` (`PaymentStore`).
+ *
+ * On [FirestoreClient] and [SignedInUser] since MON-24 phase 2 (Task 8e): the same document, reads
+ * and writes as the Android SDK calls it made.
  */
 class SupportAgreementStore(
-    private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuthService,
+    private val firestore: FirestoreClient,
+    private val auth: SignedInUser,
     private val userRepository: UserRepository,
     private val activityAnnouncer: ActivityAnnouncer
 ) {
 
-    private fun signedInUid(): String? = auth.getCurrentUser()?.uid?.takeIf { it.isNotBlank() }
+    private fun signedInUid(): String? = auth.getCurrentUid()?.takeIf { it.isNotBlank() }
 
     /** [familyId]'s child support, live. */
-    fun observe(familyId: String): Flow<SupportRead> = callbackFlow {
-        val registration = firestore.collection(COLLECTION).document(familyId)
-            .addSnapshotListener { snapshot, error ->
-                when {
-                    error != null -> {
-                        logger.w(TAG, "Child support could not be read", error)
-                        trySend(SupportRead.Unavailable)
-                    }
-                    snapshot == null || !snapshot.exists() -> trySend(SupportRead.None)
-                    else -> trySend(
-                        snapshot.data?.let { SupportAgreementDocument.read(familyId, it) }
-                            ?.let { SupportRead.Known(it) } ?: SupportRead.Unavailable
-                    )
+    fun observe(familyId: String): Flow<SupportRead> =
+        firestore.observe(DocumentPath(COLLECTION, familyId))
+            .map { snapshot ->
+                if (!snapshot.exists) {
+                    SupportRead.None
+                } else {
+                    snapshot.data?.let { SupportAgreementDocument.read(familyId, it) }
+                        ?.let { SupportRead.Known(it) } ?: SupportRead.Unavailable
                 }
             }
-        awaitClose { registration.remove() }
-    }.distinctUntilChanged()
+            .catch { error ->
+                logger.w(TAG, "Child support could not be read", error)
+                emit(SupportRead.Unavailable)
+                // Not closed, as the SDK listener it replaced was not: nothing more arrives.
+                awaitCancellation()
+            }
+            .distinctUntilChanged()
 
     /** [familyId]'s child support as the server holds it now, or null when it cannot be read. */
     suspend fun readFromServer(familyId: String): SupportRead? = try {
-        val snapshot = firestore.collection(COLLECTION).document(familyId).get(Source.SERVER).await()
-        if (!snapshot.exists()) {
+        val snapshot = firestore.get(DocumentPath(COLLECTION, familyId), ReadSource.SERVER)
+        if (!snapshot.exists) {
             SupportRead.None
         } else {
             snapshot.data?.let { SupportAgreementDocument.read(familyId, it) }?.let { SupportRead.Known(it) }
@@ -98,21 +103,23 @@ class SupportAgreementStore(
         val me = signedInUid() ?: return false
         if (existing?.proposal?.let { it.proposedBy != me } == true) return false
         val members = FamilyKey.membersOf(familyId)?.toList()?.sorted() ?: return false
-        val proposal = SupportProposal(terms, me, System.currentTimeMillis())
-        val ref = firestore.collection(COLLECTION).document(familyId)
+        val proposal = SupportProposal(terms, me, Clock.System.now().toEpochMilliseconds())
+        val ref = DocumentPath(COLLECTION, familyId)
         val stored = write {
             if (existing == null) {
-                ref.set(
+                firestore.set(
+                    ref,
                     mapOf(
                         "participants" to members,
                         "proposal" to SupportAgreementDocument.proposalMap(proposal),
                         "lastModifiedBy" to me
                     )
-                ).await()
+                )
             } else {
-                ref.update(
+                firestore.update(
+                    ref,
                     mapOf("proposal" to SupportAgreementDocument.proposalMap(proposal), "lastModifiedBy" to me)
-                ).await()
+                )
             }
         }
         if (stored) announce(familyId, ActivityKind.SUPPORT_PROPOSED, terms)
@@ -124,13 +131,14 @@ class SupportAgreementStore(
         val me = signedInUid() ?: return false
         val proposal = agreement.proposal?.takeIf { it.proposedBy != me } ?: return false
         val stored = write {
-            firestore.collection(COLLECTION).document(agreement.familyId).update(
+            firestore.update(
+                DocumentPath(COLLECTION, agreement.familyId),
                 mapOf(
                     "agreement" to SupportAgreementDocument.termsMap(proposal.terms),
-                    "proposal" to FieldValue.delete(),
+                    "proposal" to ServerValue.Delete,
                     "lastModifiedBy" to me
                 )
-            ).await()
+            )
         }
         if (stored) announce(agreement.familyId, ActivityKind.SUPPORT_ACCEPTED, proposal.terms)
         return stored
@@ -141,8 +149,10 @@ class SupportAgreementStore(
         val me = signedInUid() ?: return false
         val proposal = agreement.proposal ?: return false
         val stored = write {
-            firestore.collection(COLLECTION).document(agreement.familyId)
-                .update(mapOf("proposal" to FieldValue.delete(), "lastModifiedBy" to me)).await()
+            firestore.update(
+                DocumentPath(COLLECTION, agreement.familyId),
+                mapOf("proposal" to ServerValue.Delete, "lastModifiedBy" to me)
+            )
         }
         if (stored) {
             val kind = if (proposal.proposedBy == me) ActivityKind.SUPPORT_WITHDRAWN else ActivityKind.SUPPORT_DECLINED

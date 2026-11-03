@@ -10,6 +10,9 @@ import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.CustodyModelDao
+import com.coparently.app.data.payment.PaymentAccounts
+import com.coparently.app.data.payment.PaymentStore
+import com.coparently.app.data.payment.SettleUpMessages
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
@@ -42,6 +45,8 @@ import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
+import com.coparently.app.data.support.SupportAgreementStore
+import com.coparently.app.data.support.SupportReminders
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
@@ -57,6 +62,7 @@ import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
@@ -196,6 +202,20 @@ val documentsDataModule: Module = module {
 }
 
 /**
+ * Money between the parents (CLAUDE.md items 45, 48 and 49; MON-24 phase 2, Task 8e): the account
+ * each is paid on, the payments each says they made and received, the settle-up card, child
+ * support's agreement and this phone's reminder settings. The reminder's job and its scheduler are
+ * still the app's (WorkManager).
+ */
+val moneyDataModule: Module = module {
+    singleOf(::PaymentAccounts)
+    singleOf(::PaymentStore)
+    factoryOf(::SettleUpMessages)
+    singleOf(::SupportAgreementStore)
+    singleOf(::SupportReminders)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -208,7 +228,8 @@ val dataModules: List<Module> = listOf(
     chatDataModule,
     requestsDataModule,
     stickersDataModule,
-    documentsDataModule
+    documentsDataModule,
+    moneyDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,

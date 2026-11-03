@@ -408,10 +408,10 @@ class EmulatorParent private constructor(
     val parentRoles = ParentRoles(documents, authService)
 
     /** Payments between the parents: "I paid" and "Money arrived" (25 October 2026). */
-    val paymentStore = PaymentStore(firestore, authService, userRepository, announcer)
+    val paymentStore = PaymentStore(documents, authService, userRepository, announcer)
 
     /** The family's child support agreement (25 October 2026). */
-    val supportStore = SupportAgreementStore(firestore, authService, userRepository, announcer)
+    val supportStore = SupportAgreementStore(documents, authService, userRepository, announcer)
 
     /** What this phone remembers of each family: the co-parent's name and the slots (schema 46). */
     val knownFamilies = KnownFamilies(database.knownFamilyDao(), userDataSource, FirestoreFamilyDataSource(documents))

@@ -1,7 +1,13 @@
 package com.coparently.app.data.payment
 
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.DocumentQuery
+import com.coparently.app.data.remote.firebase.FirestoreClient
+import com.coparently.app.data.remote.firebase.ReadSource
+import com.coparently.app.data.remote.firebase.ServerValue
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.firebase.StoredDocument
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -12,16 +18,13 @@ import com.coparently.app.domain.payments.PaymentId
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.YearMonth
 
 /**
@@ -31,15 +34,18 @@ import kotlinx.datetime.YearMonth
  * Firestore only, no Room table, like the requests' clocks: a payment's state is the server's,
  * written once by each parent, and a phone offline simply does not show it yet. Each step posts a
  * card in the family's thread, pushed like any message — no push type of its own.
+ *
+ * On [FirestoreClient] and [SignedInUser] since MON-24 phase 2 (Task 8e): the same query, reads
+ * and writes as the Android SDK calls it made.
  */
 class PaymentStore(
-    private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuthService,
+    private val firestore: FirestoreClient,
+    private val auth: SignedInUser,
     private val userRepository: UserRepository,
     private val activityAnnouncer: ActivityAnnouncer
 ) {
 
-    private fun signedInUid(): String? = auth.getCurrentUser()?.uid?.takeIf { it.isNotBlank() }
+    private fun signedInUid(): String? = auth.getCurrentUid()?.takeIf { it.isNotBlank() }
 
     /**
      * Every payment of [familyId] the signed-in parent takes part in, live; null while it cannot
@@ -47,22 +53,20 @@ class PaymentStore(
      */
     fun observe(familyId: String): Flow<List<Payment>?> {
         val uid = signedInUid() ?: return flowOf(null)
-        return callbackFlow {
-            val registration = firestore.collection(COLLECTION)
-                .whereArrayContains("participants", uid)
-                .whereEqualTo("familyId", familyId)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        logger.w(TAG, "Payments could not be read", error)
-                        trySend(null)
-                        return@addSnapshotListener
-                    }
-                    val read = snapshot?.documents.orEmpty()
-                        .mapNotNull { doc -> doc.data?.let { PaymentDocument.read(doc.id, it) } }
-                    trySend(read)
-                }
-            awaitClose { registration.remove() }
-        }.distinctUntilChanged()
+        val query = DocumentQuery(COLLECTION)
+            .whereArrayContains("participants", uid)
+            .whereEqualTo("familyId", familyId)
+        return firestore.observe(query)
+            .map<List<StoredDocument>, List<Payment>?> { documents ->
+                documents.mapNotNull { doc -> doc.data?.let { PaymentDocument.read(doc.id, it) } }
+            }
+            .catch { error ->
+                logger.w(TAG, "Payments could not be read", error)
+                emit(null)
+                // Not closed, as the SDK listener it replaced was not: nothing more arrives.
+                awaitCancellation()
+            }
+            .distinctUntilChanged()
     }
 
     /**
@@ -70,7 +74,7 @@ class PaymentStore(
      * the server could not answer — a reminder that is not sure keeps quiet.
      */
     suspend fun readFromServer(id: String): Result<Payment?> = try {
-        val snapshot = firestore.collection(COLLECTION).document(id).get(Source.SERVER).await()
+        val snapshot = firestore.get(DocumentPath(COLLECTION, id), ReadSource.SERVER)
         Result.success(snapshot.data?.let { PaymentDocument.read(snapshot.id, it) })
     } catch (e: CancellationException) {
         throw e
@@ -106,8 +110,10 @@ class PaymentStore(
             payeeUid = payee
         )
         val stored = write {
-            firestore.collection(COLLECTION).document(payment.id)
-                .set(PaymentDocument.paid(payment, FieldValue.serverTimestamp())).await()
+            firestore.set(
+                DocumentPath(COLLECTION, payment.id),
+                PaymentDocument.paid(payment, ServerValue.ServerTimestamp)
+            )
         }
         if (stored) {
             val card = if (kind == PaymentKind.SUPPORT) ActivityKind.SUPPORT_PAID else ActivityKind.SETTLE_UP_PAID
@@ -125,8 +131,10 @@ class PaymentStore(
         val me = signedInUid() ?: return false
         if (payment.payeeUid != me || payment.confirmed) return false
         val stored = write {
-            firestore.collection(COLLECTION).document(payment.id)
-                .update(PaymentDocument.confirmed(me, FieldValue.serverTimestamp())).await()
+            firestore.update(
+                DocumentPath(COLLECTION, payment.id),
+                PaymentDocument.confirmed(me, ServerValue.ServerTimestamp)
+            )
         }
         if (stored) {
             val kind = if (payment.kind == PaymentKind.SUPPORT) {

@@ -31,9 +31,6 @@ import com.coparently.app.data.notification.EventReminderScheduler
 import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.notification.WorkRequestClockScheduler
 import com.coparently.app.data.pairing.PlayInstallReferrerSource
-import com.coparently.app.data.payment.PaymentAccounts
-import com.coparently.app.data.payment.PaymentStore
-import com.coparently.app.data.payment.SettleUpMessages
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
@@ -76,8 +73,6 @@ import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignedInAccountSource
-import com.coparently.app.data.support.SupportAgreementStore
-import com.coparently.app.data.support.SupportReminders
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.GoogleCalendarAutoImport
@@ -133,9 +128,6 @@ val dataModule = module {
     singleOf(::NotificationManager)
     singleOf(::WorkRequestClockScheduler)
     singleOf(::PlayInstallReferrerSource)
-    singleOf(::PaymentAccounts)
-    singleOf(::PaymentStore)
-    factoryOf(::SettleUpMessages)
     singleOf(::FcmService)
     // Where the repositories in `:shared-data` queue a push.
     single<PushQueue> { get<FcmService>() }
@@ -195,8 +187,6 @@ val dataModule = module {
     singleOf(::DeviceTraces)
     singleOf(::SessionProfileSynchronizer)
     singleOf(::SignedInAccountSource)
-    singleOf(::SupportAgreementStore)
-    singleOf(::SupportReminders)
     singleOf(::WorkManagerSupportReminderScheduler)
     singleOf(::CalendarSyncRepository)
     singleOf(::GoogleCalendarAutoImport)

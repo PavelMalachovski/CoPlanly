@@ -3,9 +3,9 @@ package com.coparently.app.data.support
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
 import kotlinx.datetime.YearMonth
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** `support_agreements/{familyId}` as the rules bound it (25 October 2026). */
 class SupportAgreementDocumentTest {
@@ -46,7 +46,7 @@ class SupportAgreementDocumentTest {
     }
 
     @Test
-    fun `terms missing a field are not read, and a document without participants is not either`() {
+    fun `terms missing a field are not read - and a document without participants is not either`() {
         val broken = SupportAgreementDocument.termsMap(terms) - "fromMonth"
         val read = SupportAgreementDocument.read("f", mapOf("participants" to listOf("a", "b"), "agreement" to broken))
         assertNull(read?.agreement)

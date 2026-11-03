@@ -1,11 +1,11 @@
 package com.coparently.app.data.payment
 
-import com.coparently.app.data.money.MinorUnits
+import com.coparently.app.data.remote.firebase.FirestoreTimestamp
+import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.Timestamp
 
 /**
  * The wire form of `payments/{id}` (25 October 2026), in both directions — the one place it is
@@ -14,6 +14,10 @@ import com.google.firebase.Timestamp
  * The amount is a plain decimal string with two places (`"450.00"`), as the settle-up card already
  * carries it, never a floating-point number: the rules bound its shape, and a phone in any locale
  * reads it back the same.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8e): a read's timestamps are [FirestoreTimestamp]s,
+ * which the Android SDK's `Timestamp` was, and the amount is read by [DecimalText.parseHalfUp], as
+ * the app's `MinorUnits.fromText` reads it.
  */
 object PaymentDocument {
 
@@ -42,7 +46,8 @@ object PaymentDocument {
         val month = (data["month"] as? String)
             ?.let { runCatching { IsoText.parseYearMonth(it) }.getOrNull() }
             ?: return null
-        val amount = MinorUnits.fromText(data["amount"] as? String) ?: return null
+        val amount = (data["amount"] as? String)?.let { DecimalText.parseHalfUp(it, PaymentQr.MONEY_SCALE) }
+            ?: return null
         return Payment(
             id = id,
             familyId = data["familyId"] as? String ?: return null,
@@ -52,8 +57,8 @@ object PaymentDocument {
             amountMinor = amount,
             payerUid = data["payerUid"] as? String ?: return null,
             payeeUid = data["payeeUid"] as? String ?: return null,
-            paidAtMillis = (data["paidAt"] as? Timestamp)?.toDate()?.time,
-            confirmedAtMillis = (data["confirmedAt"] as? Timestamp)?.toDate()?.time
+            paidAtMillis = (data["paidAt"] as? FirestoreTimestamp)?.toEpochMillis(),
+            confirmedAtMillis = (data["confirmedAt"] as? FirestoreTimestamp)?.toEpochMillis()
         )
     }
 

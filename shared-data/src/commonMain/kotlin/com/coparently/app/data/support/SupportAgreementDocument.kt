@@ -1,6 +1,6 @@
 package com.coparently.app.data.support
 
-import com.coparently.app.data.money.MinorUnits
+import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportProposal
@@ -50,7 +50,8 @@ object SupportAgreementDocument {
             ?.let { runCatching { IsoText.parseYearMonth(it) }.getOrNull() }
             ?: return null
         return SupportTerms(
-            amountMinor = MinorUnits.fromText(map["amount"] as? String) ?: return null,
+            amountMinor = (map["amount"] as? String)?.let { DecimalText.parseHalfUp(it, PaymentQr.MONEY_SCALE) }
+                ?: return null,
             currency = map["currency"] as? String ?: return null,
             dayOfMonth = (map["dayOfMonth"] as? Number)?.toInt() ?: return null,
             payerUid = map["payerUid"] as? String ?: return null,
