@@ -1503,14 +1503,19 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              and (Task 8b) the chat, change-request, request-clock and parenting-plan
              repositories (data/repository/, behind SignedInUser and PushQueue), the sync's pure
              parts (data/sync/: EventDocument, ConflictResolver, FamilyIdBackfill, …) and the
-             revision outbox (data/versions/EventVersionRecorder).
+             revision outbox (data/versions/EventVersionRecorder), and (Task 8c) the activity
+             announcer (domain/activity/ActivityAnnouncer), the family on screen (data/family/:
+             FamilyView, SelectedFamilySource, KnownFamilies), the chat mirror (data/chat/), the
+             request clocks' RequestTelling, and the custody, expense-split, event and pet
+             repositories.
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, and some of the repositories and of the sync
+             sources, and some of the repositories, of the sync, of data/family/, data/chat/ and
+             data/requests/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1529,8 +1534,9 @@ file by file:
   `usecase/` (since MON-24 phase 2's Task 6 they report through `shared-data`'s `Analytics` and
   `CrashReporter` and log through its `logger`, so they move with the data layer to `shared-data`,
   not to `shared`; `java.util.UUID` is left; `RecurrenceExpander` moved),
-  `error/ErrorHandler.kt` (`NetworkMonitor`), `activity/ActivityAnnouncer.kt`, `model/MessageTemplate.kt`
-  (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`);
+  `error/ErrorHandler.kt` (`NetworkMonitor`), `model/MessageTemplate.kt`
+  (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`); `activity/ActivityAnnouncer.kt`
+  left the list for `shared-data`'s `commonMain`, same package, in MON-24 phase 2's Task 8c;
 - `java.time` not yet converted — the communication record's builder, CSV and layouts in
   `export/` (`RecordLabels`, `RecordPlan`, `RecordTimeText` and `RecordVerification` moved), the
   school import's `SchoolEvents`, `SchoolTimetable`, `SchoolImportPlanner` and `SchoolImportItems`,
@@ -1604,11 +1610,30 @@ display name; `FirebaseAuthService` implements it) and **`PushQueue`** (`queueNo
 never `FirebaseAuthService` or `FcmService`. `ChangeRequestRepositoryImpl` and
 `RequestDeadlineRepositoryImpl` kept their parameter names (`firebaseAuthService`, `fcmService`,
 `authService`), so the e2e parents' named arguments did not change; `MessageRepositoryImpl`'s became
-`signedInUser`, and the e2e parent passes it by position. The rest of `data/repository/` and `data/sync/` is still in the app, each for what it
-needs: the custody repository and its helpers (`ActiveCustodyRow`, `CustodyRows`,
-`SignedInFamilies`, `SwapPush`), `FamilySettingsRepository` and the event, expense, child and pet
-repositories (`ActivityAnnouncer` and `data/family/`'s `FamilyView`, still in the app; `java.time` in
-the custody repository; `BigDecimal` in expenses); the friend, guest, professional and partner-profile
+`signedInUser`, and the e2e parent passes it by position. Task 8c, the families, the chat mirror
+and the repositories they unblocked: in `commonMain`, `domain/activity/ActivityAnnouncer.kt`; from
+`data/family/`, `FamilyView.kt` (with `inFamilyOnScreen` and `placementFamilyId`),
+`FamilyViewSource`, `SelectedFamilySource` (with `FamilyOption`), `KnownFamilies` and
+`KnownFamilySlots`, which ask `SignedInUser` for the uid; from `data/chat/`, `ChatMirror`,
+`ChatPartnerSource` and `DepartedThreadSource`; from `data/requests/`, `RequestTelling` and
+`RecordLook.kt` (`RecordStatus`, `CardSubject` and `RecordLook`, split out of `RequestRecords.kt`
+unchanged); and from `data/repository/`, `CustodyModelRepository` with `ActiveCustodyRow`,
+`CustodyRows`, `SignedInFamilies` and `SwapPush`, `FamilySettingsRepository`, `EventRepositoryImpl`
+and `PetRepositoryImpl`. Their constructors kept their parameter names, so the e2e parents and the
+R8 probe build them unchanged. They are bound in `shared-data`'s `repositoryDataModule`,
+`familyDataModule` (which also binds `FamilySlotsSource`), `chatDataModule` and
+`requestsDataModule`. The rest of `data/family/`, `data/chat/` and `data/requests/` is still in the
+app: `AgreementSignalSources`, `OtherFamiliesSignals`, `FamilyAgreementsSource` and
+`AgreementWithdrawals` (the professional repository, the support store and `java.time`),
+`UnassignedRecords` (records dated in `java.time` for its screen), `ChatAttachmentOutbox`
+(`java.io.File` and `data/files/`), and the request clocks' keeper, steps, records, notices, worker,
+`RequestClocks` and `RequestTime` (the Android notification manager, WorkManager and a
+`java.time.ZoneId`). `data/payment/` and `data/support/` are still in the app as a whole: their
+records are the phase-1 stay list's `Payment` and `SupportAgreement` on `java.time.YearMonth`, their
+stores call the Android Firestore SDK directly, and the reminder is a `Worker`. The rest of
+`data/repository/` and `data/sync/` is still in the app, each for what it needs: the expense and
+child repositories (`BigDecimal` in expenses; `GuestGrantPolicy` and `java.time` in the child
+record); the friend, guest, professional and partner-profile
 readers and `CalendarFeedRepositoryImpl` (the Android Firestore or Functions SDK called directly);
 `UserRepositoryImpl`, `PairingRepositoryImpl` and `PreferencesRepositoryImpl` (Auth's `FirebaseUser`,
 a `Context` and string resources, the currency hints); `JournalRepositoryImpl` and
@@ -1628,7 +1653,9 @@ opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`
 `shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument` and
 `StampedFamily` (`SyncService` and the event, pet, professional and request readers), and
 `ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
-probe and the messages wire contract).
+probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
+`PetRepositoryImpl`'s four mappers (the pets wire contract) and `ChatMirror.mirror` (the on-screen
+e2e tests, which start the mirror themselves).
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.
 
@@ -1716,7 +1743,9 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
    so far; `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
    in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
-   JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
+   JVM suite sets that zone to UTC; `PetWireContract` stays in the app although `PetRepositoryImpl`
+   moved in Task 8c, because its mappers are members of a repository that common code cannot build
+   without fakes of the DAOs), and the app's unit tests compile the same harness files and run every contract through
    the app's own `WireContracts` — which is what the command above regenerates and what the
    `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. A contract is in the
    app's list until every writer has moved. **The other direction runs in the `upgrade` job**:

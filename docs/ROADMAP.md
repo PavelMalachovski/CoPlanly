@@ -2678,7 +2678,7 @@ converts their dates.
 | `usecase/GetEventsUseCase.kt`, `EventValidator.kt` | `@Inject` |
 | `usecase/EventUseCases.kt` | bundles the four use cases above |
 | `error/ErrorHandler.kt` | `@Inject`; Crashlytics and `NetworkMonitor`; `java.io.IOException` |
-| `activity/ActivityAnnouncer.kt` | `@Inject`; `android.util.Log`; `java.util.UUID` |
+| ~~`activity/ActivityAnnouncer.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8c (Koin, the common `logger`, `kotlin.uuid.Uuid`) |
 | `model/MessageTemplate.kt` | `@StringRes` and the app's `R` (strings move in phase 2) |
 | `repository/FamilyDocumentRepository.kt` | `java.io.File` in its signatures |
 | `review/MonthStatsWire.kt` | writes the AI summary's month as `java.time.YearMonth` text (kotlinx's JVM converter); moving it means pinning that text for every year |
