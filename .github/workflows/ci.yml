@@ -2081,14 +2081,23 @@ jobs:
           pod --version || sudo gem install cocoapods
           pod --version
 
+      # What decides the pods: their names, their version and the deployment target, as
+      # `shared-data/build.gradle.kts` states them. The cache key hashes these lines alone, so an edit
+      # elsewhere in that file (the next slices make many) keeps the cache.
+      - name: Firebase pods' spec
+        id: podspec
+        run: |
+          grep -E 'val firebaseIosVersion =|ios\.deploymentTarget =|listOf\("Firebase' shared-data/build.gradle.kts > "$RUNNER_TEMP/firebase-pods.txt"
+          cat "$RUNNER_TEMP/firebase-pods.txt"
+          echo "hash=$(shasum -a 256 "$RUNNER_TEMP/firebase-pods.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       # The pods compile from source — FirebaseFirestoreInternal alone is a large C++ build — about
       # 20 minutes cold (the Firebase spike, task 1). Cached: CocoaPods' download cache and specs,
       # the plugin's synthetic Pods project under `shared-data/build/cocoapods` (so `pod install`
       # finds its pods in place, with the times `xcodebuild` compares), and Xcode's derived data,
       # where `xcodebuild` keeps what it built, so a warm run builds nothing again. Keyed on the
-      # Xcode version and on `shared-data/build.gradle.kts`, which names the pods and their version.
-      # Restored here and saved after the tests whatever they did, so a red run does not pay the
-      # cold build again; a cold run still fits this job's limit.
+      # Xcode version and the pods' spec above; a near miss (another Xcode, another pod list) still
+      # restores what it can through the prefixes, and `xcodebuild` rebuilds only what changed.
       - name: Restore the Firebase pods
         id: pods
         uses: actions/cache/restore@v4
@@ -2098,7 +2107,18 @@ jobs:
             ~/.cocoapods
             ~/Library/Developer/Xcode/DerivedData
             shared-data/build/cocoapods
-          key: pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('shared-data/build.gradle.kts') }}
+          key: pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ steps.podspec.outputs.hash }}
+          restore-keys: |
+            pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+            pods-${{ runner.os }}-${{ runner.arch }}-
+
+      # `:shared-data`'s test executable links the Firebase frameworks, so this step is where the
+      # pods are installed and built. Its own step, so the cache below is saved exactly when the
+      # pods were built — never after a compile error stopped Gradle before them, which would save
+      # a cache without them under the key and keep every later run from saving a good one.
+      - name: Build the Firebase pods and link the iOS test executable
+        id: link
+        run: ./gradlew :shared-data:linkDebugTestIosSimulatorArm64
 
       # `:shared-data` makes no framework of its own: the iPhone app's one framework comes later,
       # from `:shared-ui`, and exports it.
@@ -2109,8 +2129,10 @@ jobs:
         if: always()
         run: find shared-data/build/cocoapods -name Podfile.lock -exec grep -E "^  - Firebase" {} \; | sort -u || true
 
+      # Saved when the pods were built and the key was not already restored exactly, whatever the
+      # tests then did, so a red run does not pay the cold build again.
       - name: Save the Firebase pods
-        if: always() && steps.pods.outputs.cache-hit != 'true'
+        if: always() && steps.link.outcome == 'success' && steps.pods.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |

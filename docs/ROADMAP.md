@@ -2804,8 +2804,13 @@ bytes are identical on Android):
   four semantics, and the R8 probe's `FirestoreWriteProbe` runs GitLive's encoder minified. Not yet
   checked here: that every Firebase AAR of BoM 34.18.0 has `minCompileSdk` ≤ 36 and Kotlin metadata
   ≤ 2.3 (Google's Maven repository is unreachable from the cloud sessions; CI's
-  `checkDebugAarMetadata` is the check), the first cold pod build against `shared-ios`' 45 minutes,
-  and an iOS test against the emulators. Left for the next slices: `FcmService`,
+  `checkDebugAarMetadata` is the check; the first CI run's `checkReleaseAarMetadata` passed at
+  compileSdk 36), the first cold pod build against `shared-ios`' 45 minutes, and an iOS test
+  against the emulators. **GitLive 2.7.0 is built on kotlinx-serialization 1.9.0 and coroutines
+  1.10.2, and resolves to the project's 1.11.0 of both here**, a combination the spike never ran
+  (it pinned serialization 1.9.0); GitLive implements `SerialDescriptor` itself. The R8 probe's
+  `FirestoreWriteProbe`, the `e2e` job and `shared-ios` are what prove it, on the minified Android
+  encoder, against the emulators and in the iOS link. Left for the next slices: `FcmService`,
   `FirebaseAuthService`, `FirebaseImageStorage` and the Credential Manager classes, then
   `data/repository/` and the rest of Task 8's list.
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,

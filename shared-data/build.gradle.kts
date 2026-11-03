@@ -119,7 +119,9 @@ kotlin {
     // moved code uses. A Linux host never runs CocoaPods: the plugin configures its pod and link
     // steps on macOS only, and a klib compile needs none of them (the bindings come with GitLive).
     // The dynamic framework below is the plugin's own requirement for `linkOnly` pods; nothing
-    // builds it — the iPhone app's one framework comes from `:shared-ui`.
+    // builds it — the iPhone app's one framework comes from `:shared-ui`. CI's `shared-ios` keys its
+    // pod cache on three lines here, `firebaseIosVersion`, `ios.deploymentTarget` and the pod list;
+    // keep each on one line, as its grep reads them.
     cocoapods {
         version = "1.0"
         summary = "CoPlanly's shared data layer"
@@ -215,6 +217,9 @@ kotlin {
         androidUnitTest.dependencies {
             // commonTest runs here as the Android unit tests, on JUnit 4 like the app's.
             implementation("junit:junit:4.13.2")
+            // `GitLiveFirestoreClientAndroidTest` drives the GitLive client over a mocked Android
+            // Firestore and checks each SDK call it makes. The app's version.
+            implementation("io.mockk:mockk:1.13.13")
         }
     }
 }

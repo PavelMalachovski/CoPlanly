@@ -997,8 +997,13 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   The calendar's `@Key` models had a case while google-http-client parsed them with its own Gson;
   it left in MON-24 phase 2, and the import now reads Google's JSON by hand on Ktor; `HttpImportProbe`
   runs both imports' clients and parsers (a recorded `events.list` page, a Bakaláři sign-in and
-  events) through the whole minified Ktor pipeline on an in-memory engine, and
-  `tools/check-r8-probe.js` requires its two cases as it requires every stored model.
+  events) through the whole minified Ktor pipeline on an in-memory engine. `FirestoreWriteProbe`
+  (MON-24 phase 2, Task 8a) encodes a Firestore write through `GitLiveFirestoreClient` and GitLive's
+  own encoder, whose serializer lookup for its `FieldValue` and `Timestamp` is reflection R8 could
+  cut, and checks the map the SDK would receive, value by value ("Firestore write values through
+  GitLiveFirestoreClient and the GitLive encoder"); the `r8Test` build type alone puts GitLive's
+  `firebase-common-internal` on its compile path for it. `tools/check-r8-probe.js` requires those
+  three cases (the two imports' and the Firestore write's) as it requires every stored model.
   `tools/run-r8-probe.sh` installs and runs it on API 30; `tools/check-r8-probe.js`
   fails, one `::error::` each, on a key that is not the source field name (`bloodType`, never `a`),
   a value that does not read back equal, a probe that did not finish, and a stored model
@@ -1042,7 +1047,16 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   self-hosted runner back for this without reading `docs/IOS-RUNNER.md`, which keeps the setup and
   its security boundary as the fallback (a fork's pull request runs its own copy of `ci.yml`, so
   only the repository's "Require approval for all external contributors" setting protects a
-  self-hosted machine). `:shared:detekt` and `:shared-data:detekt` run in the `detekt` job against
+  self-hosted machine). **It builds the Firebase iOS pods** (MON-24 phase 2, Task 8a):
+  `:shared-data` links Firebase iOS 11.8.0 through the Kotlin CocoaPods plugin with `linkOnly`
+  (GitLive's klibs carry the bindings), so the job installs CocoaPods when the image has none, and
+  its own step, "Build the Firebase pods and link the iOS test executable", is where `pod install`
+  and `xcodebuild` build them — about 20 minutes cold. Their cache (CocoaPods' caches, the plugin's
+  synthetic project under `shared-data/build/cocoapods` and Xcode's derived data) is keyed on the
+  Xcode version and on the three lines of `shared-data/build.gradle.kts` that decide the pods
+  (`firebaseIosVersion`, `ios.deploymentTarget`, the pod list), with prefix `restore-keys`, and is
+  saved only when that step succeeded, so a run that stopped before the pods never saves a cache
+  without them. `:shared:detekt` and `:shared-data:detekt` run in the `detekt` job against
   the app's config and the app's baseline file — one baseline for every module, which
   `:app:detektBaseline` writes because it also reads `shared/src` and `shared-data/src` (the other
   modules' `detektBaseline` is disabled: detekt's baseline task replaces the file's findings with

@@ -538,6 +538,13 @@ dependencies {
     // take it away. Same version as kotlinx-coroutines-android above.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
 
+    // The R8 probe's `FirestoreWriteProbe` encodes a write through GitLive's own encoder
+    // (`dev.gitlive.firebase.internal.encodeAsObject`) in the minified build. GitLive's Android
+    // metadata puts this artifact in its runtime variant only, so the app runs it but cannot
+    // compile against it; the probe alone needs it on the compile path. Same version as
+    // `:shared-data`'s GitLive (2.7.0, built with Kotlin 2.2.21, `minCompileSdk=1`).
+    "r8TestImplementation"("dev.gitlive:firebase-common-internal:2.7.0")
+
     // Coil for async image loading in Compose (receipt photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
