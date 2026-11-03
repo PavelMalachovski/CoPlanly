@@ -1662,7 +1662,8 @@ pets' were). The stores run on `FirestoreClient` and `SignedInUser`, with the sa
 and writes the Android SDK calls made; a timestamp is read as a `FirestoreTimestamp`, and an amount
 through `DecimalText.parseHalfUp`, which reads it as the app's `MinorUnits.fromText` read it through
 `BigDecimal` (`MinorUnits.fromText` now delegates to it). Their constructors kept their parameter
-names, so the e2e parents and the R8 probe build them unchanged (`ChildInfoRepositoryImpl`'s
+names, so the R8 probe builds them unchanged and the e2e parents changed only where a store now
+takes a `FirestoreClient` (`PaymentStore`, `SupportAgreementStore`; `ChildInfoRepositoryImpl`'s
 `firebaseAuthService` is a `SignedInUser` now). They are bound in `moneyDataModule`,
 `repositoryDataModule`, `requestsDataModule` and `familyDataModule`. The `child_info` wire contract
 stays in `app/src/test/…/wire/` and the app's list alone: `SyncService`, still in the app, writes
