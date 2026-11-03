@@ -118,7 +118,7 @@ class UnassignedRecordsTest {
         assertEquals(BOB_FAMILY, snapshot.onScreenFamilyId)
         val custody = snapshot.records.last()
         assertEquals(CustodyModelType.WEEK_ON_WEEK_OFF, custody.custodyType)
-        assertEquals(LocalDate.of(2026, 8, 3), custody.date)
+        assertEquals(LocalDate.of(2026, 8, 3).toKotlinLocalDate(), custody.date)
     }
 
     @Test

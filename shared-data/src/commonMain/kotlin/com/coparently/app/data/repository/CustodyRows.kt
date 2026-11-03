@@ -1,7 +1,6 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.entity.CustodyModelEntity
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
@@ -12,11 +11,8 @@ import kotlin.time.Clock
 /**
  * A stored custody row as the domain model. The row's family (schema 45) stays on the row: the
  * model is the pattern, and which family it answers for is [ActiveCustodyRow]'s question.
- *
- * Public only for `data/family/UnassignedRecords`, still in the app (MON-24 phase 2, Task 8c).
  */
-@InternalSharedApi
-fun CustodyModelEntity.toDomainModel(): CustodyModel {
+internal fun CustodyModelEntity.toDomainModel(): CustodyModel {
     val momDays = momDaysPattern
         .removeSurrounding("[", "]")
         .split(",")

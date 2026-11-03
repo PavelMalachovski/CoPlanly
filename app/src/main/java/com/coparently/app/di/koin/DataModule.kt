@@ -11,7 +11,6 @@ import com.coparently.app.data.dictation.OnDeviceSpeechDictation
 import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
-import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.files.RecordPhotoImageLoader
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
@@ -81,7 +80,6 @@ val dataModule = module {
     singleOf(::FamilyDocumentRepositoryImpl)
     singleOf(::ExportFileWriter)
     singleOf(::ExportReceipts)
-    singleOf(::UnassignedRecords)
     singleOf(::RecordPhotoImageLoader)
     singleOf(::SharedFileCache)
     singleOf(::SharedFileStager)

@@ -14,6 +14,7 @@ import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
 import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.data.payment.PaymentAccounts
@@ -265,6 +266,8 @@ val familyDataModule: Module = module {
     singleOf(::SelectedFamilySource)
     // The switcher's dot: what waits in each family not on screen (design item 13; Task 8h).
     singleOf(::OtherFamiliesSignals)
+    // The parent's own records of no family, and where they belong (CLAUDE.md item 46; Task 8i).
+    singleOf(::UnassignedRecords)
 }
 
 /**

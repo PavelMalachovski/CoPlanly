@@ -1,5 +1,3 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.ChildInfoDao
@@ -23,11 +21,11 @@ import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.data.repository.toDomainModel
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.versions.EventVersionDocument
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -35,8 +33,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.datetime.toJavaLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /** What kind of record is waiting for a family, with the prefix of its [UnassignedRecord.key]. */
 enum class UnassignedKind(val key: String) {
@@ -425,19 +422,19 @@ private fun PetEntity.isOwnWithoutFamily(uid: String) =
     ownWithoutFamily(createdByFirebaseUid, familyId, deletedAtMillis, uid)
 
 private fun EventEntity.asRecord() =
-    UnassignedRecord(UnassignedKind.EVENT, id, title, date = startDateTime.date.toJavaLocalDate())
+    UnassignedRecord(UnassignedKind.EVENT, id, title, date = startDateTime.date)
 
 private fun ExpenseEntity.asRecord() = UnassignedRecord(
     kind = UnassignedKind.EXPENSE,
     id = id,
     title = title,
-    date = date.toJavaLocalDate(),
+    date = date,
     amount = amount,
     currency = currency
 )
 
 private fun ChildInfoEntity.asRecord() =
-    UnassignedRecord(UnassignedKind.CHILD, id, childName, date = dateOfBirth?.date?.toJavaLocalDate())
+    UnassignedRecord(UnassignedKind.CHILD, id, childName, date = dateOfBirth?.date)
 
 private fun PetEntity.asRecord() = UnassignedRecord(UnassignedKind.PET, id, name)
 
@@ -445,6 +442,6 @@ private fun CustodyModelEntity.asRecord() = UnassignedRecord(
     kind = UnassignedKind.CUSTODY,
     id = id,
     title = "",
-    date = runCatching { LocalDate.parse(startDate) }.getOrNull(),
+    date = runCatching { IsoText.parseDate(startDate) }.getOrNull(),
     custodyType = CustodyModelType.fromString(modelType)
 )

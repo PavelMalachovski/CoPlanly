@@ -64,6 +64,7 @@ import com.coparently.app.presentation.theme.LayoutConstants
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.utils.localizedDate
+import kotlinx.datetime.toJavaLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
 /** A record's day, in the reader's own order: "Aug 3, 2026", "3. 8. 2026". */
@@ -354,7 +355,7 @@ private fun recordTitle(record: UnassignedRecord): String =
 /** The record's supporting line: what kind it is, its day, its amount. */
 @Composable
 private fun recordDetail(record: UnassignedRecord): String? {
-    val day = record.date?.format(localizedDate(DATE_SKELETON))
+    val day = record.date?.toJavaLocalDate()?.format(localizedDate(DATE_SKELETON))
     return when (record.kind) {
         UnassignedKind.CHILD -> stringResource(R.string.unassigned_records_kind_child)
         UnassignedKind.PET -> stringResource(R.string.unassigned_records_kind_pet)
