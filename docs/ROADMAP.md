@@ -2788,6 +2788,26 @@ bytes are identical on Android):
   Google's Maven repository is unreachable from the cloud sessions. Still to run on a phone: an install
   over the previous build (`docs/DEVICE-CHECKLIST.md` §2.1), and on an iPhone, that the database
   is unreadable while the phone is locked.
+- **Firebase on GitLive, first slice** — **in progress (phase 2, Task 8a, November 2026)**: the
+  Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
+  access types moved to `:shared-data`'s `commonMain` with their packages. They call
+  `FirestoreClient`, a seam of plain values that names each operation (an update is never a set, a
+  server read never answers from the cache, a snapshot says whether it holds this phone's
+  unconfirmed write, the server's clock is a sentinel), answered by `GitLiveFirestoreClient` over
+  GitLive 2.7.0 on both platforms; callables go through `CallableFunctions`, on the Android SDK on
+  Android because GitLive cannot wrap a region-bound `FirebaseFunctions`. Platform halves cover
+  what GitLive's common API cannot say: a snapshot as the SDK's own map with its metadata, and an
+  integer increment (GitLive's Android `increment(Int)` is the SDK's double one). The Firebase BoM
+  moved to 34.18.0 with GitLive; the iPhone links the Firebase 11.8.0 pods through the Kotlin
+  CocoaPods plugin (`linkOnly`), cached in `shared-ios`. The wire harness runs from `shared-data`'s
+  commonTest and the app's unit tests alike (CLAUDE.md item 5), `FirestoreSemanticsTest` pins the
+  four semantics, and the R8 probe's `FirestoreWriteProbe` runs GitLive's encoder minified. Not yet
+  checked here: that every Firebase AAR of BoM 34.18.0 has `minCompileSdk` ≤ 36 and Kotlin metadata
+  ≤ 2.3 (Google's Maven repository is unreachable from the cloud sessions; CI's
+  `checkDebugAarMetadata` is the check), the first cold pod build against `shared-ios`' 45 minutes,
+  and an iOS test against the emulators. Left for the next slices: `FcmService`,
+  `FirebaseAuthService`, `FirebaseImageStorage` and the Credential Manager classes, then
+  `data/repository/` and the rest of Task 8's list.
 - **Before `SchoolImportItems` moves**: its derived event ids hash `text.encodeToByteArray()`,
   which writes `?` for a lone surrogate on the JVM and U+FFFD's bytes on Kotlin/Native, so the two
   platforms would derive different `school-…` ids from the same school data. It must hash

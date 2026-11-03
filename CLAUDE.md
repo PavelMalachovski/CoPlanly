@@ -563,11 +563,22 @@ When touching the UI, keep these invariants:
    Store (ROADMAP MON-24). The `upgrade` job runs this branch's test APK on
    the base build's stdlib, so androidTest must not carry a kotlin-reflect newer than main's
    Kotlin. Compiler options go through `kotlin { compilerOptions { … } }`;
-   `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.4.0 with no `-ktx`
+   `kotlinOptions` is an error since Kotlin 2.2. **Firebase BoM 34.18.0 with no `-ktx`
    artifacts** (audit L-2): 34.0.0 removed them, and the Kotlin extensions (`Firebase`, `logEvent`,
    `storageMetadata`, …) are imported from the product's own package
    (`com.google.firebase.analytics.logEvent`, never `…analytics.ktx…`). `Task.await()` comes from the
    explicitly declared `kotlinx-coroutines-play-services`, not from Firebase's transitive graph.
+   **GitLive's firebase-kotlin-sdk 2.7.0** (MON-24 phase 2, `shared-data/`; the spike chose it, ROADMAP
+   MON-24 "Firebase on two platforms") is how the data layer reaches Firestore from common code, and
+   Functions on the iPhone. It imports BoM 34.18.0, which is why the app's BoM is that one: Gradle
+   resolves one BoM for the graph, and the app and `shared-data` name the same version so their
+   artifacts are the ones that run. Move the two together, and only to a BoM a GitLive release
+   names. It is built with Kotlin 2.2.21, and 3.0's alphas with Kotlin 2.4, so 3.0 waits for that
+   step. On the iPhone, `shared-data` links the **Firebase iOS pods 11.8.0** (the version GitLive's
+   bindings were generated against) through the Kotlin CocoaPods plugin with `linkOnly = true`:
+   GitLive publishes the bindings, and a second binding of the same headers would clash. A Linux
+   host never runs CocoaPods: the plugin reports the host as unsupported, and the iOS klibs need no
+   pods because GitLive's own klibs carry the bindings (the `shared` job's iOS compile holds that).
    **Ktor 3.5.1** (MON-24 phase 2, `shared-data/`) for the two HTTP clients, the school import's and
    Google Calendar's: built with Kotlin 2.3.21 like this project, on the OkHttp engine on Android
    (which brings **OkHttp 5.3.2**; the app declares no OkHttp of its own any more, and Coil 2.7 runs
@@ -1467,8 +1478,11 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              logger, directories, the sealed preference store, crash reports, analytics,
              connectivity) and the Room database on Room KMP (data/local/: entities, DAOs and
              Converters in commonMain; the migrations, SQLCipher and the Android builder in
-             androidMain; the iPhone's builder in iosMain). Depends on shared/; no iOS framework
-             of its own
+             androidMain; the iPhone's builder in iosMain) and the Firestore data sources and
+             the callables' wrappers on GitLive's firebase-kotlin-sdk (data/remote/, behind
+             FirestoreClient and CallableFunctions; the platform halves in androidMain/iosMain).
+             Its Koin modules are dataModules and platformDataModule, which appModules includes.
+             Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
              except the phase-1 stay list below, which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
@@ -1530,8 +1544,25 @@ constructors the `upgrade` seed calls) and `di/DatabaseBuilder.kt`; in `iosMain`
 `Converters` writes them through `IsoText`, the same text `java.time`'s ISO formatters wrote
 (`ConvertersParityTest`, `shared-data/src/androidUnitTest/`); a mapper converts nothing between an
 entity and the domain, and the journal's entry, still `java.time` (phase-1 stay list), is bridged
-in `JournalRepositoryImpl`. Every other `data/…` path is still under
-`app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
+in `JournalRepositoryImpl`. Task 8a, Firebase on GitLive: in `commonMain`, `data/remote/firebase/`'s
+Firestore data sources (`Firestore*DataSource`), `PairingFunctions`, `GoogleOAuthFunctions` and
+`PushPayload.kt`, with the seam they call — `FirestoreClient` (plain values: a `StoredDocument` with
+its pending-writes flag, `ReadSource.SERVER`, `SetMerge`, `ServerValue.ServerTimestamp`/`Delete`,
+`FirestoreTimestamp`, a transaction and an integer increment) answered by `GitLiveFirestoreClient`,
+and `CallableFunctions`; `data/remote/google/`'s `CredentialProvider`, `GoogleAccess`,
+`GoogleCalendarAccess` and `GoogleSignInFailure`; `data/sync/Tombstone.kt`,
+`data/versions/EventVersionDocument.kt`, `data/requests/RequestDeadlineDocument.kt`, and
+`di/koin/FunctionsRegion.kt` (`FUNCTIONS_REGION`, same package as before) beside `DataModules.kt`.
+The platform halves are what GitLive's common API cannot say: reading a snapshot as the SDK's own
+map with its metadata, an integer increment (GitLive's Android `increment(Int)` is the SDK's double
+increment) and, on Android, callables through the SDK's region-bound `FirebaseFunctions`
+(`AndroidCallableFunctions`); `firestoreClientOf` wraps the app's own `FirebaseFirestore`, so its
+settings, an e2e parent's named app and a test's replacement still reach the data sources. No
+Firestore or Functions type appears in a data source's signature: a caller passes `ReadSource`, not
+`Source`, and `ServerValue`, not `FieldValue`. The rest of `data/remote/` — `FcmService`,
+`FirebaseAuthService`, `FirebaseImageStorage`, the messaging service, `PushNotifier`, `PushRouting`,
+`SwapPushWording`, `QRCodeService` and the Credential Manager classes — is still in the app. Every
+other `data/…` path is still under `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter` or
 `Analytics` rather than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager` or
 `AnalyticsManager`, and logs with `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
@@ -1611,7 +1642,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    between builds: `wire/<collection>/` holds documents *other* builds write, by hand — older shapes
    with keys missing, newer ones with unknown keys, `FamilyMemberRef`s and codec versions (`C2;…`,
    `L2;…`, `p2|…`) — and `wire/current/<collection>/` holds what *this* build writes, generated.
-   `WireContractTest` (`app/src/test/java/com/coparently/app/wire/`) runs every fixture through the
+   `WireContractTest` (`shared-data/src/commonTest/kotlin/com/coparently/app/wire/` since MON-24
+   phase 2, Task 8a, with the harness, on kotlinx-io; the fixtures stay where they were, and Gradle
+   hands `shared-data`'s tests their absolute path in a generated `WireFixtureLocation`) runs every
+   fixture through the
    production reader and writer of its collection (one `WireContract` each: `events`,
    `custody_models`, `messages`, `child_info`, `pets`, `expenses`, `event_versions`; `budgets` lost
    its contract with its client, September 2026) and
@@ -1621,7 +1655,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    red, and so does a loss that was fixed but is still declared. `CurrentWireFixturesTest` fails when a
    writer's output no longer matches `wire/current/`: regenerate with
    `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
-   and review the diff like a screenshot baseline. **The other direction runs in the `upgrade` job**:
+   and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
+   to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
+   so far), and the app's unit tests compile the same harness files and run every contract through
+   the app's own `WireContracts` — which is what the command above regenerates and what the
+   `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. A contract is in the
+   app's list until every writer has moved. **The other direction runs in the `upgrade` job**:
    it copies this branch's `wire/current/` into the base checkout and runs the *base's own*
    `WireContractTest` over it, so the previous build's code reads what this one writes and writes it
    back; a key an older build may lose that way must be declared in `CurrentWrite.olderBuildsMayDrop`.
@@ -1791,7 +1830,7 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     document outright and has exactly one legitimate caller — an event turned private has to
     leave Firestore with no trace.
 15. **A push carries a type, never a sentence** (SEC-3). `data/remote/firebase/PushPayload.kt`
-    is the vocabulary; `PushNotifier`, which `CoPlanlyMessagingService` hands every message to,
+    (in `shared-data`'s `commonMain` since MON-24 phase 2, Task 8a) is the vocabulary; `PushNotifier`, which `CoPlanlyMessagingService` hands every message to,
     writes the text from *its own* string resources and **drops a type it has no wording for**. Never reintroduce a `title`/`body`
     fallback for an unrecognised type — that fallback is the forgery, not a nicety, and
     `firestore.rules` refuses both keys from a client precisely so nothing legitimate needs
@@ -3176,7 +3215,7 @@ below hold what it fixed in place.
 2. **Every Cloud Function runs in `europe-west3`.** Declare each one through `regional` in
    `functions/index.js`, never `functions.` directly.
    - Five places name the region: `FUNCTIONS_REGION` there, `FUNCTIONS_REGION` in
-     `di/koin/FirebaseModule.kt`,
+     `shared-data`'s `di/koin/FunctionsRegion.kt`,
      `web/verify/`'s `PRODUCTION_FUNCTIONS_BASE`, `tools/e2e/pairing-smoke.js` and
      `web-tests/support/emulators.js`. Change them together.
    - `tools/check-e2e-coverage.js` finds callables declared either way.

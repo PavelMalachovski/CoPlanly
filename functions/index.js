@@ -28,7 +28,7 @@ const redeemGuard = require('./redeem-guard');
  * the Czech families the app is written for. 1st-generation triggers are not tied to the
  * Firestore database's location, so this holds whatever that is.
  *
- * The app (`FUNCTIONS_REGION` in `di/koin/FirebaseModule.kt`), `web/verify/`, the e2e smoke and the web tests
+ * The app (`FUNCTIONS_REGION` in `shared-data`'s `di/koin/FunctionsRegion.kt`), `web/verify/`, the e2e smoke and the web tests
  * name the same region; change them together.
  */
 const FUNCTIONS_REGION = 'europe-west3';
