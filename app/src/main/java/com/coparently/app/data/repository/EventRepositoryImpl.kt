@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.inFamilyOnScreen
@@ -14,6 +16,7 @@ import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType

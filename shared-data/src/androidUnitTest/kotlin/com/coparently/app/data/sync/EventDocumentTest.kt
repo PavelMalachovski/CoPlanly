@@ -1,5 +1,8 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.sync
 
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import kotlinx.datetime.LocalDateTime

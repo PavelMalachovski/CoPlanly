@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.sync
 
 import com.coparently.app.data.family.KnownFamilies
@@ -27,6 +29,7 @@ import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionRecorder
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.guests.GuestGrantPolicy

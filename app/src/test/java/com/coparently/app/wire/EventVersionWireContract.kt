@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.wire
 
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.versions.EventVersionDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.versions.EventVersionKind
 import kotlinx.datetime.LocalDateTime

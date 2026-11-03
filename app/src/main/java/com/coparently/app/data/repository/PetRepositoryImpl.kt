@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.inFamilyOnScreen
@@ -11,6 +13,7 @@ import com.coparently.app.data.sync.PetAudience
 import com.coparently.app.data.sync.StampedFamily
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey

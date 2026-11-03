@@ -15,6 +15,8 @@ import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSourc
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.sync.ConflictResolver
+import com.coparently.app.data.sync.FamilyIdBackfill
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -43,10 +45,19 @@ val remoteDataModule: Module = module {
 }
 
 /**
+ * The sync's pure parts (MON-24 phase 2, Task 8b). Their Room DAOs and the sealed preference store
+ * are the platform's database and store, bound where each platform builds them.
+ */
+val syncDataModule: Module = module {
+    singleOf(::ConflictResolver)
+    singleOf(::FamilyIdBackfill)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
-val dataModules: List<Module> = listOf(remoteDataModule)
+val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule)
 
 /**
  * What each platform binds for [dataModules]: the

@@ -1,6 +1,6 @@
 package com.coparently.app.data.sync
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -46,7 +46,7 @@ class TombstoneTest {
     }
 
     @Test
-    fun `zero is alive, not deleted at the epoch`() {
+    fun `zero is alive - not deleted at the epoch`() {
         // Zero is what a missing field degrades to in arithmetic, and it is the value a rule or
         // a serializer supplies when it has nothing. Reading it as "deleted on 1 January 1970"
         // would delete the row.

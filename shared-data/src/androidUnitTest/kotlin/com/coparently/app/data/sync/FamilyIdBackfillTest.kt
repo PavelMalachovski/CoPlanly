@@ -6,8 +6,8 @@ import com.coparently.app.data.local.dao.ChildInfoDao
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.PetDao
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -31,7 +31,7 @@ class FamilyIdBackfillTest {
     private lateinit var childInfoDao: ChildInfoDao
     private lateinit var petDao: PetDao
     private lateinit var changeRequestDao: ChangeRequestDao
-    private lateinit var preferences: EncryptedPreferences
+    private lateinit var preferences: SecurePreferences
     private lateinit var backfill: FamilyIdBackfill
 
     private val key = "${PreferenceKeys.FAMILY_ID_BACKFILL_PREFIX}$ALICE"

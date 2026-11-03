@@ -1,6 +1,9 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.sync
 
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import kotlinx.datetime.toKotlinLocalDateTime
 import kotlinx.datetime.toKotlinTimeZone

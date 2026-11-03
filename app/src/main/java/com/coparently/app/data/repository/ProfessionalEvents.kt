@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.model.Event

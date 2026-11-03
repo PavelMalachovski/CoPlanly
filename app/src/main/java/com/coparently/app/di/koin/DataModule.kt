@@ -105,8 +105,6 @@ import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminders
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.CalendarSyncRepository
-import com.coparently.app.data.sync.ConflictResolver
-import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.WorkManagerSyncRequester
@@ -258,8 +256,6 @@ val dataModule = module {
     singleOf(::SupportReminders)
     singleOf(::WorkManagerSupportReminderScheduler)
     singleOf(::CalendarSyncRepository)
-    singleOf(::ConflictResolver)
-    singleOf(::FamilyIdBackfill)
     singleOf(::GoogleCalendarAutoImport)
     single {
         SyncService(

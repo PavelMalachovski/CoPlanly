@@ -1,6 +1,6 @@
 package com.coparently.app.data.sync
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 class ChildInfoPhotosTest {
 
     @Test
-    fun `a document written before this field existed reads as an empty list, not null`() {
+    fun `a document written before this field existed reads as an empty list - not null`() {
         assertEquals(emptyList(), ChildInfoPhotos.decode(null))
     }
 

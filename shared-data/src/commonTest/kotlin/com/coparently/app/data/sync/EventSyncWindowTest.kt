@@ -1,6 +1,6 @@
 package com.coparently.app.data.sync
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -37,7 +37,7 @@ class EventSyncWindowTest {
     }
 
     @Test
-    fun `a day since the last sweep is due, and the boundary counts as due`() {
+    fun `a day since the last sweep is due - and the boundary counts as due`() {
         assertTrue(EventSyncWindow.needsFullSweep(500L, now - 24 * hour, now))
         assertTrue(EventSyncWindow.needsFullSweep(500L, now - 25 * hour, now))
     }
@@ -51,7 +51,7 @@ class EventSyncWindowTest {
     }
 
     @Test
-    fun `the interval is a day, and the constant is what the tests measure against`() {
+    fun `the interval is a day - and the constant is what the tests measure against`() {
         // Pinned so that changing the interval is a deliberate act with a failing test, not a
         // number quietly edited: shortening it multiplies every user's read bill, and lengthening
         // it extends how long a pre-`serverUpdatedAt` document can stay invisible.

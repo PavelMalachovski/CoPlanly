@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.requests
 
 import com.coparently.app.data.platform.logger
@@ -9,6 +11,7 @@ import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind

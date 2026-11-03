@@ -1,6 +1,7 @@
 package com.coparently.app.data.sync
 
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
@@ -19,8 +20,13 @@ import com.coparently.app.domain.time.IsoText
  *
  * All three live here, pure, so the wire-format contract tests (`app/src/test/.../wire/`,
  * fixtures in `app/src/test/resources/wire/`) run the production mappers on the JVM.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8b), while `EventRepositoryImpl`, `SyncService` and
+ * the other readers stay in the app; [InternalSharedApi] marks it public only for them until they
+ * move and it is `internal` again.
  */
-internal object EventDocument {
+@InternalSharedApi
+object EventDocument {
 
     /**
      * Reads one document into a Room row, already marked as coming from the server.

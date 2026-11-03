@@ -1,8 +1,11 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.wire
 
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyMemberRef

@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.presentation.chat
 
 import com.coparently.app.data.local.dao.EventDao
@@ -6,6 +8,7 @@ import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventAcceptance
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.Event

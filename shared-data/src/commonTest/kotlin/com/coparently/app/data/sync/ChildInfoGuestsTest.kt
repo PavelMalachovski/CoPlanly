@@ -1,7 +1,7 @@
 package com.coparently.app.data.sync
 
 import com.coparently.app.domain.guests.GuestGrant
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -48,7 +48,7 @@ class ChildInfoGuestsTest {
     }
 
     @Test
-    fun `a grant missing its name or its granter is dropped, not defaulted into existence`() {
+    fun `a grant missing its name or its granter is dropped - not defaulted into existence`() {
         // A half-read grant is a person with access whose name the parent cannot see, and a row
         // of blanks is not an honest answer to "who did I let in".
         val nameless = mapOf("gran-uid" to mapOf("grantedBy" to "alice-uid", "expiresAtMillis" to 1L))
@@ -59,7 +59,7 @@ class ChildInfoGuestsTest {
     }
 
     @Test
-    fun `a grant with no expiry reads as expired, never as permanent`() {
+    fun `a grant with no expiry reads as expired - never as permanent`() {
         // 0 is what GuestGrantPolicy and the Firestore rule both treat as already past. This is
         // the case where being lenient would hand out a permanent grant by accident.
         val undated = mapOf("gran-uid" to mapOf("name" to "Nina", "grantedBy" to "alice-uid"))
