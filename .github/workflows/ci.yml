@@ -1458,7 +1458,10 @@ jobs:
         run: |
           set -euo pipefail
           current="$GITHUB_WORKSPACE/app/src/test/resources/wire/current"
-          if [ ! -f app/src/test/java/com/coparently/app/wire/WireContractTest.kt ]; then
+          # The harness lives in `:shared-data`'s commonTest from MON-24 phase 2 (Task 8a), which
+          # the base's app unit tests compile and run with every contract; before that, in the app.
+          if [ ! -f app/src/test/java/com/coparently/app/wire/WireContractTest.kt ] \
+            && [ ! -f shared-data/src/commonTest/kotlin/com/coparently/app/wire/WireContractTest.kt ]; then
             echo "::notice::The base build predates WireContractTest; the previous-build wire check starts once the base has it."
             exit 0
           fi
@@ -2064,12 +2067,58 @@ jobs:
           packages: platform-tools
 
       - name: Xcode
-        run: xcodebuild -version
+        id: xcode
+        run: |
+          xcodebuild -version
+          echo "version=$(xcodebuild -version | tr '\n' ' ' | tr -s ' ' | sed 's/ *$//' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      # `:shared-data` links the Firebase iOS SDK through the Kotlin CocoaPods plugin (MON-24 phase 2,
+      # Task 8a): GitLive's bindings name the pods, `pod install` fetches them and `xcodebuild`
+      # builds them before the test executable links. The hosted image has CocoaPods; installed only
+      # when it does not, so an image without it still runs.
+      - name: CocoaPods
+        run: |
+          pod --version || sudo gem install cocoapods
+          pod --version
+
+      # The pods compile from source — FirebaseFirestoreInternal alone is a large C++ build — about
+      # 20 minutes cold (the Firebase spike, task 1). Cached: CocoaPods' download cache and specs,
+      # the plugin's synthetic Pods project under `shared-data/build/cocoapods` (so `pod install`
+      # finds its pods in place, with the times `xcodebuild` compares), and Xcode's derived data,
+      # where `xcodebuild` keeps what it built, so a warm run builds nothing again. Keyed on the
+      # Xcode version and on `shared-data/build.gradle.kts`, which names the pods and their version.
+      # Restored here and saved after the tests whatever they did, so a red run does not pay the
+      # cold build again; a cold run still fits this job's limit.
+      - name: Restore the Firebase pods
+        id: pods
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+            ~/Library/Developer/Xcode/DerivedData
+            shared-data/build/cocoapods
+          key: pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('shared-data/build.gradle.kts') }}
 
       # `:shared-data` makes no framework of its own: the iPhone app's one framework comes later,
       # from `:shared-ui`, and exports it.
       - name: Shared tests (iOS simulator) and the framework
         run: ./gradlew :shared:iosSimulatorArm64Test :shared:linkDebugFrameworkIosSimulatorArm64 :shared-data:iosSimulatorArm64Test
+
+      - name: Pods resolved
+        if: always()
+        run: find shared-data/build/cocoapods -name Podfile.lock -exec grep -E "^  - Firebase" {} \; | sort -u || true
+
+      - name: Save the Firebase pods
+        if: always() && steps.pods.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+            ~/Library/Developer/Xcode/DerivedData
+            shared-data/build/cocoapods
+          key: ${{ steps.pods.outputs.cache-primary-key }}
 
       - name: Upload reports
         if: always()
