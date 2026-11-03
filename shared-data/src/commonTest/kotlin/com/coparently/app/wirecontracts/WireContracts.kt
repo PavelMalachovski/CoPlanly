@@ -11,6 +11,11 @@ package com.coparently.app.wire
  * app's list alone. A message written by an older build carries a naive timestamp that is read in
  * the reading phone's zone, and only the app's suite, on the JVM, can set that zone to UTC for the
  * fixtures; here the simulator's zone would decide.
+ *
+ * And one contract stays in the app although its writer moved: `PetWireContract` (Task 8c). Its
+ * reader and writer are member extensions of `PetRepositoryImpl`, and building a repository in
+ * common code would take fakes of the Room DAOs and of the data source, which the app's tests get
+ * from MockK. It runs from the app's list until those mappers leave the repository.
  */
 internal object WireContracts : WireSuite {
 

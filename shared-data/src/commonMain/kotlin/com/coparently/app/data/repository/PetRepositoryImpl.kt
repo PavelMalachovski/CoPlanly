@@ -7,8 +7,8 @@ import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.sync.PetAudience
 import com.coparently.app.data.sync.StampedFamily
 import com.coparently.app.data.sync.Tombstone
@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
+import kotlin.time.Clock
 
 /**
  * Implementation of [PetRepository].
@@ -42,7 +43,7 @@ import kotlinx.serialization.builtins.ListSerializer
 class PetRepositoryImpl(
     private val petDao: PetDao,
     private val userDao: UserDao,
-    private val firebaseAuthService: FirebaseAuthService,
+    private val firebaseAuthService: SignedInUser,
     private val firestorePetDataSource: FirestorePetDataSource
 ) : PetRepository {
 
@@ -70,29 +71,29 @@ class PetRepositoryImpl(
     }
 
     override suspend fun upsertPet(pet: Pet) {
-        val firebaseUser = firebaseAuthService.getCurrentUser()
-        val me = firebaseUser?.let { userDao.getUserById(it.uid) }
+        val signedInUid = firebaseAuthService.getCurrentUid()
+        val me = signedInUid?.let { userDao.getUserById(it) }
         val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
         val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
         // Which relationship this pet belongs to — see the same stamp in
         // [ChildInfoRepositoryImpl.upsertChildInfo]. Null while unpaired, and never
         // re-derived once set.
         val owned = pet.copy(
-            familyId = pet.familyId ?: firebaseUser?.let { user ->
-                familyToStamp(pet.id, user.uid, livePartners, selectedPartner)
+            familyId = pet.familyId ?: signedInUid?.let { uid ->
+                familyToStamp(pet.id, uid, livePartners, selectedPartner)
             }
         )
         val entity = owned.toEntity()
         petDao.insertPet(entity)
 
-        if (firebaseUser != null) {
+        if (signedInUid != null) {
             val audience = PetAudience.entitled(
-                userId = firebaseUser.uid,
+                userId = signedInUid,
                 creatorUid = owned.createdByFirebaseUid,
                 // The pet's own family's co-parent, never the family on screen in its place.
                 partnerId = FamilyAudience.recordPartnerFor(
                     familyId = owned.familyId,
-                    myUid = firebaseUser.uid,
+                    myUid = signedInUid,
                     livePartners = livePartners,
                     selectedPartner = selectedPartner
                 )
@@ -116,11 +117,11 @@ class PetRepositoryImpl(
      * to learn from.
      */
     override suspend fun deletePet(pet: Pet) {
-        val deletedAtMillis = System.currentTimeMillis()
+        val deletedAtMillis = Clock.System.now().toEpochMilliseconds()
         petDao.markDeleted(pet.id, deletedAtMillis)
 
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        tombstoneRemotely(pet.id, deletedAtMillis, firebaseUser.uid)
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
+        tombstoneRemotely(pet.id, deletedAtMillis, signedInUid)
     }
 
     /**
@@ -147,14 +148,14 @@ class PetRepositoryImpl(
     }
 
     override suspend fun pullOnce() {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        val me = userDao.getUserById(firebaseUser.uid)
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
+        val me = userDao.getUserById(signedInUid)
         val selectedPartner = me?.partnerId?.takeIf { it.isNotBlank() }
         val livePartners = EventVersionDocument.decodeAudience(me?.partnerIdsJson ?: "[]")
         // The co-parent a pet of [familyId] names: its own family's, the answer `upsertPet` and
         // the child record's writers give from the same inputs.
         val partnerFor = { familyId: String? ->
-            FamilyAudience.recordPartnerFor(familyId, firebaseUser.uid, livePartners, selectedPartner)
+            FamilyAudience.recordPartnerFor(familyId, signedInUid, livePartners, selectedPartner)
         }
 
         // Deletions first — the half of this queue that used to have no path at all. A pending
@@ -164,14 +165,14 @@ class PetRepositoryImpl(
             petDao.getUnsyncedPets().partition { it.deletedAtMillis != null }
 
         for (entity in pendingDeletions) {
-            tombstoneRemotely(entity.id, entity.deletedAtMillis ?: continue, firebaseUser.uid)
+            tombstoneRemotely(entity.id, entity.deletedAtMillis ?: continue, signedInUid)
         }
 
         // Upload before downloading, so a local edit is never overwritten by the pull.
         for (entity in unsyncedPets) {
             val pet = entity.toDomain()
             val audience = PetAudience.entitled(
-                userId = firebaseUser.uid,
+                userId = signedInUid,
                 creatorUid = entity.createdByFirebaseUid,
                 partnerId = partnerFor(entity.familyId)
             )
@@ -181,13 +182,13 @@ class PetRepositoryImpl(
             }
         }
 
-        firestorePetDataSource.getPetsForParent(firebaseUser.uid)
+        firestorePetDataSource.getPetsForParent(signedInUid)
             .catch { e -> logger.w("PetRepo", "Pet sync failed", e) }
             .collect { firestoreList ->
                 for (firestoreData in firestoreList) {
                     if (applyDownloaded(firestoreData)) {
                         val familyId = (firestoreData["familyId"] as? String)?.takeIf { it.isNotEmpty() }
-                        repairAudience(firebaseUser.uid, partnerFor(familyId), firestoreData)
+                        repairAudience(signedInUid, partnerFor(familyId), firestoreData)
                     }
                 }
             }
@@ -299,7 +300,8 @@ class PetRepositoryImpl(
     /**
      * Converts PetEntity to domain Pet.
      */
-    internal fun PetEntity.toDomain(): Pet {
+    @InternalSharedApi
+    fun PetEntity.toDomain(): Pet {
         return Pet(
             id = id,
             name = name,
@@ -325,7 +327,8 @@ class PetRepositoryImpl(
     /**
      * Converts domain Pet to PetEntity.
      */
-    internal fun Pet.toEntity(): PetEntity {
+    @InternalSharedApi
+    fun Pet.toEntity(): PetEntity {
         return PetEntity(
             id = id,
             name = name,
@@ -357,7 +360,8 @@ class PetRepositoryImpl(
      * @param audience The `sharedWith` UIDs this write should publish to, from
      *   [PetAudience.entitled] — a parameter so every writer goes through the one policy.
      */
-    internal fun Pet.toFirestoreMap(audience: List<String>): Map<String, Any?> {
+    @InternalSharedApi
+    fun Pet.toFirestoreMap(audience: List<String>): Map<String, Any?> {
         return mapOf(
             "id" to id,
             "name" to name,
@@ -401,7 +405,8 @@ class PetRepositoryImpl(
      * build must degrade to defaults rather than throw and poison the whole pull.
      */
     @Suppress("UNCHECKED_CAST")
-    internal fun Map<String, Any?>.toPet(): Pet {
+    @InternalSharedApi
+    fun Map<String, Any?>.toPet(): Pet {
         return Pet(
             id = this["id"] as String,
             name = this["name"] as String,

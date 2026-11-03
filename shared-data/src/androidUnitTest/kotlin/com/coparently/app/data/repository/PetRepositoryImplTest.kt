@@ -1,15 +1,16 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.PetDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.PetEntity
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Pet
-import com.google.firebase.auth.FirebaseUser
-import com.google.gson.Gson
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -43,7 +44,7 @@ class PetRepositoryImplTest {
 
     private lateinit var petDao: PetDao
     private lateinit var userDao: UserDao
-    private lateinit var firebaseAuthService: FirebaseAuthService
+    private lateinit var firebaseAuthService: SignedInUser
     private lateinit var firestorePetDataSource: FirestorePetDataSource
     private lateinit var repository: PetRepositoryImpl
 
@@ -52,14 +53,9 @@ class PetRepositoryImplTest {
         petDao = mockk(relaxed = true)
         userDao = mockk(relaxed = true)
         firebaseAuthService = mockk(relaxed = true)
-        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
-        // the real service does.
-        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         firestorePetDataSource = mockk(relaxed = true)
 
-        val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-        every { firebaseUser.uid } returns ALICE
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns ALICE
 
         repository = PetRepositoryImpl(
             petDao,
@@ -97,7 +93,7 @@ class PetRepositoryImplTest {
 
     @Test
     fun `deleting while signed out queues the deletion for the next sync`() = runTest {
-        every { firebaseAuthService.getCurrentUser() } returns null
+        every { firebaseAuthService.getCurrentUid() } returns null
 
         repository.deletePet(pet())
 
@@ -282,7 +278,7 @@ class PetRepositoryImplTest {
         role = "mom",
         colorCode = "#FF4081",
         partnerId = selected,
-        partnerIdsJson = Gson().toJson(partners)
+        partnerIdsJson = partners.joinToString(",", "[", "]") { "\"$it\"" }
     )
 
     private companion object {

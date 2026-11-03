@@ -4,10 +4,10 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.events.EventAcceptance
@@ -15,8 +15,6 @@ import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.versions.EventVersionKind
-import com.google.firebase.auth.FirebaseUser
-import com.google.gson.Gson
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -27,6 +25,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -45,15 +46,13 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventRepositoryImplTest {
 
-    private val gson = Gson()
-
     private lateinit var eventDao: EventDao
     private lateinit var userDao: UserDao
-    private lateinit var firebaseAuthService: FirebaseAuthService
+    private lateinit var firebaseAuthService: SignedInUser
     private lateinit var firestoreEventDataSource: FirestoreEventDataSource
     private lateinit var activityAnnouncer: ActivityAnnouncer
     private lateinit var eventVersionRecorder: EventVersionRecorder
-    private lateinit var fcmService: FcmService
+    private lateinit var fcmService: PushQueue
     private lateinit var repository: EventRepositoryImpl
 
     private val now = LocalDateTime.of(2026, 7, 23, 10, 0)
@@ -64,12 +63,9 @@ class EventRepositoryImplTest {
         userDao = mockk(relaxed = true)
         firestoreEventDataSource = mockk(relaxed = true)
         firebaseAuthService = mockk()
-        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
-        // the real service does.
-        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         // No signed-in user -> insert/update stay local, so the Firestore path doesn't
         // interfere with what we assert about the persisted entity.
-        every { firebaseAuthService.getCurrentUser() } returns null
+        every { firebaseAuthService.getCurrentUid() } returns null
         // Every remote write lands unless a test says otherwise: the repository now reads each
         // `Result`, and a relaxed mock's answer for one is not something to depend on.
         coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
@@ -93,7 +89,7 @@ class EventRepositoryImplTest {
     @Test
     fun `getEventById maps sharedWith, permissions and lastModifiedBy back to domain`() = runTest {
         val entity = baseEntity().copy(
-            sharedWithJson = gson.toJson(listOf("uidA", "uidB")),
+            sharedWithJson = jsonOf(listOf("uidA", "uidB")),
             permissions = "read_only",
             lastModifiedBy = "uidX"
         )
@@ -120,7 +116,7 @@ class EventRepositoryImplTest {
 
         coVerify { eventDao.insertEvent(any()) }
         val stored = captured.captured
-        assertEquals(listOf("uidA", "uidB"), gson.fromJson(stored.sharedWithJson, Array<String>::class.java).toList())
+        assertEquals(listOf("uidA", "uidB"), stringsIn(stored.sharedWithJson))
         assertEquals("read_only", stored.permissions)
         assertEquals("uidX", stored.lastModifiedBy)
     }
@@ -223,7 +219,7 @@ class EventRepositoryImplTest {
             )
         )
 
-        val persisted = gson.fromJson(stored.last().sharedWithJson, Array<String>::class.java).toList()
+        val persisted = stringsIn(stored.last().sharedWithJson)
         assertEquals(listOf("uidA"), persisted)
         assertTrue(stored.last().syncedToFirestore, "a landed update is marked synced")
     }
@@ -488,7 +484,7 @@ class EventRepositoryImplTest {
             role = "mom",
             colorCode = "#FF4081",
             partnerId = "uidB",
-            partnerIdsJson = gson.toJson(listOf("uidB", "uidC"))
+            partnerIdsJson = jsonOf(listOf("uidB", "uidC"))
         )
         val uploaded = slot<Map<String, Any?>>()
         coEvery { firestoreEventDataSource.insertEvent(any(), capture(uploaded)) } returns Result.success(Unit)
@@ -511,7 +507,7 @@ class EventRepositoryImplTest {
             role = "mom",
             colorCode = "#FF4081",
             partnerId = "uidB",
-            partnerIdsJson = gson.toJson(listOf("uidB", "uidC"))
+            partnerIdsJson = jsonOf(listOf("uidB", "uidC"))
         )
         val uploads = mutableMapOf<String, Map<String, Any?>>()
         coEvery { firestoreEventDataSource.insertEvent(any(), any()) } answers {
@@ -580,10 +576,15 @@ class EventRepositoryImplTest {
         coVerify(exactly = 0) { fcmService.queueNotificationForUser(any(), any()) }
     }
 
+    /** [values] as the JSON array Room's list columns hold; kotlinx's, not the production codec. */
+    private fun jsonOf(values: List<String>): String = Json.encodeToString(ListSerializer(String.serializer()), values)
+
+    /** The strings of a stored JSON array, read by kotlinx rather than the production codec. */
+    private fun stringsIn(json: String?): List<String> =
+        Json.decodeFromString(ListSerializer(String.serializer()), checkNotNull(json))
+
     private fun signIn(uid: String, partnerId: String?) {
-        val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-        every { firebaseUser.uid } returns uid
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns uid
         coEvery { userDao.getUserById(uid) } returns UserEntity(
             id = uid,
             email = "$uid@example.com",

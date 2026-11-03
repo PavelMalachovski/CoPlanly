@@ -28,9 +28,11 @@ import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChatSearchRepositoryImpl
 import com.coparently.app.data.repository.ConversationMigrator
 import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
+import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.requests.RequestTelling
@@ -41,7 +43,9 @@ import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
+import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
+import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import org.koin.core.module.Module
@@ -115,6 +119,12 @@ val repositoryDataModule: Module = module {
         )
     }
     singleOf(::FamilySettingsRepository)
+    // All eight arguments from the graph, the family slots' source included, rather than its
+    // default (`FamilySlotsSource.None`), which only a test relies on.
+    single { EventRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single<EventRepository> { get<EventRepositoryImpl>() }
+    singleOf(::PetRepositoryImpl)
+    single<PetRepository> { get<PetRepositoryImpl>() }
     singleOf(::PostPairingConversationSetup)
     singleOf(::ParentingPlanRepository)
     singleOf(::RequestDeadlineRepositoryImpl)

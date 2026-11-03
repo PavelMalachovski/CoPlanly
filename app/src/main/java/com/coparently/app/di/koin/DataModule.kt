@@ -47,14 +47,12 @@ import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
-import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
 import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.JournalRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentSlotMigrator
-import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
@@ -159,14 +157,12 @@ val dataModule = module {
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     singleOf(::CalendarFeedRepositoryImpl)
     singleOf(::ChildInfoRepositoryImpl)
-    single { EventRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single { ExpenseRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     singleOf(::FriendRepositoryImpl)
     singleOf(::GuestRepositoryImpl)
     singleOf(::JournalRepositoryImpl)
     singleOf(::PairingRepositoryImpl)
     singleOf(::ParentSlotMigrator)
-    singleOf(::PetRepositoryImpl)
     singleOf(::PreferencesRepositoryImpl)
     singleOf(::ProfessionalRepositoryImpl)
     singleOf(::UserRepositoryImpl)

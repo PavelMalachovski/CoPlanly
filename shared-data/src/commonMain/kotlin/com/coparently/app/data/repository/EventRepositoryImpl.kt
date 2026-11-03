@@ -8,10 +8,10 @@ import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.sync.EventDocument
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
@@ -38,6 +38,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDateTime
+import kotlin.time.Clock
 
 /**
  * Implementation of EventRepository.
@@ -51,11 +52,11 @@ import kotlinx.datetime.LocalDateTime
 class EventRepositoryImpl(
     private val eventDao: EventDao,
     private val userDao: UserDao,
-    private val firebaseAuthService: FirebaseAuthService,
+    private val firebaseAuthService: SignedInUser,
     private val firestoreEventDataSource: FirestoreEventDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
     private val eventVersionRecorder: EventVersionRecorder,
-    private val fcmService: FcmService,
+    private val fcmService: PushQueue,
     private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : EventRepository {
 
@@ -155,7 +156,7 @@ class EventRepositoryImpl(
     }
 
     override suspend fun insertEvent(event: Event, announce: Boolean) {
-        val firebaseUser = firebaseAuthService.getCurrentUser()
+        val signedInUid = firebaseAuthService.getCurrentUid()
         // `createdByFirebaseUid` records who created the event, not whether it ever synced —
         // it must be stamped here, unconditionally, rather than only inside the sync branch
         // below. A private event is never synced by design, and an offline device or a failed
@@ -164,9 +165,9 @@ class EventRepositoryImpl(
         // (`WHERE createdByFirebaseUid = :myUid`), so a null row could never be found once
         // pairing moved this device to a different slot — private events were the worst case,
         // since they get no second chance from a later sync to pick up the stamp.
-        val stamped = if (firebaseUser != null) {
+        val stamped = if (signedInUid != null) {
             event.copy(
-                createdByFirebaseUid = event.createdByFirebaseUid ?: firebaseUser.uid,
+                createdByFirebaseUid = event.createdByFirebaseUid ?: signedInUid,
                 // Which relationship this event belongs to, and therefore who may see it.
                 // Stamped here for the same reason `createdByFirebaseUid` is: a private event
                 // is never synced, and an offline device leaves `syncedToFirestore` false
@@ -175,20 +176,20 @@ class EventRepositoryImpl(
                 // the event is this parent's alone until there is somebody to share it with.
                 familyId = event.familyId
                     ?: FamilyKey.orNull(
-                        firebaseUser.uid,
-                        userDao.getUserById(firebaseUser.uid)?.partnerId
+                        signedInUid,
+                        userDao.getUserById(signedInUid)?.partnerId
                     )
             )
         } else {
             event
-        }.let { withAcceptance(it, firebaseUser?.uid) }
+        }.let { withAcceptance(it, signedInUid) }
         eventDao.insertEvent(stamped.toEntity())
 
-        if (firebaseUser != null && !stamped.isPrivate) {
-            val audience = shareTargets(stamped, firebaseUser.uid, firebaseUser.uid)
-            val document = stamped.toFirestoreMap(firebaseUser.uid, audience)
+        if (signedInUid != null && !stamped.isPrivate) {
+            val audience = shareTargets(stamped, signedInUid, signedInUid)
+            val document = stamped.toFirestoreMap(signedInUid, audience)
             // Queued before the upload, so the revision survives an upload that never lands.
-            recordVersion(stamped, EventVersionKind.CREATED, firebaseUser.uid, audience, document)
+            recordVersion(stamped, EventVersionKind.CREATED, signedInUid, audience, document)
 
             if (!stamped.syncedToFirestore) {
                 val uploaded = firestoreEventDataSource.insertEvent(stamped.id, document)
@@ -199,7 +200,7 @@ class EventRepositoryImpl(
                 if (uploaded.isSuccess) {
                     val syncedEvent = stamped.copy(
                         syncedToFirestore = true,
-                        createdByFirebaseUid = firebaseUser.uid,
+                        createdByFirebaseUid = signedInUid,
                         sharedWith = audience
                     )
                     eventDao.updateEvent(syncedEvent.toEntity())
@@ -224,7 +225,7 @@ class EventRepositoryImpl(
             (if (event.isPrivate) event else event.copy(syncedToFirestore = false)).toEntity()
         )
 
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
         if (event.isPrivate) {
             // Event turned private after being shared: remove the remote copy, and only call it
             // gone once the removal landed. Until then the flag stays set, and `SyncService`
@@ -238,10 +239,10 @@ class EventRepositoryImpl(
                 }
             }
         } else {
-            val uid = event.createdByFirebaseUid ?: firebaseUser.uid
-            val audience = shareTargets(event, uid, firebaseUser.uid)
+            val uid = event.createdByFirebaseUid ?: signedInUid
+            val audience = shareTargets(event, uid, signedInUid)
             val document = event.toFirestoreMap(uid, audience)
-            recordVersion(event, EventVersionKind.UPDATED, firebaseUser.uid, audience, document)
+            recordVersion(event, EventVersionKind.UPDATED, signedInUid, audience, document)
             val uploaded = firestoreEventDataSource.updateEvent(event.id, document)
             if (uploaded.isFailure) {
                 logger.w(TAG, "Event ${event.id} update not written; it stays queued", uploaded.exceptionOrNull())
@@ -277,7 +278,7 @@ class EventRepositoryImpl(
      * including while signed out, where the deletion simply waits for the next sync.
      */
     override suspend fun deleteEvent(event: Event, announce: Boolean) {
-        val deletedAtMillis = System.currentTimeMillis()
+        val deletedAtMillis = Clock.System.now().toEpochMilliseconds()
         eventDao.markDeleted(event.id, deletedAtMillis)
         if (announce) announceToCoParent(event, ActivityKind.EVENT_DELETED)
 
@@ -286,24 +287,24 @@ class EventRepositoryImpl(
             return
         }
 
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
         // The deletion is a revision too — the one a dispute is most likely to be about. It
         // carries the event as it stood plus the tombstone fields, so the history shows what was
         // deleted and not merely that something was.
-        val creatorUid = event.createdByFirebaseUid ?: firebaseUser.uid
-        val audience = shareTargets(event, creatorUid, firebaseUser.uid)
+        val creatorUid = event.createdByFirebaseUid ?: signedInUid
+        val audience = shareTargets(event, creatorUid, signedInUid)
         recordVersion(
             event = event,
             kind = EventVersionKind.DELETED,
-            editorUid = firebaseUser.uid,
+            editorUid = signedInUid,
             audience = audience,
             document = event.toFirestoreMap(creatorUid, audience) +
-                Tombstone.fields(deletedAtMillis, firebaseUser.uid)
+                Tombstone.fields(deletedAtMillis, signedInUid)
         )
         val tombstoned = firestoreEventDataSource.tombstoneEvent(
             id = event.id,
             deletedAtMillis = deletedAtMillis,
-            deletedBy = firebaseUser.uid
+            deletedBy = signedInUid
         )
         if (tombstoned.isSuccess) {
             // Delivered. Nothing is served by keeping the row: the co-parent learns from the
@@ -384,7 +385,7 @@ class EventRepositoryImpl(
      * because a parent's event must not fail to save because chat is down.
      */
     private suspend fun announceToCoParent(event: Event, kind: ActivityKind): String? {
-        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return null
+        val myUid = firebaseAuthService.getCurrentUid() ?: return null
         val mine = event.lastModifiedBy?.takeIf { it.isNotBlank() }
             ?: event.createdByFirebaseUid
         val me = userDao.getUserById(myUid)
@@ -420,7 +421,7 @@ class EventRepositoryImpl(
      * what was added, as for any event. Best-effort, like the card: a save never fails on a push.
      */
     private suspend fun pushImportant(event: Event, coParent: String) {
-        val me = firebaseAuthService.getCurrentUser()?.uid?.let { userDao.getUserById(it) }
+        val me = firebaseAuthService.getCurrentUid()?.let { userDao.getUserById(it) }
         fcmService.queueNotificationForUser(
             coParent,
             mapOf(

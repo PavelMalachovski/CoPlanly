@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.wire
 
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.Pet
