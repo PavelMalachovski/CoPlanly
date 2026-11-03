@@ -46,6 +46,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -360,10 +361,10 @@ class ExportViewModelTest {
         val vm = viewModel()
         val from = vm.state.value.from
         val to = vm.state.value.to
-        coEvery { journal.entriesBetween("u1", from, to) } returns listOf(
+        coEvery { journal.entriesBetween("u1", from.toKotlinLocalDate(), to.toKotlinLocalDate()) } returns listOf(
             JournalEntry(
                 id = "j1",
-                entryDate = to,
+                entryDate = to.toKotlinLocalDate(),
                 text = "Pickup was an hour late",
                 createdAtMillis = 1_000L,
                 updatedAtMillis = 1_000L,
@@ -378,7 +379,7 @@ class ExportViewModelTest {
             awaitItem()
         }
 
-        coVerify { journal.entriesBetween("u1", from, to) }
+        coVerify { journal.entriesBetween("u1", from.toKotlinLocalDate(), to.toKotlinLocalDate()) }
         val entry = record.captured.journal?.entries?.single()
         assertEquals("Pickup was an hour late", entry?.text)
         assertEquals("Alice", entry?.authorName)

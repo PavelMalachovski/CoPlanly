@@ -1,6 +1,7 @@
 package com.coparently.app.domain.export
 
 import com.coparently.app.domain.journal.JournalEntry
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -51,7 +52,10 @@ object RecordJournalBuilder {
     fun build(entries: List<JournalEntry>, scope: RecordScope): RecordJournal = RecordJournal(
         entries = entries
             .filter { it.familyId.isNullOrEmpty() || it.familyId in scope.families }
-            .filter { !it.entryDate.isBefore(scope.from) && !it.entryDate.isAfter(scope.to) }
+            .filter { entry ->
+                val day = entry.entryDate.toJavaLocalDate()
+                !day.isBefore(scope.from) && !day.isAfter(scope.to)
+            }
             .distinctBy { it.id }
             .sortedWith(
                 compareBy<JournalEntry> { it.entryDate }.thenBy { it.createdAtMillis }.thenBy { it.id }
@@ -59,7 +63,7 @@ object RecordJournalBuilder {
             .map {
                 RecordJournalEntry(
                     entryId = it.id,
-                    entryDate = it.entryDate,
+                    entryDate = it.entryDate.toJavaLocalDate(),
                     authorName = scope.nameForUid(it.createdByFirebaseUid),
                     text = it.text,
                     createdAtMillis = it.createdAtMillis,

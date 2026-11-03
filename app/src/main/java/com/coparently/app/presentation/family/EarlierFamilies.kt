@@ -95,6 +95,6 @@ object EarlierFamilies {
         listOfNotNull(
             family.events.maxOfOrNull { it.startDateTime.date.toJavaLocalDate() },
             family.expenses.maxOfOrNull { it.date.toJavaLocalDate() },
-            family.journal.maxOfOrNull { it.entryDate }
+            family.journal.maxOfOrNull { it.entryDate.toJavaLocalDate() }
         ).maxOrNull()
 }

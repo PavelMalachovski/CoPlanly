@@ -2,7 +2,7 @@ package com.coparently.app.domain.repository
 
 import com.coparently.app.domain.journal.JournalEntry
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * A parent's private journal (MON-22): this phone's Room table and nothing else.

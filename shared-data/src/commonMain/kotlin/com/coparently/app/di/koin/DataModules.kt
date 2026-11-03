@@ -41,6 +41,7 @@ import com.coparently.app.data.repository.ExpenseRepositoryImpl
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
+import com.coparently.app.data.repository.JournalRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
@@ -67,6 +68,7 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.GuestRepository
+import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.ProfessionalRepository
@@ -152,6 +154,9 @@ val repositoryDataModule: Module = module {
     // default.
     single { ExpenseRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
     single<ExpenseRepository> { get<ExpenseRepositoryImpl>() }
+    // The private journal (MON-22; Task 8f): Room, and nothing that leaves the phone.
+    singleOf(::JournalRepositoryImpl)
+    single<JournalRepository> { get<JournalRepositoryImpl>() }
     singleOf(::PetRepositoryImpl)
     single<PetRepository> { get<PetRepositoryImpl>() }
     // The children's records (Task 8e): the same family-bound audience as a pet's (item 38).

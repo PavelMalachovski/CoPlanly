@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.util.UUID
 
@@ -99,9 +101,9 @@ class JournalEditorViewModel(
                 current.copy(
                     loading = false,
                     isNew = false,
-                    entryDate = entry.entryDate,
+                    entryDate = entry.entryDate.toJavaLocalDate(),
                     text = entry.text,
-                    seededDate = entry.entryDate,
+                    seededDate = entry.entryDate.toJavaLocalDate(),
                     seededText = entry.text
                 )
             }
@@ -168,10 +170,10 @@ class JournalEditorViewModel(
     private suspend fun entryFrom(form: JournalEditorState, uid: String): JournalEntry {
         val now = System.currentTimeMillis()
         val text = form.text.trim()
-        return original?.copy(entryDate = form.entryDate, text = text, updatedAtMillis = now)
+        return original?.copy(entryDate = form.entryDate.toKotlinLocalDate(), text = text, updatedAtMillis = now)
             ?: JournalEntry(
                 id = UUID.randomUUID().toString(),
-                entryDate = form.entryDate,
+                entryDate = form.entryDate.toKotlinLocalDate(),
                 text = text,
                 createdAtMillis = now,
                 updatedAtMillis = now,

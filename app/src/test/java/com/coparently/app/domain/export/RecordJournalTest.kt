@@ -10,6 +10,7 @@ import com.coparently.app.domain.export.RecordFixtures.planOf
 import com.coparently.app.domain.export.RecordFixtures.scope
 import com.coparently.app.domain.export.RecordFixtures.sources
 import com.coparently.app.domain.journal.JournalEntry
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -152,7 +153,7 @@ class RecordJournalTest {
 
     private fun entry(id: String, date: LocalDate, text: String) = JournalEntry(
         id = id,
-        entryDate = date,
+        entryDate = date.toKotlinLocalDate(),
         text = text,
         createdAtMillis = MARCH_10_0900,
         updatedAtMillis = MARCH_10_0900,

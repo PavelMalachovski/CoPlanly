@@ -22,7 +22,6 @@ val appModules: List<Module> = listOf(
     googleModule,
     installReferrerModule,
     journalDaoModule,
-    journalModule,
     knownFamilyModule,
     notificationModule,
     platformModule,

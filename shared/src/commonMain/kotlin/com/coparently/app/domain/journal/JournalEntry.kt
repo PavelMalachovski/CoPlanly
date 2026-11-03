@@ -1,6 +1,6 @@
 package com.coparently.app.domain.journal
 
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * One entry in a parent's private journal (MON-22).

@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -45,7 +46,7 @@ class JournalEditorViewModelTest {
     private val parentsSource = mockk<ParentsSource>()
     private val existing = JournalEntry(
         id = "j1",
-        entryDate = LocalDate.of(2026, 9, 1),
+        entryDate = LocalDate.of(2026, 9, 1).toKotlinLocalDate(),
         text = "Late pickup",
         createdAtMillis = 1_000L,
         updatedAtMillis = 1_000L,
@@ -101,7 +102,7 @@ class JournalEditorViewModelTest {
 
         assertEquals(ALICE, saved.captured.createdByFirebaseUid)
         assertEquals("alice__bob", saved.captured.familyId)
-        assertEquals(LocalDate.of(2026, 8, 30), saved.captured.entryDate)
+        assertEquals(LocalDate.of(2026, 8, 30).toKotlinLocalDate(), saved.captured.entryDate)
         assertEquals("Missed the call again", saved.captured.text)
         assertEquals(saved.captured.createdAtMillis, saved.captured.updatedAtMillis)
         assertTrue(model.state.value.saved)
