@@ -2726,7 +2726,7 @@ bytes are identical on Android):
   `Saver` over epoch days or seconds, never a raw kotlinx value); `AnswerByField`'s picker,
   `VaccinationListEditor` and the child-info `DatePickerDialog`; ~~`RequestTime.zone()` (`ZoneId`)~~
   (a kotlinx-datetime `TimeZone` since phase 2, Task 8h), `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
-  with the calendar's paging); `UnassignedRecord.date`.
+  with the calendar's paging); ~~`UnassignedRecord.date`~~ (kotlinx-datetime since phase 2, Task 8i).
 - **One idiom for "now"**: `java.time.LocalDateTime.now().toKotlinLocalDateTime()` in
   `AddEditEventScreen`, `ChatViewModel`, `HomeViewModel` and `ChangeRequestViewModel`, beside
   `wallClockNow()` elsewhere. They are equal; use `wallClockNow()`.
