@@ -3,6 +3,7 @@ package com.coparently.app.domain.time
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.number
 import kotlin.time.Instant
 
@@ -13,7 +14,8 @@ import kotlin.time.Instant
  * Every function reproduces, exactly, the documented output or acceptance of the `java.time` call
  * the Android build has always used for the same field — `DateTimeFormatter.ISO_LOCAL_DATE_TIME`,
  * `LocalDateTime.toString`, `OffsetDateTime.parse`, `LocalDate.toString`/`LocalDate.parse`,
- * `DateTimeFormatter.BASIC_ISO_DATE` and the pattern `HH:mm` — because the text is shared state:
+ * `YearMonth.toString`/`YearMonth.parse`, `DateTimeFormatter.BASIC_ISO_DATE` and the pattern
+ * `HH:mm` — because the text is shared state:
  * a co-parent on an older Android build reads what this code writes and writes what this code
  * reads, and a single differing character (a dropped `:00`, a year sign, a tolerated separator)
  * would make the two phones disagree about a document. The rules were written from ISO 8601, the
@@ -24,6 +26,8 @@ import kotlin.time.Instant
  * refuses, and accepts all text it accepts. Digits are ASCII only, as `java.time`'s standard
  * decimal style reads them.
  */
+// One function per java.time text the wire and the codecs carry, each beside its reader.
+@Suppress("TooManyFunctions")
 object IsoText {
 
     /**
@@ -135,6 +139,43 @@ object IsoText {
     }
 
     /**
+     * [value] as `java.time.YearMonth.toString()` writes it: the year as four digits, zero-padded,
+     * while it is between -999 and 999 (a `-` before a negative one), and otherwise every digit
+     * with only its own sign — `12026-10`, never `+12026-10`, which is where it differs from
+     * [date] and from kotlinx-datetime's own `YearMonth.toString()`; then `-MM`.
+     *
+     * The text of a payment's month (`payments/{id}.month`, and the id itself), of child support's
+     * `fromMonth` and of a settle-up card's month (MON-24 phase 2, Task 8e).
+     */
+    fun yearMonth(value: YearMonth): String = buildString {
+        val year = value.year
+        if (year > -FOUR_DIGIT_PAD_LIMIT && year < FOUR_DIGIT_PAD_LIMIT) {
+            if (year < 0) append('-')
+            append((if (year < 0) -year else year).toString().padStart(YEAR_PAD, '0'))
+        } else {
+            append(year)
+        }
+        append('-')
+        appendTwoDigits(value.month.number)
+    }
+
+    /**
+     * Reads [text] as `java.time.YearMonth.parse(text)` does: a year as [parseDate] reads one (an
+     * unsigned year of exactly four digits, a `+` year of five to ten digits, or a `-` year of four
+     * to ten digits that is not zero, at most 999 999 999), then `-`, a two-digit month from 01 to
+     * 12, and nothing after. So `java.time` cannot read back its own text for a year above 9999,
+     * and neither can this.
+     *
+     * @throws IllegalArgumentException when `java.time` would refuse the text.
+     */
+    fun parseYearMonth(text: String): YearMonth {
+        val reader = IsoReader(text)
+        val yearMonth = reader.yearMonth()
+        reader.end()
+        return yearMonth
+    }
+
+    /**
      * [value] as `BASIC_ISO_DATE` formats a date: `yyyyMMdd`, the year in exactly four digits.
      *
      * @throws IllegalArgumentException for a year below 0 or above 9999, which `BASIC_ISO_DATE`
@@ -221,6 +262,15 @@ private class IsoReader(private val text: String) {
         val day = twoDigits()
         if (month !in 1..MONTHS_PER_YEAR || day !in 1..daysInMonth(year, month)) fail("no such date")
         return LocalDate(year, month, day)
+    }
+
+    /** A year and a month as `YearMonth.parse` reads them: year, `-`, a month from 01 to 12. */
+    fun yearMonth(): YearMonth {
+        val year = year()
+        literal('-')
+        val month = twoDigits()
+        if (month !in 1..MONTHS_PER_YEAR) fail("no such month")
+        return YearMonth(year, month)
     }
 
     /** The `T` between date and time, which `ISO_LOCAL_DATE_TIME` reads in either case. */
@@ -376,6 +426,9 @@ private fun isLeapYear(year: Int): Boolean =
 
 /** Digits printed and required for a year inside 0..9999. */
 private const val YEAR_PAD = 4
+
+/** The first year magnitude `YearMonth.toString()` writes without padding it to four digits. */
+private const val FOUR_DIGIT_PAD_LIMIT = 1000
 
 /** The widest year text `ISO_LOCAL_DATE` reads, sign excluded. */
 private const val MAX_YEAR_DIGITS = 10

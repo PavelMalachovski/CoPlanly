@@ -1,7 +1,8 @@
 package com.coparently.app.data.support
 
 import com.coparently.app.data.platform.SecurePreferences
-import java.time.YearMonth
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.YearMonth
 
 /**
  * This phone's child support reminders (25 October 2026): per account and family, how many days
@@ -29,11 +30,11 @@ class SupportReminders(private val preferences: SecurePreferences) {
 
     /** The month [uid] was last reminded about in [familyId], or null. */
     fun lastReminded(uid: String, familyId: String): YearMonth? =
-        preferences.getString(lastKey(uid, familyId))?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
+        preferences.getString(lastKey(uid, familyId))?.let { runCatching { IsoText.parseYearMonth(it) }.getOrNull() }
 
     /** Records that [uid] was reminded about [month] in [familyId]. */
     fun reminded(uid: String, familyId: String, month: YearMonth) {
-        preferences.putString(lastKey(uid, familyId), month.toString())
+        preferences.putString(lastKey(uid, familyId), IsoText.yearMonth(month))
     }
 
     private fun key(uid: String, familyId: String) = "$PREFIX$uid$SEPARATOR$familyId"

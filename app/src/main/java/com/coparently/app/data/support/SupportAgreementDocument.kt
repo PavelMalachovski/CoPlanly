@@ -5,7 +5,7 @@ import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.support.SupportAgreement
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
-import java.time.YearMonth
+import com.coparently.app.domain.time.IsoText
 
 /**
  * The wire form of `support_agreements/{familyId}` (25 October 2026), in both directions. The
@@ -20,7 +20,7 @@ object SupportAgreementDocument {
         "currency" to terms.currency,
         "dayOfMonth" to terms.dayOfMonth,
         "payerUid" to terms.payerUid,
-        "fromMonth" to terms.fromMonth.toString()
+        "fromMonth" to IsoText.yearMonth(terms.fromMonth)
     )
 
     /** [proposal] as its map. */
@@ -47,7 +47,7 @@ object SupportAgreementDocument {
     @Suppress("ReturnCount") // one early answer per field the terms cannot do without
     private fun terms(map: Map<*, *>): SupportTerms? {
         val fromMonth = (map["fromMonth"] as? String)
-            ?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
+            ?.let { runCatching { IsoText.parseYearMonth(it) }.getOrNull() }
             ?: return null
         return SupportTerms(
             amountMinor = MinorUnits.fromText(map["amount"] as? String) ?: return null,

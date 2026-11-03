@@ -1,7 +1,10 @@
 package com.coparently.app.domain.support
 
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.onDay
+import kotlinx.datetime.yearMonth
 
 /**
  * What a child support agreement says (25 October 2026, owner decision: "a fixed amount once a
@@ -23,14 +26,14 @@ data class SupportTerms(
     fun payeeIn(participants: List<String>): String? = participants.singleOrNull { it != payerUid }
 
     /** The day this agreement's payment falls due in [month]. */
-    fun dueDate(month: YearMonth): LocalDate = month.atDay(dayOfMonth.coerceIn(1, MAX_DAY))
+    fun dueDate(month: YearMonth): LocalDate = month.onDay(dayOfMonth.coerceIn(1, MAX_DAY))
 
     /** The months to list up to [today]: from [fromMonth], the last [MAX_MONTHS] at most, newest first. */
     fun monthsUpTo(today: LocalDate): List<YearMonth> {
-        val now = YearMonth.from(today)
-        if (now.isBefore(fromMonth)) return emptyList()
-        return generateSequence(now) { it.minusMonths(1) }
-            .takeWhile { !it.isBefore(fromMonth) }
+        val now = today.yearMonth
+        if (now < fromMonth) return emptyList()
+        return generateSequence(now) { it.minusMonth() }
+            .takeWhile { it >= fromMonth }
             .take(MAX_MONTHS)
             .toList()
     }

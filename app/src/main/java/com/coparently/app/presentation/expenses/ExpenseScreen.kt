@@ -86,6 +86,7 @@ import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toKotlinYearMonth
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -426,7 +427,7 @@ fun ExpenseScreen(
                                     val recorded = paymentsViewModel.paymentFor(
                                         payments,
                                         PaymentKind.EXPENSES,
-                                        shownMonth.month,
+                                        shownMonth.month.toKotlinYearMonth(),
                                         currencyBalance.currency
                                     )
                                     ExpenseSummaryHeader(
@@ -454,7 +455,7 @@ fun ExpenseScreen(
                                                     paymentsViewModel.markPaid(
                                                         family,
                                                         PaymentKind.EXPENSES,
-                                                        shownMonth.month,
+                                                        shownMonth.month.toKotlinYearMonth(),
                                                         currencyBalance.currency,
                                                         owed
                                                     )

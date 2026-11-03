@@ -69,9 +69,13 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaYearMonth
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinYearMonth
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -279,7 +283,7 @@ private fun LazyListScope.months(
     enabled: Boolean,
     actions: SupportActions
 ) {
-    val months = terms.monthsUpTo(LocalDate.now())
+    val months = terms.monthsUpTo(LocalDate.now().toKotlinLocalDate())
     if (months.isEmpty()) return
     item(key = "months") {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
@@ -302,7 +306,8 @@ private fun LazyListScope.months(
                                 stringResource(R.string.payment_card_waiting)
                             PaymentState.NONE -> stringResource(
                                 R.string.support_month_due,
-                                terms.dueDate(month).format(DateTimeFormatter.ofPattern("d MMMM", Locale.getDefault()))
+                                terms.dueDate(month).toJavaLocalDate()
+                                    .format(DateTimeFormatter.ofPattern("d MMMM", Locale.getDefault()))
                             )
                         },
                         trailing = {
@@ -445,7 +450,8 @@ private fun ProposeSupportDialog(
             TextButton(
                 onClick = {
                     if (amount != null && day != null) {
-                        onConfirm(SupportTerms(amount, currency, day, payer, YearMonth.now()))
+                        val fromMonth = java.time.YearMonth.now().toKotlinYearMonth()
+                        onConfirm(SupportTerms(amount, currency, day, payer, fromMonth))
                     }
                 },
                 enabled = amount != null && day != null && payer.isNotBlank()
@@ -465,7 +471,7 @@ internal fun supportAmount(terms: SupportTerms): String =
 
 /** [month] as the reader's language names it: "October 2026". */
 internal fun supportMonth(month: YearMonth): String =
-    month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
+    month.toJavaYearMonth().format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
         .replaceFirstChar { it.titlecase(Locale.getDefault()) }
 
 /** The day a first proposal starts on. */

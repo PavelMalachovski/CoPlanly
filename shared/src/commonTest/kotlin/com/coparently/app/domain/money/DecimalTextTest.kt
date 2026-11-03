@@ -103,6 +103,41 @@ class DecimalTextTest {
     }
 
     @Test
+    fun parseHalfUpReadsAStoredAmountIntoMinorUnits() {
+        // What MinorUnits.fromText answered through BigDecimal, which the money documents read.
+        assertEquals(45_000L, DecimalText.parseHalfUp("450.00", 2))
+        assertEquals(45_000L, DecimalText.parseHalfUp("450", 2))
+        assertEquals(500_050L, DecimalText.parseHalfUp("5000.5", 2))
+        assertEquals(-125L, DecimalText.parseHalfUp("-1.25", 2))
+        assertEquals(1250L, DecimalText.parseHalfUp("1.25E1", 2))
+        assertEquals(0L, DecimalText.parseHalfUp("0.000", 2))
+    }
+
+    @Test
+    fun parseHalfUpRoundsHalfAwayFromZero() {
+        assertEquals(1235L, DecimalText.parseHalfUp("12.345", 2))
+        assertEquals(1234L, DecimalText.parseHalfUp("12.3449", 2))
+        assertEquals(1L, DecimalText.parseHalfUp("0.005", 2))
+        assertEquals(-1L, DecimalText.parseHalfUp("-0.005", 2))
+        assertEquals(0L, DecimalText.parseHalfUp("-0.004", 2))
+        assertEquals(100L, DecimalText.parseHalfUp("0.995", 2))
+        assertEquals(0L, DecimalText.parseHalfUp("1E-999999999", 2))
+    }
+
+    @Test
+    fun parseHalfUpRefusesWhatIsNotANumberOrDoesNotFit() {
+        assertNull(DecimalText.parseHalfUp("abc", 2))
+        assertNull(DecimalText.parseHalfUp("", 2))
+        assertNull(DecimalText.parseHalfUp("12,5", 2))
+        assertNull(DecimalText.parseHalfUp(" 12", 2))
+        assertNull(DecimalText.parseHalfUp("92233720368547758.08", 2))
+        assertEquals(Long.MAX_VALUE, DecimalText.parseHalfUp("92233720368547758.07", 2))
+        assertEquals(Long.MIN_VALUE, DecimalText.parseHalfUp("-92233720368547758.08", 2))
+        assertNull(DecimalText.parseHalfUp("92233720368547758.075", 2))
+        assertNull(DecimalText.parseHalfUp("1E999999999", 2))
+    }
+
+    @Test
     fun theSplitPercentIsWrittenWithoutTrailingZeros() {
         // ActivityFallbackText: BigDecimal.valueOf(basisPoints, 2).stripTrailingZeros().toPlainString() + " %".
         assertEquals("50", DecimalText.plainStripped(5000, 2))

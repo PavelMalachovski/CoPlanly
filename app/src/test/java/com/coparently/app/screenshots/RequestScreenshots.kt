@@ -21,6 +21,7 @@ import com.coparently.app.presentation.changerequests.ProfessionalRequestRow
 import com.coparently.app.presentation.changerequests.RequestHistoryGroup
 import com.coparently.app.presentation.changerequests.SupportRequestRow
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
@@ -28,7 +29,6 @@ import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.YearMonth
 
 /**
  * What a parent answers a request with (phase 2): the mini month, the card of an event waiting
@@ -120,7 +120,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
      */
     @Test
     fun agreementRows() = snap("requests_agreements") {
-        val terms = SupportTerms(350_000L, "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth.of(2026, 6))
+        val terms = SupportTerms(350_000L, "CZK", 15, ScreenshotFixtures.CO_PARENT_UID, YearMonth(2026, 6))
         val parents = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID)
         fun grant(consentBy: String) = ProfessionalGrant(
             id = "family__pro",

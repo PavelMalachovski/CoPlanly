@@ -1,6 +1,7 @@
 package com.coparently.app.domain.payments
 
-import java.time.YearMonth
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.YearMonth
 
 /**
  * What a payment between the two parents is for (25 October 2026).
@@ -79,8 +80,9 @@ object PaymentId {
     /**
      * `{familyId}__{kind}__{yyyy-MM}__{currency}`: one payment per family, kind, month and
      * currency. The rules rebuild it from the document's own fields, so a payment cannot be filed
-     * under another family or month.
+     * under another family or month. The month is [IsoText.yearMonth]'s text, the one
+     * `java.time.YearMonth` wrote before MON-24 and the document's `month` field holds.
      */
     fun of(familyId: String, kind: PaymentKind, month: YearMonth, currency: String): String =
-        "${familyId}__${kind.wire}__${month}__$currency"
+        "${familyId}__${kind.wire}__${IsoText.yearMonth(month)}__$currency"
 }

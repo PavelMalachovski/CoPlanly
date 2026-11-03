@@ -1,5 +1,6 @@
 package com.coparently.app.data.money
 
+import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -19,8 +20,12 @@ object MinorUnits {
     /**
      * [text] as `toBigDecimalOrNull()` reads it, in minor units rounded half up — "450.00" is
      * 45000, "12.345" is 1235 — or null when it is not a number or does not fit a Long.
+     *
+     * [DecimalText.parseHalfUp], which the money documents in `:shared-data` read their amounts
+     * with (MON-24 phase 2, Task 8e), so a screen and a document never read one text two ways;
+     * `DecimalTextParityTest` holds it to the `BigDecimal` reading this used to make.
      */
-    fun fromText(text: String?): Long? = text?.toBigDecimalOrNull()?.let(::fromDecimal)
+    fun fromText(text: String?): Long? = text?.let { DecimalText.parseHalfUp(it, PaymentQr.MONEY_SCALE) }
 
     /**
      * [value] in minor units rounded half up, or null when it does not fit a Long.

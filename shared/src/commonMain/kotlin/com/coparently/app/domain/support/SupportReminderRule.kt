@@ -1,7 +1,10 @@
 package com.coparently.app.domain.support
 
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.minus
+import kotlinx.datetime.yearMonth
 
 /**
  * When a payer's phone reminds them of this month's child support (25 October 2026, owner
@@ -29,8 +32,8 @@ object SupportReminderRule {
         paidThisMonth: Boolean,
         lastReminded: YearMonth?
     ): Boolean {
-        val month = YearMonth.from(today)
-        if (month.isBefore(terms.fromMonth) || paidThisMonth || lastReminded == month) return false
-        return !today.isBefore(terms.dueDate(month).minusDays(daysBefore.toLong()))
+        val month = today.yearMonth
+        if (month < terms.fromMonth || paidThisMonth || lastReminded == month) return false
+        return today >= terms.dueDate(month).minus(daysBefore, DateTimeUnit.DAY)
     }
 }

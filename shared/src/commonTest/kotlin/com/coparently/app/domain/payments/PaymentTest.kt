@@ -1,17 +1,17 @@
 package com.coparently.app.domain.payments
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /** "I paid" and "Money arrived" (25 October 2026): the id the rules rebuild, and each reader's state. */
 class PaymentTest {
 
     private val paid = Payment(
-        id = PaymentId.of(FAMILY, PaymentKind.EXPENSES, YearMonth.of(2026, 10), "CZK"),
+        id = PaymentId.of(FAMILY, PaymentKind.EXPENSES, YearMonth(2026, 10), "CZK"),
         familyId = FAMILY,
         kind = PaymentKind.EXPENSES,
-        month = YearMonth.of(2026, 10),
+        month = YearMonth(2026, 10),
         currency = "CZK",
         amountMinor = 45_000L,
         payerUid = BOB,
@@ -19,11 +19,11 @@ class PaymentTest {
     )
 
     @Test
-    fun `the id spells the family, the kind, the month and the currency`() {
+    fun `the id spells the family - the kind - the month and the currency`() {
         assertEquals("alice__bob__expenses__2026-10__CZK", paid.id)
         assertEquals(
             "alice__bob__support__2026-01__EUR",
-            PaymentId.of(FAMILY, PaymentKind.SUPPORT, YearMonth.of(2026, 1), "EUR")
+            PaymentId.of(FAMILY, PaymentKind.SUPPORT, YearMonth(2026, 1), "EUR")
         )
     }
 
@@ -38,7 +38,7 @@ class PaymentTest {
     }
 
     @Test
-    fun `a kind survives its wire value, and an unknown one is not read`() {
+    fun `a kind survives its wire value - and an unknown one is not read`() {
         PaymentKind.entries.forEach { assertEquals(it, PaymentKind.fromWire(it.wire)) }
         assertEquals(null, PaymentKind.fromWire("rent"))
     }

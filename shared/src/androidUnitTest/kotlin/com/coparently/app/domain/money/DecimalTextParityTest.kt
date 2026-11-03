@@ -77,6 +77,48 @@ class DecimalTextParityTest {
         }
     }
 
+    @Test
+    fun parseHalfUpMatchesBigDecimalOnTheCorpus() {
+        (PARSE_CORPUS + HALF_UP_TEXT_CORPUS).forEach { text ->
+            SCALES.forEach { scale -> assertParseHalfUp(text, scale) }
+        }
+    }
+
+    @Test
+    fun parseHalfUpMatchesBigDecimalOnRandomText() {
+        val random = Random(SEED)
+        repeat(RANDOM_CASES) {
+            val units = random.nextLong(-MAX_UNITS, MAX_UNITS)
+            val scale = random.nextInt(0, MAX_SCALE + 1)
+            assertParseHalfUp(BigDecimal.valueOf(units, scale).toPlainString(), MONEY_SCALE)
+            assertParseHalfUp(random.decimalish(), random.nextInt(0, MAX_SCALE + 1))
+        }
+    }
+
+    /**
+     * What the money documents read through `MinorUnits.fromText` until MON-24 phase 2:
+     * `toBigDecimalOrNull()`, rounded half up to [scale], moved into minor units, in a Long.
+     *
+     * The two early answers are what `setScale` would answer, reached without building the power
+     * of ten it needs ("1E999999999", "1E-999999999"): more than 19 integer digits never fit a Long,
+     * and a value below half of the last place kept rounds to zero.
+     */
+    private fun assertParseHalfUp(text: String, scale: Int) {
+        val expected = text.toBigDecimalOrNull()?.let { decimal ->
+            val stripped = decimal.stripTrailingZeros()
+            val integerDigits = stripped.precision().toLong() - stripped.scale()
+            when {
+                stripped.signum() == 0 -> 0L
+                integerDigits > MAX_LONG_DIGITS -> null
+                integerDigits < -scale -> 0L
+                else -> runCatching {
+                    decimal.setScale(scale, RoundingMode.HALF_UP).movePointRight(scale).longValueExact()
+                }.getOrNull()
+            }
+        }
+        assertEquals(expected, DecimalText.parseHalfUp(text, scale), "parseHalfUp(\"$text\", $scale)")
+    }
+
     private fun assertHalfUp(value: Double, scale: Int) {
         assertEquals(
             BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP).toPlainString(),
@@ -131,6 +173,12 @@ class DecimalTextParityTest {
             1.0E-3, 0.001, 9.995, 99.995, 999999999.995, 1.0E9, 123456789.123, 450.0, 1290.5, 12.3, 0.1, 0.2,
             0.30000000000000004, 1.0E21, 1.0E22, 1.0E23, 2.0E-3, 4.35, 4.345, 1.0E-300, 1.0E300,
             Double.MIN_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, 5.0E-324, 0.5, 1.5, 2.5, -0.5, 9.5
+        )
+
+        val HALF_UP_TEXT_CORPUS = listOf(
+            "12.345", "12.3449", "0.005", "-0.005", "-0.004", "0.995", "9.995", "-9.995", "0.0049", "450.00",
+            "5000.5", "92233720368547758.075", "92233720368547758.074", "-92233720368547758.084",
+            "-92233720368547758.085", "1E-999999999", "1E999999999", "5E-3", "4.9E-3", "0.00500",
         )
 
         val PARSE_CORPUS = listOf(

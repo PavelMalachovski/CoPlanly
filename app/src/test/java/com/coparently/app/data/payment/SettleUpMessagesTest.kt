@@ -11,8 +11,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.YearMonth
 import org.junit.Test
-import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
  */
 class SettleUpMessagesTest {
 
-    private val october: YearMonth = YearMonth.of(2026, 10)
+    private val october: YearMonth = YearMonth(2026, 10)
 
     @Test
     fun `a balance owed to me is an owed card with the month and a plain amount`() {

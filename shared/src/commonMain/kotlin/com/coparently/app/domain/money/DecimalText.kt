@@ -89,6 +89,41 @@ object DecimalText {
     }
 
     /**
+     * The minor units at [scale] decimals that [plain] rounds to, half away from zero, or null when
+     * it is not a decimal number or the result does not fit a Long. It reads what
+     * `plain.toBigDecimalOrNull()` reads, as [parse] does, and answers
+     * `setScale(scale, RoundingMode.HALF_UP).movePointRight(scale).longValueExact()`: "450.00" at
+     * scale 2 is 45000, "12.345" is 1235, "-0.005" is -1 and "-0.004" is 0.
+     *
+     * How the money documents (`payments`, `support_agreements`) and the settle-up cards read their
+     * amounts (MON-24 phase 2, Task 8e): the app's `MinorUnits.fromText` did this through
+     * `BigDecimal`, and an amount the rules bound to two decimals never needs the rounding. Unlike
+     * `setScale`, a text with an exponent of hundreds of millions is answered at once — with null,
+     * or with zero when it rounds away — rather than after building a power of ten that size.
+     */
+    fun parseHalfUp(plain: String, scale: Int): Long? {
+        require(scale >= 0) { "scale must not be negative: $scale" }
+        val decimal = parseDecimal(plain) ?: return null
+        val digits = decimal.digits.trimStart('0')
+        // The number is `digits` × 10^exponent; its units at `scale` are digits × 10^shift.
+        val shift = decimal.exponent + scale
+        val units = when {
+            digits.isEmpty() -> "0"
+            shift >= 0 -> {
+                if (digits.length + shift > MAX_LONG_DIGITS) return null
+                digits + "0".repeat(shift.toInt())
+            }
+            -shift > digits.length -> "0"
+            else -> {
+                val cut = digits.length + shift.toInt()
+                val kept = digits.substring(0, cut).ifEmpty { "0" }
+                if (digits[cut] >= ROUND_UP_FROM) incremented(kept) else kept
+            }
+        }
+        return ((if (decimal.negative) "-" else "") + units).toLongOrNull()
+    }
+
+    /**
      * [digits] × 10^[shift] as the digits of a whole number, or null when the shift would cut off a
      * digit that is not zero, or leave more digits than a Long holds.
      */

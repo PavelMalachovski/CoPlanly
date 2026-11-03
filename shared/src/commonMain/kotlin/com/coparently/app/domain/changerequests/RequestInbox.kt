@@ -1,4 +1,4 @@
-// `governing` and `UnansweredRows` are public in `:shared` only for this file and one more (MON-24).
+// `governing` is public in `:shared` only for this file and one in the app (MON-24).
 @file:OptIn(InternalSharedApi::class)
 
 package com.coparently.app.domain.changerequests

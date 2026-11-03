@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
 /** What the child support screen shows for the family on screen. */
 sealed interface SupportUiState {

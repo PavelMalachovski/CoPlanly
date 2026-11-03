@@ -8,7 +8,8 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.repository.UserRepository
-import java.time.YearMonth
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.YearMonth
 import kotlin.math.abs
 
 /**
@@ -63,9 +64,9 @@ class SettleUpMessages(
         fun cardFor(netForMe: Double, currency: String, month: YearMonth) = ActivityAnnouncement(
             kind = if (netForMe > 0) ActivityKind.SETTLE_UP_OWED else ActivityKind.SETTLE_UP_OWING,
             entityType = ActivityEntityType.EXPENSE,
-            entityId = "settle_${month}_$currency",
-            title = month.toString(),
-            whenIso = month.atDay(1).toString(),
+            entityId = "settle_${IsoText.yearMonth(month)}_$currency",
+            title = IsoText.yearMonth(month),
+            whenIso = IsoText.date(month.firstDay),
             amount = DecimalText.halfUp(abs(netForMe), PaymentQr.MONEY_SCALE),
             currency = currency
         )

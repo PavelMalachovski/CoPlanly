@@ -4,8 +4,8 @@ import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.Timestamp
-import java.time.YearMonth
 
 /**
  * The wire form of `payments/{id}` (25 October 2026), in both directions — the one place it is
@@ -22,7 +22,7 @@ object PaymentDocument {
         "familyId" to payment.familyId,
         "participants" to listOf(payment.payerUid, payment.payeeUid).sorted(),
         "kind" to payment.kind.wire,
-        "month" to payment.month.toString(),
+        "month" to IsoText.yearMonth(payment.month),
         "currency" to payment.currency,
         "amount" to amountText(payment.amountMinor),
         "payerUid" to payment.payerUid,
@@ -39,7 +39,9 @@ object PaymentDocument {
     @Suppress("ReturnCount") // one early answer per field a payment cannot do without
     fun read(id: String, data: Map<String, Any?>): Payment? {
         val kind = PaymentKind.fromWire(data["kind"] as? String) ?: return null
-        val month = (data["month"] as? String)?.let { runCatching { YearMonth.parse(it) }.getOrNull() } ?: return null
+        val month = (data["month"] as? String)
+            ?.let { runCatching { IsoText.parseYearMonth(it) }.getOrNull() }
+            ?: return null
         val amount = MinorUnits.fromText(data["amount"] as? String) ?: return null
         return Payment(
             id = id,

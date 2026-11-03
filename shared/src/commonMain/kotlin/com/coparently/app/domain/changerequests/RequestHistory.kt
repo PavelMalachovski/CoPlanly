@@ -330,11 +330,11 @@ object RequestHistory {
  * asked by the clock's proposer, left unanswered by its responder, and dated by the clock's closure
  * — or by its end while nobody has closed it — on this device's clock.
  *
- * Public because `RequestInbox`, still in the app module (MON-24), adds the pending proposals' rows;
- * [InternalSharedApi] keeps it from new callers until that moves too and this is `internal` again.
+ * `RequestInbox` adds the pending proposals' rows with it; `internal` again since that moved here
+ * too (MON-24 phase 2, Task 8e).
  */
-@InternalSharedApi
-object UnansweredRows {
+@OptIn(InternalSharedApi::class)
+internal object UnansweredRows {
 
     /**
      * The "No answer" row keyed [key] about [subject] when the clock [timed] says its request is
@@ -436,8 +436,9 @@ object UnansweredRows {
  * other parent as its responder ([RequestClock.governs]). Null otherwise — no id, no such clock, or
  * one this phone must ignore — and the request is then placed as if it had none.
  *
- * Public because `RequestInbox`, still in the app module (MON-24), places its waiting requests by it;
- * [InternalSharedApi] keeps it from new callers until that moves too and this is `internal` again.
+ * Public because `OtherFamiliesSignals`, still in the app module (MON-24), places another family's
+ * requests by it, as `RequestInbox` does here; [InternalSharedApi] keeps it from new callers until
+ * that moves too and this is `internal` again.
  */
 @InternalSharedApi
 fun ClocksAt.governing(scope: RequestScope, clockId: String?, authorUid: String?): TimedRequest? {

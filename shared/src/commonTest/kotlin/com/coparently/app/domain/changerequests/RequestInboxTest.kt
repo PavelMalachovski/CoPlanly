@@ -19,7 +19,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -136,7 +136,7 @@ class RequestInboxTest {
     private val unclocked get() = RequestInbox.build(scope, requests, events, overrides, proposalBy("u2"), today)
 
     @Test
-    fun `what waits on me is the co-parent's proposal, their events, swaps offered to me and their requests`() {
+    fun `what waits on me is the co-parent's proposal - their events - swaps offered to me and their requests`() {
         val inbox = RequestInbox.build(scope, requests, events, overrides, proposalBy("u2"), today)
 
         assertEquals("u2", inbox.waitingOnMe.proposal?.proposedBy)
@@ -147,7 +147,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `what waits on them is my proposal, my pending events, my pending swap offers and my pending requests`() {
+    fun `what waits on them is my proposal - my pending events - my pending swap offers and my pending requests`() {
         val inbox = RequestInbox.build(scope, requests, events, overrides, proposalBy("u1"), today)
 
         assertEquals("u1", inbox.waitingOnThem.proposal?.proposedBy)
@@ -205,7 +205,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `waiting items keep the inbox's order, events by start and requests by creation`() {
+    fun `waiting items keep the inbox's order - events by start and requests by creation`() {
         val inbox = RequestInbox.build(
             scope,
             changeRequests = listOf(
@@ -257,7 +257,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `past the deadline with the button still offered, it waits on the proposer on both phones`() {
+    fun `past the deadline with the button still offered - it waits on the proposer on both phones`() {
         for (viewer in listOf(scope, bobsScope)) {
             val past = inbox(at = PAST_DEADLINE, viewer = viewer)
 
@@ -483,7 +483,7 @@ class RequestInboxTest {
     ) = RequestInbox.build(viewer, emptyList(), emptyList(), emptyMap(), null, today, ClocksAt.of(clocks, at), settings)
 
     @Test
-    fun `the co-parent's split waits on me and mine on them, counted on Home but not on the calendar`() {
+    fun `the co-parent's split waits on me and mine on them - counted on Home but not on the calendar`() {
         val theirs = withSplit(splitSettings("u2"))
         assertEquals("u2", theirs.waitingOnMe.split?.proposedBy)
         assertNull(theirs.waitingOnThem.split)
@@ -516,7 +516,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `a split is placed by its clock, as the custody proposal is`() {
+    fun `a split is placed by its clock - as the custody proposal is`() {
         val clock = splitClock(from = "u2")
         val clockId = RequestDeadlineId.forSplit(checkNotNull(splitSettings("u2").proposal), FAMILY)
         assertEquals(clockId, clock.id)
@@ -555,7 +555,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `a split withdrawn at its end stays in History once, from its closed clock`() {
+    fun `a split withdrawn at its end stays in History once - from its closed clock`() {
         val closed = splitClock(from = "u2").copy(outcome = RequestClockOutcome.NO_ANSWER, closedAtMillis = AFTER_END)
 
         // Closed, and the withdrawal has not landed yet: one row, not two.
@@ -571,7 +571,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `the answer to a split is in History, asked by the other parent, and wins over its clock`() {
+    fun `the answer to a split is in History - asked by the other parent - and wins over its clock`() {
         val answeredAt = NOW + 3 * HOUR
         val decided = splitSettings(
             uid = null,
@@ -598,7 +598,7 @@ class RequestInboxTest {
     }
 
     @Test
-    fun `a split's clock that does not name the proposal's author, or another family's, is ignored`() {
+    fun `a split's clock that does not name the proposal's author - or another family's - is ignored`() {
         val plain = withSplit(splitSettings("u2"))
         val forged = splitClock(from = "u2").copy(proposerUid = "u1", responderUid = "u2")
         val elsewhere = splitClock(from = "u2").copy(familyId = "u1__u3")

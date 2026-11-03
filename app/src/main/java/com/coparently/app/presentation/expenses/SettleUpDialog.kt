@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.toKotlinYearMonth
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -96,7 +97,12 @@ class SettleUpViewModel(
                     return@launch
                 }
             }
-            settleUpMessages.post(pending.ask.netForMe, pending.ask.currency, pending.month, pending.familyId)
+            settleUpMessages.post(
+                pending.ask.netForMe,
+                pending.ask.currency,
+                pending.month.toKotlinYearMonth(),
+                pending.familyId
+            )
             _sendState.value = SettleUpSend.SENT
         }
     }

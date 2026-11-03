@@ -34,9 +34,12 @@ import com.coparently.app.presentation.expenses.currencyFormat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinTimeZone
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlinx.datetime.yearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -73,7 +76,7 @@ class SupportReminderWorker(
         }
         val zone = ZoneId.systemDefault()
         if (ReminderPlan.isQuietAt(System.currentTimeMillis(), zone.toKotlinTimeZone())) return Result.success()
-        val today = LocalDate.now(zone)
+        val today = java.time.LocalDate.now(zone).toKotlinLocalDate()
         families.forEach { family ->
             try {
                 remindIfDue(uid, family, today)
@@ -91,7 +94,7 @@ class SupportReminderWorker(
         val days = reminders.daysBefore(uid, familyId) ?: return
         val read = agreements.readFromServer(familyId) as? SupportRead.Known ?: return
         val terms = read.agreement.agreement?.takeIf { it.payerUid == uid } ?: return
-        val month = YearMonth.from(today)
+        val month = today.yearMonth
         val payment = payments.readFromServer(PaymentId.of(familyId, PaymentKind.SUPPORT, month, terms.currency))
             .getOrElse { return }
         val lastReminded = reminders.lastReminded(uid, familyId)
@@ -121,7 +124,7 @@ class SupportReminderWorker(
             return
         }
         PushNotifier(context).createChannels()
-        val due = terms.dueDate(month).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        val due = terms.dueDate(month).toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
         val amount = currencyFormat(terms.currency).format(MinorUnits.toDecimal(terms.amountMinor))
         val title = context.getString(R.string.support_reminder_title, due)
         val body = context.getString(R.string.support_reminder_body, amount, payeeName)

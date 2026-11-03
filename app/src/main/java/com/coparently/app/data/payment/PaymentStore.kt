@@ -11,6 +11,7 @@ import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentId
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
@@ -21,7 +22,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
 /**
  * Payments between the two parents of a family (25 October 2026): `payments/{id}`, one per
@@ -172,8 +173,8 @@ class PaymentStore(
             kind = kind,
             entityType = ActivityEntityType.PAYMENT,
             entityId = payment.id,
-            title = payment.month.toString(),
-            whenIso = payment.month.atDay(1).toString(),
+            title = IsoText.yearMonth(payment.month),
+            whenIso = IsoText.date(payment.month.firstDay),
             amount = PaymentDocument.amountText(payment.amountMinor),
             currency = payment.currency
         )

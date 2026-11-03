@@ -14,12 +14,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.YearMonth
 
 /**
  * Payments and child support between two phones (25 October 2026, owner decisions), through the
@@ -40,7 +40,7 @@ import java.time.YearMonth
 class TwoParentPaymentsTest : TwoParentTest() {
 
     private val familyId get() = FamilyKey.of(alice.uid, bob.uid)
-    private val october = YearMonth.of(2026, 10)
+    private val october = YearMonth(2026, 10)
 
     @Test
     fun aSettleUpIsPaidByOneParentAndConfirmedByTheOther() = runBlocking<Unit> {

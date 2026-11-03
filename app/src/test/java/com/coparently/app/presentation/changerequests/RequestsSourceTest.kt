@@ -46,10 +46,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
-import java.time.YearMonth
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -226,7 +226,7 @@ class RequestsSourceTest {
         familyId = "u1__u2",
         participants = listOf("u1", "u2"),
         proposal = SupportProposal(
-            SupportTerms(300_000L, "CZK", 15, "u2", YearMonth.of(2026, 11)),
+            SupportTerms(300_000L, "CZK", 15, "u2", YearMonth(2026, 11)),
             proposedBy = "u2",
             proposedAtMillis = 1L
         )

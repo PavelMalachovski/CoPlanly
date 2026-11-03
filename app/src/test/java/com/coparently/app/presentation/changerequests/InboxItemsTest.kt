@@ -27,10 +27,10 @@ import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
-import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -432,7 +432,7 @@ class InboxItemsTest {
         const val PAST_DEADLINE = NOW + 2 * HOUR
     }
 
-    private val supportTerms = SupportTerms(300_000L, "CZK", 15, "u2", YearMonth.of(2026, 11))
+    private val supportTerms = SupportTerms(300_000L, "CZK", 15, "u2", YearMonth(2026, 11))
 
     private fun grantAwaiting(consentBy: String) = ProfessionalGrant(
         id = "u1__u2__pro",

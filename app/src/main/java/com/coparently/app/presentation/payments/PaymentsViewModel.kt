@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
 /**
  * Payments between the two parents of the family on screen: "I paid" and "Money arrived" for a

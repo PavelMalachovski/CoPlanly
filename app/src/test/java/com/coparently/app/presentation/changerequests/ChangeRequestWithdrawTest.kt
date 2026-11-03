@@ -51,12 +51,12 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
-import java.time.YearMonth
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -372,7 +372,7 @@ class ChangeRequestWithdrawTest {
         familyId = "u1__u2",
         participants = listOf("u1", "u2"),
         proposal = SupportProposal(
-            SupportTerms(300_000L, "CZK", 15, "u2", YearMonth.of(2026, 11)),
+            SupportTerms(300_000L, "CZK", 15, "u2", YearMonth(2026, 11)),
             proposedBy = uid,
             proposedAtMillis = 1L
         )

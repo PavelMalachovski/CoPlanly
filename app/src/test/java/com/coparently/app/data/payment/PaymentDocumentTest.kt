@@ -3,10 +3,10 @@ package com.coparently.app.data.payment
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.google.firebase.Timestamp
+import kotlinx.datetime.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.YearMonth
 import java.util.Date
 
 /** `payments/{id}` as the rules bound it (25 October 2026). */
@@ -16,7 +16,7 @@ class PaymentDocumentTest {
         id = "alice__bob__expenses__2026-10__CZK",
         familyId = "alice__bob",
         kind = PaymentKind.EXPENSES,
-        month = YearMonth.of(2026, 10),
+        month = YearMonth(2026, 10),
         currency = "CZK",
         amountMinor = 45_000L,
         payerUid = "bob",

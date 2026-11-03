@@ -50,6 +50,7 @@ import com.coparently.app.domain.payment.PaymentRequest
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.payments.PaymentState
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.copySensitive
@@ -71,7 +72,6 @@ import kotlinx.coroutines.flow.stateIn
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -158,7 +158,7 @@ private class PaymentSteps(
     fun forCard(card: ActivityAnnouncement): Payment? = when {
         card.entityType == ActivityEntityType.PAYMENT ->
             payments.firstOrNull { it.id == card.entityId }
-        else -> runCatching { YearMonth.parse(card.title) }.getOrNull()?.let { month ->
+        else -> runCatching { IsoText.parseYearMonth(card.title) }.getOrNull()?.let { month ->
             card.currency?.let { viewModel.paymentFor(payments, PaymentKind.EXPENSES, month, it) }
         }
     }
@@ -261,7 +261,7 @@ private fun SettleUpPaymentBlock(
         Text(Iban.grouped(iban), style = MaterialTheme.typography.bodyMedium)
         PaymentActions(iban, qr)
         // Said by the payer once the money is on its way; the co-parent then confirms it arrived.
-        val month = runCatching { YearMonth.parse(card.title) }.getOrNull()
+        val month = runCatching { IsoText.parseYearMonth(card.title) }.getOrNull()
         if (month != null) {
             TextButton(
                 onClick = {
