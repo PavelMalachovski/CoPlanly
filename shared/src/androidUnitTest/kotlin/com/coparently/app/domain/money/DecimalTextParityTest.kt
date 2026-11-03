@@ -40,6 +40,19 @@ class DecimalTextParityTest {
     }
 
     @Test
+    fun jvmDoubleTextIsDoubleToStringOnTheJvm() {
+        val random = Random(SEED)
+        val corpus = listOf(0.0, -0.0, 1.0, 42.0, 1250.5, 0.001, 0.0001, 9_999_999.0, 1.0E7, 2.675, 1.0E300)
+        corpus.forEach { assertEquals(it.toString(), JvmDoubleText.of(it)) }
+        repeat(RANDOM_CASES) {
+            val value = Double.fromBits(random.nextLong())
+            assertEquals(value.toString(), JvmDoubleText.of(value))
+            val amount = random.nextLong(-10_000_000_000L, 10_000_000_000L) / 100.0
+            assertEquals(amount.toString(), JvmDoubleText.of(amount))
+        }
+    }
+
+    @Test
     fun plainMatchesBigDecimal() {
         val random = Random(SEED)
         val corpus = listOf(0L, 1L, -1L, 5L, -5L, 1250L, 5000L, 3333L, Long.MAX_VALUE, Long.MIN_VALUE)

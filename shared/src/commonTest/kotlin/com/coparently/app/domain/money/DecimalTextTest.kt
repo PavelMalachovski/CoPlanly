@@ -64,6 +64,20 @@ class DecimalTextTest {
     }
 
     @Test
+    fun jvmDoubleTextLaysADoubleOutAsTheJvmDoes() {
+        // An expense card's amount ("1250.5 CZK"): the JVM's layout, whatever the platform prints.
+        assertEquals("1250.5", JvmDoubleText.of(1250.5))
+        assertEquals("42.0", JvmDoubleText.of(42.0))
+        assertEquals("0.001", JvmDoubleText.of(0.001))
+        assertEquals("1.0E-4", JvmDoubleText.of(0.0001))
+        assertEquals("9999999.0", JvmDoubleText.of(9_999_999.0))
+        assertEquals("1.0E7", JvmDoubleText.of(10_000_000.0))
+        assertEquals("1.25E7", JvmDoubleText.of(12_500_000.0))
+        assertEquals("-3.5", JvmDoubleText.of(-3.5))
+        assertEquals("0.0", JvmDoubleText.of(0.0))
+    }
+
+    @Test
     fun plainWritesMinorUnitsAtTheirScale() {
         assertEquals("12.50", DecimalText.plain(1250, 2))
         assertEquals("0.05", DecimalText.plain(5, 2))

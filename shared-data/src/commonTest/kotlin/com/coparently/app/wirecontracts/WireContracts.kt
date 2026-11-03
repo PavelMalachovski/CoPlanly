@@ -13,12 +13,14 @@ package com.coparently.app.wire
  * fixtures; here the simulator's zone would decide.
  *
  * `PetWireContract` joined in Task 8d, once the pet mappers left `PetRepositoryImpl` for top-level
- * functions; it reads its one wall clock in the zone it runs in (see its KDoc).
+ * functions; it reads its one wall clock in the zone it runs in (see its KDoc). `ExpenseWireContract`
+ * joined in Task 8f, with the expense mappers.
  */
 internal object WireContracts : WireSuite {
 
     override val all: List<WireContract> = listOf(
         CustodyWireContract,
+        ExpenseWireContract,
         PetWireContract,
         RequestDeadlineWireContract
     )
@@ -26,8 +28,9 @@ internal object WireContracts : WireSuite {
     override val complete: Boolean = false
 
     /**
-     * These contracts read no wall clock: custody and clock times are UTC on the wire, and the pets
-     * contract makes its wall clock from a UTC instant in the zone it runs in.
+     * These contracts read no wall clock: custody and clock times are UTC on the wire, an expense's
+     * dates are naive on both sides, and the pets contract makes its wall clock from a UTC instant
+     * in the zone it runs in.
      */
     override fun <T> inReaderZone(block: () -> T): T = block()
 }

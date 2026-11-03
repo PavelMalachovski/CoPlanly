@@ -3,17 +3,16 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -48,20 +47,17 @@ class ExpenseRepositoryImplTest {
 
     private lateinit var expenseDao: ExpenseDao
     private lateinit var userDao: UserDao
-    private lateinit var firebaseAuthService: FirebaseAuthService
+    private lateinit var firebaseAuthService: SignedInUser
     private lateinit var firestoreExpenseDataSource: FirestoreExpenseDataSource
     private lateinit var repository: ExpenseRepositoryImpl
     private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
-    private val fcmService = mockk<FcmService>(relaxed = true)
+    private val fcmService = mockk<PushQueue>(relaxed = true)
 
     @Before
     fun setup() {
         expenseDao = mockk(relaxed = true)
         userDao = mockk()
         firebaseAuthService = mockk()
-        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
-        // the real service does.
-        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         firestoreExpenseDataSource = mockk()
         repository = ExpenseRepositoryImpl(
             expenseDao,
@@ -78,8 +74,7 @@ class ExpenseRepositoryImplTest {
         // The shape is the isolation. A filter on the author returns every family that author
         // is in, and while any branch of the read rule mentioned `isPartnerOf`, Firestore
         // served that query — see `firestore-tests/rules/family-isolation.test.js`.
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uidA" }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns "uidA"
         coEvery { userDao.getUserById("uidA") } returns userEntity(id = "uidA", partnerId = "uidB")
         every { firestoreExpenseDataSource.getAllExpenses("uidA__uidB") } returns emptyFlow()
 
@@ -92,8 +87,7 @@ class ExpenseRepositoryImplTest {
     fun `observeRemote asks for no family when unpaired`() = runTest {
         // Null rather than a query for this user alone: an unpaired account has nothing shared
         // to download, and the data source closes without issuing a read that would be denied.
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uidA" }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns "uidA"
         coEvery { userDao.getUserById("uidA") } returns userEntity(id = "uidA", partnerId = null)
         every { firestoreExpenseDataSource.getAllExpenses(null) } returns emptyFlow()
 
@@ -107,8 +101,7 @@ class ExpenseRepositoryImplTest {
         // The Room `users` row (and its partnerId) may not have synced down yet on a fresh
         // install. Without a partner there is no family id to derive, and the honest answer is
         // null — never an unfiltered read, which the rules reject outright.
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uidA" }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns "uidA"
         coEvery { userDao.getUserById("uidA") } returns null
         every { firestoreExpenseDataSource.getAllExpenses(null) } returns emptyFlow()
 
@@ -122,8 +115,7 @@ class ExpenseRepositoryImplTest {
         // Bob deleted Alice's expense offline. The retry used to stamp the tombstone with the
         // creator, so the record said Alice deleted what Bob did — the delete path names the
         // deleter, and a retry of the same deletion must say the same thing.
-        val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uidB" }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns "uidB"
         coEvery { userDao.getUserById("uidB") } returns userEntity(id = "uidB", partnerId = "uidA")
         coEvery { expenseDao.getUnsyncedExpenses() } returns listOf(
             com.coparently.app.data.local.entity.ExpenseEntity(
@@ -205,7 +197,7 @@ class ExpenseRepositoryImplTest {
 
     @Test
     fun `observeRemote does nothing when signed out`() = runTest {
-        every { firebaseAuthService.getCurrentUser() } returns null
+        every { firebaseAuthService.getCurrentUid() } returns null
 
         repository.observeRemote()
 
@@ -222,8 +214,7 @@ class ExpenseRepositoryImplTest {
      * nobody. Which name it carries is `ActivityAnnouncerTest`'s subject, not this file's.
      */
     private fun signIn(uid: String) {
-        val firebaseUser = mockk<FirebaseUser> { every { this@mockk.uid } returns uid }
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns uid
         coEvery { userDao.getUserById(uid) } returns null
     }
 

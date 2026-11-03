@@ -1,16 +1,18 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.inFamilyOnScreen
 import com.coparently.app.data.local.dao.ExpenseDao
 import com.coparently.app.data.local.dao.UserDao
-import com.coparently.app.data.local.entity.ExpenseEntity
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.sync.Tombstone
 import com.coparently.app.data.versions.EventVersionDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -19,28 +21,26 @@ import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.expenses.shareOf
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
-import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.model.Expense
-import com.coparently.app.domain.model.ExpenseCategory
+import com.coparently.app.domain.money.DecimalText
+import com.coparently.app.domain.money.JvmDoubleText
 import com.coparently.app.domain.repository.ExpenseRepository
-import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
-import java.math.BigDecimal
-import java.math.RoundingMode
+import kotlin.time.Clock
 
 @Suppress("LongParameterList") // one more source: each family's own slots (25 October 2026)
 class ExpenseRepositoryImpl(
     private val expenseDao: ExpenseDao,
     private val userDao: UserDao,
-    private val firebaseAuthService: FirebaseAuthService,
+    private val firebaseAuthService: SignedInUser,
     private val firestoreExpenseDataSource: FirestoreExpenseDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
-    private val fcmService: FcmService,
+    private val fcmService: PushQueue,
     private val familySlots: FamilySlotsSource = FamilySlotsSource.None
 ) : ExpenseRepository {
 
@@ -81,7 +81,7 @@ class ExpenseRepositoryImpl(
         // the Room row too, so the client can enforce creator-only editing without a network
         // read. Null when signed out; the row then reads as "editable by both", which is all
         // this device can honestly say about it.
-        val uid = expense.createdByFirebaseUid ?: firebaseAuthService.getCurrentUser()?.uid
+        val uid = expense.createdByFirebaseUid ?: firebaseAuthService.getCurrentUid()
         val owned = expense.copy(
             createdByFirebaseUid = uid,
             // Which relationship this belongs to, and therefore who may see it. A new expense from
@@ -100,15 +100,15 @@ class ExpenseRepositoryImpl(
 
         announce(owned, ActivityKind.EXPENSE_ADDED)?.let { coParent -> pushNewExpense(owned, coParent) }
 
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        pushToFirestore(owned, ownerUid = owned.createdByFirebaseUid ?: firebaseUser.uid)
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
+        pushToFirestore(owned, ownerUid = owned.createdByFirebaseUid ?: signedInUid)
     }
 
     override suspend fun updateExpense(expense: Expense) {
         expenseDao.insertExpense(expense.toEntity())
         announce(expense, ActivityKind.EXPENSE_UPDATED)
 
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
         try {
             // Ownership is immutable in `firestore.rules` (update requires
             // request.resource.data.createdByFirebaseUid == resource.data.createdByFirebaseUid).
@@ -119,7 +119,7 @@ class ExpenseRepositoryImpl(
             // with syncedToFirestore = false forever, failing again on every retry.
             val existingOwnerUid = firestoreExpenseDataSource.getExpense(expense.id)
                 ?.get("createdByFirebaseUid") as? String
-            pushToFirestore(expense, ownerUid = existingOwnerUid ?: firebaseUser.uid)
+            pushToFirestore(expense, ownerUid = existingOwnerUid ?: signedInUid)
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             logger.w("ExpenseRepo", "Expense owner lookup failed; kept locally", e)
         }
@@ -142,41 +142,6 @@ class ExpenseRepositoryImpl(
     }
 
     /**
-     * Builds the Firestore document map for an expense, stamping [ownerUid] as
-     * `createdByFirebaseUid`.
-     *
-     * `createdByFirebaseUid` mirrors the events schema so the Firestore rules can gate
-     * ownership consistently; `paidBy` stays for split/summary logic. Callers decide
-     * [ownerUid]: [addExpense] passes the current user, [updateExpense] passes the document's
-     * existing owner so ownership stays immutable across edits, as `firestore.rules` requires.
-     */
-    internal fun expenseToFirestoreMap(expense: Expense, ownerUid: String): Map<String, Any> = mapOf(
-        "id" to expense.id,
-        // Replaces the single `childId`, which is no longer written. Nothing is lost by
-        // dropping it: no client ever set it, so every document in production carries "".
-        "forMembers" to FamilyMemberRef.store(expense.forMembers),
-        // Empty rather than an absent key: the read side treats "" as "no family yet", and a
-        // document whose fields are iterated should not have a hole where a schema field is.
-        "familyId" to (expense.familyId ?: ""),
-        "title" to expense.title,
-        "amount" to expense.amount,
-        "currency" to expense.currency,
-        "category" to expense.category.name,
-        "createdByFirebaseUid" to ownerUid,
-        "paidBy" to expense.paidBy,
-        "splitBetween" to expense.splitBetween,
-        "date" to IsoText.date(expense.date),
-        "receiptUrl" to (expense.receiptUrl ?: ""),
-        "notes" to (expense.notes ?: ""),
-        "createdAt" to IsoText.dateTime(expense.createdAt),
-        // The share this expense was priced at, so both phones agree on a settled month even
-        // after the family renegotiates. -1 rather than an omitted key: the read below narrows
-        // through `Number` and a negative value is not a share, which is how "recorded before
-        // the agreement existed" crosses the wire.
-        "splitBasisPoints" to (expense.splitBasisPoints ?: -1)
-    )
-
-    /**
      * Deletes an expense, in a way the co-parent can actually find out about (CQ-3).
      *
      * The row is **tombstoned** rather than removed — hidden from every query at once, kept in
@@ -197,15 +162,15 @@ class ExpenseRepositoryImpl(
         // Read before marking: the announcement names the expense, and a tombstoned row is
         // invisible to every query that could name it afterwards.
         val deleted = expenseDao.getExpenseById(expenseId)?.toDomain()
-        val deletedAtMillis = System.currentTimeMillis()
+        val deletedAtMillis = Clock.System.now().toEpochMilliseconds()
         expenseDao.markDeleted(expenseId, deletedAtMillis)
         deleted?.let { announce(it, ActivityKind.EXPENSE_DELETED) }
 
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
         val tombstoned = firestoreExpenseDataSource.tombstoneExpense(
             expenseId = expenseId,
             deletedAtMillis = deletedAtMillis,
-            deletedBy = firebaseUser.uid
+            deletedBy = signedInUid
         )
         if (tombstoned.isSuccess) {
             expenseDao.deleteExpense(expenseId)
@@ -219,14 +184,14 @@ class ExpenseRepositoryImpl(
     }
 
     override suspend fun observeRemote() {
-        val firebaseUser = firebaseAuthService.getCurrentUser() ?: return
-        val partnerId = userDao.getUserById(firebaseUser.uid)?.partnerId
+        val signedInUid = firebaseAuthService.getCurrentUid() ?: return
+        val partnerId = userDao.getUserById(signedInUid)?.partnerId
         // The family, not the two authors. An unpaired account gets null and the data source
         // closes without querying, which is right: there is nothing shared to download, and an
         // unfiltered read would be denied.
-        val familyId = FamilyKey.orNull(firebaseUser.uid, partnerId)
+        val familyId = FamilyKey.orNull(signedInUid, partnerId)
 
-        retryPendingDeletions(firebaseUser.uid)
+        retryPendingDeletions(signedInUid)
 
         firestoreExpenseDataSource.getAllExpenses(familyId)
             .catch { e -> logger.w("ExpenseRepo", "Expense sync failed", e) }
@@ -303,7 +268,7 @@ class ExpenseRepositoryImpl(
     }
 
     override suspend fun questionExpense(expense: Expense): Boolean {
-        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return false
+        val myUid = firebaseAuthService.getCurrentUid() ?: return false
         val creator = expense.createdByFirebaseUid
         if (creator.isNullOrBlank() || creator == myUid) return false
         return announce(expense, ActivityKind.EXPENSE_QUESTIONED) != null
@@ -324,7 +289,7 @@ class ExpenseRepositoryImpl(
      * their co-parent's chat listener is down.
      */
     private suspend fun announce(expense: Expense, kind: ActivityKind): String? {
-        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return null
+        val myUid = firebaseAuthService.getCurrentUid() ?: return null
         val me = userDao.getUserById(myUid)
         // The thread of the expense's own family, never the family on screen: an expense of an
         // ended family, or of no family while there are two, has nobody to tell (October 2026
@@ -342,7 +307,7 @@ class ExpenseRepositoryImpl(
                 entityId = expense.id,
                 title = expense.title,
                 whenIso = IsoText.date(expense.date),
-                amount = "${expense.amount} ${expense.currency}",
+                amount = "${JvmDoubleText.of(expense.amount)} ${expense.currency}",
                 currency = expense.currency
             ),
             senderName = me?.name.orEmpty(),
@@ -364,7 +329,7 @@ class ExpenseRepositoryImpl(
      * is saved whether or not the push can be queued.
      */
     private suspend fun pushNewExpense(expense: Expense, coParent: String) {
-        val myUid = firebaseAuthService.getCurrentUser()?.uid ?: return
+        val myUid = firebaseAuthService.getCurrentUid() ?: return
         val me = userDao.getUserById(myUid)
         // This parent's slot in the expense's family, which may differ from the profile's
         // (per-family slots, 25 October 2026).
@@ -391,88 +356,15 @@ class ExpenseRepositoryImpl(
     private companion object {
         /** The longest actor name `firestore.rules` accepts on a push. */
         const val ACTOR_MAX = 100
-    }
 
-    /** [amount] as a plain decimal with two places, as the push carries it ("1000.00"). */
-    private fun plainMoney(amount: Double): String =
-        BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP).toPlainString()
+        /** Two decimals, as the push's `amount` and `share` carry them. */
+        const val MONEY_SCALE = 2
+    }
 
     /**
-     * An `expenses` document as a domain expense, as [observeRemote] downloads it. Throws on a
-     * document it cannot read; the caller skips that one document. `internal` so the wire-format
-     * contract tests run it on the JVM.
+     * [amount] as a plain decimal with two places, as the push carries it ("1000.00"):
+     * `BigDecimal.valueOf(amount).setScale(2, HALF_UP).toPlainString()`, which [DecimalText.halfUp]
+     * is held to (`DecimalTextParityTest`).
      */
-    internal fun expenseFromDocument(data: Map<String, Any?>): Expense = Expense(
-        id = data["id"] as String,
-        // A co-parent on a build that predates the reference type still writes
-        // `childId`, so it is read as a fallback. In practice it converts
-        // nothing — the field was never populated by any client.
-        familyId = (data["familyId"] as? String)?.takeIf { it.isNotEmpty() },
-        forMembers = FamilyMemberRef.parse(data["forMembers"])
-            .ifEmpty { FamilyMemberRef.fromLegacyChildId(data["childId"] as? String) },
-        title = data["title"] as String,
-        amount = (data["amount"] as Number).toDouble(),
-        currency = data["currency"] as String,
-        category = ExpenseCategory.valueOf(data["category"] as String),
-        paidBy = data["paidBy"] as String,
-        splitBetween = (data["splitBetween"] as? List<*>)
-            ?.filterIsInstance<String>() ?: emptyList(),
-        date = IsoText.parseDate(data["date"] as String),
-        receiptUrl = (data["receiptUrl"] as? String)?.takeIf { it.isNotEmpty() },
-        notes = (data["notes"] as? String)?.takeIf { it.isNotEmpty() },
-        createdAt = IsoText.parseDateTime(data["createdAt"] as String),
-        syncedToFirestore = true,
-        createdByFirebaseUid =
-        (data["createdByFirebaseUid"] as? String)?.takeIf { it.isNotEmpty() },
-        splitBasisPoints = (data["splitBasisPoints"] as? Number)?.toInt()
-            ?.takeIf { it >= 0 }
-    )
-
-    /** A Room row as a domain expense. `internal` for the wire-format contract tests. */
-    internal fun ExpenseEntity.toDomain(): Expense {
-        val splitBetween = StoredJson.decodeOrNull(StoredJson.strings, splitBetweenJson).orEmpty()
-        val forMembers = StoredJson.decodeOrNull(StoredJson.strings, forMembersJson).orEmpty()
-
-        return Expense(
-            id = id,
-            familyId = familyId,
-            forMembers = FamilyMemberRef.parse(forMembers),
-            title = title,
-            amount = amount,
-            currency = currency,
-            category = ExpenseCategory.valueOf(category),
-            paidBy = paidBy,
-            splitBetween = splitBetween,
-            date = date,
-            receiptUrl = receiptUrl,
-            notes = notes,
-            createdAt = createdAt,
-            syncedToFirestore = syncedToFirestore,
-            createdByFirebaseUid = createdByFirebaseUid,
-            splitBasisPoints = splitBasisPoints
-        )
-    }
-
-    /** A domain expense as a Room row. `internal` for the wire-format contract tests. */
-    internal fun Expense.toEntity(): ExpenseEntity {
-        return ExpenseEntity(
-            id = id,
-            familyId = familyId,
-            // `childId` is a dead column and is left null; see ExpenseEntity.
-            forMembersJson = StoredJson.encode(StoredJson.strings, FamilyMemberRef.store(forMembers)),
-            title = title,
-            amount = amount,
-            currency = currency,
-            category = category.name,
-            paidBy = paidBy,
-            splitBetweenJson = StoredJson.encode(StoredJson.strings, splitBetween),
-            date = date,
-            receiptUrl = receiptUrl,
-            notes = notes,
-            createdAt = createdAt,
-            syncedToFirestore = syncedToFirestore,
-            createdByFirebaseUid = createdByFirebaseUid,
-            splitBasisPoints = splitBasisPoints
-        )
-    }
+    private fun plainMoney(amount: Double): String = DecimalText.halfUp(amount, MONEY_SCALE)
 }

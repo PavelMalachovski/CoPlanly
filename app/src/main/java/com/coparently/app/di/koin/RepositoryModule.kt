@@ -1,10 +1,8 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
-import com.coparently.app.data.repository.ExpenseRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
-import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
@@ -17,7 +15,6 @@ import org.koin.dsl.module
  */
 val repositoryModule = module {
     single<PreferencesRepository> { get<PreferencesRepositoryImpl>() }
-    single<ExpenseRepository> { get<ExpenseRepositoryImpl>() }
     // Medical, pet, receipt and event photographs, all under family-keyed paths and read without
     // download URLs (L-4).
     single<RecordPhotoStorage> { get<FirebaseImageStorage>() }

@@ -1,23 +1,30 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.wire
 
-import com.coparently.app.data.repository.ExpenseRepositoryImpl
+import com.coparently.app.data.repository.expenseFromDocument
+import com.coparently.app.data.repository.expenseToFirestoreMap
+import com.coparently.app.data.repository.toDomain
+import com.coparently.app.data.repository.toEntity
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import io.mockk.mockk
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
- * `expenses`: read by `ExpenseRepositoryImpl.expenseFromDocument` (the listener), stored through
- * Room and written back by `expenseToFirestoreMap` — a `set()` stamped with the document's own
- * owner, as `updateExpense` does. FAM-2's rule is the one this pins hardest: an unrecognised
- * `forMembers` reference comes back out.
+ * `expenses`: read by `expenseFromDocument` (`ExpenseRepositoryImpl`'s listener), stored through
+ * Room (`toEntity`/`toDomain`) and written back by `expenseToFirestoreMap` — a `set()` stamped with
+ * the document's own owner, as `updateExpense` does. FAM-2's rule is the one this pins hardest: an
+ * unrecognised `forMembers` reference comes back out.
+ *
+ * The mappers are top-level in `ExpenseMappers.kt` since MON-24 phase 2 (Task 8f), so this contract
+ * builds no repository and runs on the iPhone's simulator too. It reads no wall clock: an expense's
+ * dates are naive on the wire and in the domain alike.
  */
 internal object ExpenseWireContract : WireContract {
-
-    private val repository by lazy { ExpenseRepositoryImpl(mockk(), mockk(), mockk(), mockk(), mockk(), mockk()) }
 
     override val collection = "expenses"
 
@@ -30,7 +37,7 @@ internal object ExpenseWireContract : WireContract {
 
     override fun read(document: Map<String, Any?>): Map<String, Any?>? {
         if (Tombstone.isDeleted(document)) return mapOf("id" to document["id"], "deleted" to true)
-        val expense = runCatching { repository.expenseFromDocument(document) }.getOrNull() ?: return null
+        val expense = runCatching { expenseFromDocument(document) }.getOrNull() ?: return null
         return mapOf(
             "id" to expense.id,
             "title" to expense.title,
@@ -51,16 +58,14 @@ internal object ExpenseWireContract : WireContract {
     override fun roundTrip(document: Map<String, Any?>): Map<String, Any?>? {
         if (Tombstone.isDeleted(document)) return null
         val owner = (document["createdByFirebaseUid"] as? String).orEmpty()
-        return with(repository) {
-            expenseToFirestoreMap(expenseFromDocument(document).toEntity().toDomain(), ownerUid = owner)
-        }
+        return expenseToFirestoreMap(expenseFromDocument(document).toEntity().toDomain(), ownerUid = owner)
     }
 
     override fun currentWrites(): List<CurrentWrite> = listOf(
         CurrentWrite(
             case = "repository-save",
             about = "ExpenseRepositoryImpl.addExpense's document: shared, priced at an agreed split, tagged.",
-            document = repository.expenseToFirestoreMap(expense(), ownerUid = "uidA")
+            document = expenseToFirestoreMap(expense(), ownerUid = "uidA")
         )
     )
 

@@ -37,6 +37,7 @@ import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.ConversationMigrator
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.EventRepositoryImpl
+import com.coparently.app.data.repository.ExpenseRepositoryImpl
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
@@ -63,6 +64,7 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.MessageRepository
@@ -146,6 +148,10 @@ val repositoryDataModule: Module = module {
     // default (`FamilySlotsSource.None`), which only a test relies on.
     single { EventRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<EventRepository> { get<EventRepositoryImpl>() }
+    // The expenses (Task 8f), with the family slots' source from the graph as the events', not its
+    // default.
+    single { ExpenseRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
+    single<ExpenseRepository> { get<ExpenseRepositoryImpl>() }
     singleOf(::PetRepositoryImpl)
     single<PetRepository> { get<PetRepositoryImpl>() }
     // The children's records (Task 8e): the same family-bound audience as a pet's (item 38).
