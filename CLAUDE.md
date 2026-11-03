@@ -1514,7 +1514,11 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              Worker), the agreements' sources and withdrawals, and the child info, friend and
              professional repositories, and (Task 8f) the expense, user, pairing and journal
              repositories, ProfileIdentity (data/session/), and the event use cases with
-             EventValidator and ErrorHandler (domain/usecase/, domain/error/).
+             EventValidator and ErrorHandler (domain/usecase/, domain/error/), and (Task 8g)
+             the sync itself (data/sync/SyncService, behind PushDevice, AccountConsistency and
+             RequestClockSweep), ParentSlotMigrator, the preferences repository with the
+             currency hints (data/money/CurrencyHints) and the Google Calendar import with its
+             automatic run (data/sync/CalendarSyncRepository, GoogleCalendarAutoImport).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1522,8 +1526,8 @@ domain/    — models, repository interfaces, use cases (the event ones in share
              in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, data/payment/, and most of the repositories, and some of the sync, of
-             data/family/, data/chat/, data/requests/, data/support/ and data/session/
+             sources, data/payment/, every repository but the vault's, the sync but its Worker,
+             and some of data/family/, data/chat/, data/requests/, data/support/ and data/session/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1673,15 +1677,15 @@ names, so the R8 probe builds them unchanged and the e2e parents changed only wh
 takes a `FirestoreClient` (`PaymentStore`, `SupportAgreementStore`; `ChildInfoRepositoryImpl`'s
 `firebaseAuthService` is a `SignedInUser` now). They are bound in `moneyDataModule`,
 `repositoryDataModule`, `requestsDataModule` and `familyDataModule`. The `child_info` wire contract
-stays in `app/src/test/…/wire/` and the app's list alone: `SyncService`, still in the app, writes
-`child_info` too. The child support reminder's `SupportReminderWorker` and its scheduler stay in the
+stayed in `app/src/test/…/wire/` and the app's list alone until Task 8g: `SyncService`, then still
+in the app, writes `child_info` too. The child support reminder's `SupportReminderWorker` and its scheduler stay in the
 app (WorkManager, the notification manager, `currencyFormat`). The rest of `data/family/`,
 `data/chat/` and `data/requests/` is still in the app: `OtherFamiliesSignals` (`java.time` and the
 request clocks), `UnassignedRecords` (records dated in `java.time` for its screen),
 `ChatAttachmentOutbox` (`java.io.File` and `data/files/`), and the request clocks' keeper, steps,
 records, notices, worker, `RequestClocks` and `RequestTime` (the Android notification manager,
-WorkManager and a `java.time.ZoneId`). `data/money/` stays too (`BigDecimal` for the screens'
-`NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
+WorkManager and a `java.time.ZoneId`). `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
+the screens' `NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
 the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
 `ExpenseRepositoryImpl` with `ExpenseMappers.kt` (the expense's four mappers, lifted out as the
 pets' were, so `ExpenseWireContract` moved to `shared-data`'s `wire/` and its list), whose push
@@ -1702,13 +1706,37 @@ pairing repository's, which no longer takes `firestore` or `context` but `wordin
 parent changed there alone; the R8 probe builds none of them. They are bound in
 `repositoryDataModule`, and the use cases and `ErrorHandler` in the new `useCaseDataModule`; the
 app's `firebaseRepositoryModule`, `journalModule`, `useCaseModule` and `domainModule` went with
-them. The rest of `data/repository/` and `data/sync/` is still in the app, each for what it needs:
-`PreferencesRepositoryImpl` (the currency hints); `ParentSlotMigrator` (Room's Android-only
-`withTransaction`); and `SyncService`, `SyncWorker`, `CalendarSyncRepository` and
-`GoogleCalendarAutoImport`. Every other `data/…` path is still under
+them. Task 8g, the sync and what it waited on: in `commonMain`, `data/sync/SyncService.kt` (with
+`SyncStatus`, whose `Success` time is now kotlinx-datetime's `wallClockNow()`, what
+`LocalDateTime.now()` read), whose constructor kept every parameter name (the e2e parents build it
+unchanged) and asks the platform through four narrow seams: `SignedInUser` for the uid, the new
+**`PushDevice`** (`data/remote/firebase/`: this device's push token, `getCurrentToken` and
+`updateUserToken`, beside the `PushQueue` it extends; `FcmService` implements it), the new
+**`AccountConsistency`** (`data/session/`: `ensureAccountConsistency`; `AccountSwitchGuard`
+implements it) and the new **`RequestClockSweep`** (`data/requests/`: `sweep`; `RequestClockKeeper`
+implements it). The event and child-info push payloads left `FcmService` for `RecordPushes`
+(`data/remote/firebase/`), unchanged; `data/notification/ReminderEvents.kt` (`toReminderEvent`) moved
+with the sync. `data/repository/ParentSlotMigrator.kt` runs its two re-stamps in
+`EventDao.reslotOwnerAndPickup`, a Room `@Transaction` method like `KnownFamilyDao`'s, where it used
+Android's `RoomDatabase.withTransaction`, so it no longer takes the database
+(`EventDaoReslotTest`, androidTest, proves a refused second statement takes the first back with
+it); the e2e parent changed there alone. `data/repository/PreferencesRepositoryImpl.kt` with
+`data/money/CurrencyHints.kt` reads the device region through `deviceRegionCode`
+(`data/platform/DeviceRegion.kt`, an internal `expect`/`actual`: `Locale.getDefault().country` on
+Android, the current `NSLocale`'s country code on the iPhone). `data/sync/CalendarSyncRepository.kt`
+runs on kotlinx-datetime with the same wall clocks and rows (`SyncResult.Success`'s window is
+kotlinx-datetime's `LocalDate`; `SyncViewModel` words it as before), and tells Android's
+`NetworkOnMainThreadException` apart through an internal `expect`/`actual`
+(`data/sync/NetworkOnMainThread.kt`); `data/sync/GoogleCalendarAutoImport.kt` reads the connection
+through the new `GoogleCalendarConnectionSource` (`data/remote/google/`;
+`CredentialManagerService` implements it). They are bound in `syncDataModule` (the sync and the
+Google import) and `repositoryDataModule` (the migrator, the preferences and the hints), and the
+app binds the four seams to its classes. Still in the app from `data/repository/` and `data/sync/`:
+`AndroidPairingWording` (a string resource), `SyncWorker` and `WorkManagerSyncRequester`
+(WorkManager). Every other `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
-`Analytics`, `SignedInUser` or `PushQueue` rather than `EncryptedPreferences`, a `Context` directory,
+`Analytics`, `SignedInUser`, `PushQueue` or `PushDevice` rather than `EncryptedPreferences`, a `Context` directory,
 `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService` or `FcmService`, and logs with
 `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 
@@ -1717,13 +1745,16 @@ nothing that stays in `app/`. `internal` stops at the module, so a shared declar
 still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
 opt-in) until that caller moves; today `ClocksAt.governing` (`OtherFamiliesSignals`;
 `UnansweredRows` is `internal` again since `RequestInbox` moved, Task 8e), and in
-`shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument` and
-`StampedFamily` (`SyncService` and the event, pet, professional and request readers), and
+`shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument`
+(the change-request records, the export, and the events and revisions wire contracts and their
+tests, all in the app; `StampedFamily` is `internal` again since `SyncService` moved, Task 8g),
+`toReminderEvent` (`ReminderWorker`), and
 `ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
 probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
 the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
 compiled by the app's tests too), the four child mappers in `ChildInfoMappers.kt` (the `child_info`
-wire contract and `ChildInfoRepositoryImplTest`, both in the app), the four expense mappers in
+wire contract, in `wire/` like the pets' since Task 8g, and `ChildInfoRepositoryImplTest`, in the
+app), the four expense mappers in
 `ExpenseMappers.kt` (the expenses wire contract, in `wire/` like the pets'),
 `ChatMirror.mirror` (the on-screen
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
@@ -1814,9 +1845,12 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
    and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
    to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
-   and pets and expenses so far — `PetWireContract` joined in Task 8d, once the pet mappers became
-   top-level functions, and makes its one wall clock from a UTC instant so it reads in any zone, and
-   `ExpenseWireContract` in Task 8f, the same way, reading no wall clock at all;
+   and pets, expenses and children so far — `PetWireContract` joined in Task 8d, once the pet mappers
+   became top-level functions, and makes its one wall clock from a UTC instant so it reads in any
+   zone, `ExpenseWireContract` in Task 8f, the same way, reading no wall clock at all, and
+   `ChildInfoWireContract` in Task 8g, once `SyncService`, the second writer of `child_info`, moved,
+   with its wall clock made as the pets' is; the events contract, written over Gson and `java.time`,
+   and the revisions' stay in the app, though their writers have moved;
    `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
    in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
    JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
@@ -3486,7 +3520,8 @@ below hold what it fixed in place.
     with the access token alone (`GoogleCredential`), with its timeouts and redirects, and reading
     the page by hand as strictly as its parser did: a page or a time it could not read still fails
     the import (`GoogleCalendarApiTest`, `GoogleDateTimeTest`).
-    `CalendarSyncRepository` stores every import as a private event (item 3 of "Things that are
+    `CalendarSyncRepository` (in `shared-data` with `GoogleCalendarAutoImport` since MON-24 phase 2,
+    Task 8g) stores every import as a private event (item 3 of "Things that are
     easy to get wrong"), so nothing read from Google reaches our servers unless the parent makes
     an event shared. **The import runs on its own while the switch is on** (owner request, 28 October
     2026): `SyncWorker` calls `GoogleCalendarAutoImport.importIfDue` after every sync — app start,
