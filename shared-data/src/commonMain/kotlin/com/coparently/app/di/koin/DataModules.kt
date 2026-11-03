@@ -55,7 +55,14 @@ import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.repository.UserRepositoryImpl
 import com.coparently.app.data.requests.AgreementWithdrawals
 import com.coparently.app.data.requests.FamilyAgreementsSource
+import com.coparently.app.data.requests.RequestClockActions
+import com.coparently.app.data.requests.RequestClockKeeper
+import com.coparently.app.data.requests.RequestClockSteps
+import com.coparently.app.data.requests.RequestClockSweep
+import com.coparently.app.data.requests.RequestClocks
+import com.coparently.app.data.requests.RequestRecords
 import com.coparently.app.data.requests.RequestTelling
+import com.coparently.app.data.requests.RequestTime
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.support.SupportAgreementStore
@@ -69,6 +76,7 @@ import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.error.ErrorHandler
 import com.coparently.app.domain.family.FamilySlotsSource
+import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
@@ -123,8 +131,9 @@ val remoteDataModule: Module = module {
  * The sync (MON-24 phase 2: its pure parts since Task 8b, `SyncService` itself since Task 8g).
  * Their Room DAOs and the sealed preference store are the platform's database and store, bound
  * where each platform builds them, and so are the seams the sync asks the platform through: the
- * push token (`PushDevice`), the account-switch check (`AccountConsistency`), the request clocks'
- * sweep (`RequestClockSweep`) and the reminders (`ReminderScheduler`). `SyncWorker`, which runs it
+ * push token (`PushDevice`), the account-switch check (`AccountConsistency`) and the reminders
+ * (`ReminderScheduler`); the request clocks' sweep (`RequestClockSweep`) is [requestsDataModule]'s
+ * keeper since Task 8h. `SyncWorker`, which runs it
  * on WorkManager, stays in the app. Beside it, the Google Calendar import, read-only and private
  * (Legal item 10), and its automatic run after every sync (Task 8g), which reads the connection
  * through `GoogleCalendarConnectionSource`.
@@ -257,11 +266,30 @@ val chatDataModule: Module = module {
 }
 
 /**
- * What the request clocks' background steps say to the answering parent (phase 3a; MON-24 phase 2,
- * Task 8c). The clocks' keeper, steps and notices are still bound in the app's `dataModule`.
+ * The request clocks (phase 3a, CLAUDE.md item 42): what their background steps say to the
+ * answering parent (MON-24 phase 2, Task 8c), and since Task 8h their time, the clocks a screen
+ * reads, the keeper every sync runs, the steps, the records they read and what a parent does from a
+ * card. The jobs (`RequestClockScheduler`) and the notices (`RequestClockNotices`) are the
+ * platform's, bound where it builds them.
  */
 val requestsDataModule: Module = module {
     singleOf(::RequestTelling)
+    single { RequestTime() }
+    singleOf(::RequestClocks)
+    singleOf(::RequestRecords)
+    singleOf(::RequestClockSteps)
+    singleOf(::RequestClockActions)
+    // The secondary constructor, whose deliveries run on the keeper's own scope for the process.
+    single {
+        RequestClockKeeper(
+            get<RequestDeadlineRepository>(),
+            get<RequestClockSteps>(),
+            get<RequestClockScheduler>(),
+            get<RequestTime>()
+        )
+    }
+    // The clocks' pass every full sync runs.
+    single<RequestClockSweep> { get<RequestClockKeeper>() }
     // The three agreements beside the requests, read and withdrawn for the family on screen
     // (board SW-7; Task 8e).
     factoryOf(::FamilyAgreementsSource)
@@ -338,7 +366,7 @@ val dataModules: List<Module> = listOf(
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, Analytics, Connectivity,
 //  SignedInUser, PushQueue, PushDevice, AttachmentUploadGate, RequestClockScheduler,
-//  RequestClockSweep, ReminderScheduler, SyncRequester, PairingWording, AccountConsistency,
+//  RequestClockNotices, ReminderScheduler, SyncRequester, PairingWording, AccountConsistency,
 //  GoogleCalendarApi, CredentialProvider and GoogleCalendarConnectionSource on the iPhone before
 //  its app starts Koin.
 /**
@@ -352,11 +380,13 @@ val dataModules: List<Module> = listOf(
  * the Room DAOs, `SecurePreferences`, `CrashReporter`, `SignedInUser`, `PushQueue`,
  * `AttachmentUploadGate` and `RequestClockScheduler`, and since Task 8f `Analytics`,
  * `Connectivity`, `ReminderScheduler` (the event use cases and `ErrorHandler`), `SyncRequester` and
- * `PairingWording` (the pairing repository), and since Task 8g `PushDevice`, `AccountConsistency`
- * and `RequestClockSweep` (the sync) and `GoogleCalendarApi`, `CredentialProvider` and
- * `GoogleCalendarConnectionSource` (the Google Calendar import), which the app's own modules bind on Android
- * (`UserRepository` and `PairingRepository`, which the app bound until Task 8f, are this layer's
- * own now). The iPhone's module binds none of them yet; nothing starts Koin there, and the first
- * resolution would fail until it does.
+ * `PairingWording` (the pairing repository), and since Task 8g `PushDevice` and
+ * `AccountConsistency` (the sync) and `GoogleCalendarApi`, `CredentialProvider` and
+ * `GoogleCalendarConnectionSource` (the Google Calendar import), and since Task 8h
+ * `RequestClockNotices` (the request clocks' steps), which the app's own modules bind on Android
+ * (`UserRepository` and `PairingRepository`, which the app bound until Task 8f, and
+ * `RequestClockSweep`, which it bound in Task 8g, are this layer's own now). The iPhone's module
+ * binds none of them yet; nothing starts Koin there, and the first resolution would fail until it
+ * does.
  */
 expect val platformDataModule: Module

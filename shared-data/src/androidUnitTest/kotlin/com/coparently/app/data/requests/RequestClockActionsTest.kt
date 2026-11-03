@@ -15,11 +15,11 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.ZoneOffset
 
 /**
  * [RequestClockActions]: the two things a parent does to a request's clock from a card (phase 3a,
@@ -36,7 +36,7 @@ class RequestClockActionsTest {
     private val telling = mockk<RequestTelling>(relaxed = true)
     private val scheduler = mockk<RequestClockScheduler>(relaxed = true)
     private var now = SENT
-    private val time = RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = emptyFlow())
+    private val time = RequestTime(now = { now }, zoneOf = { TimeZone.UTC }, ticks = emptyFlow())
 
     private val actions = RequestClockActions(repository, records, telling, scheduler, time)
 

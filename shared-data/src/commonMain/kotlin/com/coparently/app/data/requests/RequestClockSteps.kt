@@ -9,7 +9,6 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.toKotlinTimeZone
 
 /** How a step of a request's clock went. */
 enum class StepResult {
@@ -53,11 +52,15 @@ enum class StepResult {
  * **A step cannot schedule its own job again.** Jobs are kept by name, and a name that is running
  * is not enqueued twice, so a step that fired early answers [StepResult.RETRY] when its time is
  * moments away and [StepResult.DONE] otherwise, and leaves the rest to the keeper's sweep.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8h). What only the platform can do stays behind two
+ * seams it binds: posting a notice ([RequestClockNotices]; the app's `RequestNotices`) and keeping
+ * the jobs ([RequestClockScheduler]; the app's `WorkRequestClockScheduler`, whose worker runs this).
  */
 class RequestClockSteps(
     private val repository: RequestDeadlineRepository,
     private val records: RequestRecords,
-    private val notices: RequestNotices,
+    private val notices: RequestClockNotices,
     private val telling: RequestTelling,
     private val scheduler: RequestClockScheduler,
     private val time: RequestTime
@@ -69,7 +72,7 @@ class RequestClockSteps(
         val now = time.nowMillis()
         val due = clock.responderUid == repository.signedInUid() &&
             now - plannedAtMillis <= LATE_REMINDER_MILLIS &&
-            !ReminderPlan.isQuietAt(now, time.zone().toKotlinTimeZone()) &&
+            !ReminderPlan.isQuietAt(now, time.zone()) &&
             RequestClock.stateOf(clock, now) == ClockState.OPEN
         if (!due) return StepResult.DONE
         return when (records.look(clock).status) {

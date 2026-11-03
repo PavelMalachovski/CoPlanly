@@ -2,6 +2,7 @@ package com.coparently.app.data.requests
 
 import app.cash.turbine.test
 import com.coparently.app.domain.changerequests.ClocksAt
+import com.coparently.app.domain.changerequests.ReminderPlan
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -13,11 +14,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toKotlinTimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
-import java.time.ZoneOffset
 
 /**
  * [RequestClocks] and [RequestTime]: the family's clocks seen at a moment, and the minute that
@@ -46,7 +48,7 @@ class RequestClocksTest {
     fun `a tick re-reads the same clocks at the new time`() = runTest {
         var now = START
         val ticks = MutableSharedFlow<Unit>()
-        val time = RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks)
+        val time = RequestTime(now = { now }, zoneOf = { TimeZone.UTC }, ticks = ticks)
         val repository = mockk<RequestDeadlineRepository>()
         every { repository.observeFamily(ME, FAMILY) } returns flowOf(listOf(clock))
 
@@ -72,7 +74,7 @@ class RequestClocksTest {
         val snapshots = MutableSharedFlow<List<RequestDeadline>>()
         val repository = mockk<RequestDeadlineRepository>()
         every { repository.observeFamily(ME, FAMILY) } returns snapshots
-        val time = RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks)
+        val time = RequestTime(now = { now }, zoneOf = { TimeZone.UTC }, ticks = ticks)
 
         RequestClocks(repository, time, keeper).observeFamily(ME, FAMILY).test {
             snapshots.emit(listOf(clock))
@@ -92,7 +94,7 @@ class RequestClocksTest {
     fun `an undelivered clock addressed to this parent is handed to the keeper`() = runTest {
         // While the app runs, the listener is how this phone first sees a request's clock (spec
         // §5.3): it is delivered at once rather than at the next sync.
-        val time = RequestTime(now = { START }, zoneOf = { ZoneOffset.UTC }, ticks = flowOf(Unit))
+        val time = RequestTime(now = { START }, zoneOf = { TimeZone.UTC }, ticks = flowOf(Unit))
         val toMe = clock.copy(id = "change_uidA_cr-2", ref = "cr-2")
         val delivered = clock.copy(deliveredAtMillis = START)
         val mine = clock.copy(id = "change_uidB_cr-3", ref = "cr-3", proposerUid = ME, responderUid = "uidA")
@@ -114,11 +116,48 @@ class RequestClocksTest {
         val after = System.currentTimeMillis()
 
         assertTrue(production.nowMillis() in before..after + SLACK_MILLIS)
-        assertEquals(ZoneId.systemDefault(), production.zone())
+        assertEquals(ZoneId.systemDefault().toKotlinTimeZone(), production.zone())
 
-        val fixed = RequestTime(now = { START }, zoneOf = { ZoneId.of("Pacific/Kiritimati") }, ticks = flowOf())
+        val fixed = RequestTime(now = { START }, zoneOf = { TimeZone.of("Pacific/Kiritimati") }, ticks = flowOf())
         assertEquals(START, fixed.nowMillis())
-        assertEquals(ZoneId.of("Pacific/Kiritimati"), fixed.zone())
+        assertEquals(TimeZone.of("Pacific/Kiritimati"), fixed.zone())
+    }
+
+    /**
+     * MON-24 phase 2 (Task 8h) moved the zone from `java.time`'s `ZoneId` to kotlinx-datetime's
+     * `TimeZone`. The keeper plans reminders, and a reminder checks its quiet hours, in that zone, so
+     * the system zone it reads must be the one `ZoneId.systemDefault()` named — read again on every
+     * call, as the parent travels — and plan and check alike on each side of a summer-time change.
+     */
+    @Test
+    fun `the system zone is the one java time names - read again on every call and across summer time`() {
+        val saved = java.util.TimeZone.getDefault()
+        val production = RequestTime()
+        try {
+            PARITY_ZONES.forEach { id ->
+                java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(id))
+                val before = ZoneId.systemDefault().toKotlinTimeZone()
+                val after = production.zone()
+                assertEquals(id, before, after)
+                TRANSITION_INSTANTS.forEach { sent -> assertSameReminders(id, sent, before, after) }
+            }
+        } finally {
+            java.util.TimeZone.setDefault(saved)
+        }
+    }
+
+    /** The quiet hours of every hour of three days from [sent], and the reminder plan, in both zones. */
+    private fun assertSameReminders(id: String, sent: Long, before: TimeZone, after: TimeZone) {
+        (0L until 3 * DAY step HOUR).map { sent + it }.forEach { now ->
+            val quiet = ReminderPlan.isQuietAt(now, before)
+            assertEquals("$id $now", quiet, ReminderPlan.isQuietAt(now, after))
+        }
+        val answerBy = sent + 3 * DAY
+        assertEquals(
+            "$id $sent",
+            ReminderPlan.plan(sent, answerBy, sent, before),
+            ReminderPlan.plan(sent, answerBy, sent, after)
+        )
     }
 
     @Test
@@ -156,5 +195,32 @@ class RequestClocksTest {
 
         /** Two reads of the system clock in a row, with a margin for a slow runner. */
         const val SLACK_MILLIS = 5_000L
+
+        const val DAY = 24 * HOUR
+
+        /** Zones with summer time both ways, half-hour changes, the date line and none at all. */
+        val PARITY_ZONES = listOf(
+            "Europe/Prague",
+            "America/Santiago",
+            "Australia/Lord_Howe",
+            "Pacific/Kiritimati",
+            "America/New_York",
+            "UTC"
+        )
+
+        /**
+         * A day before each 2026 change of Prague, New York, Santiago and Lord Howe, so the three
+         * days that follow span it.
+         */
+        val TRANSITION_INSTANTS = listOf(
+            "2026-03-28T12:00:00Z", // Prague springs forward on the 29th
+            "2026-10-24T12:00:00Z", // Prague falls back on the 25th
+            "2026-03-07T12:00:00Z", // New York springs forward on the 8th
+            "2026-10-31T12:00:00Z", // New York falls back on 1 November
+            "2026-04-04T12:00:00Z", // Santiago falls back on the 5th
+            "2026-09-05T12:00:00Z", // Santiago springs forward on the 6th
+            "2026-04-04T00:00:00Z", // Lord Howe falls back half an hour on the 5th
+            "2026-10-03T00:00:00Z" // Lord Howe springs forward half an hour on the 4th
+        ).map { java.time.Instant.parse(it).toEpochMilli() }
     }
 }

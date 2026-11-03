@@ -22,13 +22,12 @@ import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
-import kotlinx.datetime.toKotlinTimeZone
+import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.ZoneId
 
 /**
  * [RequestClockKeeper]: what each full sync, and each listener snapshot while the app runs, does
@@ -67,11 +66,11 @@ class RequestClockKeeperTest {
 
         keeper().sweep(BOB, setOf(ALICE))
 
-        val plan = ReminderPlan.plan(SENT, ANSWER_BY, now, PRAGUE.toKotlinTimeZone())
+        val plan = ReminderPlan.plan(SENT, ANSWER_BY, now, PRAGUE)
         assertEquals("three reminders over three days", 3, plan.size)
         assertNotEquals(
             "Prague's evening is Kiritimati's night: the zone decides",
-            ReminderPlan.plan(SENT, ANSWER_BY, now, ZoneId.of("Pacific/Kiritimati").toKotlinTimeZone()),
+            ReminderPlan.plan(SENT, ANSWER_BY, now, TimeZone.of("Pacific/Kiritimati")),
             plan
         )
         coVerify(exactly = 1) { repository.markDelivered(clock, now, plan) }
@@ -217,7 +216,7 @@ class RequestClockKeeperTest {
         // sync (final review M-3). Real steps, a server read that never answers: the sweep gives the
         // step up at its bound, closes nothing and leaves the end to its own job.
         val records = mockk<RequestRecords>()
-        val notices = mockk<RequestNotices>(relaxed = true)
+        val notices = mockk<RequestClockNotices>(relaxed = true)
         val telling = mockk<RequestTelling>(relaxed = true)
         val realSteps = RequestClockSteps(repository, records, notices, telling, scheduler, time)
         val due = clockByBob()
@@ -311,6 +310,6 @@ class RequestClockKeeperTest {
         /** 2026-05-05T16:53:20Z. */
         const val SENT = 1_778_000_000_000L
         const val ANSWER_BY = SENT + 3 * DAY
-        val PRAGUE: ZoneId = ZoneId.of("Europe/Prague")
+        val PRAGUE: TimeZone = TimeZone.of("Europe/Prague")
     }
 }

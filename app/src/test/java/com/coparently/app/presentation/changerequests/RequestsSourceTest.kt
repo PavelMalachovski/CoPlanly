@@ -1,3 +1,6 @@
+// `RequestTime.of` is public in `:shared-data` only for the app's tests (MON-24).
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.presentation.changerequests
 
 import app.cash.turbine.ReceiveTurbine
@@ -8,6 +11,7 @@ import com.coparently.app.data.requests.FamilyAgreementsSource
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestTime
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.changerequests.ClockState
 import com.coparently.app.domain.changerequests.ClocksAt
 import com.coparently.app.domain.changerequests.FamilyAgreements
@@ -46,11 +50,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -183,7 +187,7 @@ class RequestsSourceTest {
             pairingRepository = mockk<PairingRepository> { every { observePairingState() } returns flowOf(pairing) },
             requestClocks = RequestClocks(
                 clockRepository,
-                RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = ticks),
+                RequestTime.of(now = { now }, zoneOf = { TimeZone.UTC }, ticks = ticks),
                 // Delivery is the keeper's, and `RequestClocksTest` covers the hand-over.
                 mockk<RequestClockKeeper>(relaxed = true)
             ),

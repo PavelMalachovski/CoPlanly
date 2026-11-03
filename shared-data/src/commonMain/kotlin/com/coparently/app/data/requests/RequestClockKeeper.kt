@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.coparently.app.data.requests
 
 import com.coparently.app.domain.changerequests.ReminderPlan
@@ -8,10 +10,12 @@ import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.datetime.toKotlinTimeZone
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Keeps this phone's part of every open request clock in hand (phase 3a, spec §4.3, §4.5, §5.3).
@@ -35,8 +39,9 @@ import kotlinx.datetime.toKotlinTimeZone
  * under an id of their own; and the sweep keeps only clocks whose other parent is still one of this
  * parent's co-parents (CLAUDE.md items 38, 41).
  *
- * The sync, in `:shared-data` since MON-24 phase 2 (Task 8g), runs [sweep] as its
- * [RequestClockSweep].
+ * The sync runs [sweep] as its [RequestClockSweep]. Both are in `:shared-data` since MON-24 phase 2
+ * (the sync since Task 8g, this since Task 8h); the jobs it schedules are the platform's
+ * ([RequestClockScheduler]: WorkManager on Android).
  */
 class RequestClockKeeper internal constructor(
     private val repository: RequestDeadlineRepository,
@@ -55,7 +60,7 @@ class RequestClockKeeper internal constructor(
     ) : this(repository, steps, scheduler, time, CoroutineScope(SupervisorJob() + Dispatchers.IO))
 
     /** The ids of the clocks a delivery is running for, so one listener seen by three screens writes once. */
-    private val inFlight = mutableSetOf<String>()
+    private val inFlight = AtomicReference(emptySet<String>())
 
     /**
      * Keeps every open clock of [myUid] whose other parent is in [coParents]: delivers what this
@@ -138,7 +143,7 @@ class RequestClockKeeper internal constructor(
      */
     private suspend fun deliver(clock: RequestDeadline, now: Long) {
         val sentAt = clock.createdAtMillis
-        val times = ReminderPlan.plan(sentAt ?: now, clock.answerByMillis, now, time.zone().toKotlinTimeZone())
+        val times = ReminderPlan.plan(sentAt ?: now, clock.answerByMillis, now, time.zone())
         val deliveredAt = sentAt?.let { maxOf(now, it) } ?: now
         if (repository.markDelivered(clock, deliveredAt, times)) {
             times.forEach { scheduler.scheduleReminder(clock.id, it) }
@@ -151,10 +156,25 @@ class RequestClockKeeper internal constructor(
     private fun isGenuine(clock: RequestDeadline): Boolean =
         clock.id == RequestDeadlineId.of(clock.kind, clock.proposerUid, clock.ref, clock.familyId)
 
-    private fun claim(id: String): Boolean = synchronized(inFlight) { inFlight.add(id) }
+    /**
+     * Adds [id] to the deliveries running, atomically: true for the one caller that added it, false
+     * while it is there already. A compare-and-set loop over an immutable set rather than a lock,
+     * which common code has none of; the set it replaces is the one it read, compared by identity.
+     */
+    private fun claim(id: String): Boolean {
+        while (true) {
+            val running = inFlight.load()
+            if (id in running) return false
+            if (inFlight.compareAndSet(running, running + id)) return true
+        }
+    }
 
+    /** Takes [id] out of the deliveries running, atomically. */
     private fun release(id: String) {
-        synchronized(inFlight) { inFlight.remove(id) }
+        while (true) {
+            val running = inFlight.load()
+            if (inFlight.compareAndSet(running, running - id)) return
+        }
     }
 
     internal companion object {

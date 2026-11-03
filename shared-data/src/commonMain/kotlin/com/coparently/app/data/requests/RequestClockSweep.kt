@@ -5,8 +5,9 @@ package com.coparently.app.data.requests
  * 8g): how a phone that was not running delivers a clock and arms its reminders, and how the
  * proposer's deadline and end come back after a job was lost.
  *
- * The app's `RequestClockKeeper` answers it on Android, with its WorkManager jobs and notices,
- * which stay in the app.
+ * [RequestClockKeeper] answers it on both platforms (in `:shared-data` beside the sync since Task
+ * 8h); the jobs it schedules and the notices its steps post are the platform's
+ * (`RequestClockScheduler`, [RequestClockNotices]).
  */
 interface RequestClockSweep {
 

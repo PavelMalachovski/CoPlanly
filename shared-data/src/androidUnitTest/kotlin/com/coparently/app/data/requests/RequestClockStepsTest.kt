@@ -17,6 +17,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -37,11 +38,11 @@ class RequestClockStepsTest {
 
     private val repository = mockk<RequestDeadlineRepository>()
     private val records = mockk<RequestRecords>()
-    private val notices = mockk<RequestNotices>(relaxed = true)
+    private val notices = mockk<RequestClockNotices>(relaxed = true)
     private val telling = mockk<RequestTelling>(relaxed = true)
     private val scheduler = mockk<RequestClockScheduler>(relaxed = true)
     private var now = SENT
-    private val time = RequestTime(now = { now }, zoneOf = { ZoneOffset.UTC }, ticks = emptyFlow())
+    private val time = RequestTime(now = { now }, zoneOf = { TimeZone.UTC }, ticks = emptyFlow())
 
     private val steps = RequestClockSteps(repository, records, notices, telling, scheduler, time)
 

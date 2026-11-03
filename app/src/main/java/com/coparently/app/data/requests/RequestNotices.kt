@@ -34,14 +34,17 @@ import kotlinx.coroutines.withTimeoutOrNull
  * They post on the schedule channel, so a parent who muted money still hears about a handover, and
  * a tap opens the Requests inbox in the clock's family, like the request's own push (CLAUDE.md
  * item 15). Nothing is posted while notifications are not allowed.
+ *
+ * Android's [RequestClockNotices]: the steps that decide a notice is due are in `:shared-data` since
+ * MON-24 phase 2 (Task 8h); the wording and the posting stay here.
  */
 class RequestNotices(
     private val context: Context,
     private val pairingRepository: PairingRepository
-) {
+) : RequestClockNotices {
 
     /** Reminds the answering parent that the proposer waits for an answer until the deadline. */
-    suspend fun remind(clock: RequestDeadline) {
+    override suspend fun remind(clock: RequestDeadline) {
         val name = nameOf(clock.proposerUid)
         val until = answerByText(
             clock.answerByMillis,
@@ -57,7 +60,7 @@ class RequestNotices(
     }
 
     /** Tells the proposer that the answering parent did not answer by the deadline. */
-    suspend fun deadlinePassed(clock: RequestDeadline) {
+    override suspend fun deadlinePassed(clock: RequestDeadline) {
         val name = nameOf(clock.responderUid)
         post(
             clock,
@@ -68,7 +71,7 @@ class RequestNotices(
     }
 
     /** Tells the proposer that the request is closed with no answer. */
-    suspend fun noAnswer(clock: RequestDeadline) {
+    override suspend fun noAnswer(clock: RequestDeadline) {
         val name = nameOf(clock.responderUid)
         post(
             clock,
