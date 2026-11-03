@@ -1,3 +1,6 @@
+// The child mappers are public in `:shared-data` only for the wire contract and these tests (MON-24).
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.ChildInfoDao
@@ -6,6 +9,7 @@ import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.model.ChildInfo
 import com.google.firebase.auth.FirebaseUser
@@ -163,7 +167,7 @@ class ChildInfoRepositoryImplTest {
             // the child's health details in front of that family's parent.
             coEvery { userDao.getUserById(ALICE) } returns
                 userEntity(partnerId = CAROL, partnerIds = listOf(BOB, CAROL))
-            val stored = with(repository) { childInfo(createdByFirebaseUid = ALICE).toEntity() }
+            val stored = childInfo(createdByFirebaseUid = ALICE).toEntity()
             coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns stored
             coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
                 Result.success(Unit)
@@ -183,9 +187,7 @@ class ChildInfoRepositoryImplTest {
     fun `the pull's upload names each child's own family, not the one on screen`() = runTest {
         coEvery { userDao.getUserById(ALICE) } returns
             userEntity(partnerId = CAROL, partnerIds = listOf(BOB, CAROL))
-        val bobsChild = with(repository) {
-            childInfo(createdByFirebaseUid = ALICE).copy(familyId = BOB_FAMILY).toEntity()
-        }
+        val bobsChild = childInfo(createdByFirebaseUid = ALICE).copy(familyId = BOB_FAMILY).toEntity()
         coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(bobsChild)
         coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
             Result.success(Unit)
@@ -246,18 +248,14 @@ class ChildInfoRepositoryImplTest {
     fun `a pull keeps an edit that has not gone up instead of replacing it with the server's copy`() =
         runTest {
             coEvery { userDao.getUserById(ALICE) } returns userEntity(partnerId = BOB)
-            val edited = with(repository) {
-                childInfo(createdByFirebaseUid = ALICE).copy(childName = "Ema (edited)").toEntity()
-            }
+            val edited = childInfo(createdByFirebaseUid = ALICE).copy(childName = "Ema (edited)").toEntity()
             // The upload half runs first and fails, so the edit is still unsynced when the
             // download half meets the older document.
             coEvery { childInfoDao.getUnsyncedChildInfo() } returns listOf(edited)
             coEvery { firestoreChildInfoDataSource.upsertChildInfo(any(), any()) } returns
                 Result.failure(IOException("offline"))
             coEvery { childInfoDao.getChildInfoById(CHILD_ID) } returns edited
-            val document = with(repository) {
-                childInfo(createdByFirebaseUid = ALICE).toFirestoreMap(listOf(ALICE, BOB))
-            }
+            val document = childInfo(createdByFirebaseUid = ALICE).toFirestoreMap(listOf(ALICE, BOB))
             every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns
                 flowOf(listOf(document))
 
@@ -271,9 +269,7 @@ class ChildInfoRepositoryImplTest {
         coEvery { userDao.getUserById(ALICE) } returns userEntity(partnerId = BOB)
         coEvery { childInfoDao.getUnsyncedChildInfo() } returns emptyList()
         coEvery { childInfoDao.getChildInfoById(any()) } returns null
-        val document = with(repository) {
-            childInfo(createdByFirebaseUid = BOB).toFirestoreMap(listOf(ALICE, BOB))
-        }
+        val document = childInfo(createdByFirebaseUid = BOB).toFirestoreMap(listOf(ALICE, BOB))
         every { firestoreChildInfoDataSource.getChildInfoForParent(ALICE) } returns flowOf(
             listOf(document + ("childName" to 42L), document + ("id" to "child-2"))
         )

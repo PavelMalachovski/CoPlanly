@@ -32,15 +32,18 @@ import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChatSearchRepositoryImpl
+import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.ConversationMigrator
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
+import com.coparently.app.data.repository.ProfessionalRepositoryImpl
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.stickers.ParentRoles
@@ -55,10 +58,13 @@ import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
+import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
+import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
+import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import org.koin.core.module.Module
@@ -139,12 +145,22 @@ val repositoryDataModule: Module = module {
     single<EventRepository> { get<EventRepositoryImpl>() }
     singleOf(::PetRepositoryImpl)
     single<PetRepository> { get<PetRepositoryImpl>() }
+    // The children's records (Task 8e): the same family-bound audience as a pet's (item 38).
+    singleOf(::ChildInfoRepositoryImpl)
+    single<ChildInfoRepository> { get<ChildInfoRepositoryImpl>() }
     // The read-only calendar links (MON-17) and a child's guest invitations (item 16), on the
     // callables and the Firestore seam since Task 8d.
     singleOf(::CalendarFeedRepositoryImpl)
     single<CalendarFeedRepository> { get<CalendarFeedRepositoryImpl>() }
     singleOf(::GuestRepositoryImpl)
     single<GuestRepository> { get<GuestRepositoryImpl>() }
+    // The trusted third person (item 16), bound apart from GuestRepository because a friend and a
+    // guest open different things; and MON-18's two-consent, expiring professional access, bound
+    // apart from FriendRepository because the two are admitted by different rules (Task 8e).
+    singleOf(::FriendRepositoryImpl)
+    single<FriendRepository> { get<FriendRepositoryImpl>() }
+    singleOf(::ProfessionalRepositoryImpl)
+    single<ProfessionalRepository> { get<ProfessionalRepositoryImpl>() }
     singleOf(::PostPairingConversationSetup)
     singleOf(::ParentingPlanRepository)
     singleOf(::RequestDeadlineRepositoryImpl)

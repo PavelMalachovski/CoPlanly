@@ -1,7 +1,11 @@
 package com.coparently.app.wire
 
-import com.coparently.app.data.repository.ChildInfoRepositoryImpl
+import com.coparently.app.data.repository.toChildInfo
+import com.coparently.app.data.repository.toDomain
+import com.coparently.app.data.repository.toEntity
+import com.coparently.app.data.repository.toFirestoreMap
 import com.coparently.app.data.sync.Tombstone
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.guests.GuestGrant
 import com.coparently.app.domain.model.ChildInfo
@@ -9,17 +13,17 @@ import com.coparently.app.domain.model.MedicalProfile
 import com.coparently.app.domain.model.Medication
 import com.coparently.app.domain.model.SchoolInfo
 import com.coparently.app.domain.time.IsoText
-import io.mockk.mockk
 import kotlinx.datetime.LocalDateTime
 
 /**
- * `child_info`: read by `ChildInfoRepositoryImpl.toChildInfo` (the pull), stored through Room
- * (`toEntity`/`toDomain`, JSON columns included) and written back by `toFirestoreMap` — a
- * `set()`, so a newer build's key is at the mercy of this one.
+ * `child_info`: read by `toChildInfo` (the pull), stored through Room (`toEntity`/`toDomain`, JSON
+ * columns included) and written back by `toFirestoreMap` — a `set()`, so a newer build's key is at
+ * the mercy of this one. The four are `ChildInfoRepositoryImpl`'s mappers, top-level in
+ * `:shared-data` since MON-24 phase 2 (Task 8e); the contract stays in the app's list, since
+ * `SyncService` writes `child_info` too.
  */
+@OptIn(InternalSharedApi::class)
 internal object ChildInfoWireContract : WireContract {
-
-    private val repository by lazy { ChildInfoRepositoryImpl(mockk(), mockk(), mockk(), mockk()) }
 
     override val collection = "child_info"
 
@@ -29,7 +33,7 @@ internal object ChildInfoWireContract : WireContract {
 
     override fun read(document: Map<String, Any?>): Map<String, Any?>? {
         if (Tombstone.isDeleted(document)) return mapOf("id" to document["id"], "deleted" to true)
-        val child = runCatching { with(repository) { document.toChildInfo() } }.getOrNull() ?: return null
+        val child = runCatching { document.toChildInfo() }.getOrNull() ?: return null
         return mapOf(
             "id" to child.id,
             "childName" to child.childName,
@@ -49,14 +53,14 @@ internal object ChildInfoWireContract : WireContract {
     override fun roundTrip(document: Map<String, Any?>): Map<String, Any?>? {
         if (Tombstone.isDeleted(document)) return null
         val audience = (document["sharedWith"] as? List<*>).orEmpty().filterIsInstance<String>()
-        return with(repository) { document.toChildInfo().toEntity().toDomain().toFirestoreMap(audience) }
+        return document.toChildInfo().toEntity().toDomain().toFirestoreMap(audience)
     }
 
     override fun currentWrites(): List<CurrentWrite> = listOf(
         CurrentWrite(
             case = "repository-save",
             about = "ChildInfoRepositoryImpl.upsertChildInfo's document: medical profile, a guest, a school.",
-            document = with(repository) { child().toFirestoreMap(listOf("uidA", "uidB", "guest-1")) }
+            document = child().toFirestoreMap(listOf("uidA", "uidB", "guest-1"))
         )
     )
 

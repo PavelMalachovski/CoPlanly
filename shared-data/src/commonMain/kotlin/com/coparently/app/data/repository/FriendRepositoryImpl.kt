@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.SelectedFamilySource
@@ -29,7 +31,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
-import java.util.UUID
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Firestore-backed [FriendRepository].
@@ -44,8 +48,9 @@ import java.util.UUID
  * gate.
  *
  * On [FirestoreClient] and [SignedInUser] since MON-24 phase 2 (Task 8d): the same documents,
- * queries and listeners as the Android SDK calls it made. It stays in the app while
- * [FriendRepository] and `ProfessionalEvents` take a `java.time.LocalDate`.
+ * queries and listeners as the Android SDK calls it made. In `:shared-data` since Task 8e, when
+ * [FriendRepository] and [ProfessionalEvents] moved to kotlinx-datetime's `LocalDate`; its ids are
+ * `Uuid.random()`'s text and its clock `Clock.System`, as [GuestRepositoryImpl]'s.
  */
 class FriendRepositoryImpl(
     private val firestore: FirestoreClient,
@@ -59,7 +64,7 @@ class FriendRepositoryImpl(
         // `GuestRepositoryImpl` states: the rule stops a malformed document existing, the
         // callable stops it meaning anything, and this stops the user being shown a code that
         // was never going to work.
-        if (grantExpiresAtMillis <= System.currentTimeMillis()) {
+        if (grantExpiresAtMillis <= nowMillis()) {
             return Result.failure(PairingException(PairingError.GrantEnded))
         }
         return runFriend {
@@ -68,11 +73,11 @@ class FriendRepositoryImpl(
             val email = authService.getCurrentEmail().orEmpty()
             val profile = firestore.get(DocumentPath(USERS, uid))
             val invite = GuestInvite(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 code = InviteCodeGenerator.generate(),
                 // Empty: a friend is invited to the calendar, not to one child.
                 childInfoId = "",
-                inviteExpiresAtMillis = System.currentTimeMillis() + INVITE_TTL_MILLIS,
+                inviteExpiresAtMillis = nowMillis() + INVITE_TTL_MILLIS,
                 grantExpiresAtMillis = grantExpiresAtMillis
             )
             firestore.set(
@@ -87,7 +92,7 @@ class FriendRepositoryImpl(
                     // account their child's grandmother signs in with.
                     "toEmail" to "",
                     "status" to STATUS_PENDING,
-                    "createdAt" to System.currentTimeMillis(),
+                    "createdAt" to nowMillis(),
                     "expiresAt" to invite.inviteExpiresAtMillis,
                     "acceptedBy" to null,
                     "kind" to KIND_FRIEND,
@@ -132,7 +137,7 @@ class FriendRepositoryImpl(
             } else {
                 CalendarFriendPolicy.active(
                     grants.filter { it.familyId == familyId },
-                    System.currentTimeMillis()
+                    nowMillis()
                 )
             }
         }
@@ -176,7 +181,7 @@ class FriendRepositoryImpl(
         DocumentQuery(CALENDAR_FRIENDS).whereEqualTo("friendUid", myUid)
 
     private fun liveSoonestFirst(grants: List<CalendarFriendGrant>): List<CalendarFriendGrant> =
-        CalendarFriendPolicy.active(grants, System.currentTimeMillis()).sortedBy { it.expiresAtMillis }
+        CalendarFriendPolicy.active(grants, nowMillis()).sortedBy { it.expiresAtMillis }
 
     /**
      * A grant query as a flow of decoded grants. Not closed on error: a denied or dropped
@@ -272,6 +277,8 @@ class FriendRepositoryImpl(
     ) {
         Result.failure(PairingException(PairingError.Unknown(e.message)))
     }
+
+    private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
     private companion object {
         const val TAG = "FriendRepository"

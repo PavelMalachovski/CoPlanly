@@ -2,7 +2,7 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.domain.friends.FriendCalendarRead
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**

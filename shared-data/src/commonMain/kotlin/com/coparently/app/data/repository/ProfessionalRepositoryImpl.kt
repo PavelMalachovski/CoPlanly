@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.family.SelectedFamilySource
@@ -29,7 +31,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
-import java.util.UUID
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Firestore-backed [ProfessionalRepository] (MON-18).
@@ -43,8 +47,9 @@ import java.util.UUID
  * must show "nothing to read" then, not crash or spin.
  *
  * On [FirestoreClient] and [SignedInUser] since MON-24 phase 2 (Task 8d): the same documents,
- * queries and listeners as the Android SDK calls it made. It stays in the app while
- * [ProfessionalRepository] and `ProfessionalEvents` take a `java.time.LocalDate`.
+ * queries and listeners as the Android SDK calls it made. In `:shared-data` since Task 8e, when
+ * [ProfessionalRepository] and [ProfessionalEvents] moved to kotlinx-datetime's `LocalDate`; its ids are
+ * `Uuid.random()`'s text and its clock `Clock.System`, as [GuestRepositoryImpl]'s.
  */
 class ProfessionalRepositoryImpl(
     private val firestore: FirestoreClient,
@@ -58,7 +63,7 @@ class ProfessionalRepositoryImpl(
     override fun currentUid(): String? = authService.getCurrentUid()
 
     override suspend fun invite(role: ProfessionalRole, grantExpiresAtMillis: Long): Result<GuestInvite> {
-        if (grantExpiresAtMillis <= System.currentTimeMillis()) {
+        if (grantExpiresAtMillis <= nowMillis()) {
             return Result.failure(PairingException(PairingError.GrantEnded))
         }
         return runProfessional {
@@ -71,10 +76,10 @@ class ProfessionalRepositoryImpl(
                 ?: throw PairingException(PairingError.Unknown("No family selected"))
             val profile = firestore.get(DocumentPath(USERS, uid))
             val invite = GuestInvite(
-                id = UUID.randomUUID().toString(),
+                id = Uuid.random().toString(),
                 code = InviteCodeGenerator.generate(),
                 childInfoId = "",
-                inviteExpiresAtMillis = System.currentTimeMillis() + INVITE_TTL_MILLIS,
+                inviteExpiresAtMillis = nowMillis() + INVITE_TTL_MILLIS,
                 grantExpiresAtMillis = grantExpiresAtMillis
             )
             firestore.set(
@@ -87,7 +92,7 @@ class ProfessionalRepositoryImpl(
                     "fromUserEmail" to email,
                     "toEmail" to "",
                     "status" to STATUS_PENDING,
-                    "createdAt" to System.currentTimeMillis(),
+                    "createdAt" to nowMillis(),
                     "expiresAt" to invite.inviteExpiresAtMillis,
                     "acceptedBy" to null,
                     "kind" to KIND_PROFESSIONAL,
@@ -133,7 +138,7 @@ class ProfessionalRepositoryImpl(
         val myUid = currentUid() ?: throw PairingException(PairingError.Unknown("Not signed in"))
         // A field path rather than a dotted string: a uid is alphanumeric today, and a path built
         // from segments stays one key whatever it contains.
-        firestore.update(DocumentPath(GRANTS, grantId), FieldPath(FIELD_CONSENTS, myUid), System.currentTimeMillis())
+        firestore.update(DocumentPath(GRANTS, grantId), FieldPath(FIELD_CONSENTS, myUid), nowMillis())
     }
 
     override suspend fun revoke(grantId: String): Result<Unit> = runProfessional {
@@ -214,6 +219,8 @@ class ProfessionalRepositoryImpl(
     ) {
         Result.failure(PairingException(PairingError.Unknown(e.message)))
     }
+
+    private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
     private companion object {
         const val TAG = "ProfessionalRepository"

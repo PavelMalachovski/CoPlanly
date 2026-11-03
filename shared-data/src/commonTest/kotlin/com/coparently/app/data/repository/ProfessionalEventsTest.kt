@@ -3,7 +3,7 @@ package com.coparently.app.data.repository
 import com.coparently.app.domain.events.EventAcceptance
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
@@ -52,7 +52,7 @@ class ProfessionalEventsTest {
     }
 
     @Test
-    fun `an unparseable document is skipped, not fatal`() {
+    fun `an unparseable document is skipped - not fatal`() {
         val events = ProfessionalEvents.from(
             listOf(doc("broken", "not a date"), doc("fine", "2026-10-07T15:00:00")),
             from,
