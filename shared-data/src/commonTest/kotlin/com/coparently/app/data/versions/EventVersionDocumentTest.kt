@@ -1,7 +1,7 @@
 package com.coparently.app.data.versions
 
 import com.coparently.app.domain.versions.EventVersionKind
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -24,13 +24,13 @@ class EventVersionDocumentTest {
     }
 
     @Test
-    fun `a kind this build does not know reads as nothing, never as a guess`() {
+    fun `a kind this build does not know reads as nothing - never as a guess`() {
         assertNull(EventVersionKind.fromWire("restored"))
         assertNull(EventVersionKind.fromWire(null))
     }
 
     @Test
-    fun `a document carries exactly the keys the rule allows, minus the server's own`() {
+    fun `a document carries exactly the keys the rule allows - minus the server's own`() {
         val document = EventVersionDocument.document(
             eventId = "e1",
             kind = EventVersionKind.CREATED,

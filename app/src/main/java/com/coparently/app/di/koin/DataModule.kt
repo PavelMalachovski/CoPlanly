@@ -109,7 +109,6 @@ import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
-import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -287,5 +286,4 @@ val dataModule = module {
     }
     singleOf(::WorkManagerSyncRequester)
     singleOf(::TelemetryConsentApplier)
-    singleOf(::EventVersionRecorder)
 }

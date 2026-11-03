@@ -4,18 +4,21 @@ import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventVersionOutboxEntity
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.domain.versions.EventVersionKind
-import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.UUID
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Keeps every saved revision of a shared event (MON-4; CLAUDE.md item 25).
@@ -52,6 +55,7 @@ class EventVersionRecorder(
      */
     // Each argument is a field of the revision; see `EventVersionDocument.document`.
     @Suppress("LongParameterList")
+    @OptIn(ExperimentalUuidApi::class)
     suspend fun record(
         eventId: String,
         kind: EventVersionKind,
@@ -60,13 +64,13 @@ class EventVersionRecorder(
         audience: List<String>,
         familyId: String?,
         snapshot: Map<String, Any?>,
-        deviceTimeMillis: Long = System.currentTimeMillis()
+        deviceTimeMillis: Long = Clock.System.now().toEpochMilliseconds()
     ) {
         if (isPrivate || editorUid.isBlank()) return
         try {
             outboxDao.insert(
                 EventVersionOutboxEntity(
-                    id = UUID.randomUUID().toString(),
+                    id = Uuid.random().toString(),
                     eventId = eventId,
                     kind = kind.wire,
                     editorUid = editorUid,
@@ -164,11 +168,16 @@ class EventVersionRecorder(
             landed
         } catch (e: CancellationException) {
             throw e
-        } catch (e: FirebaseFirestoreException) {
-            onRefusal(row, e)
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            logger.w(TAG, "Revision ${row.id} not uploaded; it stays queued", e)
-            false
+            // A Firestore failure carries a code; anything else (no code) is an outage of another
+            // kind, and the row stays queued as it is.
+            val code = remote.errorCodeOf(e)
+            if (code != null) {
+                onRefusal(row, e, code)
+            } else {
+                logger.w(TAG, "Revision ${row.id} not uploaded; it stays queued", e)
+                false
+            }
         }
     }
 
@@ -179,9 +188,9 @@ class EventVersionRecorder(
      * the rule sees an update and refuses it — so the server is asked whether it already holds
      * the revision before the row is counted as refused.
      */
-    private suspend fun onRefusal(row: EventVersionOutboxEntity, e: FirebaseFirestoreException): Boolean {
-        if (e.code != FirebaseFirestoreException.Code.PERMISSION_DENIED) {
-            logger.w(TAG, "Revision ${row.id} not uploaded (${e.code}); it stays queued", e)
+    private suspend fun onRefusal(row: EventVersionOutboxEntity, e: Exception, code: FirestoreErrorCode): Boolean {
+        if (code != FirestoreErrorCode.PERMISSION_DENIED) {
+            logger.w(TAG, "Revision ${row.id} not uploaded ($code); it stays queued", e)
             return false
         }
         val alreadyThere = runCatching { remote.exists(row.id) }.getOrDefault(false)

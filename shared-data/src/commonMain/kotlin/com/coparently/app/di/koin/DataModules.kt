@@ -17,6 +17,7 @@ import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
+import com.coparently.app.data.versions.EventVersionRecorder
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -53,11 +54,16 @@ val syncDataModule: Module = module {
     singleOf(::FamilyIdBackfill)
 }
 
+/** The revision outbox of shared events (MON-4; CLAUDE.md item 25). */
+val versionsDataModule: Module = module {
+    singleOf(::EventVersionRecorder)
+}
+
 /**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
-val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule)
+val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule, versionsDataModule)
 
 /**
  * What each platform binds for [dataModules]: the

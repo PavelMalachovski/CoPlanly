@@ -4,11 +4,13 @@ import com.coparently.app.data.local.dao.EventVersionOutboxDao
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.EventVersionOutboxEntity
 import com.coparently.app.data.local.entity.UserEntity
+import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
 import com.coparently.app.domain.versions.EventVersionKind
 import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
@@ -38,6 +40,10 @@ class EventVersionRecorderTest {
         userDao = mockk(relaxed = true)
         remote = mockk(relaxed = true)
         recorder = EventVersionRecorder(outboxDao, userDao, remote)
+        // What the GitLive client answers on Android, where its exception is the SDK's own.
+        every { remote.errorCodeOf(any()) } answers {
+            (firstArg<Throwable>() as? FirebaseFirestoreException)?.code?.name?.let(FirestoreErrorCode::named)
+        }
         coEvery { userDao.getUserById(ALICE) } returns UserEntity(
             id = ALICE,
             email = "alice@example.com",
