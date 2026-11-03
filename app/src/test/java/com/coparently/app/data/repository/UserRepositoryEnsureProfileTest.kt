@@ -6,11 +6,11 @@ import com.coparently.app.data.local.entity.UserEntity
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.ServerValue
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.domain.model.User
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
-import com.google.firebase.firestore.FieldValue
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -270,8 +270,8 @@ class UserRepositoryEnsureProfileTest {
         )
 
         val patch = capturedRemotePatch()
-        assertEquals(FieldValue.delete().javaClass, patch["allergies"]?.javaClass)
-        assertEquals(FieldValue.delete().javaClass, patch["medicalProfile"]?.javaClass)
+        assertEquals(ServerValue.Delete, patch["allergies"])
+        assertEquals(ServerValue.Delete, patch["medicalProfile"])
         // Only `setHealthConsent` writes the consent, so a save from a row that has not caught
         // up with another device cannot withdraw it.
         assertFalse(patch.containsKey("healthDataConsent"))
@@ -303,7 +303,7 @@ class UserRepositoryEnsureProfileTest {
         coVerify { userDao.setHealthConsent(UID, null, null) }
         val patch = capturedRemotePatch()
         assertEquals(setOf("healthDataConsent"), patch.keys)
-        assertEquals(FieldValue.delete().javaClass, patch["healthDataConsent"]?.javaClass)
+        assertEquals(ServerValue.Delete, patch["healthDataConsent"])
     }
 
     @Test
