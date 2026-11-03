@@ -33,6 +33,12 @@ test('an apostrophe or a quote escaped with a backslash is refused, naming the s
 
 test('an unescaped quote is refused: aapt2 drops it', () => {
   refused('"System default" follows', /unescaped "/);
+  refused('a back\\\\"quote', /unescaped "/);
+});
+
+test('an unescaped apostrophe is refused: aapt2 refuses it', () => {
+  refused("Don't", /unescaped '/);
+  refused("a back\\\\'s", /unescaped '/);
 });
 
 test('whitespace aapt2 would collapse or trim is refused', () => {

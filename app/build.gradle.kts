@@ -359,7 +359,7 @@ dependencies {
     kover(project(":shared-data"))
     // The UI both apps share (MON-24 phase 2, Task 9): so far the strings, as Compose
     // Multiplatform resources (`Res`, which the parity tests read). The app reads the same files
-    // as Android resources through `tools/strings-to-android-res.gradle.kts`, applied below.
+    // as Android resources through the `stringsToAndroidRes` task below.
     implementation(project(":shared-ui"))
 
     // Core Android - Updated to latest stable versions

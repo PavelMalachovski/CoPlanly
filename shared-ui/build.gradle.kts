@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // `app/src/main/res/values*/` lives in `src/commonMain/composeResources/values*/` (same file names,
 // the five locales), where Compose Multiplatform's resource plugin generates `Res` (package
 // `com.coparently.app.resources`) from them. The app keeps `R.string` and Android's own reading of
-// the same files through `tools/strings-to-android-res.gradle.kts`, which copies them unchanged into
+// the same files through `:app`'s `stringsToAndroidRes` task, which copies them unchanged into
 // the app's generated resources. The theme, the common components, the ViewModels and the screens
 // follow here task by task, packages unchanged.
 //

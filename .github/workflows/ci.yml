@@ -2002,6 +2002,7 @@ jobs:
             shared/build/test-results/
             shared-data/build/reports/
             shared-data/build/test-results/
+            shared-ui/build/reports/
           if-no-files-found: ignore
           retention-days: 14
 

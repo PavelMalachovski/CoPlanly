@@ -484,8 +484,14 @@ function stringTextProblems(text, name) {
     const hint = e === "'" ? ' (write \\u0027)' : e === '"' ? ' (write \\u0022)' : '';
     out.push(`the escape \\${e}, which Compose Multiplatform keeps with its backslash${hint}`);
   }
-  if (/(?:^|[^\\])"/.test(text)) {
+  // What is left once every escape is taken out: a quote or an apostrophe there is bare, also
+  // after an escaped backslash (`\\"`).
+  const bare = text.replace(/\\(u[0-9a-fA-F]{4}|.)/g, '');
+  if (bare.includes('"')) {
     out.push('an unescaped ", which aapt2 drops and Compose Multiplatform keeps (write \\u0022)');
+  }
+  if (bare.includes("'")) {
+    out.push("an unescaped ', which aapt2 refuses and Compose Multiplatform accepts (write \\u0027)");
   }
   if (/[ \t\r\n]{2,}|[\t\r\n]/.test(text) || text !== text.trim()) {
     out.push('whitespace aapt2 collapses or trims and Compose Multiplatform keeps (write \\n for a line break)');
