@@ -1,6 +1,6 @@
 package com.coparently.app.domain.ai
 
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
 /**
  * Whether this build offers the AI assist at all — `BuildConfig.AI_ASSIST_ENABLED`, on in debug and

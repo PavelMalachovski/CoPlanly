@@ -1,8 +1,13 @@
 package com.coparently.app.domain.receipts
 
 import com.coparently.app.domain.model.ExpenseCategory
-import java.text.Normalizer
-import java.time.LocalDate
+import com.coparently.app.domain.platform.canonicalDecomposition
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * Turns the raw lines recognised on a receipt into structured fields.
@@ -43,8 +48,7 @@ object ReceiptParser {
 
     /** Lowercases and strips diacritics so "K ÚHRADĚ" and "k uhrade" compare equal. */
     internal fun normalise(text: String): String =
-        Normalizer.normalize(text.lowercase(), Normalizer.Form.NFD)
-            .replace(COMBINING_MARKS_REGEX, "")
+        text.lowercase().canonicalDecomposition().replace(COMBINING_MARKS_REGEX, "")
 
     /** Whether [char] can appear in a money-shaped token: a digit, or one of the two separators. */
     private fun isMoneyCharacter(char: Char): Boolean = char.isDigit() || char == '.' || char == ','
@@ -183,7 +187,7 @@ object ReceiptParser {
     private val DATE_DMY_SHORT = Regex("""\b(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2})\b""")
 
     /** A receipt older than this is almost certainly a misread, not a real purchase. */
-    private const val MAX_RECEIPT_AGE_YEARS = 2L
+    private const val MAX_RECEIPT_AGE_YEARS = 2
 
     /**
      * Two-digit receipt years are assumed to fall in the 2000s (e.g. "26" reads as 2026) —
@@ -264,7 +268,8 @@ object ReceiptParser {
      * @return The purchase date, or null when nothing plausible was found
      */
     internal fun findDate(lines: List<String>, today: LocalDate): LocalDate? {
-        val oldest = today.minusYears(MAX_RECEIPT_AGE_YEARS)
+        // Clamped to the month's last day, as `minusYears` did: 29 February goes to the 28th.
+        val oldest = today.minus(MAX_RECEIPT_AGE_YEARS, DateTimeUnit.YEAR)
 
         for (line in lines) {
             // Candidates are ordered by regex type (DMY, then ISO YMD, then short-year DMY),
@@ -286,8 +291,8 @@ object ReceiptParser {
             }
 
             candidates.forEach { (year, month, day) ->
-                val date = runCatching { LocalDate.of(year, month, day) }.getOrNull()
-                if (date != null && !date.isAfter(today) && !date.isBefore(oldest)) return date
+                val date = runCatching { LocalDate(year, month, day) }.getOrNull()
+                if (date != null && date <= today && date >= oldest) return date
             }
         }
         return null
@@ -377,7 +382,10 @@ object ReceiptParser {
      * @param today Reference date used to sanity-check the purchase date
      * @return Best-effort fields; any of them may be null
      */
-    fun parse(lines: List<String>, today: LocalDate = LocalDate.now()): ReceiptScan = ReceiptScan(
+    fun parse(
+        lines: List<String>,
+        today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    ): ReceiptScan = ReceiptScan(
         total = findTotal(lines),
         currency = findCurrency(lines),
         merchant = findMerchant(lines),

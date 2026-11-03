@@ -236,7 +236,7 @@ class MonthReviewViewModelTest {
         advanceUntilIdle()
 
         assertEquals("A calm month.", vm.summary.value)
-        coVerify { repository.summarizeMonth(today.toJavaYearMonth(), "cs", any()) }
+        coVerify { repository.summarizeMonth(today, "cs", any()) }
         assertEquals(today.toJavaYearMonth().toString(), stats.captured["month"])
         val days = stats.captured["daysWithParent"] as List<*>
         assertTrue(days.all { (it as Map<*, *>)["name"] in setOf("Alice", "Bob") })

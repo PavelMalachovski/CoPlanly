@@ -3,6 +3,7 @@ package com.coparently.app.presentation.expenses
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
+import kotlinx.datetime.toJavaLocalDate
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -24,7 +25,7 @@ class BuildReceiptScanUpdateTest {
         total = 299.0,
         currency = "CZK",
         merchant = "LEKARNA DR.MAX",
-        date = LocalDate.of(2026, 7, 12),
+        date = kotlinx.datetime.LocalDate(2026, 7, 12),
         category = ExpenseCategory.MEDICAL
     )
 
@@ -54,7 +55,7 @@ class BuildReceiptScanUpdateTest {
     @Test
     fun `date still at today is filled from the scan`() {
         val update = buildReceiptScanUpdate(scan, untouchedForm, today)
-        assertEquals(scan.date, update.date)
+        assertEquals(scan.date?.toJavaLocalDate(), update.date)
     }
 
     @Test

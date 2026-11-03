@@ -3,8 +3,10 @@ package com.coparently.app.domain.chat
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageType
 import com.coparently.app.domain.text.PercentCodec
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /**
  * Reporting a chat message (Play's user-generated content policy; play-final audit F-10).
@@ -35,9 +37,14 @@ object MessageReport {
      * When the message was sent, as an ISO-8601 instant in UTC to the second
      * (`2026-09-25T10:15:30Z`). Support reads this, not the parent, so it is one unambiguous form
      * rather than the reader's clock (the export's reasoning, not the chat's).
+     *
+     * The text `Instant.ofEpochMilli(…).truncatedTo(SECONDS).toString()` wrote: the UTC wall clock
+     * with its seconds always printed, no fraction, and `Z`.
      */
-    fun sentAtUtc(sentAtMillis: Long): String =
-        Instant.ofEpochMilli(sentAtMillis).truncatedTo(ChronoUnit.SECONDS).toString()
+    fun sentAtUtc(sentAtMillis: Long): String {
+        val seconds = Instant.fromEpochSeconds(sentAtMillis.floorDiv(MILLIS_PER_SECOND))
+        return IsoText.dateTime(seconds.toLocalDateTime(TimeZone.UTC)) + "Z"
+    }
 
     /**
      * A `mailto:` URI (RFC 6068) addressed to [address] with [subject] and [body] prefilled.
@@ -49,6 +56,8 @@ object MessageReport {
      */
     fun mailtoUri(address: String, subject: String, body: String): String =
         "mailto:$address?subject=${encode(subject)}&body=${encode(body)}"
+
+    private const val MILLIS_PER_SECOND = 1_000L
 
     private fun encode(text: String): String =
         PercentCodec.encode(text)

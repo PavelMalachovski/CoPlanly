@@ -3,12 +3,13 @@ package com.coparently.app.data.ai
 import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.ai.AiAssistResult
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
 /**
  * [AiAssistRepository] over the `aiAssist` callable, through the app's one [FirebaseFunctions]
@@ -42,7 +43,8 @@ class FunctionsAiAssistRepository(
             mapOf(
                 KEY_TASK to TASK_MONTH_SUMMARY,
                 KEY_LOCALE to locale,
-                KEY_MONTH to month.toString(),
+                // `java.time.YearMonth.toString()`'s text, which this sent until MON-24.
+                KEY_MONTH to IsoText.yearMonth(month),
                 KEY_STATS to stats
             )
         )

@@ -21,9 +21,9 @@ import kotlin.test.assertTrue
  * set the server validates, names in place of slots, and nothing sent for a month without a
  * schedule.
  *
- * Split from `MonthReviewCalculatorTest` when the calculator moved to `:shared` (MON-24):
- * [MonthStatsWire] stays in the app, because it writes the month through `java.time.YearMonth`'s
- * own text, so its tests stay here with the same month the calculator's tests use.
+ * Split from `MonthReviewCalculatorTest` when the calculator moved to `:shared` (MON-24), with the
+ * same month the calculator's tests use. The month is `IsoText.yearMonth`, `java.time.YearMonth`'s
+ * own text, which `YearMonthTextParityTest` holds for every year.
  */
 class MonthStatsWireTest {
 

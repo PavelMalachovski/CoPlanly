@@ -45,7 +45,6 @@ import kotlinx.datetime.YearMonth
 import kotlinx.datetime.atTime
 import kotlinx.datetime.minusMonth
 import kotlinx.datetime.plusMonth
-import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.yearMonth
 
 /** Keeps the flows warm across a configuration change. */
@@ -230,7 +229,7 @@ class MonthReviewViewModel(
         if (!aiAvailable) return
         val review = state.value.review?.takeIf { MonthStatsWire.canSend(it) } ?: return
         val stats = MonthStatsWire.of(review, names::labelFor, names::labelForUid)
-        session.request { repository.summarizeMonth(review.month.toJavaYearMonth(), locale, stats) }
+        session.request { repository.summarizeMonth(review.month, locale, stats) }
     }
 
     /** "I agree" on the consent dialog. */

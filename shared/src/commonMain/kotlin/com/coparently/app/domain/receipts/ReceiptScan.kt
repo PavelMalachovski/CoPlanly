@@ -1,7 +1,7 @@
 package com.coparently.app.domain.receipts
 
 import com.coparently.app.domain.model.ExpenseCategory
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * What could be read off a receipt photo. Every field is best-effort and may be null.

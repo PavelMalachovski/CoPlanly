@@ -1,8 +1,8 @@
 package com.coparently.app.domain.receipts
 
 import com.coparently.app.domain.model.ExpenseCategory
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 /** End-to-end tests for [ReceiptParser.parse] over realistic receipt layouts. */
 class ReceiptParserFullTest {
 
-    private val today = LocalDate.of(2026, 7, 30)
+    private val today = LocalDate(2026, 7, 30)
 
     @Test
     fun `reads a czech pharmacy receipt`() {
@@ -29,7 +29,7 @@ class ReceiptParserFullTest {
         assertEquals(299.0, scan.total)
         assertEquals("CZK", scan.currency)
         assertEquals("LEKARNA DR.MAX", scan.merchant)
-        assertEquals(LocalDate.of(2026, 7, 12), scan.date)
+        assertEquals(LocalDate(2026, 7, 12), scan.date)
         assertEquals(ExpenseCategory.MEDICAL, scan.category)
     }
 
@@ -48,7 +48,7 @@ class ReceiptParserFullTest {
         assertEquals(12.99, scan.total)
         assertEquals("EUR", scan.currency)
         assertEquals("CITY BOOKSHOP", scan.merchant)
-        assertEquals(LocalDate.of(2026, 5, 21), scan.date)
+        assertEquals(LocalDate(2026, 5, 21), scan.date)
     }
 
     @Test

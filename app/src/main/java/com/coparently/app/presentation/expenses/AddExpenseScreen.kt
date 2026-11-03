@@ -709,7 +709,7 @@ internal fun buildReceiptScanUpdate(
         title = scan.merchant?.takeIf { formState.title.isBlank() },
         amount = scan.total?.takeIf { formState.amount.isBlank() }?.toString(),
         category = scan.category?.takeIf { formState.category == ExpenseCategory.OTHER },
-        date = scan.date?.takeIf { formState.date == today },
+        date = scan.date?.toJavaLocalDate()?.takeIf { formState.date == today },
         currency = SupportedCurrency.fromCode(scan.currency)?.takeIf { formState.currency == null }
     )
 

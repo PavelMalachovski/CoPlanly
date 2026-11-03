@@ -1,14 +1,14 @@
 package com.coparently.app.domain.receipts
 
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /** Tests for currency and purchase-date detection in [ReceiptParser]. */
 class ReceiptParserDateCurrencyTest {
 
-    private val today = LocalDate.of(2026, 7, 30)
+    private val today = LocalDate(2026, 7, 30)
 
     @Test
     fun `detects czech crowns`() {
@@ -64,7 +64,7 @@ class ReceiptParserDateCurrencyTest {
     @Test
     fun `reads a czech style date`() {
         assertEquals(
-            LocalDate.of(2026, 7, 12),
+            LocalDate(2026, 7, 12),
             ReceiptParser.findDate(listOf("Datum: 12.07.2026 14:32"), today)
         )
     }
@@ -72,7 +72,7 @@ class ReceiptParserDateCurrencyTest {
     @Test
     fun `reads a slash separated date`() {
         assertEquals(
-            LocalDate.of(2026, 6, 3),
+            LocalDate(2026, 6, 3),
             ReceiptParser.findDate(listOf("03/06/2026"), today)
         )
     }
@@ -80,7 +80,7 @@ class ReceiptParserDateCurrencyTest {
     @Test
     fun `reads an iso date`() {
         assertEquals(
-            LocalDate.of(2026, 5, 21),
+            LocalDate(2026, 5, 21),
             ReceiptParser.findDate(listOf("2026-05-21"), today)
         )
     }
@@ -88,7 +88,7 @@ class ReceiptParserDateCurrencyTest {
     @Test
     fun `reads a two digit year`() {
         assertEquals(
-            LocalDate.of(2026, 7, 12),
+            LocalDate(2026, 7, 12),
             ReceiptParser.findDate(listOf("12.07.26"), today)
         )
     }
@@ -106,7 +106,7 @@ class ReceiptParserDateCurrencyTest {
     @Test
     fun `skips a card expiry and takes the real purchase date`() {
         val lines = listOf("VISA exp 09/2031", "Datum 12.07.2026")
-        assertEquals(LocalDate.of(2026, 7, 12), ReceiptParser.findDate(lines, today))
+        assertEquals(LocalDate(2026, 7, 12), ReceiptParser.findDate(lines, today))
     }
 
     @Test

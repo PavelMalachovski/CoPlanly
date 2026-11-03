@@ -8,6 +8,9 @@ import com.coparently.app.domain.model.MessageType
 import org.junit.Test
 import java.net.URI
 import java.net.URLDecoder
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -69,6 +72,20 @@ class MessageReportTest {
     }
 
     @Test
+    fun `the time is the text java time wrote for the instant`() {
+        val random = Random(SEED)
+        // Around the epoch and a whole second, years 1 and 10000 at their edges, and draws from
+        // before year 0 to past year 10000, where the year carries a sign.
+        val fixed = listOf(-1L, -999L, -1_000L, -1_001L, 0L, 59_999L, 60_000L) +
+            listOf(YEAR_1_MILLIS, YEAR_1_MILLIS - 1, YEAR_10000_MILLIS, YEAR_10000_MILLIS - 1)
+        val drawn = List(SAMPLES) { random.nextLong(YEAR_1_MILLIS * 3, YEAR_10000_MILLIS * 2) }
+        for (millis in fixed + drawn) {
+            val expected = Instant.ofEpochMilli(millis).truncatedTo(ChronoUnit.SECONDS).toString()
+            assertEquals(expected, MessageReport.sentAtUtc(millis), "at $millis")
+        }
+    }
+
+    @Test
     fun `the mailto carries the address, subject and body, and decodes back to them`() {
         val subject = "CoPlanly: nahlášení zprávy"
         val body = "ID zprávy: m1\nConversation ID: a_b & more?\nSent at (UTC): 2026-09-21T14:13:20Z"
@@ -88,5 +105,16 @@ class MessageReportTest {
     fun `a space is percent-encoded, never a plus`() {
         val uri = MessageReport.mailtoUri("s@example.com", "a b", "1 + 1")
         assertEquals("mailto:s@example.com?subject=a%20b&body=1%20%2B%201", uri)
+    }
+
+    private companion object {
+        const val SEED = 20261103L
+        const val SAMPLES = 20_000
+
+        /** 0001-01-01T00:00:00Z. */
+        const val YEAR_1_MILLIS = -62_135_596_800_000L
+
+        /** 10000-01-01T00:00:00Z. */
+        const val YEAR_10000_MILLIS = 253_402_300_800_000L
     }
 }
