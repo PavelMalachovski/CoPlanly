@@ -1,5 +1,8 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.data.chat.ChatMirror
+import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
@@ -113,6 +116,16 @@ val familyDataModule: Module = module {
 }
 
 /**
+ * The chat thread's process-wide mirror, the co-parent it follows and the threads kept after a
+ * co-parent's departure (MON-24 phase 2, Task 8c; CLAUDE.md "Known issues", CQ-8 and M-8).
+ */
+val chatDataModule: Module = module {
+    singleOf(::ChatMirror)
+    singleOf(::ChatPartnerSource)
+    singleOf(::DepartedThreadSource)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -121,7 +134,8 @@ val dataModules: List<Module> = listOf(
     syncDataModule,
     versionsDataModule,
     repositoryDataModule,
-    familyDataModule
+    familyDataModule,
+    chatDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,

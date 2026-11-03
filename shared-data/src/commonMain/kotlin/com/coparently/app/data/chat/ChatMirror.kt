@@ -1,11 +1,13 @@
 package com.coparently.app.data.chat
 
 import com.coparently.app.data.platform.logger
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -74,6 +76,7 @@ class ChatMirror(
      * `TelemetryConsentApplier.start()` — the mirror belongs to the process, which is the whole
      * point of moving it off a screen.
      */
+    @OptIn(InternalSharedApi::class)
     fun start() {
         scope.launch { mirror() }
     }
@@ -83,9 +86,12 @@ class ChatMirror(
      *
      * @param sleep How to wait between restarts. A parameter so a test can drive it: the
      *   give-up-and-retry behaviour is the entire subject of this class, and it is untestable
-     *   against a real five-minute delay.
+     *   against a real five-minute delay. Public only for the on-screen e2e tests in the app,
+     *   which start the mirror themselves because their test application never runs
+     *   `CoPlanlyApplication.onCreate`.
      */
-    internal suspend fun mirror(sleep: suspend (Long) -> Unit = { delay(it) }) {
+    @InternalSharedApi
+    suspend fun mirror(sleep: suspend (Long) -> Unit = { delay(it) }) {
         combine(
             userRepository.observeCurrentUserId(),
             chatPartnerSource.observe()

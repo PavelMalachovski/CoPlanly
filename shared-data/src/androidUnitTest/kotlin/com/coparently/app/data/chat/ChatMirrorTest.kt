@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.chat
 
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.domain.model.Message

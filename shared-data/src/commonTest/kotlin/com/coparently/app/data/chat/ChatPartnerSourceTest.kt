@@ -2,7 +2,7 @@ package com.coparently.app.data.chat
 
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
@@ -37,7 +37,7 @@ class ChatPartnerSourceTest {
     }
 
     @Test
-    fun `an unpaired account has nobody, whatever a stale projection says`() {
+    fun `an unpaired account has nobody - whatever a stale projection says`() {
         assertEquals(ChatPartner.None, ChatPartnerSource.resolve(PairingState.NotPaired(), SECOND))
     }
 

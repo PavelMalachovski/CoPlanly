@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.e2e
 
 import android.content.Context
@@ -30,6 +32,7 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.sync.SyncService
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PreferencesRepository

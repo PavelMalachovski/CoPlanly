@@ -1,7 +1,7 @@
 package com.coparently.app.domain.chat
 
 import com.coparently.app.data.chat.DepartedThreadSource
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -41,7 +41,7 @@ class DepartedThreadTest {
     }
 
     @Test
-    fun `an ordinary thread, a past deadline or a stranger read as nothing`() {
+    fun `an ordinary thread - a past deadline or a stranger read as nothing`() {
         assertNull(DepartedThread.fromDocument(THREAD, document(departedUid = null, until = null), ME, NOW))
         assertNull(DepartedThread.fromDocument(THREAD, document(until = NOW), ME, NOW))
         assertNull(DepartedThread.fromDocument(THREAD, document(until = "2026-10-25"), ME, NOW))
@@ -55,12 +55,12 @@ class DepartedThreadTest {
     }
 
     @Test
-    fun `a missing name reads as blank, for the screen's own fallback`() {
+    fun `a missing name reads as blank - for the screen's own fallback`() {
         assertEquals("", DepartedThread.fromDocument(THREAD, document(name = null), ME, NOW)?.departedName)
     }
 
     @Test
-    fun `the source keeps the readable ones, soonest deadline first`() {
+    fun `the source keeps the readable ones - soonest deadline first`() {
         val later = document(until = NOW + 2 * DAY) + ("id" to "later")
         val sooner = document(until = NOW + DAY) + ("id" to "sooner")
         val ordinary = document(departedUid = null) + ("id" to "ordinary")

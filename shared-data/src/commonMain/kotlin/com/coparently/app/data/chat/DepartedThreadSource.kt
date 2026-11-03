@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlin.time.Clock
 
 /**
  * The conversations kept for this parent after a co-parent deleted their account ([DepartedThread]).
@@ -42,7 +43,7 @@ class DepartedThreadSource(
                 flowOf(emptyList<DepartedThread>())
             } else {
                 messages.observeDepartedThreads(uid)
-                    .map { documents -> parse(documents, uid, System.currentTimeMillis()) }
+                    .map { documents -> parse(documents, uid, nowMillis()) }
                     .catch { e ->
                         logger.w(TAG, "Kept-thread listener failed; showing none", e)
                         emit(emptyList())
@@ -55,7 +56,7 @@ class DepartedThreadSource(
      * treats like any thread it cannot reach.
      */
     suspend fun current(myUid: String): List<DepartedThread> = try {
-        parse(messages.fetchDepartedThreads(myUid), myUid, System.currentTimeMillis())
+        parse(messages.fetchDepartedThreads(myUid), myUid, nowMillis())
     } catch (e: CancellationException) {
         throw e
     } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
@@ -72,5 +73,7 @@ class DepartedThreadSource(
             documents.mapNotNull { data ->
                 (data["id"] as? String)?.let { id -> DepartedThread.fromDocument(id, data, myUid, nowMillis) }
             }.sortedBy { it.retainedUntilMillis }
+
+        private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
     }
 }
