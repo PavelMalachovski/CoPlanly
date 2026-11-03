@@ -1,7 +1,7 @@
 package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.UserDao
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
@@ -18,13 +18,13 @@ import kotlinx.coroutines.flow.onStart
  * ([FamilyView.counts]), and a record that is "only mine" or from an earlier family carries a mark.
  */
 class FamilyViewSource(
-    private val auth: FirebaseAuthService,
+    private val auth: SignedInUser,
     private val userDao: UserDao
 ) {
 
     /** The view, re-emitted when the switcher or the co-parent set changes; everything signed out. */
     fun observe(): Flow<FamilyView> = flow {
-        val uid = auth.getCurrentUser()?.uid?.takeIf { it.isNotBlank() }
+        val uid = auth.getCurrentUid()?.takeIf { it.isNotBlank() }
         if (uid == null) {
             emit(FamilyView.EVERYTHING)
             return@flow

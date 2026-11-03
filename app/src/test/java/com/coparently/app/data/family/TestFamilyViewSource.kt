@@ -2,8 +2,7 @@ package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
-import com.google.firebase.auth.FirebaseUser
+import com.coparently.app.data.remote.firebase.SignedInUser
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -24,8 +23,7 @@ fun testFamilyViewSource(
     signedInUid: String? = null,
     row: StateFlow<UserEntity?> = MutableStateFlow(null)
 ): FamilyViewSource {
-    val user = signedInUid?.let { id -> mockk<FirebaseUser> { every { uid } returns id } }
-    val auth = mockk<FirebaseAuthService> { every { getCurrentUser() } returns user }
+    val auth = mockk<SignedInUser> { every { getCurrentUid() } returns signedInUid }
     val userDao = mockk<UserDao> {
         every { observeUserById(any()) } returns row
         coEvery { getUserById(any()) } answers { row.value }

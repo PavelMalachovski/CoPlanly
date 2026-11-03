@@ -64,6 +64,9 @@ class EventRepositoryImplTest {
         userDao = mockk(relaxed = true)
         firestoreEventDataSource = mockk(relaxed = true)
         firebaseAuthService = mockk()
+        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
+        // the real service does.
+        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         // No signed-in user -> insert/update stay local, so the Firestore path doesn't
         // interfere with what we assert about the persisted entity.
         every { firebaseAuthService.getCurrentUser() } returns null

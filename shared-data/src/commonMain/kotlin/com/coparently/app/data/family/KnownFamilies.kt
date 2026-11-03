@@ -6,6 +6,7 @@ import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.domain.family.FamilyKey
 import kotlinx.coroutines.CancellationException
+import kotlin.time.Clock
 
 /**
  * Keeps `known_families` current for every live family: the co-parent's name and the two slots
@@ -27,7 +28,11 @@ class KnownFamilies(
 ) {
 
     /** Remembers each of [coParentUids]' family with [myUid]. */
-    suspend fun refresh(myUid: String, coParentUids: Collection<String>, nowMillis: Long = System.currentTimeMillis()) {
+    suspend fun refresh(
+        myUid: String,
+        coParentUids: Collection<String>,
+        nowMillis: Long = Clock.System.now().toEpochMilliseconds()
+    ) {
         coParentUids.filter { it.isNotBlank() && it != myUid }.distinct().forEach { coParent ->
             val familyId = FamilyKey.of(myUid, coParent)
             remember("name") {
@@ -53,7 +58,7 @@ class KnownFamilies(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            logger.w(TAG, "Could not read a family's $what (${e.javaClass.simpleName}); kept the last one")
+            logger.w(TAG, "Could not read a family's $what (${e::class.simpleName}); kept the last one")
         }
     }
 

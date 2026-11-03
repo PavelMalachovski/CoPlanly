@@ -2,11 +2,10 @@ package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
-import com.google.firebase.auth.FirebaseUser
+import com.coparently.app.data.remote.firebase.SignedInUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -32,8 +31,8 @@ import kotlin.test.assertNull
 class SelectedFamilySourceTest {
 
     private lateinit var userDao: UserDao
-    private lateinit var authService: FirebaseAuthService
-    private lateinit var preferences: EncryptedPreferences
+    private lateinit var authService: SignedInUser
+    private lateinit var preferences: SecurePreferences
     private lateinit var firestoreUserDataSource: FirestoreUserDataSource
     private lateinit var source: SelectedFamilySource
 
@@ -44,8 +43,7 @@ class SelectedFamilySourceTest {
         userDao = mockk(relaxed = true)
         authService = mockk(relaxed = true)
         preferences = mockk(relaxed = true)
-        every { authService.getCurrentUser() } returns
-            mockk<FirebaseUser> { every { uid } returns ALICE }
+        every { authService.getCurrentUid() } returns ALICE
         firestoreUserDataSource = mockk(relaxed = true)
         source = SelectedFamilySource(
             userDao, authService, firestoreUserDataSource, preferences

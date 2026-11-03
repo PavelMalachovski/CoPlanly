@@ -1,5 +1,9 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.data.family.FamilyViewSource
+import com.coparently.app.data.family.KnownFamilies
+import com.coparently.app.data.family.KnownFamilySlots
+import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
@@ -26,6 +30,7 @@ import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.MessageRepository
@@ -95,10 +100,29 @@ val repositoryDataModule: Module = module {
 }
 
 /**
+ * Which family is on screen and what it may show (MON-24 phase 2, Task 8c; CLAUDE.md items 43, 46,
+ * 50): the switcher's selection, the view the repositories filter by, and each family's names and
+ * slots as this phone last read them.
+ */
+val familyDataModule: Module = module {
+    singleOf(::FamilyViewSource)
+    singleOf(::KnownFamilies)
+    singleOf(::KnownFamilySlots)
+    factory<FamilySlotsSource> { get<KnownFamilySlots>() }
+    singleOf(::SelectedFamilySource)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
-val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule, versionsDataModule, repositoryDataModule)
+val dataModules: List<Module> = listOf(
+    remoteDataModule,
+    syncDataModule,
+    versionsDataModule,
+    repositoryDataModule,
+    familyDataModule
+)
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,
 //  AttachmentUploadGate and RequestClockScheduler on the iPhone before its app starts Koin.

@@ -1,17 +1,21 @@
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.serialization.StoredJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.time.Clock
 
 /**
  * One co-parenting relationship this device can be looking at.
@@ -61,7 +65,7 @@ data class FamilyOption(
  */
 class SelectedFamilySource(
     private val userDao: UserDao,
-    private val firebaseAuthService: FirebaseAuthService,
+    private val firebaseAuthService: SignedInUser,
     private val firestoreUserDataSource: FirestoreUserDataSource,
     private val encryptedPreferences: SecurePreferences
 ) {
@@ -153,11 +157,11 @@ class SelectedFamilySource(
         val uid = currentUid() ?: return null
         val target = families().firstOrNull { it.familyId == familyId }
         if (target == null) {
-            pendingSwitch.set(PendingSwitch(uid, familyId, System.currentTimeMillis() + PENDING_SWITCH_MILLIS))
+            pendingSwitch.store(PendingSwitch(uid, familyId, nowMillis() + PENDING_SWITCH_MILLIS))
             logger.w(TAG, "A switch to a family this device does not know yet waits for the next reconcile")
             return null
         }
-        pendingSwitch.set(null)
+        pendingSwitch.store(null)
         encryptedPreferences.putString(key(uid), familyId)
         applyProjection(uid, target)
         return target
@@ -189,8 +193,8 @@ class SelectedFamilySource(
      * which are dropped.
      */
     private suspend fun askedFor(uid: String): FamilyOption? {
-        val pending = pendingSwitch.get() ?: return null
-        val live = pending.uid == uid && System.currentTimeMillis() <= pending.untilMillis
+        val pending = pendingSwitch.load() ?: return null
+        val live = pending.uid == uid && nowMillis() <= pending.untilMillis
         val target = if (live) families().firstOrNull { it.familyId == pending.familyId } else null
         if (target != null || !live) pendingSwitch.compareAndSet(pending, null)
         return target
@@ -238,7 +242,9 @@ class SelectedFamilySource(
         userDao.updateUser(row.copy(partnerId = partnerId))
     }
 
-    private fun currentUid(): String? = firebaseAuthService.getCurrentUser()?.uid
+    private fun currentUid(): String? = firebaseAuthService.getCurrentUid()
+
+    private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
     private fun key(uid: String) = "${PreferenceKeys.SELECTED_FAMILY_PREFIX}$uid"
 

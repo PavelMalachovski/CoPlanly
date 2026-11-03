@@ -52,6 +52,9 @@ class PetRepositoryImplTest {
         petDao = mockk(relaxed = true)
         userDao = mockk(relaxed = true)
         firebaseAuthService = mockk(relaxed = true)
+        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
+        // the real service does.
+        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         firestorePetDataSource = mockk(relaxed = true)
 
         val firebaseUser = mockk<FirebaseUser>(relaxed = true)

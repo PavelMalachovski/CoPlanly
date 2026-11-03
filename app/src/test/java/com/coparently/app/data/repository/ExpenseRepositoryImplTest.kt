@@ -59,6 +59,9 @@ class ExpenseRepositoryImplTest {
         expenseDao = mockk(relaxed = true)
         userDao = mockk()
         firebaseAuthService = mockk()
+        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
+        // the real service does.
+        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         firestoreExpenseDataSource = mockk()
         repository = ExpenseRepositoryImpl(
             expenseDao,

@@ -2,9 +2,8 @@ package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.family.FamilyKey
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -137,8 +136,7 @@ class FamilyViewTest {
 
     @Test
     fun `a switch re-filters the same records`() = runTest(UnconfinedTestDispatcher()) {
-        val user = mockk<FirebaseUser> { every { uid } returns zuzana }
-        val auth = mockk<FirebaseAuthService> { every { getCurrentUser() } returns user }
+        val auth = mockk<SignedInUser> { every { getCurrentUid() } returns zuzana }
         val rowFlow = MutableStateFlow<UserEntity?>(row(onScreen = "igor", partners = listOf("igor", "carol")))
         val userDao = mockk<UserDao> {
             every { observeUserById(zuzana) } returns rowFlow
@@ -159,7 +157,7 @@ class FamilyViewTest {
 
     @Test
     fun `signed out nothing is filtered`() = runTest {
-        val auth = mockk<FirebaseAuthService> { every { getCurrentUser() } returns null }
+        val auth = mockk<SignedInUser> { every { getCurrentUid() } returns null }
         val records = flowOf(listOf("shoes" to igorFamily, "swimming" to carolFamily))
         val out = records.inFamilyOnScreen(auth, mockk()) { it.second }.first()
         assertEquals(2, out.size)

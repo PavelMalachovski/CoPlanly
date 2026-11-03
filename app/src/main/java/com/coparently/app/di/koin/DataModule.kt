@@ -20,11 +20,7 @@ import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
 import com.coparently.app.data.family.AgreementSignalSources
-import com.coparently.app.data.family.FamilyViewSource
-import com.coparently.app.data.family.KnownFamilies
-import com.coparently.app.data.family.KnownFamilySlots
 import com.coparently.app.data.family.OtherFamiliesSignals
-import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.files.RecordPhotoImageLoader
 import com.coparently.app.data.files.SharedFileCache
@@ -143,11 +139,7 @@ val dataModule = module {
     singleOf(::OptionalRecordSections)
     singleOf(::ParentingPlanRecordSource)
     factoryOf(::AgreementSignalSources)
-    singleOf(::FamilyViewSource)
-    singleOf(::KnownFamilies)
-    singleOf(::KnownFamilySlots)
     singleOf(::OtherFamiliesSignals)
-    singleOf(::SelectedFamilySource)
     singleOf(::UnassignedRecords)
     singleOf(::RecordPhotoImageLoader)
     singleOf(::SharedFileCache)

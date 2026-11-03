@@ -2,7 +2,7 @@ package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.serialization.StoredJson
@@ -150,14 +150,14 @@ val Event.placementFamilyId: String?
  * @param familyOf The record's family, or null for none.
  */
 fun <T> Flow<List<T>>.inFamilyOnScreen(
-    auth: FirebaseAuthService,
+    auth: SignedInUser,
     userDao: UserDao,
     creatorOf: (T) -> String? = { null },
     familyOf: (T) -> String?
 ): Flow<List<T>> {
     val records = this
     return flow {
-        val uid = auth.getCurrentUser()?.uid?.takeIf { it.isNotBlank() }
+        val uid = auth.getCurrentUid()?.takeIf { it.isNotBlank() }
         if (uid == null) {
             emitAll(records)
             return@flow
