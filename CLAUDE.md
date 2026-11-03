@@ -1742,7 +1742,7 @@ app binds the four seams to its classes. Still in the app from `data/repository/
 (WorkManager). Task 8h, the request clocks (item 42) and what waited on them: in `commonMain`, from
 `data/requests/`, `RequestTime` (its zone kotlinx-datetime's `TimeZone.currentSystemDefault()`,
 which on Android is `ZoneId.systemDefault()` itself and is read on every call; `RequestClocksTest`
-holds the reminders' plan and quiet hours to the old zone across summer-time changes, and the app's
+holds the zone to `ZoneId.systemDefault()` on every call, as the system zone changes, and the app's
 tests build a fixed clock through `RequestTime.of`, the primary constructor staying `internal` for
 `KoinGraphTest`), `RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a
 compare-and-set over an immutable set where it took a JVM lock; the sweep's bound, its
@@ -1776,7 +1776,9 @@ since `RequestInbox` moved, Task 8e, and `ClocksAt.governing` lost its marker wh
 in `shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument`
 (the export, and the events and revisions wire contracts and their tests, all in the app;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
-(`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app), and
+(`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app; `minuteTicks` beside it is
+public without the marker, because its caller, `AnswerByField`, is presentation code that stays in
+another module and so it never becomes `internal` again, as `governing`), and
 `ChatMappers`' entity and document mappers (the export, the R8 probe and the messages wire
 contract; the mark mappers are `internal` again since the other families' signals moved, Task 8h), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
 the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is

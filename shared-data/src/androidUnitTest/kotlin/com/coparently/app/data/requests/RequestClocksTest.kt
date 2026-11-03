@@ -2,7 +2,6 @@ package com.coparently.app.data.requests
 
 import app.cash.turbine.test
 import com.coparently.app.domain.changerequests.ClocksAt
-import com.coparently.app.domain.changerequests.ReminderPlan
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -125,39 +124,23 @@ class RequestClocksTest {
 
     /**
      * MON-24 phase 2 (Task 8h) moved the zone from `java.time`'s `ZoneId` to kotlinx-datetime's
-     * `TimeZone`. The keeper plans reminders, and a reminder checks its quiet hours, in that zone, so
-     * the system zone it reads must be the one `ZoneId.systemDefault()` named — read again on every
-     * call, as the parent travels — and plan and check alike on each side of a summer-time change.
+     * `TimeZone`. The keeper plans reminders, and a reminder checks its quiet hours, in that zone;
+     * `ReminderPlan` already took a kotlinx `TimeZone` before, converted from `ZoneId.systemDefault()`.
+     * So what must hold is the zone itself: on every call it is the one `ZoneId.systemDefault()`
+     * names, and it follows a change of the system zone without the clock being rebuilt.
      */
     @Test
-    fun `the system zone is the one java time names - read again on every call and across summer time`() {
+    fun `the system zone is the one java time names - read again on every call`() {
         val saved = java.util.TimeZone.getDefault()
         val production = RequestTime()
         try {
             PARITY_ZONES.forEach { id ->
                 java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(id))
-                val before = ZoneId.systemDefault().toKotlinTimeZone()
-                val after = production.zone()
-                assertEquals(id, before, after)
-                TRANSITION_INSTANTS.forEach { sent -> assertSameReminders(id, sent, before, after) }
+                assertEquals(id, ZoneId.systemDefault().toKotlinTimeZone(), production.zone())
             }
         } finally {
             java.util.TimeZone.setDefault(saved)
         }
-    }
-
-    /** The quiet hours of every hour of three days from [sent], and the reminder plan, in both zones. */
-    private fun assertSameReminders(id: String, sent: Long, before: TimeZone, after: TimeZone) {
-        (0L until 3 * DAY step HOUR).map { sent + it }.forEach { now ->
-            val quiet = ReminderPlan.isQuietAt(now, before)
-            assertEquals("$id $now", quiet, ReminderPlan.isQuietAt(now, after))
-        }
-        val answerBy = sent + 3 * DAY
-        assertEquals(
-            "$id $sent",
-            ReminderPlan.plan(sent, answerBy, sent, before),
-            ReminderPlan.plan(sent, answerBy, sent, after)
-        )
     }
 
     @Test
@@ -196,8 +179,6 @@ class RequestClocksTest {
         /** Two reads of the system clock in a row, with a margin for a slow runner. */
         const val SLACK_MILLIS = 5_000L
 
-        const val DAY = 24 * HOUR
-
         /** Zones with summer time both ways, half-hour changes, the date line and none at all. */
         val PARITY_ZONES = listOf(
             "Europe/Prague",
@@ -207,20 +188,5 @@ class RequestClocksTest {
             "America/New_York",
             "UTC"
         )
-
-        /**
-         * A day before each 2026 change of Prague, New York, Santiago and Lord Howe, so the three
-         * days that follow span it.
-         */
-        val TRANSITION_INSTANTS = listOf(
-            "2026-03-28T12:00:00Z", // Prague springs forward on the 29th
-            "2026-10-24T12:00:00Z", // Prague falls back on the 25th
-            "2026-03-07T12:00:00Z", // New York springs forward on the 8th
-            "2026-10-31T12:00:00Z", // New York falls back on 1 November
-            "2026-04-04T12:00:00Z", // Santiago falls back on the 5th
-            "2026-09-05T12:00:00Z", // Santiago springs forward on the 6th
-            "2026-04-04T00:00:00Z", // Lord Howe falls back half an hour on the 5th
-            "2026-10-03T00:00:00Z" // Lord Howe springs forward half an hour on the 4th
-        ).map { java.time.Instant.parse(it).toEpochMilli() }
     }
 }

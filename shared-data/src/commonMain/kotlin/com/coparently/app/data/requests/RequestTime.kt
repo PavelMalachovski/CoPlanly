@@ -18,8 +18,9 @@ import kotlin.time.Clock
  * read again, a minute later.
  *
  * The zone is kotlinx-datetime's since MON-24 phase 2 (Task 8h): the system's zone, which on Android
- * is `java.time`'s `ZoneId.systemDefault()` read through `TimeZone.currentSystemDefault()`, the same
- * zone the reminders were planned and checked in when this held a `ZoneId` (`RequestClocksTest`).
+ * is `java.time`'s `ZoneId.systemDefault()` read through `TimeZone.currentSystemDefault()` on every
+ * call, the zone the reminders were planned and checked in when this held a `ZoneId`.
+ * `RequestClocksTest` holds the zone to `ZoneId.systemDefault()` on every call.
  *
  * @property ticks Emits once at once, then at each minute boundary, for as long as it is collected.
  */
