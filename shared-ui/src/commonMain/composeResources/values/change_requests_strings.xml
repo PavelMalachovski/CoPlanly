@@ -5,7 +5,7 @@
     <string name="change_request_inbox_title">Requests</string>
     <string name="change_request_back">Back</string>
     <string name="change_request_empty_title">No requests yet</string>
-    <string name="change_request_empty_hint">Open an event and tap \"Request change\" to propose a new time to your co-parent.</string>
+    <string name="change_request_empty_hint">Open an event and tap \u0022Request change\u0022 to propose a new time to your co-parent.</string>
     <!-- Status chip labels (UI labels for ChangeRequestStatus). -->
     <string name="change_request_status_pending">Pending</string>
     <string name="change_request_status_accepted">Accepted</string>
@@ -44,7 +44,7 @@
     <string name="change_request_error_proposal_decline_failed">The proposal could not be declined. Please try again.</string>
     <string name="change_request_error_answer_failed">That could not be answered. Please try again.</string>
     <string name="change_request_error_withdraw_failed">The request could not be withdrawn. Please try again.</string>
-    <string name="change_request_error_signed_out">You\'re signed out. Sign in and try again.</string>
+    <string name="change_request_error_signed_out">You\u0027re signed out. Sign in and try again.</string>
     <string name="change_request_error_not_paired">Pair with your co-parent first to send change requests.</string>
     <string name="change_request_error_not_in_family">This event is not in a family you are linked with, so there is nobody to ask.</string>
     <string name="change_request_error_send_failed">The change request could not be sent. Please try again.</string>
@@ -59,7 +59,7 @@
     <string name="request_history_custody">New custody schedule</string>
     <string name="request_history_split">Expense split</string>
     <string name="request_history_yours_answered">Your request · %1$s answered</string>
-    <string name="request_history_theirs_answered">%1$s\'s request · you answered</string>
+    <string name="request_history_theirs_answered">%1$s\u0027s request · you answered</string>
     <string name="request_history_withdrawn_by_you">You withdrew it</string>
     <string name="request_history_withdrawn_by">%1$s withdrew it</string>
     <string name="request_history_when">%1$s · %2$s</string>

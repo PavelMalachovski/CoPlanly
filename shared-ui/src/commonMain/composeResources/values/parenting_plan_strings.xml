@@ -10,7 +10,7 @@
 <resources>
     <string name="parenting_plan_title">Parenting plan</string>
     <string name="parenting_plan_settings_description">Answer separately, then see where you already agree</string>
-    <string name="parenting_plan_intro">Each of you answers on your own. Nobody sees a half being written, and neither of you can edit the other\'s. Where you both tick the other\'s answer, the question counts as agreed.</string>
+    <string name="parenting_plan_intro">Each of you answers on your own. Nobody sees a half being written, and neither of you can edit the other\u0027s. Where you both tick the other\u0027s answer, the question counts as agreed.</string>
     <string name="parenting_plan_disclaimer">This is not the Ministry of Justice form. It covers the same areas the law and that form name, in our own words.</string>
     <string name="parenting_plan_progress_agreed">%1$d of %2$d agreed</string>
     <string name="parenting_plan_progress_answered">You have answered %1$d of %2$d</string>

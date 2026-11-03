@@ -20,7 +20,7 @@
     <string name="auth_action_sign_in">Sign In</string>
     <string name="auth_action_create_account">Create account</string>
     <string name="auth_action_sign_up">Sign up</string>
-    <string name="auth_no_account_question">Don\'t have an account?</string>
+    <string name="auth_no_account_question">Don\u0027t have an account?</string>
     <string name="auth_have_account_question">Already have an account?</string>
     <string name="auth_forgot_password_link">Forgot password?</string>
     <string name="auth_saved_password_sign_in">Sign in with saved password</string>

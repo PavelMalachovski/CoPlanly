@@ -3,7 +3,7 @@
      "Dad": every parent label goes through ParentLabels and renders that person's name. -->
 <resources>
     <string name="day_swap_sheet_title">Swap this day</string>
-    <string name="day_swap_currently_with">Right now this day is %1$s\'s</string>
+    <string name="day_swap_currently_with">Right now this day is %1$s\u0027s</string>
     <string name="day_swap_would_go_to">You are offering it to %1$s</string>
     <string name="day_swap_cancel">Not now</string>
     <string name="day_swap_needs_coparent">Link a co-parent first — a swap is something the two of you agree.</string>

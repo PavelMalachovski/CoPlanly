@@ -18,7 +18,7 @@
     <string name="common_error_server_title">Server error</string>
     <string name="common_loading_events">Loading events…</string>
     <string name="common_no_data_title">No data</string>
-    <string name="common_no_data_description">There\'s nothing to show here yet</string>
+    <string name="common_no_data_description">There\u0027s nothing to show here yet</string>
     <string name="common_quick_actions_title">Quick actions</string>
     <string name="common_quick_action_new_event">New event</string>
     <string name="common_quick_action_new_event_subtitle">Create a new calendar event</string>
@@ -49,7 +49,7 @@
     <string name="common_error_generic">Something went wrong. Please try again.</string>
     <string name="common_error_offline">No internet connection. Check your connection and try again.</string>
     <string name="common_error_server">The server could not be reached. Please try again later.</string>
-    <string name="common_error_permission">You don\'t have permission to do that.</string>
+    <string name="common_error_permission">You don\u0027t have permission to do that.</string>
     <string name="common_error_invalid_input">Some details are missing or invalid. Check them and try again.</string>
     <!-- Audit leftovers (Sept 2026): required-field marker and the discard-changes dialog. -->
     <string name="common_required">Required</string>

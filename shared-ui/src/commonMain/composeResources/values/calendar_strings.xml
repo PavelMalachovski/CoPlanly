@@ -105,10 +105,10 @@
     <string name="calendar_agenda_time_range">%1$s–%2$s</string>
     <!-- Shown when a calendar write or query fails. The calendar used to say nothing at
          all, so a failed reschedule looked exactly like a successful one. -->
-    <string name="calendar_operation_failed">Couldn\'t save that change. It may not have reached your co-parent.</string>
+    <string name="calendar_operation_failed">Couldn\u0027t save that change. It may not have reached your co-parent.</string>
     <string name="calendar_retry">Retry</string>
     <!-- UX-8: whose day it is is its own line now, not a suffix on the date. -->
-    <string name="calendar_agenda_custody_day">%1$s\'s day</string>
+    <string name="calendar_agenda_custody_day">%1$s\u0027s day</string>
     <string name="calendar_week_number">Wk %1$d</string>
     <string name="calendar_agenda_custody_day_you">Your day</string>
     <string name="calendar_filter_members">Show for</string>

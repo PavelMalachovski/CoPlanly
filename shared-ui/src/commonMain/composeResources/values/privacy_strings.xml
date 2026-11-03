@@ -12,12 +12,12 @@
 <resources>
     <string name="consent_title">Help improve CoPlanly?</string>
     <string name="consent_body">CoPlanly can send usage statistics and crash reports to Google Firebase. They carry a random identifier of this installation, not your name or email, and tell us which screens are slow and which crashes are real — nothing else.</string>
-    <string name="consent_never">Never included: your children\'s names or health details, your messages, your events, your expenses, or your receipts. Those are never part of statistics or crash reports.</string>
+    <string name="consent_never">Never included: your children\u0027s names or health details, your messages, your events, your expenses, or your receipts. Those are never part of statistics or crash reports.</string>
     <string name="consent_changeable">You can change this at any time in Settings. The app works exactly the same either way.</string>
     <string name="consent_accept">Yes, send statistics</string>
     <string name="consent_decline">No, send nothing</string>
     <string name="settings_telemetry_title">Usage statistics</string>
-    <string name="settings_telemetry_description">Statistics and crash reports under a random installation identifier. Never your family\'s data.</string>
+    <string name="settings_telemetry_description">Statistics and crash reports under a random installation identifier. Never your family\u0027s data.</string>
     <!-- REL-4. Shown only once BuildConfig.PRIVACY_POLICY_URL is set (PrivacyPolicyLink). -->
     <string name="privacy_policy_title">Privacy policy</string>
     <string name="privacy_policy_description">What CoPlanly stores about your family, and why</string>

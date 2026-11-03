@@ -3,7 +3,7 @@
      they agree to it. Every parent label goes through ParentLabels: never "Mom" or "Dad". -->
 <resources>
     <string name="event_acceptance_offered_to_you">%1$s added this on your day</string>
-    <string name="event_acceptance_offered_by_you">You added this on %1$s\'s day</string>
+    <string name="event_acceptance_offered_by_you">You added this on %1$s\u0027s day</string>
     <string name="event_acceptance_waiting">Waiting for an answer</string>
     <string name="event_acceptance_accepted">Agreed</string>
     <string name="event_acceptance_declined">Turned down</string>

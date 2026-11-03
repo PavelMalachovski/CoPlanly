@@ -7,7 +7,7 @@
     <string name="receipt_camera_denied">Camera permission is needed to photograph a receipt</string>
     <string name="receipt_camera_unavailable">No camera app is available to take a photo</string>
     <string name="receipt_scanning">Reading the receipt…</string>
-    <string name="receipt_scan_failed">Couldn\'t read the receipt</string>
+    <string name="receipt_scan_failed">Couldn\u0027t read the receipt</string>
     <string name="receipt_scan_applied">Filled from receipt</string>
     <string name="receipt_scan_undo">Undo</string>
 </resources>

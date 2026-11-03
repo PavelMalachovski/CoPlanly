@@ -28,7 +28,7 @@
     <string name="auth_create_account">Create account</string>
     <string name="auth_email">Email</string>
     <string name="auth_password">Password</string>
-    <string name="auth_sign_up_prompt">Don\'t have an account? Sign up</string>
+    <string name="auth_sign_up_prompt">Don\u0027t have an account? Sign up</string>
     <string name="auth_sign_in_prompt">Already have an account? Sign in</string>
     <string name="auth_forgot_password">Forgot password?</string>
     <string name="auth_fill_all_fields">Please fill in all fields</string>
@@ -90,8 +90,8 @@
     <string name="child_info_title">Child information</string>
     <string name="child_info_add">Add child</string>
     <string name="child_info_edit">Edit child</string>
-    <string name="child_info_name">Child\'s Name</string>
-    <string name="child_info_name_required">Child\'s name *</string>
+    <string name="child_info_name">Child\u0027s Name</string>
+    <string name="child_info_name_required">Child\u0027s name *</string>
     <string name="child_info_medical_notes">Additional medical information</string>
     <string name="child_info_medical_notes_hint">Any other important medical information…</string>
     <string name="child_info_medications">Medications</string>

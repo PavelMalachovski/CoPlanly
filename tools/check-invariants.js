@@ -33,6 +33,17 @@
  *     `docs/legal/PRIVACY-POLICY.md`, its hosted copy and `web/index.html` name, so widening the
  *     scope in code fails until the texts say so too.
  *
+ *  7. **The strings read the same on Android and in Compose Multiplatform.** Since MON-24 phase 2
+ *     (Task 9) one set of files is read twice: by aapt2 and `String.format` into the app's
+ *     `R.string`, and by Compose Multiplatform 1.9.3's resource plugin into `:shared-ui`'s `Res`.
+ *     The plugin unescapes only `\n`, `\t`, `\uXXXX` and `\\`, keeps whitespace as written, and
+ *     its formatter replaces only `%<n>$s` and `%<n>$d`; aapt2 also takes `\'`, `\"`, `\@` and
+ *     `\?`, drops an unescaped `"`, collapses and trims whitespace, and `String.format` turns `%%`
+ *     into `%`. A text that uses any of those reads differently in the two, so it is written the
+ *     way both read alike (`\u0027` for an apostrophe, `\u0022` for a straight quote).
+ *     `StringsParityTest` and `PluralsParityTest` (Robolectric, in the app) compare the two
+ *     readings of every key; this is their offline half, which fails before CI runs them.
+ *
  * Exits non-zero listing every problem found, so it can gate a build.
  */
 
@@ -438,6 +449,89 @@ function checkGoogleScopeDisclosed() {
   console.log(`google scope: checked against ${GOOGLE_SCOPE_DOCUMENTS.length} documents`);
 }
 
+// ---- 7. the strings read the same on Android and in Compose Multiplatform ---
+
+/**
+ * The keys whose text holds a literal `%%` beside format arguments. `String.format` prints `%`;
+ * Compose Multiplatform 1.9.3's formatter leaves `%%` as it is, and no spelling of a literal percent
+ * sign reads as one in both (`%` becomes a bare `%`, which `String.format` refuses). They are
+ * read through `R.string` today (`presentation/changerequests/SplitShares.kt`); before that file
+ * moves to `:shared-ui` (MON-24 Task 11) they need a wording or a format both read alike.
+ * `StringsParityTest` holds the same list.
+ */
+const PERCENT_WITH_ARGUMENTS = new Set([
+  'expenses_split_shares_named',
+  'expenses_split_shares_you_first',
+  'expenses_split_shares_you_second',
+]);
+
+/**
+ * What in one resource text Android and Compose Multiplatform 1.9.3 would read differently.
+ *
+ * @param {string} text the text between the tags, as written in the file (comments stripped)
+ * @param {string} name the resource name, for the `%%` allowance
+ * @return {string[]} one line per problem; empty when both read it alike
+ */
+function stringTextProblems(text, name) {
+  const out = [];
+  if (/[<]|&(?:quot|apos|#34|#39|#x22|#x27);/i.test(text)) {
+    out.push('markup, CDATA or a quote entity, which the two parsers have not been compared on');
+  }
+  for (const m of text.matchAll(/\\(u[0-9a-fA-F]{4}|.)/g)) {
+    const e = m[1];
+    if (e[0] === 'u' && e.length === 5) continue;
+    if (e === 'n' || e === 't' || e === '\\') continue;
+    const hint = e === "'" ? ' (write \\u0027)' : e === '"' ? ' (write \\u0022)' : '';
+    out.push(`the escape \\${e}, which Compose Multiplatform keeps with its backslash${hint}`);
+  }
+  if (/(?:^|[^\\])"/.test(text)) {
+    out.push('an unescaped ", which aapt2 drops and Compose Multiplatform keeps (write \\u0022)');
+  }
+  if (/[ \t\r\n]{2,}|[\t\r\n]/.test(text) || text !== text.trim()) {
+    out.push('whitespace aapt2 collapses or trims and Compose Multiplatform keeps (write \\n for a line break)');
+  }
+  if (/^[@?]/.test(text)) out.push('a leading @ or ?, which aapt2 reads as a reference');
+  const args = [...text.matchAll(/%(?:(\d+)\$)?([-#+ 0,(]*\d*(?:\.\d+)?)([a-zA-Z%])/g)];
+  for (const m of args) {
+    if (m[3] === '%' && !m[1] && !m[2]) continue;
+    if (m[1] && !m[2] && (m[3] === 's' || m[3] === 'd')) continue;
+    out.push(`the format ${m[0]}, which Compose Multiplatform does not replace (only %<n>$s and %<n>$d)`);
+  }
+  const hasArgs = args.some((m) => m[3] !== '%');
+  if (hasArgs && /%%/.test(text) && !PERCENT_WITH_ARGUMENTS.has(name)) {
+    out.push('%% beside format arguments, which Compose Multiplatform prints as %% and Android as %');
+  }
+  return out;
+}
+
+/** Every text of every string, plural item and array item in one `values*` directory. */
+function* resourceTexts(dir) {
+  const dirPath = path.join(RES, dir);
+  if (!fs.existsSync(dirPath)) return;
+  for (const file of fs.readdirSync(dirPath).filter((f) => f.endsWith('.xml'))) {
+    const xml = stripComments(fs.readFileSync(path.join(dirPath, file), 'utf8'));
+    for (const m of xml.matchAll(/<string\s[^>]*?name="([^"]+)"[^>]*?(?:\/>|>([\s\S]*?)<\/string>)/g)) {
+      yield { file, name: m[1], text: m[2] || '' };
+    }
+    for (const m of xml.matchAll(/<(plurals|string-array)\s[^>]*?name="([^"]+)"[^>]*>([\s\S]*?)<\/\1>/g)) {
+      for (const item of m[3].matchAll(/<item\b[^>]*?(?:\/>|>([\s\S]*?)<\/item>)/g)) {
+        yield { file, name: m[2], text: item[1] || '' };
+      }
+    }
+  }
+}
+
+function checkStringTexts() {
+  let count = 0;
+  for (const dir of [BASE_DIR, ...LOCALE_DIRS]) {
+    for (const { file, name, text } of resourceTexts(dir)) {
+      count++;
+      for (const p of stringTextProblems(text, name)) fail(`${RES_DIR}/${dir}/${file} "${name}": ${p}`);
+    }
+  }
+  console.log(`string texts: ${count} checked for what Android and Compose Multiplatform read differently`);
+}
+
 // ---- run --------------------------------------------------------------------
 
 if (require.main === module) {
@@ -446,6 +540,7 @@ if (require.main === module) {
   checkNoGson();
   checkProbeCoverage();
   checkGoogleScopeDisclosed();
+  checkStringTexts();
 
   if (problems.length) {
     console.error(`\n${problems.length} problem(s):`);
@@ -455,4 +550,4 @@ if (require.main === module) {
   console.log('\nAll invariants hold.');
 }
 
-module.exports = { storedJsonModels, gsonImports, googleScopeProblems };
+module.exports = { storedJsonModels, gsonImports, googleScopeProblems, stringTextProblems, PERCENT_WITH_ARGUMENTS };

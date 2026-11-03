@@ -45,7 +45,7 @@
     <string name="home_section_partner_changed">%1$s changed</string>
 
     <!-- Timeline row. %1$s = day and time, %2$s = the parent whose day it is. -->
-    <string name="home_timeline_meta">%1$s · %2$s\'s day</string>
+    <string name="home_timeline_meta">%1$s · %2$s\u0027s day</string>
     <string name="home_week_days_you">Your days</string>
     <string name="home_week_days_of">%1$s’s days</string>
     <string name="home_timeline_meta_you">%1$s · your day</string>
@@ -56,7 +56,7 @@
 
     <!-- Contacts: item 16's one button, between the changes feed and the spend tile. -->
     <string name="home_contacts">Contacts</string>
-    <string name="home_contacts_supporting">Grandparents, doctors, a friend\'s parents</string>
+    <string name="home_contacts_supporting">Grandparents, doctors, a friend\u0027s parents</string>
 
     <!-- Activity feed. %1$s = event title; the section header already names who made the
          change, so the row states the action rather than repeating "Co-parent". -->

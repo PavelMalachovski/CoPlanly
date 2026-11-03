@@ -11,7 +11,7 @@
 
     <!-- The consent dialog, asked before the first request -->
     <string name="ai_consent_dialog_title">Drafts and summaries written by AI</string>
-    <string name="ai_consent_dialog_message">To suggest a reply, CoPlanly sends the last 20 messages of the conversation, including your co-parent\'s, and anything you have already typed. To summarise a month, it sends that month\'s figures and both parents\' names. They go to Google Cloud in the EU, where an AI model (Claude, by Anthropic) writes the text. Nothing is kept there once it is written.\n\nA draft only goes into your message box: nothing reaches your co-parent unless you send it. AI can be wrong, so read it first. You can turn this off at any time in Settings → App.</string>
+    <string name="ai_consent_dialog_message">To suggest a reply, CoPlanly sends the last 20 messages of the conversation, including your co-parent\u0027s, and anything you have already typed. To summarise a month, it sends that month\u0027s figures and both parents\u0027 names. They go to Google Cloud in the EU, where an AI model (Claude, by Anthropic) writes the text. Nothing is kept there once it is written.\n\nA draft only goes into your message box: nothing reaches your co-parent unless you send it. AI can be wrong, so read it first. You can turn this off at any time in Settings → App.</string>
     <string name="ai_consent_agree">I agree</string>
     <string name="ai_consent_not_saved">Your answer could not be saved. Check your connection and try again.</string>
 

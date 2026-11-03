@@ -21,19 +21,19 @@
 
     <!-- MON-13, regional half: the Land whose own public holidays are added. -->
     <string name="holiday_region_label_de">State</string>
-    <string name="holiday_region_settings_summary">Adds that state\'s own public holidays and school vacations</string>
+    <string name="holiday_region_settings_summary">Adds that state\u0027s own public holidays and school vacations</string>
     <string name="holiday_region_none">Nationwide only</string>
     <string name="country_holidays_pick_region">Nationwide public holidays are shown on the calendar. School vacations are set per state: choose one to add its school vacations and its own public holidays.</string>
     <string name="country_holidays_with_region">Nationwide public holidays, and the public holidays and school vacations of %1$s, are shown on the calendar.</string>
 
     <!-- MON-13, regional half: Slovakia's kraje, which add their spring holidays. -->
     <string name="holiday_region_label_sk">Region (kraj)</string>
-    <string name="holiday_region_settings_summary_sk">Adds that region\'s spring holidays</string>
+    <string name="holiday_region_settings_summary_sk">Adds that region\u0027s spring holidays</string>
     <string name="country_holidays_with_region_sk">Public holidays and school vacations are shown on the calendar, with the spring holidays of %1$s.</string>
 
     <!-- The wording for any other country that gains regions. -->
     <string name="holiday_region_label">Region</string>
-    <string name="holiday_region_settings_summary_generic">Adds that region\'s own holidays and school vacations</string>
+    <string name="holiday_region_settings_summary_generic">Adds that region\u0027s own holidays and school vacations</string>
     <string name="country_holidays_with_region_generic">Nationwide public holidays, and the holidays and school vacations of %1$s, are shown on the calendar.</string>
 
     <string name="region_de_bb">Brandenburg</string>

@@ -59,7 +59,7 @@
     <!-- Warning shown when saving an expense dated outside the current month -->
     <string name="expense_date_other_month_title">Not in the current month</string>
     <!-- %1$s = the expense's month, e.g. "October 2024" -->
-    <string name="expense_date_other_month_message">This expense is dated %1$s, so it won\'t show under the current month. Switch months on the Expenses screen to find it.</string>
+    <string name="expense_date_other_month_message">This expense is dated %1$s, so it won\u0027t show under the current month. Switch months on the Expenses screen to find it.</string>
     <string name="expense_date_other_month_confirm">Save anyway</string>
 
     <!-- Expense categories (labels for the ExpenseCategory enum) -->
@@ -96,7 +96,7 @@
     <string name="expense_split_shared">Share with your co-parent</string>
     <string name="expense_split_not_shared_hint">Counts towards your spending, but neither of you owes the other for it.</string>
     <string name="expense_split_ratio">Split %1$d / %2$d</string>
-    <string name="expense_split_override_hint">Different split for this expense only. The family\'s agreed split does not change.</string>
+    <string name="expense_split_override_hint">Different split for this expense only. The family\u0027s agreed split does not change.</string>
     <string name="expense_for_members">Who is this for?</string>
     <string name="expenses_filter_members">Show for</string>
     <!-- UX-17: the proposer's side of the same conversation. -->
@@ -112,7 +112,7 @@
     <string name="settle_up_dialog_owed">%1$s will see in the chat that they owe you %2$s.</string>
     <string name="settle_up_dialog_owing">%1$s will see in the chat that you owe them %2$s. If they have added a bank account, you will get a QR code to pay with.</string>
     <string name="settle_up_iban_label">Your IBAN, for a QR payment (optional)</string>
-    <string name="settle_up_iban_invalid">This IBAN doesn\'t look right. Check it, or leave the field empty.</string>
+    <string name="settle_up_iban_invalid">This IBAN doesn\u0027t look right. Check it, or leave the field empty.</string>
     <string name="settle_up_send">Send</string>
     <string name="settle_up_cancel">Cancel</string>
     <string name="settle_up_iban_save_failed">Your IBAN could not be saved. The settle-up was not sent.</string>

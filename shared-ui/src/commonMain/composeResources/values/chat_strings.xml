@@ -24,7 +24,7 @@
     <string name="chat_request_change">Request change</string>
     <string name="chat_request_change_title">Request a change</string>
     <string name="chat_no_upcoming_events">No upcoming events to propose a change for.</string>
-    <string name="chat_pick_event_to_reschedule">Pick the event you\'d like to reschedule:</string>
+    <string name="chat_pick_event_to_reschedule">Pick the event you\u0027d like to reschedule:</string>
     <!-- Shown when the co-parent action is used on an account that has no co-parent linked. -->
     <string name="chat_no_coparent">You are not linked with a co-parent yet.</string>
     <!-- Snackbar action next to chat_no_coparent; opens the pairing screen. -->
@@ -69,33 +69,33 @@
     <string name="chat_template_handover_confirm_title">Confirm a handover</string>
     <string name="chat_template_handover_confirm_content">Confirming the handover on [day] at [time], at [place]. Please let me know if anything changes.</string>
     <string name="chat_template_pickup_delay_title">Running late</string>
-    <string name="chat_template_pickup_delay_content">I\'m running about [number] minutes late for the handover and will be there by [time]. Sorry for the wait.</string>
+    <string name="chat_template_pickup_delay_content">I\u0027m running about [number] minutes late for the handover and will be there by [time]. Sorry for the wait.</string>
     <string name="chat_template_pickup_early_title">Ask for an earlier handover</string>
     <string name="chat_template_pickup_early_content">Would it work to do the handover earlier on [day], at [time]? If not, the usual time is fine.</string>
     <string name="chat_template_packing_title">Things to pack</string>
-    <string name="chat_template_packing_content">Could you please pack [items] for [day]? They\'re needed for [what for]. Thank you.</string>
+    <string name="chat_template_packing_content">Could you please pack [items] for [day]? They\u0027re needed for [what for]. Thank you.</string>
     <string name="chat_template_schedule_change_title">Ask to swap days</string>
-    <string name="chat_template_schedule_change_content">Could we swap days? You\'d take [date], and I\'d take [other date] in return. Please let me know by [date].</string>
+    <string name="chat_template_schedule_change_content">Could we swap days? You\u0027d take [date], and I\u0027d take [other date] in return. Please let me know by [date].</string>
     <string name="chat_template_child_sick_title">Child is unwell</string>
-    <string name="chat_template_child_sick_content">[Child] has [symptoms] today and a temperature of [temperature]. We\'re staying at home, and I\'ll give you an update by [time].</string>
-    <string name="chat_template_doctor_visit_title">After a doctor\'s visit</string>
+    <string name="chat_template_child_sick_content">[Child] has [symptoms] today and a temperature of [temperature]. We\u0027re staying at home, and I\u0027ll give you an update by [time].</string>
+    <string name="chat_template_doctor_visit_title">After a doctor\u0027s visit</string>
     <string name="chat_template_doctor_visit_content">I took [child] to the doctor today. Reason: [reason]. Diagnosis and treatment: [what the doctor said]. Medicine: [name, dose, until when]. Next check-up: [date].</string>
     <string name="chat_template_school_event_title">School event</string>
-    <string name="chat_template_school_event_content">The school\'s [event] is on [date] at [time]. I\'m planning to go. Are you going too?</string>
+    <string name="chat_template_school_event_content">The school\u0027s [event] is on [date] at [time]. I\u0027m planning to go. Are you going too?</string>
     <string name="chat_template_parent_teacher_meeting_title">Parent-teacher meeting</string>
-    <string name="chat_template_parent_teacher_meeting_content">The parent-teacher meeting is on [date] at [time], and the teacher would like to discuss [topic]. Are you going? If not, I\'ll send you a summary afterwards.</string>
+    <string name="chat_template_parent_teacher_meeting_content">The parent-teacher meeting is on [date] at [time], and the teacher would like to discuss [topic]. Are you going? If not, I\u0027ll send you a summary afterwards.</string>
     <string name="chat_template_school_update_title">School update</string>
     <string name="chat_template_school_update_content">An update from school about [child]: [what happened]. Nothing is needed from you, this is just so you know.</string>
     <string name="chat_template_holiday_plan_title">Plan the holidays</string>
-    <string name="chat_template_holiday_plan_content">Let\'s plan [holiday]. My suggestion: [proposal]. Could you let me know by [date] whether that works, or suggest something else?</string>
+    <string name="chat_template_holiday_plan_content">Let\u0027s plan [holiday]. My suggestion: [proposal]. Could you let me know by [date] whether that works, or suggest something else?</string>
     <string name="chat_template_travel_abroad_title">Travel abroad</string>
-    <string name="chat_template_travel_abroad_content">I\'m planning a trip with [child] to [country] from [date] to [date]. We\'ll stay at [address], and you can reach me on [phone]. Could you let me know by [date] whether you agree?</string>
+    <string name="chat_template_travel_abroad_content">I\u0027m planning a trip with [child] to [country] from [date] to [date]. We\u0027ll stay at [address], and you can reach me on [phone]. Could you let me know by [date] whether you agree?</string>
     <string name="chat_template_expense_share_title">Share of an expense</string>
     <string name="chat_template_expense_share_content">Shared expense: [what], [date], [amount] in total. Your share is [amount]. Could you send it by [date]? I can forward the receipt.</string>
     <string name="chat_template_acknowledge_title">Got your message</string>
-    <string name="chat_template_acknowledge_content">Thanks for your message about [topic]. I\'ll reply by [day].</string>
+    <string name="chat_template_acknowledge_content">Thanks for your message about [topic]. I\u0027ll reply by [day].</string>
     <string name="chat_template_confirm_agreement_title">Confirm what we agreed</string>
-    <string name="chat_template_confirm_agreement_content">To make sure we\'re on the same page, here\'s what we agreed: [agreement]. If you see it differently, please let me know.</string>
+    <string name="chat_template_confirm_agreement_content">To make sure we\u0027re on the same page, here\u0027s what we agreed: [agreement]. If you see it differently, please let me know.</string>
     <string name="chat_failed_to_send_retry">Not sent — tap to retry</string>
     <string name="chat_load_earlier">Load earlier messages</string>
 
@@ -150,11 +150,11 @@
     <string name="chat_report_body">Tell us what is wrong with this message:\n\n\n---\nThe message text is not included. If you want us to read it, paste it above.\nMessage ID: %1$s\nConversation ID: %2$s\nSent at (UTC): %3$s</string>
     <string name="chat_report_no_email_app">No email app is set up. To report the message, write to %1$s.</string>
     <string name="settle_up_pay_title">Pay %1$s to %2$s</string>
-    <string name="settle_up_pay_hint">In your bank\'s app, choose a QR payment and load this code from an image, or share it to the app.</string>
+    <string name="settle_up_pay_hint">In your bank\u0027s app, choose a QR payment and load this code from an image, or share it to the app.</string>
     <string name="settle_up_share_qr">Share QR code</string>
     <string name="settle_up_share_chooser">Share the payment code</string>
     <string name="settle_up_copy_iban">Copy IBAN</string>
     <string name="settle_up_iban_copied">IBAN copied</string>
-    <string name="settle_up_no_account">%1$s hasn\'t added a bank account for payments yet.</string>
+    <string name="settle_up_no_account">%1$s hasn\u0027t added a bank account for payments yet.</string>
     <string name="settle_up_qr_description">QR code for paying %1$s to %2$s</string>
 </resources>

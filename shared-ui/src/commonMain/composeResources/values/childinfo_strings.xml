@@ -26,7 +26,7 @@
     <string name="childinfo_section_teacher">Teacher information</string>
 
     <!-- Child info: basic form -->
-    <string name="childinfo_child_name_label">Child\'s name *</string>
+    <string name="childinfo_child_name_label">Child\u0027s name *</string>
     <string name="childinfo_dob_value">Date of birth: %1$s</string>
     <string name="childinfo_add_child_button">Add child</string>
     <string name="childinfo_save_changes">Save changes</string>
@@ -101,17 +101,17 @@
     <string name="childinfo_grade_placeholder">e.g., 3rd grade</string>
     <string name="childinfo_teacher_name_optional_label">Teacher Name (optional)</string>
     <string name="childinfo_teacher_email_optional_label">Teacher Email (optional)</string>
-    <string name="childinfo_save_failed">Could not save the child\'s details. Please try again.</string>
+    <string name="childinfo_save_failed">Could not save the child\u0027s details. Please try again.</string>
     <string name="childinfo_children_group_label">Children</string>
     <string name="childinfo_delete_title">Delete %1$s?</string>
-    <string name="childinfo_delete_message">Their record, medications, allergies and photographs are removed from this device and from your co-parent\'s.</string>
+    <string name="childinfo_delete_message">Their record, medications, allergies and photographs are removed from this device and from your co-parent\u0027s.</string>
     <string name="childinfo_delete_confirm">Delete</string>
     <string name="childinfo_delete_cancel">Keep</string>
     <string name="childinfo_delete_action">Delete child</string>
 
     <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
-    <string name="childinfo_load_failed">Could not load the children\'s details. Please try again.</string>
-    <string name="childinfo_delete_failed">Could not delete the child\'s details. Please try again.</string>
+    <string name="childinfo_load_failed">Could not load the children\u0027s details. Please try again.</string>
+    <string name="childinfo_delete_failed">Could not delete the child\u0027s details. Please try again.</string>
 
     <!-- School "Clear" confirmation, and the detail screen of a child deleted while it was open. -->
     <string name="childinfo_school_clear_title">Clear school details?</string>

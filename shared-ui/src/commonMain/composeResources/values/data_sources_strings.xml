@@ -5,7 +5,7 @@
 -->
 <resources>
     <string name="settings_data_sources_title">Data sources and licences</string>
-    <string name="settings_data_sources_description">Where the calendar\'s holidays and school vacations come from</string>
+    <string name="settings_data_sources_description">Where the calendar\u0027s holidays and school vacations come from</string>
     <string name="data_sources_intro">The public holidays and school vacations on the calendar are built into the app, so nothing is downloaded while you use it. They were prepared from the sources below.</string>
     <string name="data_sources_group_holidays">Holidays and school vacations</string>
     <string name="data_sources_openholidays_title" translatable="false">OpenHolidays API</string>

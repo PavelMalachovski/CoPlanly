@@ -25,11 +25,11 @@
          the wording the split and custody steps use once there is a co-parent to name. -->
     <string name="onboarding_coparent_title">Link with your co-parent</string>
     <string name="onboarding_notifications_title">Turn on notifications</string>
-    <string name="onboarding_notifications_body">Your co-parent\'s requests, their answers, event reminders and messages all arrive as notifications. Without them you only see them when you open the app.</string>
+    <string name="onboarding_notifications_body">Your co-parent\u0027s requests, their answers, event reminders and messages all arrive as notifications. Without them you only see them when you open the app.</string>
     <string name="onboarding_notifications_allow">Allow notifications</string>
     <string name="onboarding_notifications_on">Notifications are on.</string>
-    <string name="onboarding_notifications_later">You can change this any time in your phone\'s settings.</string>
-    <string name="onboarding_coparent_body">Linking puts the two of you on one calendar. If your co-parent has already set things up, you will see it straight away. If they haven\'t joined yet, invite them.</string>
+    <string name="onboarding_notifications_later">You can change this any time in your phone\u0027s settings.</string>
+    <string name="onboarding_coparent_body">Linking puts the two of you on one calendar. If your co-parent has already set things up, you will see it straight away. If they haven\u0027t joined yet, invite them.</string>
     <string name="onboarding_coparent_enter_code">I have their code</string>
     <string name="onboarding_coparent_invite">Invite my co-parent</string>
     <string name="onboarding_coparent_later">Not now</string>
@@ -43,7 +43,7 @@
     <string name="onboarding_coparent_found_custody">Custody schedule</string>
     <string name="onboarding_coparent_found_split">Cost split</string>
     <string name="onboarding_coparent_found_set">Set up</string>
-    <string name="onboarding_coparent_nothing_yet">Nothing has arrived yet. %1$s\'s phone sends their details the next time it is online — you can continue now, and whatever they entered will appear later.</string>
+    <string name="onboarding_coparent_nothing_yet">Nothing has arrived yet. %1$s\u0027s phone sends their details the next time it is online — you can continue now, and whatever they entered will appear later.</string>
 
     <!-- Asked when Skip would leave something typed on this step unsaved. -->
 </resources>

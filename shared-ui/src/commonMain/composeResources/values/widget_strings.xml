@@ -4,7 +4,7 @@
          the home and calendar strings wherever it says the same thing as the today card and the
          handover hero; these are only what it says and they do not. -->
     <string name="widget_today_name">Today</string>
-    <string name="widget_today_description">Whose day it is, the next handover and today\'s events</string>
+    <string name="widget_today_description">Whose day it is, the next handover and today\u0027s events</string>
     <!-- %1$s = today's date, formatted for the reader's locale -->
     <string name="widget_today_title">Today · %1$s</string>
     <string name="widget_today_signed_out">Sign in to CoPlanly to see your day.</string>

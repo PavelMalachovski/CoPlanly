@@ -29,9 +29,9 @@
 
     <string name="export_record_title">CoPlanly communication record</string>
     <string name="export_statement_what">This is a record of what the parents recorded and wrote to each other in CoPlanly, and when. It is not a record of what happened, and it does not say whether anything written here is true.</string>
-    <string name="export_statement_messages">Messages cannot be edited or deleted by either parent once sent. A message\'s time is the sender\'s device clock.</string>
-    <string name="export_statement_revisions">Every saved revision of a calendar entry is kept whole and cannot be changed afterwards. Each shows two times: when the editing parent\'s device recorded it, and when the server received it.</string>
-    <string name="export_statement_limits">Entry times are the wall-clock times the parents entered, without a time zone. Expenses are shown as they stand today. Entries saved before revision history began show only their current state. Private entries and children\'s medical records are never included.</string>
+    <string name="export_statement_messages">Messages cannot be edited or deleted by either parent once sent. A message\u0027s time is the sender\u0027s device clock.</string>
+    <string name="export_statement_revisions">Every saved revision of a calendar entry is kept whole and cannot be changed afterwards. Each shows two times: when the editing parent\u0027s device recorded it, and when the server received it.</string>
+    <string name="export_statement_limits">Entry times are the wall-clock times the parents entered, without a time zone. Expenses are shown as they stand today. Entries saved before revision history began show only their current state. Private entries and children\u0027s medical records are never included.</string>
     <string name="export_record_period">Period</string>
     <string name="export_record_generated">Generated</string>
     <string name="export_record_time_zone">Times shown in</string>
@@ -86,9 +86,9 @@
     <!-- The parenting plan in the record (MON-5 in MON-3): printed as it stands, not for a period. -->
     <string name="export_include_label">Also include</string>
     <string name="export_include_plan">The parenting plan</string>
-    <string name="export_include_plan_supporting">Both parents\' answers and where you agree, as the plan stands today — whatever the period</string>
-    <string name="export_plan_current_state">Not limited to the period above: this is the plan as it stood when this record was generated. Each parent answers separately; a question counts as agreed only when each has ticked the other\'s answer as it reads now.</string>
-    <string name="export_plan_not_from_server">The parenting plan could not be read from the server. What follows is this phone\'s copy, which may not match what the other parent sees.</string>
+    <string name="export_include_plan_supporting">Both parents\u0027 answers and where you agree, as the plan stands today — whatever the period</string>
+    <string name="export_plan_current_state">Not limited to the period above: this is the plan as it stood when this record was generated. Each parent answers separately; a question counts as agreed only when each has ticked the other\u0027s answer as it reads now.</string>
+    <string name="export_plan_not_from_server">The parenting plan could not be read from the server. What follows is this phone\u0027s copy, which may not match what the other parent sees.</string>
     <string name="export_plan_unsent_here">Changes made on this phone that have not reached the server yet are not shown.</string>
     <string name="export_plan_none">No parenting plan recorded.</string>
     <string name="export_plan_last_changed">Last changed</string>
@@ -99,8 +99,8 @@
     <!-- The private journal as an optional section (MON-22). -->
     <string name="export_include_journal">My private journal</string>
     <string name="export_include_journal_supporting">Your own entries about days in this period, marked in the file as your private notes. Off unless you tick it.</string>
-    <string name="export_journal_private_note">These are one parent\'s own private notes, kept on their phone. They were never shared with the other parent through the app, and the other parent has not seen them. They are included because that parent chose to include them.</string>
-    <string name="export_journal_clock_note">Each entry is dated by the day it is about. When it was written and last edited comes from that phone\'s clock; no server ever received these entries.</string>
+    <string name="export_journal_private_note">These are one parent\u0027s own private notes, kept on their phone. They were never shared with the other parent through the app, and the other parent has not seen them. They are included because that parent chose to include them.</string>
+    <string name="export_journal_clock_note">Each entry is dated by the day it is about. When it was written and last edited comes from that phone\u0027s clock; no server ever received these entries.</string>
     <string name="export_journal_none">No journal entries about days in this period.</string>
     <string name="export_journal_written">Written</string>
     <string name="export_journal_edited">Last edited</string>
