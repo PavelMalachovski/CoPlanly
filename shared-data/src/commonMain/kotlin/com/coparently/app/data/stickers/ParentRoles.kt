@@ -2,9 +2,9 @@ package com.coparently.app.data.stickers
 
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.DocumentPath
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.SetMerge
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.ParentRoleAnswer
 import kotlinx.coroutines.CancellationException
@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.map
  */
 class ParentRoles(
     private val firestore: FirestoreClient,
-    private val auth: FirebaseAuthService
+    private val auth: SignedInUser
 ) {
 
     /**
@@ -35,7 +35,7 @@ class ParentRoles(
      * read says nothing at all, so neither asks the question.
      */
     fun observeMine(): Flow<ParentRoleAnswer> {
-        val uid = auth.getCurrentUser()?.uid ?: return flowOf(ParentRoleAnswer.Loading)
+        val uid = auth.getCurrentUid() ?: return flowOf(ParentRoleAnswer.Loading)
         return firestore.observe(DocumentPath(USERS, uid))
             .map { snapshot ->
                 // `as? String`: a number there must not throw inside the listener.
@@ -63,7 +63,7 @@ class ParentRoles(
      * @return Whether the write landed.
      */
     suspend fun setMine(role: ParentRole): Boolean {
-        val uid = auth.getCurrentUser()?.uid ?: return false
+        val uid = auth.getCurrentUid() ?: return false
         return try {
             firestore.set(DocumentPath(USERS, uid), mapOf(FIELD to role.wire), SetMerge.Merge)
             true

@@ -157,6 +157,16 @@ class GitLiveFirestoreClientAndroidTest {
         verify(exactly = 1) { document.delete() }
     }
 
+    @Test
+    fun `a new id is the SDK's own and nothing is written`() {
+        val fresh = mockk<DocumentReference>()
+        every { collection.document() } returns fresh
+        every { fresh.id } returns "Xy12"
+
+        assertEquals("Xy12", client.newDocumentId(COLLECTION))
+        verify(exactly = 1) { collection.document() }
+    }
+
     // ---- reads --------------------------------------------------------------------------------
 
     @Test

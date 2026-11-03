@@ -139,6 +139,11 @@ class RecordingFirestoreClient : FirestoreClient {
         documents.remove(path)
     }
 
+    /** How many ids [newDocumentId] has made: the next is `auto-<n + 1>`. */
+    private var idsMade = 0
+
+    override fun newDocumentId(collection: String): String = "auto-${++idsMade}"
+
     override suspend fun get(query: DocumentQuery, source: ReadSource): List<StoredDocument> {
         record(Operation.Query(query, source))
         return queryAnswer(query)

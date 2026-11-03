@@ -54,6 +54,9 @@ object SilentFirestore : FirestoreClient {
         awaitCancellation()
     }
 
+    // An id is made on the phone, with nothing to wait for; nothing written under it ever lands.
+    override fun newDocumentId(collection: String): String = "silent-$collection"
+
     override suspend fun get(query: DocumentQuery, source: ReadSource): List<StoredDocument> =
         awaitCancellation()
 

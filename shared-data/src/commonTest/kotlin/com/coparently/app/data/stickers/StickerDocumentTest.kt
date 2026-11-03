@@ -1,7 +1,8 @@
 package com.coparently.app.data.stickers
 
+import com.coparently.app.data.remote.firebase.FirestoreTimestamp
 import com.coparently.app.domain.stickers.StickerKind
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -20,7 +21,7 @@ class StickerDocumentTest {
     }
 
     @Test
-    fun `a stored sticker reads back, the app's with no sender`() {
+    fun `a stored sticker reads back - the app's with no sender`() {
         val read = StickerDocument.read(
             "app_uB_on_time_2026-W43",
             mapOf("to" to "uB", "from" to "app", "familyId" to "", "kind" to "on_time", "createdAt" to 5L)
@@ -28,6 +29,23 @@ class StickerDocumentTest {
         assertEquals(null, read?.fromUid)
         assertEquals(StickerKind.ON_TIME, read?.kind)
         assertEquals(5L, read?.createdAtMillis)
+        assertNull(read?.seenAtMillis)
+    }
+
+    @Test
+    fun `a server timestamp reads as its epoch milliseconds`() {
+        val read = StickerDocument.read(
+            "s",
+            mapOf(
+                "to" to "uB",
+                "from" to "uA",
+                "kind" to "thank_you",
+                "createdAt" to FirestoreTimestamp(1_778_000_000L, 123_456_789),
+                "seenAt" to "not a time"
+            )
+        )
+        assertEquals(1_778_000_000_123L, read?.createdAtMillis)
+        assertEquals("uA", read?.fromUid)
         assertNull(read?.seenAtMillis)
     }
 

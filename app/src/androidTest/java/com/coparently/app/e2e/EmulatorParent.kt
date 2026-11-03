@@ -402,7 +402,7 @@ class EmulatorParent private constructor(
     )
 
     /** Stickers between the parents (October 2026), over this phone's Firestore and push writer. */
-    val stickerStore = StickerStore(firestore, authService, userRepository, fcmService, announcer)
+    val stickerStore = StickerStore(documents, authService, userRepository, fcmService, announcer)
 
     /** How this parent's stickers address them: `users/{uid}.parentRole`. */
     val parentRoles = ParentRoles(documents, authService)

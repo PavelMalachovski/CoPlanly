@@ -1,8 +1,8 @@
 package com.coparently.app.data.stickers
 
+import com.coparently.app.data.remote.firebase.FirestoreTimestamp
 import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.domain.stickers.StickerKind
-import com.google.firebase.Timestamp
 
 /**
  * The wire form of `stickers/{id}` (October 2026), in both directions — the one place it is
@@ -16,7 +16,10 @@ object StickerDocument {
     /** The value `from` holds for a sticker the app gave. */
     const val FROM_APP = "app"
 
-    /** A sticker [fromUid] sends [toUid] in [familyId]; `createdAt` is the caller's server timestamp. */
+    /**
+     * A sticker [fromUid] sends [toUid] in [familyId]; `createdAt` is the caller's server timestamp
+     * (`ServerValue.ServerTimestamp`).
+     */
     fun parentSticker(
         fromUid: String,
         toUid: String,
@@ -53,8 +56,9 @@ object StickerDocument {
         )
     }
 
+    // A timestamp as `FirestoreClient` reads it; its `toEpochMillis` is the SDK's `toDate().time`.
     private fun millisOf(value: Any?): Long? = when (value) {
-        is Timestamp -> value.toDate().time
+        is FirestoreTimestamp -> value.toEpochMillis()
         is Number -> value.toLong()
         else -> null
     }

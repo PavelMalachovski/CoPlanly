@@ -1,9 +1,13 @@
 package com.coparently.app.data.stickers
 
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.DocumentQuery
+import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
+import com.coparently.app.data.remote.firebase.ServerValue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -12,14 +16,12 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.domain.stickers.StickerKind
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.map
 
 /**
  * Stickers between parents (October 2026, owner decisions): `stickers/{id}`, read by its receiver
@@ -30,17 +32,20 @@ import kotlinx.coroutines.tasks.await
  *
  * Firestore only, no Room table: a sticker is a small thing a parent looks at on Home, and a copy
  * on the phone would have to be cleared at unpair as the server clears its own.
+ *
+ * On [FirestoreClient], [SignedInUser] and [PushQueue] since MON-24 phase 2 (Task 8d): the same
+ * documents, query and listener as the Android SDK calls it made.
  */
 class StickerStore(
-    private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuthService,
+    private val firestore: FirestoreClient,
+    private val auth: SignedInUser,
     private val userRepository: UserRepository,
-    private val fcmService: FcmService,
+    private val fcmService: PushQueue,
     private val activityAnnouncer: ActivityAnnouncer
 ) {
 
     /** The signed-in parent's uid, or null. */
-    fun signedInUid(): String? = auth.getCurrentUser()?.uid?.takeIf { it.isNotBlank() }
+    fun signedInUid(): String? = auth.getCurrentUid()?.takeIf { it.isNotBlank() }
 
     /** Every sticker [uid] received, newest first; empty when they cannot be read. */
     fun observeReceived(uid: String): Flow<List<Sticker>> = observe("to", uid)
@@ -49,21 +54,20 @@ class StickerStore(
     fun observeSent(uid: String): Flow<List<Sticker>> = observe("from", uid)
 
     // The rule admits a list only when it is keyed on the reader as receiver or as sender.
-    private fun observe(field: String, uid: String): Flow<List<Sticker>> = callbackFlow {
-        val registration = firestore.collection(COLLECTION).whereEqualTo(field, uid)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logger.w(TAG, "Stickers could not be read", error)
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                val stickers = snapshot?.documents.orEmpty()
+    private fun observe(field: String, uid: String): Flow<List<Sticker>> =
+        firestore.observe(DocumentQuery(COLLECTION).whereEqualTo(field, uid))
+            .map { documents ->
+                documents
                     .mapNotNull { doc -> doc.data?.let { StickerDocument.read(doc.id, it) } }
                     .sortedByDescending { it.createdAtMillis ?: Long.MAX_VALUE }
-                trySend(stickers)
             }
-        awaitClose { registration.remove() }
-    }.distinctUntilChanged()
+            .catch { error ->
+                logger.w(TAG, "Stickers could not be read", error)
+                emit(emptyList())
+                // Not closed, as the SDK listener it replaced was not: nothing more arrives.
+                awaitCancellation()
+            }
+            .distinctUntilChanged()
 
     /**
      * Sends [kind] to the other parent of [familyId] and pushes `sticker_received` to them.
@@ -74,8 +78,8 @@ class StickerStore(
         val me = signedInUid()
         val to = FamilyKey.membersOf(familyId)?.toList()?.firstOrNull { it != me }
         if (me == null || to == null || kind.fromApp) return false
-        val id = firestore.collection(COLLECTION).document().id
-        val stored = write(id, StickerDocument.parentSticker(me, to, familyId, kind, FieldValue.serverTimestamp()))
+        val id = firestore.newDocumentId(COLLECTION)
+        val stored = write(id, StickerDocument.parentSticker(me, to, familyId, kind, ServerValue.ServerTimestamp))
         if (stored) {
             val name = userRepository.getCurrentUser()?.name.orEmpty().take(ACTOR_MAX)
             fcmService.queueNotificationForUser(
@@ -100,8 +104,7 @@ class StickerStore(
     suspend fun markSeen(sticker: Sticker) {
         if (sticker.seenAtMillis != null || sticker.toUid != signedInUid()) return
         try {
-            firestore.collection(COLLECTION).document(sticker.id)
-                .update("seenAt", FieldValue.serverTimestamp()).await()
+            firestore.update(DocumentPath(COLLECTION, sticker.id), "seenAt", ServerValue.ServerTimestamp)
         } catch (e: CancellationException) {
             throw e
         } catch (
@@ -112,7 +115,7 @@ class StickerStore(
     }
 
     private suspend fun write(id: String, data: Map<String, Any>): Boolean = try {
-        firestore.collection(COLLECTION).document(id).set(data).await()
+        firestore.set(DocumentPath(COLLECTION, id), data)
         true
     } catch (e: CancellationException) {
         throw e

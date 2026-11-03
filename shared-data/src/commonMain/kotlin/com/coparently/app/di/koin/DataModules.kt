@@ -38,6 +38,8 @@ import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.RequestDeadlineRepositoryImpl
 import com.coparently.app.data.requests.RequestTelling
+import com.coparently.app.data.stickers.ParentRoles
+import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
@@ -173,6 +175,15 @@ val requestsDataModule: Module = module {
 }
 
 /**
+ * Stickers between the parents and how each parent's stickers address them (CLAUDE.md item 47;
+ * MON-24 phase 2, Task 8d).
+ */
+val stickersDataModule: Module = module {
+    singleOf(::ParentRoles)
+    singleOf(::StickerStore)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -183,7 +194,8 @@ val dataModules: List<Module> = listOf(
     repositoryDataModule,
     familyDataModule,
     chatDataModule,
-    requestsDataModule
+    requestsDataModule,
+    stickersDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, SignedInUser, PushQueue,

@@ -78,6 +78,8 @@ class GitLiveFirestoreClient(private val firestore: FirebaseFirestore) : Firesto
         reference(path).delete()
     }
 
+    override fun newDocumentId(collection: String): String = firestore.collection(collection).document.id
+
     override suspend fun get(query: DocumentQuery, source: ReadSource): List<StoredDocument> =
         build(query).get(source.toGitLive()).documents.map { it.toStoredDocument() }
 

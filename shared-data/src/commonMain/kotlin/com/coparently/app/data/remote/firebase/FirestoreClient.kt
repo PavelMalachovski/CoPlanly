@@ -56,6 +56,12 @@ interface FirestoreClient {
     /** Deletes the document at [path]. */
     suspend fun delete(path: DocumentPath)
 
+    /**
+     * A new document id in [collection], made on this phone as the SDK's `collection.document()`
+     * makes one (twenty random characters); nothing is read or written.
+     */
+    fun newDocumentId(collection: String): String
+
     /** One read of [query]'s documents, in its order. */
     suspend fun get(query: DocumentQuery, source: ReadSource = ReadSource.DEFAULT): List<StoredDocument>
 

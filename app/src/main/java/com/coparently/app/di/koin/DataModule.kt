@@ -78,8 +78,6 @@ import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignedInAccountSource
-import com.coparently.app.data.stickers.ParentRoles
-import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminders
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
@@ -201,8 +199,6 @@ val dataModule = module {
     singleOf(::DeviceTraces)
     singleOf(::SessionProfileSynchronizer)
     singleOf(::SignedInAccountSource)
-    singleOf(::ParentRoles)
-    singleOf(::StickerStore)
     singleOf(::SupportAgreementStore)
     singleOf(::SupportReminders)
     singleOf(::WorkManagerSupportReminderScheduler)
