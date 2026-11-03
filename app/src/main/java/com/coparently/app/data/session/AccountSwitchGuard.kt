@@ -34,7 +34,8 @@ import kotlinx.coroutines.withContext
  * [SessionProfileSynchronizer]'s auth-state collector (the session boundary every sign-in
  * passes through) and the top of `SyncService.performFullSync` (the choke point every upload
  * passes through). The second call is what closes the race — a periodic `SyncWorker` run can
- * fire before the collector has seen the new uid.
+ * fire before the collector has seen the new uid. The sync, in `:shared-data` since MON-24 phase 2
+ * (Task 8g), reaches it as its [AccountConsistency].
  */
 class AccountSwitchGuard(
     private val context: Context,
@@ -43,7 +44,7 @@ class AccountSwitchGuard(
     private val encryptedPreferences: SecurePreferences,
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler
-) {
+) : AccountConsistency {
     private val mutex = Mutex()
 
     /**
@@ -54,7 +55,7 @@ class AccountSwitchGuard(
      * `clearAllTables` is blocking. The mutex keeps the two call sites from racing each other
      * into a double wipe.
      */
-    suspend fun ensureAccountConsistency() {
+    override suspend fun ensureAccountConsistency() {
         val uid = authService.getCurrentUser()?.uid ?: return
         mutex.withLock {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

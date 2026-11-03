@@ -219,7 +219,7 @@ class ChangeRequestRepositoryImpl(
         answerByMillis: Long?
     ) {
         if (targetUserId.isEmpty() || targetUserId == firebaseAuthService.getCurrentUid()) return
-        // Null for an action nothing announces — see `FcmService.createEventNotificationPayload`.
+        // Null for an action nothing announces — see `RecordPushes.event`.
         val type = PushPayload.changeRequestType(action) ?: return
         // Empty rather than "Your co-parent": the receiving device holds a translated fallback
         // for a missing name, and an English one written here would win over it.

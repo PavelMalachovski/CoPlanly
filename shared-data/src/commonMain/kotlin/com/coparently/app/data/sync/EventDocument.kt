@@ -21,9 +21,11 @@ import com.coparently.app.domain.time.IsoText
  * All three live here, pure, so the wire-format contract tests (`app/src/test/.../wire/`,
  * fixtures in `app/src/test/resources/wire/`) run the production mappers on the JVM.
  *
- * In `:shared-data` since MON-24 phase 2 (Task 8b), while `EventRepositoryImpl`, `SyncService` and
- * the other readers stay in the app; [InternalSharedApi] marks it public only for them until they
- * move and it is `internal` again.
+ * In `:shared-data` since MON-24 phase 2 (Task 8b). `EventRepositoryImpl` (Task 8c) and
+ * `SyncService` (Task 8g) moved with it; the other readers — the change-request inbox's
+ * `RequestRecords`, the export's `CommunicationRecordSource` — and the events wire contract stay in
+ * the app, so [InternalSharedApi] marks it public only for them until they move and it is
+ * `internal` again.
  */
 @InternalSharedApi
 object EventDocument {

@@ -6,24 +6,23 @@ import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.local.entity.ChildInfoEntity
 import com.coparently.app.data.local.entity.EventEntity
 import com.coparently.app.data.local.entity.UserEntity
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.remote.firebase.EventDownload
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
-import com.coparently.app.data.requests.RequestClockKeeper
-import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.requests.RequestClockSweep
+import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.repository.PetRepository
-import com.google.firebase.auth.FirebaseUser
-import com.google.gson.Gson
+import com.coparently.app.domain.serialization.StoredJson
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -78,7 +77,6 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncServiceTest {
 
-    private val gson = Gson()
     private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val now: LocalDateTime = LocalDateTime.of(2026, 8, 1, 12, 0)
 
@@ -88,16 +86,16 @@ class SyncServiceTest {
     private lateinit var firestoreEventDataSource: FirestoreEventDataSource
     private lateinit var firestoreChildInfoDataSource: FirestoreChildInfoDataSource
     private lateinit var firestoreUserDataSource: FirestoreUserDataSource
-    private lateinit var firebaseAuthService: FirebaseAuthService
-    private lateinit var fcmService: FcmService
+    private lateinit var firebaseAuthService: SignedInUser
+    private lateinit var fcmService: PushDevice
     private lateinit var parentSlotMigrator: ParentSlotMigrator
-    private lateinit var encryptedPreferences: EncryptedPreferences
+    private lateinit var encryptedPreferences: SecurePreferences
     private lateinit var petRepository: PetRepository
-    private lateinit var accountSwitchGuard: AccountSwitchGuard
+    private lateinit var accountSwitchGuard: AccountConsistency
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var familyIdBackfill: FamilyIdBackfill
     private val reminderScheduler: ReminderScheduler = mockk(relaxed = true)
-    private val requestClockKeeper: RequestClockKeeper = mockk(relaxed = true)
+    private val requestClockKeeper: RequestClockSweep = mockk(relaxed = true)
     private lateinit var syncService: SyncService
 
     /**
@@ -134,9 +132,7 @@ class SyncServiceTest {
         // is handed.
         familyIdBackfill = mockk(relaxed = true)
 
-        val firebaseUser = mockk<FirebaseUser>(relaxed = true)
-        every { firebaseUser.uid } returns ALICE
-        every { firebaseAuthService.getCurrentUser() } returns firebaseUser
+        every { firebaseAuthService.getCurrentUid() } returns ALICE
 
         // "This device has never re-published for anybody." Both overload forms are stubbed
         // because `getString`'s second parameter has a default value; `ParentSlotMigratorTest`
@@ -241,9 +237,6 @@ class SyncServiceTest {
         coEvery { eventDao.getUnsyncedEvents() } returns listOf(fresh)
         coEvery { eventDao.markOwnEventsUnsynced(ALICE) } returns 1
         coEvery { firestoreEventDataSource.insertEvent(any(), any()) } returns Result.success(Unit)
-        every { fcmService.createEventNotificationPayload(any(), any(), any(), any()) } returns
-            mapOf(PushPayload.TYPE to PushPayload.EVENT_CREATED)
-
         syncService.performFullSync()
 
         val queued = mutableListOf<Map<String, String>>()
@@ -620,7 +613,7 @@ class SyncServiceTest {
 
             syncService.performFullSync()
 
-            val storedProfile = gson.fromJson(inserted.captured.medicalProfileJson, Map::class.java)
+            val storedProfile = checkNotNull(StoredJson.decodeObject(inserted.captured.medicalProfileJson))
             assertEquals("O_NEGATIVE", storedProfile["bloodType"])
             val vaccination = (storedProfile["vaccinations"] as List<*>).single() as Map<*, *>
             assertEquals("MMR", vaccination["name"])
@@ -1516,7 +1509,7 @@ class SyncServiceTest {
             role = "mom",
             colorCode = "#FF4081",
             partnerId = selected,
-            partnerIdsJson = gson.toJson(partners)
+            partnerIdsJson = StoredJson.encode(StoredJson.strings, partners)
         )
     }
 
@@ -1542,7 +1535,7 @@ class SyncServiceTest {
         updatedAt = now.toKotlinLocalDateTime(),
         updatedAtMillis = EventTimestamp.ofWallClock(now.toKotlinLocalDateTime()),
         createdByFirebaseUid = createdByFirebaseUid,
-        sharedWithJson = gson.toJson(sharedWith)
+        sharedWithJson = StoredJson.encode(StoredJson.strings, sharedWith)
     )
 
     private fun childInfoEntity(updatedAt: LocalDateTime, synced: Boolean) = ChildInfoEntity(

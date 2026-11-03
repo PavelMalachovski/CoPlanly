@@ -33,6 +33,7 @@ import com.coparently.app.data.pairing.PlayInstallReferrerSource
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
+import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialAuthenticator
@@ -45,6 +46,7 @@ import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.requests.RequestClockActions
 import com.coparently.app.data.requests.RequestClockKeeper
 import com.coparently.app.data.requests.RequestClockSteps
+import com.coparently.app.data.requests.RequestClockSweep
 import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestNotices
 import com.coparently.app.data.requests.RequestRecords
@@ -59,6 +61,7 @@ import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
 import com.coparently.app.data.security.EncryptionManager
+import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.session.AccountDeletionService
 import com.coparently.app.data.session.AccountSwitchGuard
 import com.coparently.app.data.session.DeviceTraces
@@ -67,7 +70,6 @@ import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.GoogleCalendarAutoImport
-import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -121,6 +123,8 @@ val dataModule = module {
     singleOf(::FcmService)
     // Where the repositories in `:shared-data` queue a push.
     single<PushQueue> { get<FcmService>() }
+    // This device's push token, which the sync in `:shared-data` keeps on the profile.
+    single<PushDevice> { get<FcmService>() }
     singleOf(::FirebaseAuthService)
     // The one question the repositories in `:shared-data` ask of the signed-in account.
     single<SignedInUser> { get<FirebaseAuthService>() }
@@ -141,6 +145,8 @@ val dataModule = module {
             get<RequestTime>()
         )
     }
+    // The clocks' pass every full sync runs (the sync is in `:shared-data`).
+    single<RequestClockSweep> { get<RequestClockKeeper>() }
     singleOf(::RequestClockSteps)
     singleOf(::RequestClocks)
     singleOf(::RequestNotices)
@@ -166,40 +172,14 @@ val dataModule = module {
     single { BakalariSchoolDirectory(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     singleOf(::AccountDeletionService)
     singleOf(::AccountSwitchGuard)
+    // The check the sync in `:shared-data` runs before its first upload.
+    single<AccountConsistency> { get<AccountSwitchGuard>() }
     singleOf(::DeviceTraces)
     singleOf(::SessionProfileSynchronizer)
     singleOf(::SignedInAccountSource)
     singleOf(::WorkManagerSupportReminderScheduler)
     singleOf(::CalendarSyncRepository)
     singleOf(::GoogleCalendarAutoImport)
-    single {
-        SyncService(
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get()
-        )
-    }
     singleOf(::WorkManagerSyncRequester)
     singleOf(::TelemetryConsentApplier)
 }

@@ -14,11 +14,14 @@ package com.coparently.app.wire
  *
  * `PetWireContract` joined in Task 8d, once the pet mappers left `PetRepositoryImpl` for top-level
  * functions; it reads its one wall clock in the zone it runs in (see its KDoc). `ExpenseWireContract`
- * joined in Task 8f, with the expense mappers.
+ * joined in Task 8f, with the expense mappers. `ChildInfoWireContract` joined in Task 8g, once
+ * `SyncService`, the second writer of `child_info`, moved; it reads its wall clock as the pets'
+ * contract does.
  */
 internal object WireContracts : WireSuite {
 
     override val all: List<WireContract> = listOf(
+        ChildInfoWireContract,
         CustodyWireContract,
         ExpenseWireContract,
         PetWireContract,
@@ -29,8 +32,8 @@ internal object WireContracts : WireSuite {
 
     /**
      * These contracts read no wall clock: custody and clock times are UTC on the wire, an expense's
-     * dates are naive on both sides, and the pets contract makes its wall clock from a UTC instant
-     * in the zone it runs in.
+     * dates are naive on both sides, and the pets and child-info contracts make their wall clock
+     * from a UTC instant in the zone they run in.
      */
     override fun <T> inReaderZone(block: () -> T): T = block()
 }

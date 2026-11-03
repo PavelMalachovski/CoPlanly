@@ -19,8 +19,13 @@ import kotlinx.datetime.LocalDateTime
  * `child_info`: read by `toChildInfo` (the pull), stored through Room (`toEntity`/`toDomain`, JSON
  * columns included) and written back by `toFirestoreMap` — a `set()`, so a newer build's key is at
  * the mercy of this one. The four are `ChildInfoRepositoryImpl`'s mappers, top-level in
- * `:shared-data` since MON-24 phase 2 (Task 8e); the contract stays in the app's list, since
- * `SyncService` writes `child_info` too.
+ * `:shared-data` since MON-24 phase 2 (Task 8e); the contract joined `:shared-data`'s list in Task
+ * 8g, when `SyncService`, the other writer of `child_info`, moved too.
+ *
+ * It reads in any zone, as the pets' contract does: a child's `updatedAt` is a UTC instant on the
+ * wire and a wall clock in the domain, so the current write's wall clock is made from that instant
+ * in the zone it runs in, and the read reports the instant. The app's run, in UTC, writes the same
+ * document as before.
  */
 @OptIn(InternalSharedApi::class)
 internal object ChildInfoWireContract : WireContract {
@@ -87,7 +92,7 @@ internal object ChildInfoWireContract : WireContract {
             )
         ),
         createdAt = LocalDateTime(2026, 5, 1, 8, 0),
-        updatedAt = LocalDateTime(2026, 5, 2, 18, 45, 10),
+        updatedAt = EventTimestamp.toWallClock(EventTimestamp.fromWire("2026-05-02T18:45:10")),
         createdByFirebaseUid = "uidA",
         lastModifiedBy = "uidA",
         familyId = "uidA__uidB"

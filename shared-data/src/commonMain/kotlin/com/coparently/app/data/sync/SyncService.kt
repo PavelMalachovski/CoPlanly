@@ -13,20 +13,21 @@ import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.notification.toReminderEvent
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreTimestamp
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.PushDevice
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.RecordPushes
 import com.coparently.app.data.remote.firebase.ServerValue
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.ParentingPlanRepository
-import com.coparently.app.data.requests.RequestClockKeeper
-import com.coparently.app.data.session.AccountSwitchGuard
+import com.coparently.app.data.requests.RequestClockSweep
+import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.versions.EventVersionDocument
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.InternalSharedApi
@@ -39,17 +40,24 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.wallClockNow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 import kotlin.time.Clock
 
 /**
  * Service for managing synchronization between local database and Firestore.
  * Handles bidirectional sync of events, child info, and user data.
  * Provides real-time sync status updates.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8g). What it asked of the app it asks through
+ * narrow seams the app answers: the signed-in uid ([SignedInUser]), this device's push token and
+ * the push queue ([PushDevice]), the account-switch check ([AccountConsistency]) and the request
+ * clocks' sweep ([RequestClockSweep]). Its parameter names are the ones it had, so the e2e phones
+ * build it unchanged.
  */
 // Ten collaborators, all injected: a Koin graph edge list, not a call signature anybody
 // writes by hand, and grouping them behind a wrapper type would only hide which sync
@@ -62,8 +70,8 @@ class SyncService(
     private val firestoreEventDataSource: FirestoreEventDataSource,
     private val firestoreChildInfoDataSource: FirestoreChildInfoDataSource,
     private val firestoreUserDataSource: FirestoreUserDataSource,
-    private val firebaseAuthService: FirebaseAuthService,
-    private val fcmService: FcmService,
+    private val firebaseAuthService: SignedInUser,
+    private val fcmService: PushDevice,
     private val conflictResolver: ConflictResolver,
     private val parentSlotMigrator: ParentSlotMigrator,
     private val encryptedPreferences: SecurePreferences,
@@ -74,11 +82,11 @@ class SyncService(
     private val familySettingsRepository: FamilySettingsRepository,
     private val familyIdBackfill: FamilyIdBackfill,
     private val selectedFamilySource: SelectedFamilySource,
-    private val accountSwitchGuard: AccountSwitchGuard,
+    private val accountSwitchGuard: AccountConsistency,
     private val custodyModelRepository: CustodyModelRepository,
     private val eventVersionRecorder: EventVersionRecorder,
     private val reminderScheduler: ReminderScheduler,
-    private val requestClockKeeper: RequestClockKeeper,
+    private val requestClockKeeper: RequestClockSweep,
     private val knownFamilies: KnownFamilies
 ) {
 
@@ -91,7 +99,7 @@ class SyncService(
      */
     suspend fun performFullSync(): Result<Unit> {
         return try {
-            val currentUser = firebaseAuthService.getCurrentUser()
+            val currentUid = firebaseAuthService.getCurrentUid()
                 ?: return Result.failure(IllegalStateException("User not authenticated"))
 
             // The upload choke point: a periodic SyncWorker run can fire before the session
@@ -103,7 +111,7 @@ class SyncService(
 
             // Step 1: Sync user data (including FCM token)
             _syncStatus.value = SyncStatus.Syncing(10, 100)
-            syncUserData(currentUser.uid)
+            syncUserData(currentUid)
 
             // Step 2: Name the family on rows written before there was one to name. After
             // `syncUserData`, which is what brings a freshly accepted co-parent down, and
@@ -111,23 +119,23 @@ class SyncService(
             // rather than waiting for the sync after next. Given every co-parent, not the family
             // on screen: with two there is no family to name, and it stamps nothing.
             familyIdBackfill.run(
-                userId = currentUser.uid,
-                coParents = coParentsOf(currentUser.uid, userDao.getUserById(currentUser.uid))
+                userId = currentUid,
+                coParents = coParentsOf(currentUid, userDao.getUserById(currentUid))
             )
 
             // Step 3: Sync events. Each of these two passes reports which newly arrived
             // co-parents its quiet re-uploads were for, so that the whole backfill is announced
             // once at the end rather than once per record.
             _syncStatus.value = SyncStatus.Syncing(40, 100)
-            val eventsSharedWith = syncEvents(currentUser.uid)
+            val eventsSharedWith = syncEvents(currentUid)
             // Event revisions (MON-4), after the events themselves so a create's revision goes up
             // behind the event it describes. Its own outbox, because the event paths' remote
             // writes are best-effort and a revision must not be lost with one.
-            eventVersionRecorder.flush(currentUser.uid)
+            eventVersionRecorder.flush(currentUid)
 
             // Step 4: Sync child info
             _syncStatus.value = SyncStatus.Syncing(70, 100)
-            val childrenSharedWith = syncChildInfo(currentUser.uid)
+            val childrenSharedWith = syncChildInfo(currentUid)
 
             // Step 5: Sync pets. The repository handles upload, download and audience repair
             // itself (mirroring child info), so there is nothing to duplicate here.
@@ -152,8 +160,8 @@ class SyncService(
             // proposer's deadline and end come back after a job was lost. Given every co-parent,
             // not the family on screen (spec §5.6). A failure never fails the sync.
             runCatching {
-                val me = userDao.getUserById(currentUser.uid)
-                requestClockKeeper.sweep(currentUser.uid, coParentsOf(currentUser.uid, me))
+                val me = userDao.getUserById(currentUid)
+                requestClockKeeper.sweep(currentUid, coParentsOf(currentUid, me))
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 logger.w(TAG, "The request clocks were not swept", e)
@@ -162,7 +170,7 @@ class SyncService(
             // and a save made offline or refused has nothing else retrying it. A parenting plan
             // is filled in over weeks, so "it will go up next time you open the screen" is not
             // good enough — the co-parent is waiting to answer beside it.
-            parentingPlanRepository.flushOutbox(currentUser.uid)
+            parentingPlanRepository.flushOutbox(currentUid)
             // The same shape, for the one number the wizard collects before there is anybody to
             // agree it with: an unpaired account can only cache the split ratio, and until this
             // ran nothing ever carried it across. A parent who set 70/30 during onboarding paired
@@ -176,10 +184,10 @@ class SyncService(
             // of years-old events each announcing itself as created. Addressed to the co-parents
             // the re-published records now name and did not before — never simply to the family
             // on screen, which after a second pairing is usually the co-parent who gained nothing.
-            announceSharedRecords(currentUser.uid, eventsSharedWith + childrenSharedWith)
+            announceSharedRecords(currentUid, eventsSharedWith + childrenSharedWith)
 
             // Step 7: Complete
-            _syncStatus.value = SyncStatus.Success(LocalDateTime.now())
+            _syncStatus.value = SyncStatus.Success(wallClockNow())
             Result.success(Unit)
         } catch (e: Exception) {
             _syncStatus.value = SyncStatus.Error(e.message ?: "Unknown error")
@@ -285,7 +293,7 @@ class SyncService(
         val sweepKey = PreferenceKeys.EVENT_SYNC_SWEEP_PREFIX + userId
         val storedCursor = encryptedPreferences.getString(cursorKey)?.toLongOrNull()
         val lastSweep = encryptedPreferences.getString(sweepKey)?.toLongOrNull()
-        val startedAt = System.currentTimeMillis()
+        val startedAt = Clock.System.now().toEpochMilliseconds()
         val sweeping = EventSyncWindow.needsFullSweep(storedCursor, lastSweep, startedAt)
         val changedAfter = if (sweeping) null else storedCursor?.let(FirestoreTimestamp::fromEpochMillis)
 
@@ -364,7 +372,7 @@ class SyncService(
                                 "pickupConfirmedBy" to localEntity.pickupConfirmedBy,
                                 "pickupConfirmedAt" to localEntity.pickupConfirmedAt?.let(IsoText::dateTime),
                                 "createdAt" to IsoText.dateTime(localEntity.createdAt),
-                                "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
+                                "updatedAt" to EventTimestamp.toWire(Clock.System.now().toEpochMilliseconds()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
                                 "imageUrl" to localEntity.imageUrl,
@@ -777,7 +785,7 @@ class SyncService(
                                 ),
                                 "guests" to ChildInfoGuests.encode(guestsOf(localEntity)),
                                 "createdAt" to IsoText.dateTime(localEntity.createdAt),
-                                "updatedAt" to EventTimestamp.toWire(System.currentTimeMillis()),
+                                "updatedAt" to EventTimestamp.toWire(Clock.System.now().toEpochMilliseconds()),
                                 "createdByFirebaseUid" to localEntity.createdByFirebaseUid,
                                 "lastModifiedBy" to userId,
                                 "familyId" to (family ?: "")
@@ -948,7 +956,7 @@ class SyncService(
     private inline fun <T> readDocument(kind: String, id: String?, read: () -> T): T? =
         runCatching(read)
             .onFailure { e ->
-                logger.w(TAG, "$kind document $id could not be read (${e.javaClass.simpleName}); skipped")
+                logger.w(TAG, "$kind document $id could not be read (${e::class.simpleName}); skipped")
             }
             .getOrNull()
 
@@ -985,13 +993,13 @@ class SyncService(
         eventTitle: String,
         action: String
     ) {
-        val currentUser = firebaseAuthService.getCurrentUser() ?: return
-        val userData = userDao.getUserById(currentUser.uid) ?: return
+        val currentUid = firebaseAuthService.getCurrentUid() ?: return
+        val userData = userDao.getUserById(currentUid) ?: return
 
         // Null for an action nothing announces. Skipping is the whole of the handling: the
         // receiving device composes the sentence from the type now, so a payload it has no
         // type for is a push that would be dropped on arrival.
-        val notificationPayload = fcmService.createEventNotificationPayload(
+        val notificationPayload = RecordPushes.event(
             eventId = eventId,
             eventTitle = eventTitle,
             action = action,
@@ -1009,10 +1017,10 @@ class SyncService(
         childInfoId: String,
         childName: String
     ) {
-        val currentUser = firebaseAuthService.getCurrentUser() ?: return
-        val userData = userDao.getUserById(currentUser.uid) ?: return
+        val currentUid = firebaseAuthService.getCurrentUid() ?: return
+        val userData = userDao.getUserById(currentUid) ?: return
 
-        val notificationPayload = fcmService.createChildInfoNotificationPayload(
+        val notificationPayload = RecordPushes.childInfo(
             childInfoId = childInfoId,
             childName = childName,
             updatedBy = userData.name

@@ -136,6 +136,7 @@ import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel

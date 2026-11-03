@@ -34,6 +34,9 @@ import kotlinx.datetime.toKotlinTimeZone
  * [RequestDeadlineId] derives it, so the other parent cannot set or close this parent's request
  * under an id of their own; and the sweep keeps only clocks whose other parent is still one of this
  * parent's co-parents (CLAUDE.md items 38, 41).
+ *
+ * The sync, in `:shared-data` since MON-24 phase 2 (Task 8g), runs [sweep] as its
+ * [RequestClockSweep].
  */
 class RequestClockKeeper internal constructor(
     private val repository: RequestDeadlineRepository,
@@ -41,7 +44,7 @@ class RequestClockKeeper internal constructor(
     private val scheduler: RequestClockScheduler,
     private val time: RequestTime,
     private val scope: CoroutineScope
-) {
+) : RequestClockSweep {
 
     /** The production keeper: its deliveries run for as long as the process does. */
     constructor(
@@ -58,7 +61,7 @@ class RequestClockKeeper internal constructor(
      * Keeps every open clock of [myUid] whose other parent is in [coParents]: delivers what this
      * parent must answer, and schedules or runs what they asked.
      */
-    suspend fun sweep(myUid: String, coParents: Set<String>) {
+    override suspend fun sweep(myUid: String, coParents: Set<String>) {
         val now = time.nowMillis()
         repository.openFor(myUid, now - LOOKBACK_MILLIS)
             .filter { isGenuine(it) }

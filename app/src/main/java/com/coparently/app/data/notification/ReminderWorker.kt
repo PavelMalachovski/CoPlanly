@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.notification
 
 import android.Manifest
@@ -15,6 +17,7 @@ import androidx.work.WorkerParameters
 import com.coparently.app.R
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.time.IsoText
