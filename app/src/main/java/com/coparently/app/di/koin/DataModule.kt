@@ -24,7 +24,6 @@ import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
 import com.coparently.app.data.files.StoredRecordFamilies
-import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.security.DatabaseKey
 import com.coparently.app.data.local.security.EncryptedDatabase
@@ -40,7 +39,6 @@ import com.coparently.app.data.payment.SettleUpMessages
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
-import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialAuthenticator
@@ -49,10 +47,8 @@ import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
-import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.EventRepositoryImpl
 import com.coparently.app.data.repository.ExpenseRepositoryImpl
-import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.JournalRepositoryImpl
@@ -96,7 +92,6 @@ import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
-import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.notification.RequestClockScheduler
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
@@ -164,19 +159,8 @@ val dataModule = module {
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     singleOf(::CalendarFeedRepositoryImpl)
     singleOf(::ChildInfoRepositoryImpl)
-    single {
-        CustodyModelRepository(
-            get<CustodyModelDao>(),
-            get<UserRepository>(),
-            get<FirestoreCustodyDataSource>(),
-            get<ActivityAnnouncer>(),
-            get<FcmService>(),
-            get<RequestDeadlineRepository>()
-        )
-    }
     single { EventRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get()) }
     single { ExpenseRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
-    singleOf(::FamilySettingsRepository)
     singleOf(::FriendRepositoryImpl)
     singleOf(::GuestRepositoryImpl)
     singleOf(::JournalRepositoryImpl)

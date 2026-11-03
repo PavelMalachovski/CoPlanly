@@ -1,9 +1,9 @@
 package com.coparently.app.data.repository
 
 import app.cash.turbine.test
-import com.coparently.app.data.local.preferences.EncryptedPreferences
-import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.custody.CustodyKey
 import com.coparently.app.domain.expenses.FamilySettings
@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
 class FamilySettingsRepositoryTest {
 
     private val dataSource = mockk<FirestoreFamilySettingsDataSource>()
-    private val preferences = mockk<EncryptedPreferences>()
+    private val preferences = mockk<SecurePreferences>()
 
     /** The chat cards; `FamilySettingsSplitRequestTest` reads what they say. */
     private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
@@ -73,7 +73,7 @@ class FamilySettingsRepositoryTest {
             dataSource,
             userRepository,
             preferences,
-            mockk<FcmService>(relaxed = true),
+            mockk<PushQueue>(relaxed = true),
             announcer,
             requestDeadlines
         )
@@ -183,7 +183,7 @@ class FamilySettingsRepositoryTest {
     fun `a ratio agreed before pairing is announced to the co-parent`() = runTest {
         // It becomes the pair's agreement of record the moment it is written, priced onto every
         // expense from then on. Until this, the co-parent learned of it only by opening Settings.
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         coEvery { dataSource.getSettings(any()) } returns null
         coEvery { dataSource.setSettings(any(), any()) } returns Unit
 
@@ -201,7 +201,7 @@ class FamilySettingsRepositoryTest {
         // no document yet applied outright and told nobody. With the co-parent link made first,
         // a second parent's wizard reaches that branch routinely, so the co-parent learned of
         // the split that prices every expense only by opening Settings.
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         coEvery { dataSource.getSettings(any()) } returns null
         coEvery { dataSource.setSettings(any(), any()) } returns Unit
 
@@ -219,7 +219,7 @@ class FamilySettingsRepositoryTest {
         // SEC-3's shape, and `PushPayload` states the reason for this family of types: a push
         // saying "the split is now 70/30" puts a number a reader may act on onto a lock screen,
         // written by the other side and unverifiable until the app is opened.
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         coEvery { dataSource.getSettings(any()) } returns null
         coEvery { dataSource.setSettings(any(), any()) } returns Unit
 
@@ -235,7 +235,7 @@ class FamilySettingsRepositoryTest {
     fun `nothing is announced when nothing is published`() = runTest {
         // The pair already has an agreement, so this pass writes nothing — and a push about a
         // write that did not happen is worse than silence.
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         coEvery { dataSource.getSettings(any()) } returns FamilySettings(
             ratio = SplitRatio.EVEN,
             participants = listOf(ME, PARTNER),
@@ -289,7 +289,7 @@ class FamilySettingsRepositoryTest {
         // co-parent's banner is derived from the document. A push type for it would cost the
         // four places SEC-3 requires to agree, to say that something stopped existing. Its chat
         // card is `FamilySettingsSplitRequestTest`'s.
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         coEvery { dataSource.getSettings(any()) } returns settingsWithProposalBy(ME)
         coEvery { dataSource.setSettings(any(), any()) } returns Unit
 
@@ -348,7 +348,7 @@ class FamilySettingsRepositoryTest {
         // Igor's proposal was on screen; a push tap then switched to the family with Carol. The
         // answer used to read the family again at tap time and could accept Carol's proposal,
         // which the parent had never seen.
-        val fcmService = mockk<FcmService>(relaxed = true)
+        val fcmService = mockk<PushQueue>(relaxed = true)
         coEvery { dataSource.getSettings(IGOR_FAMILY) } returns proposalIn(IGOR_FAMILY, by = IGOR)
         coEvery { dataSource.getSettings(CAROL_FAMILY) } returns proposalIn(CAROL_FAMILY, by = CAROL)
         val written = slot<String>()
@@ -413,7 +413,7 @@ class FamilySettingsRepositoryTest {
     /** A repository over [rows], the signed-in parent's Room row as a stream. */
     private fun twoFamilyRepository(
         rows: MutableStateFlow<List<User>>,
-        fcmService: FcmService = mockk(relaxed = true)
+        fcmService: PushQueue = mockk(relaxed = true)
     ): FamilySettingsRepository {
         every { preferences.getSplitRatioBasisPoints() } returns null
         every { preferences.putSplitRatioSlot(any()) } returns Unit
@@ -462,7 +462,7 @@ class FamilySettingsRepositoryTest {
 
     /** A repository whose only interesting collaborator is [fcmService]. */
     private fun repositoryWith(
-        fcmService: FcmService,
+        fcmService: PushQueue,
         cachedBasisPoints: Int? = null
     ): FamilySettingsRepository {
         every { preferences.getSplitRatioBasisPoints() } returns cachedBasisPoints

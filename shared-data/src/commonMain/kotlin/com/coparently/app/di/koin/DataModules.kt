@@ -7,6 +7,7 @@ import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.KnownFamilySlots
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
@@ -22,9 +23,12 @@ import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSourc
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChatSearchRepositoryImpl
 import com.coparently.app.data.repository.ConversationMigrator
+import com.coparently.app.data.repository.CustodyModelRepository
+import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PostPairingConversationSetup
@@ -39,6 +43,7 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
+import com.coparently.app.domain.repository.UserRepository
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -97,6 +102,19 @@ val repositoryDataModule: Module = module {
     singleOf(::ChatSearchRepositoryImpl)
     single<ChatSearchRepository> { get<ChatSearchRepositoryImpl>() }
     singleOf(::ConversationMigrator)
+    // The secondary constructor, which starts the process-lifetime scope the shared custody
+    // stream runs in; the primary one takes a test's scope.
+    single {
+        CustodyModelRepository(
+            get<CustodyModelDao>(),
+            get<UserRepository>(),
+            get<FirestoreCustodyDataSource>(),
+            get<ActivityAnnouncer>(),
+            get<PushQueue>(),
+            get<RequestDeadlineRepository>()
+        )
+    }
+    singleOf(::FamilySettingsRepository)
     singleOf(::PostPairingConversationSetup)
     singleOf(::ParentingPlanRepository)
     singleOf(::RequestDeadlineRepositoryImpl)

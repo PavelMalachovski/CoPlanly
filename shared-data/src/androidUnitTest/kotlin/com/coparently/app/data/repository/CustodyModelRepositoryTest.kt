@@ -2,9 +2,9 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
-import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.ReadSource
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -106,7 +106,7 @@ class CustodyModelRepositoryTest {
     private lateinit var userRepository: UserRepository
     private lateinit var firestoreCustodyDataSource: FirestoreCustodyDataSource
     private lateinit var activityAnnouncer: ActivityAnnouncer
-    private lateinit var fcmService: FcmService
+    private lateinit var fcmService: PushQueue
     private lateinit var requestDeadlines: RequestDeadlineRepository
     private lateinit var repository: CustodyModelRepository
 

@@ -2,9 +2,9 @@ package com.coparently.app.data.repository
 
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
+import kotlin.time.Clock
 
 /**
  * How a submitted ratio was applied.
@@ -115,7 +116,7 @@ class FamilySettingsRepository(
     private val dataSource: FirestoreFamilySettingsDataSource,
     private val userRepository: UserRepository,
     private val preferences: SecurePreferences,
-    fcmService: FcmService,
+    fcmService: PushQueue,
     activityAnnouncer: ActivityAnnouncer,
     requestDeadlines: RequestDeadlineRepository
 ) {
@@ -291,7 +292,7 @@ class FamilySettingsRepository(
         ratio: SplitRatio,
         answerBy: AnswerByPick?
     ): Result<RatioSubmission> {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val existing = documents.read(pair.documentId) ?: return agreeFirst(pair, ratio, now)
         return SplitRatioTransition.propose(existing, ratio, pair.myUid, now).fold(
             onSuccess = { proposed ->
@@ -365,7 +366,7 @@ class FamilySettingsRepository(
                 ratio = anchored,
                 participants = pair.participants,
                 lastModifiedBy = pair.myUid,
-                lastModifiedAtMillis = System.currentTimeMillis()
+                lastModifiedAtMillis = Clock.System.now().toEpochMilliseconds()
             )
         ).onSuccess {
             // The document is the record now; the cache goes back to merely mirroring it, and the
@@ -489,7 +490,7 @@ class FamilySettingsRepository(
         val pair = families.current().pairIn(familyId) ?: return noCoParent()
         val existing = documents.read(pair.documentId)
             ?: return Result.failure(IllegalStateException("There is no proposal to answer"))
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val decided = if (accept) {
             SplitRatioTransition.accept(existing, pair.myUid, now)
         } else {
@@ -571,7 +572,7 @@ private class SettingsDocuments(private val dataSource: FirestoreFamilySettingsD
  */
 private class SplitTelling(
     private val announcer: ActivityAnnouncer,
-    private val fcmService: FcmService,
+    private val fcmService: PushQueue,
     private val requestDeadlines: RequestDeadlineRepository
 ) {
 
@@ -644,7 +645,7 @@ private fun splitClock(pair: CustodyPair, proposal: SplitRatioProposal, answerBy
     val responder = pair.otherParent()
     if (answerBy == null || responder == null) return null
     val zone = TimeZone.currentSystemDefault()
-    val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), null, zone) ?: return null
+    val deadline = AnswerBy.resolve(answerBy, Clock.System.now().toEpochMilliseconds(), null, zone) ?: return null
     return RequestStart(
         kind = RequestKind.SPLIT,
         ref = proposal.proposedAtMillis.toString(),

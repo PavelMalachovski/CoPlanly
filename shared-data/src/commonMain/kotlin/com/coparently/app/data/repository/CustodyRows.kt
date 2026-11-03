@@ -1,18 +1,22 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.entity.CustodyModelEntity
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.DayOverride
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.time.IsoText
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import com.coparently.app.domain.time.wallClockNow
+import kotlin.time.Clock
 
 /**
  * A stored custody row as the domain model. The row's family (schema 45) stays on the row: the
  * model is the pattern, and which family it answers for is [ActiveCustodyRow]'s question.
+ *
+ * Public only for `data/family/UnassignedRecords`, still in the app (MON-24 phase 2, Task 8c).
  */
-internal fun CustodyModelEntity.toDomainModel(): CustodyModel {
+@InternalSharedApi
+fun CustodyModelEntity.toDomainModel(): CustodyModel {
     val momDays = momDaysPattern
         .removeSurrounding("[", "]")
         .split(",")
@@ -48,8 +52,8 @@ internal fun CustodyModelEntity.toDomainModel(): CustodyModel {
  *   phone's schedule survives, so it has to mean the same thing in both zones (SEC-4).
  */
 internal fun CustodyModel.toEntity(
-    createdAt: String = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-    lastModifiedAtMillis: Long = System.currentTimeMillis(),
+    createdAt: String = IsoText.dateTime(wallClockNow()),
+    lastModifiedAtMillis: Long = Clock.System.now().toEpochMilliseconds(),
     dayOverrides: Map<String, DayOverride> = emptyMap()
 ): CustodyModelEntity {
     val momDaysJson = momDayIndices.sorted().joinToString(",", "[", "]")

@@ -1,10 +1,10 @@
 package com.coparently.app.data.repository
 
 import app.cash.turbine.test
-import com.coparently.app.data.local.preferences.EncryptedPreferences
-import com.coparently.app.data.remote.firebase.FcmService
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -47,8 +47,8 @@ import kotlin.test.assertTrue
 class FamilySettingsSplitRequestTest {
 
     private val dataSource = mockk<FirestoreFamilySettingsDataSource>()
-    private val preferences = mockk<EncryptedPreferences>(relaxed = true)
-    private val fcmService = mockk<FcmService>(relaxed = true)
+    private val preferences = mockk<SecurePreferences>(relaxed = true)
+    private val fcmService = mockk<PushQueue>(relaxed = true)
     private val announcer = mockk<ActivityAnnouncer>(relaxed = true)
     private val requestDeadlines = mockk<RequestDeadlineRepository>()
 

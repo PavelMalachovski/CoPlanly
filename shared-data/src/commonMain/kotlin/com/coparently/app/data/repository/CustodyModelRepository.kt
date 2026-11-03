@@ -1,12 +1,15 @@
+@file:OptIn(ExperimentalUuidApi::class, InternalSharedApi::class)
+
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.ReadSource
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -35,6 +38,7 @@ import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.wallClockNow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -58,14 +62,12 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.UUID
 import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Repository for managing custody model configurations.
@@ -132,7 +134,7 @@ constructor(
     private val userRepository: UserRepository,
     private val firestoreCustodyDataSource: FirestoreCustodyDataSource,
     private val activityAnnouncer: ActivityAnnouncer,
-    private val fcmService: FcmService,
+    private val fcmService: PushQueue,
     private val requestDeadlines: RequestDeadlineRepository,
     private val scope: CoroutineScope
 ) {
@@ -152,7 +154,7 @@ constructor(
         userRepository: UserRepository,
         firestoreCustodyDataSource: FirestoreCustodyDataSource,
         activityAnnouncer: ActivityAnnouncer,
-        fcmService: FcmService,
+        fcmService: PushQueue,
         requestDeadlines: RequestDeadlineRepository
     ) : this(
         custodyModelDao,
@@ -529,8 +531,7 @@ constructor(
      */
     suspend fun acceptProposal(): Result<Unit> = decideProposal { current, uid, now, nowMillis ->
         // The accepter's own date: the day the past stops and the proposal begins, at the latest.
-        val acceptedOn = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-            .toKotlinLocalDate()
+        val acceptedOn = Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(TimeZone.currentSystemDefault()).date
         CustodyProposalTransition.accept(current, uid, now, nowMillis, acceptedOn)
     }
 
@@ -722,7 +723,7 @@ constructor(
         val entity = model.toEntity(
             createdAt = original?.createdAt ?: nowIso(),
             lastModifiedAtMillis = original?.lastModifiedAtMillis ?: nowMillis()
-        ).copy(id = UUID.randomUUID().toString(), isActive = false, familyId = original?.familyId)
+        ).copy(id = Uuid.random().toString(), isActive = false, familyId = original?.familyId)
         custodyModelDao.insertModel(entity)
     }
 
@@ -742,7 +743,7 @@ constructor(
         answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.weekOnWeekOff(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             startDate = startDate,
             momFirst = momFirst
         )
@@ -769,7 +770,7 @@ constructor(
         answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.everyOtherWeekend(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             startDate = startDate,
             momIsResident = momIsResident,
             midweek = midweek
@@ -788,7 +789,7 @@ constructor(
         answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.twoTwoThree(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
@@ -806,7 +807,7 @@ constructor(
         answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.threeFourFourThree(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             startDate = startDate,
             momStartsFirst = momStartsFirst
         )
@@ -826,7 +827,7 @@ constructor(
         answerBy: AnswerByPick? = null
     ): PatternSubmission {
         val model = CustodyModel.custom(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             startDate = startDate,
             patternDays = patternDays,
             momDayIndices = momDayIndices
@@ -1459,11 +1460,10 @@ constructor(
      */
     private fun <T> Flow<*>.mirrorOnly(): Flow<T> = transform { }
 
-    private fun nowIso(): String =
-        LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+    private fun nowIso(): String = IsoText.dateTime(wallClockNow())
 
     /** Now as an instant. What orders two phones' writes; see [CustodyTimestamp]. */
-    private fun nowMillis(): Long = System.currentTimeMillis()
+    private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
     /**
      * The shared document as it arrived, with the family it was read for.
@@ -1535,7 +1535,8 @@ private fun swapClock(
     val days = dates.mapNotNull { runCatching { IsoText.parseDate(it) }.getOrNull() }
     val zone = TimeZone.currentSystemDefault()
     val cap = RequestCap.forSwap(days, zone)
-    val deadline = cap?.let { AnswerBy.resolve(answerBy, System.currentTimeMillis(), it, zone) } ?: return null
+    val now = Clock.System.now().toEpochMilliseconds()
+    val deadline = cap?.let { AnswerBy.resolve(answerBy, now, it, zone) } ?: return null
     return RequestStart(
         kind = RequestKind.SWAP,
         ref = groupId,
@@ -1568,7 +1569,7 @@ private fun proposalClock(
     val zone = TimeZone.currentSystemDefault()
     val today = Clock.System.todayIn(zone)
     val cap = RequestCap.forProposal(agreed, proposal.model, today, zone)
-    val deadline = AnswerBy.resolve(answerBy, System.currentTimeMillis(), cap, zone) ?: return null
+    val deadline = AnswerBy.resolve(answerBy, Clock.System.now().toEpochMilliseconds(), cap, zone) ?: return null
     return RequestStart(
         kind = RequestKind.PROPOSAL,
         ref = proposal.proposedAt,

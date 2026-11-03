@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.family
 
 import com.coparently.app.data.local.dao.ChildInfoDao
@@ -21,6 +23,7 @@ import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.data.repository.toDomainModel
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.data.versions.EventVersionDocument
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.CustodyModelType
