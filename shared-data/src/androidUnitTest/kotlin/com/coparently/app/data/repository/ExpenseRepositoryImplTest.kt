@@ -299,6 +299,23 @@ class ExpenseRepositoryImplTest {
     }
 
     @Test
+    fun `the chat card carries the amount as the JVM writes the double, beside its currency`() = runTest {
+        // The export and an older build print this text as it stands (`JvmDoubleText`).
+        signIn("uidA")
+        coEvery { userDao.getUserById("uidA") } returns
+            userEntity(id = "uidA", partnerId = "uidB").copy(partnerIdsJson = "[\"uidB\"]")
+        coEvery { firestoreExpenseDataSource.setExpense(any(), any()) } returns Unit
+        val cards = mutableListOf<ActivityAnnouncement>()
+        coEvery { announcer.announce(capture(cards), any(), any(), any()) } returns Unit
+
+        repository.addExpense(expense().copy(id = "e1", amount = 1000.0, familyId = "uidA__uidB"))
+        repository.addExpense(expense().copy(id = "e2", amount = 12_500_000.0, familyId = "uidA__uidB"))
+
+        assertEquals(listOf("1000.0 CZK", "1.25E7 CZK"), cards.map { it.amount })
+        assertEquals(listOf("CZK", "CZK"), cards.map { it.currency })
+    }
+
+    @Test
     fun `an expense not split with the co-parent pushes no share`() = runTest {
         signIn("uidA")
         coEvery { userDao.getUserById("uidA") } returns

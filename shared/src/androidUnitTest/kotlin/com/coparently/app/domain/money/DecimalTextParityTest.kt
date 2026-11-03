@@ -42,7 +42,10 @@ class DecimalTextParityTest {
     @Test
     fun jvmDoubleTextIsDoubleToStringOnTheJvm() {
         val random = Random(SEED)
-        val corpus = listOf(0.0, -0.0, 1.0, 42.0, 1250.5, 0.001, 0.0001, 9_999_999.0, 1.0E7, 2.675, 1.0E300)
+        // [0.001, 0.01) with few digits is where the JDK before 19 (and ART) adds a trailing zero
+        // ("0.0020", JDK-4511638): Android's text must be the running runtime's, whichever it is.
+        val corpus = listOf(0.0, -0.0, 1.0, 42.0, 1250.5, 0.001, 0.0001, 9_999_999.0, 1.0E7, 2.675, 1.0E300) +
+            listOf(0.002, 0.005, 0.0025, 0.0099, 2.0E-3, 5.0E-3, 0.0011, 0.009)
         corpus.forEach { assertEquals(it.toString(), JvmDoubleText.of(it)) }
         repeat(RANDOM_CASES) {
             val value = Double.fromBits(random.nextLong())

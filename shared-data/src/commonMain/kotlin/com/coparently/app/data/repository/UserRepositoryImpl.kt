@@ -112,10 +112,12 @@ class UserRepositoryImpl(
      * retries. Failures are logged and swallowed.
      */
     override suspend fun ensureProfile() {
-        val account = firebaseAuthService.getCurrentAccount() ?: return
-        val uid = account.uid
-
         try {
+            // Inside the try, as the `FirebaseUser` reads it replaced were: a platform whose
+            // account read can fail must not take the session synchronizer down.
+            val account = firebaseAuthService.getCurrentAccount() ?: return
+            val uid = account.uid
+
             // Null here means either "no document" or "the read failed"; both are safe,
             // because every write below is a merge and the name resolution falls back to
             // the local row rather than to a guess.

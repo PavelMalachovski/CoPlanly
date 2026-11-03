@@ -1517,8 +1517,9 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              EventValidator and ErrorHandler (domain/usecase/, domain/error/).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
-domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
-             except the phase-1 stay list below, which is still in app/
+domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
+             ReminderScheduler — in shared/, except the phase-1 stay list below, which is still
+             in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
              sources, data/payment/, and most of the repositories, and some of the sync, of
@@ -1686,8 +1687,10 @@ the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `dat
 pets' were, so `ExpenseWireContract` moved to `shared-data`'s `wire/` and its list), whose push
 writes `amount` and `share` through `DecimalText.halfUp` (`BigDecimal.valueOf(x).setScale(2,
 HALF_UP).toPlainString()`, held by `DecimalTextParityTest`) and whose chat card writes the amount
-through `JvmDoubleText` (the JVM's `Double.toString`, unchanged on Android and the same text on the
-iPhone); `UserRepositoryImpl`, with `data/session/ProfileIdentity.kt`, asking `SignedInUser`'s new
+through `JvmDoubleText` (`Double.toString` itself on Android, so unchanged by construction; on the
+iPhone the JVM's layout of Kotlin/Native's digits, JDK 19's, which for a few short values in
+[0.001, 0.01) writes "0.002" where ART's older `FloatingDecimal` writes "0.0020", and no stored or
+wire text depends on that); `UserRepositoryImpl`, with `data/session/ProfileIdentity.kt`, asking `SignedInUser`'s new
 `observeCurrentUid` and `getCurrentAccount` (`SignedInAccount`: the uid, name, address, picture,
 anonymity and linked providers `FirebaseUser` carried, read at one moment) for what it read of
 `FirebaseUser`; `PairingRepositoryImpl` on `FirestoreClient` (the same documents, queries, listeners,

@@ -1,5 +1,6 @@
 package com.coparently.app.domain.money
 
+import com.coparently.app.domain.serialization.JvmNumberLayout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -66,15 +67,29 @@ class DecimalTextTest {
     @Test
     fun jvmDoubleTextLaysADoubleOutAsTheJvmDoes() {
         // An expense card's amount ("1250.5 CZK"): the JVM's layout, whatever the platform prints.
+        // Nothing in [0.001, 0.01) here: on Android this is the runtime's own `toString`, which
+        // before JDK 19 writes a few of those with a trailing zero (see `theIphoneLayoutIsJdk19s`).
         assertEquals("1250.5", JvmDoubleText.of(1250.5))
         assertEquals("42.0", JvmDoubleText.of(42.0))
-        assertEquals("0.001", JvmDoubleText.of(0.001))
         assertEquals("1.0E-4", JvmDoubleText.of(0.0001))
         assertEquals("9999999.0", JvmDoubleText.of(9_999_999.0))
         assertEquals("1.0E7", JvmDoubleText.of(10_000_000.0))
         assertEquals("1.25E7", JvmDoubleText.of(12_500_000.0))
         assertEquals("-3.5", JvmDoubleText.of(-3.5))
         assertEquals("0.0", JvmDoubleText.of(0.0))
+    }
+
+    @Test
+    fun theIphoneLayoutIsJdk19s() {
+        // What `JvmDoubleText` does with Kotlin/Native's digits: JDK 19's layout, so the older
+        // FloatingDecimal's trailing zero (JDK-4511638) is not reproduced there.
+        assertEquals("0.002", JvmNumberLayout.of("0.0020"))
+        assertEquals("0.002", JvmNumberLayout.of("2.0E-3"))
+        assertEquals("0.002", JvmNumberLayout.of("2e-03"))
+        assertEquals("0.0025", JvmNumberLayout.of("0.0025"))
+        assertEquals("0.0099", JvmNumberLayout.of("9.9e-03"))
+        assertEquals("1.0E7", JvmNumberLayout.of("1e+07"))
+        assertEquals("1250.5", JvmNumberLayout.of("1250.5"))
     }
 
     @Test
