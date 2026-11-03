@@ -60,8 +60,10 @@ import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.support.SupportAgreementStore
 import com.coparently.app.data.support.SupportReminders
+import com.coparently.app.data.sync.CalendarSyncRepository
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
+import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
@@ -123,11 +125,15 @@ val remoteDataModule: Module = module {
  * where each platform builds them, and so are the seams the sync asks the platform through: the
  * push token (`PushDevice`), the account-switch check (`AccountConsistency`), the request clocks'
  * sweep (`RequestClockSweep`) and the reminders (`ReminderScheduler`). `SyncWorker`, which runs it
- * on WorkManager, stays in the app.
+ * on WorkManager, stays in the app. Beside it, the Google Calendar import, read-only and private
+ * (Legal item 10), and its automatic run after every sync (Task 8g), which reads the connection
+ * through `GoogleCalendarConnectionSource`.
  */
 val syncDataModule: Module = module {
+    singleOf(::CalendarSyncRepository)
     singleOf(::ConflictResolver)
     singleOf(::FamilyIdBackfill)
+    singleOf(::GoogleCalendarAutoImport)
     // Twenty-four collaborators, past what a constructor reference takes (`singleOf` stops at
     // twenty-two), so each one by its type.
     single {
@@ -332,8 +338,9 @@ val dataModules: List<Module> = listOf(
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, Analytics, Connectivity,
 //  SignedInUser, PushQueue, PushDevice, AttachmentUploadGate, RequestClockScheduler,
-//  RequestClockSweep, ReminderScheduler, SyncRequester, PairingWording and AccountConsistency on
-//  the iPhone before its app starts Koin.
+//  RequestClockSweep, ReminderScheduler, SyncRequester, PairingWording, AccountConsistency,
+//  GoogleCalendarApi, CredentialProvider and GoogleCalendarConnectionSource on the iPhone before
+//  its app starts Koin.
 /**
  * The Firestore and callable seams [dataModules] needs: the
  * [com.coparently.app.data.remote.firebase.FirestoreClient] and the
@@ -346,7 +353,8 @@ val dataModules: List<Module> = listOf(
  * `AttachmentUploadGate` and `RequestClockScheduler`, and since Task 8f `Analytics`,
  * `Connectivity`, `ReminderScheduler` (the event use cases and `ErrorHandler`), `SyncRequester` and
  * `PairingWording` (the pairing repository), and since Task 8g `PushDevice`, `AccountConsistency`
- * and `RequestClockSweep` (the sync), which the app's own modules bind on Android
+ * and `RequestClockSweep` (the sync) and `GoogleCalendarApi`, `CredentialProvider` and
+ * `GoogleCalendarConnectionSource` (the Google Calendar import), which the app's own modules bind on Android
  * (`UserRepository` and `PairingRepository`, which the app bound until Task 8f, are this layer's
  * own now). The iPhone's module binds none of them yet; nothing starts Koin there, and the first
  * resolution would fail until it does.

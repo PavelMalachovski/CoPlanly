@@ -1,9 +1,9 @@
 package com.coparently.app.data.sync
 
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
-import com.coparently.app.data.remote.google.CredentialManagerService
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
+import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -11,8 +11,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -47,7 +47,7 @@ class GoogleCalendarAutoImportTest {
     @Test
     fun `a due import runs the button's import and records when`() = runTest {
         val repository: CalendarSyncRepository = mockk()
-        val success = SyncResult.Success(3, LocalDate.of(2026, 10, 1), LocalDate.of(2027, 1, 1), false)
+        val success = SyncResult.Success(3, LocalDate(2026, 10, 1), LocalDate(2027, 1, 1), false)
         coEvery { repository.syncFromGoogle(any(), any()) } returns
             flowOf(SyncResult.Progress(SyncStage.STARTING), success)
         val preferences = preferences(enabled = true, lastRun = null)
@@ -74,11 +74,11 @@ class GoogleCalendarAutoImportTest {
         lastRun: Long? = null
     ) = GoogleCalendarAutoImport.isDue(enabled, connection, lastRun, now)
 
-    private fun connected(): CredentialManagerService = mockk {
+    private fun connected(): GoogleCalendarConnectionSource = mockk {
         every { connection() } returns GoogleCalendarConnection.CONNECTED
     }
 
-    private fun preferences(enabled: Boolean, lastRun: Long?): EncryptedPreferences = mockk(relaxed = true) {
+    private fun preferences(enabled: Boolean, lastRun: Long?): SecurePreferences = mockk(relaxed = true) {
         every { getBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, false) } returns enabled
         every { getString(PreferenceKeys.GOOGLE_CALENDAR_LAST_AUTO_IMPORT, any()) } returns lastRun?.toString()
     }

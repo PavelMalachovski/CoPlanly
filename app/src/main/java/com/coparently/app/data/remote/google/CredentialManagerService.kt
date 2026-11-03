@@ -27,7 +27,7 @@ class CredentialManagerService(
     private val context: Context,
     private val encryptedPreferences: SecurePreferences,
     private val googleOAuthFunctions: GoogleOAuthFunctions
-) {
+) : GoogleCalendarConnectionSource {
     private val credentialManager: CredentialManager? = try {
         CredentialManager.create(context)
     } catch (e: Exception) {
@@ -216,8 +216,11 @@ class CredentialManagerService(
      * the access token is [accessToken]'s job. This used to be `isSignedIn()`, "the access token is
      * good for five more minutes", which every connection stopped being about 55 minutes after it
      * was made — Settings then said "not signed in", and the import refused to start.
+     *
+     * The automatic import, in `:shared-data` since MON-24 phase 2 (Task 8g), reads it as its
+     * [GoogleCalendarConnectionSource].
      */
-    fun connection(): GoogleCalendarConnection {
+    override fun connection(): GoogleCalendarConnection {
         val accessToken = encryptedPreferences.getAccessToken()
         val expiresAt = encryptedPreferences.getTokenExpiry() ?: 0L
         return when {

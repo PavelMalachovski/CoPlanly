@@ -3,24 +3,29 @@ package com.coparently.app.data.sync
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
+import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import kotlinx.coroutines.flow.lastOrNull
+import kotlin.time.Clock
 
 /**
  * Imports from Google Calendar on its own, from the background sync (owner request, October 2026:
  * a parent had to press "Sync from Google Calendar" to see their latest events).
  *
- * [SyncWorker] calls [importIfDue] after every run, so the import follows the app's own sync: when
+ * `SyncWorker` calls [importIfDue] after every run, so the import follows the app's own sync: when
  * the app starts, each time it comes back to the foreground, on the calendar's pull to refresh and
  * every fifteen minutes in the background. It runs only while the parent has turned sync on and
  * Google Calendar is connected, and at most once per [MIN_INTERVAL_MILLIS]. It is the same import
  * the button runs ([CalendarSyncRepository.syncFromGoogle]), so every event still arrives private
  * (Legal item 10) and a re-import keeps what the parent set in the app.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8g); it reads the connection through
+ * [GoogleCalendarConnectionSource], which the app's `CredentialManagerService` answers, under the
+ * parameter name it had.
  */
 class GoogleCalendarAutoImport(
     private val calendarSyncRepository: CalendarSyncRepository,
-    private val credentialManagerService: CredentialManagerService,
+    private val credentialManagerService: GoogleCalendarConnectionSource,
     private val encryptedPreferences: SecurePreferences
 ) {
 
@@ -34,7 +39,7 @@ class GoogleCalendarAutoImport(
      * @param nowMillis The current time, for the spacing.
      * @return The import's last result, or null when nothing ran.
      */
-    suspend fun importIfDue(nowMillis: Long = System.currentTimeMillis()): SyncResult? {
+    suspend fun importIfDue(nowMillis: Long = Clock.System.now().toEpochMilliseconds()): SyncResult? {
         val due = isDue(
             enabled = encryptedPreferences.getBoolean(PreferenceKeys.GOOGLE_CALENDAR_SYNC_ENABLED, false),
             connection = credentialManagerService.connection(),

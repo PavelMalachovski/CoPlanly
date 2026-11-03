@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toJavaLocalDate
 
 /**
  * ViewModel для управления операциями синхронизации.
@@ -280,7 +281,7 @@ internal fun SyncResult.toSyncState(): GoogleCalendarSyncState = when (this) {
         UiText.Plural(
             id = if (truncated) R.plurals.sync_google_synced_truncated else R.plurals.sync_google_synced,
             count = synced,
-            args = listOf(synced, UiText.Date(from), UiText.Date(until))
+            args = listOf(synced, UiText.Date(from.toJavaLocalDate()), UiText.Date(until.toJavaLocalDate()))
         )
     )
     is SyncResult.Error -> GoogleCalendarSyncState.Error(reason.toUiText())

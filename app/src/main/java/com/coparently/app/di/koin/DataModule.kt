@@ -39,6 +39,7 @@ import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
+import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.repository.AndroidPairingWording
 import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.requests.RequestClockActions
@@ -66,8 +67,6 @@ import com.coparently.app.data.session.DeviceTraces
 import com.coparently.app.data.session.SessionProfileSynchronizer
 import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
-import com.coparently.app.data.sync.CalendarSyncRepository
-import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -128,6 +127,8 @@ val dataModule = module {
     singleOf(::FirebaseImageStorage)
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)
+    // The Google Calendar connection the automatic import in `:shared-data` reads.
+    single<GoogleCalendarConnectionSource> { get<CredentialManagerService>() }
     singleOf(::CredentialProviderImpl)
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     // The thread title PairingRepositoryImpl (in `:shared-data`) falls back to, from resources.
@@ -174,8 +175,6 @@ val dataModule = module {
     singleOf(::SessionProfileSynchronizer)
     singleOf(::SignedInAccountSource)
     singleOf(::WorkManagerSupportReminderScheduler)
-    singleOf(::CalendarSyncRepository)
-    singleOf(::GoogleCalendarAutoImport)
     singleOf(::WorkManagerSyncRequester)
     singleOf(::TelemetryConsentApplier)
 }

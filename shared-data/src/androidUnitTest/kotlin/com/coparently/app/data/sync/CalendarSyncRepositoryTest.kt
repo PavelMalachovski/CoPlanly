@@ -20,7 +20,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -171,8 +170,8 @@ class CalendarSyncRepositoryTest {
 
         val success = repository().syncFromGoogle().toList().last() as SyncResult.Success
 
-        assertEquals(LocalDate.of(2026, 8, 24), success.from, "start of the window")
-        assertEquals(LocalDate.of(2027, 8, 24), success.until, "end of the window")
+        assertEquals(KotlinLocalDate(2026, 8, 24), success.from, "start of the window")
+        assertEquals(KotlinLocalDate(2027, 8, 24), success.until, "end of the window")
     }
 
     @Test

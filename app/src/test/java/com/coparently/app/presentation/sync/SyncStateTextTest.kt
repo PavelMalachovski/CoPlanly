@@ -6,6 +6,7 @@ import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
 import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.presentation.common.UiText
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -24,11 +25,16 @@ class SyncStateTextTest {
     private val from = LocalDate.of(2026, 8, 24)
     private val until = LocalDate.of(2027, 8, 24)
 
+    // The import reports kotlinx-datetime dates since it moved to `:shared-data` (MON-24 phase 2,
+    // Task 8g); the screen words them as the `java.time` dates above.
+    private val start = from.toKotlinLocalDate()
+    private val end = until.toKotlinLocalDate()
+
     @Test
     fun `a truncated import is not worded like a complete one`() {
         // CQ-7: the old import stopped at the 50th event and said what a complete one said.
-        val cutShort = SyncResult.Success(synced = 50, from = from, until = until, truncated = true).toSyncState()
-        val complete = SyncResult.Success(synced = 50, from = from, until = until, truncated = false).toSyncState()
+        val cutShort = SyncResult.Success(synced = 50, from = start, until = end, truncated = true).toSyncState()
+        val complete = SyncResult.Success(synced = 50, from = start, until = end, truncated = false).toSyncState()
 
         assertEquals(
             GoogleCalendarSyncState.Success(
@@ -49,7 +55,7 @@ class SyncStateTextTest {
 
     @Test
     fun `the window read is passed as dates, formatted in the reader's locale`() {
-        val state = SyncResult.Success(synced = 3, from = from, until = until, truncated = false).toSyncState()
+        val state = SyncResult.Success(synced = 3, from = start, until = end, truncated = false).toSyncState()
 
         val text = (state as GoogleCalendarSyncState.Success).message as UiText.Plural
         assertEquals(listOf(3, UiText.Date(from), UiText.Date(until)), text.args)

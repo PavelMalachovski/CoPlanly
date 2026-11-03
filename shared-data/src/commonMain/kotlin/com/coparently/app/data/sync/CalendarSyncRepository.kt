@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.data.sync
 
 import com.coparently.app.data.local.dao.EventDao
@@ -14,19 +16,32 @@ import com.coparently.app.domain.events.EventTimestamp
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.minus
+import com.coparently.app.domain.time.wallClockNow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.io.IOException
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Repository for synchronizing events between local database and Google Calendar.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8g), on kotlinx-datetime: the same wall clocks in
+ * this device's zone, the same stored rows. A main-thread network call, which only Android can
+ * report, is told apart through [isNetworkOnMainThread].
  */
 class CalendarSyncRepository(
     private val eventDao: EventDao,
@@ -76,8 +91,8 @@ class CalendarSyncRepository(
                 withContext(Dispatchers.IO) {
                     googleCalendarApi.listEvents(
                         credential = credential,
-                        timeMin = startDate?.toKotlinLocalDateTime(),
-                        timeMax = endDate?.toKotlinLocalDateTime()
+                        timeMin = startDate,
+                        timeMax = endDate
                     )
                 }
             }
@@ -97,8 +112,8 @@ class CalendarSyncRepository(
             emit(
                 SyncResult.Success(
                     synced = eventsToInsert.size,
-                    from = imported.from.date.toJavaLocalDate(),
-                    until = imported.until.date.toJavaLocalDate(),
+                    from = imported.from.date,
+                    until = imported.until.date,
                     truncated = imported.truncated
                 )
             )
@@ -112,9 +127,6 @@ class CalendarSyncRepository(
         } catch (e: IllegalStateException) {
             logger.e("CalendarSync", "Authentication error: ${e.message}", e)
             emit(SyncResult.Error(SyncFailure.AUTHENTICATION))
-        } catch (e: android.os.NetworkOnMainThreadException) {
-            logger.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
-            emit(SyncResult.Error(SyncFailure.UNKNOWN))
         } catch (e: GoogleCalendarHttpException) {
             // Google refused the call. Kept before the IOException branch below: the exception
             // google-api-client threw before MON-24 extended IOException, and the reverse order
@@ -122,15 +134,22 @@ class CalendarSyncRepository(
             // Kotlin does not flag an unreachable catch the way Java does.
             logger.e("CalendarSync", "Google API error: ${e.statusCode}", e)
             emit(SyncResult.Error(SyncFailure.forStatus(e.statusCode)))
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
             logger.e("CalendarSync", "Network error: ${e.message}", e)
             emit(SyncResult.Error(SyncFailure.NETWORK))
         } catch (e: Exception) {
-            // Log full error for debugging
-            logger.e("CalendarSync", "Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
-            // The exception's class and message go to the log above and to Crashlytics; they
-            // used to be printed on the Settings screen too, in English, as the whole message.
-            crashReporter.record(e)
+            if (e.isNetworkOnMainThread()) {
+                // Android's NetworkOnMainThreadException, which no branch above catches: its own
+                // `catch` branch until the move to common code (MON-24 phase 2, Task 8g), where
+                // only the Android actual can name the type.
+                logger.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
+            } else {
+                // Log full error for debugging
+                logger.e("CalendarSync", "Unexpected error: ${e::class.simpleName} - ${e.message}", e)
+                // The exception's class and message go to the log above and to Crashlytics; they
+                // used to be printed on the Settings screen too, in English, as the whole message.
+                crashReporter.record(e)
+            }
             emit(SyncResult.Error(SyncFailure.UNKNOWN))
         }
     }
@@ -212,30 +231,30 @@ class CalendarSyncRepository(
         // note onto today's cell and lost its real date. `date` is a calendar date, read as it is
         // written (google-api-client gave it as UTC midnight, read back in UTC: the same day).
         val startDateTime = start?.dateTime?.let { epochMillisToLocal(it.toEpochMilliseconds()) }
-            ?: start?.date?.let { it.toJavaLocalDate().atStartOfDay() }
-            ?: LocalDateTime.now()
+            ?: start?.date?.atTime(0, 0)
+            ?: wallClockNow()
 
         // A date-only end is *exclusive* in Google's model: a one-day event on the 14th ends on
         // the 15th. Stored as the 15th at 00:00 it overlapped the 15th in every day query and was
         // drawn a day too long. It is stored as the last minute of the day before instead, which
         // is how `AllDayEvent` reads a day's close (and how the school import writes one).
         val endDateTime = end?.dateTime?.let { epochMillisToLocal(it.toEpochMilliseconds()) }
-            ?: end?.date?.let { lastMinuteBefore(it.toJavaLocalDate().atStartOfDay(), startDateTime) }
+            ?: end?.date?.let { lastMinuteBefore(it.atTime(0, 0), startDateTime) }
 
-        val importedAtMillis = System.currentTimeMillis()
+        val importedAtMillis = Clock.System.now().toEpochMilliseconds()
         return EventEntity(
-            id = id ?: java.util.UUID.randomUUID().toString(),
+            id = id ?: Uuid.random().toString(),
             title = summary ?: "Untitled Event",
             description = description,
             // The row's columns are `kotlinx.datetime` since the entities moved to common code
             // (MON-24 phase 2); the same value, and the same stored text (`Converters`).
-            startDateTime = startDateTime.toKotlinLocalDateTime(),
-            endDateTime = endDateTime?.toKotlinLocalDateTime(),
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
             eventType = "google",
             parentOwner = ownerSlot,
             isRecurring = recurrence != null,
             recurrencePattern = recurrence?.firstOrNull(),
-            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            createdAt = wallClockNow(),
             updatedAt = EventTimestamp.toWallClock(importedAtMillis),
             updatedAtMillis = importedAtMillis,
             createdByFirebaseUid = ownerUid,
@@ -263,21 +282,21 @@ class CalendarSyncRepository(
 
     /** A timed event's epoch millis as a local date-time in this device's zone. */
     private fun epochMillisToLocal(millis: Long): LocalDateTime =
-        LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(millis), ZoneId.systemDefault())
+        Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
 
     /**
      * The last minute before an exclusive all-day end ([exclusiveEnd], a midnight), never before
      * [start]'s own day closes — a malformed end at or before the start still covers that day.
      */
     private fun lastMinuteBefore(exclusiveEnd: LocalDateTime, start: LocalDateTime): LocalDateTime {
-        val last = exclusiveEnd.minusMinutes(1)
-        val startDayClose = start.toLocalDate().atTime(LAST_MINUTE_OF_DAY)
-        return if (last.isBefore(startDayClose)) startDayClose else last
+        val last = exclusiveEnd.minus(1, DateTimeUnit.MINUTE)
+        val startDayClose = start.date.atTime(LAST_MINUTE_OF_DAY)
+        return if (last < startDayClose) startDayClose else last
     }
 
     private companion object {
         /** Where an imported all-day event's last day closes; `AllDayEvent` reads it as such. */
-        val LAST_MINUTE_OF_DAY: LocalTime = LocalTime.of(23, 59)
+        val LAST_MINUTE_OF_DAY: LocalTime = LocalTime(23, 59)
     }
 }
 

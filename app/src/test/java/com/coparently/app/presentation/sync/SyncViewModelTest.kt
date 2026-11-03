@@ -33,10 +33,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -111,8 +111,8 @@ class SyncViewModelTest {
         google.connect()
         val done = SyncResult.Success(
             synced = 3,
-            from = LocalDate.of(2026, 9, 1),
-            until = LocalDate.of(2027, 9, 1),
+            from = LocalDate(2026, 9, 1),
+            until = LocalDate(2027, 9, 1),
             truncated = false
         )
         coEvery { calendarSyncRepository.syncFromGoogle(any(), any()) } returns
@@ -144,8 +144,8 @@ class SyncViewModelTest {
         google.connect(expiresInMillis = -GoogleCredentialsFixture.HOUR)
         val done = SyncResult.Success(
             synced = 1,
-            from = LocalDate.of(2026, 9, 1),
-            until = LocalDate.of(2027, 9, 1),
+            from = LocalDate(2026, 9, 1),
+            until = LocalDate(2027, 9, 1),
             truncated = false
         )
         coEvery { calendarSyncRepository.syncFromGoogle(any(), any()) } returns flowOf(done)
