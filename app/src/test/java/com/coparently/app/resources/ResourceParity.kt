@@ -81,12 +81,15 @@ internal object ResourceParity {
     /**
      * Compose Multiplatform's Android reader opens its files through the application context its
      * `AndroidContextProvider` records when the app starts. Robolectric creates the manifest's
-     * content providers, so it is normally set; this sets it when it is not, so a Robolectric
-     * change surfaces as a difference in text rather than as "Android context is not initialized".
+     * content providers, so it is normally set; this sets it when it is not. It reaches the
+     * library's internal field by reflection and gives up quietly if that ever moves: the reader
+     * then says "Android context is not initialized", which names the cause.
      */
     fun ensureComposeResourcesContext() {
-        val provider = Class.forName("org.jetbrains.compose.resources.AndroidContextProvider")
-        val field = provider.getDeclaredField("ANDROID_CONTEXT").apply { isAccessible = true }
-        if (field.get(null) == null) field.set(null, context)
+        runCatching {
+            val provider = Class.forName("org.jetbrains.compose.resources.AndroidContextProvider")
+            val field = provider.getDeclaredField("ANDROID_CONTEXT").apply { isAccessible = true }
+            if (field.get(null) == null) field.set(null, context)
+        }
     }
 }
