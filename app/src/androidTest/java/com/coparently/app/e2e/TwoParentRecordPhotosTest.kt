@@ -169,7 +169,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         carol.petRepository.upsertPet(pet.copy(photos = listOf(solo)))
         val photo = checkNotNull(RecordPhotoCodec.decode(solo))
         val kept = carol.sharedFileCache.cached(RecordPhotoPaths.objectNameOf(soloPath), photo.sha256)
-        val bytes = checkNotNull(kept) { "the uploader's own copy was not kept" }.readBytes()
+        val bytes = File(checkNotNull(kept) { "the uploader's own copy was not kept" }.toString()).readBytes()
         assertRefused { dan.storage.reference.child(soloPath).getBytes(MAX_PHOTO_BYTES).await() }
 
         pair(inviter = carol, accepter = dan)
@@ -213,7 +213,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
         ) { "Dan cannot see the photograph Carol took before they paired" }
         assertEquals(familyPath, viewable.paths.first())
         val opened = dan.sharedFileCache.localCopy(familyPath, RecordPhotoPaths.objectNameOf(familyPath), photo.sha256)
-        assertArrayEquals(bytes, opened.readBytes())
+        assertArrayEquals(bytes, File(opened.toString()).readBytes())
         assertEquals(carol.uid, dan.storage.reference.child(familyPath).metadata.await().getCustomMetadata("uploader"))
     }
 
@@ -254,7 +254,7 @@ class TwoParentRecordPhotosTest : TwoParentTest() {
             RecordPhotoPaths.objectNameOf(photo.storagePath),
             photo.sha256
         )
-        assertArrayEquals(stored, opened.readBytes())
+        assertArrayEquals(stored, File(opened.toString()).readBytes())
         assertEquals(photo.sizeBytes, stored.size.toLong())
 
         assertRefused { stranger.storage.reference.child(photo.storagePath).getBytes(MAX_PHOTO_BYTES).await() }

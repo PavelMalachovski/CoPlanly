@@ -29,7 +29,6 @@ val appModules: List<Module> = listOf(
     requestClockModule,
     schoolModule,
     securityModule,
-    sharedFilesModule,
     familyDocumentCacheDaoModule,
     supportModule,
     syncModule,

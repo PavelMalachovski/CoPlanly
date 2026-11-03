@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 /** What the vault screen can show in place of, or as, its list. */
 sealed interface DocumentsList {
@@ -163,7 +164,7 @@ class FamilyDocumentsViewModel(
     fun open(document: FamilyDocument) {
         viewModelScope.launch {
             repository.localCopy(document)
-                .onSuccess { _opened.trySend(OpenedFile(it, document.contentType)) }
+                .onSuccess { _opened.trySend(OpenedFile(File(it.toString()), document.contentType)) }
                 .onFailure { e ->
                     _state.update { it.copy(error = sharedFileError(e, R.string.shared_file_error_open)) }
                 }

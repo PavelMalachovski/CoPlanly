@@ -14,7 +14,7 @@ import com.coparently.app.domain.files.RecordPhotoPaths
 import com.coparently.app.domain.files.ViewablePhoto
 import kotlinx.coroutines.CancellationException
 import okio.FileSystem
-import okio.Path.Companion.toOkioPath
+import okio.Path.Companion.toPath
 import java.io.IOException
 
 /**
@@ -39,7 +39,7 @@ class RecordPhotoFetcher(
             try {
                 val file = cache.localCopy(path, RecordPhotoPaths.objectNameOf(path), photo.sha256)
                 return SourceResult(
-                    source = ImageSource(file = file.toOkioPath(), fileSystem = FileSystem.SYSTEM),
+                    source = ImageSource(file = file.toString().toPath(), fileSystem = FileSystem.SYSTEM),
                     mimeType = photo.contentType,
                     dataSource = DataSource.DISK
                 )

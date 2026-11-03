@@ -13,4 +13,15 @@ expect object Sha256 {
 
     /** The 32-byte SHA-256 digest of [bytes]. */
     fun digest(bytes: ByteArray): ByteArray
+
+    /**
+     * The 32-byte SHA-256 digest of every run of bytes [feed] hands its `update`, in order: the
+     * digest of a shared file read a buffer at a time, which is too large to hold at once (MON-23;
+     * `data/files/` in `:shared-data`). An exception [feed] throws leaves this call with it, and no
+     * digest.
+     *
+     * @param feed Called once, with `update(bytes, offset, length)`, which hashes
+     *   `bytes[offset until offset + length]`.
+     */
+    fun digestOf(feed: (update: (bytes: ByteArray, offset: Int, length: Int) -> Unit) -> Unit): ByteArray
 }

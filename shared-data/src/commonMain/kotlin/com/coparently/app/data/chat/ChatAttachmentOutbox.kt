@@ -1,10 +1,11 @@
 package com.coparently.app.data.chat
 
+import com.coparently.app.data.files.LocalFiles
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
 import com.coparently.app.data.platform.AppDirectories
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
@@ -13,8 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.io.File
-import java.io.IOException
+import kotlinx.io.IOException
+import kotlinx.io.files.Path
 
 /**
  * Files waiting to leave the phone with their chat message (MON-23).
@@ -29,16 +30,19 @@ import java.io.IOException
  * The staged copy is app-private storage, not the SQLCipher database (CLAUDE.md item 20); it lives
  * only until the upload lands, then moves to [SharedFileCache] so the sender can open it without
  * downloading it back.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8j), on kotlinx-io paths, asking [SignedInUser] for
+ * the uploader (the app's `FirebaseAuthService` before; the parameter kept its name).
  */
 class ChatAttachmentOutbox(
     private val directories: AppDirectories,
     private val stager: SharedFileStager,
     private val storage: SharedFileStorage,
     private val cache: SharedFileCache,
-    private val authService: FirebaseAuthService
+    private val authService: SignedInUser
 ) : AttachmentUploadGate {
 
-    private val root: File get() = File(directories.files.toString(), OUTBOX_DIRECTORY)
+    private val root: Path get() = Path(directories.files, OUTBOX_DIRECTORY)
 
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
 
@@ -52,7 +56,7 @@ class ChatAttachmentOutbox(
      *   rules would refuse — nothing is queued then
      */
     suspend fun stage(conversationId: String, messageId: String, contentUri: String): ChatAttachment {
-        val staged = stager.stage(contentUri, File(root, messageId))
+        val staged = stager.stage(contentUri, Path(root, messageId))
         return ChatAttachment(
             storagePath = ChatAttachmentCodec.storagePath(conversationId, messageId, staged.fileName),
             contentType = staged.contentType,
@@ -63,19 +67,19 @@ class ChatAttachmentOutbox(
     }
 
     /** The staged copy of [attachment] while its message is still in the outbox, else null. */
-    fun stagedFile(messageId: String, attachment: ChatAttachment): File? =
-        File(File(root, messageId), attachment.fileName).takeIf { it.exists() }
+    fun stagedFile(messageId: String, attachment: ChatAttachment): Path? =
+        Path(root, messageId, attachment.fileName).takeIf { LocalFiles.exists(it) }
 
     /** Drops everything staged for [messageId] — the message was never queued. */
     fun discard(messageId: String) {
-        File(root, messageId).deleteRecursively()
+        LocalFiles.deleteRecursively(Path(root, messageId))
     }
 
     override suspend fun ensureUploaded(message: Message) {
         val attachments = ChatAttachmentCodec.attachmentsOf(message.attachments)
             .filter { ChatAttachmentCodec.belongsTo(it, message.conversationId, message.id) }
         if (attachments.isEmpty()) return
-        val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
+        val uid = authService.getCurrentUid() ?: throw IOException("Not signed in")
         try {
             attachments.forEach { attachment -> upload(message.id, attachment, uid) }
         } finally {
@@ -107,8 +111,9 @@ class ChatAttachmentOutbox(
         ) { fraction -> _progress.update { it + (messageId to fraction) } }
     }
 
-    internal companion object {
-        /** Also cleared by `DeviceTraces`. */
+    /** Where the outbox lives. */
+    companion object {
+        /** Under the app's files directory; also cleared by the app's `DeviceTraces`. */
         const val OUTBOX_DIRECTORY = "chat_outbox"
     }
 }

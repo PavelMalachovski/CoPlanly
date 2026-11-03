@@ -1,12 +1,11 @@
 package com.coparently.app.data.files
 
 import com.coparently.app.data.platform.AppDirectories
-import com.coparently.app.domain.files.toHex
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.IOException
-import java.security.MessageDigest
+import kotlinx.io.IOException
+import kotlinx.io.files.Path
 
 /** The downloaded bytes are not the ones whose digest the record carries; nothing is shown. */
 class SharedFileIntegrityException : IOException("Downloaded file does not match its recorded SHA-256")
@@ -20,27 +19,31 @@ class SharedFileIntegrityException : IOException("Downloaded file does not match
  * and is renamed into place only when the hash is the recorded one; so a copy found here needs no
  * second check, and a file that does not match what a parent filed or sent is never opened as if
  * it did. The cache is the system's to clear — nothing here is the record, the server is.
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8j), on kotlinx-io paths under [AppDirectories]
+ * (`java.io.File` before; a screen that hands a copy to Android opens `File(path.toString())`).
  */
 class SharedFileCache(
     private val directories: AppDirectories,
     private val storage: SharedFileStorage
 ) {
 
-    private val viewRoot: File get() = File(directories.cache.toString(), VIEW_DIRECTORY)
+    private val viewRoot: Path get() = Path(directories.cache, VIEW_DIRECTORY, VIEW_SUBDIRECTORY)
 
     /** A verified local copy of the file at [storagePath], downloading it when there is none. */
-    suspend fun localCopy(storagePath: String, fileName: String, sha256: String): File =
+    suspend fun localCopy(storagePath: String, fileName: String, sha256: String): Path =
         withContext(Dispatchers.IO) {
-            val target = File(File(viewRoot, sha256), fileName)
-            if (!target.exists()) {
-                target.parentFile?.mkdirs()
-                val partial = File(target.parentFile, "$fileName$PARTIAL_SUFFIX")
+            val target = Path(viewRoot, sha256, fileName)
+            if (!LocalFiles.exists(target)) {
+                val directory = Path(viewRoot, sha256)
+                LocalFiles.createDirectories(directory)
+                val partial = Path(directory, "$fileName$PARTIAL_SUFFIX")
                 storage.download(storagePath, partial)
-                if (sha256Of(partial) != sha256) {
-                    partial.delete()
+                if (LocalFiles.sha256Of(partial) != sha256) {
+                    LocalFiles.delete(partial)
                     throw SharedFileIntegrityException()
                 }
-                if (!partial.renameTo(target)) throw IOException("Could not keep the downloaded file")
+                if (!LocalFiles.rename(partial, target)) throw IOException("Could not keep the downloaded file")
             }
             target
         }
@@ -50,11 +53,11 @@ class SharedFileCache(
      * attachment without downloading bytes they already hold. Its digest was computed as it was
      * staged, which is the check a download would have made.
      */
-    suspend fun adopt(file: File, fileName: String, sha256: String) {
+    suspend fun adopt(file: Path, fileName: String, sha256: String) {
         withContext(Dispatchers.IO) {
-            val target = File(File(viewRoot, sha256), fileName)
-            target.parentFile?.mkdirs()
-            if (target.exists() || !file.renameTo(target)) file.delete()
+            val target = Path(viewRoot, sha256, fileName)
+            LocalFiles.createDirectories(Path(viewRoot, sha256))
+            if (LocalFiles.exists(target) || !LocalFiles.rename(file, target)) LocalFiles.delete(file)
         }
     }
 
@@ -65,36 +68,27 @@ class SharedFileCache(
      */
     suspend fun keep(bytes: ByteArray, fileName: String, sha256: String) {
         withContext(Dispatchers.IO) {
-            val target = File(File(viewRoot, sha256), fileName)
-            if (target.exists()) return@withContext
-            target.parentFile?.mkdirs()
-            val partial = File(target.parentFile, "$fileName$PARTIAL_SUFFIX")
-            partial.writeBytes(bytes)
-            if (!partial.renameTo(target)) partial.delete()
+            val target = Path(viewRoot, sha256, fileName)
+            if (LocalFiles.exists(target)) return@withContext
+            val directory = Path(viewRoot, sha256)
+            LocalFiles.createDirectories(directory)
+            val partial = Path(directory, "$fileName$PARTIAL_SUFFIX")
+            LocalFiles.writeBytes(partial, bytes)
+            if (!LocalFiles.rename(partial, target)) LocalFiles.delete(partial)
         }
     }
 
     /** The cached copy for [sha256]/[fileName] when one is already here, without downloading. */
-    fun cached(fileName: String, sha256: String): File? =
-        File(File(viewRoot, sha256), fileName).takeIf { it.exists() }
-
-    private fun sha256Of(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(BUFFER_BYTES)
-            var read = input.read(buffer)
-            while (read >= 0) {
-                digest.update(buffer, 0, read)
-                read = input.read(buffer)
-            }
-        }
-        return digest.digest().toHex()
-    }
+    fun cached(fileName: String, sha256: String): Path? =
+        Path(viewRoot, sha256, fileName).takeIf { LocalFiles.exists(it) }
 
     private companion object {
-        /** Under `cacheDir`; `res/xml/file_paths.xml` names the same directory. */
-        const val VIEW_DIRECTORY = "shared_files/view"
+        /**
+         * Under `cacheDir`, `shared_files/view`; `res/xml/file_paths.xml` names the same directory,
+         * and `DeviceTraces` clears `shared_files`.
+         */
+        const val VIEW_DIRECTORY = "shared_files"
+        const val VIEW_SUBDIRECTORY = "view"
         const val PARTIAL_SUFFIX = ".part"
-        const val BUFFER_BYTES = 64 * 1024
     }
 }

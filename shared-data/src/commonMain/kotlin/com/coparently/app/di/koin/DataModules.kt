@@ -1,10 +1,12 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.documents.FamilyDocumentIndex
 import com.coparently.app.data.documents.FamilyDocumentIndexCache
+import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.OptionalRecordSections
 import com.coparently.app.data.export.ParentingPlanRecordSource
@@ -15,6 +17,10 @@ import com.coparently.app.data.family.KnownFamilySlots
 import com.coparently.app.data.family.OtherFamiliesSignals
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.family.UnassignedRecords
+import com.coparently.app.data.files.SharedFileCache
+import com.coparently.app.data.files.SharedFileStager
+import com.coparently.app.data.files.SharedFileStorage
+import com.coparently.app.data.files.StoredRecordFamilies
 import com.coparently.app.data.local.dao.CustodyModelDao
 import com.coparently.app.data.money.CurrencyHints
 import com.coparently.app.data.payment.PaymentAccounts
@@ -85,6 +91,7 @@ import com.coparently.app.data.sync.GoogleCalendarAutoImport
 import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.versions.EventVersionRecorder
 import com.coparently.app.domain.activity.ActivityAnnouncer
+import com.coparently.app.domain.chat.AttachmentUploadGate
 import com.coparently.app.domain.error.ErrorHandler
 import com.coparently.app.domain.family.FamilySlotsSource
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -94,6 +101,7 @@ import com.coparently.app.domain.repository.ChatSearchRepository
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.ExpenseRepository
+import com.coparently.app.domain.repository.FamilyDocumentRepository
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.JournalRepository
@@ -322,12 +330,31 @@ val stickersDataModule: Module = module {
 
 /**
  * The vault's index in Firestore and its read-through Room cache (MON-23, CLAUDE.md item 31;
- * MON-24 phase 2, Task 8d). The repository over them, which stages and opens files, is still the
- * app's.
+ * MON-24 phase 2, Task 8d), and since Task 8j the repository over them, which stages, uploads and
+ * opens the files through [filesDataModule].
  */
 val documentsDataModule: Module = module {
     singleOf(::FamilyDocumentIndex)
     singleOf(::FamilyDocumentIndexCache)
+    singleOf(::FamilyDocumentRepositoryImpl)
+    single<FamilyDocumentRepository> { get<FamilyDocumentRepositoryImpl>() }
+}
+
+/**
+ * The files the parents share and the photographs on their records (MON-23 and L-4, CLAUDE.md item
+ * 31 and Legal item 8; MON-24 phase 2, Task 8j): Storage by path and never by download URL, the
+ * digest-checked view cache, the staging of a picked file, which family a stored record names, and
+ * the chat outbox's gate before a message's Firestore write. The bucket (`StorageBucket`) and the
+ * picker's files (`PickedFiles`) are the platform's, bound where it builds them.
+ */
+val filesDataModule: Module = module {
+    singleOf(::SharedFileStorage)
+    singleOf(::SharedFileCache)
+    singleOf(::SharedFileStager)
+    factoryOf(::StoredRecordFamilies)
+    singleOf(::ChatAttachmentOutbox)
+    // The gate `MessageRepositoryImpl` passes every message through before writing it.
+    single<AttachmentUploadGate> { get<ChatAttachmentOutbox>() }
 }
 
 /**
@@ -409,6 +436,7 @@ val dataModules: List<Module> = listOf(
     requestsDataModule,
     stickersDataModule,
     documentsDataModule,
+    filesDataModule,
     moneyDataModule,
     exportDataModule,
     schoolDataModule,

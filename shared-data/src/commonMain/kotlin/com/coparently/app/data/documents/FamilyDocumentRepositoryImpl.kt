@@ -1,11 +1,12 @@
 package com.coparently.app.data.documents
 
+import com.coparently.app.data.files.LocalFiles
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
 import com.coparently.app.data.platform.AppDirectories
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.documents.DocumentCategory
 import com.coparently.app.domain.documents.FamilyDocument
 import com.coparently.app.domain.documents.FamilyDocumentPaths
@@ -15,9 +16,11 @@ import com.coparently.app.domain.repository.FamilyDocumentRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import java.io.File
-import java.io.IOException
-import java.util.UUID
+import kotlinx.io.IOException
+import kotlinx.io.files.Path
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Firestore- and Storage-backed [FamilyDocumentRepository] (MON-23).
@@ -27,18 +30,23 @@ import java.util.UUID
  * labelled, while the server cannot be reached. Every write goes to Firestore — the cache is never
  * written from here and never uploads. The bytes live in Storage and are never reached by a
  * download URL (CLAUDE.md item 31).
+ *
+ * In `:shared-data` since MON-24 phase 2 (Task 8j), on kotlinx-io paths, asking [SignedInUser] for
+ * the account (the app's `FirebaseAuthService` before; the parameter kept its name). A document's
+ * id is a random UUID in the text `java.util.UUID` wrote (`kotlin.uuid.Uuid`), its time the epoch
+ * millis `System.currentTimeMillis()` read.
  */
 class FamilyDocumentRepositoryImpl(
     private val directories: AppDirectories,
     private val index: FamilyDocumentIndex,
-    private val authService: FirebaseAuthService,
+    private val authService: SignedInUser,
     private val stager: SharedFileStager,
     private val storage: SharedFileStorage,
     private val cache: SharedFileCache
 ) : FamilyDocumentRepository {
 
     override fun observe(familyId: String): Flow<VaultListing?> {
-        val uid = authService.getCurrentUser()?.uid ?: return flowOf(null)
+        val uid = authService.getCurrentUid() ?: return flowOf(null)
         val members = FamilyKey.membersOf(familyId) ?: return flowOf(VaultListing(emptyList()))
         // A family this account is not in has nothing to show — not even a cached copy a previous
         // account left behind.
@@ -52,9 +60,9 @@ class FamilyDocumentRepositoryImpl(
         category: DocumentCategory,
         contentUri: String
     ): Result<FamilyDocument> = guarded("add") {
-        val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
-        val docId = UUID.randomUUID().toString()
-        val staging = File(directories.cache.toString(), "$UPLOAD_DIRECTORY/$docId")
+        val uid = authService.getCurrentUid() ?: throw IOException("Not signed in")
+        val docId = newDocumentId()
+        val staging = Path(directories.cache, UPLOAD_DIRECTORY, UPLOAD_SUBDIRECTORY, docId)
         try {
             val staged = stager.stage(contentUri, staging)
             val document = FamilyDocument(
@@ -68,23 +76,23 @@ class FamilyDocumentRepositoryImpl(
                 contentType = staged.contentType,
                 sizeBytes = staged.sizeBytes,
                 sha256 = staged.sha256,
-                createdAtMillis = System.currentTimeMillis()
+                createdAtMillis = nowMillis()
             )
             storage.upload(document.storagePath, staged.file, staged.contentType, staged.sha256, uid)
             writeIndexOrRemoveFile(document)
             cache.adopt(staged.file, staged.fileName, staged.sha256)
             document
         } finally {
-            staging.deleteRecursively()
+            LocalFiles.deleteRecursively(staging)
         }
     }
 
     override suspend fun delete(document: FamilyDocument): Result<Unit> = guarded("delete") {
-        val uid = authService.getCurrentUser()?.uid ?: throw IOException("Not signed in")
-        index.tombstone(document.id, uid, System.currentTimeMillis())
+        val uid = authService.getCurrentUid() ?: throw IOException("Not signed in")
+        index.tombstone(document.id, uid, nowMillis())
     }
 
-    override suspend fun localCopy(document: FamilyDocument): Result<File> = guarded("open") {
+    override suspend fun localCopy(document: FamilyDocument): Result<Path> = guarded("open") {
         cache.localCopy(document.storagePath, document.fileName, document.sha256)
     }
 
@@ -118,10 +126,16 @@ class FamilyDocumentRepositoryImpl(
         Result.failure(e)
     }
 
+    @OptIn(ExperimentalUuidApi::class)
+    private fun newDocumentId(): String = Uuid.random().toString()
+
+    private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
+
     private companion object {
         const val TAG = "FamilyDocuments"
 
-        /** Under `cacheDir`: a copy only lives while its upload runs. */
-        const val UPLOAD_DIRECTORY = "shared_files/upload"
+        /** Under `cacheDir`, `shared_files/upload`: a copy only lives while its upload runs. */
+        const val UPLOAD_DIRECTORY = "shared_files"
+        const val UPLOAD_SUBDIRECTORY = "upload"
     }
 }

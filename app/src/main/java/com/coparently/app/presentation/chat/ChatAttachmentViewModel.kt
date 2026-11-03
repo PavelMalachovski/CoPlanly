@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.io.files.Path
 import java.io.File
 import java.util.UUID
 
@@ -113,7 +114,7 @@ class ChatAttachmentViewModel(
             val local = outbox.stagedFile(message.id, attachment)
                 ?: cache.cached(attachment.fileName, attachment.sha256)
                 ?: fetch(attachment)
-            if (local != null) _thumbnails.update { it + (attachment.storagePath to local) }
+            if (local != null) _thumbnails.update { it + (attachment.storagePath to File(local.toString())) }
         }
     }
 
@@ -123,11 +124,11 @@ class ChatAttachmentViewModel(
         viewModelScope.launch {
             val local = outbox.stagedFile(message.id, attachment)
             if (local != null) {
-                _opened.send(OpenedFile(local, attachment.contentType))
+                _opened.send(OpenedFile(File(local.toString()), attachment.contentType))
                 return@launch
             }
             runCatching { cache.localCopy(attachment.storagePath, attachment.fileName, attachment.sha256) }
-                .onSuccess { _opened.trySend(OpenedFile(it, attachment.contentType)) }
+                .onSuccess { _opened.trySend(OpenedFile(File(it.toString()), attachment.contentType)) }
                 .onFailure { e -> _error.value = sharedFileError(e, R.string.shared_file_error_open) }
         }
     }
@@ -142,7 +143,7 @@ class ChatAttachmentViewModel(
         _error.value = null
     }
 
-    private suspend fun fetch(attachment: ChatAttachment): File? = try {
+    private suspend fun fetch(attachment: ChatAttachment): Path? = try {
         cache.localCopy(attachment.storagePath, attachment.fileName, attachment.sha256)
     } catch (e: CancellationException) {
         throw e

@@ -4,18 +4,16 @@ import android.content.Context
 import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.data.ai.FunctionsAiAssistRepository
 import com.coparently.app.data.analytics.AnalyticsManager
-import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.consent.HealthConsentManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
-import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.ExportFileWriter
 import com.coparently.app.data.export.ExportReceipts
+import com.coparently.app.data.files.AndroidPickedFiles
+import com.coparently.app.data.files.FirebaseStorageBucket
+import com.coparently.app.data.files.PickedFiles
 import com.coparently.app.data.files.RecordPhotoImageLoader
-import com.coparently.app.data.files.SharedFileCache
-import com.coparently.app.data.files.SharedFileStager
-import com.coparently.app.data.files.SharedFileStorage
-import com.coparently.app.data.files.StoredRecordFamilies
+import com.coparently.app.data.files.StorageBucket
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.security.DatabaseKey
 import com.coparently.app.data.local.security.EncryptedDatabase
@@ -55,7 +53,6 @@ import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
 import io.ktor.client.HttpClient
-import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
@@ -73,18 +70,18 @@ val dataModule = module {
     singleOf(::AiConsentManager)
     singleOf(::FunctionsAiAssistRepository)
     singleOf(::AnalyticsManager)
-    singleOf(::ChatAttachmentOutbox)
     singleOf(::HealthConsentManager)
     singleOf(::CrashlyticsManager)
     singleOf(::OnDeviceSpeechDictation)
-    singleOf(::FamilyDocumentRepositoryImpl)
     singleOf(::ExportFileWriter)
     singleOf(::ExportReceipts)
     singleOf(::RecordPhotoImageLoader)
-    singleOf(::SharedFileCache)
-    singleOf(::SharedFileStager)
-    singleOf(::SharedFileStorage)
-    factoryOf(::StoredRecordFamilies)
+    singleOf(::FirebaseStorageBucket)
+    // The Storage SDK and the picker's `ContentResolver`, which the shared files in `:shared-data`
+    // (MON-23, L-4) upload, download and stage through.
+    single<StorageBucket> { get<FirebaseStorageBucket>() }
+    singleOf(::AndroidPickedFiles)
+    single<PickedFiles> { get<AndroidPickedFiles>() }
     single { EncryptedPreferences(get<Context>(), get<EncryptionManager>()) }
     singleOf(::DatabaseKey)
     singleOf(::EncryptedDatabase)

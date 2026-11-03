@@ -12,6 +12,8 @@ import com.coparently.app.data.documents.FamilyDocumentRepositoryImpl
 import com.coparently.app.data.export.ExportReceipts
 import com.coparently.app.data.family.KnownFamilies
 import com.coparently.app.data.family.SelectedFamilySource
+import com.coparently.app.data.files.AndroidPickedFiles
+import com.coparently.app.data.files.FirebaseStorageBucket
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileStager
 import com.coparently.app.data.files.SharedFileStorage
@@ -187,9 +189,9 @@ class EmulatorParent private constructor(
     private val userDataSource = FirestoreUserDataSource(documents)
     private val messageDataSource = FirestoreMessageDataSource(documents)
 
-    val sharedFileStorage = SharedFileStorage(storage)
+    val sharedFileStorage = SharedFileStorage(FirebaseStorageBucket(storage))
     val sharedFileCache = SharedFileCache(directories, sharedFileStorage)
-    private val stager = SharedFileStager(fileContext)
+    private val stager = SharedFileStager(AndroidPickedFiles(fileContext))
 
     /** The production record-photo storage (L-4): medical, pet, receipt and event photos. */
     val photoStorage = FirebaseImageStorage(

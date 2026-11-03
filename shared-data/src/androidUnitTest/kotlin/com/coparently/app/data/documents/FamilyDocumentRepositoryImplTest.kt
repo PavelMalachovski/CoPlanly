@@ -1,9 +1,8 @@
 package com.coparently.app.data.documents
 
 import com.coparently.app.data.platform.AppDirectories
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.documents.VaultListing
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -21,7 +20,7 @@ import kotlin.test.assertNull
 class FamilyDocumentRepositoryImplTest {
 
     private val index = mockk<FamilyDocumentIndex>()
-    private val authService = mockk<FirebaseAuthService>()
+    private val authService = mockk<SignedInUser>()
 
     private val repository = FamilyDocumentRepositoryImpl(
         directories = mockk<AppDirectories>(),
@@ -33,8 +32,7 @@ class FamilyDocumentRepositoryImplTest {
     )
 
     private fun signedInAs(userId: String?) {
-        val user = userId?.let { id -> mockk<FirebaseUser> { every { uid } returns id } }
-        every { authService.getCurrentUser() } returns user
+        every { authService.getCurrentUid() } returns userId
     }
 
     @Test

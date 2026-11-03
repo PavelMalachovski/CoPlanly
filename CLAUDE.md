@@ -1526,15 +1526,18 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              the Bakaláři parsers, the authorizer, the connection store, the connect flow, the
              writer and the importer, behind SchoolImportWordings and SchoolImportScheduler),
              the export's record sources (data/export/ but ExportFileWriter and ExportReceipts)
-             and data/family/UnassignedRecords.
+             and data/family/UnassignedRecords, and (Task 8j) the shared files (data/files/ but
+             RecordPhotoFetcher, behind StorageBucket and PickedFiles), the chat attachment
+             outbox and the vault's repository (data/documents/).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
-             except the phase-1 stay list below (two files), which is still in app/
+             except the phase-1 stay list below (one file), which is still in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, data/payment/, every repository but the vault's and the AI assist's, the
+             sources, data/payment/, every repository but the AI assist's, data/files/ but the
+             photo fetcher and the Android halves of its seams, the
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer and record ids, and some of data/chat/, data/support/ and data/session/
@@ -1554,11 +1557,14 @@ root changed. `domain/activity/ActivityAnnouncer.kt` is the exception the other 
 data layer's `MessageRepository` and logger; and so, since Task 8f, are the event use cases and
 `EventValidator` in `domain/usecase/` and `domain/error/ErrorHandler.kt`, which report and log
 through the data layer's `Analytics`, `CrashReporter`, `logger` and `Connectivity` (their tests in
-`shared-data/src/androidUnitTest/`). **The exceptions are the phase-1 stay list**, still under
+`shared-data/src/androidUnitTest/`), and, since Task 8j, `domain/repository/FamilyDocumentRepository.kt`,
+whose local copy is a kotlinx-io `Path` and which `shared/` (no kotlinx-io) cannot declare.
+**The exceptions are the phase-1 stay list**, still under
 `app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
 file by file:
 - dependency injection, Android or the data layer — `model/MessageTemplate.kt`
-  (`@StringRes`), `repository/FamilyDocumentRepository.kt` (`java.io.File`); `activity/ActivityAnnouncer.kt`
+  (`@StringRes`); `repository/FamilyDocumentRepository.kt` left for `shared-data`'s `commonMain` in
+  Task 8j (a local copy is a kotlinx-io `Path` there, where it was a `java.io.File`); `activity/ActivityAnnouncer.kt`
   left the list for `shared-data`'s `commonMain`, same package, in MON-24 phase 2's Task 8c, and the
   event use cases with `EventValidator` (`usecase/`, the new id from `kotlin.uuid.Uuid`) and
   `error/ErrorHandler.kt` (the connection through `Connectivity.isOnline`, which `NetworkMonitor`
@@ -1667,7 +1673,8 @@ document's four mappers, lifted out of `PetRepositoryImpl`, so `PetWireContract`
 `data/documents/`, `FamilyDocumentIndex`, `FamilyDocumentIndexCache` and `FamilyDocumentMapper`. They
 are bound in `repositoryDataModule`, `stickersDataModule` and `documentsDataModule`. The friend and
 professional repositories went onto `FirestoreClient` and `SignedInUser` then, and moved in Task 8e
-(below). `FamilyDocumentRepositoryImpl` stays in the app (`java.io.File` and `data/files/`), and so
+(below). `FamilyDocumentRepositoryImpl` stayed in the app (`java.io.File` and `data/files/`) until
+Task 8j (below), and so
 does `data/session/` but for `ProfileIdentity`, which moved in Task 8f (below)
 (Auth's `FirebaseUser` and its state flow, a `Context`, the Functions SDK and `FcmService`'s token in
 account deletion). The seams grew for them:
@@ -1698,7 +1705,7 @@ app (WorkManager, the notification manager, `currencyFormat`). The rest of `data
 request clocks) and the request clocks' keeper, steps, records, `RequestClocks` and `RequestTime`
 (the Android notification manager, WorkManager and a `java.time.ZoneId`) until Task 8h (below);
 `UnassignedRecords` (records dated in `java.time` for its screen) until Task 8i, `ChatAttachmentOutbox`
-(`java.io.File` and `data/files/`), and the clocks' notices and worker still. `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
+(`java.io.File` and `data/files/`) until Task 8j, and the clocks' notices and worker still. `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
 the screens' `NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
 the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
 `ExpenseRepositoryImpl` with `ExpenseMappers.kt` (the expense's four mappers, lifted out as the
@@ -1785,14 +1792,38 @@ formatting it at its edge). They are bound in `schoolDataModule`, `exportDataMod
 `familyDataModule`; the app binds `SchoolImportWordings`. Still in the app: `SchoolImportWorker`
 and `WorkManagerSchoolImportScheduler` (WorkManager), `SchoolImportWordingSource`, the Bakaláři
 client's Koin definitions (the app's named HTTP client), `ExportFileWriter` (`PdfDocument`) and
-`ExportReceipts` (`FirebaseFunctions` and `BuildConfig`). Every other
+`ExportReceipts` (`FirebaseFunctions` and `BuildConfig`). Task 8j, the files the parents share
+(MON-23, item 31 and Legal item 8): in `commonMain`, `data/files/`'s `SharedFileStorage`,
+`SharedFileCache`, `SharedFileStager` (with `StagedFile` and the two exceptions) and
+`StoredRecordFamilies`, on kotlinx-io paths under `AppDirectories` where they took `java.io.File`
+(the internal `LocalFiles` answers as `File.delete`, `renameTo` and `mkdirs` did, and a file is
+hashed a buffer at a time through the new `Sha256.digestOf`, `MessageDigest` on Android and
+CommonCrypto's `CC_SHA256_Init`/`Update`/`Final` on the iPhone); `data/chat/ChatAttachmentOutbox`,
+the gate before a message's Firestore write, and `data/documents/FamilyDocumentRepositoryImpl` with
+`domain/repository/FamilyDocumentRepository` (a local copy is a `Path`; the screens that hand one
+to Android open `File(path.toString())`), both asking `SignedInUser` for the uid. They take two new
+seams in `data/files/`: **`StorageBucket`** (an object's custom metadata, a file or bytes put with
+their metadata, a download into a file, a delete; nothing that answers a download URL), which the
+app's `FirebaseStorageBucket` answers with the calls `SharedFileStorage` made, and
+**`PickedFiles`** (a picked file's type, display name and bytes), which the app's
+`AndroidPickedFiles` answers from the `ContentResolver`. What the rules require of a create (the
+`uploader` and `sha256` metadata, in that order), the idempotence across a lost response, the
+digest checked before the rename, the cap abandoned mid-copy and the outbox's order are decided in
+`commonMain`. No constructor kept the SDK type it took: the e2e parent builds
+`SharedFileStorage(FirebaseStorageBucket(storage))` and `SharedFileStager(AndroidPickedFiles(context))`;
+the outbox's and the repository's parameter names did not change. They are bound in the new
+`filesDataModule` (with `AttachmentUploadGate`) and `documentsDataModule` (with
+`FamilyDocumentRepository`); the app binds the two seams, and its `sharedFilesModule` is gone. Still
+in the app from `data/files/`: `RecordPhotoFetcher` (Coil) and the two seams' Android halves; and
+`FirebaseImageStorage` (a `Bitmap`'s re-encoding). Every other
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
 `Analytics`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockNotices`,
-`RequestClockScheduler` or `GoogleCalendarConnectionSource` rather than `EncryptedPreferences`, a
-`Context` directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`,
-`AccountSwitchGuard`, `RequestNotices`, `WorkRequestClockScheduler` or `CredentialManagerService`,
+`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket` or `PickedFiles` rather
+than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `AnalyticsManager`,
+`FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`, `RequestNotices`,
+`WorkRequestClockScheduler`, `CredentialManagerService`, `FirebaseStorage` or a `ContentResolver`,
 and logs with
 `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 
