@@ -2714,7 +2714,8 @@ the repository):
 `UnansweredRows` and `ClocksAt.governing` are public in `:shared` only for `RequestInbox` and
 `OtherFamiliesSignals`, and carry `@InternalSharedApi` (an error-level opt-in) until those move;
 then they become `internal` again and the marker goes. `UnansweredRows` did when `RequestInbox`
-moved (phase 2, Task 8e); `governing` waits for `OtherFamiliesSignals`.
+moved (phase 2, Task 8e). `governing` lost its marker when `OtherFamiliesSignals` moved to
+`:shared-data` (phase 2, Task 8h), and stays public, because that is another module.
 
 **Carried into phase 2** (found in phase 1's reviews; none changes what a parent sees, and the
 bytes are identical on Android):
@@ -2723,8 +2724,8 @@ bytes are identical on Android):
   `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at; the event, expense and
   change-request forms, whose `rememberSaveable` state is Java-serialised (give each saved date a
   `Saver` over epoch days or seconds, never a raw kotlinx value); `AnswerByField`'s picker,
-  `VaccinationListEditor` and the child-info `DatePickerDialog`; `RequestTime.zone()` (`ZoneId`),
-  `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
+  `VaccinationListEditor` and the child-info `DatePickerDialog`; ~~`RequestTime.zone()` (`ZoneId`)~~
+  (a kotlinx-datetime `TimeZone` since phase 2, Task 8h), `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
   with the calendar's paging); `UnassignedRecord.date`.
 - **One idiom for "now"**: `java.time.LocalDateTime.now().toKotlinLocalDateTime()` in
   `AddEditEventScreen`, `ChatViewModel`, `HomeViewModel` and `ChangeRequestViewModel`, beside

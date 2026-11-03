@@ -1518,7 +1518,11 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              the sync itself (data/sync/SyncService, behind PushDevice, AccountConsistency and
              RequestClockSweep), ParentSlotMigrator, the preferences repository with the
              currency hints (data/money/CurrencyHints) and the Google Calendar import with its
-             automatic run (data/sync/CalendarSyncRepository, GoogleCalendarAutoImport).
+             automatic run (data/sync/CalendarSyncRepository, GoogleCalendarAutoImport), and
+             (Task 8h) the request clocks (data/requests/: RequestTime, RequestClocks, the
+             keeper, the steps, the records and the actions, behind RequestClockNotices and
+             the domain's RequestClockScheduler) and the switcher's dot
+             (data/family/OtherFamiliesSignals).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1527,7 +1531,9 @@ domain/    — models, repository interfaces, use cases (the event ones in share
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
              sources, data/payment/, every repository but the vault's and the AI assist's, the
-             sync but its WorkManager classes, and some of data/family/, data/chat/, data/requests/, data/support/ and data/session/
+             sync but its WorkManager classes, the request clocks but their notices and worker,
+             data/family/ but UnassignedRecords, and some of data/chat/, data/support/ and
+             data/session/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1680,11 +1686,11 @@ takes a `FirestoreClient` (`PaymentStore`, `SupportAgreementStore`; `ChildInfoRe
 stayed in `app/src/test/…/wire/` and the app's list alone until Task 8g: `SyncService`, then still
 in the app, writes `child_info` too. The child support reminder's `SupportReminderWorker` and its scheduler stay in the
 app (WorkManager, the notification manager, `currencyFormat`). The rest of `data/family/`,
-`data/chat/` and `data/requests/` is still in the app: `OtherFamiliesSignals` (`java.time` and the
-request clocks), `UnassignedRecords` (records dated in `java.time` for its screen),
-`ChatAttachmentOutbox` (`java.io.File` and `data/files/`), and the request clocks' keeper, steps,
-records, notices, worker, `RequestClocks` and `RequestTime` (the Android notification manager,
-WorkManager and a `java.time.ZoneId`). `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
+`data/chat/` and `data/requests/` stayed in the app then: `OtherFamiliesSignals` (`java.time` and the
+request clocks) and the request clocks' keeper, steps, records, `RequestClocks` and `RequestTime`
+(the Android notification manager, WorkManager and a `java.time.ZoneId`) until Task 8h (below);
+`UnassignedRecords` (records dated in `java.time` for its screen), `ChatAttachmentOutbox`
+(`java.io.File` and `data/files/`), and the clocks' notices and worker still. `data/money/`'s `MinorUnits` stays too (`BigDecimal` for
 the screens' `NumberFormat`). Task 8f, the last repositories that waited on `BigDecimal`, Auth's `FirebaseUser`,
 the raw Firestore SDK or the stay list's `java.time`: in `commonMain`, from `data/repository/`,
 `ExpenseRepositoryImpl` with `ExpenseMappers.kt` (the expense's four mappers, lifted out as the
@@ -1733,26 +1739,46 @@ through the new `GoogleCalendarConnectionSource` (`data/remote/google/`;
 Google import) and `repositoryDataModule` (the migrator, the preferences and the hints), and the
 app binds the four seams to its classes. Still in the app from `data/repository/` and `data/sync/`:
 `AndroidPairingWording` (a string resource), `SyncWorker` and `WorkManagerSyncRequester`
-(WorkManager). Every other `data/…` path is still under
+(WorkManager). Task 8h, the request clocks (item 42) and what waited on them: in `commonMain`, from
+`data/requests/`, `RequestTime` (its zone kotlinx-datetime's `TimeZone.currentSystemDefault()`,
+which on Android is `ZoneId.systemDefault()` itself and is read on every call; `RequestClocksTest`
+holds the reminders' plan and quiet hours to the old zone across summer-time changes, and the app's
+tests build a fixed clock through `RequestTime.of`, the primary constructor staying `internal` for
+`KoinGraphTest`), `RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a
+compare-and-set over an immutable set where it took a JVM lock; the sweep's bound, its
+`NonCancellable` tail and everything else unchanged), `RequestClockSteps` and `RequestRecords`, and
+from `data/family/`, `OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system
+clock in the system zone, what `LocalDate.now()` and `System.currentTimeMillis()` read). The steps
+post through the new **`RequestClockNotices`** (`data/requests/`: `remind`, `deadlinePassed` and
+`noAnswer`; the app's `RequestNotices` implements it) and keep their jobs through the domain's
+`RequestClockScheduler`, as before. Every constructor kept its parameter names, so the e2e parents
+build them unchanged. They are bound in `requestsDataModule` (with `RequestClockSweep`, which the
+app bound in Task 8g) and `familyDataModule`, and the app binds `RequestClockNotices`. Still in the
+app from `data/requests/` and `data/notification/`: `RequestNotices` (the notification manager, the
+strings and the `BigTextStyle` of item 15), `RequestClockWorker`, `RequestClockWork` and
+`WorkRequestClockScheduler` (WorkManager: the `KEEP` names and `needsNetwork`). Every other
+`data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
-`Analytics`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockSweep` or
-`GoogleCalendarConnectionSource` rather than `EncryptedPreferences`, a `Context` directory,
-`CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`,
-`RequestClockKeeper` or `CredentialManagerService`, and logs with
+`Analytics`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockNotices`,
+`RequestClockScheduler` or `GoogleCalendarConnectionSource` rather than `EncryptedPreferences`, a
+`Context` directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`,
+`AccountSwitchGuard`, `RequestNotices`, `WorkRequestClockScheduler` or `CredentialManagerService`,
+and logs with
 `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
 still in the app carries `@InternalSharedApi` (`domain/InternalSharedApi.kt`, an error-level
-opt-in) until that caller moves; today `ClocksAt.governing` (`OtherFamiliesSignals`;
-`UnansweredRows` is `internal` again since `RequestInbox` moved, Task 8e), and in
-`shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument`
-(the change-request records, the export, and the events and revisions wire contracts and their
-tests, all in the app; `StampedFamily` is `internal` again since `SyncService` moved, Task 8g),
-`toReminderEvent` (`ReminderWorker`), and
-`ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
-probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
+opt-in) until that caller moves; today none in `shared/` (`UnansweredRows` is `internal` again
+since `RequestInbox` moved, Task 8e, and `ClocksAt.governing` lost its marker when
+`OtherFamiliesSignals` moved to `shared-data`, Task 8h — public, since that is another module), and
+in `shared-data/` `BakalariJson`, which the school import's parsers in the app read, `EventDocument`
+(the export, and the events and revisions wire contracts and their tests, all in the app;
+`StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
+(`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app), and
+`ChatMappers`' entity and document mappers (the export, the R8 probe and the messages wire
+contract; the mark mappers are `internal` again since the other families' signals moved, Task 8h), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
 the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
 compiled by the app's tests too), the four child mappers in `ChildInfoMappers.kt` (the `child_info`
 wire contract, in `wire/` like the pets' since Task 8g, and `ChildInfoRepositoryImplTest`, in the
