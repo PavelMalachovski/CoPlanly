@@ -85,9 +85,11 @@ jobs:
   #    tests, the baselines in `app/src/test/screenshots/`) → no screenshots;
   #  * the emulator matrix is API 30 alone unless the change touches what API 26 and 16 KB exist for
   #    — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`, `src/debug/` — or the build;
-  #  * the shared modules' own jobs run on `shared/**` and `shared-data/**`, the build files and
-  #    this workflow, and a change in either module counts as the build does for everything else
-  #    (the app compiles both).
+  #  * the shared modules' own jobs run on `shared/**`, `shared-data/**` and `shared-ui/**`, the
+  #    build files and this workflow. A change in `shared/` or `shared-data/` counts as the build
+  #    does for everything else (the app compiles them); in `shared-ui/`, its strings
+  #    (`composeResources/`), screens (`presentation/`) and tests count as the app's `res/`,
+  #    `presentation/` and tests they stand for, and the rest of it as the build.
   #
   # The build files and `.github/workflows/**` run everything: editing this file is exactly when
   # you want to see the build it describes. A push to `main` and a manual run always run everything
@@ -114,9 +116,9 @@ jobs:
       # The `web` job: anything but docs and the Android app — web/, web-tests/, functions/,
       # firebase.json, the Firebase CLI's lock file, the workflow, or a path the script does not know.
       web: ${{ steps.filter.outputs.web }}
-      # The `shared` and `shared-ios` jobs: the multiplatform modules (`shared/**`, `shared-data/**`),
-      # the build files and the workflow. A path in either module is also an Android path for every
-      # output above.
+      # The `shared` and `shared-ios` jobs: the multiplatform modules (`shared/**`, `shared-data/**`,
+      # `shared-ui/**`), the build files and the workflow. A path in any of them is also an Android
+      # path for every output above (a `shared-ui/` string or screen as the app path it stands for).
       shared: ${{ steps.filter.outputs.shared }}
       # The four emulator jobs (`instrumented`, `e2e`, `upgrade`, `r8-runtime`) may run: false on a
       # draft pull request without the `full-ci` label. ANDed into each of them beside its path
@@ -365,6 +367,7 @@ jobs:
             app/build/reports/
             shared/build/reports/
             shared-data/build/reports/
+            shared-ui/build/reports/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -408,9 +411,9 @@ jobs:
       # accepted debt, regenerate the baseline through the Regenerate workflow so the acceptance
       # is a visible commit.
       #
-      # `detekt` is a task selector: it runs `:app:detekt`, `:shared:detekt` and
-      # `:shared-data:detekt`, the shared modules held to the app's configuration and the app's
-      # baseline file (one baseline for all three, which `:app:detektBaseline` writes; see
+      # `detekt` is a task selector: it runs `:app:detekt`, `:shared:detekt`, `:shared-data:detekt`
+      # and `:shared-ui:detekt`, the shared modules held to the app's configuration and the app's
+      # baseline file (one baseline for all four, which `:app:detektBaseline` writes; see
       # shared/build.gradle.kts).
       - name: detekt
         run: ./gradlew detekt
@@ -424,6 +427,7 @@ jobs:
             app/build/reports/detekt/
             shared/build/reports/detekt/
             shared-data/build/reports/detekt/
+            shared-ui/build/reports/detekt/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -1897,11 +1901,14 @@ jobs:
           require_tests: true
 
   # The shared Kotlin Multiplatform modules (MON-24): `shared/`, the domain the Android app and the
-  # iPhone app both run, and `shared-data/`, the data layer (from phase 2: the school import's and
-  # Google Calendar's HTTP clients on Ktor). Two jobs, gated on `changes`' `shared` output
-  # (`shared/**`, `shared-data/**`, the build files, the workflow). `build-test` runs these tests
-  # too, because Kover merges both modules into the app's coverage; this job is where they get a
-  # check run of their own, beside the iOS compile.
+  # iPhone app both run, `shared-data/`, the data layer (phase 2), and `shared-ui/`, the UI (from
+  # phase 2's Task 9: the strings as Compose Multiplatform resources). Two jobs, gated on `changes`'
+  # `shared` output (`shared/**`, `shared-data/**`, `shared-ui/**`, the build files, the workflow).
+  # `build-test` runs these tests too, because Kover merges `:shared` and `:shared-data` into the
+  # app's coverage; this job is where they get a check run of their own, beside the iOS compile.
+  # `:shared-ui` has no tests of its own yet: its strings are checked by the app's parity tests
+  # (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib — `Res` included —
+  # is compiled here.
   #
   # `compileKotlinIosSimulatorArm64` builds the iOS klib on Linux. Kotlin has done that without a
   # flag since 2.2.20 ("stable cross-platform compilation"), so a common-code change that does not
@@ -1983,6 +1990,7 @@ jobs:
           :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
           :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
           :shared-data:compileTestKotlinIosSimulatorArm64
+          :shared-ui:compileKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()
@@ -2055,8 +2063,8 @@ jobs:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build.gradle.kts') }}
 
-      # Gradle configures every project before it runs a task, and `:app`, `:shared` and
-      # `:shared-data` all apply the Android plugin, which fails configuration with "SDK location
+      # Gradle configures every project before it runs a task, and `:app` and the three shared
+      # modules all apply the Android plugin, which fails configuration with "SDK location
       # not found" when no ANDROID_HOME or local.properties names one, even when only iOS tasks
       # were asked for.
       # The action's default package list includes the long-retired `tools`, which the current
@@ -2120,10 +2128,10 @@ jobs:
         id: link
         run: ./gradlew :shared-data:linkDebugTestIosSimulatorArm64
 
-      # `:shared-data` makes no framework of its own: the iPhone app's one framework comes later,
-      # from `:shared-ui`, and exports it.
+      # The iPhone app's one framework, `Shared`, is `:shared-ui`'s (MON-24 phase 2, Task 9): static,
+      # exporting `:shared` and `:shared-data`, neither of which makes one of its own any more.
       - name: Shared tests (iOS simulator) and the framework
-        run: ./gradlew :shared:iosSimulatorArm64Test :shared:linkDebugFrameworkIosSimulatorArm64 :shared-data:iosSimulatorArm64Test
+        run: ./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
 
       - name: Pods resolved
         if: always()
@@ -2152,6 +2160,7 @@ jobs:
             shared/build/test-results/
             shared-data/build/reports/
             shared-data/build/test-results/
+            shared-ui/build/reports/
           if-no-files-found: ignore
           retention-days: 14
 

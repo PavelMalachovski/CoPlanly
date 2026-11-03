@@ -12,7 +12,8 @@
  * emulator legs as a JSON array for the `instrumented` job's `strategy.matrix.include`),
  * `r8runtime` (the minified build run on an emulator, `r8-runtime`), `web` (the verification
  * page in a browser and the calendar feed through an RFC 5545 parser, `web`) and `shared` (the
- * Kotlin Multiplatform modules' own tests, `shared` on Linux and `shared-ios` on macOS). With
+ * Kotlin Multiplatform modules' own tests and iOS compile, `shared` on Linux and `shared-ios` on
+ * macOS). With
  * `--all` it
  * prints the answer for "run everything", which is what a push to `main`, a manual run, or a diff
  * that could not be computed gets.
@@ -41,9 +42,9 @@ const UI_ONLY = /^(app\/src\/main\/java\/com\/coparently\/app\/presentation\/(?!
 const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|app\/build\.gradle\.kts$|app\/proguard|\.github\/workflows\/)/;
 
 /**
- * The Kotlin Multiplatform modules (MON-24), `shared/` (the domain) and `shared-data/` (the data
- * layer, from phase 2: the school import's and Google Calendar's HTTP clients first), their build
- * files and their sources in every source set. The app compiles both, so a path here is an Android
+ * The Kotlin Multiplatform modules (MON-24), `shared/` (the domain), `shared-data/` (the data
+ * layer, from phase 2) and `shared-ui/` (the UI, from phase 2's Task 9, but for the paths
+ * [SHARED_UI_AS_APP] maps onto the app), their build files and their sources in every source set. The app compiles both, so a path here is an Android
  * path for every other output too, and it is treated as the build is: every Android job, every
  * emulator leg. Their commonMain holds the domain the app's screens render and the clients the
  * imports call, their stored models reach `StoredJson` and R8, and their Android targets are held
@@ -51,7 +52,28 @@ const BUILD = /^(build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|
  * both modules' jobs, is true for this and for [BUILD], whose root and module build files and
  * workflow can change what the modules compile against.
  */
-const SHARED = /^shared(-data)?\//;
+const SHARED = /^shared(-data|-ui)?\//;
+
+/**
+ * `:shared-ui` (MON-24 phase 2, from Task 9) holds what the app's `res/` and `presentation/` held:
+ * the strings (and, later, the fonts and drawables) in `composeResources/`, and the screens. A path
+ * there is decided as the app path it stands for, so a screen-only or string-only change skips e2e
+ * and the R8 probe as it did in `app/` — and the `shared` jobs still run, because the iPhone
+ * compiles it. Its tests stand for the app's unit tests. Anything else in the module — its build
+ * file, and Kotlin outside `presentation/` — is [SHARED]: the build.
+ */
+const SHARED_UI_AS_APP = [
+  [/^shared-ui\/src\/commonMain\/composeResources\//, 'app/src/main/res/'],
+  [/^shared-ui\/src\/(?![A-Za-z]*Test\/)[A-Za-z]+\/kotlin\/com\/coparently\/app\/presentation\//,
+    'app/src/main/java/com/coparently/app/presentation/'],
+  [/^shared-ui\/src\/[A-Za-z]*Test\//, 'app/src/test/'],
+];
+
+/** @return {string} a `:shared-ui` path as the app path it stands for ([SHARED_UI_AS_APP]); others unchanged */
+function asAppPath(path) {
+  for (const [re, to] of SHARED_UI_AS_APP) if (re.test(path)) return path.replace(re, to);
+  return path;
+}
 
 /**
  * What the screenshot job renders, what renders it, and what it compares against: the committed
@@ -134,7 +156,7 @@ const NON_R8_RUNTIME = /^(app\/src\/main\/res\/|app\/src\/test\/|app\/src\/andro
  * `firestore-tests/` (whose lock file pins the Firebase CLI it starts the emulators with), the
  * workflow, and any path this file does not know.
  */
-const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared(-data)?\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
+const NON_WEB = /^(docs\/|\.cursor\/|[^/]*\.md$|\.gitignore$|LICENSE$|app\/|shared(-data|-ui)?\/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradle\/|gradlew(\.bat)?$)/;
 
 /**
  * Paths no CI job reads: the UI tour's request file, its workflow and its scripts. The tour is a
@@ -229,8 +251,9 @@ function nothing() {
 function decide(paths) {
   const all = paths.map((p) => p.trim()).filter(Boolean);
   if (all.length === 0) return everything();
-  const changed = all.filter((p) => !UI_TOUR_ONLY.test(p) && !VIRTUAL_TESTER_ONLY.test(p));
-  if (changed.length === 0) return nothing();
+  const kept = all.filter((p) => !UI_TOUR_ONLY.test(p) && !VIRTUAL_TESTER_ONLY.test(p));
+  if (kept.length === 0) return nothing();
+  const changed = kept.map(asAppPath);
 
   // A change to a shared module is decided as a change to the build is (see [SHARED]).
   const build = changed.some((p) => BUILD.test(p) || SHARED.test(p));
@@ -241,7 +264,8 @@ function decide(paths) {
   const upgrade = build || changed.some((p) => UPGRADE_INPUTS.test(p) || !UPGRADE_UNAFFECTED.test(p));
   const r8runtime = build || changed.some((p) => !NON_ANDROID.test(p) && !NON_R8_RUNTIME.test(p));
   const web = changed.some((p) => !NON_WEB.test(p));
-  const shared = build;
+  // Every `:shared-ui` path, screens and strings included: the iPhone compiles them.
+  const shared = build || kept.some((p) => /^shared-ui\//.test(p));
   return { android, e2e, screenshots, upgrade, matrix: fullMatrix ? FULL_MATRIX : [LEG_30], r8runtime, web, shared };
 }
 
@@ -287,5 +311,5 @@ if (require.main === module) {
 
 module.exports = {
   decide, format, everything, nothing, decideEmulators, formatEvent, FULL_CI_LABEL, FULL_MATRIX, LEG_30,
-  EMULATOR_SENSITIVE, UPGRADE_INPUTS,
+  EMULATOR_SENSITIVE, UPGRADE_INPUTS, asAppPath,
 };

@@ -339,6 +339,43 @@ test('a shared-data change is decided as a shared change - every Android job and
   assert.equal(d.web, false);
 });
 
+test('a shared-ui string or screen change is decided as the app path it stands for, plus the shared jobs', () => {
+  // The strings moved from app/src/main/res/ (MON-24 phase 2, Task 9); the screens follow.
+  const d = decide([
+    'shared-ui/src/commonMain/composeResources/values-de/home_strings.xml',
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/home/HomeScreen.kt',
+  ]);
+  assert.equal(d.shared, true);
+  assert.equal(d.android, true);
+  assert.equal(d.e2e, false);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.upgrade, false);
+  assert.equal(d.r8runtime, false);
+  assert.deepEqual(legs(d), [30]);
+  assert.equal(d.web, false);
+  // As in the app: presentation/common is not UI-only, and presentation/event reaches the R8 probe.
+  assert.equal(decide(['shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/common/ParentsSource.kt']).e2e, true);
+  assert.equal(decide(['shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/event/EventDraft.kt']).r8runtime, true);
+  // Its tests stand for the app's unit tests.
+  const tests = decide(['shared-ui/src/commonTest/kotlin/com/coparently/app/presentation/home/HomeWeekTest.kt']);
+  assert.equal(tests.e2e, false);
+  assert.equal(tests.shared, true);
+});
+
+test('the rest of shared-ui is the build: its build file and Kotlin outside presentation/', () => {
+  for (const path of [
+    'shared-ui/build.gradle.kts',
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/di/UiModules.kt',
+    'shared-ui/src/iosMain/kotlin/com/coparently/app/MainViewController.kt',
+  ]) {
+    const d = decide([path]);
+    assert.equal(d.shared, true, path);
+    assert.equal(d.e2e, true, path);
+    assert.equal(d.upgrade, true, path);
+    assert.deepEqual(legs(d), [26, 30, 35], path);
+  }
+});
+
 test('the shared jobs run on the module, the root and module build files and the workflow', () => {
   for (const path of [
     'shared/build.gradle.kts',
@@ -347,6 +384,8 @@ test('the shared jobs run on the module, the root and module build files and the
     'shared-data/build.gradle.kts',
     'shared-data/src/commonTest/kotlin/com/coparently/app/data/http/WebAddressVectorsTest.kt',
     'shared-data/src/iosMain/kotlin/com/coparently/app/data/http/HttpClients.ios.kt',
+    'shared-ui/build.gradle.kts',
+    'shared-ui/src/commonMain/composeResources/values/strings.xml',
     'build.gradle.kts',
     'settings.gradle.kts',
     'gradle.properties',
