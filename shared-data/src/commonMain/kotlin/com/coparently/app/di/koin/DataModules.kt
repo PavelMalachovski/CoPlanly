@@ -460,31 +460,24 @@ val dataModules: List<Module> = listOf(
     useCaseDataModule
 )
 
-// TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, Analytics, Connectivity,
-//  SignedInUser, PushQueue, PushDevice, AttachmentUploadGate, RequestClockScheduler,
-//  RequestClockNotices, ReminderScheduler, SyncRequester, PairingWording, AccountConsistency,
-//  GoogleCalendarApi, CredentialProvider, GoogleCalendarConnectionSource, BakalariClient,
-//  SchoolImportWordings and SchoolImportScheduler on the iPhone before its app starts Koin.
 /**
- * The Firestore and callable seams [dataModules] needs: the
- * [com.coparently.app.data.remote.firebase.FirestoreClient] and the
- * [com.coparently.app.data.remote.firebase.CallableFunctions]. On Android they wrap the Firebase
- * SDK instances the app's `firebaseModule` builds, so an instrumented test's replacement of those
- * reaches the data sources; on the iPhone they are GitLive's default instances.
+ * What [dataModules] takes from the platform: the Firestore and callable seams
+ * ([com.coparently.app.data.remote.firebase.FirestoreClient],
+ * [com.coparently.app.data.remote.firebase.CallableFunctions]) here, and everything else where each
+ * platform builds it. On Android the two seams wrap the Firebase SDK instances the app's
+ * `firebaseModule` builds, so an instrumented test's replacement of those reaches the data sources,
+ * and the rest — the Room DAOs, `AppDirectories`, `SecurePreferences`, `CrashReporter`, `Analytics`,
+ * `Connectivity`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`,
+ * `ReminderScheduler`, `RequestClockScheduler`, `RequestClockNotices`, `SyncRequester`,
+ * `PairingWording`, `GoogleCalendarApi`, `CredentialProvider`, `GoogleCalendarConnectionSource`,
+ * `BakalariClient`, `SchoolImportWordings`, `SchoolImportScheduler` and, since Task 8j,
+ * `StorageBucket`, `PickedFiles` and `ExportVerifyAddress` — is bound by the app's own modules.
  *
- * It is not all that [dataModules] needs from the platform. Since Task 8b its definitions also take
- * the Room DAOs, `SecurePreferences`, `CrashReporter`, `SignedInUser`, `PushQueue`,
- * `AttachmentUploadGate` and `RequestClockScheduler`, and since Task 8f `Analytics`,
- * `Connectivity`, `ReminderScheduler` (the event use cases and `ErrorHandler`), `SyncRequester` and
- * `PairingWording` (the pairing repository), and since Task 8g `PushDevice` and
- * `AccountConsistency` (the sync) and `GoogleCalendarApi`, `CredentialProvider` and
- * `GoogleCalendarConnectionSource` (the Google Calendar import), and since Task 8h
- * `RequestClockNotices` (the request clocks' steps), and since Task 8i `BakalariClient`,
- * `SchoolImportWordings` and `SchoolImportScheduler` (the school import), which the app's own
- * modules bind on Android
- * (`UserRepository` and `PairingRepository`, which the app bound until Task 8f, and
- * `RequestClockSweep`, which it bound in Task 8g, are this layer's own now). The iPhone's module
- * binds none of them yet; nothing starts Koin there, and the first resolution would fail until it
- * does.
+ * On the iPhone this module binds all of them itself (Task 8j): GitLive's default instances, the
+ * app's directories, the database on the bundled driver and its DAOs, the Keychain's store, the
+ * no-op telemetry, the network monitor and the two HTTP clients, and for what the iPhone does not
+ * have yet (sign-in, push, Cloud Storage, a picker, Google Calendar, background jobs, notifications
+ * and its own wording) stand-ins that answer as a phone with nothing of the kind would. Nothing
+ * starts Koin there yet; the app that does, in phase 3, replaces the stand-ins.
  */
 expect val platformDataModule: Module

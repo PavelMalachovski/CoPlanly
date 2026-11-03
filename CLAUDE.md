@@ -1531,7 +1531,9 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              outbox and the vault's repository (data/documents/), data/session/'s
              SessionProfileSynchronizer and SignedInAccountSource, and the export's
              ExportReceipts (on CallableFunctions, behind ExportVerifyAddress).
-             Its Koin modules are dataModules and platformDataModule, which appModules includes.
+             Its Koin modules are dataModules and platformDataModule, which appModules includes;
+             on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
+             di/koin/IosUnavailable.kt where the iPhone has nothing yet).
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -1831,7 +1833,16 @@ by `IsoText.date` (what `LocalDate.toString()` wrote), and the verification page
 new **`ExportVerifyAddress`** (`data/export/`, a `fun interface`; the app answers it with
 `BuildConfig.EXPORT_VERIFY_URL`); every failure is still an answer, never an exception, and the six
 receipt rules are unchanged. It is bound in `exportDataModule`; the e2e parent builds it on its
-`AndroidCallableFunctions`. Every other
+`AndroidCallableFunctions`. **On the iPhone, `platformDataModule` binds every seam `dataModules`
+takes** (Task 8j; `di/koin/PlatformDataModule.ios.kt`): GitLive's default instances, the app's
+directories, the database on the bundled driver and its fifteen DAOs, the Keychain's store, the
+no-op telemetry, the network monitor and the two HTTP clients, and, for what the iPhone does not
+have yet, the stand-ins in `di/koin/IosUnavailable.kt` — nobody signed in, no push, no Google
+Calendar, no Cloud Storage (every bucket call an `IOException`), nothing picked, no background job or
+notice, no verification address, and no wording (a pairing's thread title and a school import's
+titles are stored data a co-parent reads, so no English stand-in is written; asking throws). A
+Koin `verify()` of `dataModules` with exactly those types resolves (run once on the JVM in this
+task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Every other
 `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
