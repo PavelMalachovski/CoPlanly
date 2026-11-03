@@ -62,7 +62,10 @@ internal object NoPushDevice : PushDevice {
         Result.failure(IllegalStateException(UNAVAILABLE))
 }
 
-/** Nothing to compare: with nobody signed in, no account can follow another. */
+/**
+ * Nothing to compare: with nobody signed in ([NoSignedInUser]), no account can follow another.
+ * Replace the two together: a real sign-in over this answer would keep the previous account's data.
+ */
 internal object NoAccountSwitch : AccountConsistency {
     override suspend fun ensureAccountConsistency() = Unit
 }
@@ -146,9 +149,12 @@ internal object NoStorageBucket : StorageBucket {
     override suspend fun delete(path: String): Unit = throw IOException(UNAVAILABLE)
 }
 
-/** Nothing can be picked yet: no file has a type or a name, and none opens. */
+/**
+ * Nothing can be picked yet: no file has a name, and reading one fails as unavailable, never as a
+ * type the rules would refuse.
+ */
 internal object NoPickedFiles : PickedFiles {
-    override fun typeOf(contentUri: String): String? = null
+    override fun typeOf(contentUri: String): String? = throw IOException(UNAVAILABLE)
     override fun displayNameOf(contentUri: String): String? = null
     override fun open(contentUri: String): RawSource = throw IOException(UNAVAILABLE)
 }

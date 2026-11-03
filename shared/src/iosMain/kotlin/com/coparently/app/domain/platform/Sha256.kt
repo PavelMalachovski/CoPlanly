@@ -45,6 +45,11 @@ actual object Sha256 {
             val context = alloc<CC_SHA256_CTX>()
             CC_SHA256_Init(context.ptr)
             feed { bytes, offset, length ->
+                // CommonCrypto reads whatever the pointer reaches, so a run outside the array is
+                // refused here, as Android's `MessageDigest.update` refuses it.
+                require(offset >= 0 && length >= 0 && offset <= bytes.size - length) {
+                    "Run $offset+$length outside an array of ${bytes.size}"
+                }
                 // `addressOf` needs an index inside the array, which an empty run does not have.
                 if (length > 0) {
                     bytes.usePinned { pinned ->

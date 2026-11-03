@@ -71,4 +71,14 @@ class Sha256Test {
         }
         assertEquals("cap reached", thrown.message)
     }
+
+    @Test
+    fun aRunOutsideTheArrayIsRefused() {
+        assertFailsWith<IllegalArgumentException> {
+            Sha256.digestOf { update -> update(ByteArray(4), 2, 3) }
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Sha256.digestOf { update -> update(ByteArray(4), -1, 1) }
+        }
+    }
 }

@@ -1920,6 +1920,9 @@ the screens, the pickers, the camera, a viewer app and a real network.
       Meanwhile B files a new document; A leaves flight mode: the line goes and B's document
       appears without reopening the screen. With two families (M-8), switch family offline:
       the other family's list is never shown under this one.
+- [ ] **On a release (minified) build** (MON-24 phase 2, Task 8j: the first files the shipped app
+      writes through kotlinx-io, which the R8 probe does not touch): A uploads a vault PDF and sends
+      a chat photo; B opens both, and opens each again from the cache.
 - **Fallback (1P):** do A's steps, sign in as B on the same phone and look.
 - **If it fails:** tag `FamilyDocuments` / `ChatAttachments` / `MessageRepo`; `storage.rules`
   (`isOneOfPair`, `isAcceptableSharedFile`), `firestore.rules` `family_documents`,
