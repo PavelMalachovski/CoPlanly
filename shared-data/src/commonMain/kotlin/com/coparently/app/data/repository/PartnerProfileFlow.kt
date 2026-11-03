@@ -6,7 +6,6 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.DocumentPath
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.StoredDocument
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.FamilyKind
 import com.coparently.app.domain.model.PartnerSummary
 import kotlinx.coroutines.CancellationException
@@ -40,13 +39,10 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * the same snapshot listener this attached itself: its failure ends the flow with the listener's
  * error, which is what the retry below reads.
  *
- * Public for `PairingRepositoryImpl`, which stays in the app until it moves too.
- *
  * @param partnerId The co-parent's uid.
  * @param pairedAt When the link was made, carried into every summary unchanged.
  */
-@InternalSharedApi
-fun FirestoreClient.partnerProfile(partnerId: String, pairedAt: Long?): Flow<PartnerSummary> {
+internal fun FirestoreClient.partnerProfile(partnerId: String, pairedAt: Long?): Flow<PartnerSummary> {
     // Whether anything has been sent — a profile or the bare partner. Shared across re-attachments
     // and set before the send, so an error arriving right behind a snapshot cannot overwrite it,
     // and a re-attachment that fails again says nothing new.

@@ -1,17 +1,16 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.data.remote.firebase.AcceptInvitationResult
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.data.remote.firebase.PairingException
+import com.coparently.app.data.remote.firebase.RecordingFirestoreClient.Failure
+import com.coparently.app.data.remote.firebase.RecordingFirestoreClient.Operation
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -194,7 +193,7 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
 
         assertTrue(result.isSuccess)
         assertEquals("ABCDEF", result.getOrNull()?.code)
-        verify(exactly = 0) { invitationsCollection.document(any()) }
+        assertTrue(firestoreClient.writes.isEmpty())
     }
 
     @Test
@@ -206,15 +205,12 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
             createdAt = System.currentTimeMillis() - HOUR_MILLIS
         )
         stubOwnInvitesQuery(expired)
-        val newInviteRef = mockk<DocumentReference>(relaxed = true)
-        every { invitationsCollection.document(any()) } returns newInviteRef
-        every { newInviteRef.set(any()) } returns Tasks.forResult<Void>(null)
 
         val result = repository.createOrReuseInviteCode()
 
         assertTrue(result.isSuccess)
         assertNotEquals("OLDCOD", result.getOrNull()?.code)
-        verify { newInviteRef.set(any()) }
+        assertTrue(invitationWritten())
     }
 
     /**
@@ -228,11 +224,8 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
      */
     @Test
     fun `a new invite carries the profile name once the profile has one`() = runTest {
-        every { userSnapshot.getString("name") } returns "Alice Novak"
+        stubOwnProfile(name = "Alice Novak")
         stubOwnInvitesQuery()
-        val newInviteRef = mockk<DocumentReference>(relaxed = true)
-        every { invitationsCollection.document(any()) } returns newInviteRef
-        every { newInviteRef.set(any()) } returns Tasks.forResult<Void>(null)
 
         val result = repository.createOrReuseInviteCode()
 
@@ -241,11 +234,8 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
 
     @Test
     fun `a new invite falls back to the email address when the profile has no name`() = runTest {
-        every { userSnapshot.getString("name") } returns null
+        stubOwnProfile(name = null)
         stubOwnInvitesQuery()
-        val newInviteRef = mockk<DocumentReference>(relaxed = true)
-        every { invitationsCollection.document(any()) } returns newInviteRef
-        every { newInviteRef.set(any()) } returns Tasks.forResult<Void>(null)
 
         val result = repository.createOrReuseInviteCode()
 
@@ -285,7 +275,7 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
 
             assertTrue(result.isSuccess)
             assertEquals("NEWEST", result.getOrNull()?.code)
-            verify(exactly = 0) { invitationsCollection.document(any()) }
+            assertTrue(firestoreClient.writes.isEmpty())
         }
 
     /**
@@ -299,77 +289,63 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
             pendingInviteDoc(code = kind.take(6).uppercase().padEnd(6, 'X'), toEmail = "").ofKind(kind)
         }
         stubOwnInvitesQuery(*others.toTypedArray())
-        val newInviteRef = mockk<DocumentReference>(relaxed = true)
-        every { invitationsCollection.document(any()) } returns newInviteRef
-        every { newInviteRef.set(any()) } returns Tasks.forResult<Void>(null)
 
         val result = repository.createOrReuseInviteCode()
 
         assertTrue(result.isSuccess)
         val code = result.getOrNull()?.code.orEmpty()
         assertFalse(code in setOf("GUESTX", "FRIEND", "PROFES"))
-        verify { newInviteRef.set(any()) }
+        assertTrue(invitationWritten())
     }
 
     // ---- revokeActiveInvite -------------------------------------------------
 
     @Test
     fun `revokeActiveInvite cancels only the code invite, not email invitations`() = runTest {
-        val codeInviteRef = mockk<DocumentReference>(relaxed = true)
-        val codeInvite = pendingInviteDoc(code = "ABCDEF", toEmail = "", reference = codeInviteRef)
-        every { codeInviteRef.update("status", "cancelled") } returns Tasks.forResult<Void>(null)
-
-        val emailInviteRef = mockk<DocumentReference>(relaxed = true)
-        val emailInvite = pendingInviteDoc(
-            code = "EMAIL1",
-            toEmail = "other@example.com",
-            reference = emailInviteRef
-        )
+        val codeInvite = pendingInviteDoc(code = "ABCDEF", toEmail = "")
+        val emailInvite = pendingInviteDoc(code = "EMAIL1", toEmail = "other@example.com")
         stubOwnInvitesQuery(codeInvite, emailInvite)
 
         val result = repository.revokeActiveInvite()
 
         assertTrue(result.isSuccess)
-        verify { codeInviteRef.update("status", "cancelled") }
-        verify(exactly = 0) { emailInviteRef.update(any<String>(), any()) }
+        // The code invite alone is cancelled; the email invitation is not touched.
+        assertEquals(listOf(cancelled(codeInvite.id)), firestoreClient.writes)
     }
 
     @Test
     fun `revokeActiveInvite leaves guest, friend and professional codes alone`() = runTest {
-        val codeInviteRef = mockk<DocumentReference>(relaxed = true)
-        val codeInvite = pendingInviteDoc(code = "ABCDEF", toEmail = "", reference = codeInviteRef)
-        every { codeInviteRef.update("status", "cancelled") } returns Tasks.forResult<Void>(null)
-        val otherRefs = List(3) { mockk<DocumentReference>(relaxed = true) }
-        val others = listOf("guest", "friend", "professional").zip(otherRefs) { kind, ref ->
-            pendingInviteDoc(code = "GHJKMN", toEmail = "", reference = ref).ofKind(kind)
+        val codeInvite = pendingInviteDoc(code = "ABCDEF", toEmail = "")
+        val others = listOf("guest", "friend", "professional").map { kind ->
+            pendingInviteDoc(code = "GHJKMN", toEmail = "").ofKind(kind)
         }
         stubOwnInvitesQuery(codeInvite, *others.toTypedArray())
 
         val result = repository.revokeActiveInvite()
 
         assertTrue(result.isSuccess)
-        verify { codeInviteRef.update("status", "cancelled") }
-        otherRefs.forEach { ref -> verify(exactly = 0) { ref.update(any<String>(), any()) } }
+        assertEquals(listOf(cancelled(codeInvite.id)), firestoreClient.writes)
     }
 
     // ---- runPairing error normalization -------------------------------------
 
     @Test
     fun `runPairing normalizes an unexpected Firestore failure to PairingError Unknown`() = runTest {
-        val docRef = mockk<DocumentReference>(relaxed = true)
-        every { invitationsCollection.document("invite-1") } returns docRef
-        every { docRef.update("status", "rejected") } throws
-            mockk<FirebaseFirestoreException>(relaxed = true)
+        firestoreClient.failNext(Failure(FirestoreErrorCode.UNAVAILABLE))
 
         val result = repository.rejectIncoming("invite-1")
 
+        assertEquals(
+            listOf(Operation.UpdateField(DocumentPath("invitations", "invite-1"), "status", null, "rejected")),
+            firestoreClient.writes
+        )
         assertTrue(result.isFailure)
         assertTrue((result.exceptionOrNull() as PairingException).error is PairingError.Unknown)
     }
 
     @Test
     fun `runPairing passes a thrown PairingException through unchanged`() = runTest {
-        every { authService.getCurrentUser() } returns null
+        every { authService.getCurrentUid() } returns null
 
         val result = repository.createOrReuseInviteCode()
 
@@ -379,4 +355,12 @@ class PairingRepositoryImplCallablesTest : PairingRepositoryImplFixture() {
             (result.exceptionOrNull() as PairingException).error
         )
     }
+
+    /** Whether a new invitation document was written: the one `set()` of `invitations/{id}`. */
+    private fun invitationWritten(): Boolean =
+        firestoreClient.writes.any { it is Operation.Set && it.path.collection == "invitations" }
+
+    /** The one update `revokeActiveInvite` makes of invitation [id]. */
+    private fun cancelled(id: String): Operation =
+        Operation.UpdateField(DocumentPath("invitations", id), "status", null, "cancelled")
 }

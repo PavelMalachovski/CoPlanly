@@ -1,18 +1,18 @@
-@file:OptIn(InternalSharedApi::class)
+@file:OptIn(ExperimentalAtomicApi::class, ExperimentalUuidApi::class)
 
 package com.coparently.app.data.repository
 
-import android.content.Context
-import com.coparently.app.R
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.local.dao.UserDao
 import com.coparently.app.data.platform.logger
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.DocumentPath
+import com.coparently.app.data.remote.firebase.DocumentQuery
 import com.coparently.app.data.remote.firebase.FirestoreClient
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.remote.firebase.SignedInUser
+import com.coparently.app.data.remote.firebase.StoredDocument
 import com.coparently.app.data.sync.SyncRequester
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.InvitePreview
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.model.PairingInvite
@@ -21,13 +21,10 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.serialization.StoredJson
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -36,30 +33,33 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.tasks.await
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Firestore-backed [PairingRepository].
  *
  * Reads are realtime snapshot listeners; the two writes that touch the other
  * parent's document (accept, unpair) go through Cloud Functions.
+ *
+ * On the Firestore seam ([FirestoreClient]) and in `:shared-data` since MON-24 phase 2 (Task 8f;
+ * the co-parent's profile listener since Task 8d): the same documents, queries, listeners and
+ * writes the Android SDK calls made, and the signed-in account from [SignedInUser].
  */
+@Suppress("LongParameterList") // the listeners, the callables, the mirror's three and the wording
 class PairingRepositoryImpl(
-    private val firestore: FirebaseFirestore,
-    // The co-parent's profile listener ([partnerProfile]), on the seam since MON-24 phase 2
-    // (Task 8d); the rest of this class still calls the Android SDK through [firestore].
     private val firestoreClient: FirestoreClient,
-    private val authService: FirebaseAuthService,
+    private val authService: SignedInUser,
     private val pairingFunctions: PairingFunctions,
     private val postPairingConversationSetup: PostPairingConversationSetup,
     private val userDao: UserDao,
     private val selectedFamilySource: SelectedFamilySource,
     private val syncRequester: SyncRequester,
-    // Application context only, for the localized conversation-title fallback. This is a
-    // repository, not a ViewModel, so it is allowed to resolve resources directly.
-    private val context: Context
+    // The localized conversation-title fallback, which only the platform's resources hold.
+    private val wording: PairingWording
 ) : PairingRepository {
 
     /**
@@ -67,8 +67,8 @@ class PairingRepositoryImpl(
      * link do no work. Null means "nothing applied yet".
      *
      * Shared by every collector of [observePairingState]: each one has listeners of its own and
-     * runs the hook on every value, and the `getAndSet` here is what lets exactly one of them act
-     * on a given change.
+     * runs the hook on every value, and the `exchange` here (Java's `getAndSet`) is what lets
+     * exactly one of them act on a given change.
      */
     private val appliedPairing = AtomicReference<AppliedPairing?>(null)
 
@@ -96,9 +96,9 @@ class PairingRepositoryImpl(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observePairingState(): Flow<PairingState> =
-        authService.getAuthStateFlow()
-            .flatMapLatest { user ->
-                if (user == null) {
+        authService.observeCurrentUid()
+            .flatMapLatest { uid ->
+                if (uid == null) {
                     // Signed out (or auth has not restored its session yet). There is no
                     // dedicated "unauthenticated" case in PairingState, and Loading is
                     // accurate either way: as soon as auth resolves to a user, flatMapLatest
@@ -106,9 +106,9 @@ class PairingRepositoryImpl(
                     flowOf(ObservedPairing(PairingState.Loading))
                 } else {
                     combine(
-                        observeLinkedPartner(user.uid),
-                        observeOwnInvites(user.uid),
-                        observeIncomingInvites(user.email.orEmpty())
+                        observeLinkedPartner(uid),
+                        observeOwnInvites(uid),
+                        observeIncomingInvites(authService.getCurrentEmail().orEmpty())
                     ) { linked, own, incoming ->
                         val partner = linked.partner
                         if (partner == null) {
@@ -153,12 +153,7 @@ class PairingRepositoryImpl(
 
     override suspend fun createOrReuseInviteCode(): Result<PairingInvite> = runPairing {
         val user = requireUser()
-        val existing = firestore.collection(INVITATIONS)
-            .whereEqualTo("fromUserId", user.uid)
-            .whereEqualTo("status", STATUS_PENDING)
-            .get()
-            .await()
-            .documents
+        val existing = firestoreClient.get(ownPendingInvites(user.uid))
             .toActiveCodeInvites()
             .firstOrNull()
 
@@ -176,15 +171,10 @@ class PairingRepositoryImpl(
      */
     override suspend fun revokeActiveInvite(): Result<Unit> = runPairing {
         val user = requireUser()
-        firestore.collection(INVITATIONS)
-            .whereEqualTo("fromUserId", user.uid)
-            .whereEqualTo("status", STATUS_PENDING)
-            .get()
-            .await()
-            .documents
-            .filter { it.getString("toEmail").orEmpty().isEmpty() }
+        firestoreClient.get(ownPendingInvites(user.uid))
+            .filter { it.string("toEmail").orEmpty().isEmpty() }
             .filter { it.isCoParentInvite() }
-            .forEach { it.reference.update("status", STATUS_CANCELLED).await() }
+            .forEach { firestoreClient.update(DocumentPath(INVITATIONS, it.id), "status", STATUS_CANCELLED) }
     }
 
     override suspend fun previewInvite(code: String): Result<InvitePreview> {
@@ -206,9 +196,7 @@ class PairingRepositoryImpl(
         pairingFunctions.acceptInvitation(invitationId = invitationId).map { it.role }
 
     override suspend fun rejectIncoming(invitationId: String): Result<Unit> = runPairing {
-        firestore.collection(INVITATIONS).document(invitationId)
-            .update("status", STATUS_REJECTED)
-            .await()
+        firestoreClient.update(DocumentPath(INVITATIONS, invitationId), "status", STATUS_REJECTED)
     }
 
     override suspend fun unpair(partnerUid: String?): Result<Unit> = pairingFunctions.unpair(partnerUid).map { }
@@ -261,7 +249,7 @@ class PairingRepositoryImpl(
      * is built to repeat on every launch.
      */
     private suspend fun onPairingStateObserved(observed: ObservedPairing) {
-        val uid = authService.getCurrentUser()?.uid ?: return
+        val uid = authService.getCurrentUid() ?: return
         val coParents: Set<String> = when (val state = observed.state) {
             // Loading carries no information about the link — mirroring it would clear a
             // perfectly good partner list every time the flow recovers from a transient error.
@@ -274,7 +262,7 @@ class PairingRepositoryImpl(
         // the set itself moved. Keyed by uid as well, so a different account signing in is
         // never mistaken for "already applied".
         val applied = AppliedPairing(uid, coParents)
-        val previous = appliedPairing.getAndSet(applied)
+        val previous = appliedPairing.exchange(applied)
         if (previous == applied) return
         val newcomers = coParents - previous?.takeIf { it.uid == uid }?.coParents.orEmpty()
 
@@ -360,11 +348,11 @@ class PairingRepositoryImpl(
     private fun observeLinkedPartner(uid: String): Flow<LinkedPartner> =
         observeUserDocument(uid)
             .map { snapshot ->
-                val partnerId = snapshot?.getString("partnerId").orEmpty()
+                val partnerId = snapshot.string("partnerId").orEmpty()
                 PartnerLink(
                     partnerId = partnerId,
-                    pairedAt = snapshot?.getLong("pairedAt"),
-                    coParents = coParentUids(snapshot?.get("partnerIds"), partnerId)
+                    pairedAt = snapshot.long("pairedAt"),
+                    coParents = coParentUids(snapshot.data?.get("partnerIds"), partnerId)
                 )
             }
             .distinctUntilChanged()
@@ -394,64 +382,56 @@ class PairingRepositoryImpl(
      * leaves the combined state where it was (or at [PairingState.Loading] if this is the
      * first snapshot), and Firestore keeps retrying the listener on its own.
      */
-    private fun observeUserDocument(uid: String): Flow<DocumentSnapshot?> = callbackFlow {
-        val registration = firestore.collection(USERS).document(uid)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logger.w(TAG, "User document listener failed", error)
-                    return@addSnapshotListener
-                }
-                trySend(snapshot)
+    private fun observeUserDocument(uid: String): Flow<StoredDocument> =
+        firestoreClient.observe(DocumentPath(USERS, uid))
+            .catch { error ->
+                // The SDK listener this was reported its error once and then stayed silent.
+                logger.w(TAG, "User document listener failed", error)
+                awaitCancellation()
             }
-        awaitClose { registration.remove() }
-    }
 
-    private fun observeOwnInvites(uid: String): Flow<List<PairingInvite>> = callbackFlow {
-        val registration = firestore.collection(INVITATIONS)
-            .whereEqualTo("fromUserId", uid)
-            .whereEqualTo("status", STATUS_PENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logger.w(TAG, "Own-invitations listener failed", error)
-                }
-                trySend(snapshot?.documents.orEmpty().toActiveCodeInvites())
+    private fun observeOwnInvites(uid: String): Flow<List<PairingInvite>> =
+        firestoreClient.observe(ownPendingInvites(uid))
+            .map { it.toActiveCodeInvites() }
+            .catch { error ->
+                // An empty list, as the SDK listener's null snapshot gave, and then nothing.
+                logger.w(TAG, "Own-invitations listener failed", error)
+                emit(emptyList())
+                awaitCancellation()
             }
-        awaitClose { registration.remove() }
-    }
 
     private fun observeIncomingInvites(email: String): Flow<List<PairingInvite>> {
         val normalized = email.trim().lowercase()
         if (normalized.isEmpty()) return flowOf(emptyList())
-        return callbackFlow {
-            val registration = firestore.collection(INVITATIONS)
-                .whereEqualTo("toEmail", normalized)
-                .whereEqualTo("status", STATUS_PENDING)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        // The address itself is deliberately not logged — logcat is
-                        // readable by anyone with adb access to the device.
-                        logger.w(TAG, "Incoming-invitations listener failed", error)
-                    }
-                    trySend(snapshot?.documents.orEmpty().mapNotNull { it.toInvite() })
-                }
-            awaitClose { registration.remove() }
-        }
+        val query = DocumentQuery(INVITATIONS)
+            .whereEqualTo("toEmail", normalized)
+            .whereEqualTo("status", STATUS_PENDING)
+        return firestoreClient.observe(query)
+            .map { documents -> documents.mapNotNull { it.toInvite() } }
+            .catch { error ->
+                // The address itself is deliberately not logged — logcat is
+                // readable by anyone with adb access to the device.
+                logger.w(TAG, "Incoming-invitations listener failed", error)
+                emit(emptyList())
+                awaitCancellation()
+            }
     }
 
     private suspend fun writeNewInvite(toEmail: String): PairingInvite {
         val user = requireUser()
-        val profile = firestore.collection(USERS).document(user.uid).get().await()
+        val profile = firestoreClient.get(DocumentPath(USERS, user.uid))
         val ttl = if (toEmail.isEmpty()) CODE_TTL_MILLIS else EMAIL_TTL_MILLIS
         val invite = PairingInvite(
-            id = UUID.randomUUID().toString(),
+            id = Uuid.random().toString(),
             code = InviteCodeGenerator.generate(),
             fromUserId = user.uid,
-            fromUserName = profile.getString("name") ?: user.email.orEmpty(),
+            fromUserName = profile.string("name") ?: user.email.orEmpty(),
             fromUserEmail = user.email.orEmpty(),
             toEmail = toEmail,
-            expiresAtMillis = System.currentTimeMillis() + ttl
+            expiresAtMillis = nowMillis() + ttl
         )
-        firestore.collection(INVITATIONS).document(invite.id).set(
+        firestoreClient.set(
+            DocumentPath(INVITATIONS, invite.id),
             mapOf(
                 "id" to invite.id,
                 "code" to invite.code,
@@ -460,11 +440,11 @@ class PairingRepositoryImpl(
                 "fromUserEmail" to invite.fromUserEmail,
                 "toEmail" to invite.toEmail,
                 "status" to STATUS_PENDING,
-                "createdAt" to System.currentTimeMillis(),
+                "createdAt" to nowMillis(),
                 "expiresAt" to invite.expiresAtMillis,
                 "acceptedBy" to null
             )
-        ).await()
+        )
         return invite
     }
 
@@ -492,15 +472,15 @@ class PairingRepositoryImpl(
      * pairing.
      */
     private suspend fun ensureConversationWith(partnerId: String) {
-        val uid = authService.getCurrentUser()?.uid ?: return
+        val uid = authService.getCurrentUid() ?: return
         if (partnerId.isEmpty()) return
         try {
             // The partner's display name titles the thread; their profile may not carry one
             // yet, in which case a localized placeholder stands in.
-            val partnerName = firestore.collection(USERS).document(partnerId).get().await()
-                .getString("name")
+            val partnerName = firestoreClient.get(DocumentPath(USERS, partnerId))
+                .string("name")
                 .orEmpty()
-                .ifEmpty { context.getString(R.string.pairing_default_partner_name) }
+                .ifEmpty { wording.defaultPartnerName() }
             postPairingConversationSetup.run(uid, partnerId, partnerName)
         } catch (e: CancellationException) {
             throw e
@@ -511,14 +491,23 @@ class PairingRepositoryImpl(
         }
     }
 
-    private fun requireUser() = authService.getCurrentUser()
-        ?: throw PairingException(PairingError.Unknown("Not signed in"))
+    /**
+     * The signed-in account's uid and address, or a "Not signed in" [PairingException]. Both are
+     * read now, as the Android SDK's `currentUser` answered them in one object.
+     */
+    private fun requireUser(): Inviter {
+        val uid = authService.getCurrentUid() ?: throw PairingException(PairingError.Unknown("Not signed in"))
+        return Inviter(uid = uid, email = authService.getCurrentEmail())
+    }
+
+    /** Who is asking: [requireUser]'s answer. */
+    private data class Inviter(val uid: String, val email: String?)
 
     /**
      * Runs a Firestore block and normalizes any failure into a [PairingException].
      *
-     * The lambda is `suspend` because every body calls `await()`; an inline
-     * non-suspending version will not compile here. Cancellation must
+     * The lambda is `suspend` because every body calls the client's suspending reads and
+     * writes; an inline non-suspending version will not compile here. Cancellation must
      * propagate rather than be reported as a pairing failure — otherwise
      * navigating away mid-call surfaces a spurious error instead of the
      * silent cancellation structured concurrency expects.
@@ -546,6 +535,11 @@ class PairingRepositoryImpl(
         const val CODE_TTL_MILLIS = 24L * 60 * 60 * 1000
         const val EMAIL_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000
         val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+
+        /** This account's pending invitations, as the reuse lookup, the revoke and the listener ask. */
+        fun ownPendingInvites(uid: String): DocumentQuery = DocumentQuery(INVITATIONS)
+            .whereEqualTo("fromUserId", uid)
+            .whereEqualTo("status", STATUS_PENDING)
     }
 }
 
@@ -559,7 +553,7 @@ class PairingRepositoryImpl(
  * one who opens "Add another co-parent". They were handed the grandmother's code as their
  * co-parent code (which the accept callable then refuses), and "New code" cancelled it.
  */
-private fun DocumentSnapshot.isCoParentInvite(): Boolean = getString("kind").isNullOrEmpty()
+private fun StoredDocument.isCoParentInvite(): Boolean = string("kind").isNullOrEmpty()
 
 /**
  * Narrows a batch of invitation documents down to the code/QR/link invites (as
@@ -572,13 +566,13 @@ private fun DocumentSnapshot.isCoParentInvite(): Boolean = getString("kind").isN
  * client-side (not via a Firestore `orderBy`) so this does not require a composite
  * index that has not been created.
  */
-private fun List<DocumentSnapshot>.toActiveCodeInvites(): List<PairingInvite> {
-    val now = System.currentTimeMillis()
+private fun List<StoredDocument>.toActiveCodeInvites(): List<PairingInvite> {
+    val now = nowMillis()
     return this
-        .filter { it.getString("toEmail").orEmpty().isEmpty() }
+        .filter { it.string("toEmail").orEmpty().isEmpty() }
         .filter { it.isCoParentInvite() }
-        .filter { (it.getLong("expiresAt") ?: 0L) > now }
-        .sortedByDescending { it.getLong("createdAt") ?: 0L }
+        .filter { (it.long("expiresAt") ?: 0L) > now }
+        .sortedByDescending { it.long("createdAt") ?: 0L }
         .mapNotNull { it.toInvite() }
 }
 
@@ -600,18 +594,34 @@ private fun coParentUids(partnerIds: Any?, partnerId: String): Set<String> {
 }
 
 /** An invitation document as the domain sees it, or null for one carrying no code. */
-private fun DocumentSnapshot.toInvite(): PairingInvite? {
-    val code = getString("code") ?: return null
+private fun StoredDocument.toInvite(): PairingInvite? {
+    val code = string("code") ?: return null
     return PairingInvite(
-        id = getString("id") ?: id,
+        id = string("id") ?: id,
         code = code,
-        fromUserId = getString("fromUserId").orEmpty(),
-        fromUserName = getString("fromUserName").orEmpty(),
-        fromUserEmail = getString("fromUserEmail").orEmpty(),
-        toEmail = getString("toEmail").orEmpty(),
-        expiresAtMillis = getLong("expiresAt") ?: 0L
+        fromUserId = string("fromUserId").orEmpty(),
+        fromUserName = string("fromUserName").orEmpty(),
+        fromUserEmail = string("fromUserEmail").orEmpty(),
+        toEmail = string("toEmail").orEmpty(),
+        expiresAtMillis = long("expiresAt") ?: 0L
     )
 }
+
+/**
+ * The number in [field] as a Long, or null when the field is absent or null. Throws when it holds
+ * something else, as the SDK's `DocumentSnapshot.getLong` does, with its words.
+ */
+// The SDK's own exception type, so a caller's `catch` and its message stay what they were.
+@Suppress("TooGenericExceptionThrown")
+private fun StoredDocument.long(field: String): Long? = when (val value = data?.get(field)) {
+    null -> null
+    is Number -> value.toLong()
+    // The SDK names the JVM class; this is that text, not a JVM call.
+    else -> throw RuntimeException("Field '$field' is not a java.lang.Number")
+}
+
+/** This phone's clock, in epoch milliseconds: what `System.currentTimeMillis()` answered. */
+private fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
 /**
  * [code] trimmed and upper-cased, or null when it cannot be a code at all — refused here as

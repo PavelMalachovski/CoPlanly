@@ -1,5 +1,3 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.data.repository
 
 import app.cash.turbine.test
@@ -7,7 +5,6 @@ import com.coparently.app.data.remote.firebase.DocumentPath
 import com.coparently.app.data.remote.firebase.FirestoreErrorCode
 import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
 import com.coparently.app.data.remote.firebase.StoredDocument
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.PartnerSummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ProducerScope

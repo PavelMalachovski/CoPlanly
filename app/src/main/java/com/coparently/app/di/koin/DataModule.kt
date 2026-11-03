@@ -39,7 +39,8 @@ import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
 import com.coparently.app.data.remote.google.GoogleCalendarApi
-import com.coparently.app.data.repository.PairingRepositoryImpl
+import com.coparently.app.data.repository.AndroidPairingWording
+import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
 import com.coparently.app.data.requests.RequestClockActions
@@ -129,7 +130,8 @@ val dataModule = module {
     singleOf(::CredentialManagerService)
     singleOf(::CredentialProviderImpl)
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
-    singleOf(::PairingRepositoryImpl)
+    // The thread title PairingRepositoryImpl (in `:shared-data`) falls back to, from resources.
+    single<PairingWording> { AndroidPairingWording(get()) }
     singleOf(::ParentSlotMigrator)
     singleOf(::PreferencesRepositoryImpl)
     singleOf(::RequestClockActions)

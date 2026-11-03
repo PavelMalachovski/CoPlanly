@@ -43,6 +43,7 @@ import com.coparently.app.data.repository.FriendRepositoryImpl
 import com.coparently.app.data.repository.GuestRepositoryImpl
 import com.coparently.app.data.repository.JournalRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
+import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
@@ -71,6 +72,7 @@ import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.MessageRepository
+import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.domain.repository.RequestDeadlineRepository
@@ -184,6 +186,10 @@ val repositoryDataModule: Module = module {
     // the family selection, the chat sources and the custody and split repositories read.
     singleOf(::UserRepositoryImpl)
     single<UserRepository> { get<UserRepositoryImpl>() }
+    // The co-parent link as the listeners report it, mirrored into Room (items 37 and 39; Task
+    // 8f). Its thread-title wording and the sync request are the platform's.
+    singleOf(::PairingRepositoryImpl)
+    single<PairingRepository> { get<PairingRepositoryImpl>() }
 }
 
 /**

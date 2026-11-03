@@ -3,10 +3,8 @@ package com.coparently.app.data.repository
 import app.cash.turbine.test
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
-import com.google.firebase.firestore.FirebaseFirestoreException
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
@@ -257,7 +255,7 @@ class PairingRepositoryImplTest : PairingRepositoryImplFixture() {
             assertEquals(PairingState.Loading, awaitItem())
             runCurrent()
             listeners.emitInvites()
-            listeners.failUser(mockk<FirebaseFirestoreException>(relaxed = true))
+            listeners.failUser(IllegalStateException("PERMISSION_DENIED"))
 
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
@@ -321,7 +319,7 @@ class PairingRepositoryImplTest : PairingRepositoryImplFixture() {
             listeners.emitPartner(partnerDoc(name = "Bob", role = "dad", colorCode = "#1976D2"))
             assertEquals("Bob", (awaitItem() as PairingState.Paired).partner.name)
 
-            listeners.failPartner(mockk<FirebaseFirestoreException>(relaxed = true))
+            listeners.failPartner(IllegalStateException("PERMISSION_DENIED"))
 
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
@@ -340,7 +338,7 @@ class PairingRepositoryImplTest : PairingRepositoryImplFixture() {
             listeners.emitInvites()
             listeners.emitUser(userDoc(partnerId = "u2", pairedAt = 123L))
 
-            listeners.failPartner(mockk<FirebaseFirestoreException>(relaxed = true))
+            listeners.failPartner(IllegalStateException("PERMISSION_DENIED"))
 
             assertEquals(
                 PairingState.Paired(

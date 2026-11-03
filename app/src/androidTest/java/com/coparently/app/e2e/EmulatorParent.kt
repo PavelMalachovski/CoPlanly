@@ -42,6 +42,7 @@ import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSourc
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.remote.firebase.firestoreClientOf
+import com.coparently.app.data.repository.AndroidPairingWording
 import com.coparently.app.data.repository.CalendarFeedRepositoryImpl
 import com.coparently.app.data.repository.ChangeRequestRepositoryImpl
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
@@ -280,7 +281,6 @@ class EmulatorParent private constructor(
     )
 
     val pairingRepository = PairingRepositoryImpl(
-        firestore = firestore,
         firestoreClient = documents,
         authService = authService,
         pairingFunctions = PairingFunctions(callables),
@@ -291,7 +291,7 @@ class EmulatorParent private constructor(
         userDao = database.userDao(),
         selectedFamilySource = selectedFamilySource,
         syncRequester = NoSyncRequester,
-        context = context
+        wording = AndroidPairingWording(context)
     )
 
     val parentsSource = ParentsSource(userRepository, pairingRepository)
