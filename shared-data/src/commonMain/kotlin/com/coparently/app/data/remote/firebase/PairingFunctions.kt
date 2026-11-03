@@ -1,0 +1,314 @@
+package com.coparently.app.data.remote.firebase
+
+import com.coparently.app.data.platform.logger
+import com.coparently.app.domain.friends.AcceptCalendarFriendResult
+import com.coparently.app.domain.guests.AcceptGuestResult
+import com.coparently.app.domain.model.InvitePreview
+import com.coparently.app.domain.model.PairingError
+import com.coparently.app.domain.professionals.AcceptProfessionalResult
+import kotlinx.coroutines.CancellationException
+
+/**
+ * Thin client for the invitation Cloud Functions.
+ *
+ * Translates a callable's refusal ([CallableException]) into a [PairingError] so the layers
+ * above never inspect exception text or Firebase error codes.
+ *
+ * Guest redemption lives here too, next to co-parent redemption, even though the two must
+ * never be confused server-side. The thing they share is exactly this class's job — one
+ * `call` helper, one reason-to-[PairingError] table — and a second copy of that table is a
+ * second place for the two to drift apart. What must not be shared is the *decision*, and
+ * that is made by two separate callables in `functions/index.js`, each of which refuses the
+ * other's `kind`.
+ */
+class PairingFunctions(
+    private val functions: CallableFunctions
+) {
+
+    /**
+     * Redeems an invitation by [code] or by [invitationId] — exactly one.
+     *
+     * @return the co-parent's Firebase UID and, if the deployed callable reports one, this
+     *   device's newly assigned parent slot (see `assignSlots` in `functions/index.js`) — or a
+     *   [PairingException]-wrapped [PairingError] on failure. `partnerId` is required: a
+     *   response missing it is a contract violation with the callable and is treated as
+     *   [PairingError.Unknown], not silently coerced to a blank UID. `role` is soft-parsed
+     *   instead: a client built against a redeployed backend that has not shipped yet (or a
+     *   backend that has not been redeployed for a client that has) must not report a pairing
+     *   that succeeded server-side as a failed accept — see [AcceptInvitationResult.role].
+     * @throws IllegalArgumentException if both or neither of [code] and [invitationId] are
+     *   given — this is a caller programming error, not a backend failure, so it is not
+     *   folded into the returned [Result].
+     */
+    suspend fun acceptInvitation(
+        code: String? = null,
+        invitationId: String? = null
+    ): Result<AcceptInvitationResult> {
+        require((code == null) != (invitationId == null)) {
+            "acceptInvitation requires exactly one of code or invitationId, got " +
+                "code=$code, invitationId=$invitationId"
+        }
+        val payload = buildMap<String, Any> {
+            code?.let { put("code", it) }
+            invitationId?.let { put("invitationId", it) }
+        }
+        return call("acceptPairingInvitation", payload) { data ->
+            val partnerId = data["partnerId"] as? String
+            val role = (data["role"] as? String)?.takeIf { it.isNotBlank() }
+            if (role == null) {
+                logger.w(TAG, "acceptPairingInvitation succeeded but returned no role; slot re-stamp will be skipped")
+            }
+            AcceptInvitationResult(
+                partnerId = checkNotNull(partnerId?.takeIf { it.isNotBlank() }) {
+                    "acceptPairingInvitation succeeded but returned no partnerId"
+                },
+                role = role
+            )
+        }
+    }
+
+    /**
+     * Asks who is behind [code] without redeeming it (`previewPairingInvitation`).
+     *
+     * Fails with the [PairingError] the accept would fail with, so a code that cannot be linked
+     * is refused before the parent is asked to confirm. A `NOT_FOUND` that carries no reason is
+     * not a missing invitation — the server always names one — but the callable itself missing,
+     * on a backend not yet redeployed. That comes back as [PairingError.Unknown], so the caller
+     * can still ask without a name and leave the decision to the accept.
+     *
+     * @return the inviter's first name, or null when the server has none to show.
+     */
+    suspend fun previewInvitation(code: String): Result<InvitePreview> {
+        val result = call("previewPairingInvitation", mapOf("code" to code)) { data ->
+            InvitePreview(inviterName = (data["inviterName"] as? String)?.trim()?.takeIf { it.isNotEmpty() })
+        }
+        val failure = result.exceptionOrNull() as? PairingException ?: return result
+        val callableMissing = failure.error == PairingError.NotFound && reasonOf(failure.cause) == null
+        return if (callableMissing) {
+            val unavailable = PairingError.Unknown("previewPairingInvitation unavailable")
+            Result.failure(PairingException(unavailable, failure.cause))
+        } else {
+            result
+        }
+    }
+
+    /**
+     * Redeems a **guest** invitation by [code] or by [invitationId] — exactly one.
+     *
+     * Reaches `acceptGuestInvitation`, never `acceptPairingInvitation`. The two callables
+     * refuse each other's `kind`, so a code offered to the wrong one comes back as
+     * [PairingError.NotGuestInvitation] or [PairingError.GuestInvitation] rather than
+     * quietly doing the other thing.
+     *
+     * @return the child record the caller may now read and when that ends, or a
+     *   [PairingException]-wrapped [PairingError] on failure. Both fields are required: a
+     *   response missing either is a contract violation, and a grant with no end is the one
+     *   outcome this feature must never produce by accident.
+     * @throws IllegalArgumentException if both or neither of [code] and [invitationId] are
+     *   given — a caller programming error, not a backend failure.
+     */
+    suspend fun acceptGuestInvitation(
+        code: String? = null,
+        invitationId: String? = null
+    ): Result<AcceptGuestResult> {
+        require((code == null) != (invitationId == null)) {
+            "acceptGuestInvitation requires exactly one of code or invitationId, got " +
+                "code=$code, invitationId=$invitationId"
+        }
+        val payload = buildMap<String, Any> {
+            code?.let { put("code", it) }
+            invitationId?.let { put("invitationId", it) }
+        }
+        return call("acceptGuestInvitation", payload) { data ->
+            val childInfoId = data["childInfoId"] as? String
+            val expiresAtMillis = (data["expiresAtMillis"] as? Number)?.toLong() ?: 0L
+            AcceptGuestResult(
+                childInfoId = checkNotNull(childInfoId?.takeIf { it.isNotBlank() }) {
+                    "acceptGuestInvitation succeeded but returned no childInfoId"
+                },
+                expiresAtMillis = expiresAtMillis.also {
+                    check(it > 0L) { "acceptGuestInvitation succeeded but returned no expiry" }
+                }
+            )
+        }
+    }
+
+    /**
+     * Redeems a **calendar friend** invitation by [code] or by [invitationId] — exactly one.
+     *
+     * Reaches `acceptCalendarFriendInvitation`, the third callable beside pairing and guest.
+     * The pairing one refuses this `kind` outright, so a friend code offered there can never
+     * run `assignSlots` and hand a friend a parent slot.
+     *
+     * @return the two parents whose calendar the caller may now read and when that ends, or a
+     *   [PairingException]-wrapped [PairingError] on failure. Both are required: a pair of the
+     *   wrong size or a grant with no end is a contract violation, not something to paper over.
+     * @throws IllegalArgumentException if both or neither of [code] and [invitationId] are
+     *   given — a caller programming error, not a backend failure.
+     */
+    suspend fun acceptCalendarFriendInvitation(
+        code: String? = null,
+        invitationId: String? = null
+    ): Result<AcceptCalendarFriendResult> {
+        require((code == null) != (invitationId == null)) {
+            "acceptCalendarFriendInvitation requires exactly one of code or invitationId, got " +
+                "code=$code, invitationId=$invitationId"
+        }
+        val payload = buildMap<String, Any> {
+            code?.let { put("code", it) }
+            invitationId?.let { put("invitationId", it) }
+        }
+        return call("acceptCalendarFriendInvitation", payload) { data ->
+            @Suppress("UNCHECKED_CAST")
+            val parents = (data["familyParents"] as? List<*>)
+                ?.mapNotNull { it as? String }
+                .orEmpty()
+            val expiresAtMillis = (data["expiresAtMillis"] as? Number)?.toLong() ?: 0L
+            AcceptCalendarFriendResult(
+                familyParents = parents.also {
+                    check(it.size == 2) {
+                        "acceptCalendarFriendInvitation succeeded but named ${it.size} parents"
+                    }
+                },
+                expiresAtMillis = expiresAtMillis.also {
+                    check(it > 0L) {
+                        "acceptCalendarFriendInvitation succeeded but returned no expiry"
+                    }
+                }
+            )
+        }
+    }
+
+    /**
+     * Redeems a **professional** invitation (MON-18) by [code] or by [invitationId] — exactly one.
+     *
+     * Reaches `acceptProfessionalInvitation`, the fourth callable. The pairing one refuses this
+     * `kind` by name and the friend and guest ones refuse it as not theirs, so a mediator's code
+     * can never become a parent slot or a friend's single-consent grant.
+     *
+     * @return the grant written and when it ends. The grant opens nothing until the co-parent
+     *   consents; the result says only that the code was redeemed.
+     * @throws IllegalArgumentException if both or neither of [code] and [invitationId] are given.
+     */
+    suspend fun acceptProfessionalInvitation(
+        code: String? = null,
+        invitationId: String? = null
+    ): Result<AcceptProfessionalResult> {
+        require((code == null) != (invitationId == null)) {
+            "acceptProfessionalInvitation requires exactly one of code or invitationId, got " +
+                "code=$code, invitationId=$invitationId"
+        }
+        val payload = buildMap<String, Any> {
+            code?.let { put("code", it) }
+            invitationId?.let { put("invitationId", it) }
+        }
+        return call("acceptProfessionalInvitation", payload) { data ->
+            val grantId = (data["grantId"] as? String)?.takeIf { it.isNotBlank() }
+            val expiresAtMillis = (data["expiresAtMillis"] as? Number)?.toLong() ?: 0L
+            AcceptProfessionalResult(
+                grantId = checkNotNull(grantId) {
+                    "acceptProfessionalInvitation succeeded but returned no grantId"
+                },
+                expiresAtMillis = expiresAtMillis.also {
+                    check(it > 0L) { "acceptProfessionalInvitation succeeded but returned no expiry" }
+                }
+            )
+        }
+    }
+
+    /**
+     * Removes the co-parent link with [partnerUid].
+     *
+     * The callable takes `partnerId`, which family to end. Omitted, it means "the only one", which
+     * the server refuses (`ambiguous-partner`) once the caller is in two families, so a parent in
+     * two families names the co-parent of the family on screen.
+     *
+     * @param partnerUid The co-parent to unpair from, or null for an account's only co-parent.
+     * @return the former partner's UID, or null when there was no link.
+     */
+    suspend fun unpair(partnerUid: String? = null): Result<String?> {
+        val payload = partnerUid?.takeIf { it.isNotBlank() }?.let { mapOf("partnerId" to it) }.orEmpty()
+        return call("unpairCoParent", payload) { it["unpairedFrom"] as? String }
+    }
+
+    private suspend fun <T> call(
+        name: String,
+        payload: Map<String, Any>,
+        parse: (Map<*, *>) -> T
+    ): Result<T> = try {
+        val result = functions.call(name, payload)
+        Result.success(parse((result as? Map<*, *>) ?: emptyMap<String, Any>()))
+    } catch (e: CancellationException) {
+        // Coroutine cancellation must propagate, not be reported as a pairing failure —
+        // otherwise navigating away mid-call surfaces a spurious error instead of the
+        // silent cancellation structured concurrency expects.
+        throw e
+    } catch (
+        // Any remaining backend or parsing failure becomes a typed PairingError; the
+        // caller decides how to surface it. Rethrowing would only crash the UI layer.
+        @Suppress("TooGenericExceptionCaught") e: Exception
+    ) {
+        Result.failure(PairingException(toPairingError(e), e))
+    }
+
+    companion object {
+        private const val TAG = "PairingFunctions"
+
+        /** The `reason` a callable put in its error's details, or null when it named none. */
+        private fun reasonOf(e: Throwable?): String? =
+            ((e as? CallableException)?.details as? Map<*, *>)?.get("reason") as? String
+
+        /** Maps a callable failure to the matching [PairingError]. */
+        fun toPairingError(e: Throwable): PairingError {
+            return when (reasonOf(e)) {
+                "not-found" -> PairingError.NotFound
+                "invitation-expired" -> PairingError.Expired
+                "invitation-not-pending" -> PairingError.NotPending
+                "self-pairing" -> PairingError.SelfPairing
+                "already-paired" -> PairingError.AlreadyPaired
+                "wrong-recipient" -> PairingError.WrongRecipient
+                "enter-their-code" -> PairingError.EnterTheirCode
+                "slot-conflict" -> PairingError.SlotConflict
+                "guest-invitation" -> PairingError.GuestInvitation
+                "not-a-guest-invitation" -> PairingError.NotGuestInvitation
+                "friend-invitation" -> PairingError.FriendInvitation
+                "not-a-friend-invitation" -> PairingError.NotFriendInvitation
+                "professional-invitation" -> PairingError.ProfessionalInvitation
+                "not-a-professional-invitation" -> PairingError.NotProfessionalInvitation
+                "inviter-not-paired" -> PairingError.InviterNotPaired
+                "grant-expired" -> PairingError.GrantEnded
+                "inviter-not-entitled" -> PairingError.InviterNotEntitled
+                "already-entitled" -> PairingError.AlreadyEntitled
+                else -> when ((e as? CallableException)?.code) {
+                    CallableCode.UNAVAILABLE,
+                    CallableCode.DEADLINE_EXCEEDED -> PairingError.Network
+                    CallableCode.NOT_FOUND -> PairingError.NotFound
+                    else -> PairingError.Unknown(e.message)
+                }
+            }
+        }
+    }
+}
+
+/** Carries a [PairingError] through `Result.failure`, keeping the original [cause] for logging. */
+class PairingException(val error: PairingError, cause: Throwable? = null) :
+    Exception(error.toString(), cause)
+
+/**
+ * What [PairingFunctions.acceptInvitation] returns on success.
+ *
+ * @property partnerId The co-parent's Firebase UID.
+ * @property role The parent slot ("mom" or "dad") this device was just assigned, or null if
+ *   the callable did not report one. The inviter keeps whatever slot it already had; the
+ *   accepter always gets the other one — see `assignSlots` in `functions/index.js`. Callers
+ *   compare this to the slot they held before accepting to detect a change and re-stamp
+ *   accordingly. Nullable rather than required: unlike [partnerId], a missing `role` is not
+ *   treated as a contract violation, because it is reachable in the wild during a staged
+ *   rollout — a client built against a redeployed backend running ahead of it, or the reverse
+ *   — and in both cases the pairing itself has already succeeded server-side by the time this
+ *   is parsed. Failing the whole accept over a field that only gates a best-effort local
+ *   migration would report a successful pairing as failed, with no way to retry it (the
+ *   invitation is no longer pending). A null here means only that the migration is skipped,
+ *   not that pairing failed.
+ */
+data class AcceptInvitationResult(val partnerId: String, val role: String?)

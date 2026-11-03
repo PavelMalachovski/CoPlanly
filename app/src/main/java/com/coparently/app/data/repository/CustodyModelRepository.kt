@@ -6,6 +6,7 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.ReadSource
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -34,7 +35,6 @@ import com.coparently.app.domain.model.MidweekContact
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -349,7 +349,7 @@ constructor(
         currentPair()?.let { readShared(it) } ?: SharedCustodyRead.Unavailable
 
     /** [readShared] for [pair]'s document, so a caller reads the family it already decided on. */
-    private suspend fun readShared(pair: CustodyPair, source: Source = Source.DEFAULT): SharedCustodyRead {
+    private suspend fun readShared(pair: CustodyPair, source: ReadSource = ReadSource.DEFAULT): SharedCustodyRead {
         return try {
             firestoreCustodyDataSource.getCustody(pair.documentId, source)
                 ?.let { SharedCustodyRead.Found(it) }
@@ -447,7 +447,7 @@ constructor(
         // What stops the save, if anything: the pair's own schedule, or no answer to read.
         val stopped: FirstSchedule? = when {
             pair == null -> FirstSchedule.Unavailable.takeIf { linkedToCoParent }
-            else -> when (val read = readShared(pair, Source.SERVER)) {
+            else -> when (val read = readShared(pair, ReadSource.SERVER)) {
                 is SharedCustodyRead.Found -> FirstSchedule.SharedExists(read.custody.model)
                 SharedCustodyRead.Unavailable -> FirstSchedule.Unavailable
                 SharedCustodyRead.Absent -> null

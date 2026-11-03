@@ -3,19 +3,17 @@ package com.coparently.app.data.repository
 import com.coparently.app.data.local.dao.MessageDao
 import com.coparently.app.data.local.entity.ConversationEntity
 import com.coparently.app.data.local.entity.MessageEntity
+import com.coparently.app.data.remote.firebase.DocumentPath
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
+import com.coparently.app.data.remote.firebase.RecordingFirestoreClient
+import com.coparently.app.data.remote.firebase.SetMerge
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.model.MessageType
-import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.SetOptions
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -60,11 +58,7 @@ class MessageRepositoryReadStateTest {
     private lateinit var firestoreMessageDataSource: FirestoreMessageDataSource
     private lateinit var repository: MessageRepositoryImpl
 
-    private lateinit var firestore: FirebaseFirestore
-    private lateinit var conversationsCollection: CollectionReference
-    private lateinit var conversationDocument: DocumentReference
-    private lateinit var messagesCollection: CollectionReference
-    private lateinit var messageDocument: DocumentReference
+    private lateinit var firestore: RecordingFirestoreClient
     private lateinit var dataSource: FirestoreMessageDataSource
 
     @Before
@@ -85,18 +79,7 @@ class MessageRepositoryReadStateTest {
         // A mark is the newest message's timestamp, so every mark test needs a thread.
         coEvery { messageDao.getMessagesOnce(any()) } returns listOf(messageRow(OLDER), messageRow(NEWEST))
 
-        conversationDocument = mockk(relaxed = true)
-        conversationsCollection = mockk(relaxed = true)
-        messageDocument = mockk(relaxed = true)
-        messagesCollection = mockk(relaxed = true)
-        firestore = mockk(relaxed = true)
-        every { firestore.collection("conversations") } returns conversationsCollection
-        every { firestore.collection("messages") } returns messagesCollection
-        every { conversationsCollection.document(any()) } returns conversationDocument
-        every { messagesCollection.document(any()) } returns messageDocument
-        every { conversationDocument.update(any<String>(), any()) } returns Tasks.forResult(null)
-        every { conversationDocument.set(any(), any<SetOptions>()) } returns Tasks.forResult(null)
-        every { messageDocument.set(any()) } returns Tasks.forResult(null)
+        firestore = RecordingFirestoreClient()
         dataSource = FirestoreMessageDataSource(firestore)
     }
 
@@ -246,38 +229,41 @@ class MessageRepositoryReadStateTest {
 
     @Test
     fun `markRead writes lastReadAt for this user and no other field`() = runTest {
-        val field = slot<String>()
-        val value = slot<Any>()
-
         dataSource.markRead(CONVERSATION, UID_A, AT_MILLIS)
 
-        verify(exactly = 1) { conversationDocument.update(capture(field), capture(value)) }
         // The deployed rule permits amending your own key only; a whole-map write is denied.
-        assertEquals("lastReadAt.$UID_A", field.captured)
-        assertEquals(AT_MILLIS, value.captured)
+        assertEquals(
+            listOf(
+                RecordingFirestoreClient.Operation.UpdateField(CONVERSATION_PATH, "lastReadAt.$UID_A", null, AT_MILLIS)
+            ),
+            firestore.writes
+        )
     }
 
     @Test
     fun `markDelivered writes lastDeliveredAt for this user and no other field`() = runTest {
-        val field = slot<String>()
-        val value = slot<Any>()
-
         dataSource.markDelivered(CONVERSATION, UID_A, AT_MILLIS)
 
-        verify(exactly = 1) { conversationDocument.update(capture(field), capture(value)) }
-        assertEquals("lastDeliveredAt.$UID_A", field.captured)
-        assertEquals(AT_MILLIS, value.captured)
+        assertEquals(
+            listOf(
+                RecordingFirestoreClient.Operation.UpdateField(
+                    CONVERSATION_PATH,
+                    "lastDeliveredAt.$UID_A",
+                    null,
+                    AT_MILLIS
+                )
+            ),
+            firestore.writes
+        )
     }
 
     @Test
     fun `setConversation merges rather than replacing, so existing marks survive`() = runTest {
-        val options = slot<SetOptions>()
-
         dataSource.setConversation(CONVERSATION, mapOf("id" to CONVERSATION))
 
         // A plain `set` would drop both mark maps of whichever device happened to write last.
-        verify(exactly = 1) { conversationDocument.set(any(), capture(options)) }
-        assertNotNull(options.captured)
+        val set = firestore.writes.single() as RecordingFirestoreClient.Operation.Set
+        assertEquals(SetMerge.Merge, set.merge)
     }
 
     // ---- sendMessage ------------------------------------------------------
@@ -574,6 +560,7 @@ class MessageRepositoryReadStateTest {
         const val UID_A = "uidA"
         const val UID_B = "uidB"
         const val CONVERSATION = "uidA__uidB"
+        val CONVERSATION_PATH = DocumentPath("conversations", CONVERSATION)
         const val MESSAGE_ID = "message-1"
         const val AT_MILLIS = 1_754_000_000_000L
         const val CREATED_AT = "2026-08-01T10:00:00"

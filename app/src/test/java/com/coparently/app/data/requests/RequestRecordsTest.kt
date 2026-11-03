@@ -3,6 +3,7 @@ package com.coparently.app.data.requests
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
+import com.coparently.app.data.remote.firebase.ReadSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -30,7 +31,6 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
-import com.google.firebase.firestore.Source
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -232,8 +232,8 @@ class RequestRecordsTest {
             swaps = mapOf("2026-05-08" to swap("g-1", DayOverrideStatus.DECLINED)),
             decision = decision(PROPOSED_AT)
         )
-        coEvery { custodyDataSource.getCustody(FAMILY, Source.DEFAULT) } returns pending
-        coEvery { custodyDataSource.getCustody(FAMILY, Source.SERVER) } returns answered
+        coEvery { custodyDataSource.getCustody(FAMILY, ReadSource.DEFAULT) } returns pending
+        coEvery { custodyDataSource.getCustody(FAMILY, ReadSource.SERVER) } returns answered
         assertEquals(RecordStatus.PENDING, statusOf(RequestKind.SWAP, "g-1"))
         assertEquals(RecordStatus.ANSWERED, serverStatusOf(RequestKind.SWAP, "g-1"))
         assertEquals(RecordStatus.ANSWERED, serverStatusOf(RequestKind.PROPOSAL, PROPOSED_AT))
@@ -246,9 +246,9 @@ class RequestRecordsTest {
         coEvery { changeRequests.getChangeRequestById("cr-1") } returns changeRequest(ChangeRequestStatus.PENDING)
         coEvery { changeRequests.fetchFromServer("cr-1") } throws IOException("offline")
         coEvery { eventDataSource.getEventFromServer("ev-1") } throws IOException("offline")
-        coEvery { custodyDataSource.getCustody(FAMILY, Source.DEFAULT) } returns
+        coEvery { custodyDataSource.getCustody(FAMILY, ReadSource.DEFAULT) } returns
             custody(proposal = proposal(PROPOSED_AT))
-        coEvery { custodyDataSource.getCustody(FAMILY, Source.SERVER) } throws IOException("offline")
+        coEvery { custodyDataSource.getCustody(FAMILY, ReadSource.SERVER) } throws IOException("offline")
 
         assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.CHANGE, "cr-1"))
         assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.EVENT, "ev-1"))
@@ -274,8 +274,10 @@ class RequestRecordsTest {
         runTest {
             signedInAs(ALICE, listOf(BOB))
             val ref = SPLIT_AT.toString()
-            coEvery { settingsDataSource.getSettings(FAMILY, Source.DEFAULT) } returns settings(splitProposal(SPLIT_AT))
-            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns
+            coEvery {
+                settingsDataSource.getSettings(FAMILY, ReadSource.DEFAULT)
+            } returns settings(splitProposal(SPLIT_AT))
+            coEvery { settingsDataSource.getSettings(FAMILY, ReadSource.SERVER) } returns
                 settings(decision = splitDecision(SPLIT_AT))
             assertEquals(RecordStatus.PENDING, statusOf(RequestKind.SPLIT, ref))
             assertEquals("Bob answered on his phone", RecordStatus.ANSWERED, serverStatusOf(RequestKind.SPLIT, ref))
@@ -285,15 +287,15 @@ class RequestRecordsTest {
                 records.look(clock(RequestKind.SPLIT, ref)).card
             )
 
-            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns
+            coEvery { settingsDataSource.getSettings(FAMILY, ReadSource.SERVER) } returns
                 settings(splitProposal(SPLIT_AT + 1))
             assertEquals("replaced by a newer one", RecordStatus.GONE, serverStatusOf(RequestKind.SPLIT, ref))
-            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns
+            coEvery { settingsDataSource.getSettings(FAMILY, ReadSource.SERVER) } returns
                 settings(splitProposal(SPLIT_AT, by = BOB))
             assertEquals("the other parent's", RecordStatus.GONE, serverStatusOf(RequestKind.SPLIT, ref))
-            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } returns null
+            coEvery { settingsDataSource.getSettings(FAMILY, ReadSource.SERVER) } returns null
             assertEquals(RecordStatus.GONE, serverStatusOf(RequestKind.SPLIT, ref))
-            coEvery { settingsDataSource.getSettings(FAMILY, Source.SERVER) } throws IOException("offline")
+            coEvery { settingsDataSource.getSettings(FAMILY, ReadSource.SERVER) } throws IOException("offline")
             assertEquals(RecordStatus.UNKNOWN, serverStatusOf(RequestKind.SPLIT, ref))
         }
 

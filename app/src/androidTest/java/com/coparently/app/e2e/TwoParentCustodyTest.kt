@@ -396,7 +396,7 @@ class TwoParentCustodyTest : TwoParentTest() {
             lastModifiedKind = CustodyWriteKind.SWAP
         )
         val refusal = runCatching {
-            FirestoreCustodyDataSource(bob.firestore)
+            FirestoreCustodyDataSource(bob.documents)
                 .setCustody(CustodyKey.of(alice.uid, bob.uid), listOf(alice.uid, bob.uid), forged)
         }.exceptionOrNull()
         assertEquals(
@@ -425,7 +425,7 @@ class TwoParentCustodyTest : TwoParentTest() {
             lastModifiedKind = CustodyWriteKind.SWAP
         )
         val refusal = runCatching {
-            FirestoreCustodyDataSource(alice.firestore)
+            FirestoreCustodyDataSource(alice.documents)
                 .setCustody(CustodyKey.of(alice.uid, bob.uid), listOf(alice.uid, bob.uid), forged)
         }.exceptionOrNull()
         assertEquals(

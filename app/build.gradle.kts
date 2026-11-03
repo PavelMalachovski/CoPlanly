@@ -329,6 +329,17 @@ android {
         getByName("androidTest") {
             assets.srcDir("$projectDir/schemas")
         }
+        // The wire contracts' harness lives in `:shared-data`'s commonTest (MON-24 phase 2, Task
+        // 8a), where the contracts move as their writers do. The contracts whose writers are
+        // still here run from this module, so its unit tests compile the same harness from the
+        // same files, beside this module's `WireContracts` (the list of every contract) and its
+        // `WireFixtureLocation`. Only these two directories are shared this way.
+        getByName("test") {
+            java.srcDir("$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/wire")
+            // The recording Firestore and callable fakes the moved contracts and the app's own
+            // data-layer tests drive the data sources with.
+            java.srcDir("$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/data/remote/firebase/testing")
+        }
     }
 }
 
@@ -501,11 +512,15 @@ dependencies {
     // Firebase BoM 34 (audit L-2). 34.0.0 removed the `-ktx` modules; their Kotlin extensions
     // (`Firebase`, `logEvent`, `storageMetadata`, …) have lived in the main modules under the
     // product's own package since BoM 32.5, which is where every import in `app/src` already
-    // points. Don't add a `-ktx` artifact back: it no longer resolves. 34.4.0 rather than the
-    // newest 34.x because it is contemporary with the rest of this toolchain (Compose BOM
-    // 2025.10, AGP 8.10); move it on a machine that can run
-    // `./gradlew :app:dependencies`.
-    val firebaseBom = platform("com.google.firebase:firebase-bom:34.4.0")
+    // points. Don't add a `-ktx` artifact back: it no longer resolves.
+    //
+    // 34.18.0 since MON-24 phase 2 (Task 8a): GitLive's firebase-kotlin-sdk 2.7.0, which
+    // `:shared-data` reaches Firestore through, imports this BoM, and Gradle resolves one BoM for
+    // the whole graph — the higher one. Declaring the same version here keeps the app's own
+    // Firebase artifacts on the version they actually run at, rather than one this line no longer
+    // decides. GitLive's Android side is this same SDK, so the data layer's calls are the SDK's
+    // own. Move this and `:shared-data`'s together, and only to a BoM a GitLive release names.
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.18.0")
     implementation(firebaseBom)
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")

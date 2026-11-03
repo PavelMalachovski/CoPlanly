@@ -10,6 +10,8 @@ import org.koin.core.module.Module
  * provided; [dataModule], [domainModule], [presentationModule], [viewModelModule] and
  * [workerModule] hold what Hilt built from `@Inject` constructors. The former `serializationModule`
  * provided the one injectable Gson; it went with Gson (MON-24), since `StoredJson` is an object.
+ * `:shared-data`'s [dataModules] and its Android [platformDataModule] follow (MON-24 phase 2): the
+ * data layer both apps run, which binds its Firebase seams over this graph's SDK instances.
  */
 val appModules: List<Module> = listOf(
     aiModule,
@@ -39,4 +41,4 @@ val appModules: List<Module> = listOf(
     presentationModule,
     viewModelModule,
     workerModule
-)
+) + dataModules + platformDataModule

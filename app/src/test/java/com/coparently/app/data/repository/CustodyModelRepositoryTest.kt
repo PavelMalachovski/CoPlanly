@@ -5,6 +5,7 @@ import com.coparently.app.data.local.entity.CustodyModelEntity
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.ReadSource
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
@@ -34,7 +35,6 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.RequestDeadlineRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.firestore.Source
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -216,7 +216,7 @@ class CustodyModelRepositoryTest {
     fun `the first schedule never proposes over a schedule the pair already shares`() = runTest(dispatcher) {
         // Onboarding's Next must never send a proposal (new-user review, October 2026): with a
         // shared document present nothing is written anywhere, and the step shows that schedule.
-        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, Source.SERVER) } returns remoteCustody()
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, ReadSource.SERVER) } returns remoteCustody()
 
         val result = repository.activateFirstSchedule(localModel())
 
@@ -227,7 +227,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `the first schedule activates when the pair has no document yet`() = runTest(dispatcher) {
-        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, Source.SERVER) } returns null
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, ReadSource.SERVER) } returns null
 
         val result = repository.activateFirstSchedule(localModel())
 
@@ -262,7 +262,7 @@ class CustodyModelRepositoryTest {
 
     @Test
     fun `the first schedule writes nothing when the server cannot answer`() = runTest(dispatcher) {
-        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, Source.SERVER) } throws permissionDenied()
+        coEvery { firestoreCustodyDataSource.getCustody(DOCUMENT_ID, ReadSource.SERVER) } throws permissionDenied()
 
         val result = repository.activateFirstSchedule(localModel())
 

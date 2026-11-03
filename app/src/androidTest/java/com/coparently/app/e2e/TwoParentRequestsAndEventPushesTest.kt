@@ -165,7 +165,7 @@ class TwoParentRequestsAndEventPushesTest : TwoParentTest() {
             alice.eventVersionRecorder.undelivered(alice.uid).none { it.eventId == event.id }
         )
 
-        val bobsVersions = FirestoreEventVersionDataSource(bob.firestore)
+        val bobsVersions = FirestoreEventVersionDataSource(bob.documents)
         val revisions = withTimeout(EmulatorParent.WAIT_MS) {
             var found = phoneRevisions(bobsVersions, event.id)
             while (found.map { it.kind }.toSet() != setOf(EventVersionKind.CREATED, EventVersionKind.UPDATED)) {

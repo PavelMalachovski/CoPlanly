@@ -7,6 +7,7 @@ import com.coparently.app.data.local.Converters
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestorePetDataSource
+import com.coparently.app.data.remote.firebase.firestoreClientOf
 import com.coparently.app.data.repository.ChildInfoRepositoryImpl
 import com.coparently.app.data.repository.DayOverrideJson
 import com.coparently.app.data.repository.PetRepositoryImpl
@@ -73,7 +74,8 @@ internal class R8JsonProbe(private val context: Context) {
                 database.close()
             }
         }
-        return setup + cases + dayOverrideCases() + eventDraftCases() + libraryTypeCases() + HttpImportProbe.run()
+        return setup + cases + dayOverrideCases() + eventDraftCases() + libraryTypeCases() + HttpImportProbe.run() +
+            FirestoreWriteProbe.run()
     }
 
     private fun firebaseApp(): FirebaseApp =
@@ -99,7 +101,7 @@ internal class R8JsonProbe(private val context: Context) {
             childInfoDao = database.childInfoDao(),
             userDao = database.userDao(),
             firebaseAuthService = auth,
-            firestoreChildInfoDataSource = FirestoreChildInfoDataSource(firestore)
+            firestoreChildInfoDataSource = FirestoreChildInfoDataSource(firestoreClientOf(firestore))
         )
         val via = "ChildInfoRepositoryImpl.upsertChildInfo -> Room child_info -> getChildInfoById"
         return guarded(CHILD_TYPES, via) {
@@ -152,7 +154,7 @@ internal class R8JsonProbe(private val context: Context) {
             petDao = database.petDao(),
             userDao = database.userDao(),
             firebaseAuthService = auth,
-            firestorePetDataSource = FirestorePetDataSource(firestore)
+            firestorePetDataSource = FirestorePetDataSource(firestoreClientOf(firestore))
         )
         val via = "PetRepositoryImpl.upsertPet -> Room pets -> getPetById"
         return guarded(listOf(MEDICATION, VACCINATION, PET), via) {

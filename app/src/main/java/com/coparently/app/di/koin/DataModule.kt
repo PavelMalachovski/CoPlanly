@@ -47,21 +47,7 @@ import com.coparently.app.data.payment.SettleUpMessages
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirebaseImageStorage
-import com.coparently.app.data.remote.firebase.FirestoreChangeRequestDataSource
-import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
-import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
-import com.coparently.app.data.remote.firebase.FirestoreEventVersionDataSource
-import com.coparently.app.data.remote.firebase.FirestoreExpenseDataSource
-import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
-import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
-import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
-import com.coparently.app.data.remote.firebase.FirestoreParentingPlanDataSource
-import com.coparently.app.data.remote.firebase.FirestorePetDataSource
-import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSource
-import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
-import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
-import com.coparently.app.data.remote.firebase.PairingFunctions
 import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
@@ -191,21 +177,6 @@ val dataModule = module {
     singleOf(::FcmService)
     singleOf(::FirebaseAuthService)
     singleOf(::FirebaseImageStorage)
-    singleOf(::FirestoreChangeRequestDataSource)
-    singleOf(::FirestoreChildInfoDataSource)
-    singleOf(::FirestoreCustodyDataSource)
-    singleOf(::FirestoreEventDataSource)
-    singleOf(::FirestoreEventVersionDataSource)
-    singleOf(::FirestoreExpenseDataSource)
-    singleOf(::FirestoreFamilyDataSource)
-    singleOf(::FirestoreFamilySettingsDataSource)
-    singleOf(::FirestoreMessageDataSource)
-    singleOf(::FirestoreParentingPlanDataSource)
-    singleOf(::FirestorePetDataSource)
-    singleOf(::FirestoreRequestDeadlineDataSource)
-    singleOf(::FirestoreUserDataSource)
-    singleOf(::GoogleOAuthFunctions)
-    singleOf(::PairingFunctions)
     singleOf(::CredentialAuthenticator)
     singleOf(::CredentialManagerService)
     singleOf(::CredentialProviderImpl)

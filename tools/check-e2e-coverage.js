@@ -32,7 +32,7 @@ const path = require('path');
 
 const E2E_DIR = 'app/src/androidTest/java/com/coparently/app/e2e';
 const COVERAGE = 'tools/e2e/coverage.json';
-const PUSH_PAYLOAD = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushPayload.kt';
+const PUSH_PAYLOAD = 'shared-data/src/commonMain/kotlin/com/coparently/app/data/remote/firebase/PushPayload.kt';
 const KINDS = ['firestore', 'storage', 'push', 'functions'];
 
 /** Strips `//` and `/* … *\/` comments, which name collections in prose. */

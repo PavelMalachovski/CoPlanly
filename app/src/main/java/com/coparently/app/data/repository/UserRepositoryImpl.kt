@@ -6,7 +6,9 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreFamilyDataSource
+import com.coparently.app.data.remote.firebase.FirestoreTimestamp
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
+import com.coparently.app.data.remote.firebase.ServerValue
 import com.coparently.app.data.session.ProfileIdentity
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.domain.consent.HealthConsent
@@ -17,10 +19,8 @@ import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserInfo
-import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -442,8 +442,8 @@ class UserRepositoryImpl(
                     // `healthDataConsent` is deliberately absent: only `setHealthConsent` writes
                     // it, so an ordinary save from a row that has not caught up with another
                     // device cannot withdraw or grant it.
-                    "allergies" to FieldValue.delete(),
-                    "medicalProfile" to FieldValue.delete(),
+                    "allergies" to ServerValue.Delete,
+                    "medicalProfile" to ServerValue.Delete,
                     "onboardingCompletedAt" to (user.onboardingCompletedAt ?: ""),
                     // A string of constant names, not a list: the co-parent reads it to decide
                     // whether to show child records, and the two halves must agree on one shape.
@@ -505,7 +505,7 @@ class UserRepositoryImpl(
      * Records or clears this parent's child-health consent, in Room and then in Firestore.
      *
      * Room first, through a targeted update, so the medical sections lock or unlock at once.
-     * Firestore second, as a merge of the one key — a map when given, `FieldValue.delete()` when
+     * Firestore second, as a merge of the one key — a map when given, `ServerValue.Delete` when
      * withdrawn. The remote write is what makes the consent demonstrable and what a second device
      * reads back; offline, Firestore queues it and every later read on this device already sees
      * it, so a read of the document in between cannot restore a withdrawn consent. A failure is logged, not
@@ -517,7 +517,7 @@ class UserRepositoryImpl(
         if (changed == 0) logger.w(TAG, "No local profile row to record the health consent on")
         val value: Any = consent?.let {
             mapOf(HEALTH_CONSENT_VERSION_KEY to it.version, HEALTH_CONSENT_AT_KEY to it.atMillis)
-        } ?: FieldValue.delete()
+        } ?: ServerValue.Delete
         firestoreUserDataSource.updateUser(uid, mapOf(HEALTH_CONSENT_KEY to value))
             .onFailure { logger.e(TAG, "Failed to write the health consent to Firestore", it) }
     }
@@ -535,8 +535,8 @@ class UserRepositoryImpl(
     override suspend fun setAiConsent(version: Int?): Boolean {
         val uid = firebaseAuthService.getCurrentUser()?.uid ?: return false
         val value: Any = version?.let {
-            mapOf(AI_CONSENT_VERSION_KEY to it, AI_CONSENT_AT_KEY to FieldValue.serverTimestamp())
-        } ?: FieldValue.delete()
+            mapOf(AI_CONSENT_VERSION_KEY to it, AI_CONSENT_AT_KEY to ServerValue.ServerTimestamp)
+        } ?: ServerValue.Delete
         return firestoreUserDataSource.updateUser(uid, mapOf(AI_CONSENT_KEY to value))
             .onFailure { logger.e(TAG, "Failed to write the AI consent to Firestore", it) }
             .isSuccess
@@ -690,7 +690,7 @@ class UserRepositoryImpl(
         val stored = this[AI_CONSENT_KEY] as? Map<*, *> ?: return null
         val version = (stored[AI_CONSENT_VERSION_KEY] as? Number)?.toInt() ?: return null
         val grantedAt = when (val at = stored[AI_CONSENT_AT_KEY]) {
-            is Timestamp -> at.toDate().time
+            is FirestoreTimestamp -> at.toEpochMillis()
             is Number -> at.toLong()
             else -> null
         }

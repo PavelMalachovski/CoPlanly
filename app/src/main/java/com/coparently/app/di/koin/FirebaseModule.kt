@@ -14,13 +14,6 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import org.koin.dsl.module
 
-/**
- * The region every Cloud Function runs in: Frankfurt, so a family's data is processed inside
- * the EEA (`docs/legal/LEGAL-REVIEW-2026-09.md` L-3). It has to match `FUNCTIONS_REGION` in
- * `functions/index.js`: a callable asked for in another region answers NOT_FOUND.
- */
-const val FUNCTIONS_REGION = "europe-west3"
-
 /** Cap Storage retries at 20s so photo uploads fail fast instead of hanging ~2min. */
 private const val STORAGE_RETRY_TIMEOUT_MS = 20_000L
 

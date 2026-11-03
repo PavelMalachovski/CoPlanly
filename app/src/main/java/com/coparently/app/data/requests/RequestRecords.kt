@@ -4,6 +4,7 @@ import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirestoreCustodyDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
 import com.coparently.app.data.remote.firebase.FirestoreFamilySettingsDataSource
+import com.coparently.app.data.remote.firebase.ReadSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.EventDocument
@@ -21,7 +22,6 @@ import com.coparently.app.domain.repository.ChangeRequestRepository
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
 
 /** What a request's own record says when a step of its clock looks (phase 3a). */
@@ -129,11 +129,11 @@ constructor(
 
     /** The custody document of the clock's family, from the server when [fromServer] says so. */
     private suspend fun custodyOf(clock: RequestDeadline, fromServer: Boolean): SharedCustody? =
-        custodyDataSource.getCustody(clock.familyId, if (fromServer) Source.SERVER else Source.DEFAULT)
+        custodyDataSource.getCustody(clock.familyId, if (fromServer) ReadSource.SERVER else ReadSource.DEFAULT)
 
     /** The money agreement of the clock's family, from the server when [fromServer] says so. */
     private suspend fun settingsOf(clock: RequestDeadline, fromServer: Boolean): FamilySettings? =
-        familySettingsDataSource.getSettings(clock.familyId, if (fromServer) Source.SERVER else Source.DEFAULT)
+        familySettingsDataSource.getSettings(clock.familyId, if (fromServer) ReadSource.SERVER else ReadSource.DEFAULT)
 
     /**
      * Withdraws the proposal [clock] times — custody or expense split ([RequestKind.withdrawnAtEnd]) —

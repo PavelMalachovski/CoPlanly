@@ -151,7 +151,7 @@ function checkLocales() {
 
 // ---- 3: push types ----------------------------------------------------------
 
-const PAYLOAD_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushPayload.kt';
+const PAYLOAD_KT = 'shared-data/src/commonMain/kotlin/com/coparently/app/data/remote/firebase/PushPayload.kt';
 const SERVICE_KT = 'app/src/main/java/com/coparently/app/data/remote/firebase/PushNotifier.kt';
 const RULES = 'firestore.rules';
 const PUSH_STRINGS = 'app/src/main/res/values/push_strings.xml';
@@ -384,7 +384,7 @@ function checkProbeCoverage() {
 
 // ---- 6. the Google scope the app asks for is the one it discloses ------------
 
-const GOOGLE_SCOPE_SOURCE = 'app/src/main/java/com/coparently/app/data/remote/google/GoogleCalendarAccess.kt';
+const GOOGLE_SCOPE_SOURCE = 'shared-data/src/commonMain/kotlin/com/coparently/app/data/remote/google/GoogleCalendarAccess.kt';
 
 /** The documents that tell a parent, and Google's reviewer, what the app asks of Google Calendar. */
 const GOOGLE_SCOPE_DOCUMENTS = ['docs/legal/PRIVACY-POLICY.md', 'web/privacy/index.html', 'web/index.html'];

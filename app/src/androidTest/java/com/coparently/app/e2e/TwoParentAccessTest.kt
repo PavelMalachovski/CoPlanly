@@ -290,13 +290,13 @@ class TwoParentAccessTest : TwoParentTest() {
         assertEquals(invite.grantExpiresAtMillis, accepted.expiresAtMillis)
 
         // The record, read by id through the production data source on the guest's phone.
-        val record = checkNotNull(FirestoreChildInfoDataSource(nina.firestore).getChildInfoById(child.id)) {
+        val record = checkNotNull(FirestoreChildInfoDataSource(nina.documents).getChildInfoById(child.id)) {
             "The guest cannot read the record she was invited to"
         }
         assertEquals("Ema", record["childName"])
         assertTrue(nina.uid in (record["sharedWith"] as List<*>))
         // Alice's own read shows the grant, so she can see who is reading and revoke it.
-        val asAliceSeesIt = checkNotNull(FirestoreChildInfoDataSource(alice.firestore).getChildInfoById(child.id))
+        val asAliceSeesIt = checkNotNull(FirestoreChildInfoDataSource(alice.documents).getChildInfoById(child.id))
         assertTrue(nina.uid in (asAliceSeesIt["guests"] as Map<*, *>).keys)
 
         EmulatorEnvironment.step("A guest reads; she does not write, and sees no calendar")
@@ -531,7 +531,7 @@ class TwoParentAccessTest : TwoParentTest() {
         assertTrue("Bob's message went with his account", kept.documents.any { it.id == message.id })
 
         // Found the way the chat tab and the export find it, with no pairing left to derive it from.
-        val found = DepartedThreadSource(alice.userRepository, FirestoreMessageDataSource(alice.firestore))
+        val found = DepartedThreadSource(alice.userRepository, FirestoreMessageDataSource(alice.documents))
             .current(alice.uid)
         assertEquals(listOf(DepartedThread(conversationId, bobUid, bob.name, retainedUntil)), found)
 

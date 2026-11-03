@@ -15,8 +15,10 @@ import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreEventDataSource
+import com.coparently.app.data.remote.firebase.FirestoreTimestamp
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.firebase.ServerValue
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
@@ -34,15 +36,12 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.serialization.StoredJson
 import com.coparently.app.domain.time.IsoText
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.Instant
 import java.time.LocalDateTime
-import java.util.Date
 
 /**
  * Service for managing synchronization between local database and Firestore.
@@ -285,7 +284,7 @@ class SyncService(
         val lastSweep = encryptedPreferences.getString(sweepKey)?.toLongOrNull()
         val startedAt = System.currentTimeMillis()
         val sweeping = EventSyncWindow.needsFullSweep(storedCursor, lastSweep, startedAt)
-        val changedAfter = if (sweeping) null else storedCursor?.let { Timestamp(Date(it)) }
+        val changedAfter = if (sweeping) null else storedCursor?.let(FirestoreTimestamp::fromEpochMillis)
 
         firestoreEventDataSource.observeEventsSharedWith(userId, changedAfter).collect { download ->
             for (firestoreData in download.documents) {
@@ -417,7 +416,7 @@ class SyncService(
             // A pass that returned nothing leaves the cursor where it was; there is no new
             // high-water mark to record, and `startedAt` is not one.
             download.highestCursor?.let { seen ->
-                encryptedPreferences.putString(cursorKey, seen.toDate().time.toString())
+                encryptedPreferences.putString(cursorKey, seen.toEpochMillis().toString())
             }
             if (sweeping) {
                 encryptedPreferences.putString(sweepKey, startedAt.toString())
@@ -904,7 +903,7 @@ class SyncService(
                     // A pairing moved this inviter's slot (`slotsForPairing`): re-stamp, then
                     // remove the server's mark so a later install never acts on it again.
                     if (parentSlotMigrator.adoptSlotMovedAtPairing(userId, updatedUser.role)) {
-                        firestoreUserDataSource.updateUser(userId, mapOf(SLOT_MOVED_AT to FieldValue.delete()))
+                        firestoreUserDataSource.updateUser(userId, mapOf(SLOT_MOVED_AT to ServerValue.Delete))
                     }
                 } else {
                     parentSlotMigrator.reslotIfSlotChanged(myUid = userId, newRole = updatedUser.role)

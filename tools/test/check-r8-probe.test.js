@@ -102,11 +102,15 @@ test('production code imports no Gson', () => {
 
 test('every required call site is a label the probe reports', () => {
   // The labels are literals in two languages; a renamed one would make the requirement unmeetable.
-  const source = fs.readFileSync(
-    path.join(__dirname, '..', '..', 'app/src/r8Test/java/com/coparently/app/r8probe/HttpImportProbe.kt'),
-    'utf8'
-  );
+  // `HttpImportProbe` reports the imports' call sites, `FirestoreWriteProbe` the Firestore write's.
+  const probes = ['HttpImportProbe.kt', 'FirestoreWriteProbe.kt'];
+  const source = probes
+    .map((name) => fs.readFileSync(
+      path.join(__dirname, '..', '..', 'app/src/r8Test/java/com/coparently/app/r8probe', name),
+      'utf8'
+    ))
+    .join('\n');
   for (const label of REQUIRED_CALL_SITES) {
-    assert.ok(source.includes(`"${label}"`), `HttpImportProbe.kt does not report "${label}"`);
+    assert.ok(source.includes(`"${label}"`), `no probe in ${probes.join(' or ')} reports "${label}"`);
   }
 });

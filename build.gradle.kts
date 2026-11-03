@@ -9,6 +9,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.21" apply false
     // The shared module (MON-24). Same artifact as the Android plugin above, so the same version.
     id("org.jetbrains.kotlin.multiplatform") version "2.3.21" apply false
+    id("org.jetbrains.kotlin.native.cocoapods") version "2.3.21" apply false
     // kotlinx.serialization's compiler plugin, which replaced Gson's reflection (MON-24). It ships
     // with the compiler, so it always takes the Kotlin version.
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.21" apply false
