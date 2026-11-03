@@ -1507,7 +1507,9 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              announcer (domain/activity/ActivityAnnouncer), the family on screen (data/family/:
              FamilyView, SelectedFamilySource, KnownFamilies), the chat mirror (data/chat/), the
              request clocks' RequestTelling, and the custody, expense-split, event and pet
-             repositories.
+             repositories, and (Task 8d) the calendar-feed and guest repositories, the
+             co-parent's profile listener (PartnerProfileFlow), the stickers (data/stickers/)
+             and the vault's index and its cache (data/documents/).
              Its Koin modules are dataModules and platformDataModule, which appModules includes.
              Depends on shared/; no iOS framework of its own
 domain/    — models, repository interfaces, use cases, holidays, ReminderScheduler — in shared/,
@@ -1624,7 +1626,24 @@ unchanged); and from `data/repository/`, `CustodyModelRepository` with `ActiveCu
 and `PetRepositoryImpl`. Their constructors kept their parameter names, so the e2e parents and the
 R8 probe build them unchanged. They are bound in `shared-data`'s `repositoryDataModule`,
 `familyDataModule` (which also binds `FamilySlotsSource`), `chatDataModule` and
-`requestsDataModule`. The rest of `data/family/`, `data/chat/` and `data/requests/` is still in the
+`requestsDataModule`. Task 8d, the readers that called the Android SDK directly: in `commonMain`,
+from `data/repository/`, `CalendarFeedRepositoryImpl` (on `CallableFunctions`; a refusal is a
+`CallableException`, the limit still `CalendarFeedLimitException`), `GuestRepositoryImpl`,
+`PartnerProfileFlow` (`FirestoreClient.partnerProfile`, which `PairingRepositoryImpl` calls through
+the `FirestoreClient` it now takes beside its `FirebaseFirestore`) and `PetMappers.kt` (the pet
+document's four mappers, lifted out of `PetRepositoryImpl`, so `PetWireContract` runs in
+`shared-data` too); `data/stickers/` (`ParentRoles`, `StickerDocument`, `StickerStore`); and from
+`data/documents/`, `FamilyDocumentIndex`, `FamilyDocumentIndexCache` and `FamilyDocumentMapper`. They
+are bound in `repositoryDataModule`, `stickersDataModule` and `documentsDataModule`. The friend and
+professional repositories went onto `FirestoreClient` and `SignedInUser` and stay in the app, because
+their interfaces and `ProfessionalEvents` take the stay list's `java.time.LocalDate`; so does
+`FamilyDocumentRepositoryImpl` (`java.io.File` and `data/files/`), and `data/session/` as a whole
+(Auth's `FirebaseUser` and its state flow, a `Context`, the Functions SDK and `FcmService`'s token in
+account deletion; `ProfileIdentity` has callers in the app alone). The seams grew for them:
+`SignedInUser` also answers the account's e-mail address and picture, `DocumentQuery.whereIn` is the
+SDK's `whereIn`, `StoredDocument.string` throws as `getString` did, `FirestoreClient.newDocumentId` is
+`collection.document().id`, and `FirestoreClient.observeWithMetadata` is a query listener with
+`MetadataChanges.INCLUDE` whose snapshots carry their own `hasPendingWrites` and `isFromCache`. The rest of `data/family/`, `data/chat/` and `data/requests/` is still in the
 app: `AgreementSignalSources`, `OtherFamiliesSignals`, `FamilyAgreementsSource` and
 `AgreementWithdrawals` (the professional repository, the support store and `java.time`),
 `UnassignedRecords` (records dated in `java.time` for its screen), `ChatAttachmentOutbox`
@@ -1635,8 +1654,7 @@ records are the phase-1 stay list's `Payment` and `SupportAgreement` on `java.ti
 stores call the Android Firestore SDK directly, and the reminder is a `Worker`. The rest of
 `data/repository/` and `data/sync/` is still in the app, each for what it needs: the expense and
 child repositories (`BigDecimal` in expenses; `GuestGrantPolicy` and `java.time` in the child
-record); the friend, guest, professional and partner-profile
-readers and `CalendarFeedRepositoryImpl` (the Android Firestore or Functions SDK called directly);
+record); the friend and professional repositories (above);
 `UserRepositoryImpl`, `PairingRepositoryImpl` and `PreferencesRepositoryImpl` (Auth's `FirebaseUser`,
 a `Context` and string resources, the currency hints); `JournalRepositoryImpl` and
 `ProfessionalEvents` (the phase-1 stay list's `java.time`); `ParentSlotMigrator` (Room's
@@ -1656,7 +1674,9 @@ opt-in) until that caller moves; today `UnansweredRows` and `ClocksAt.governing`
 `StampedFamily` (`SyncService` and the event, pet, professional and request readers), and
 `ChatMappers`' entity, document and mark mappers (the export, the other families' signals, the R8
 probe and the messages wire contract), `CustodyModelEntity.toDomainModel` (`UnassignedRecords`),
-`PetRepositoryImpl`'s four mappers (the pets wire contract), `ChatMirror.mirror` (the on-screen
+the four pet mappers in `PetMappers.kt` (the pets wire contract, which sits in `wire/` and so is
+compiled by the app's tests too), `FirestoreClient.partnerProfile` (`PairingRepositoryImpl`),
+`ChatMirror.mirror` (the on-screen
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe). This list is the one place they are
 recorded; `InternalSharedApi`'s KDoc points here.
@@ -1745,11 +1765,11 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
    `UPDATE_WIRE_FIXTURES=1 ./gradlew :app:testDebugUnitTest --tests '*CurrentWireFixturesTest*' --rerun`
    and review the diff like a screenshot baseline. **Two modules run the harness**: a contract moves
    to `shared-data`'s `wirecontracts/WireContracts` when its writer does (custody and request clocks
-   so far; `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
+   and pets so far — `PetWireContract` joined in Task 8d, once the pet mappers became top-level
+   functions, and makes its one wall clock from a UTC instant so it reads in any zone;
+   `MessageWireContract` moved beside the harness with its writer in Task 8b but is listed
    in the app's suite alone, because a legacy chat timestamp reads in the reader's zone and only the
-   JVM suite sets that zone to UTC; `PetWireContract` stays in the app although `PetRepositoryImpl`
-   moved in Task 8c, because its mappers are members of a repository that common code cannot build
-   without fakes of the DAOs), and the app's unit tests compile the same harness files and run every contract through
+   JVM suite sets that zone to UTC), and the app's unit tests compile the same harness files and run every contract through
    the app's own `WireContracts` — which is what the command above regenerates and what the
    `upgrade` job's `:app:testDebugUnitTest --tests '*WireContractTest*'` runs. A contract is in the
    app's list until every writer has moved. **The other direction runs in the `upgrade` job**:
