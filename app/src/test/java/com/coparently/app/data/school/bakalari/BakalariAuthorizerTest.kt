@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.school.SchoolConnectionStore
 import com.coparently.app.data.school.SchoolTestSupport
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolImportKind
 import com.coparently.app.domain.school.SchoolImportRecord
@@ -53,7 +56,7 @@ class BakalariAuthorizerTest {
             }
         )
     )
-    private val authorizer by lazy { BakalariAuthorizer(client, store) { clock } }
+    private val authorizer by lazy { BakalariAuthorizer.on(client, store) { clock } }
 
     @Before
     fun setUp() {

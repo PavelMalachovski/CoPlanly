@@ -7,14 +7,13 @@ import com.coparently.app.data.school.bakalari.BakalariTokens
 import com.coparently.app.data.school.bakalari.user
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.school.SchoolConnection
+import com.coparently.app.domain.school.SchoolConnectionId
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import java.security.MessageDigest
-import java.util.Locale
 
 /**
  * A sign-in that has not been saved yet: the connect flow holds it while the parent chooses the
@@ -146,12 +145,5 @@ class SchoolAccounts(
     }
 
     private fun connectionId(uid: String, baseUrl: String, username: String): String =
-        MessageDigest.getInstance("SHA-256")
-            .digest("$uid|$baseUrl|$username".toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(Locale.ROOT, it) }
-            .take(CONNECTION_ID_LENGTH)
-
-    private companion object {
-        const val CONNECTION_ID_LENGTH = 16
-    }
+        SchoolConnectionId.of(uid, baseUrl, username)
 }

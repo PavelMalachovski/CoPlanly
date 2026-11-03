@@ -20,13 +20,9 @@ import com.coparently.app.domain.school.SchoolImportWording
 class SchoolImportWordingSource(
     private val context: Context,
     private val childInfoRepository: ChildInfoRepository
-) {
+) : SchoolImportWordings {
 
-    /**
-     * The wording for the CoPlanly child [childId], named as the family named them; [fallbackName]
-     * — the school's name for the child — when the child record is gone.
-     */
-    suspend fun forChild(childId: String, fallbackName: String): SchoolImportWording {
+    override suspend fun forChild(childId: String, fallbackName: String): SchoolImportWording {
         val name = childInfoRepository.getChildInfoById(childId)?.childName?.takeIf { it.isNotBlank() }
             ?: fallbackName
         return ResourceWording(context, name)

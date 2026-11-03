@@ -1,8 +1,12 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.school
 
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.newMonitor
 import com.coparently.app.data.school.bakalari.BakalariTokens
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolImportKind
@@ -53,10 +57,11 @@ data class StoredSchoolConnection(
  * call [clearAll]; `EncryptedPreferences.clear()` deliberately keeps them, because a Google
  * Calendar disconnect reaches it too.
  *
- * Every method is synchronised, so a read-modify-write in [update] cannot interleave with another,
- * and every write reaches the sealed file before the method returns (`InMemorySharedPreferences`
- * persists each commit under its lock) — which is what lets `BakalariAuthorizer` write a rotated
- * refresh token down **before** it uses it.
+ * Every method runs under one reentrant monitor (`synchronized` on Android, an `NSRecursiveLock` on
+ * the iPhone; before MON-24, `@Synchronized` on each method), so a read-modify-write in [update]
+ * cannot interleave with another, and every write reaches the sealed file before the method returns
+ * (`InMemorySharedPreferences` persists each commit under its lock) — which is what lets
+ * `BakalariAuthorizer` write a rotated refresh token down **before** it uses it.
  *
  * The value is JSON written and read by hand ([SchoolConnectionCodec]), never a serializer over a
  * data class, so the stored text depends on no class's shape.
@@ -65,28 +70,30 @@ class SchoolConnectionStore(
     private val preferences: SecurePreferences
 ) {
     private val version = MutableStateFlow(0L)
+    private val monitor = newMonitor()
 
     /** The connections of [uid], re-read whenever this store writes. */
     fun observe(uid: String): Flow<List<StoredSchoolConnection>> = version.map { all(uid) }
 
     /** The connections of [uid], in the order they were made. */
-    @Synchronized
-    fun all(uid: String): List<StoredSchoolConnection> =
+    fun all(uid: String): List<StoredSchoolConnection> = monitor.locked {
         preferences.keysWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
             .mapNotNull { key -> preferences.getString(key)?.let(SchoolConnectionCodec::decode) }
             .filter { it.ownerUid == uid }
             .sortedBy { it.connection.id }
+    }
 
     /** The connection [id] of [uid], or null — also for one that belongs to another account. */
-    @Synchronized
-    fun get(uid: String, id: String): StoredSchoolConnection? =
+    fun get(uid: String, id: String): StoredSchoolConnection? = monitor.locked {
         preferences.getString(key(id))?.let(SchoolConnectionCodec::decode)?.takeIf { it.ownerUid == uid }
+    }
 
     /** Stores [connection], replacing one with the same id. */
-    @Synchronized
     fun put(connection: StoredSchoolConnection) {
-        preferences.putString(key(connection.id), SchoolConnectionCodec.encode(connection))
-        version.value++
+        monitor.locked {
+            preferences.putString(key(connection.id), SchoolConnectionCodec.encode(connection))
+            version.value++
+        }
     }
 
     /**
@@ -95,31 +102,30 @@ class SchoolConnectionStore(
      *
      * @return The stored result, or null when there is no such connection for [uid].
      */
-    @Synchronized
     fun update(
         uid: String,
         id: String,
         change: (StoredSchoolConnection) -> StoredSchoolConnection
-    ): StoredSchoolConnection? {
-        val current = get(uid, id) ?: return null
-        val next = change(current)
-        put(next)
-        return next
+    ): StoredSchoolConnection? = monitor.locked {
+        get(uid, id)?.let(change)?.also(::put)
     }
 
     /** Forgets the connection [id] of [uid]. Its imported events stay in the calendar. */
-    @Synchronized
     fun remove(uid: String, id: String) {
-        if (get(uid, id) == null) return
-        preferences.remove(key(id))
-        version.value++
+        monitor.locked {
+            if (get(uid, id) != null) {
+                preferences.remove(key(id))
+                version.value++
+            }
+        }
     }
 
     /** Forgets every connection on this device: sign-out, an account switch, account deletion. */
-    @Synchronized
     fun clearAll() {
-        preferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
-        version.value++
+        monitor.locked {
+            preferences.removeWithPrefix(PreferenceKeys.SCHOOL_CONNECTION_PREFIX)
+            version.value++
+        }
     }
 
     private fun key(id: String) = PreferenceKeys.SCHOOL_CONNECTION_PREFIX + id
@@ -130,8 +136,12 @@ class SchoolConnectionStore(
  *
  * Version 1. A record that cannot be read — another version, a damaged value — decodes to null
  * and is treated as absent; the parent connects again.
+ *
+ * Public, behind [InternalSharedApi], only for the app's `GsonParityTest`, which holds it to the
+ * text Gson wrote.
  */
-internal object SchoolConnectionCodec {
+@InternalSharedApi
+object SchoolConnectionCodec {
 
     private const val VERSION = 1
 

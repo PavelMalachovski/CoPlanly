@@ -1,11 +1,8 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.school.bakalari.BakalariJson.bool
 import com.coparently.app.data.school.bakalari.BakalariJson.objects
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolEvent
 import com.coparently.app.domain.school.SchoolEventStudent
 import com.coparently.app.domain.school.SchoolEventTime

@@ -1,12 +1,14 @@
 package com.coparently.app.data.school
 
 import com.coparently.app.data.platform.logger
+import com.coparently.app.data.platform.newMonitor
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariException
 import com.coparently.app.data.school.bakalari.events
 import com.coparently.app.data.school.bakalari.timetable
 import com.coparently.app.data.school.bakalari.withStatus
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyAudience
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilySlotsSource
@@ -28,11 +30,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.Clock
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /**
  * One school update (MON-8): fetch, plan, write.
@@ -41,13 +43,15 @@ import java.util.concurrent.ConcurrentHashMap
  * function the JVM tests reach. Updates of one connection run one at a time — the daily job and
  * "Update now" can meet — so two passes never both create the same event.
  */
+@Suppress("LongParameterList") // a clock and its zone, which one `java.time.Clock` carried (MON-24)
 class SchoolImporter internal constructor(
     private val authorizer: BakalariAuthorizer,
     private val client: BakalariClient,
     private val store: SchoolConnectionStore,
     private val userRepository: UserRepository,
     private val collaborators: Collaborators,
-    private val clock: Clock
+    private val clock: Clock,
+    private val zone: TimeZone
 ) {
 
     /**
@@ -62,21 +66,26 @@ class SchoolImporter internal constructor(
      */
     class Collaborators(
         val writer: SchoolEventWriter,
-        val wording: SchoolImportWordingSource,
+        val wording: SchoolImportWordings,
         val children: ChildInfoRepository,
         val familySlots: FamilySlotsSource = FamilySlotsSource.None
     )
 
-    /** The production importer, on the system clock. */
+    /**
+     * The production importer, on the system clock in the zone the phone had when it was built —
+     * what `java.time.Clock.systemDefaultZone()` gave it before MON-24.
+     */
     constructor(
         authorizer: BakalariAuthorizer,
         client: BakalariClient,
         store: SchoolConnectionStore,
         userRepository: UserRepository,
         collaborators: Collaborators
-    ) : this(authorizer, client, store, userRepository, collaborators, Clock.systemDefaultZone())
+    ) : this(authorizer, client, store, userRepository, collaborators, Clock.System, TimeZone.currentSystemDefault())
 
-    private val locks = ConcurrentHashMap<String, Mutex>()
+    /** One lock per connection, made on first use; [locksMonitor] guards the map, as a concurrent map did. */
+    private val locks = HashMap<String, Mutex>()
+    private val locksMonitor = newMonitor()
 
     /**
      * Updates every connection of the signed-in account.
@@ -93,7 +102,7 @@ class SchoolImporter internal constructor(
     /** Updates the connection [connectionId] of the signed-in account. Never throws. */
     suspend fun sync(connectionId: String): SchoolSyncResult {
         val uid = userRepository.getCurrentUserId() ?: return SchoolSyncResult.NotFound
-        return locks.getOrPut(connectionId) { Mutex() }.withLock {
+        return locksMonitor.locked { locks.getOrPut(connectionId) { Mutex() } }.withLock {
             try {
                 syncLocked(uid, connectionId)
             } catch (e: CancellationException) {
@@ -118,7 +127,7 @@ class SchoolImporter internal constructor(
             return SchoolSyncResult.NeedsFamily
         }
 
-        val today = java.time.LocalDate.now(clock).toKotlinLocalDate()
+        val today = clock.todayIn(zone)
         val weeks = timetableWeeks(uid, connectionId, today)
         val events = schoolEvents(uid, connectionId, today)
         // Re-read: the fetch may have rotated the tokens, and those must not be written back stale.
@@ -134,7 +143,7 @@ class SchoolImporter internal constructor(
                 ownerSlot = family.familyId?.let { collaborators.familySlots.get(it)?.of(uid) } ?: user.role
             ),
             today = today,
-            now = java.time.LocalDateTime.now(clock).toKotlinLocalDateTime(),
+            now = clock.now().toLocalDateTime(zone),
             student = latest.student,
             events = events,
             weeks = weeks,
@@ -146,7 +155,7 @@ class SchoolImporter internal constructor(
         val input = draft.copy(existing = collaborators.writer.existing(SchoolImportPlanner.idsToLookUp(draft)))
         val plan = SchoolImportPlanner.plan(input)
         val counts = collaborators.writer.apply(plan)
-        val finishedAt = clock.millis()
+        val finishedAt = clock.now().toEpochMilliseconds()
         store.update(uid, connectionId) { current ->
             current.copy(
                 connection = current.connection.copy(
@@ -256,7 +265,21 @@ class SchoolImporter internal constructor(
         data object Unknown : ConnectionFamily
     }
 
-    private companion object {
-        const val TAG = "SchoolImporter"
+    /** Builders for the app's tests, which live in another module. */
+    companion object {
+        private const val TAG = "SchoolImporter"
+
+        /** An importer on [clock] in [zone], for a test. */
+        @InternalSharedApi
+        @Suppress("LongParameterList") // the constructor's, one by one
+        fun on(
+            authorizer: BakalariAuthorizer,
+            client: BakalariClient,
+            store: SchoolConnectionStore,
+            userRepository: UserRepository,
+            collaborators: Collaborators,
+            clock: Clock,
+            zone: TimeZone
+        ): SchoolImporter = SchoolImporter(authorizer, client, store, userRepository, collaborators, clock, zone)
     }
 }

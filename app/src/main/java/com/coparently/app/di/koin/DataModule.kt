@@ -43,13 +43,9 @@ import com.coparently.app.data.repository.AndroidPairingWording
 import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.requests.RequestClockNotices
 import com.coparently.app.data.requests.RequestNotices
-import com.coparently.app.data.school.SchoolAccounts
-import com.coparently.app.data.school.SchoolConnectionStore
-import com.coparently.app.data.school.SchoolEventWriter
 import com.coparently.app.data.school.SchoolImportWordingSource
-import com.coparently.app.data.school.SchoolImporter
+import com.coparently.app.data.school.SchoolImportWordings
 import com.coparently.app.data.school.WorkManagerSchoolImportScheduler
-import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.school.bakalari.BakalariSchoolDirectory
 import com.coparently.app.data.security.EncryptionManager
@@ -62,7 +58,6 @@ import com.coparently.app.data.session.SignedInAccountSource
 import com.coparently.app.data.support.WorkManagerSupportReminderScheduler
 import com.coparently.app.data.sync.WorkManagerSyncRequester
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
-import com.coparently.app.domain.repository.UserRepository
 import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -126,22 +121,10 @@ val dataModule = module {
     singleOf(::RequestNotices)
     // The notices the request clocks' steps (in `:shared-data`) post on this phone.
     single<RequestClockNotices> { get<RequestNotices>() }
-    singleOf(::SchoolAccounts)
-    singleOf(::SchoolConnectionStore)
-    singleOf(::SchoolEventWriter)
     singleOf(::SchoolImportWordingSource)
-    single {
-        SchoolImporter(
-            get<BakalariAuthorizer>(),
-            get<BakalariClient>(),
-            get<SchoolConnectionStore>(),
-            get<UserRepository>(),
-            get<SchoolImporter.Collaborators>()
-        )
-    }
-    factory { SchoolImporter.Collaborators(get(), get(), get(), get()) }
+    // The titles the school import (in `:shared-data`) writes, from resources.
+    single<SchoolImportWordings> { get<SchoolImportWordingSource>() }
     singleOf(::WorkManagerSchoolImportScheduler)
-    single { BakalariAuthorizer(get<BakalariClient>(), get<SchoolConnectionStore>()) }
     single { BakalariClient(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     single { BakalariSchoolDirectory(get<HttpClient>(SCHOOL_HTTP_CLIENT)) }
     singleOf(::AccountDeletionService)

@@ -13,7 +13,7 @@ import kotlin.time.Instant
  *
  * Every function reproduces, exactly, the documented output or acceptance of the `java.time` call
  * the Android build has always used for the same field — `DateTimeFormatter.ISO_LOCAL_DATE_TIME`,
- * `LocalDateTime.toString`, `OffsetDateTime.parse`, `LocalDate.toString`/`LocalDate.parse`,
+ * `LocalDateTime.toString`, `OffsetDateTime.parse`, `LocalTime.parse`, `LocalDate.toString`/`LocalDate.parse`,
  * `YearMonth.toString`/`YearMonth.parse`, `DateTimeFormatter.BASIC_ISO_DATE` and the pattern
  * `HH:mm` — because the text is shared state:
  * a co-parent on an older Android build reads what this code writes and writes what this code
@@ -114,6 +114,37 @@ object IsoText {
         reader.end()
         val epochSeconds = date.toEpochDays() * SECONDS_PER_DAY + time.toSecondOfDay() - offsetSeconds
         return Instant.fromEpochSeconds(epochSeconds, time.nanosecond)
+    }
+
+    /**
+     * Reads [text] as `OffsetDateTime.parse(text).toLocalDateTime()` does: the [parseOffsetDateTime]
+     * grammar, and the date and time as written, the offset read and checked but not applied. The
+     * school import's wall clock (MON-8): a school writes its own zone's time with that zone's offset.
+     *
+     * @throws IllegalArgumentException when `java.time` would refuse the text.
+     */
+    fun parseOffsetWallClock(text: String): LocalDateTime {
+        val reader = IsoReader(text)
+        val date = reader.date()
+        reader.dateTimeSeparator()
+        val time = reader.time()
+        reader.offsetSeconds()
+        reader.end()
+        return LocalDateTime(date, time)
+    }
+
+    /**
+     * Reads [text] as `LocalTime.parse(text)` (`ISO_LOCAL_TIME`) does: `HH:mm`, optionally `:ss`
+     * and then optionally a decimal point followed by zero to nine digits, and nothing after; hour
+     * 0–23, never 24.
+     *
+     * @throws IllegalArgumentException when `java.time` would refuse the text.
+     */
+    fun parseTime(text: String): LocalTime {
+        val reader = IsoReader(text)
+        val time = reader.time()
+        reader.end()
+        return time
     }
 
     /**

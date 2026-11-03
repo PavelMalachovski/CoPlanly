@@ -1,5 +1,3 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.http.Outgoing
@@ -8,7 +6,6 @@ import com.coparently.app.data.http.Redirects
 import com.coparently.app.data.http.WebAddress
 import com.coparently.app.data.http.send
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import com.coparently.app.domain.InternalSharedApi
 import io.ktor.client.HttpClient
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod

@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.school
 
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.school.bakalari.BakalariTokens
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolImportKind
 import com.coparently.app.domain.school.SchoolImportRecord

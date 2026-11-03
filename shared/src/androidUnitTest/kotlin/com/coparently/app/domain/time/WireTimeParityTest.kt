@@ -16,6 +16,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -214,6 +215,14 @@ class WireTimeParityTest {
         assertEquals(WireTimeOracle.custodyFromWire(text), CustodyTimestamp.fromWire(text), "custody fromWire($text)")
         assertSameOutcome("parseDateTime($text)", { WireTimeOracle.parseDateTime(text) }) {
             IsoText.parseDateTime(text).toJavaLocalDateTime()
+        }
+        assertSameOutcome("parseOffsetWallClock($text)", { OffsetDateTime.parse(text).toLocalDateTime() }) {
+            IsoText.parseOffsetWallClock(text).toJavaLocalDateTime()
+        }
+        // The time half of the same text, which `LocalTime.parse` reads alone.
+        val time = text.substringAfter('T', text)
+        assertSameOutcome("parseTime($time)", { LocalTime.parse(time) }) {
+            IsoText.parseTime(time).toJavaLocalTime()
         }
     }
 

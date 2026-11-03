@@ -1,8 +1,11 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.serialization
 
 import com.coparently.app.data.school.SchoolConnectionCodec
 import com.coparently.app.data.school.StoredSchoolConnection
 import com.coparently.app.data.school.bakalari.BakalariTokens
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.Activity
 import com.coparently.app.domain.model.EmergencyContact
 import com.coparently.app.domain.model.MedicalProfile

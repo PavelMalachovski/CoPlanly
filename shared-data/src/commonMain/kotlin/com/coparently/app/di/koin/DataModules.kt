@@ -64,6 +64,12 @@ import com.coparently.app.data.requests.RequestClocks
 import com.coparently.app.data.requests.RequestRecords
 import com.coparently.app.data.requests.RequestTelling
 import com.coparently.app.data.requests.RequestTime
+import com.coparently.app.data.school.SchoolAccounts
+import com.coparently.app.data.school.SchoolConnectionStore
+import com.coparently.app.data.school.SchoolEventWriter
+import com.coparently.app.data.school.SchoolImporter
+import com.coparently.app.data.school.bakalari.BakalariAuthorizer
+import com.coparently.app.data.school.bakalari.BakalariClient
 import com.coparently.app.data.stickers.ParentRoles
 import com.coparently.app.data.stickers.StickerStore
 import com.coparently.app.data.support.SupportAgreementStore
@@ -333,6 +339,29 @@ val moneyDataModule: Module = module {
 }
 
 /**
+ * The school import (MON-8, CLAUDE.md item 35; MON-24 phase 2, Task 8i): the sealed connection
+ * store, the connect flow, the sign-in keeper, the calendar writer and the importer. The Bakaláři
+ * client and directory, the titles' wording and the daily job's scheduler are the app's (its named
+ * HTTP client, string resources and WorkManager).
+ */
+val schoolDataModule: Module = module {
+    singleOf(::SchoolConnectionStore)
+    singleOf(::SchoolAccounts)
+    singleOf(::SchoolEventWriter)
+    single { BakalariAuthorizer(get<BakalariClient>(), get<SchoolConnectionStore>()) }
+    factory { SchoolImporter.Collaborators(get(), get(), get(), get()) }
+    single {
+        SchoolImporter(
+            get<BakalariAuthorizer>(),
+            get<BakalariClient>(),
+            get<SchoolConnectionStore>(),
+            get<UserRepository>(),
+            get<SchoolImporter.Collaborators>()
+        )
+    }
+}
+
+/**
  * The event use cases and the error boundary of the screen that runs them (MON-24 phase 2, Task
  * 8f; the app's `useCaseModule` and `domainModule` before). Each use case is a `factory`: under
  * Hilt they were `@ViewModelScoped`, one instance per ViewModel, and every one of them is
@@ -364,14 +393,15 @@ val dataModules: List<Module> = listOf(
     stickersDataModule,
     documentsDataModule,
     moneyDataModule,
+    schoolDataModule,
     useCaseDataModule
 )
 
 // TODO(MON-24): bind the DAOs, SecurePreferences, CrashReporter, Analytics, Connectivity,
 //  SignedInUser, PushQueue, PushDevice, AttachmentUploadGate, RequestClockScheduler,
 //  RequestClockNotices, ReminderScheduler, SyncRequester, PairingWording, AccountConsistency,
-//  GoogleCalendarApi, CredentialProvider and GoogleCalendarConnectionSource on the iPhone before
-//  its app starts Koin.
+//  GoogleCalendarApi, CredentialProvider, GoogleCalendarConnectionSource, BakalariClient,
+//  SchoolImportWordings and SchoolImportScheduler on the iPhone before its app starts Koin.
 /**
  * The Firestore and callable seams [dataModules] needs: the
  * [com.coparently.app.data.remote.firebase.FirestoreClient] and the
@@ -386,7 +416,9 @@ val dataModules: List<Module> = listOf(
  * `PairingWording` (the pairing repository), and since Task 8g `PushDevice` and
  * `AccountConsistency` (the sync) and `GoogleCalendarApi`, `CredentialProvider` and
  * `GoogleCalendarConnectionSource` (the Google Calendar import), and since Task 8h
- * `RequestClockNotices` (the request clocks' steps), which the app's own modules bind on Android
+ * `RequestClockNotices` (the request clocks' steps), and since Task 8i `BakalariClient`,
+ * `SchoolImportWordings` and `SchoolImportScheduler` (the school import), which the app's own
+ * modules bind on Android
  * (`UserRepository` and `PairingRepository`, which the app bound until Task 8f, and
  * `RequestClockSweep`, which it bound in Task 8g, are this layer's own now). The iPhone's module
  * binds none of them yet; nothing starts Koin there, and the first resolution would fail until it

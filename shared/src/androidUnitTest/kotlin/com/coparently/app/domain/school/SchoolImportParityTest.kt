@@ -52,6 +52,17 @@ class SchoolImportParityTest {
     }
 
     @Test
+    fun `a connection id is the hash MessageDigest made`() {
+        repeat(SAMPLES) {
+            val uid = text()
+            val baseUrl = "https://${text()}.example"
+            val username = text()
+            val old = sha256Hex("$uid|$baseUrl|$username").take(16)
+            assertEquals(old, SchoolConnectionId.of(uid, baseUrl, username), "connection of $uid, $username")
+        }
+    }
+
+    @Test
     fun `the Monday of a week is the one java time named`() {
         var day = LocalDate.of(2025, 12, 1)
         while (day.isBefore(LocalDate.of(2027, 1, 1))) {

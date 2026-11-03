@@ -1,6 +1,5 @@
 package com.coparently.app.data.school.bakalari
 
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.serialization.StoredJson
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonArray
@@ -19,13 +18,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * Every reader here returns null or empty for a missing, null or mistyped field and never throws,
  * so an unknown or odd field costs that field, not the response.
  *
- * In `:shared-data` with the client and the school directory, which read through it, while the
- * three parsers of the school's answers stay in the app with the `java.time` school domain they
- * build (MON-24's stay list); [InternalSharedApi] marks it public only for them, and the app adds
- * the one reader that needs `java.time`, `wallClock`, as an extension of this object.
+ * In `:shared-data` with everything that reads through it: the client, the school directory and the
+ * three parsers of the school's answers, and `wallClock`, an extension of this object (MON-24).
  */
-@InternalSharedApi
-object BakalariJson {
+internal object BakalariJson {
 
     /** [text] as a JSON object; throws [BakalariException.Malformed] when it is not one. */
     fun objectOf(text: String): JsonObject =

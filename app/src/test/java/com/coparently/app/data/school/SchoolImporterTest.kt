@@ -1,7 +1,10 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.school
 
 import com.coparently.app.data.school.bakalari.BakalariAuthorizer
 import com.coparently.app.data.school.bakalari.BakalariClient
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.ChildInfoRepository
@@ -23,17 +26,17 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * One school update end to end on the JVM (MON-8): a real client and authorizer against an
@@ -47,10 +50,12 @@ class SchoolImporterTest {
     private var school: (String) -> Pair<Int, String> = { 404 to "" }
     private lateinit var dir: File
     private lateinit var store: SchoolConnectionStore
-    private val clock = Clock.fixed(Instant.parse("2020-03-02T06:00:00Z"), ZoneOffset.UTC)
+    private val clock = object : Clock {
+        override fun now(): Instant = Instant.parse("2020-03-02T06:00:00Z")
+    }
     private val users = mockk<UserRepository>()
     private val writer = mockk<SchoolEventWriter>()
-    private val wording = mockk<SchoolImportWordingSource>()
+    private val wording = mockk<SchoolImportWordings>()
     private val children = mockk<ChildInfoRepository>()
     private val requested = mutableListOf<String>()
 
@@ -98,7 +103,7 @@ class SchoolImporterTest {
 
         val stored = checkNotNull(store.get("alice", "conn1"))
         assertEquals(SchoolConnectionStatus.OK, stored.connection.status)
-        assertEquals(clock.millis(), stored.connection.lastSuccessAtMillis)
+        assertEquals(clock.now().toEpochMilliseconds(), stored.connection.lastSuccessAtMillis)
         val failed = plan.captured.creates.first().id
         assertFalse(failed in stored.ledger, "a create that failed is tried again next time")
         assertEquals(4, stored.ledger.values.count { it.kind == SchoolImportKind.HOURS })
@@ -221,13 +226,14 @@ class SchoolImporterTest {
             }
         )
         val client = BakalariClient(http)
-        return SchoolImporter(
-            authorizer = BakalariAuthorizer(client, store, clock::millis),
+        return SchoolImporter.on(
+            authorizer = BakalariAuthorizer.on(client, store) { clock.now().toEpochMilliseconds() },
             client = client,
             store = store,
             userRepository = users,
             collaborators = SchoolImporter.Collaborators(writer, wording, children),
-            clock = clock
+            clock = clock,
+            zone = TimeZone.UTC
         )
     }
 

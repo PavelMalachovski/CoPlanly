@@ -1,11 +1,8 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.data.school.bakalari.BakalariJson.obj
 import com.coparently.app.data.school.bakalari.BakalariJson.objects
 import com.coparently.app.data.school.bakalari.BakalariJson.text
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolDay
 import com.coparently.app.domain.school.SchoolDayType
 import com.coparently.app.domain.school.SchoolWeek
@@ -13,10 +10,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.plus
-import kotlinx.datetime.toKotlinLocalTime
 import kotlinx.serialization.json.JsonObject
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 
 /**
  * Reads `GET /api/3/timetable/actual?date=` into the days the import needs (MON-8).
@@ -42,7 +36,6 @@ object BakalariTimetableParser {
     private const val REMOVED = "Removed"
     private const val CANCELED = "Canceled"
     private const val ADDED = "Added"
-    private val TIME = DateTimeFormatter.ofPattern("H:mm")
     private const val DAYS_IN_WEEK = 7
 
     /**
@@ -93,10 +86,6 @@ object BakalariTimetableParser {
 
     private fun time(text: String?): LocalTime? {
         val value = text?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        return try {
-            java.time.LocalTime.parse(value, TIME).toKotlinLocalTime()
-        } catch (ignored: DateTimeParseException) {
-            runCatching { java.time.LocalTime.parse(value).toKotlinLocalTime() }.getOrNull()
-        }
+        return BakalariTime.parse(value)
     }
 }

@@ -46,15 +46,6 @@ class SchoolImportWorker(
     }
 }
 
-/** Starts and stops the daily school import. An interface so the connect flow can be tested. */
-interface SchoolImportScheduler {
-    /** Makes sure the daily import runs; a no-op when it is already scheduled. */
-    fun schedule()
-
-    /** Stops the daily import. */
-    fun cancel()
-}
-
 /**
  * [SchoolImportScheduler] over WorkManager: unique periodic work named [WORK_NAME], once a day,
  * only with a network, kept rather than replaced so connecting a second school does not move the

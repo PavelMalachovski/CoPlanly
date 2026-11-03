@@ -1,11 +1,13 @@
 package com.coparently.app.data.school.bakalari
 
+import com.coparently.app.data.platform.newMonitor
 import com.coparently.app.data.school.SchoolConnectionStore
 import com.coparently.app.data.school.StoredSchoolConnection
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Clock
 
 /**
  * Keeps a school connection signed in (MON-8).
@@ -29,9 +31,12 @@ class BakalariAuthorizer internal constructor(
 ) {
 
     /** The production authorizer, on the wall clock. */
-    constructor(client: BakalariClient, store: SchoolConnectionStore) : this(client, store, System::currentTimeMillis)
+    constructor(client: BakalariClient, store: SchoolConnectionStore) :
+        this(client, store, { Clock.System.now().toEpochMilliseconds() })
 
-    private val locks = ConcurrentHashMap<String, Mutex>()
+    /** One lock per connection, made on first use; [locksMonitor] guards the map, as a concurrent map did. */
+    private val locks = HashMap<String, Mutex>()
+    private val locksMonitor = newMonitor()
 
     /**
      * Runs [call] with a live access token for the connection [connectionId] of [uid].
@@ -89,11 +94,17 @@ class BakalariAuthorizer internal constructor(
             ?: throw BakalariException.ConnectionGone()
     }
 
-    private fun lockFor(connectionId: String): Mutex = locks.getOrPut(connectionId) { Mutex() }
+    private fun lockFor(connectionId: String): Mutex = locksMonitor.locked { locks.getOrPut(connectionId) { Mutex() } }
 
-    private companion object {
+    /** Builders for the app's tests, which live in another module. */
+    companion object {
         /** A token this close to its expiry is refreshed first rather than sent and refused. */
-        const val EXPIRY_MARGIN_MS = 60_000L
+        private const val EXPIRY_MARGIN_MS = 60_000L
+
+        /** An authorizer on the clock [now], for a test. */
+        @InternalSharedApi
+        fun on(client: BakalariClient, store: SchoolConnectionStore, now: () -> Long): BakalariAuthorizer =
+            BakalariAuthorizer(client, store, now)
     }
 }
 
