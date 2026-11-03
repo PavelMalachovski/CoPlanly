@@ -2,11 +2,15 @@ package com.coparently.app.domain.school
 
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toKotlinLocalDateTime
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -19,7 +23,7 @@ import kotlin.test.assertTrue
 class SchoolImportPlannerTest {
 
     /** A Monday. */
-    private val today = LocalDate.of(2026, 10, 5)
+    private val today = LocalDate(2026, 10, 5)
     private val now = today.atTime(6, 30)
 
     private val target = SchoolImportTarget(
@@ -48,8 +52,8 @@ class SchoolImportPlannerTest {
         assertTrue(event.id.startsWith("school-"))
         assertEquals("school-".length + 32, event.id.length)
         assertEquals("Trip to the zoo", event.title)
-        assertEquals(LocalDateTime.of(2026, 10, 7, 8, 0).toKotlinLocalDateTime(), event.startDateTime)
-        assertEquals(LocalDateTime.of(2026, 10, 7, 13, 0).toKotlinLocalDateTime(), event.endDateTime)
+        assertEquals(LocalDateTime(2026, 10, 7, 8, 0), event.startDateTime)
+        assertEquals(LocalDateTime(2026, 10, 7, 13, 0), event.endDateTime)
         assertEquals("school", event.eventType)
         assertEquals("mom", event.parentOwner)
         assertFalse(event.isPrivate)
@@ -89,10 +93,10 @@ class SchoolImportPlannerTest {
         val creates = plan(events = listOf(event)).creates.sortedBy { it.startDateTime }
 
         assertEquals(3, creates.map { it.id }.distinct().size)
-        assertEquals(LocalDate.of(2026, 10, 12).atStartOfDay().toKotlinLocalDateTime(), creates[0].startDateTime)
+        assertEquals(LocalDate(2026, 10, 12).atStartOfDay(), creates[0].startDateTime)
         assertNull(creates[0].endDateTime, "one all-day date has no end")
-        assertEquals(LocalDateTime.of(2026, 10, 13, 10, 45).toKotlinLocalDateTime(), creates[1].endDateTime)
-        assertEquals(LocalDate.of(2026, 10, 21).atStartOfDay().toKotlinLocalDateTime(), creates[2].endDateTime)
+        assertEquals(LocalDateTime(2026, 10, 13, 10, 45), creates[1].endDateTime)
+        assertEquals(LocalDate(2026, 10, 21).atStartOfDay(), creates[2].endDateTime)
     }
 
     @Test
@@ -138,7 +142,7 @@ class SchoolImportPlannerTest {
         val update = plan(events = listOf(moved), existing = live(stored), ledger = first.ledger).updates.single()
 
         assertEquals("Trip to the zoo (moved)", update.title)
-        assertEquals(LocalDateTime.of(2026, 10, 7, 15, 0).toKotlinLocalDateTime(), update.endDateTime)
+        assertEquals(LocalDateTime(2026, 10, 7, 15, 0), update.endDateTime)
         assertEquals(listOf("alice", "bob"), update.sharedWith)
         assertEquals(30, update.reminderMinutes)
         assertTrue(update.isImportant)
@@ -194,8 +198,8 @@ class SchoolImportPlannerTest {
         val event = plan(weeks = listOf(week(today, schoolDay(today)))).creates.single()
 
         assertEquals("Anna at school", event.title)
-        assertEquals(today.atTime(8, 0).toKotlinLocalDateTime(), event.startDateTime)
-        assertEquals(today.atTime(14, 20).toKotlinLocalDateTime(), event.endDateTime)
+        assertEquals(today.atTime(8, 0), event.startDateTime)
+        assertEquals(today.atTime(14, 20), event.endDateTime)
         assertEquals(SchoolImportPlanner.idOf(target, SchoolImportKind.HOURS, today.toString()), event.id)
     }
 
@@ -241,8 +245,8 @@ class SchoolImportPlannerTest {
             .sortedBy { it.startDateTime }
 
         assertEquals(2, creates.size)
-        assertEquals(friday.atStartOfDay().toKotlinLocalDateTime(), creates[0].startDateTime)
-        assertEquals(nextMonday.atStartOfDay().toKotlinLocalDateTime(), creates[0].endDateTime)
+        assertEquals(friday.atStartOfDay(), creates[0].startDateTime)
+        assertEquals(nextMonday.atStartOfDay(), creates[0].endDateTime)
         assertEquals(SchoolImportPlanner.idOf(target, SchoolImportKind.DAY_OFF, friday.toString()), creates[0].id)
         assertNull(creates[1].endDateTime)
     }
@@ -273,8 +277,8 @@ class SchoolImportPlannerTest {
         assertTrue(later.creates.isEmpty())
         val extended = later.updates.single()
         assertEquals(fridayEvent.id, extended.id)
-        assertEquals(friday.atStartOfDay().toKotlinLocalDateTime(), extended.startDateTime)
-        assertEquals(nextMonday.plusDays(1).atStartOfDay().toKotlinLocalDateTime(), extended.endDateTime)
+        assertEquals(friday.atStartOfDay(), extended.startDateTime)
+        assertEquals(nextMonday.plusDays(1).atStartOfDay(), extended.endDateTime)
     }
 
     @Test
@@ -327,7 +331,7 @@ class SchoolImportPlannerTest {
         students = emptyList()
     )
 
-    private fun at(text: String) = LocalDateTime.parse(text)
+    private fun at(text: String) = IsoText.parseDateTime(text)
 
     private fun timed(start: String, end: String) = SchoolEventTime(false, at(start), at(end), "$start:00+02:00")
 
@@ -335,7 +339,7 @@ class SchoolImportPlannerTest {
         SchoolEventTime(true, at("${first}T00:00"), at("${last}T23:59"), "${first}T00:00:00+02:00")
 
     private fun schoolDay(date: LocalDate) =
-        SchoolDay(date, SchoolDayType.WORK_DAY, "", true, LocalTime.of(8, 0), LocalTime.of(14, 20))
+        SchoolDay(date, SchoolDayType.WORK_DAY, "", true, LocalTime(8, 0), LocalTime(14, 20))
 
     private fun week(anyDay: LocalDate, vararg days: SchoolDay) = SchoolWeek(SchoolWeek.mondayOf(anyDay), days.toList())
 
@@ -371,4 +375,10 @@ class SchoolImportPlannerTest {
         existing: Map<String, ExistingImport> = emptyMap(),
         ledger: Map<String, SchoolImportRecord> = emptyMap()
     ) = SchoolImportPlanner.plan(input(today, events, weeks, drawnHolidays, existing, ledger))
+
+    private fun LocalDate.plusDays(days: Int): LocalDate = plus(days, DateTimeUnit.DAY)
+
+    private fun LocalDate.minusDays(days: Int): LocalDate = minus(days, DateTimeUnit.DAY)
+
+    private fun LocalDate.atStartOfDay(): LocalDateTime = atTime(0, 0)
 }

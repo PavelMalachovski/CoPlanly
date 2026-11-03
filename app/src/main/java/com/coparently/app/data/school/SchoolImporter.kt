@@ -26,11 +26,12 @@ import com.coparently.app.domain.school.SchoolWeek
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.Clock
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -117,7 +118,7 @@ class SchoolImporter internal constructor(
             return SchoolSyncResult.NeedsFamily
         }
 
-        val today = LocalDate.now(clock)
+        val today = java.time.LocalDate.now(clock).toKotlinLocalDate()
         val weeks = timetableWeeks(uid, connectionId, today)
         val events = schoolEvents(uid, connectionId, today)
         // Re-read: the fetch may have rotated the tokens, and those must not be written back stale.
@@ -133,7 +134,7 @@ class SchoolImporter internal constructor(
                 ownerSlot = family.familyId?.let { collaborators.familySlots.get(it)?.of(uid) } ?: user.role
             ),
             today = today,
-            now = LocalDateTime.now(clock),
+            now = java.time.LocalDateTime.now(clock).toKotlinLocalDateTime(),
             student = latest.student,
             events = events,
             weeks = weeks,
@@ -201,7 +202,7 @@ class SchoolImporter internal constructor(
         return try {
             (0 until SchoolImportPlanner.TIMETABLE_WEEKS).map { week ->
                 authorizer.withAccess(uid, connectionId) { baseUrl, token ->
-                    client.timetable(baseUrl, token, monday.plusWeeks(week.toLong()))
+                    client.timetable(baseUrl, token, monday.plus(week, DateTimeUnit.WEEK))
                 }
             }
         } catch (e: BakalariException.Forbidden) {
@@ -225,11 +226,9 @@ class SchoolImporter internal constructor(
      */
     private fun drawnHolidays(user: User, today: LocalDate): Set<LocalDate> {
         val provider = HolidayLocation.of(user.countryCode, user.regionCode).provider ?: return emptySet()
-        // The tables are kotlinx-datetime in `:shared` (MON-24); the school import is java.time.
-        val from = SchoolWeek.mondayOf(today).toKotlinLocalDate()
-        val to = today.plusDays(SchoolImportPlanner.EVENT_WINDOW_DAYS).toKotlinLocalDate()
-        return (provider.holidaysInRange(from, to).keys + provider.schoolVacationDaysInRange(from, to))
-            .mapTo(mutableSetOf()) { it.toJavaLocalDate() }
+        val from = SchoolWeek.mondayOf(today)
+        val to = today.plus(SchoolImportPlanner.EVENT_WINDOW_DAYS, DateTimeUnit.DAY)
+        return (provider.holidaysInRange(from, to).keys + provider.schoolVacationDaysInRange(from, to)).toSet()
     }
 
     private fun failure(uid: String, connectionId: String, error: BakalariException): SchoolSyncResult {

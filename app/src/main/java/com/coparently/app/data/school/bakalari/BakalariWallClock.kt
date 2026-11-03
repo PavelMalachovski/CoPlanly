@@ -3,7 +3,8 @@
 package com.coparently.app.data.school.bakalari
 
 import com.coparently.app.domain.InternalSharedApi
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
 
@@ -17,8 +18,8 @@ import java.time.format.DateTimeParseException
  */
 internal fun BakalariJson.wallClock(text: String?): LocalDateTime? {
     val value = text?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-    return parseOrNull { OffsetDateTime.parse(value).toLocalDateTime() }
-        ?: parseOrNull { LocalDateTime.parse(value) }
+    return parseOrNull { OffsetDateTime.parse(value).toLocalDateTime() }?.toKotlinLocalDateTime()
+        ?: parseOrNull { java.time.LocalDateTime.parse(value) }?.toKotlinLocalDateTime()
 }
 
 private fun <T> parseOrNull(parse: () -> T): T? = try {

@@ -1,6 +1,6 @@
 package com.coparently.app.domain.school
 
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
 
 /**
  * One event from a school's calendar (MON-8): a trip, a parents' evening, a sports day.

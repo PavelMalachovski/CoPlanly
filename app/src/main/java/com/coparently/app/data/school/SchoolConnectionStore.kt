@@ -9,6 +9,7 @@ import com.coparently.app.domain.school.SchoolImportKind
 import com.coparently.app.domain.school.SchoolImportRecord
 import com.coparently.app.domain.school.SchoolStudent
 import com.coparently.app.domain.serialization.StoredJson
+import com.coparently.app.domain.time.IsoText
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -21,8 +22,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import java.time.LocalDate
-import java.time.format.DateTimeParseException
 
 /**
  * Everything the phone keeps about one school connection (MON-8).
@@ -163,7 +162,7 @@ internal object SchoolConnectionCodec {
             put("expiresAt", stored.tokens.expiresAtMillis)
             putJsonObject("ledger") {
                 stored.ledger.forEach { (eventId, record) ->
-                    put(eventId, "${record.kind.stored}|${record.lastDate}|${record.fingerprint}")
+                    put(eventId, "${record.kind.stored}|${IsoText.date(record.lastDate)}|${record.fingerprint}")
                 }
             }
         }
@@ -216,9 +215,10 @@ internal object SchoolConnectionCodec {
             val parts = value.textOrNull()?.split('|') ?: return@mapNotNull null
             if (parts.size != LEDGER_PARTS) return@mapNotNull null
             val kind = SchoolImportKind.of(parts[0]) ?: return@mapNotNull null
+            // `LocalDate.parse`'s grammar, which this read until MON-24.
             val date = try {
-                LocalDate.parse(parts[1])
-            } catch (e: DateTimeParseException) {
+                IsoText.parseDate(parts[1])
+            } catch (e: IllegalArgumentException) {
                 return@mapNotNull null
             }
             eventId to SchoolImportRecord(kind, date, parts[2])

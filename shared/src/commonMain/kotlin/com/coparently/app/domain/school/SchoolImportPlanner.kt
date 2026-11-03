@@ -2,9 +2,8 @@ package com.coparently.app.domain.school
 
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * What an imported calendar event was made from (MON-8).
@@ -187,7 +186,7 @@ object SchoolImportPlanner {
 
     /** Decides what one update creates, updates and deletes. See the object's KDoc. */
     fun plan(input: SchoolImportInput): SchoolImportPlan {
-        val ledger = input.ledger.filterValues { !it.lastDate.isBefore(input.today) }.toMutableMap()
+        val ledger = input.ledger.filterValues { it.lastDate >= input.today }.toMutableMap()
         val creates = mutableListOf<Event>()
         val updates = mutableListOf<Event>()
         for (item in SchoolImportItems.all(input)) {
@@ -233,12 +232,12 @@ object SchoolImportPlanner {
         id = id,
         title = fields.title,
         description = fields.description,
-        startDateTime = fields.start.toKotlinLocalDateTime(),
-        endDateTime = fields.end?.toKotlinLocalDateTime(),
+        startDateTime = fields.start,
+        endDateTime = fields.end,
         eventType = SCHOOL_EVENT_TYPE,
         parentOwner = input.target.ownerSlot,
-        createdAt = input.now.toKotlinLocalDateTime(),
-        updatedAt = input.now.toKotlinLocalDateTime(),
+        createdAt = input.now,
+        updatedAt = input.now,
         createdByFirebaseUid = input.target.ownerUid,
         lastModifiedBy = input.target.ownerUid,
         isPrivate = false,
@@ -253,15 +252,15 @@ object SchoolImportPlanner {
     private fun ImportItem.changedFrom(event: Event, record: SchoolImportRecord?): Boolean {
         if (record != null && record.fingerprint == fields.fingerprint) return false
         return event.title != fields.title || event.description != fields.description ||
-            event.startDateTime != fields.start.toKotlinLocalDateTime() ||
-            event.endDateTime != fields.end?.toKotlinLocalDateTime()
+            event.startDateTime != fields.start ||
+            event.endDateTime != fields.end
     }
 
     private fun Event.withFields(fields: ImportFields, editorUid: String) = copy(
         title = fields.title,
         description = fields.description,
-        startDateTime = fields.start.toKotlinLocalDateTime(),
-        endDateTime = fields.end?.toKotlinLocalDateTime(),
+        startDateTime = fields.start,
+        endDateTime = fields.end,
         lastModifiedBy = editorUid
     )
 }

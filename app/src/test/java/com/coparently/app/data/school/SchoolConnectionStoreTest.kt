@@ -5,12 +5,12 @@ import com.coparently.app.data.school.bakalari.BakalariTokens
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolImportKind
 import com.coparently.app.domain.school.SchoolImportRecord
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -40,7 +40,7 @@ class SchoolConnectionStoreTest {
     fun `a connection round-trips, record and tokens included, and survives a restart`() {
         val stored = SchoolTestSupport.stored().copy(
             ledger = mapOf(
-                "school-abc" to SchoolImportRecord(SchoolImportKind.DAY_OFF, LocalDate.of(2026, 10, 9), "0123abcd")
+                "school-abc" to SchoolImportRecord(SchoolImportKind.DAY_OFF, LocalDate(2026, 10, 9), "0123abcd")
             ),
             tokens = BakalariTokens("access-9", "refresh-9", 1_700_000_000_000L)
         )

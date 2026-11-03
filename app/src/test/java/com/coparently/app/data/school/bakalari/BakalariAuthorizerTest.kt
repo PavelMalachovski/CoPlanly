@@ -14,12 +14,12 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
-import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -93,7 +93,7 @@ class BakalariAuthorizerTest {
 
     @Test
     fun `a refused refresh marks the connection as needing the password and deletes nothing`() = runTest {
-        val ledger = mapOf("school-x" to SchoolImportRecord(SchoolImportKind.EVENT, LocalDate.of(2026, 10, 7), "f"))
+        val ledger = mapOf("school-x" to SchoolImportRecord(SchoolImportKind.EVENT, LocalDate(2026, 10, 7), "f"))
         store.put(
             SchoolTestSupport.stored(baseUrl = BASE, tokens = BakalariTokens("a", "dead-refresh", 0L))
                 .copy(ledger = ledger)
@@ -127,7 +127,7 @@ class BakalariAuthorizerTest {
         enqueue(SchoolTestSupport.fixture("events.json"))
 
         val events = authorizer.withAccess("alice", "conn1") { base, token ->
-            client.events(base, token, LocalDate.of(2026, 10, 5))
+            client.events(base, token, LocalDate(2026, 10, 5))
         }
 
         assertEquals("TBVQN", events.single().id)
@@ -155,7 +155,7 @@ class BakalariAuthorizerTest {
     fun `the timetable is asked for by date and read for the requested week`() = runTest {
         enqueue(SchoolTestSupport.fixture("bezny.json"))
 
-        val week = client.timetable(BASE, "token", LocalDate.of(2020, 3, 4))
+        val week = client.timetable(BASE, "token", LocalDate(2020, 3, 4))
 
         assertEquals(
             "https://skola.example.cz/api/3/timetable/actual?date=2020-03-04",

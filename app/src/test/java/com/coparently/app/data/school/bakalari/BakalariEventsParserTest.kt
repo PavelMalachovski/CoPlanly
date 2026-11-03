@@ -3,8 +3,8 @@ package com.coparently.app.data.school.bakalari
 import com.coparently.app.data.school.SchoolTestSupport.fixture
 import com.coparently.app.domain.school.SchoolEventAudience
 import com.coparently.app.domain.school.SchoolStudent
+import kotlinx.datetime.LocalDateTime
 import org.junit.Test
-import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -32,11 +32,11 @@ class BakalariEventsParserTest {
         assertEquals(2, event.times.size)
         val (wholeDay, morning) = event.times
         assertTrue(wholeDay.wholeDay)
-        assertEquals(LocalDateTime.of(2019, 9, 2, 0, 0), wholeDay.start)
-        assertEquals(LocalDateTime.of(2019, 9, 2, 23, 59), wholeDay.end)
+        assertEquals(LocalDateTime(2019, 9, 2, 0, 0), wholeDay.start)
+        assertEquals(LocalDateTime(2019, 9, 2, 23, 59), wholeDay.end)
         assertEquals("2019-09-02T00:00:00+02:00", wholeDay.startKey)
         assertFalse(morning.wholeDay)
-        assertEquals(LocalDateTime.of(2019, 9, 3, 8, 0), morning.start)
+        assertEquals(LocalDateTime(2019, 9, 3, 8, 0), morning.start)
         assertEquals(listOf("XS"), event.classIds)
         assertEquals("GQ1DS", event.students.single().id)
     }

@@ -24,8 +24,8 @@ import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.InternalAPI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import java.time.LocalDate
 
 /**
  * The two imports' HTTP clients in the minified build (MON-24 fix round): a recorded Google
@@ -88,7 +88,7 @@ internal object HttpImportProbe {
             val client = BakalariClient(httpClient(engine, HttpTimeouts.SCHOOL))
             val decoded = runBlocking {
                 val tokens = client.signIn(SCHOOL, "r8-probe", "heslo")
-                val event = client.events(SCHOOL, tokens.accessToken, LocalDate.of(2026, 10, 5)).single()
+                val event = client.events(SCHOOL, tokens.accessToken, LocalDate(2026, 10, 5)).single()
                 val start = event.times.single().start.toString()
                 listOf(tokens.accessToken, tokens.refreshToken, event.id, event.title, start).joinToString("|")
             }

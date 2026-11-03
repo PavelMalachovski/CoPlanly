@@ -1,8 +1,11 @@
 package com.coparently.app.domain.school
 
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
 
 /**
  * What a school's timetable says a day is (MON-8).
@@ -86,6 +89,6 @@ data class SchoolWeek(
     companion object {
         /** The Monday of the week holding [date]. */
         fun mondayOf(date: LocalDate): LocalDate =
-            date.minusDays((date.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+            date.minus(date.dayOfWeek.isoDayNumber - DayOfWeek.MONDAY.isoDayNumber, DateTimeUnit.DAY)
     }
 }

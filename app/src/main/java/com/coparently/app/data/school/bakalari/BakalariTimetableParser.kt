@@ -9,9 +9,12 @@ import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.school.SchoolDay
 import com.coparently.app.domain.school.SchoolDayType
 import com.coparently.app.domain.school.SchoolWeek
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toKotlinLocalTime
 import kotlinx.serialization.json.JsonObject
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
@@ -40,7 +43,7 @@ object BakalariTimetableParser {
     private const val CANCELED = "Canceled"
     private const val ADDED = "Added"
     private val TIME = DateTimeFormatter.ofPattern("H:mm")
-    private const val DAYS_IN_WEEK = 7L
+    private const val DAYS_IN_WEEK = 7
 
     /**
      * The week holding [requested], as far as [json] describes it.
@@ -50,7 +53,7 @@ object BakalariTimetableParser {
     fun parse(json: String, requested: LocalDate): SchoolWeek {
         val root = BakalariJson.objectOf(json)
         val monday = SchoolWeek.mondayOf(requested)
-        val sunday = monday.plusDays(DAYS_IN_WEEK - 1)
+        val sunday = monday.plus(DAYS_IN_WEEK - 1, DateTimeUnit.DAY)
         val hours = root.objects("Hours").mapNotNull { hour ->
             val id = hour.text("Id") ?: return@mapNotNull null
             val begin = time(hour.text("BeginTime")) ?: return@mapNotNull null
@@ -58,8 +61,8 @@ object BakalariTimetableParser {
             id to (begin to end)
         }.toMap()
         val days = root.objects("Days").mapNotNull { day ->
-            val date = BakalariJson.wallClock(day.text("Date"))?.toLocalDate() ?: return@mapNotNull null
-            if (date.isBefore(monday) || date.isAfter(sunday)) return@mapNotNull null
+            val date = BakalariJson.wallClock(day.text("Date"))?.date ?: return@mapNotNull null
+            if (date < monday || date > sunday) return@mapNotNull null
             dayOf(day, date, hours)
         }
         return SchoolWeek(monday, days.distinctBy { it.date }.sortedBy { it.date })
@@ -91,9 +94,9 @@ object BakalariTimetableParser {
     private fun time(text: String?): LocalTime? {
         val value = text?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         return try {
-            LocalTime.parse(value, TIME)
+            java.time.LocalTime.parse(value, TIME).toKotlinLocalTime()
         } catch (ignored: DateTimeParseException) {
-            runCatching { LocalTime.parse(value) }.getOrNull()
+            runCatching { java.time.LocalTime.parse(value).toKotlinLocalTime() }.getOrNull()
         }
     }
 }

@@ -2,11 +2,14 @@ package com.coparently.app.domain.school
 
 import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.platform.Sha256
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalDateTime
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalDateTime
+import com.coparently.app.domain.text.Utf8
+import com.coparently.app.domain.time.IsoText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
 
 /**
  * The four fields an import owns on an event; everything else on the event is the parent's.
@@ -22,10 +25,17 @@ internal data class ImportFields(
     val start: LocalDateTime,
     val end: LocalDateTime?
 ) {
-    /** A short hash of the four fields, recorded to tell the school's edits from the parent's. */
+    /**
+     * A short hash of the four fields, recorded to tell the school's edits from the parent's. The
+     * times are hashed as `java.time.LocalDateTime.toString()` wrote them ([IsoText.dateTimeShortest]),
+     * so a fingerprint recorded before MON-24 still matches.
+     */
     val fingerprint: String
-        get() = SchoolImportIds.sha256Hex(listOf(title, description.orEmpty(), start, end ?: "").joinToString("\u0000"))
-            .take(FINGERPRINT_LENGTH)
+        get() {
+            val times = listOf(IsoText.dateTimeShortest(start), end?.let(IsoText::dateTimeShortest).orEmpty())
+            return SchoolImportIds.sha256Hex((listOf(title, description.orEmpty()) + times).joinToString("\u0000"))
+                .take(FINGERPRINT_LENGTH)
+        }
 
     private companion object {
         const val FINGERPRINT_LENGTH = 16
@@ -57,15 +67,20 @@ internal object SchoolImportIds {
         PREFIX + sha256Hex("bakalari|${target.baseUrl}|${target.username}|${kind.stored}|$key").take(HASH_LENGTH)
 
     /** The id of [date]'s school-hours event. */
-    fun hours(target: SchoolImportTarget, date: LocalDate): String = of(target, SchoolImportKind.HOURS, date.toString())
+    fun hours(target: SchoolImportTarget, date: LocalDate): String =
+        of(target, SchoolImportKind.HOURS, IsoText.date(date))
 
     /** The id of the day-off run that starts on [date]. */
     fun dayOff(target: SchoolImportTarget, date: LocalDate): String =
-        of(target, SchoolImportKind.DAY_OFF, date.toString())
+        of(target, SchoolImportKind.DAY_OFF, IsoText.date(date))
 
-    /** [text]'s SHA-256, in lower-case hex. */
+    /**
+     * [text]'s SHA-256, in lower-case hex, over the bytes the JVM's `toByteArray(UTF_8)` writes
+     * ([Utf8.encode]): an unpaired surrogate is `?` on every platform, so an iPhone derives the
+     * ids an Android phone derived from the same school data.
+     */
     fun sha256Hex(text: String): String =
-        Sha256.digest(text.encodeToByteArray()).toHex()
+        Sha256.digest(Utf8.encode(text)).toHex()
 }
 
 /**
@@ -89,7 +104,7 @@ internal object SchoolImportItems {
     fun daysInWindow(input: SchoolImportInput): List<SchoolDay> {
         val end = windowEnd(input)
         return input.weeks.flatMap { it.days }
-            .filter { !it.date.isBefore(input.today) && it.date.isBefore(end) }
+            .filter { it.date >= input.today && it.date < end }
             .distinctBy { it.date }
             .sortedBy { it.date }
     }
@@ -102,13 +117,13 @@ internal object SchoolImportItems {
             .flatMap { event ->
                 val title = event.title.trim().take(SchoolImportPlanner.MAX_TITLE_LENGTH)
                 event.times.mapNotNull { time ->
-                    val date = time.start.toLocalDate()
-                    if (title.isEmpty() || date.isBefore(input.today) || !date.isBefore(end)) return@mapNotNull null
+                    val date = time.start.date
+                    if (title.isEmpty() || date < input.today || date >= end) return@mapNotNull null
                     val fields = time.fields(title, event.description?.trim()?.ifBlank { null })
                     ImportItem(
                         id = SchoolImportIds.of(input.target, SchoolImportKind.EVENT, "${event.id}|${time.startKey}"),
                         kind = SchoolImportKind.EVENT,
-                        lastDate = fields.end?.toLocalDate() ?: date,
+                        lastDate = fields.end?.date ?: date,
                         fields = fields
                     )
                 }
@@ -121,11 +136,11 @@ internal object SchoolImportItems {
      * the school's wall-clock times.
      */
     private fun SchoolEventTime.fields(title: String, description: String?): ImportFields = if (wholeDay) {
-        val date = start.toLocalDate()
-        val lastDay = end?.toLocalDate()?.takeIf { it.isAfter(date) }
+        val date = start.date
+        val lastDay = end?.date?.takeIf { it > date }
         ImportFields(title, description, date.atStartOfDay(), lastDay?.atStartOfDay())
     } else {
-        ImportFields(title, description, start, end?.takeIf { !it.isBefore(start) })
+        ImportFields(title, description, start, end?.takeIf { it >= start })
     }
 
     /** A school-hours event for each fetched day with a lesson. */
@@ -174,10 +189,10 @@ internal object SchoolImportItems {
         val earlier = input.ledger.filterValues { it.kind == SchoolImportKind.DAY_OFF }.keys
             .mapNotNull { (input.existing[it] as? ExistingImport.Live)?.event }
             .firstOrNull { event ->
-                val start = event.startDateTime.date.toJavaLocalDate()
-                val end = event.endDateTime?.date?.toJavaLocalDate() ?: start
-                event.title == run.title && start.isBefore(run.first) &&
-                    (!end.isBefore(run.first) || onlyWeekendBetween(end, run.first))
+                val start = event.startDateTime.date
+                val end = event.endDateTime?.date ?: start
+                event.title == run.title && start < run.first &&
+                    (end >= run.first || onlyWeekendBetween(end, run.first))
             } ?: return null
         return ImportItem(
             id = earlier.id,
@@ -186,7 +201,7 @@ internal object SchoolImportItems {
             fields = ImportFields(
                 run.title,
                 null,
-                earlier.startDateTime.toJavaLocalDateTime(),
+                earlier.startDateTime,
                 run.last.atStartOfDay()
             )
         )
@@ -196,7 +211,7 @@ internal object SchoolImportItems {
         id = SchoolImportIds.dayOff(target, first),
         kind = SchoolImportKind.DAY_OFF,
         lastDate = last,
-        fields = ImportFields(title, null, first.atStartOfDay(), last.takeIf { it.isAfter(first) }?.atStartOfDay())
+        fields = ImportFields(title, null, first.atStartOfDay(), last.takeIf { it > first }?.atStartOfDay())
     )
 
     private data class DayOffRun(val first: LocalDate, val last: LocalDate, val title: String)
@@ -204,15 +219,18 @@ internal object SchoolImportItems {
 
 /** The day after the last imported one. */
 private fun windowEnd(input: SchoolImportInput): LocalDate =
-    input.today.plusDays(SchoolImportPlanner.EVENT_WINDOW_DAYS)
+    input.today.plus(SchoolImportPlanner.EVENT_WINDOW_DAYS, DateTimeUnit.DAY)
+
+/** Midnight at the start of this day, as `java.time.LocalDate.atStartOfDay()` gave it: a wall clock. */
+private fun LocalDate.atStartOfDay(): LocalDateTime = atTime(0, 0)
 
 /** Whether [later] follows [earlier] with nothing but a weekend between them. */
 private fun onlyWeekendBetween(earlier: LocalDate, later: LocalDate): Boolean {
-    if (!later.isAfter(earlier)) return false
-    var day = earlier.plusDays(1)
-    while (day.isBefore(later)) {
+    if (later <= earlier) return false
+    var day = earlier.plus(1, DateTimeUnit.DAY)
+    while (day < later) {
         if (day.dayOfWeek != DayOfWeek.SATURDAY && day.dayOfWeek != DayOfWeek.SUNDAY) return false
-        day = day.plusDays(1)
+        day = day.plus(1, DateTimeUnit.DAY)
     }
     return true
 }

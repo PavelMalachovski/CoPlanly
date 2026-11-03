@@ -125,7 +125,7 @@ class GsonParityTest {
                 ledger = List(random.nextInt(3)) {
                     text(random) to SchoolImportRecord(
                         SchoolImportKind.entries.random(random),
-                        java.time.LocalDate.of(
+                        LocalDate(
                             random.nextInt(2000, 2100),
                             random.nextInt(1, 13),
                             random.nextInt(1, 29)
@@ -230,7 +230,8 @@ class GsonParityTest {
         root.addProperty("expiresAt", stored.tokens.expiresAtMillis)
         val ledger = JsonObject()
         stored.ledger.forEach { (eventId, record) ->
-            ledger.addProperty(eventId, "${record.kind.stored}|${record.lastDate}|${record.fingerprint}")
+            val lastDate = record.lastDate.toJavaLocalDate()
+            ledger.addProperty(eventId, "${record.kind.stored}|$lastDate|${record.fingerprint}")
         }
         root.add("ledger", ledger)
         return root.toString()
