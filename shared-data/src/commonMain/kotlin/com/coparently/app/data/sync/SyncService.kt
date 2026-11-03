@@ -59,7 +59,7 @@ import kotlin.time.Clock
  * clocks' sweep ([RequestClockSweep]). Its parameter names are the ones it had, so the e2e phones
  * build it unchanged.
  */
-// Ten collaborators, all injected: a Koin graph edge list, not a call signature anybody
+// Twenty-four collaborators, all injected: a Koin graph edge list, not a call signature anybody
 // writes by hand, and grouping them behind a wrapper type would only hide which sync
 // destinations this service actually has - the same reasoning `PairingViewModel` uses.
 @Suppress("LongParameterList")
@@ -956,7 +956,7 @@ class SyncService(
     private inline fun <T> readDocument(kind: String, id: String?, read: () -> T): T? =
         runCatching(read)
             .onFailure { e ->
-                logger.w(TAG, "$kind document $id could not be read (${e::class.simpleName}); skipped")
+                logger.w(TAG, "$kind document $id could not be read (${e::class.simpleName.orEmpty()}); skipped")
             }
             .getOrNull()
 

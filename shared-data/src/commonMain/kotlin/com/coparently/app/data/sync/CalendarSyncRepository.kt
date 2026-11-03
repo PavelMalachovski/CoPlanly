@@ -145,7 +145,7 @@ class CalendarSyncRepository(
                 logger.e("CalendarSync", "NetworkOnMainThreadException: API call must be on background thread", e)
             } else {
                 // Log full error for debugging
-                logger.e("CalendarSync", "Unexpected error: ${e::class.simpleName} - ${e.message}", e)
+                logger.e("CalendarSync", "Unexpected error: ${e::class.simpleName.orEmpty()} - ${e.message}", e)
                 // The exception's class and message go to the log above and to Crashlytics; they
                 // used to be printed on the Settings screen too, in English, as the whole message.
                 crashReporter.record(e)

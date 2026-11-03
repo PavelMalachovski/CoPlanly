@@ -1526,8 +1526,8 @@ domain/    — models, repository interfaces, use cases (the event ones in share
              in app/
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
-             sources, data/payment/, every repository but the vault's, the sync but its Worker,
-             and some of data/family/, data/chat/, data/requests/, data/support/ and data/session/
+             sources, data/payment/, every repository but the vault's and the AI assist's, the
+             sync but its WorkManager classes, and some of data/family/, data/chat/, data/requests/, data/support/ and data/session/
 presentation/ — Compose screens per feature + ViewModels + theme
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
@@ -1736,8 +1736,10 @@ app binds the four seams to its classes. Still in the app from `data/repository/
 (WorkManager). Every other `data/…` path is still under
 `app/src/main/java/com/coparently/app/`. **The data layer reaches the platform only through those
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
-`Analytics`, `SignedInUser`, `PushQueue` or `PushDevice` rather than `EncryptedPreferences`, a `Context` directory,
-`CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService` or `FcmService`, and logs with
+`Analytics`, `SignedInUser`, `PushQueue`, `PushDevice`, `AccountConsistency`, `RequestClockSweep` or
+`GoogleCalendarConnectionSource` rather than `EncryptedPreferences`, a `Context` directory,
+`CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`, `AccountSwitchGuard`,
+`RequestClockKeeper` or `CredentialManagerService`, and logs with
 `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use

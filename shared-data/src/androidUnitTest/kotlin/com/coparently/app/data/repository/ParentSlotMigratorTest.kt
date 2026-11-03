@@ -106,6 +106,21 @@ class ParentSlotMigratorTest {
     }
 
     @Test
+    fun `the re-stamp is the DAO's one transactional write, never the two statements alone`() = runTest {
+        // The setup's stub delegates to the two statements, so the tests above would pass even if
+        // `reslot` called them directly, outside any transaction (MON-24 phase 2, Task 8g). Here
+        // the transactional method answers on its own, and the bare statements must not be called.
+        coEvery { eventDao.reslotOwnerAndPickup("mom", "dad", "u1") } returns 4
+
+        val changed = migrator.reslot(from = "mom", to = "dad", myUid = "u1")
+
+        assertEquals(4, changed)
+        coVerify(exactly = 1) { eventDao.reslotOwnerAndPickup("mom", "dad", "u1") }
+        coVerify(exactly = 0) { eventDao.reslotOwner(any(), any(), any()) }
+        coVerify(exactly = 0) { eventDao.reslotPickup(any(), any(), any()) }
+    }
+
+    @Test
     fun `reslot records the new slot as this user's marker`() = runTest {
         migrator.reslot(from = "mom", to = "dad", myUid = "u1")
 
