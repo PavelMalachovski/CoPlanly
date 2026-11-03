@@ -15,6 +15,7 @@ import com.coparently.app.data.remote.firebase.FirestoreRequestDeadlineDataSourc
 import com.coparently.app.data.remote.firebase.FirestoreUserDataSource
 import com.coparently.app.data.remote.firebase.GoogleOAuthFunctions
 import com.coparently.app.data.remote.firebase.PairingFunctions
+import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.sync.ConflictResolver
 import com.coparently.app.data.sync.FamilyIdBackfill
 import com.coparently.app.data.versions.EventVersionRecorder
@@ -60,10 +61,18 @@ val versionsDataModule: Module = module {
 }
 
 /**
+ * The repositories that have moved here (MON-24 phase 2, Task 8b); the rest are still bound in the
+ * app's `dataModule` and `repositoryModule`.
+ */
+val repositoryDataModule: Module = module {
+    singleOf(::ParentingPlanRepository)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
-val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule, versionsDataModule)
+val dataModules: List<Module> = listOf(remoteDataModule, syncDataModule, versionsDataModule, repositoryDataModule)
 
 /**
  * What each platform binds for [dataModules]: the

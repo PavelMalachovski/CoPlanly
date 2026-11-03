@@ -3,7 +3,7 @@ package com.coparently.app.data.repository
 import com.coparently.app.domain.friends.CalendarFriendGrant
 import com.coparently.app.domain.friends.FriendProfile
 import com.coparently.app.domain.friends.FriendRole
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -37,7 +37,7 @@ class FriendMappersTest {
     }
 
     @Test
-    fun `the grant id is the family and the friend, as the callable and the rule build it`() {
+    fun `the grant id is the family and the friend - as the callable and the rule build it`() {
         assertEquals("dad__mom__friend", CalendarFriendGrant.documentId(FAMILY_ID, "friend"))
     }
 
@@ -62,7 +62,7 @@ class FriendMappersTest {
     }
 
     @Test
-    fun `a grant carries the friend's Google picture, and survives without one`() {
+    fun `a grant carries the friend's Google picture - and survives without one`() {
         // Copied into the grant at accept time so the parents' list needs no second read of a
         // document that is not theirs. A blank one is null, not an empty string, so the
         // avatar has one thing to test for before falling back to the initial.
@@ -89,7 +89,7 @@ class FriendMappersTest {
     }
 
     @Test
-    fun `ignores names that are not a map, values that are not text, and uids outside the family`() {
+    fun `ignores names that are not a map - values that are not text - and uids outside the family`() {
         // A malformed name never costs the friend her grant: the names are a label, not access.
         assertEquals(
             emptyMap(),
@@ -145,7 +145,7 @@ class FriendMappersTest {
     }
 
     @Test
-    fun `a nameless profile is dropped, because access nobody can name cannot be revoked`() {
+    fun `a nameless profile is dropped - because access nobody can name cannot be revoked`() {
         assertNull(FriendMappers.profileFrom("friend", mapOf("role" to "GUARDIAN")))
         assertNull(FriendMappers.profileFrom("friend", mapOf("name" to "  ")))
     }

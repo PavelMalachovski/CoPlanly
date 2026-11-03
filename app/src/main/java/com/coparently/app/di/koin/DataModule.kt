@@ -67,7 +67,6 @@ import com.coparently.app.data.repository.JournalRepositoryImpl
 import com.coparently.app.data.repository.MessageRepositoryImpl
 import com.coparently.app.data.repository.PairingRepositoryImpl
 import com.coparently.app.data.repository.ParentSlotMigrator
-import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.data.repository.PetRepositoryImpl
 import com.coparently.app.data.repository.PostPairingConversationSetup
 import com.coparently.app.data.repository.PreferencesRepositoryImpl
@@ -202,7 +201,6 @@ val dataModule = module {
     single { MessageRepositoryImpl(get(), get(), get(), get()) }
     singleOf(::PairingRepositoryImpl)
     singleOf(::ParentSlotMigrator)
-    singleOf(::ParentingPlanRepository)
     singleOf(::PetRepositoryImpl)
     singleOf(::PostPairingConversationSetup)
     singleOf(::PreferencesRepositoryImpl)

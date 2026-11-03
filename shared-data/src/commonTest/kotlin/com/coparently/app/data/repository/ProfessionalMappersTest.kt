@@ -1,7 +1,7 @@
 package com.coparently.app.data.repository
 
 import com.coparently.app.domain.professionals.ProfessionalRole
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -32,7 +32,7 @@ class ProfessionalMappersTest {
     }
 
     @Test
-    fun `no end, no family, no professional or a wrong-sized family is not a grant`() {
+    fun `no end - no family - no professional or a wrong-sized family is not a grant`() {
         assertNull(ProfessionalMappers.grantFrom("x", stored("expiresAtMillis" to null)))
         assertNull(ProfessionalMappers.grantFrom("x", stored("expiresAtMillis" to 0L)))
         assertNull(ProfessionalMappers.grantFrom("x", stored("familyId" to "")))
