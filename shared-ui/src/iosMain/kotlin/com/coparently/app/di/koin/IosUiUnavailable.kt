@@ -5,6 +5,7 @@ import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
 import com.coparently.app.domain.dictation.SpeechDictation
+import com.coparently.app.presentation.pairing.InviteQrCodes
 import kotlinx.datetime.YearMonth
 
 /*
@@ -48,3 +49,10 @@ internal object NoAiAssist : AiAssistRepository {
         stats: Map<String, Any>
     ): AiAssistResult = AiAssistResult.Disabled
 }
+
+/**
+ * No QR code drawn yet (slice 10e: the pairing ViewModel asks for one): the iPhone has no QR encoder
+ * yet, so an invitation is handed over by its code and link alone. Task 11's pairing screen must not
+ * draw an empty QR frame on the iPhone while this is bound (design item 8).
+ */
+internal val NoInviteQrCodes = InviteQrCodes { null }

@@ -2953,8 +2953,11 @@ bytes are identical on Android):
   built, CI pending**: settings (`settingsUiModule`) — Settings' ViewModel, on two new seams in
   `:shared-data` (`PushRegistration` for the push switch, `AccountDeletion` for the account's erasure,
   which the app's `FcmService` and `AccountDeletionService` answer; the iPhone offers neither yet)
-  and its product events through `Analytics`, and the calendar-feed screen's. Pairing, onboarding,
-  auth, sync and the rest follow.
+  and its product events through `Analytics`, and the calendar-feed screen's. Then pairing
+  (`pairingUiModule`), its error messages now Compose Multiplatform resources (the friend and
+  professional screens read the same ones) and its QR code through a new `InviteQrCodes` seam the
+  app answers with ZXing over the share sheet's link (the iPhone draws none yet), and onboarding
+  (`onboardingUiModule`) with its steps. Auth, sync and the rest follow.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

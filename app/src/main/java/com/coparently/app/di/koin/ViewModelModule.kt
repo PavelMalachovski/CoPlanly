@@ -15,8 +15,6 @@ import com.coparently.app.presentation.home.HomeViewModel
 import com.coparently.app.presentation.home.PutOffAsksViewModel
 import com.coparently.app.presentation.journal.JournalEditorViewModel
 import com.coparently.app.presentation.journal.JournalListViewModel
-import com.coparently.app.presentation.onboarding.OnboardingViewModel
-import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
 import com.coparently.app.presentation.pets.PetsViewModel
 import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
@@ -56,8 +54,6 @@ val viewModelModule = module {
     viewModelOf(::PutOffAsksViewModel)
     viewModelOf(::JournalEditorViewModel)
     viewModelOf(::JournalListViewModel)
-    viewModelOf(::OnboardingViewModel)
-    viewModelOf(::PairingViewModel)
     viewModelOf(::ParentingPlanViewModel)
     viewModelOf(::PetsViewModel)
     viewModelOf(::ProfessionalCalendarViewModel)

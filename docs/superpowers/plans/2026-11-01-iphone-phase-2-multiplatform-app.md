@@ -851,6 +851,27 @@ Then payments and child support:
 - Tests: `SettingsViewModelTest` (the push mock a `PushRegistration`) and `CalendarFeedViewModelTest`
   (MockK) to androidUnitTest.
 
+Then pairing and onboarding:
+- `PairingViewModel` (`pairingUiModule`) with `PairingErrorText.kt`: `pairingMessageRes()` answers a
+  `StringResource`, so `PairingFormState`'s `codeErrorRes`, `actionErrorRes` and `actionInfoRes` are
+  `StringResource?`, and so are `FriendViewModel`'s and `ProfessionalsViewModel`'s `errorRes` and
+  `FriendViewModel.saveError`, still in the app (10f), which call it. `Log` → `logger`,
+  `AnalyticsManager.logInvitationAccepted()` → `Analytics.logInvitationAccepted()` (the member left).
+- New seam `presentation/pairing/InviteQrCodes` (`:shared-ui`, `fun interface`, code →
+  `ImageBitmap?`): the app's `AndroidInviteQrCodes` (`QRCodeService` over `pairingLinkFor`, so
+  `BuildConfig.PAIRING_WEB_LINK` stays in the app; `presentationModule`). iPhone: `platformUiModule`
+  binds `NoInviteQrCodes` (null).
+- `OnboardingViewModel` (`onboardingUiModule`) with `OnboardingStep.kt`: `Log` → `logger`,
+  `LocalDateTime.now().toString()` → `IsoText.dateTimeShortest(wallClockNow())`.
+- Screen edges: `PairingScreen` (its snackbar through `rememberUiTextResolver`, the field's error
+  through CMP `stringResource`), `InviteCodeCard` (takes the `ImageBitmap`), and the friends' and
+  professionals' five error texts (CMP `stringResource`).
+- Tests: `OnboardingStepTest` to commonTest (one name lost its commas); `PairingViewModelTest` and
+  `OnboardingViewModelTest` (MockK) to androidUnitTest — the first verifies `InviteQrCodes.forInvite`
+  and `Analytics.log("invitation_accepted", …)`, drops a dead `ValidationUtils` mock, and its
+  `pairingLinkFor` check moved to the app's new `AndroidInviteQrCodesTest`; `FriendViewModelTest`
+  and `ProfessionalsViewModelTest` compare `Res.string` where they compared `R.string`.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**
@@ -881,6 +902,9 @@ Then payments and child support:
   shared screens must not offer a receipt scan or a child support reminder on the iPhone (design
   refresh item 8): a scan there always fails and a reminder is never scheduled. Hide both until the
   iPhone has the capability, as `CameraCapture` and `Dictation` are hidden.
+- While `platformUiModule` binds `NoInviteQrCodes`, the shared pairing screen must not draw the QR
+  frame on the iPhone (it would wait for a code that never comes); the code and the link are how an
+  invitation leaves the phone there.
 
 - [ ] **Step 1: For each group, run the screenshot tests and the group's instrumented tests**
   before the move. Record that they are green.

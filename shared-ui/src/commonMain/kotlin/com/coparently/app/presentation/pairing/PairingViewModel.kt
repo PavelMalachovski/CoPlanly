@@ -1,19 +1,18 @@
-// `coParentOnScreen` and its helpers are public in `:shared-ui` only for the ViewModels still here (MON-24).
+// `coParentOnScreen` and its helpers are public behind the marker for the app's ViewModels, and the
+// marker applies in its own module too (MON-24).
 @file:OptIn(InternalSharedApi::class)
 
 package com.coparently.app.presentation.pairing
 
-import android.graphics.Bitmap
-import android.util.Log
-import androidx.annotation.StringRes
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
-import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.logInvitationAccepted
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.PairingException
-import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.SignedInAccountSource
@@ -33,6 +32,8 @@ import com.coparently.app.presentation.common.CoParentOnScreen
 import com.coparently.app.presentation.common.coParentOnScreen
 import com.coparently.app.presentation.common.observeSignedInUser
 import com.coparently.app.presentation.common.projectedCoParentUid
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_error_code_incomplete
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -46,10 +47,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Transient state of the pairing form — everything that is not the pairing
- * itself. Errors are string resource ids, never English literals, so the
+ * itself. Errors are string resources, never English literals, so the
  * screen renders them in the user's language.
  *
  * Errors are split by where they belong: [codeErrorRes] and [emailErrorRes]
@@ -65,8 +67,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 data class PairingFormState(
     val codeInput: String = "",
     val isBusy: Boolean = false,
-    @StringRes val codeErrorRes: Int? = null,
-    @StringRes val actionErrorRes: Int? = null,
+    val codeErrorRes: StringResource? = null,
+    val actionErrorRes: StringResource? = null,
     /**
      * A one-shot confirmation to show once, cleared by [PairingViewModel.consumeActionInfo].
      *
@@ -75,8 +77,9 @@ data class PairingFormState(
      * message deliberately does not claim the email arrived — the app cannot know that — it
      * says the invitation is out and the code can be handed over directly if it does not.
      */
-    @StringRes val actionInfoRes: Int? = null,
-    val qrBitmap: Bitmap? = null,
+    val actionInfoRes: StringResource? = null,
+    /** The active invitation's QR code, from [InviteQrCodes], or null until it is drawn. */
+    val qrBitmap: ImageBitmap? = null,
     /** A code waiting for the parent's yes before it is redeemed; see [PairingViewModel.redeemCode]. */
     val confirmation: InviteConfirmation? = null
 )
@@ -108,6 +111,10 @@ sealed interface PairingEvent {
 /**
  * ViewModel for the pairing screen: exposes the realtime [PairingState] from
  * the repository plus the local form state, and forwards its actions.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (Task 10): the QR code comes from [InviteQrCodes] and the
+ * accepted invitation's event goes through [Analytics], which the app's `AndroidInviteQrCodes` and
+ * `AnalyticsManager` answer on Android.
  */
 // Eight collaborators, all injected: this is a Koin graph edge list, not a call signature
 // anybody writes by hand, and grouping them behind a wrapper type would only hide which
@@ -115,8 +122,8 @@ sealed interface PairingEvent {
 @Suppress("LongParameterList")
 class PairingViewModel(
     private val pairingRepository: PairingRepository,
-    private val qrCodeService: QRCodeService,
-    private val analyticsManager: AnalyticsManager,
+    private val inviteQrCodes: InviteQrCodes,
+    private val analyticsManager: Analytics,
     private val userRepository: UserRepository,
     private val parentSlotMigrator: ParentSlotMigrator,
     private val custodyModelRepository: CustodyModelRepository,
@@ -234,7 +241,7 @@ class PairingViewModel(
     fun redeemCode() {
         val code = _form.value.codeInput
         if (!InviteCodeGenerator.isValid(code)) {
-            _form.value = _form.value.copy(codeErrorRes = R.string.pairing_error_code_incomplete)
+            _form.value = _form.value.copy(codeErrorRes = Res.string.pairing_error_code_incomplete)
             return
         }
         _form.value = _form.value.copy(isBusy = true, codeErrorRes = null, confirmation = null)
@@ -412,7 +419,7 @@ class PairingViewModel(
                 // merely failed to read it. The complement above has already landed, so the
                 // accepter's own calendar is right; the mirror reconciles the pair later.
                 SharedCustodyRead.Unavailable -> {
-                    Log.w(TAG, "The shared pattern could not be read; leaving it to the mirror")
+                    logger.w(TAG, "The shared pattern could not be read; leaving it to the mirror")
                     return@runCatching
                 }
             }
@@ -433,7 +440,7 @@ class PairingViewModel(
             // Cancellation is not a failure — leaving the pairing screen mid-reconcile cancels
             // this scope, and reporting that as an error would bury the ones that matter.
             if (e is CancellationException) throw e
-            Log.e(TAG, "Failed to reconcile the custody pattern after pairing", e)
+            logger.e(TAG, "Failed to reconcile the custody pattern after pairing", e)
         }
     }
 
@@ -466,7 +473,7 @@ class PairingViewModel(
     private suspend fun awaitPairingVisibleLocally() {
         withTimeoutOrNull(PAIRING_VISIBLE_TIMEOUT_MS) {
             state.first { it is PairingState.Paired }
-        } ?: Log.w(TAG, "The pairing did not reach Room in time; reconciling on local data alone")
+        } ?: logger.w(TAG, "The pairing did not reach Room in time; reconciling on local data alone")
     }
 
     /**
@@ -485,8 +492,8 @@ class PairingViewModel(
     private suspend fun reslotIfChanged(myUid: String, from: String, to: String) {
         if (from == to) return
         runCatching { parentSlotMigrator.reslot(from = from, to = to, myUid = myUid) }
-            .onSuccess { changed -> Log.i(TAG, "Re-stamped $changed record(s) from $from to $to") }
-            .onFailure { e -> Log.e(TAG, "Failed to re-stamp records from $from to $to", e) }
+            .onSuccess { changed -> logger.i(TAG, "Re-stamped $changed record(s) from $from to $to") }
+            .onFailure { e -> logger.e(TAG, "Failed to re-stamp records from $from to $to", e) }
     }
 
     /**
@@ -521,7 +528,8 @@ class PairingViewModel(
     }
 
     /**
-     * Renders the active invite's link as a QR bitmap.
+     * Renders the active invite's link as a QR bitmap, through [InviteQrCodes], which draws the
+     * link the share sheet sends.
      *
      * The QR used to live behind a dialog this opened; it is now shown inline on the pairing
      * screen, so this is called as soon as there is a code to encode rather than on a tap.
@@ -529,7 +537,7 @@ class PairingViewModel(
     fun showQr() {
         val invite = state.value.activeInviteOrNull ?: return
         viewModelScope.launch {
-            val bitmap = qrCodeService.generatePairingQRCode(content = pairingLinkFor(invite.code))
+            val bitmap = inviteQrCodes.forInvite(invite.code)
             _form.value = _form.value.copy(qrBitmap = bitmap)
         }
     }
@@ -551,7 +559,7 @@ class PairingViewModel(
 
     private fun launchAction(
         onSuccess: () -> Unit = {},
-        onError: (Int) -> Unit = { res -> _form.value = _form.value.copy(actionErrorRes = res) },
+        onError: (StringResource) -> Unit = { res -> _form.value = _form.value.copy(actionErrorRes = res) },
         action: suspend () -> Result<*>
     ) {
         _form.value = _form.value.copy(isBusy = true, actionErrorRes = null)

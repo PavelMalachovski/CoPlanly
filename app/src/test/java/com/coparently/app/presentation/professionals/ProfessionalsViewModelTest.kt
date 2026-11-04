@@ -8,6 +8,8 @@ import com.coparently.app.domain.professionals.AcceptProfessionalResult
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.professional_error_not_professional_invitation
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -124,6 +126,6 @@ class ProfessionalsViewModelTest {
         vm.updateCode("FRI234")
         vm.redeemCode()
         advanceUntilIdle()
-        assertEquals(R.string.professional_error_not_professional_invitation, vm.redeem.value.errorRes)
+        assertEquals(Res.string.professional_error_not_professional_invitation, vm.redeem.value.errorRes)
     }
 }

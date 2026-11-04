@@ -12,3 +12,6 @@ fun Analytics.logNotificationsToggled(enabled: Boolean) =
 
 /** The app's theme set to dark or light in Settings. */
 fun Analytics.logThemeChanged(isDark: Boolean) = log("theme_changed", mapOf("dark_mode" to isDark.toString()))
+
+/** An invitation addressed to this parent accepted. */
+fun Analytics.logInvitationAccepted() = log("invitation_accepted")

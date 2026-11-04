@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.friends
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.domain.family.FamilyKey
@@ -24,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import kotlin.time.Clock
 
 /**
@@ -45,7 +45,7 @@ data class FriendInviteState(
     val duration: FriendAccessDuration = FriendAccessDuration.DEFAULT,
     val invite: GuestInvite? = null,
     val isBusy: Boolean = false,
-    @StringRes val errorRes: Int? = null
+    val errorRes: StringResource? = null
 )
 
 /**
@@ -66,7 +66,7 @@ data class FriendRedeemState(
     val code: String = "",
     val isBusy: Boolean = false,
     val accepted: Boolean = false,
-    @StringRes val errorRes: Int? = null,
+    val errorRes: StringResource? = null,
     val isExpanded: Boolean = false,
     val openFamilyId: String? = null
 )
@@ -110,10 +110,10 @@ class FriendViewModel(
     private val _invite = MutableStateFlow(FriendInviteState())
     val invite: StateFlow<FriendInviteState> = _invite.asStateFlow()
 
-    private val _saveError = MutableStateFlow<Int?>(null)
+    private val _saveError = MutableStateFlow<StringResource?>(null)
 
     /** Why the last profile save failed, or null. */
-    val saveError: StateFlow<Int?> = _saveError.asStateFlow()
+    val saveError: StateFlow<StringResource?> = _saveError.asStateFlow()
 
     /** Opens the invite sheet on the default length. */
     fun openInvite() {
@@ -274,7 +274,7 @@ class FriendViewModel(
         _saveError.value = null
     }
 
-    private fun errorRes(e: Throwable): Int = e.pairingMessageRes()
+    private fun errorRes(e: Throwable): StringResource = e.pairingMessageRes()
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

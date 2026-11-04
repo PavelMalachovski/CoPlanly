@@ -86,13 +86,6 @@ class AnalyticsManager(
     }
 
     /**
-     * Log pairing invitation accepted event.
-     */
-    fun logInvitationAccepted() {
-        analytics.logEvent("invitation_accepted", null)
-    }
-
-    /**
      * Log child info added event.
      */
     fun logChildInfoAdded() {

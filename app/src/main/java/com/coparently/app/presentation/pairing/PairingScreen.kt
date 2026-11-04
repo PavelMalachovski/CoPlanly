@@ -6,7 +6,6 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,7 +64,10 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.copySensitive
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
@@ -74,6 +76,8 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -162,14 +166,14 @@ fun PairingScreen(
     val pendingDeepLinkCode = rememberSaveable(prefilledCode) { mutableStateOf(prefilledCode) }
 
     PairingSideEffects(viewModel, state, prefilledCode, onCustodyConflict)
-    ActionErrorSnackbar(form.actionErrorRes, snackbarHostState, context, viewModel::consumeActionError)
+    ActionErrorSnackbar(form.actionErrorRes, snackbarHostState, viewModel::consumeActionError)
     // Same one-shot shape as the error above: sending an email invitation reported
     // nothing at all before, so a delivered and an undelivered invitation looked alike.
-    ActionErrorSnackbar(form.actionInfoRes, snackbarHostState, context, viewModel::consumeActionInfo)
+    ActionErrorSnackbar(form.actionInfoRes, snackbarHostState, viewModel::consumeActionInfo)
     // A paired account's code field shows its own refusal; a deep link or an invitation redeemed
     // from here with that field closed needs somewhere else to show one.
     if (state is PairingState.Paired && !(addingAnother.value && mode.value == PairingMode.ENTER)) {
-        ActionErrorSnackbar(form.codeErrorRes, snackbarHostState, context, viewModel::clearError)
+        ActionErrorSnackbar(form.codeErrorRes, snackbarHostState, viewModel::clearError)
     }
 
     Scaffold(
@@ -333,14 +337,16 @@ private fun DeepLinkPreview(pendingCode: MutableState<String?>, viewModel: Pairi
  */
 @Composable
 private fun ActionErrorSnackbar(
-    @StringRes actionErrorRes: Int?,
+    actionErrorRes: StringResource?,
     snackbarHostState: SnackbarHostState,
-    context: Context,
     onConsumed: () -> Unit
 ) {
+    // Worded in the composition's language (CQ-14): the resource is Compose Multiplatform's since
+    // the ViewModel moved to `:shared-ui`.
+    val textResolver = rememberUiTextResolver()
     LaunchedEffect(actionErrorRes) {
         actionErrorRes?.let { res ->
-            snackbarHostState.showSnackbar(context.getString(res))
+            snackbarHostState.showSnackbar(UiText.Res(res).asString(textResolver))
             onConsumed()
         }
     }

@@ -2,10 +2,8 @@ package com.coparently.app.presentation.pairing
 
 import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
-import com.coparently.app.R
-import com.coparently.app.data.analytics.AnalyticsManager
+import com.coparently.app.data.platform.Analytics
 import com.coparently.app.data.remote.firebase.PairingException
-import com.coparently.app.data.remote.firebase.QRCodeService
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.SignedInAccountSource
@@ -23,15 +21,23 @@ import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository
-import com.coparently.app.utils.ValidationUtils
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_error_already_paired
+import com.coparently.app.resources.pairing_error_enter_their_code
+import com.coparently.app.resources.pairing_error_expired
+import com.coparently.app.resources.pairing_error_network
+import com.coparently.app.resources.pairing_error_not_found
+import com.coparently.app.resources.pairing_error_not_pending
+import com.coparently.app.resources.pairing_error_self_pairing
+import com.coparently.app.resources.pairing_error_slot_conflict
+import com.coparently.app.resources.pairing_error_unknown
+import com.coparently.app.resources.pairing_error_wrong_recipient
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,24 +60,18 @@ class PairingViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: PairingRepository
-    private lateinit var analyticsManager: AnalyticsManager
+    private lateinit var analyticsManager: Analytics
     private lateinit var userRepository: UserRepository
     private lateinit var parentSlotMigrator: ParentSlotMigrator
     private lateinit var custodyModelRepository: CustodyModelRepository
     private lateinit var pendingCustodyConflict: PendingCustodyConflict
     private lateinit var signedInAccountSource: SignedInAccountSource
-    private lateinit var qrCodeService: QRCodeService
+    private lateinit var inviteQrCodes: InviteQrCodes
     private lateinit var viewModel: PairingViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        // ValidationUtils.validateEmail() reads android.util.Patterns.EMAIL_ADDRESS, an
-        // Android framework field that is null on the plain-JVM unit-test classpath
-        // (isReturnDefaultValues only helps for stubbed methods, not a static field read).
-        // Mocking the object sidesteps that entirely; each email test stubs the one call
-        // it needs.
-        mockkObject(ValidationUtils)
         repository = mockk(relaxed = true)
         analyticsManager = mockk(relaxed = true)
         userRepository = mockk(relaxed = true)
@@ -85,7 +85,7 @@ class PairingViewModelTest {
             flowOf(PairingState.NotPaired())
         signedInAccountSource = mockk(relaxed = true)
         every { signedInAccountSource.observe() } returns flowOf(ACCOUNT)
-        qrCodeService = mockk(relaxed = true)
+        inviteQrCodes = mockk(relaxed = true)
         coEvery { repository.previewInvite(any()) } returns Result.success(InvitePreview("Alice"))
         buildViewModel()
     }
@@ -111,7 +111,7 @@ class PairingViewModelTest {
     private fun buildViewModel() {
         viewModel = PairingViewModel(
             pairingRepository = repository,
-            qrCodeService = qrCodeService,
+            inviteQrCodes = inviteQrCodes,
             analyticsManager = analyticsManager,
             userRepository = userRepository,
             parentSlotMigrator = parentSlotMigrator,
@@ -124,7 +124,6 @@ class PairingViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        unmockkObject(ValidationUtils)
     }
 
     @Test
@@ -207,7 +206,7 @@ class PairingViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         assertNull(viewModel.form.value.confirmation)
-        assertEquals(R.string.pairing_error_enter_their_code, viewModel.form.value.codeErrorRes)
+        assertEquals(Res.string.pairing_error_enter_their_code, viewModel.form.value.codeErrorRes)
         coVerify(exactly = 0) { repository.redeem(any()) }
     }
 
@@ -221,7 +220,7 @@ class PairingViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         assertNull(viewModel.form.value.confirmation)
-        assertEquals(R.string.pairing_error_network, viewModel.form.value.codeErrorRes)
+        assertEquals(Res.string.pairing_error_network, viewModel.form.value.codeErrorRes)
     }
 
     @Test
@@ -245,22 +244,22 @@ class PairingViewModelTest {
 
         linkWith("4F7K2M")
 
-        assertEquals(R.string.pairing_error_already_paired, viewModel.form.value.codeErrorRes)
+        assertEquals(Res.string.pairing_error_already_paired, viewModel.form.value.codeErrorRes)
     }
 
     @Test
     fun `every PairingError maps to its own message`() = runTest(dispatcher) {
         val cases = mapOf(
-            PairingError.NotFound to R.string.pairing_error_not_found,
-            PairingError.Expired to R.string.pairing_error_expired,
-            PairingError.NotPending to R.string.pairing_error_not_pending,
-            PairingError.SelfPairing to R.string.pairing_error_self_pairing,
-            PairingError.AlreadyPaired to R.string.pairing_error_already_paired,
-            PairingError.WrongRecipient to R.string.pairing_error_wrong_recipient,
-            PairingError.EnterTheirCode to R.string.pairing_error_enter_their_code,
-            PairingError.SlotConflict to R.string.pairing_error_slot_conflict,
-            PairingError.Network to R.string.pairing_error_network,
-            PairingError.Unknown("boom") to R.string.pairing_error_unknown
+            PairingError.NotFound to Res.string.pairing_error_not_found,
+            PairingError.Expired to Res.string.pairing_error_expired,
+            PairingError.NotPending to Res.string.pairing_error_not_pending,
+            PairingError.SelfPairing to Res.string.pairing_error_self_pairing,
+            PairingError.AlreadyPaired to Res.string.pairing_error_already_paired,
+            PairingError.WrongRecipient to Res.string.pairing_error_wrong_recipient,
+            PairingError.EnterTheirCode to Res.string.pairing_error_enter_their_code,
+            PairingError.SlotConflict to Res.string.pairing_error_slot_conflict,
+            PairingError.Network to Res.string.pairing_error_network,
+            PairingError.Unknown("boom") to Res.string.pairing_error_unknown
         )
 
         cases.forEach { (error, expectedRes) ->
@@ -278,7 +277,7 @@ class PairingViewModelTest {
 
         linkWith("4F7K2M")
 
-        assertEquals(R.string.pairing_error_unknown, viewModel.form.value.codeErrorRes)
+        assertEquals(Res.string.pairing_error_unknown, viewModel.form.value.codeErrorRes)
     }
 
     @Test
@@ -328,7 +327,7 @@ class PairingViewModelTest {
         viewModel.inviteAnotherCoParent()
         dispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(R.string.pairing_error_network, viewModel.form.value.actionErrorRes)
+        assertEquals(Res.string.pairing_error_network, viewModel.form.value.actionErrorRes)
     }
 
     @Test
@@ -351,7 +350,8 @@ class PairingViewModelTest {
         viewModel.showQr()
         dispatcher.scheduler.advanceUntilIdle()
 
-        verify(exactly = 1) { qrCodeService.generatePairingQRCode(content = pairingLinkFor("4F7K2M")) }
+        // Which link the code is drawn as is the app's `AndroidInviteQrCodes`' (`AndroidInviteQrCodesTest`).
+        verify(exactly = 1) { inviteQrCodes.forInvite("4F7K2M") }
     }
 
     // ---- acceptIncoming / slot re-stamping --------------------------------
@@ -368,7 +368,7 @@ class PairingViewModelTest {
             coVerify(exactly = 1) {
                 parentSlotMigrator.reslot(from = "mom", to = "dad", myUid = "user-a")
             }
-            coVerify(exactly = 1) { analyticsManager.logInvitationAccepted() }
+            coVerify(exactly = 1) { analyticsManager.log("invitation_accepted", emptyMap()) }
         }
 
     @Test
@@ -395,7 +395,7 @@ class PairingViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
 
         coVerify(exactly = 0) { parentSlotMigrator.reslot(any(), any(), any()) }
-        assertEquals(R.string.pairing_error_not_found, viewModel.form.value.actionErrorRes)
+        assertEquals(Res.string.pairing_error_not_found, viewModel.form.value.actionErrorRes)
     }
 
     @Test
@@ -424,7 +424,7 @@ class PairingViewModelTest {
             dispatcher.scheduler.advanceUntilIdle()
 
             coVerify(exactly = 0) { parentSlotMigrator.reslot(any(), any(), any()) }
-            coVerify(exactly = 1) { analyticsManager.logInvitationAccepted() }
+            coVerify(exactly = 1) { analyticsManager.log("invitation_accepted", emptyMap()) }
             assertEquals(null, viewModel.form.value.actionErrorRes)
         }
 
@@ -442,7 +442,7 @@ class PairingViewModelTest {
         viewModel.acceptIncoming("invite-1")
         dispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 1) { analyticsManager.logInvitationAccepted() }
+        coVerify(exactly = 1) { analyticsManager.log("invitation_accepted", emptyMap()) }
         assertEquals(null, viewModel.form.value.actionErrorRes)
     }
 
@@ -720,7 +720,7 @@ class PairingViewModelTest {
         dispatcher.scheduler.runCurrent()
 
         assertFalse(viewModel.form.value.isBusy)
-        coVerify(exactly = 1) { analyticsManager.logInvitationAccepted() }
+        coVerify(exactly = 1) { analyticsManager.log("invitation_accepted", emptyMap()) }
 
         dispatcher.scheduler.advanceUntilIdle()
     }

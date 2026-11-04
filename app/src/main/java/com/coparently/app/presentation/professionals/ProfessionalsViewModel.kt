@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.professionals
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
@@ -17,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The invite sheet's state (MON-18).
@@ -37,7 +37,7 @@ data class ProfessionalInviteState(
     val duration: ProfessionalAccessDuration = ProfessionalAccessDuration.DEFAULT,
     val invite: GuestInvite? = null,
     val isBusy: Boolean = false,
-    @StringRes val errorRes: Int? = null
+    val errorRes: StringResource? = null
 )
 
 /**
@@ -52,7 +52,7 @@ data class ProfessionalRedeemState(
     val code: String = "",
     val isBusy: Boolean = false,
     val accepted: Boolean = false,
-    @StringRes val errorRes: Int? = null
+    val errorRes: StringResource? = null
 )
 
 /**

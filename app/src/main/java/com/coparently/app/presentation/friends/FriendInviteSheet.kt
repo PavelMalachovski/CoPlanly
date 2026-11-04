@@ -40,6 +40,7 @@ import com.coparently.app.presentation.pairing.PLAY_STORE_URL
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Offering somebody read access to the family calendar (item 16).

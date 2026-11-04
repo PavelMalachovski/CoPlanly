@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.friends
 
-import com.coparently.app.R
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.friends.AcceptCalendarFriendResult
 import com.coparently.app.domain.friends.CalendarFriendGrant
@@ -9,6 +8,10 @@ import com.coparently.app.domain.friends.FriendRole
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.FriendRepository
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_error_network
+import com.coparently.app.resources.pairing_error_not_found
+import com.coparently.app.resources.pairing_error_not_friend_invitation
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -104,7 +107,7 @@ class FriendViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.redeem.value.openFamilyId)
-        assertEquals(R.string.pairing_error_not_found, vm.redeem.value.errorRes)
+        assertEquals(Res.string.pairing_error_not_found, vm.redeem.value.errorRes)
         assertTrue(vm.redeem.value.isExpanded)
     }
 
@@ -218,7 +221,7 @@ class FriendViewModelTest {
 
         val state = vm.redeem.value
         assertEquals("ABC234", state.code)
-        assertEquals(R.string.pairing_error_not_friend_invitation, state.errorRes)
+        assertEquals(Res.string.pairing_error_not_friend_invitation, state.errorRes)
         assertFalse(state.isBusy)
         assertFalse(state.accepted)
     }
@@ -232,7 +235,7 @@ class FriendViewModelTest {
         vm.saveProfile("Grandma", FriendRole.FRIEND, emptyList(), null, null)
         advanceUntilIdle()
 
-        assertEquals(R.string.pairing_error_network, vm.saveError.value)
+        assertEquals(Res.string.pairing_error_network, vm.saveError.value)
         vm.clearSaveError()
         assertNull(vm.saveError.value)
     }

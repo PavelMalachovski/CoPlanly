@@ -1,6 +1,6 @@
 package com.coparently.app.presentation.onboarding
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class OnboardingStepTest {
 
     @Test
-    fun `the wizard is the link, notifications, the profile and the schedule, in that order`() {
+    fun `the wizard is the link - notifications - the profile and the schedule in that order`() {
         assertEquals(
             listOf(
                 OnboardingStep.CoParent,

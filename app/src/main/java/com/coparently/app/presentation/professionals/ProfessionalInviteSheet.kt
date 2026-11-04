@@ -33,6 +33,7 @@ import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.pairing.PLAY_STORE_URL
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Inviting a professional (MON-18): who, for how long, then a code.

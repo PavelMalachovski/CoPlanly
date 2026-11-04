@@ -28,7 +28,9 @@ import com.coparently.app.presentation.family.EarlierFamiliesViewModel
 import com.coparently.app.presentation.family.FamilyViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsViewModel
 import com.coparently.app.presentation.home.MonthSpendDependencies
+import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
+import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
@@ -182,6 +184,26 @@ val settingsUiModule: Module = module {
 }
 
 /**
+ * Pairing (MON-24 phase 2, Task 10): the co-parent link — the invitation's code, its QR, the code
+ * redeemed only after "Link with …?", an addressed invitation accepted or declined, the slot
+ * re-stamp and the custody reconciliation after it, and the unpair of the family on screen. The QR
+ * goes through `InviteQrCodes`, which the app binds on Android and [platformUiModule] stands in for
+ * on the iPhone. (The choice between two patterns pairing can leave is [custodyUiModule]'s.)
+ */
+val pairingUiModule: Module = module {
+    viewModelOf(::PairingViewModel)
+}
+
+/**
+ * Onboarding (MON-24 phase 2, Task 10): the four-step wizard — the link and what it brought back,
+ * the notification question, the profile with the country guessed from the phone's own region, and
+ * the custody step's state beside the schedule editor [custodyUiModule] holds.
+ */
+val onboardingUiModule: Module = module {
+    viewModelOf(::OnboardingViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -198,7 +220,9 @@ val uiModules: List<Module> = listOf(
     expensesUiModule,
     paymentsUiModule,
     supportUiModule,
-    settingsUiModule
+    settingsUiModule,
+    pairingUiModule,
+    onboardingUiModule
 )
 
 /**

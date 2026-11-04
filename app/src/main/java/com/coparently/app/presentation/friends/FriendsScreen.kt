@@ -39,6 +39,7 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId

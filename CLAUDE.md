@@ -1598,9 +1598,9 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              (slice 9c); and, from Task 10, the shared state of presentation/common/ (ParentsSource
              and its siblings) and the ViewModels, group by group (so far common/'s, chat's, the
              calendar's, the events', custody's, the requests', the family's, expenses', payments',
-             child support's and settings'), with their Koin modules: uiModules and
-             platformUiModule, which appModules includes. Screens follow (Task 11). It makes the
-             iPhone's one framework, Shared (static, exporting shared/ and shared-data/)
+             child support's, settings', pairing's and onboarding's), with their Koin modules:
+             uiModules and platformUiModule, which appModules includes. Screens follow (Task 11). It
+             makes the iPhone's one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
              except the phase-1 stay list below (one file), which is still in app/
@@ -2020,7 +2020,7 @@ On the iPhone `platformUiModule` binds the chat's two platform seams the data la
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
 `NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the ViewModels still in the
-app that call them move (four since `RequestsSource` moved in 10c; see the `@InternalSharedApi`
+app that call them move (three since `PairingViewModel` moved in 10e; see the `@InternalSharedApi`
 paragraph below). Slice 10b moved **the
 calendar**: `CalendarViewModel` (its filters and the dismissed custody change in `SecurePreferences`,
 under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
@@ -2136,6 +2136,24 @@ names and parameters `AnalyticsManager`'s functions of those names wrote (they l
 iPhone's `platformDataModule` binds `NoPushRegistration` (the switch reads off, turning it on
 fails, nothing to detach) and `NoAccountDeletion` (it fails and wipes nothing). Both ViewModel tests
 (MockK) run in `androidUnitTest`, the push mock now a `PushRegistration`.
+Then **pairing and onboarding**: `PairingViewModel` (in `pairingUiModule`; its log lines through
+`logger`, the accepted invitation's event through `Analytics` as `logInvitationAccepted`, which left
+`AnalyticsManager` too) with `PairingErrorText.kt`, whose `pairingMessageRes` now answers a Compose
+Multiplatform `StringResource`, so `PairingFormState`'s three messages are `StringResource`s and so are
+the friend and professional ViewModels' `errorRes` and `FriendViewModel.saveError`, which read it from
+the app (their screens read them through Compose Multiplatform's `stringResource`; `PairingScreen`'s
+snackbar through `rememberUiTextResolver`). The invitation's QR code comes from
+`presentation/pairing/InviteQrCodes` (new in `:shared-ui`, a `fun interface` taking the code and
+answering a Compose `ImageBitmap`), which the app's `AndroidInviteQrCodes` answers with `QRCodeService`
+over `pairingLinkFor` — the share sheet's link, with `BuildConfig.PAIRING_WEB_LINK` staying in the app
+(item 37) — so `PairingFormState.qrBitmap` is an `ImageBitmap` and `InviteCodeCard` draws it as it is;
+`AndroidInviteQrCodesTest` holds the link. `OnboardingViewModel` (in `onboardingUiModule`) with
+`OnboardingStep`: its log lines through `logger`, and the finish mark
+`IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote. On the
+iPhone `platformUiModule` binds `NoInviteQrCodes` (no QR drawn). `OnboardingStepTest` runs in
+`commonTest` (one name lost its commas); `PairingViewModelTest` and `OnboardingViewModelTest` (MockK) in
+`androidUnitTest`, the first verifying `InviteQrCodes.forInvite` and `Analytics.log` where it verified
+`QRCodeService` and `AnalyticsManager`, and without its dead `ValidationUtils` mock.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -2165,9 +2183,9 @@ app), the four expense mappers in
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and in `shared-ui/` (Task 10)
 `CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
-`User.projectedCoParentUid` (`HomeViewModel`, `PairingViewModel`, `ProfileViewModel` and
-`ParentingPlanViewModel`, in the app until their slices move them; `ParentsSource`, `FamilyKindSource`
-and, since slice 10c, `RequestsSource` opt in beside them in `:shared-ui`). This list
+`User.projectedCoParentUid` (`HomeViewModel`, `ProfileViewModel` and `ParentingPlanViewModel`, in
+the app until their slices move them; `ParentsSource`, `FamilyKindSource`, since slice 10c
+`RequestsSource` and, since slice 10e, `PairingViewModel` opt in beside them in `:shared-ui`). This list
 is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.

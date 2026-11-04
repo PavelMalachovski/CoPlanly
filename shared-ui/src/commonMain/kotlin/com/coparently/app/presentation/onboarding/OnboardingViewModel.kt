@@ -1,9 +1,9 @@
 package com.coparently.app.presentation.onboarding
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.platform.DeviceRegion
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.sync.SyncRequester
@@ -16,6 +16,8 @@ import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.IsoText
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.theme.ParentColorChoice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -28,7 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.LocalDateTime
 
 /**
  * What the wizard knows about the co-parent link.
@@ -252,7 +253,7 @@ class OnboardingViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 // An empty form is a survivable outcome; a crashed wizard on first launch is not.
-                Log.e(TAG, "Failed to prefill the wizard from the existing account", e)
+                logger.e(TAG, "Failed to prefill the wizard from the existing account", e)
             }
         }
     }
@@ -274,7 +275,7 @@ class OnboardingViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "The wizard stopped following the custody pattern", e)
+                logger.e(TAG, "The wizard stopped following the custody pattern", e)
             }
         }
     }
@@ -297,7 +298,7 @@ class OnboardingViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "The wizard stopped following the pairing state", e)
+                logger.e(TAG, "The wizard stopped following the pairing state", e)
             }
         }
     }
@@ -322,7 +323,7 @@ class OnboardingViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "The fetch of the co-parent's records failed; reporting none", e)
+                logger.e(TAG, "The fetch of the co-parent's records failed; reporting none", e)
                 CoParentData()
             }
             _uiState.update { it.copy(fetch = CoParentFetch.Done(found)) }
@@ -358,7 +359,7 @@ class OnboardingViewModel(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Could not read the pair's expense split", e)
+            logger.w(TAG, "Could not read the pair's expense split", e)
             null
         }
         return CoParentData(
@@ -434,7 +435,7 @@ class OnboardingViewModel(
                     val fresh = userRepository.getCurrentUser()
                     if (fresh != null) {
                         userRepository.updateUser(
-                            fresh.copy(onboardingCompletedAt = LocalDateTime.now().toString())
+                            fresh.copy(onboardingCompletedAt = IsoText.dateTimeShortest(wallClockNow()))
                         )
                     }
                 }
@@ -443,7 +444,7 @@ class OnboardingViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "Failed to record that onboarding finished", e)
+                logger.e(TAG, "Failed to record that onboarding finished", e)
             }
             _uiState.update { it.copy(isSaving = false, isFinished = true) }
         }
@@ -474,7 +475,7 @@ class OnboardingViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.e(TAG, "Failed to save a wizard step", e)
+                logger.e(TAG, "Failed to save a wizard step", e)
             }
         }
     }

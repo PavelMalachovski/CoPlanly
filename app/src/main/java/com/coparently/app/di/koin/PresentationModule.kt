@@ -1,6 +1,8 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.home.HomeIdentityDependencies
+import com.coparently.app.presentation.pairing.AndroidInviteQrCodes
+import com.coparently.app.presentation.pairing.InviteQrCodes
 import com.coparently.app.presentation.review.MonthReviewAssist
 import com.coparently.app.presentation.review.MonthReviewSources
 import com.coparently.app.presentation.widget.TodayWidgetNames
@@ -25,4 +27,6 @@ val presentationModule = module {
     singleOf(::TodayWidgetNames)
     singleOf(::TodayWidgetRefresher)
     singleOf(::NetworkMonitor)
+    // The invitation's QR code, which the pairing ViewModel in `:shared-ui` asks for.
+    single<InviteQrCodes> { AndroidInviteQrCodes(get()) }
 }
