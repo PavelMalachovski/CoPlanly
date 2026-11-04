@@ -94,7 +94,7 @@ expect fun readerMediumDate(date: LocalDate): String
 /** [date] in the language's own short style ("8/12/26", "12.08.26"), as [readerMediumDate] is the medium. */
 expect fun readerShortDate(date: LocalDate): String
 
-/** [date] in the language's own long style ("August 12, 2026", "12. srpna 2026"), as [readerMediumDate] is the medium. */
+/** [date] in the language's own long style ("August 12, 2026"), as [readerMediumDate] is the medium. */
 expect fun readerLongDate(date: LocalDate): String
 
 /** [date] in the language's own full style ("Wednesday, August 12, 2026"), as [readerMediumDate] is the medium. */

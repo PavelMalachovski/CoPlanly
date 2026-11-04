@@ -1030,7 +1030,8 @@ fun TimelineRow(
             }
             // An all-day event says so rather than "12:00 AM" (D-18; `AllDayEvent`).
             val timeLabel = if (AllDayEvent.isAllDay(event)) {
-                "${ReaderDateText.date(event.startDateTime.date, "EEEd")} · ${stringResource(Res.string.event_all_day)}"
+                val day = ReaderDateText.date(event.startDateTime.date, "EEEd")
+                "$day · ${stringResource(Res.string.event_all_day)}"
             } else {
                 event.startDateTime.dateAndTime("EEEd")
             }

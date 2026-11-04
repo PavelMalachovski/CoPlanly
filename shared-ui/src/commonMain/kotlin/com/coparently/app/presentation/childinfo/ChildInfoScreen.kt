@@ -373,7 +373,6 @@ private fun GuestAccessGroup(
     }
 }
 
-
 /** The child's identity: name, and date of birth when recorded. */
 @Composable
 private fun BasicInfoGroup(childInfo: ChildInfo, onClick: () -> Unit) {

@@ -369,10 +369,11 @@ private fun MoneySection(money: List<MonthMoney>, names: ParentNames) {
             money.forEachIndexed { index, entry ->
                 if (index > 0) Divider()
                 val paid = entry.paidByUid.entries.sortedBy { it.key }.map { (uid, amount) ->
+                    val money = ReaderMoneyText.amount(amount, entry.currency)
                     if (names.isReaderUid(uid)) {
-                        stringResource(Res.string.month_review_paid_by_you, ReaderMoneyText.amount(amount, entry.currency))
+                        stringResource(Res.string.month_review_paid_by_you, money)
                     } else {
-                        stringResource(Res.string.month_review_paid_by, names.labelForUid(uid), ReaderMoneyText.amount(amount, entry.currency))
+                        stringResource(Res.string.month_review_paid_by, names.labelForUid(uid), money)
                     }
                 }
                 val settlement = entry.settlement?.let {
