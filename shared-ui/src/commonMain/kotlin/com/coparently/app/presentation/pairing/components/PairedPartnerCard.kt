@@ -10,15 +10,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.presentation.common.AccountAvatar
 import com.coparently.app.presentation.theme.Spacing
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_paired_since
+import com.coparently.app.resources.pairing_unknown_sender
+import com.coparently.app.utils.readerMediumDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Instant
 
 /**
  * Summary of the linked co-parent.
@@ -39,7 +41,7 @@ fun PairedPartnerCard(
     partner: PartnerSummary,
     modifier: Modifier = Modifier
 ) {
-    val displayName = partner.name.ifBlank { stringResource(R.string.pairing_unknown_sender) }
+    val displayName = partner.name.ifBlank { stringResource(Res.string.pairing_unknown_sender) }
 
     Card(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -54,7 +56,7 @@ fun PairedPartnerCard(
                 Text(text = displayName, style = MaterialTheme.typography.titleMedium)
                 partner.pairedSinceMillis?.let { millis ->
                     Text(
-                        text = stringResource(R.string.pairing_paired_since, formatDate(millis)),
+                        text = stringResource(Res.string.pairing_paired_since, formatDate(millis)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -65,13 +67,8 @@ fun PairedPartnerCard(
 }
 
 /**
- * Formats an epoch-millis instant as a localized date.
- *
- * `LocalDate.ofInstant` is API 34+, and minSdk here is 26 — go through the zone
- * explicitly instead.
+ * Formats an epoch-millis instant as a localized medium date, on the phone's own day
+ * (`readerMediumDate`, `FormatStyle.MEDIUM` on Android, as before).
  */
 private fun formatDate(millis: Long): String =
-    Instant.ofEpochMilli(millis)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
-        .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+    readerMediumDate(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date)

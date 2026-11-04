@@ -31,17 +31,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.presentation.common.InviteCodeText
 import com.coparently.app.presentation.common.dashedRoundedBorder
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_code_expired_generate
+import com.coparently.app.resources.pairing_copy_code
+import com.coparently.app.resources.pairing_expires_in_hours
+import com.coparently.app.resources.pairing_expires_in_minutes
+import com.coparently.app.resources.pairing_new_code
+import com.coparently.app.resources.pairing_qr_code_content_description
+import com.coparently.app.resources.pairing_share_link
+import com.coparently.app.resources.pairing_tap_to_copy_and_expiry
+import com.coparently.app.resources.pairing_your_code_title
 import kotlinx.coroutines.delay
-import java.util.concurrent.TimeUnit
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /** Side of the inline QR code. */
 private val QR_SIZE = 180.dp
@@ -61,8 +72,11 @@ private val QR_SIZE = 180.dp
  *
  * @param invite The outstanding invite
  * @param qrBitmap Rendered QR for the invite link, or null while it is still being generated
- * @param onCopy Copies the code to the clipboard
- * @param onShare Opens the system share sheet with the invite message
+ * @param qrAvailable Whether this phone draws QR codes at all; where it does not (the iPhone for
+ *   now) no frame is drawn, since an empty one would wait for a code that never comes
+ * @param onCopy Copies the code to the clipboard, or null where the phone has no clipboard for it
+ * @param onShare Opens the system share sheet with the invite message, or null where there is none
+ *   (the code and the link are then read off the screen)
  * @param onRegenerate Issues a fresh code
  */
 @Composable
@@ -71,8 +85,9 @@ private val QR_SIZE = 180.dp
 fun InviteCodeCard(
     invite: PairingInvite,
     qrBitmap: ImageBitmap?,
-    onCopy: () -> Unit,
-    onShare: () -> Unit,
+    qrAvailable: Boolean,
+    onCopy: (() -> Unit)?,
+    onShare: (() -> Unit)?,
     onRegenerate: () -> Unit
 ) {
     Card(
@@ -90,12 +105,13 @@ fun InviteCodeCard(
             verticalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
             Text(
-                text = stringResource(R.string.pairing_your_code_title),
+                text = stringResource(Res.string.pairing_your_code_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Dashed container + copy glyph: the affordance the old bare code had none of.
+            // Dashed container + copy glyph: the affordance the old bare code had none of. Without
+            // a clipboard the code is only read, so nothing in it says it can be tapped.
             Row(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.medium)
@@ -103,25 +119,29 @@ fun InviteCodeCard(
                         color = MaterialTheme.colorScheme.outline,
                         cornerRadius = 16.dp
                     )
-                    .clickable(onClick = onCopy)
+                    .then(if (onCopy != null) Modifier.clickable(onClick = onCopy) else Modifier)
                     .padding(horizontal = Spacing.XL, vertical = Spacing.M),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.M)
             ) {
                 InviteCodeText(code = invite.code, color = MaterialTheme.colorScheme.primary)
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = stringResource(R.string.pairing_copy_code),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(IconSizes.Standard)
-                )
+                if (onCopy != null) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = stringResource(Res.string.pairing_copy_code),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(IconSizes.Standard)
+                    )
+                }
             }
 
+            val countdown = countdownText(invite.expiresAtMillis)
             Text(
-                text = stringResource(
-                    R.string.pairing_tap_to_copy_and_expiry,
-                    countdownText(invite.expiresAtMillis)
-                ),
+                text = if (onCopy != null) {
+                    stringResource(Res.string.pairing_tap_to_copy_and_expiry, countdown)
+                } else {
+                    countdown
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -129,44 +149,48 @@ fun InviteCodeCard(
 
             // Inline, not behind a dialog — handing the code over is most of what this
             // screen is for, and a QR the other parent cannot see is not handing anything over.
-            Box(
-                modifier = Modifier
-                    .size(QR_SIZE)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.inverseOnSurface),
-                contentAlignment = Alignment.Center
-            ) {
-                qrBitmap?.let {
-                    Image(
-                        bitmap = it,
-                        contentDescription =
-                        stringResource(R.string.pairing_qr_code_content_description),
-                        modifier = Modifier.padding(Spacing.S)
-                    )
+            if (qrAvailable) {
+                Box(
+                    modifier = Modifier
+                        .size(QR_SIZE)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.inverseOnSurface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    qrBitmap?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription =
+                            stringResource(Res.string.pairing_qr_code_content_description),
+                            modifier = Modifier.padding(Spacing.S)
+                        )
+                    }
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
-            ) {
-                Button(onClick = onShare, modifier = Modifier.weight(1f)) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null,
-                        modifier = Modifier.size(IconSizes.Small)
-                    )
-                    Text(
-                        text = stringResource(R.string.pairing_share_link),
-                        modifier = Modifier.padding(start = Spacing.S)
-                    )
+            if (onShare != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+                ) {
+                    Button(onClick = onShare, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(IconSizes.Small)
+                        )
+                        Text(
+                            text = stringResource(Res.string.pairing_share_link),
+                            modifier = Modifier.padding(start = Spacing.S)
+                        )
+                    }
                 }
             }
 
             TextButton(onClick = onRegenerate) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Text(
-                    text = stringResource(R.string.pairing_new_code),
+                    text = stringResource(Res.string.pairing_new_code),
                     modifier = Modifier.padding(start = Spacing.S)
                 )
             }
@@ -181,21 +205,23 @@ fun InviteCodeCard(
  */
 @Composable
 private fun countdownText(expiresAtMillis: Long): String {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(Clock.System.now().toEpochMilliseconds()) }
     LaunchedEffect(expiresAtMillis) {
         while (now < expiresAtMillis) {
-            delay(TimeUnit.SECONDS.toMillis(REFRESH_INTERVAL_SECONDS))
-            now = System.currentTimeMillis()
+            delay(REFRESH_INTERVAL_SECONDS.seconds)
+            now = Clock.System.now().toEpochMilliseconds()
         }
     }
     val remaining = (expiresAtMillis - now).coerceAtLeast(0)
-    if (remaining == 0L) return stringResource(R.string.pairing_code_expired_generate)
-    val hours = TimeUnit.MILLISECONDS.toHours(remaining)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(remaining) % MINUTES_PER_HOUR
+    if (remaining == 0L) return stringResource(Res.string.pairing_code_expired_generate)
+    // Whole hours and the minutes left over, as `TimeUnit`'s truncating conversions counted them.
+    val left = remaining.milliseconds
+    val hours = left.inWholeHours
+    val minutes = left.inWholeMinutes % MINUTES_PER_HOUR
     return if (hours > 0) {
-        stringResource(R.string.pairing_expires_in_hours, hours, minutes)
+        stringResource(Res.string.pairing_expires_in_hours, hours, minutes)
     } else {
-        stringResource(R.string.pairing_expires_in_minutes, minutes)
+        stringResource(Res.string.pairing_expires_in_minutes, minutes)
     }
 }
 

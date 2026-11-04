@@ -3057,6 +3057,10 @@ bytes are identical on Android):
   the platform interfaces. On a phone with no push registration, no Google sign-in or no language
   picker of its own (the iPhone for now) Settings offers no push switch, no Google Calendar row and
   no language row.
+  Then pairing and onboarding: the pairing screen, the invitation, the code card and the code field,
+  and the four-step wizard, the invitation's share, copy and scan through the platform interfaces; on
+  a phone with no QR drawing, share sheet, clipboard or scanner (the iPhone for now) the card draws no
+  QR frame and offers no Share or copy, and the form no scan.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

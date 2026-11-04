@@ -1473,6 +1473,30 @@ Then the export and the school import:
   the device's credential fixture) drives `startGoogleSignIn` through `AndroidGoogleCalendarSignIn` and
   `handleSignInResult` through `signInAnswer`, with two new cases (no client, a client that throws);
   `SyncStateTextTest` stays, so `toSyncState`/`toUiText` are public.
+- Group 2, pairing and onboarding (`git mv`, packages unchanged, `R.string` → `Res.string`):
+  `pairing/PairingScreen.kt`, `InvitationView.kt` (public: `InvitationViewTest`, the screenshots),
+  `PairingLink.kt` and `components/` (`InviteCodeCard`, `IncomingInviteCard`, `PairedPartnerCard`,
+  `CodeEntryField`), and `onboarding/OnboardingScreen.kt`. The Android calls, each replaced: the
+  invitation's `ACTION_SEND` chooser with the Activity's `getString` → `ShareSheet.shareText` with the
+  message and title read through `rememberUiTextResolver` in a coroutine at the tap (CMP reads a
+  string outside composition only as a `suspend`); `copySensitive(context, …)` →
+  `SensitiveClipboard`; the scanner's `StartActivityForResult` of `QRScannerActivity` →
+  `QrScanner.rememberScanner` (`AndroidQrScanner` is that launcher; the helper answers null where
+  `QrScanner.available` is false, kept out of `PairingScreen` so its cyclomatic count stays at the
+  threshold); `BuildConfig.PAIRING_WEB_LINK` → `AppBuildValues.pairingWebLink`, with
+  `pairingLinkFor(code, web)` now taking it (no default) and the app's new `BuildPairingLink.kt` keeping
+  `pairingLinkFor(code)` over `BuildConfig` for `AndroidInviteQrCodes` and `PairingLinkTest`;
+  `PLAY_STORE_URL`/`playStoreUrlFor` public (the app's friend and professional invitations); the
+  countdown's `System.currentTimeMillis()`/`TimeUnit` → `Clock.System` and `Duration.inWholeHours`/
+  `inWholeMinutes` (both truncate, as `TimeUnit` did); the paired-since day's `ofLocalizedDate(MEDIUM)`
+  → `readerMediumDate`; androidx.activity's `BackHandler` → CMP's (opted in); the onboarding's
+  `hasNotificationPermission(context)` → `PermissionRequester.isGranted`; `@StringRes Int` →
+  `StringResource`. **Carried notes:** `InviteQrCodes.available` (true by default; `NoInviteQrCodes` is
+  an object answering false), `PairingViewModel.qrAvailable`, and `InviteCodeCard(qrAvailable, onCopy?,
+  onShare?)`: no QR frame, no Share, and no copy glyph or tap (the line under the code says only how
+  long it lasts) where unavailable; the scan button and the onboarding's notification button only
+  where their capability is. Kept in the app: `QRScannerActivity`, `QrScannerScreen` (CameraX, ML
+  Kit), `AndroidInviteQrCodes`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

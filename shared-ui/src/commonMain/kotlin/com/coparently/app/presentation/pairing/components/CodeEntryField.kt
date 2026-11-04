@@ -11,14 +11,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.sp
-import com.coparently.app.R
 import com.coparently.app.domain.pairing.InviteCodeGenerator
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.headlineSmallEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_code_field_label
+import com.coparently.app.resources.pairing_have_a_code
+import com.coparently.app.resources.pairing_link_accounts
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Input for a code the user was given. Accepts a pasted pairing link or share
@@ -45,13 +48,13 @@ fun CodeEntryField(
         verticalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         Text(
-            text = stringResource(R.string.pairing_have_a_code),
+            text = stringResource(Res.string.pairing_have_a_code),
             style = MaterialTheme.typography.titleMedium
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(stringResource(R.string.pairing_code_field_label)) },
+            label = { Text(stringResource(Res.string.pairing_code_field_label)) },
             singleLine = true,
             enabled = enabled,
             isError = errorText != null,
@@ -73,7 +76,7 @@ fun CodeEntryField(
                 enabled = enabled && value.length == InviteCodeGenerator.LENGTH,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.pairing_link_accounts))
+                Text(stringResource(Res.string.pairing_link_accounts))
             }
         }
     }

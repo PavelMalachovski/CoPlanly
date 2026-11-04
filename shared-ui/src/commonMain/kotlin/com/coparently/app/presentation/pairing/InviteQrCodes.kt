@@ -14,6 +14,13 @@ import androidx.compose.ui.graphics.ImageBitmap
  */
 fun interface InviteQrCodes {
 
+    /**
+     * Whether this phone draws QR codes at all. The pairing screen draws the QR frame only when it
+     * does (design item 8): ZXing on Android always does; the iPhone's stand-in does not yet, and an
+     * empty frame would wait for a code that never comes (MON-24 phase 2, slice 11f).
+     */
+    val available: Boolean get() = true
+
     /** The QR code of [code]'s invitation link, or null when it could not be drawn. */
     fun forInvite(code: String): ImageBitmap?
 }

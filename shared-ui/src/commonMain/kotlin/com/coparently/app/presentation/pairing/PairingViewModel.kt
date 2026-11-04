@@ -523,6 +523,13 @@ class PairingViewModel(
     }
 
     /**
+     * Whether this phone draws an invitation's QR code ([InviteQrCodes.available]); the screen draws
+     * the QR frame only when it does (MON-24 phase 2, slice 11f: the iPhone's stand-in does not).
+     */
+    val qrAvailable: Boolean
+        get() = inviteQrCodes.available
+
+    /**
      * Renders the active invite's link as a QR bitmap, through [InviteQrCodes], which draws the
      * link the share sheet sends.
      *

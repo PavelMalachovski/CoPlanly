@@ -1216,7 +1216,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `CollapsedMonthSummary`, which the screenshots render, and `ReceiptScanEffect` with its
   `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives; slice 11f:
 `ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render, and
-`GridSwatch`, which onboarding draws). A test that moves with its code to `:shared-ui` keeps `internal`
+`GridSwatch`, which onboarding draws, then `InvitationView`, which `InvitationViewTest` and the
+screenshots render). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1652,7 +1653,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              split's wording, the stickers' views, the family's two dialogs and Home's money text,
              and the expenses' and child support's screens (presentation/expenses/,
              presentation/support/); and, from slice 11f, Settings' screens (presentation/settings/,
-             with the country picker and the consent screens) and SyncViewModel.
+             with the country picker and the consent screens) and SyncViewModel, then pairing's and
+             onboarding's screens (presentation/pairing/, presentation/onboarding/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1670,10 +1672,12 @@ presentation/ — Compose screens per feature, and the ViewModel whose sign-ins 
              Android activity (AuthViewModel; Task 11). Their strings, the theme, the design
              system's components, the shared state and every other ViewModel are in shared-ui/
              (Task 10; SyncViewModel since slice 11f), and so are chat's, the event form's, the
-             calendar's, custody's, the requests', the family's, the expenses', child support's and
-             Settings' screens (Task 11, slices 11b–11f); the app keeps their previews and the
-             Android halves of the platform interfaces (presentation/platform/, the language
-             picker's AndroidAppLanguages, Google's sign-in's AndroidGoogleCalendarSignIn)
+             calendar's, custody's, the requests', the family's, the expenses', child support's,
+             Settings', pairing's and onboarding's screens (Task 11, slices 11b–11f); the app keeps
+             their previews and the Android halves of the platform interfaces
+             (presentation/platform/, the language picker's AndroidAppLanguages, Google's
+             sign-in's AndroidGoogleCalendarSignIn, the QR scanner's QRScannerActivity and
+             QrScannerScreen, the invitation QR's AndroidInviteQrCodes)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2210,7 +2214,27 @@ store through `SecurePreferences`. Settings draws the Google Calendar row only w
 `GoogleCalendarSignIn.available` (not on the iPhone). `SyncViewModelTest` and `SyncStateTextTest`
 stay in the app (the first runs over the device's real credential store), so `toSyncState` and
 `toUiText` are public. `AppLanguage`'s Android half (`current`, `apply`) is the app's
-`AndroidAppLanguages`; `SystemDefaultRelaunch` stays with it.
+`AndroidAppLanguages`; `SystemDefaultRelaunch` stays with it. **Then pairing's and onboarding's
+screens** (slice 11f): `presentation/pairing/`'s `PairingScreen`, `InvitationView` (public for
+`InvitationViewTest` and the screenshots), `PairingLink.kt` and `components/` (`InviteCodeCard`,
+`IncomingInviteCard`, `PairedPartnerCard`, `CodeEntryField`), and `onboarding/OnboardingScreen.kt`.
+`pairingLinkFor(code, web)` takes the build's choice as an argument now (the screen reads it from
+`AppBuildValues.pairingWebLink`), and the app's `pairing/BuildPairingLink.kt` keeps the one-argument
+`pairingLinkFor(code)` over `BuildConfig.PAIRING_WEB_LINK` for `AndroidInviteQrCodes` and the tests,
+so the QR and the share text still carry one link (item 37); `PLAY_STORE_URL` and `playStoreUrlFor`
+are public for the friend and professional invitations still in the app. The invitation's share
+sheet and copy go through `ShareSheet` and `SensitiveClipboard` (its text worded through
+`rememberUiTextResolver` in a coroutine at the tap, where it read the Activity's `getString`), the
+scan through `QrScanner` (`QRScannerActivity` on Android, unchanged), Back through Compose
+Multiplatform's `BackHandler`, the paired-since day through `readerMediumDate`, the code's countdown
+through `kotlin.time` (whole hours and minutes, as `TimeUnit` truncated them), and the onboarding's
+notification question through `PermissionRequester`. **The carried notes**: where the phone draws no
+QR (`InviteQrCodes.available`, new, true by default; the iPhone's `NoInviteQrCodes` says false;
+`PairingViewModel.qrAvailable`) the card draws no QR frame; where there is no share sheet, clipboard
+or scanner (the iPhone for now) the card offers no Share, no copy (the code stays, the line under
+it says only how long it lasts) and the form no scan button; and the onboarding's notification step
+offers its button only where the phone asks for the permission. `QRScannerActivity`,
+`QrScannerScreen` and `AndroidInviteQrCodes` stay in the app.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

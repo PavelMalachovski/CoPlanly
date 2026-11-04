@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.onboarding
 
-import androidx.activity.compose.BackHandler
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,19 +44,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.common.CountryPicker
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
-import com.coparently.app.presentation.common.hasNotificationPermission
 import com.coparently.app.presentation.common.labelRes
 import com.coparently.app.presentation.common.rememberNotificationPermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
@@ -72,11 +68,54 @@ import com.coparently.app.presentation.custody.SchedulePreviewMonth
 import com.coparently.app.presentation.custody.createTempModel
 import com.coparently.app.presentation.custody.custodyPreviewText
 import com.coparently.app.presentation.custody.labelRes
+import com.coparently.app.presentation.platform.LocalPermissionRequester
+import com.coparently.app.presentation.platform.PlatformPermission
 import com.coparently.app.presentation.settings.GridSwatch
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.country_label
+import com.coparently.app.resources.onboarding_back
+import com.coparently.app.resources.onboarding_coparent_body
+import com.coparently.app.resources.onboarding_coparent_enter_code
+import com.coparently.app.resources.onboarding_coparent_fetching
+import com.coparently.app.resources.onboarding_coparent_fetching_hint
+import com.coparently.app.resources.onboarding_coparent_found_children
+import com.coparently.app.resources.onboarding_coparent_found_custody
+import com.coparently.app.resources.onboarding_coparent_found_pets
+import com.coparently.app.resources.onboarding_coparent_found_set
+import com.coparently.app.resources.onboarding_coparent_found_split
+import com.coparently.app.resources.onboarding_coparent_found_title
+import com.coparently.app.resources.onboarding_coparent_invite
+import com.coparently.app.resources.onboarding_coparent_later
+import com.coparently.app.resources.onboarding_coparent_linked_body
+import com.coparently.app.resources.onboarding_coparent_linked_title
+import com.coparently.app.resources.onboarding_coparent_nothing_yet
+import com.coparently.app.resources.onboarding_coparent_title
+import com.coparently.app.resources.onboarding_custody_body
+import com.coparently.app.resources.onboarding_custody_checking
+import com.coparently.app.resources.onboarding_custody_existing_body
+import com.coparently.app.resources.onboarding_custody_looks_right
+import com.coparently.app.resources.onboarding_custody_propose_change
+import com.coparently.app.resources.onboarding_custody_title
+import com.coparently.app.resources.onboarding_finish
+import com.coparently.app.resources.onboarding_next
+import com.coparently.app.resources.onboarding_notifications_allow
+import com.coparently.app.resources.onboarding_notifications_body
+import com.coparently.app.resources.onboarding_notifications_later
+import com.coparently.app.resources.onboarding_notifications_on
+import com.coparently.app.resources.onboarding_notifications_title
+import com.coparently.app.resources.onboarding_profile_name_required
+import com.coparently.app.resources.onboarding_profile_title
+import com.coparently.app.resources.onboarding_progress
+import com.coparently.app.resources.onboarding_skip
+import com.coparently.app.resources.onboarding_title
+import com.coparently.app.resources.pairing_default_partner_name
+import com.coparently.app.resources.profile_name_label
+import com.coparently.app.resources.settings_parent_color
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -101,7 +140,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param viewModel Wizard state and mutations
  * @param scheduleViewModel The schedule step's form and its never-proposing save
  */
-@OptIn(ExperimentalMaterial3Api::class)
+// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
+// Android, as before).
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun OnboardingScreen(
     onFinished: () -> Unit,
@@ -131,11 +172,11 @@ fun OnboardingScreen(
     // a schedule the pair already shares, confirms it and writes nothing.
     val onCustodyStep = uiState.step == OnboardingStep.Custody
     val primary = when {
-        !onCustodyStep -> PrimaryAction(R.string.onboarding_next, uiState.canAdvance, viewModel::next)
+        !onCustodyStep -> PrimaryAction(Res.string.onboarding_next, uiState.canAdvance, viewModel::next)
         scheduleMode is OnboardingScheduleMode.Existing ->
-            PrimaryAction(R.string.onboarding_custody_looks_right, enabled = true, onClick = viewModel::finish)
+            PrimaryAction(Res.string.onboarding_custody_looks_right, enabled = true, onClick = viewModel::finish)
         scheduleMode is OnboardingScheduleMode.Form -> PrimaryAction(
-            R.string.onboarding_finish,
+            Res.string.onboarding_finish,
             enabled = schedule.isValid && !schedule.isLoading,
             onClick = {
                 scheduleViewModel.saveFirstSchedule(
@@ -144,7 +185,7 @@ fun OnboardingScreen(
                 )
             }
         )
-        else -> PrimaryAction(R.string.onboarding_finish, enabled = false, onClick = {})
+        else -> PrimaryAction(Res.string.onboarding_finish, enabled = false, onClick = {})
     }
 
     Scaffold(
@@ -173,7 +214,7 @@ fun OnboardingScreen(
  * The bottom bar's primary button on this step: its label, whether it may be pressed, and what it
  * does.
  */
-private data class PrimaryAction(@StringRes val label: Int, val enabled: Boolean, val onClick: () -> Unit)
+private data class PrimaryAction(val label: StringResource, val enabled: Boolean, val onClick: () -> Unit)
 
 /** What the schedule step renders from, and the ViewModel its form writes to. */
 private class ScheduleStepState(
@@ -187,14 +228,14 @@ private class ScheduleStepState(
 @Composable
 private fun OnboardingTopBar(state: OnboardingUiState) {
     Column {
-        TopAppBar(title = { Text(stringResource(R.string.onboarding_title)) })
+        TopAppBar(title = { Text(stringResource(Res.string.onboarding_title)) })
         LinearProgressIndicator(
             progress = { state.displayIndex.toFloat() / state.stepCount },
             modifier = Modifier.fillMaxWidth()
         )
         Text(
             text = stringResource(
-                R.string.onboarding_progress,
+                Res.string.onboarding_progress,
                 state.displayIndex,
                 state.stepCount
             ),
@@ -248,11 +289,11 @@ private fun CoParentStep(
 ) {
     when (val link = state.coParent) {
         is CoParentLink.Linked -> LinkedCoParent(
-            name = link.name.ifBlank { stringResource(R.string.pairing_default_partner_name) },
+            name = link.name.ifBlank { stringResource(Res.string.pairing_default_partner_name) },
             fetch = state.fetch
         )
         CoParentLink.None, CoParentLink.Unknown -> {
-            StepHeading(title = R.string.onboarding_coparent_title, body = R.string.onboarding_coparent_body)
+            StepHeading(title = Res.string.onboarding_coparent_title, body = Res.string.onboarding_coparent_body)
             Button(onClick = { onOpenPairing(true) }, modifier = Modifier.fillMaxWidth()) {
                 Icon(
                     imageVector = Icons.Default.Link,
@@ -260,7 +301,7 @@ private fun CoParentStep(
                     modifier = Modifier.size(IconSizes.Small)
                 )
                 Spacer(modifier = Modifier.width(Spacing.S))
-                Text(stringResource(R.string.onboarding_coparent_enter_code))
+                Text(stringResource(Res.string.onboarding_coparent_enter_code))
             }
             OutlinedButton(onClick = { onOpenPairing(false) }, modifier = Modifier.fillMaxWidth()) {
                 Icon(
@@ -269,7 +310,7 @@ private fun CoParentStep(
                     modifier = Modifier.size(IconSizes.Small)
                 )
                 Spacer(modifier = Modifier.width(Spacing.S))
-                Text(stringResource(R.string.onboarding_coparent_invite))
+                Text(stringResource(Res.string.onboarding_coparent_invite))
             }
         }
     }
@@ -284,19 +325,22 @@ private fun CoParentStep(
  */
 @Composable
 private fun NotificationsStep(onAnswered: () -> Unit) {
-    val context = LocalContext.current
-    var granted by remember { mutableStateOf(hasNotificationPermission(context)) }
+    // The phone's permission (`PermissionRequester`, MON-24 phase 2, slice 11f): asked only where the
+    // platform asks for one at all; where it cannot (the iPhone for now) the step offers no button
+    // that would only move on, and Next does.
+    val permissions = LocalPermissionRequester.current
+    var granted by remember { mutableStateOf(permissions.isGranted(PlatformPermission.NOTIFICATIONS)) }
     val requester = rememberNotificationPermissionRequester(onDenied = onAnswered)
-    StepHeading(title = R.string.onboarding_notifications_title, body = R.string.onboarding_notifications_body)
+    StepHeading(title = Res.string.onboarding_notifications_title, body = Res.string.onboarding_notifications_body)
     if (granted) {
-        StatusRow(text = stringResource(R.string.onboarding_notifications_on)) {
+        StatusRow(text = stringResource(Res.string.onboarding_notifications_on)) {
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
         }
-    } else {
+    } else if (permissions.available) {
         Button(
             onClick = {
                 requester.request {
@@ -312,10 +356,10 @@ private fun NotificationsStep(onAnswered: () -> Unit) {
                 modifier = Modifier.size(IconSizes.Small)
             )
             Spacer(modifier = Modifier.width(Spacing.S))
-            Text(stringResource(R.string.onboarding_notifications_allow))
+            Text(stringResource(Res.string.onboarding_notifications_allow))
         }
         Text(
-            text = stringResource(R.string.onboarding_notifications_later),
+            text = stringResource(Res.string.onboarding_notifications_later),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -332,32 +376,32 @@ private fun LinkedCoParent(name: String, fetch: CoParentFetch) {
             tint = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = stringResource(R.string.onboarding_coparent_linked_title, name),
+            text = stringResource(Res.string.onboarding_coparent_linked_title, name),
             style = MaterialTheme.typography.headlineSmall
         )
     }
     Text(
-        text = stringResource(R.string.onboarding_coparent_linked_body, name),
+        text = stringResource(Res.string.onboarding_coparent_linked_body, name),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     when (fetch) {
         CoParentFetch.Idle, CoParentFetch.Running -> {
-            StatusRow(text = stringResource(R.string.onboarding_coparent_fetching, name)) {
+            StatusRow(text = stringResource(Res.string.onboarding_coparent_fetching, name)) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             }
             // A spinner alone reads as "wait here", and on a slow network it can spin for a
             // while (D-24). Nothing on this step needs the fetch to finish: the later steps keep
             // listening and fill in what arrives.
             Text(
-                text = stringResource(R.string.onboarding_coparent_fetching_hint),
+                text = stringResource(Res.string.onboarding_coparent_fetching_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         is CoParentFetch.Done -> if (fetch.found.isEmpty) {
-            StatusRow(text = stringResource(R.string.onboarding_coparent_nothing_yet, name)) {
+            StatusRow(text = stringResource(Res.string.onboarding_coparent_nothing_yet, name)) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
@@ -383,27 +427,27 @@ private fun StatusRow(text: String, leading: @Composable () -> Unit) {
 /** What the fetch found, one row per kind of record that came across. */
 @Composable
 private fun FoundRecords(name: String, found: CoParentData) {
-    SectionHeading(text = stringResource(R.string.onboarding_coparent_found_title, name))
-    val setUp = stringResource(R.string.onboarding_coparent_found_set)
+    SectionHeading(text = stringResource(Res.string.onboarding_coparent_found_title, name))
+    val setUp = stringResource(Res.string.onboarding_coparent_found_set)
     SectionGroup {
         val rows = buildList {
             if (found.children > 0) {
                 add(
                     Triple(
                         Icons.Default.ChildCare,
-                        R.string.onboarding_coparent_found_children,
+                        Res.string.onboarding_coparent_found_children,
                         found.children.toString()
                     )
                 )
             }
             if (found.pets > 0) {
-                add(Triple(Icons.Default.Pets, R.string.onboarding_coparent_found_pets, found.pets.toString()))
+                add(Triple(Icons.Default.Pets, Res.string.onboarding_coparent_found_pets, found.pets.toString()))
             }
             if (found.hasCustodySchedule) {
-                add(Triple(Icons.Default.CalendarMonth, R.string.onboarding_coparent_found_custody, setUp))
+                add(Triple(Icons.Default.CalendarMonth, Res.string.onboarding_coparent_found_custody, setUp))
             }
             if (found.hasSplitAgreement) {
-                add(Triple(Icons.Default.Balance, R.string.onboarding_coparent_found_split, setUp))
+                add(Triple(Icons.Default.Balance, Res.string.onboarding_coparent_found_split, setUp))
             }
         }
         rows.forEachIndexed { index, (icon, title, value) ->
@@ -474,22 +518,22 @@ private fun ParentColorSwatches(
  */
 @Composable
 private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
-    StepHeading(title = R.string.onboarding_profile_title)
+    StepHeading(title = Res.string.onboarding_profile_title)
 
     OutlinedTextField(
         value = state.name,
         onValueChange = viewModel::updateName,
-        label = { Text(stringResource(R.string.profile_name_label)) },
+        label = { Text(stringResource(Res.string.profile_name_label)) },
         // Explained, not flagged: a field nobody has touched yet must not be rendered in error
         // colours on the first screen a new parent sees. The disabled Next carries the rule.
-        supportingText = { Text(stringResource(R.string.onboarding_profile_name_required)) },
+        supportingText = { Text(stringResource(Res.string.onboarding_profile_name_required)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
 
     // Beside the name rather than on a step of its own: this is "who you are" — what you are
     // called and how you are marked.
-    SectionHeading(title = R.string.settings_parent_color)
+    SectionHeading(title = Res.string.settings_parent_color)
     ParentColorSwatches(
         selected = state.parentColor,
         onSelect = viewModel::updateParentColor
@@ -497,7 +541,7 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
 
     // The calendar draws holidays from the very first launch, so the country is asked here; it
     // opens on the phone's own when this app has its holidays.
-    SectionHeading(title = R.string.country_label)
+    SectionHeading(title = Res.string.country_label)
     CountryPicker(
         selected = state.country,
         onSelect = viewModel::updateCountry,
@@ -517,15 +561,15 @@ private fun ProfileStep(state: OnboardingUiState, viewModel: OnboardingViewModel
  */
 @Composable
 private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, onOpenEditor: () -> Unit) {
-    StepHeading(title = R.string.onboarding_custody_title)
+    StepHeading(title = Res.string.onboarding_custody_title)
     val parentNames = rememberParentNames(schedule.viewModel.parents.collectAsState().value)
     when (val mode = schedule.mode) {
-        OnboardingScheduleMode.Checking -> StatusRow(text = stringResource(R.string.onboarding_custody_checking)) {
+        OnboardingScheduleMode.Checking -> StatusRow(text = stringResource(Res.string.onboarding_custody_checking)) {
             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
         }
         OnboardingScheduleMode.Form -> {
             Text(
-                text = stringResource(R.string.onboarding_custody_body),
+                text = stringResource(Res.string.onboarding_custody_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -554,8 +598,8 @@ private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, o
         is OnboardingScheduleMode.Existing -> {
             Text(
                 text = stringResource(
-                    R.string.onboarding_custody_existing_body,
-                    state.coParentName?.ifBlank { null } ?: stringResource(R.string.pairing_default_partner_name)
+                    Res.string.onboarding_custody_existing_body,
+                    state.coParentName?.ifBlank { null } ?: stringResource(Res.string.pairing_default_partner_name)
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -566,7 +610,7 @@ private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, o
                 description = stringResource(mode.model.modelType.labelRes())
             )
             TextButton(onClick = onOpenEditor) {
-                Text(stringResource(R.string.onboarding_custody_propose_change))
+                Text(stringResource(Res.string.onboarding_custody_propose_change))
             }
         }
     }
@@ -574,7 +618,7 @@ private fun CustodyStep(state: OnboardingUiState, schedule: ScheduleStepState, o
 
 /** A step's title, and the sentence under it where one exists. */
 @Composable
-private fun StepHeading(@StringRes title: Int, @StringRes body: Int? = null) {
+private fun StepHeading(title: StringResource, body: StringResource? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = stringResource(title),
@@ -592,7 +636,7 @@ private fun StepHeading(@StringRes title: Int, @StringRes body: Int? = null) {
 
 /** A label over an editor that brings no label of its own. */
 @Composable
-private fun SectionHeading(@StringRes title: Int) {
+private fun SectionHeading(title: StringResource) {
     SectionHeading(text = stringResource(title))
 }
 
@@ -623,7 +667,7 @@ private fun OnboardingBottomBar(
     val back: @Composable () -> Unit = {
         if (!state.isFirstStep) {
             TextButton(onClick = onBack) {
-                Text(stringResource(R.string.onboarding_back))
+                Text(stringResource(Res.string.onboarding_back))
             }
         }
     }
@@ -671,9 +715,9 @@ private fun OnboardingSkipButton(step: OnboardingStep, onSkip: () -> Unit) {
         Text(
             stringResource(
                 if (step == OnboardingStep.CoParent) {
-                    R.string.onboarding_coparent_later
+                    Res.string.onboarding_coparent_later
                 } else {
-                    R.string.onboarding_skip
+                    Res.string.onboarding_skip
                 }
             )
         )

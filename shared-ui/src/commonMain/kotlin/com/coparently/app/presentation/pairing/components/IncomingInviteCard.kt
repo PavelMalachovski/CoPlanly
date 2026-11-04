@@ -12,10 +12,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_accept_button
+import com.coparently.app.resources.pairing_reject_button
+import com.coparently.app.resources.pairing_unknown_sender
+import org.jetbrains.compose.resources.stringResource
 
 /** One invitation addressed to this user, with accept and decline. */
 @Composable
@@ -34,7 +37,7 @@ fun IncomingInviteCard(
             Column {
                 Text(
                     text = invite.fromUserName.ifEmpty {
-                        stringResource(R.string.pairing_unknown_sender)
+                        stringResource(Res.string.pairing_unknown_sender)
                     },
                     style = MaterialTheme.typography.titleSmall
                 )
@@ -46,10 +49,10 @@ fun IncomingInviteCard(
             }
             Row {
                 TextButton(onClick = onAccept) {
-                    Text(stringResource(R.string.pairing_accept_button))
+                    Text(stringResource(Res.string.pairing_accept_button))
                 }
                 TextButton(onClick = onReject) {
-                    Text(stringResource(R.string.pairing_reject_button))
+                    Text(stringResource(Res.string.pairing_reject_button))
                 }
             }
         }

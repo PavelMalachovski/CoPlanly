@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.pairing
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,19 +19,30 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.coparently.app.R
 import com.coparently.app.presentation.common.HeroIcon
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_invitation_fact_agree
+import com.coparently.app.resources.pairing_invitation_fact_messages
+import com.coparently.app.resources.pairing_invitation_fact_same
+import com.coparently.app.resources.pairing_invitation_fact_unlink
+import com.coparently.app.resources.pairing_invitation_lede
+import com.coparently.app.resources.pairing_invitation_link
+import com.coparently.app.resources.pairing_invitation_not_now
+import com.coparently.app.resources.pairing_invitation_title
+import com.coparently.app.resources.pairing_invitation_title_unnamed
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The invitation a parent who is not linked yet answers before a code is redeemed — in place of
@@ -54,8 +64,11 @@ import com.coparently.app.presentation.theme.Spacing
  * @param onAnswer True to redeem the code, false to decline.
  * @param modifier Applied to the screen's root.
  */
+// Public for the app's `InvitationViewTest` and the screenshots. `ExperimentalComposeUiApi`:
+// Compose Multiplatform's common `BackHandler` (androidx.activity's on Android, as before).
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun InvitationView(
+fun InvitationView(
     inviterName: String?,
     onAnswer: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -65,7 +78,7 @@ internal fun InvitationView(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
             StickyActionBar(
-                label = stringResource(R.string.pairing_invitation_link),
+                label = stringResource(Res.string.pairing_invitation_link),
                 onClick = { onAnswer(true) }
             )
         }
@@ -82,23 +95,23 @@ internal fun InvitationView(
             HeroIcon(Icons.Default.Groups)
             Text(
                 text = if (inviterName != null) {
-                    stringResource(R.string.pairing_invitation_title, inviterName)
+                    stringResource(Res.string.pairing_invitation_title, inviterName)
                 } else {
-                    stringResource(R.string.pairing_invitation_title_unnamed)
+                    stringResource(Res.string.pairing_invitation_title_unnamed)
                 },
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.semantics { heading() }
             )
             Text(
-                text = stringResource(R.string.pairing_invitation_lede),
+                text = stringResource(Res.string.pairing_invitation_lede),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
             InvitationFacts()
             TextButton(onClick = { onAnswer(false) }) {
-                Text(stringResource(R.string.pairing_invitation_not_now))
+                Text(stringResource(Res.string.pairing_invitation_not_now))
             }
         }
     }
@@ -110,22 +123,22 @@ private fun InvitationFacts() {
     SectionGroup(modifier = Modifier.fillMaxWidth()) {
         SectionRow(
             icon = Icons.Default.CalendarMonth,
-            title = stringResource(R.string.pairing_invitation_fact_same)
+            title = stringResource(Res.string.pairing_invitation_fact_same)
         )
         Divider()
         SectionRow(
             icon = Icons.Default.ThumbUp,
-            title = stringResource(R.string.pairing_invitation_fact_agree)
+            title = stringResource(Res.string.pairing_invitation_fact_agree)
         )
         Divider()
         SectionRow(
             icon = Icons.Default.Lock,
-            title = stringResource(R.string.pairing_invitation_fact_messages)
+            title = stringResource(Res.string.pairing_invitation_fact_messages)
         )
         Divider()
         SectionRow(
             icon = Icons.Default.LinkOff,
-            title = stringResource(R.string.pairing_invitation_fact_unlink)
+            title = stringResource(Res.string.pairing_invitation_fact_unlink)
         )
     }
 }

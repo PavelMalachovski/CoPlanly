@@ -1,11 +1,5 @@
 package com.coparently.app.presentation.pairing
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,10 +46,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.BuildConfig
-import com.coparently.app.R
 import com.coparently.app.domain.model.PairingInvite
 import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
@@ -66,15 +56,47 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
-import com.coparently.app.presentation.common.copySensitive
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.pairing.components.CodeEntryField
 import com.coparently.app.presentation.pairing.components.IncomingInviteCard
 import com.coparently.app.presentation.pairing.components.InviteCodeCard
 import com.coparently.app.presentation.pairing.components.PairedPartnerCard
+import com.coparently.app.presentation.platform.LocalAppBuildValues
+import com.coparently.app.presentation.platform.LocalQrScanner
+import com.coparently.app.presentation.platform.LocalSensitiveClipboard
+import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pairing_add_another_description
+import com.coparently.app.resources.pairing_add_another_title
+import com.coparently.app.resources.pairing_back
+import com.coparently.app.resources.pairing_cancel
+import com.coparently.app.resources.pairing_code_copied
+import com.coparently.app.resources.pairing_confirm_named_message
+import com.coparently.app.resources.pairing_confirm_named_title
+import com.coparently.app.resources.pairing_deep_link_confirm_message
+import com.coparently.app.resources.pairing_deep_link_confirm_title
+import com.coparently.app.resources.pairing_link_accounts
+import com.coparently.app.resources.pairing_mode_enter
+import com.coparently.app.resources.pairing_mode_share
+import com.coparently.app.resources.pairing_scan_qr_code
+import com.coparently.app.resources.pairing_screen_title
+import com.coparently.app.resources.pairing_share_invite
+import com.coparently.app.resources.pairing_share_message
+import com.coparently.app.resources.pairing_share_message_web
+import com.coparently.app.resources.pairing_trust_body
+import com.coparently.app.resources.pairing_trust_title
+import com.coparently.app.resources.pairing_unpair_button
+import com.coparently.app.resources.pairing_unpair_confirm_action
+import com.coparently.app.resources.pairing_unpair_confirm_message
+import com.coparently.app.resources.pairing_unpair_confirm_title
+import com.coparently.app.resources.pairing_unpair_final_message
+import com.coparently.app.resources.pairing_unpair_final_no
+import com.coparently.app.resources.pairing_unpair_final_title
+import com.coparently.app.resources.pairing_unpair_final_yes
+import com.coparently.app.resources.parent_label_coparent
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -124,11 +146,10 @@ fun PairingScreen(
     val partnerOnScreen by viewModel.partnerOnScreen.collectAsState()
     val form by viewModel.form.collectAsState()
     val account by viewModel.account.collectAsState()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val codeCopiedMessage = stringResource(R.string.pairing_code_copied)
-    val qrScannerLauncher = rememberQrScannerLauncher(viewModel)
+    val codeCopiedMessage = stringResource(Res.string.pairing_code_copied)
+    val scanQr = rememberQrScan(viewModel)
 
     // A deep-linked code means the user is redeeming someone else's, so open on that mode — as
     // does a caller that said so outright.
@@ -139,9 +160,8 @@ fun PairingScreen(
     }
 
     val actions = rememberNotPairedActions(
-        context = context,
         onCodeCopied = { scope.launch { snackbarHostState.showSnackbar(codeCopiedMessage) } },
-        onScanQr = { qrScannerLauncher.launch(Intent(context, QRScannerActivity::class.java)) }
+        onScanQr = scanQr
     )
 
     // rememberSaveable so a config change never silently drops a decision the
@@ -296,10 +316,10 @@ private fun UnpairFlow(
         )
     } else {
         ConfirmationDialog(
-            title = stringResource(R.string.pairing_unpair_final_title),
-            message = stringResource(R.string.pairing_unpair_final_message),
-            confirmText = stringResource(R.string.pairing_unpair_final_yes),
-            dismissText = stringResource(R.string.pairing_unpair_final_no),
+            title = stringResource(Res.string.pairing_unpair_final_title),
+            message = stringResource(Res.string.pairing_unpair_final_message),
+            confirmText = stringResource(Res.string.pairing_unpair_final_yes),
+            dismissText = stringResource(Res.string.pairing_unpair_final_no),
             onConfirm = {
                 onUnpair()
                 visible.value = false
@@ -361,15 +381,15 @@ private fun ActionErrorSnackbar(
 private fun PairingTopBar(state: PairingState, partnerOnScreen: PartnerSummary?, onNavigateBack: () -> Unit) {
     val title = (state as? PairingState.Paired)?.let { paired ->
         (partnerOnScreen ?: paired.partner)?.name?.takeIf { it.isNotBlank() }
-            ?: stringResource(R.string.parent_label_coparent)
-    } ?: stringResource(R.string.pairing_screen_title)
+            ?: stringResource(Res.string.parent_label_coparent)
+    } ?: stringResource(Res.string.pairing_screen_title)
     TopAppBar(
         title = { Text(title) },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.pairing_back)
+                    contentDescription = stringResource(Res.string.pairing_back)
                 )
             }
         }
@@ -377,72 +397,90 @@ private fun PairingTopBar(state: PairingState, partnerOnScreen: PartnerSummary?,
 }
 
 /**
- * Launches [QRScannerActivity] and, on a successful scan, feeds the returned
- * code straight into the redeem flow — the same path as typing it by hand.
+ * Opens the phone's QR scanner (on Android `QRScannerActivity`, through `QrScanner`) and, on a
+ * successful scan, feeds the returned code straight into the redeem flow — the same path as typing
+ * it by hand. Null where the phone has no scanner (the iPhone until phase 4): the code and the link
+ * are how an invitation arrives there, and the form offers no scan button.
  */
 @Composable
-private fun rememberQrScannerLauncher(viewModel: PairingViewModel): ActivityResultLauncher<Intent> =
-    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getStringExtra(QRScannerActivity.EXTRA_CODE)?.let { code ->
-                viewModel.onCodeInputChange(code)
-                viewModel.redeemCode()
-            }
-        }
+private fun rememberQrScan(viewModel: PairingViewModel): (() -> Unit)? {
+    val qrScanner = LocalQrScanner.current
+    val launcher = qrScanner.rememberScanner { code ->
+        viewModel.onCodeInputChange(code)
+        viewModel.redeemCode()
     }
+    return if (qrScanner.available) launcher::launch else null
+}
 
-/** The screen-level side effects the not-paired/loading form needs but does not own itself. */
+/**
+ * The screen-level side effects the not-paired/loading form needs but does not own itself. Each is
+ * null where the phone cannot do it (the iPhone has no share sheet, clipboard or scanner yet), and
+ * the form then offers no control for it: the code and the link are read off the screen.
+ */
 private data class NotPairedActions(
-    val onShareInvite: (PairingInvite) -> Unit,
-    val onCopyCode: (String) -> Unit,
-    val onScanQr: () -> Unit,
+    val onShareInvite: ((PairingInvite) -> Unit)?,
+    val onCopyCode: ((String) -> Unit)?,
+    val onScanQr: (() -> Unit)?,
 )
 
 @Composable
 private fun rememberNotPairedActions(
-    context: Context,
     onCodeCopied: () -> Unit,
-    onScanQr: () -> Unit
-): NotPairedActions = remember(context, onCodeCopied, onScanQr) {
-    NotPairedActions(
-        onShareInvite = { invite -> context.startActivity(shareIntent(context, invite)) },
-        onCopyCode = { code ->
-            copySensitive(context, "invite code", code)
-            onCodeCopied()
-        },
-        onScanQr = onScanQr
-    )
+    onScanQr: (() -> Unit)?
+): NotPairedActions {
+    val shareSheet = LocalShareSheet.current
+    val clipboard = LocalSensitiveClipboard.current
+    val webLink = LocalAppBuildValues.current.pairingWebLink
+    // Worded in the composition's language at the moment of sharing, as the Activity's
+    // `getString` did (CQ-14).
+    val textResolver = rememberUiTextResolver()
+    val scope = rememberCoroutineScope()
+    return remember(shareSheet, clipboard, webLink, textResolver, scope, onCodeCopied, onScanQr) {
+        NotPairedActions(
+            onShareInvite = if (shareSheet.available) {
+                { invite ->
+                    // Compose Multiplatform reads a string outside composition in a coroutine; on
+                    // the main dispatcher, as the tap's own frame is.
+                    scope.launch {
+                        shareSheet.shareText(
+                            text = shareMessage(invite, webLink).asString(textResolver),
+                            chooserTitle = UiText.Res(Res.string.pairing_share_invite).asString(textResolver)
+                        )
+                    }
+                }
+            } else {
+                null
+            },
+            onCopyCode = if (clipboard.available) {
+                { code ->
+                    clipboard.copySensitive("invite code", code)
+                    onCodeCopied()
+                }
+            } else {
+                null
+            },
+            onScanQr = onScanQr
+        )
+    }
 }
 
 /**
- * Builds the share-sheet intent for an outstanding invite.
+ * The share sheet's text for an outstanding invite.
  *
- * With the web link the message is short: the page it opens carries the Play Store link and the
- * iPhone answer, and the code stays in the text for typing by hand. With the app-only link the
- * message has to carry both itself.
+ * With the web link ([webLink], the build's choice) the message is short: the page it opens carries
+ * the Play Store link and the iPhone answer, and the code stays in the text for typing by hand.
+ * With the app-only link the message has to carry both itself.
  */
-private fun shareIntent(context: Context, invite: PairingInvite): Intent {
-    val message = if (BuildConfig.PAIRING_WEB_LINK) {
-        context.getString(
-            R.string.pairing_share_message_web,
-            invite.fromUserName,
-            pairingLinkFor(invite.code),
-            invite.code
-        )
-    } else {
-        context.getString(
-            R.string.pairing_share_message,
-            invite.fromUserName,
-            invite.code,
-            pairingLinkFor(invite.code),
-            playStoreUrlFor(invite.code)
-        )
-    }
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, message)
-    }
-    return Intent.createChooser(sendIntent, context.getString(R.string.pairing_share_invite))
+private fun shareMessage(invite: PairingInvite, webLink: Boolean): UiText = if (webLink) {
+    UiText.Res(
+        Res.string.pairing_share_message_web,
+        listOf(invite.fromUserName, pairingLinkFor(invite.code, webLink), invite.code)
+    )
+} else {
+    UiText.Res(
+        Res.string.pairing_share_message,
+        listOf(invite.fromUserName, invite.code, pairingLinkFor(invite.code, webLink), playStoreUrlFor(invite.code))
+    )
 }
 
 /**
@@ -491,8 +529,8 @@ private fun LazyListScope.pairedSection(
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.PersonAdd,
-                title = stringResource(R.string.pairing_add_another_title),
-                supporting = stringResource(R.string.pairing_add_another_description),
+                title = stringResource(Res.string.pairing_add_another_title),
+                supporting = stringResource(Res.string.pairing_add_another_description),
                 onClick = {
                     addingAnother.value = !addingAnother.value
                     // A paired account gets no code on entry, so opening this row mints one.
@@ -521,7 +559,7 @@ private fun LazyListScope.pairedSection(
             SectionRow(
                 icon = Icons.Default.LinkOff,
                 iconTint = MaterialTheme.colorScheme.error,
-                title = stringResource(R.string.pairing_unpair_button),
+                title = stringResource(Res.string.pairing_unpair_button),
                 titleColor = MaterialTheme.colorScheme.error,
                 onClick = onUnpairClick
             )
@@ -567,8 +605,9 @@ private fun LazyListScope.inviteSection(
             InviteCodeCard(
                 invite = activeInvite,
                 qrBitmap = form.qrBitmap,
-                onCopy = { actions.onCopyCode(activeInvite.code) },
-                onShare = { actions.onShareInvite(activeInvite) },
+                qrAvailable = viewModel.qrAvailable,
+                onCopy = actions.onCopyCode?.let { copy -> { copy(activeInvite.code) } },
+                onShare = actions.onShareInvite?.let { share -> { share(activeInvite) } },
                 onRegenerate = viewModel::regenerateInvite
             )
         }
@@ -630,8 +669,9 @@ private fun LazyListScope.anotherCoParentSection(
             InviteCodeCard(
                 invite = activeInvite,
                 qrBitmap = form.qrBitmap,
-                onCopy = { actions.onCopyCode(activeInvite.code) },
-                onShare = { actions.onShareInvite(activeInvite) },
+                qrAvailable = viewModel.qrAvailable,
+                onCopy = actions.onCopyCode?.let { copy -> { copy(activeInvite.code) } },
+                onShare = actions.onShareInvite?.let { share -> { share(activeInvite) } },
                 onRegenerate = viewModel::regenerateInvite
             )
         } else {
@@ -668,7 +708,7 @@ private fun LazyListScope.enterCodeSection(
             enabled = !form.isBusy
         )
     }
-    item { ScanQrButton(onClick = actions.onScanQr) }
+    actions.onScanQr?.let { scan -> item { ScanQrButton(onClick = scan) } }
 }
 
 /**
@@ -688,14 +728,14 @@ private fun PairingModeToggle(selected: PairingMode, onSelect: (PairingMode) -> 
             onClick = { onSelect(PairingMode.SHARE) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
             icon = {},
-            label = { Text(stringResource(R.string.pairing_mode_share)) }
+            label = { Text(stringResource(Res.string.pairing_mode_share)) }
         )
         SegmentedButton(
             selected = selected == PairingMode.ENTER,
             onClick = { onSelect(PairingMode.ENTER) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
             icon = {},
-            label = { Text(stringResource(R.string.pairing_mode_enter)) }
+            label = { Text(stringResource(Res.string.pairing_mode_enter)) }
         )
     }
 }
@@ -731,13 +771,13 @@ private fun TrustPanel() {
                     modifier = Modifier.size(IconSizes.Small)
                 )
                 Text(
-                    text = stringResource(R.string.pairing_trust_title),
+                    text = stringResource(Res.string.pairing_trust_title),
                     style = MaterialTheme.typography.labelLargeEmphasized,
                     color = MaterialTheme.colorScheme.tertiary
                 )
             }
             Text(
-                text = stringResource(R.string.pairing_trust_body),
+                text = stringResource(Res.string.pairing_trust_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -753,7 +793,7 @@ private fun ScanQrButton(onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Icon(Icons.Default.QrCodeScanner, contentDescription = null)
         Text(
-            text = stringResource(R.string.pairing_scan_qr_code),
+            text = stringResource(Res.string.pairing_scan_qr_code),
             modifier = Modifier.padding(start = Spacing.S)
         )
     }
@@ -767,10 +807,10 @@ private fun UnpairConfirmationDialog(
     onDismiss: () -> Unit
 ) {
     ConfirmationDialog(
-        title = stringResource(R.string.pairing_unpair_confirm_title),
-        message = stringResource(R.string.pairing_unpair_confirm_message, partnerName),
-        confirmText = stringResource(R.string.pairing_unpair_confirm_action),
-        dismissText = stringResource(R.string.pairing_cancel),
+        title = stringResource(Res.string.pairing_unpair_confirm_title),
+        message = stringResource(Res.string.pairing_unpair_confirm_message, partnerName),
+        confirmText = stringResource(Res.string.pairing_unpair_confirm_action),
+        dismissText = stringResource(Res.string.pairing_cancel),
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )
@@ -789,17 +829,17 @@ internal fun InviteConfirmationDialog(confirmation: InviteConfirmation, onAnswer
     val name = confirmation.inviterName
     ConfirmationDialog(
         title = if (name != null) {
-            stringResource(R.string.pairing_confirm_named_title, name)
+            stringResource(Res.string.pairing_confirm_named_title, name)
         } else {
-            stringResource(R.string.pairing_deep_link_confirm_title)
+            stringResource(Res.string.pairing_deep_link_confirm_title)
         },
         message = if (name != null) {
-            stringResource(R.string.pairing_confirm_named_message)
+            stringResource(Res.string.pairing_confirm_named_message)
         } else {
-            stringResource(R.string.pairing_deep_link_confirm_message, confirmation.code)
+            stringResource(Res.string.pairing_deep_link_confirm_message, confirmation.code)
         },
-        confirmText = stringResource(R.string.pairing_link_accounts),
-        dismissText = stringResource(R.string.pairing_cancel),
+        confirmText = stringResource(Res.string.pairing_link_accounts),
+        dismissText = stringResource(Res.string.pairing_cancel),
         onConfirm = { onAnswer(true) },
         onDismiss = { onAnswer(false) }
     )

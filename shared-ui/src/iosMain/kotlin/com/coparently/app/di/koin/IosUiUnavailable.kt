@@ -1,5 +1,6 @@
 package com.coparently.app.di.koin
 
+import androidx.compose.ui.graphics.ImageBitmap
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.dictation.DictationFailure
@@ -52,7 +53,11 @@ internal object NoAiAssist : AiAssistRepository {
 
 /**
  * No QR code drawn yet (slice 10e: the pairing ViewModel asks for one): the iPhone has no QR encoder
- * yet, so an invitation is handed over by its code and link alone. Task 11's pairing screen must not
- * draw an empty QR frame on the iPhone while this is bound (design item 8).
+ * yet, so an invitation is handed over by its code and link alone, and the pairing screen draws no
+ * QR frame while this is bound ([InviteQrCodes.available], design item 8).
  */
-internal val NoInviteQrCodes = InviteQrCodes { null }
+internal val NoInviteQrCodes: InviteQrCodes = object : InviteQrCodes {
+    override val available: Boolean = false
+
+    override fun forInvite(code: String): ImageBitmap? = null
+}
