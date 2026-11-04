@@ -3049,6 +3049,14 @@ bytes are identical on Android):
   image loader or text recognition (the iPhone for now) the form offers no receipt and scans nothing.
   Then child support's screen, whose payer's reminder is offered only where the phone runs its job.
   **Slice 11e built, CI pending.**
+  Slice 11f, Settings, pairing, onboarding, the sign-in and the sync: first Settings — its five
+  groups, the colour picker, the calendar links, the data sources, the region and country pickers
+  and the consent screens — with the Google Calendar connection's ViewModel. Google's sign-in screen
+  is the shell's (on Android the activity result it always was), the connection the data layer's;
+  the language card, the links, the notification permission, the share and the clipboard go through
+  the platform interfaces. On a phone with no push registration, no Google sign-in or no language
+  picker of its own (the iPhone for now) Settings offers no push switch, no Google Calendar row and
+  no language row.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

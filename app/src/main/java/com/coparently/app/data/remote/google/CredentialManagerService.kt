@@ -27,7 +27,7 @@ class CredentialManagerService(
     private val context: Context,
     private val encryptedPreferences: SecurePreferences,
     private val googleOAuthFunctions: GoogleOAuthFunctions
-) : GoogleCalendarConnectionSource {
+) : GoogleCalendarAccount {
     private val credentialManager: CredentialManager? = try {
         CredentialManager.create(context)
     } catch (e: Exception) {
@@ -244,7 +244,7 @@ class CredentialManagerService(
      * @param forceRefresh Renew even though the stored expiry says the token is still good — what a
      *   caller does once after the Calendar API refused it (401).
      */
-    suspend fun accessToken(forceRefresh: Boolean = false): GoogleAccess {
+    override suspend fun accessToken(forceRefresh: Boolean): GoogleAccess {
         val stored = encryptedPreferences.getAccessToken()
         val expiresAt = encryptedPreferences.getTokenExpiry() ?: 0L
         val now = System.currentTimeMillis()
@@ -314,7 +314,7 @@ class CredentialManagerService(
      * ([EncryptedPreferences.clear], with its exemptions) and ends the Google sign-in. What "Sign
      * out of app" runs; disconnecting Google Calendar alone is [disconnect].
      */
-    suspend fun signOut(): Pair<Boolean, String?> {
+    override suspend fun signOut(): Pair<Boolean, String?> {
         // The local credential goes first, unconditionally. `revokeAccess()` is a network call,
         // and while it sat *before* the clear, an offline sign-out threw past it and left the
         // refresh token, the access token and the calendar id on disk — for the next account to
@@ -334,7 +334,7 @@ class CredentialManagerService(
      * the family on screen, the sync cursors and the calendar filters with it — and the "Enable
      * sync" switch, which now stays to be found as it was on a reconnect.
      */
-    suspend fun disconnect() {
+    override suspend fun disconnect() {
         // Local first, for the reason [signOut] gives.
         encryptedPreferences.removeGoogleCalendarAccount()
         endGoogleSignIn()

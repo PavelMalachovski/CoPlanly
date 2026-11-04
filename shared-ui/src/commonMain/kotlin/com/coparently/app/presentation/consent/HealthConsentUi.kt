@@ -15,18 +15,31 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.consent.HealthConsent
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.localizedDate
-import java.time.Instant
-import java.time.ZoneId
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.health_consent_add_action
+import com.coparently.app.resources.health_consent_agree
+import com.coparently.app.resources.health_consent_dialog_message
+import com.coparently.app.resources.health_consent_dialog_title
+import com.coparently.app.resources.health_consent_locked
+import com.coparently.app.resources.health_consent_not_now
+import com.coparently.app.resources.health_consent_settings_given
+import com.coparently.app.resources.health_consent_settings_not_given
+import com.coparently.app.resources.health_consent_settings_title
+import com.coparently.app.resources.health_consent_settings_withdraw
+import com.coparently.app.resources.health_consent_withdraw_confirm
+import com.coparently.app.resources.health_consent_withdraw_message
+import com.coparently.app.resources.health_consent_withdraw_title
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Instant
 
 /**
  * The consent dialog shown before a child's health details are entered (GDPR Art. 9(2)(a)).
@@ -40,10 +53,10 @@ import java.time.ZoneId
 @Composable
 fun HealthConsentDialog(onAgree: () -> Unit, onNotNow: () -> Unit) {
     ConfirmationDialog(
-        title = stringResource(R.string.health_consent_dialog_title),
-        message = stringResource(R.string.health_consent_dialog_message),
-        confirmText = stringResource(R.string.health_consent_agree),
-        dismissText = stringResource(R.string.health_consent_not_now),
+        title = stringResource(Res.string.health_consent_dialog_title),
+        message = stringResource(Res.string.health_consent_dialog_message),
+        confirmText = stringResource(Res.string.health_consent_agree),
+        dismissText = stringResource(Res.string.health_consent_not_now),
         onConfirm = onAgree,
         onDismiss = onNotNow
     )
@@ -66,7 +79,7 @@ fun LockedMedicalSection(
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
         Text(
-            text = stringResource(R.string.health_consent_locked),
+            text = stringResource(Res.string.health_consent_locked),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -77,7 +90,7 @@ fun LockedMedicalSection(
                 modifier = Modifier.size(IconSizes.Small)
             )
             Spacer(modifier = Modifier.width(Spacing.S))
-            Text(stringResource(R.string.health_consent_add_action))
+            Text(stringResource(Res.string.health_consent_add_action))
         }
     }
 }
@@ -100,14 +113,13 @@ fun HealthConsentSettingsRow(
     withdrawing: Boolean,
     onWithdraw: () -> Unit
 ) {
-    val dateFormatter = remember { localizedDate("yMMMd") }
     val supporting = consent?.let {
-        val day = Instant.ofEpochMilli(it.atMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-        stringResource(R.string.health_consent_settings_given, day.format(dateFormatter))
-    } ?: stringResource(R.string.health_consent_settings_not_given)
+        val day = Instant.fromEpochMilliseconds(it.atMillis).toLocalDateTime(TimeZone.currentSystemDefault()).date
+        stringResource(Res.string.health_consent_settings_given, ReaderDateText.date(day, "yMMMd"))
+    } ?: stringResource(Res.string.health_consent_settings_not_given)
     SectionRow(
         icon = Icons.Default.MedicalServices,
-        title = stringResource(R.string.health_consent_settings_title),
+        title = stringResource(Res.string.health_consent_settings_title),
         supporting = supporting,
         trailing = if (consent != null && !withdrawing) {
             {
@@ -117,7 +129,7 @@ fun HealthConsentSettingsRow(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text(stringResource(R.string.health_consent_settings_withdraw))
+                    Text(stringResource(Res.string.health_consent_settings_withdraw))
                 }
             }
         } else {
@@ -136,9 +148,9 @@ fun HealthConsentSettingsRow(
 @Composable
 fun HealthConsentWithdrawDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     ConfirmationDialog(
-        title = stringResource(R.string.health_consent_withdraw_title),
-        message = stringResource(R.string.health_consent_withdraw_message),
-        confirmText = stringResource(R.string.health_consent_withdraw_confirm),
+        title = stringResource(Res.string.health_consent_withdraw_title),
+        message = stringResource(Res.string.health_consent_withdraw_message),
+        confirmText = stringResource(Res.string.health_consent_withdraw_confirm),
         isDestructive = true,
         onConfirm = onConfirm,
         onDismiss = onDismiss

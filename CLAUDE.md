@@ -1214,7 +1214,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   screenshots render, `splitSharesText`, `formatMoney` and `balanceCaption`, which Home calls, and
   the stickers' `roleOrNull` and `senderLine`, which `MyStickersScreen` calls, then the expenses'
   `CollapsedMonthSummary`, which the screenshots render, and `ReceiptScanEffect` with its
-  `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives). A test that moves with its code to `:shared-ui` keeps `internal`
+  `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives; slice 11f:
+`ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render, and
+`GridSwatch`, which onboarding draws). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1649,7 +1651,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              form); and, from slice 11e, the family's screens (presentation/family/), with the
              split's wording, the stickers' views, the family's two dialogs and Home's money text,
              and the expenses' and child support's screens (presentation/expenses/,
-             presentation/support/).
+             presentation/support/); and, from slice 11f, Settings' screens (presentation/settings/,
+             with the country picker and the consent screens) and SyncViewModel.
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1663,12 +1666,14 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature, and the two ViewModels whose sign-ins run on an
-             Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
-             the design system's components, the shared state and every other ViewModel are in
-             shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's, custody's,
-             the requests', the family's, the expenses' and child support's screens (Task 11, slices
-             11b–11e); the app keeps their previews
+presentation/ — Compose screens per feature, and the ViewModel whose sign-ins run on an
+             Android activity (AuthViewModel; Task 11). Their strings, the theme, the design
+             system's components, the shared state and every other ViewModel are in shared-ui/
+             (Task 10; SyncViewModel since slice 11f), and so are chat's, the event form's, the
+             calendar's, custody's, the requests', the family's, the expenses', child support's and
+             Settings' screens (Task 11, slices 11b–11f); the app keeps their previews and the
+             Android halves of the platform interfaces (presentation/platform/, the language
+             picker's AndroidAppLanguages, Google's sign-in's AndroidGoogleCalendarSignIn)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -1986,7 +1991,7 @@ task; the iPhone has no `koin-test`). Phase 3's app replaces each stand-in. Ever
 interfaces**: a new data-layer class takes `SecurePreferences`, `AppDirectories`, `CrashReporter`,
 `Analytics`, `DeviceRegion`, `SignedInUser`, `AuthSession`, `PushQueue`, `PushDevice`,
 `PushRegistration`, `AccountConsistency`, `AccountDeletion`, `AccountTraces`, `RequestClockNotices`,
-`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `StorageBucket`, `PickedFiles`,
+`RequestClockScheduler`, `GoogleCalendarConnectionSource`, `GoogleCalendarAccount`, `StorageBucket`, `PickedFiles`,
 `ExportVerifyAddress` or `RecordFileWriter` rather than `EncryptedPreferences`, a `Context`
 directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `FcmService`,
 `AccountSwitchGuard`, `AccountDeletionService`, `DeviceTraces`, `RequestNotices`,
@@ -1994,7 +1999,7 @@ directory, `CrashlyticsManager`, `AnalyticsManager`, `FirebaseAuthService`, `Fcm
 `ExportFileWriter` or `BuildConfig`, and logs with `logger.e/w/i/d(TAG, …)`, never
 `android.util.Log`. A ViewModel in `:shared-ui` takes the same seams (`AuthSession`,
 `PushRegistration`, `AccountDeletion` and `AccountTraces` came with slice 10e, `RecordFileWriter`
-with slice 10f).
+with slice 10f, `GoogleCalendarAccount` with slice 11f).
 
 **Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
 phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
@@ -2031,13 +2036,14 @@ public for the app's `TwoPaneTest` and Chat); `ListSkeleton` with `components/Sk
 `RecordPlaceMark`; and the notification and microphone requesters (`PermissionRequesters.kt`, over
 `PermissionRequester`; `hasNotificationPermission(context)` and `hasMicrophonePermission(context)`
 stay in the app's `AndroidPermissionChecks.kt`). Still in the app, each for its reason:
-`AuthViewModel` and `SyncViewModel`, whose sign-ins run on an Android activity (Task 11, below);
-the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveClipboard`,
+`AuthViewModel`, whose sign-ins run on an Android activity (Task 11, below; `SyncViewModel` left in
+slice 11f); the Android halves of the platform interfaces (`SharedFileViewer`, `SensitiveClipboard`,
 `PrivacyPolicyLink`, `TermsOfServiceLink`, which `AndroidPlatform.kt` calls or which read
 `BuildConfig` for screens still in the app); the `java.time` users whose signatures carry
 `java.time` to their callers (~~`MonthPaging`'s direction and transition, Expenses'~~, moved with
 Expenses in slice 11e onto kotlinx-datetime, and `VaccinationListEditor`), each moving with its screens onto kotlinx-datetime and the date seam; the
-`@StringRes` label helpers (`BloodTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the component
+`@StringRes` label helpers (`BloodTypeLabel`, `PetSpeciesLabel`; ~~`CountryPicker`~~, moved with Settings
+in slice 11f onto `StringResource`) and the component
 that reads them (`MedicalProfileEditor`), which move with the screens that pass them ids. **Slice
 11c moved the calendar's and the event form's helpers** onto kotlinx-datetime and `StringResource`,
 packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx-datetime days; the
@@ -2172,7 +2178,39 @@ chat's): its months through `Clock.System.todayIn`, a due day `ReaderDateText.pa
 the dialog's amount `DecimalText.plain` (what `MinorUnits.toDecimal(…).toPlainString()` wrote), and
 **the payer's reminder offered only where this phone runs its job**
 (`SupportReminderScheduler.available`, new, true by default; the iPhone's `NoSupportReminderJob` says
-false; `SupportViewModel.remindersAvailable`), the carried note's hiding.
+false; `SupportViewModel.remindersAvailable`), the carried note's hiding. **Then Settings' screens**
+(slice 11f): `presentation/settings/`'s `SettingsScreen` (its five groups, design refresh item 4),
+`ParentColorDialog` (the picker, `ParentColorPicker`, `CUSTOM_COLOUR` and `GridSwatch` public for the
+screenshots, `ParentColorPickerTest` and onboarding), `CalendarFeedScreen`, `DataSourcesScreen` (its
+`DataSourcesTest` in `commonTest`, comparing the `StringResource`s' keys) and `RegionDialog`, with
+`common/CountryPicker.kt` (its labels `StringResource`s) and `consent/`'s `HealthConsentUi.kt` and
+`TelemetryConsentScreen.kt`, and **`SyncViewModel`** (`settingsUiModule`). The phone's half, each
+from the shell: links through `OpenUrl` and `AppBuildValues` (the privacy policy, the terms, the data
+sources, the version; a row drawn only while its address is set and the phone opens links), the
+notification permission through `PermissionRequester`, the calendar link's share and copy through
+`ShareSheet` and `SensitiveClipboard` (each offered only where available), its language the reader's
+(`readerLanguage()`, the activity's first locale on Android) and its days `readerMediumDate`, the
+consent's day `ReaderDateText.date(…, "yMMMd")`, the last sync's time `ReaderDateText.time`, and the
+language card through the new `AppLanguages` (above; the `AppLanguage` enum moved, its labels
+`StringResource`s). **The push switch is offered only where the phone registers for pushes**
+(`PushRegistration.available`, new, true by default; the iPhone's `NoPush` says false;
+`SettingsViewModel.pushAvailable`), the carried note's hiding. **Google Calendar's sign-in is the
+shell's**: `presentation/platform/GoogleCalendarSignIn` (`open()`: opened, unavailable or failed),
+provided by `MainActivity` alone through `LocalGoogleCalendarSignIn` (it replaced
+`LocalGoogleSignInCallback` and Settings' `onStartGoogleSignIn`), whose Android half,
+`AndroidGoogleCalendarSignIn`, builds the sign-in client's intent and launches it through the
+activity's result, as `SyncViewModel.createGoogleSignInIntent` and the screen did; the activity hands
+the answer to `SyncViewModel.handleSignInResult` as a `GoogleSignInAnswer`
+(`CredentialManagerService.signInAnswer(task)`), whose `complete()` is `handleSignInResult(task)`,
+redeemed after the ViewModel says "processing", as before. The ViewModel reads the connection, the
+token and the two sign-outs through the new `GoogleCalendarAccount` (`data/remote/google/`, in
+`:shared-data`; `CredentialManagerService` answers it, so `signOut` keeps its order, the local store
+cleared before the network revoke, item 23; the iPhone's `NoGoogleCalendar` connects nothing), and the
+store through `SecurePreferences`. Settings draws the Google Calendar row only where
+`GoogleCalendarSignIn.available` (not on the iPhone). `SyncViewModelTest` and `SyncStateTextTest`
+stay in the app (the first runs over the device's real credential store), so `toSyncState` and
+`toUiText` are public. `AppLanguage`'s Android half (`current`, `apply`) is the app's
+`AndroidAppLanguages`; `SystemDefaultRelaunch` stays with it.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
@@ -2376,7 +2414,8 @@ Task 11 gives the screens their platform interfaces: `AuthViewModel` hands Crede
 Auth exception types into `AuthError`; `SyncViewModel` builds Google Sign-In's `Intent` and reads
 its `Task<GoogleSignInAccount>` result, an activity-result flow, through `CredentialManagerService`.
 Each moves once its sign-in is behind a platform interface the screen provides (plan, Task 11's
-carried notes).
+carried notes; `SyncViewModel` did in slice 11f, behind `GoogleCalendarSignIn` and
+`GoogleCalendarAccount`, below).
 Slice 10f moves **the rest**. Its first group is **Home, the month in review, stickers and the
 consents**. `HomeViewModel` (with `HomeIdentityDependencies`, a `factory`) and
 `PutOffAsksViewModel` are in `homeUiModule`, with what Home's ViewModel reads and nothing Android
@@ -2443,16 +2482,18 @@ did. The iPhone's `platformDataModule` binds `NoRecordFiles` (rendering fails, n
 screen says the export failed) and the school directory over its own client, as it binds the
 Bakaláři client. The three tests (MockK) run in `androidUnitTest`. **Task 10 is done but for
 `AuthViewModel` and `SyncViewModel`**, which stay in the app until Task 11 (above); the app's
-`viewModelModule` holds those two alone.
+`viewModelModule` holds those two alone (`AuthViewModel` alone since slice 11f moved `SyncViewModel`).
 
 **What a moved screen asks of the phone goes through `presentation/platform/`** (MON-24 phase 2,
 Task 11, slice 11a). One interface per capability in `:shared-ui`'s `commonMain` — `ShareSheet`,
 `FilePicker`, `CameraCapture`, `QrScanner`, `Dictation`, `PermissionRequester`, `OpenUrl` (links,
 a shared file in a viewer, the dialler, a mail draft, the app's settings), `SensitiveClipboard`,
 `AppBuildValues` (what screens read from `BuildConfig`), `FileDetails` (a picked file's name and
-size, a size in the reader's words; slice 11b) and `QrCodes` (a QR matrix from text, and the code
+size, a size in the reader's words; slice 11b), `QrCodes` (a QR matrix from text, and the code
 shared as a picture: ZXing and a PNG through the file provider on Android, the settle-up card's
-payment code; slice 11b) — each with `available`, so a screen draws
+payment code; slice 11b) and `AppLanguages` (the language picker's choice and its applying:
+AppCompat's per-app locale on Android, `AndroidAppLanguages`, with `SystemDefaultRelaunch` below 13;
+none on the iPhone, whose own Settings app sets it; slice 11f) — each with `available`, so a screen draws
 no affordance the phone cannot keep (design item 8). They reach the screens through one
 `staticCompositionLocalOf` each, provided together by `ProvidePlatform(PlatformServices(…))`, whose
 constructor has no defaults, so a shell cannot leave one out. The app's `ProvideAndroidPlatform`
@@ -4705,7 +4746,7 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   - **The per-app choice** is `LocaleManager.getApplicationLocales()` on Android 13 and later;
     below that AppCompat's, which only an activity loads, so `AppLocale.rememberChoice` (in
     `MainActivity.onCreate`) mirrors it in the plain preference file `app_language` for a push or a
-    worker in a process no activity has started, and `AppLanguage.apply` mirrors a new choice the
+    worker in a process no activity has started, and `AndroidAppLanguages.apply` mirrors a new choice the
     moment it is made, so the mirror never lags it. A push below 13 therefore follows the choice
     too, which it never did before. **Below 13, "System default" over a choice restarts the app**
     (`presentation/settings/SystemDefaultRelaunch`): AppCompat would otherwise hold an empty request
@@ -4741,8 +4782,10 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
 
 - **Language selection**: the owner's rule above by default (the phone's first language when
   shipped, else English), plus a manual per-app override — the
-  "Language" card in Settings (`presentation/settings/AppLanguage.kt`,
-  `AppCompatDelegate.setApplicationLocales`). The choice is persisted by the
+  "Language" card in Settings (the `AppLanguage` enum in `:shared-ui`'s
+  `presentation/settings/AppLanguage.kt`; the choice and `AppCompatDelegate.setApplicationLocales`
+  in the app's `AndroidAppLanguages`, the `AppLanguages` platform interface's Android half since
+  MON-24 phase 2, slice 11f). The choice is persisted by the
   `autoStoreLocales` manifest service and mirrored to the Android 13+ system per-app
   language setting. There is no DataStore/ViewModel state for it — AppCompat is the
   source of truth (the `app_language` preference below 13 is only `AppLocale`'s mirror of it).

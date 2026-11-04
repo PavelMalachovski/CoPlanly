@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.common
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -11,27 +10,75 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.domain.holidays.HolidayCoverage
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.country_at
+import com.coparently.app.resources.country_cz
+import com.coparently.app.resources.country_de
+import com.coparently.app.resources.country_holidays_pick_region
+import com.coparently.app.resources.country_holidays_public_only
+import com.coparently.app.resources.country_holidays_school_at
+import com.coparently.app.resources.country_holidays_school_sk
+import com.coparently.app.resources.country_holidays_supported
+import com.coparently.app.resources.country_holidays_suspended
+import com.coparently.app.resources.country_holidays_unavailable
+import com.coparently.app.resources.country_holidays_with_region
+import com.coparently.app.resources.country_holidays_with_region_generic
+import com.coparently.app.resources.country_holidays_with_region_sk
+import com.coparently.app.resources.country_other
+import com.coparently.app.resources.country_ru
+import com.coparently.app.resources.country_sk
+import com.coparently.app.resources.country_ua
+import com.coparently.app.resources.holiday_region_label
+import com.coparently.app.resources.holiday_region_label_de
+import com.coparently.app.resources.holiday_region_label_sk
+import com.coparently.app.resources.holiday_region_none
+import com.coparently.app.resources.holiday_region_settings_summary
+import com.coparently.app.resources.holiday_region_settings_summary_generic
+import com.coparently.app.resources.holiday_region_settings_summary_sk
+import com.coparently.app.resources.region_de_bb
+import com.coparently.app.resources.region_de_be
+import com.coparently.app.resources.region_de_bw
+import com.coparently.app.resources.region_de_by
+import com.coparently.app.resources.region_de_hb
+import com.coparently.app.resources.region_de_he
+import com.coparently.app.resources.region_de_hh
+import com.coparently.app.resources.region_de_mv
+import com.coparently.app.resources.region_de_ni
+import com.coparently.app.resources.region_de_nw
+import com.coparently.app.resources.region_de_rp
+import com.coparently.app.resources.region_de_sh
+import com.coparently.app.resources.region_de_sl
+import com.coparently.app.resources.region_de_sn
+import com.coparently.app.resources.region_de_st
+import com.coparently.app.resources.region_de_th
+import com.coparently.app.resources.region_sk_bc
+import com.coparently.app.resources.region_sk_bl
+import com.coparently.app.resources.region_sk_ki
+import com.coparently.app.resources.region_sk_ni
+import com.coparently.app.resources.region_sk_pv
+import com.coparently.app.resources.region_sk_ta
+import com.coparently.app.resources.region_sk_tc
+import com.coparently.app.resources.region_sk_zi
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * What this country is called on screen.
  *
  * The mapping lives here rather than on the enum because `HolidayCountry` is a domain type and
- * `R` is not available to it — the same split `FamilyKind` and `ParentLabels` already use.
+ * `Res` is not available to it — the same split `FamilyKind` and `ParentLabels` already use.
  */
-@StringRes
-fun HolidayCountry.labelRes(): Int = when (this) {
-    HolidayCountry.CZECHIA -> R.string.country_cz
-    HolidayCountry.SLOVAKIA -> R.string.country_sk
-    HolidayCountry.GERMANY -> R.string.country_de
-    HolidayCountry.AUSTRIA -> R.string.country_at
-    HolidayCountry.UKRAINE -> R.string.country_ua
-    HolidayCountry.RUSSIA -> R.string.country_ru
-    HolidayCountry.OTHER -> R.string.country_other
+fun HolidayCountry.labelRes(): StringResource = when (this) {
+    HolidayCountry.CZECHIA -> Res.string.country_cz
+    HolidayCountry.SLOVAKIA -> Res.string.country_sk
+    HolidayCountry.GERMANY -> Res.string.country_de
+    HolidayCountry.AUSTRIA -> Res.string.country_at
+    HolidayCountry.UKRAINE -> Res.string.country_ua
+    HolidayCountry.RUSSIA -> Res.string.country_ru
+    HolidayCountry.OTHER -> Res.string.country_other
 }
 
 /**
@@ -39,9 +86,9 @@ fun HolidayCountry.labelRes(): Int = when (this) {
  * row says the choice does, and the note shown once one is chosen (`%1$s` is the region's name).
  */
 private data class RegionWording(
-    @StringRes val label: Int,
-    @StringRes val summary: Int,
-    @StringRes val withRegion: Int
+    val label: StringResource,
+    val summary: StringResource,
+    val withRegion: StringResource
 )
 
 /**
@@ -55,19 +102,19 @@ private data class RegionWording(
 private fun HolidayCountry.regionWording(): RegionWording? = when {
     regions.isEmpty() -> null
     this == HolidayCountry.GERMANY -> RegionWording(
-        label = R.string.holiday_region_label_de,
-        summary = R.string.holiday_region_settings_summary,
-        withRegion = R.string.country_holidays_with_region
+        label = Res.string.holiday_region_label_de,
+        summary = Res.string.holiday_region_settings_summary,
+        withRegion = Res.string.country_holidays_with_region
     )
     this == HolidayCountry.SLOVAKIA -> RegionWording(
-        label = R.string.holiday_region_label_sk,
-        summary = R.string.holiday_region_settings_summary_sk,
-        withRegion = R.string.country_holidays_with_region_sk
+        label = Res.string.holiday_region_label_sk,
+        summary = Res.string.holiday_region_settings_summary_sk,
+        withRegion = Res.string.country_holidays_with_region_sk
     )
     else -> RegionWording(
-        label = R.string.holiday_region_label,
-        summary = R.string.holiday_region_settings_summary_generic,
-        withRegion = R.string.country_holidays_with_region_generic
+        label = Res.string.holiday_region_label,
+        summary = Res.string.holiday_region_settings_summary_generic,
+        withRegion = Res.string.country_holidays_with_region_generic
     )
 }
 
@@ -75,12 +122,10 @@ private fun HolidayCountry.regionWording(): RegionWording? = when {
  * What this country calls the regions its holidays vary by — "State"/"Bundesland" for Germany,
  * "Region (kraj)"/"Kraj" for Slovakia — or null for a country with none.
  */
-@StringRes
-fun HolidayCountry.regionLabelRes(): Int? = regionWording()?.label
+fun HolidayCountry.regionLabelRes(): StringResource? = regionWording()?.label
 
 /** What the Settings row says choosing a region adds, or null for a country with none. */
-@StringRes
-fun HolidayCountry.regionSummaryRes(): Int? = regionWording()?.summary
+fun HolidayCountry.regionSummaryRes(): StringResource? = regionWording()?.summary
 
 /**
  * What region [code] of this country is called on screen, or null for a code this build has no
@@ -90,8 +135,7 @@ fun HolidayCountry.regionSummaryRes(): Int? = regionWording()?.summary
  * Slovakia — rather than on the domain's `GermanState`/`SlovakRegion`, which are internal to the
  * holiday tables; the codes are the ISO 3166-2 suffixes `HolidayCountry.regions` lists.
  */
-@StringRes
-fun HolidayCountry.regionNameRes(code: String): Int? = when (this) {
+fun HolidayCountry.regionNameRes(code: String): StringResource? = when (this) {
     HolidayCountry.GERMANY -> GERMAN_REGION_LABELS[code]
     HolidayCountry.SLOVAKIA -> SLOVAK_REGION_LABELS[code]
     else -> null
@@ -101,35 +145,35 @@ fun HolidayCountry.regionNameRes(code: String): Int? = when (this) {
  * Slovakia's eight kraje by ISO 3166-2 suffix; see `SlovakRegion` for what each adds. Their names
  * are proper names in Slovak, the form a Slovak school letter uses, and are not translated.
  */
-private val SLOVAK_REGION_LABELS: Map<String, Int> = mapOf(
-    "BC" to R.string.region_sk_bc,
-    "BL" to R.string.region_sk_bl,
-    "KI" to R.string.region_sk_ki,
-    "NI" to R.string.region_sk_ni,
-    "PV" to R.string.region_sk_pv,
-    "TA" to R.string.region_sk_ta,
-    "TC" to R.string.region_sk_tc,
-    "ZI" to R.string.region_sk_zi
+private val SLOVAK_REGION_LABELS: Map<String, StringResource> = mapOf(
+    "BC" to Res.string.region_sk_bc,
+    "BL" to Res.string.region_sk_bl,
+    "KI" to Res.string.region_sk_ki,
+    "NI" to Res.string.region_sk_ni,
+    "PV" to Res.string.region_sk_pv,
+    "TA" to Res.string.region_sk_ta,
+    "TC" to Res.string.region_sk_tc,
+    "ZI" to Res.string.region_sk_zi
 )
 
 /** Germany's sixteen Länder by ISO 3166-2 suffix; see `GermanState` for what each adds. */
-private val GERMAN_REGION_LABELS: Map<String, Int> = mapOf(
-    "BB" to R.string.region_de_bb,
-    "BE" to R.string.region_de_be,
-    "BW" to R.string.region_de_bw,
-    "BY" to R.string.region_de_by,
-    "HB" to R.string.region_de_hb,
-    "HE" to R.string.region_de_he,
-    "HH" to R.string.region_de_hh,
-    "MV" to R.string.region_de_mv,
-    "NI" to R.string.region_de_ni,
-    "NW" to R.string.region_de_nw,
-    "RP" to R.string.region_de_rp,
-    "SH" to R.string.region_de_sh,
-    "SL" to R.string.region_de_sl,
-    "SN" to R.string.region_de_sn,
-    "ST" to R.string.region_de_st,
-    "TH" to R.string.region_de_th
+private val GERMAN_REGION_LABELS: Map<String, StringResource> = mapOf(
+    "BB" to Res.string.region_de_bb,
+    "BE" to Res.string.region_de_be,
+    "BW" to Res.string.region_de_bw,
+    "BY" to Res.string.region_de_by,
+    "HB" to Res.string.region_de_hb,
+    "HE" to Res.string.region_de_he,
+    "HH" to Res.string.region_de_hh,
+    "MV" to Res.string.region_de_mv,
+    "NI" to Res.string.region_de_ni,
+    "NW" to Res.string.region_de_nw,
+    "RP" to Res.string.region_de_rp,
+    "SH" to Res.string.region_de_sh,
+    "SL" to Res.string.region_de_sl,
+    "SN" to Res.string.region_de_sn,
+    "ST" to Res.string.region_de_st,
+    "TH" to Res.string.region_de_th
 )
 
 /**
@@ -139,7 +183,7 @@ private val GERMAN_REGION_LABELS: Map<String, Int> = mapOf(
 @Composable
 fun HolidayCountry.regionName(regionCode: String?): String {
     val res = regionOrNull(regionCode)?.let { regionNameRes(it) }
-    return stringResource(res ?: R.string.holiday_region_none)
+    return stringResource(res ?: Res.string.holiday_region_none)
 }
 
 /**
@@ -172,11 +216,11 @@ fun HolidayCountry.coverageNote(regionCode: String? = null): String {
             else -> stringResource(withRegion, regionName(region))
         }
         HolidayCoverage.PUBLIC_ONLY -> when {
-            regions.isEmpty() -> stringResource(R.string.country_holidays_public_only, name)
-            else -> stringResource(R.string.country_holidays_pick_region)
+            regions.isEmpty() -> stringResource(Res.string.country_holidays_public_only, name)
+            else -> stringResource(Res.string.country_holidays_pick_region)
         }
-        HolidayCoverage.SUSPENDED -> stringResource(R.string.country_holidays_suspended, name)
-        HolidayCoverage.NONE -> stringResource(R.string.country_holidays_unavailable, name)
+        HolidayCoverage.SUSPENDED -> stringResource(Res.string.country_holidays_suspended, name)
+        HolidayCoverage.NONE -> stringResource(Res.string.country_holidays_unavailable, name)
     }
 }
 
@@ -185,11 +229,10 @@ fun HolidayCountry.coverageNote(regionCode: String? = null): String {
  * school calendar is left out because it is set per region. Only the countries whose providers
  * return vacations without a region reach this; anything else gets the plain sentence.
  */
-@StringRes
-private fun HolidayCountry.schoolNoteRes(): Int = when (this) {
-    HolidayCountry.SLOVAKIA -> R.string.country_holidays_school_sk
-    HolidayCountry.AUSTRIA -> R.string.country_holidays_school_at
-    else -> R.string.country_holidays_supported
+private fun HolidayCountry.schoolNoteRes(): StringResource = when (this) {
+    HolidayCountry.SLOVAKIA -> Res.string.country_holidays_school_sk
+    HolidayCountry.AUSTRIA -> Res.string.country_holidays_school_at
+    else -> Res.string.country_holidays_supported
 }
 
 /**
@@ -285,7 +328,7 @@ private fun RegionChips(
         FilterChip(
             selected = selectedRegion == null,
             onClick = { onSelectRegion(null) },
-            label = { Text(stringResource(R.string.holiday_region_none)) }
+            label = { Text(stringResource(Res.string.holiday_region_none)) }
         )
         country.regions.forEach { code ->
             val name = country.regionNameRes(code)?.let { stringResource(it) } ?: code

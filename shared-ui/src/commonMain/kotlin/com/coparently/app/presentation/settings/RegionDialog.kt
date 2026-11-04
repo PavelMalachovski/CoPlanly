@@ -21,14 +21,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import com.coparently.app.R
 import com.coparently.app.domain.holidays.HolidayCountry
 import com.coparently.app.presentation.common.coverageNote
 import com.coparently.app.presentation.common.regionLabelRes
 import com.coparently.app.presentation.common.regionNameRes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.country_label
+import com.coparently.app.resources.holiday_region_none
+import com.coparently.app.resources.settings_family_kind_cancel
+import com.coparently.app.resources.settings_family_kind_save
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Picks the region whose own public holidays are added to [country]'s (MON-13, regional half).
@@ -51,13 +55,13 @@ internal fun RegionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(country.regionLabelRes() ?: R.string.country_label)) },
+        title = { Text(stringResource(country.regionLabelRes() ?: Res.string.country_label)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { code ->
                     val label = code?.let { country.regionNameRes(it) }?.let { stringResource(it) }
                         ?: code
-                        ?: stringResource(R.string.holiday_region_none)
+                        ?: stringResource(Res.string.holiday_region_none)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -85,12 +89,12 @@ internal fun RegionDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(chosen) }) {
-                Text(stringResource(R.string.settings_family_kind_save))
+                Text(stringResource(Res.string.settings_family_kind_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_family_kind_cancel))
+                Text(stringResource(Res.string.settings_family_kind_cancel))
             }
         }
     )

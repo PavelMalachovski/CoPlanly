@@ -65,6 +65,13 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     /**
+     * Whether this phone can register for pushes ([PushRegistration.available]); the screen offers the
+     * push switch only when it can (MON-24 phase 2, slice 11f: the iPhone's stand-in cannot).
+     */
+    val pushAvailable: Boolean
+        get() = fcmService.available
+
+    /**
      * The account the app itself is signed in as — distinct from the Google account used
      * for calendar sync, which `SyncViewModel` reports separately further up this screen.
      *

@@ -3,6 +3,7 @@ package com.coparently.app.presentation.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import com.coparently.app.presentation.settings.AppLanguage
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -104,6 +105,11 @@ class PlatformServicesTest {
             override val available = false
             override fun encode(content: String): QrMatrix? = null
             override fun shareImage(matrix: QrMatrix, chooserTitle: String) = Unit
+        },
+        appLanguages = object : AppLanguages {
+            override val available = false
+            override fun current() = AppLanguage.SYSTEM
+            override fun apply(language: AppLanguage) = Unit
         },
     )
 }

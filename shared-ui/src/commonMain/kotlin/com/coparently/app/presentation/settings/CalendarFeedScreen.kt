@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.settings
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,26 +34,51 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.feed.CalendarFeedLink
-import com.coparently.app.domain.feed.CreatedCalendarFeed
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ExpandableDetails
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
-import com.coparently.app.presentation.common.copySensitive
+import com.coparently.app.presentation.common.readerLanguage
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.LocalSensitiveClipboard
+import com.coparently.app.presentation.platform.LocalShareSheet
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_feed_copy
+import com.coparently.app.resources.calendar_feed_create
+import com.coparently.app.resources.calendar_feed_created_supporting
+import com.coparently.app.resources.calendar_feed_created_title
+import com.coparently.app.resources.calendar_feed_details
+import com.coparently.app.resources.calendar_feed_done
+import com.coparently.app.resources.calendar_feed_empty
+import com.coparently.app.resources.calendar_feed_excluded
+import com.coparently.app.resources.calendar_feed_included
+import com.coparently.app.resources.calendar_feed_intro
+import com.coparently.app.resources.calendar_feed_link_title
+import com.coparently.app.resources.calendar_feed_link_unused
+import com.coparently.app.resources.calendar_feed_link_used
+import com.coparently.app.resources.calendar_feed_links_label
+import com.coparently.app.resources.calendar_feed_no_family
+import com.coparently.app.resources.calendar_feed_revoke
+import com.coparently.app.resources.calendar_feed_revoke_confirm
+import com.coparently.app.resources.calendar_feed_revoke_confirm_text
+import com.coparently.app.resources.calendar_feed_revoke_confirm_title
+import com.coparently.app.resources.calendar_feed_share
+import com.coparently.app.resources.calendar_feed_share_chooser
+import com.coparently.app.resources.calendar_feed_share_message
+import com.coparently.app.resources.calendar_feed_title
+import com.coparently.app.resources.calendar_feed_warning
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.common_dialog_cancel
+import com.coparently.app.utils.readerMediumDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import kotlin.time.Instant
 
 /**
  * Read-only calendar links for a parent whose phone cannot run the app (MON-17).
@@ -76,7 +99,8 @@ fun CalendarFeedScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val textResolver = rememberUiTextResolver()
-    val language = LocalConfiguration.current.locales[0].language
+    // The feed's language: the one the app speaks, which on Android is the activity's first locale.
+    val language = readerLanguage()
     val snackbarHostState = remember { SnackbarHostState() }
     var revoking by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -91,12 +115,12 @@ fun CalendarFeedScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.calendar_feed_title)) },
+                title = { Text(stringResource(Res.string.calendar_feed_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -145,12 +169,15 @@ private fun FeedBody(
     if (!state.isLoading && state.familyId == null) {
         EmptyState(
             icon = Icons.Default.Link,
-            title = stringResource(R.string.calendar_feed_no_family),
+            title = stringResource(Res.string.calendar_feed_no_family),
             modifier = modifier
         )
         return
     }
-    val context = LocalContext.current
+    // The phone's share sheet and clipboard (MON-24 phase 2, slice 11f); each action is offered only
+    // where the phone has it (the iPhone has neither yet: the link is read off the screen there).
+    val shareSheet = LocalShareSheet.current
+    val clipboard = LocalSensitiveClipboard.current
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -158,7 +185,7 @@ private fun FeedBody(
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         Text(
-            text = stringResource(R.string.calendar_feed_intro),
+            text = stringResource(Res.string.calendar_feed_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -166,22 +193,25 @@ private fun FeedBody(
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.AddLink,
-                title = stringResource(R.string.calendar_feed_create),
+                title = stringResource(Res.string.calendar_feed_create),
                 onClick = if (canCreate) onCreate else null
             )
         }
         // Under the action, because it is what a parent must know before sharing a link.
         Text(
-            text = stringResource(R.string.calendar_feed_warning),
+            text = stringResource(Res.string.calendar_feed_warning),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         state.created?.let { created ->
+            // The share sheet for a new link: the `webcal://` form to tap on an iPhone, and the
+            // https one.
+            val shareText = stringResource(Res.string.calendar_feed_share_message, created.webcalUrl, created.url)
+            val chooserTitle = stringResource(Res.string.calendar_feed_share_chooser)
+            val clipLabel = stringResource(Res.string.calendar_feed_title)
             CreatedLink(
-                onShare = { context.startActivity(shareIntent(context, created)) },
-                onCopy = {
-                    copySensitive(context, context.getString(R.string.calendar_feed_title), created.url)
-                },
+                onShare = { shareSheet.shareText(shareText, chooserTitle) }.takeIf { shareSheet.available },
+                onCopy = { clipboard.copySensitive(clipLabel, created.url) }.takeIf { clipboard.available },
                 onDone = onDone
             )
         }
@@ -201,8 +231,8 @@ private fun FeedBody(
  */
 @Composable
 private fun FeedExplanation() {
-    ExpandableDetails(label = stringResource(R.string.calendar_feed_details)) {
-        listOf(R.string.calendar_feed_included, R.string.calendar_feed_excluded).forEach { res ->
+    ExpandableDetails(label = stringResource(Res.string.calendar_feed_details)) {
+        listOf(Res.string.calendar_feed_included, Res.string.calendar_feed_excluded).forEach { res ->
             Text(
                 text = stringResource(res),
                 style = MaterialTheme.typography.bodyMedium,
@@ -212,35 +242,44 @@ private fun FeedExplanation() {
     }
 }
 
-/** The link just made: the one moment its address exists outside the calendar it goes to. */
+/**
+ * The link just made: the one moment its address exists outside the calendar it goes to.
+ *
+ * @param onShare Shares the link, or null where the phone has no share sheet
+ * @param onCopy Copies the link, or null where the phone has no clipboard for it
+ */
 @Composable
 private fun CreatedLink(
-    onShare: () -> Unit,
-    onCopy: () -> Unit,
+    onShare: (() -> Unit)?,
+    onCopy: (() -> Unit)?,
     onDone: () -> Unit
 ) {
     Column {
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.Link,
-                title = stringResource(R.string.calendar_feed_created_title),
-                supporting = stringResource(R.string.calendar_feed_created_supporting)
+                title = stringResource(Res.string.calendar_feed_created_title),
+                supporting = stringResource(Res.string.calendar_feed_created_supporting)
             )
-            Divider()
-            SectionRow(
-                icon = Icons.Default.Share,
-                title = stringResource(R.string.calendar_feed_share),
-                onClick = onShare
-            )
-            Divider()
-            SectionRow(
-                icon = Icons.Default.ContentCopy,
-                title = stringResource(R.string.calendar_feed_copy),
-                onClick = onCopy
-            )
+            onShare?.let { share ->
+                Divider()
+                SectionRow(
+                    icon = Icons.Default.Share,
+                    title = stringResource(Res.string.calendar_feed_share),
+                    onClick = share
+                )
+            }
+            onCopy?.let { copy ->
+                Divider()
+                SectionRow(
+                    icon = Icons.Default.ContentCopy,
+                    title = stringResource(Res.string.calendar_feed_copy),
+                    onClick = copy
+                )
+            }
         }
         TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.calendar_feed_done))
+            Text(stringResource(Res.string.calendar_feed_done))
         }
     }
 }
@@ -254,12 +293,12 @@ private fun FeedLinks(
     onRevoke: (String) -> Unit
 ) {
     Column {
-        GroupLabel(stringResource(R.string.calendar_feed_links_label))
+        GroupLabel(stringResource(Res.string.calendar_feed_links_label))
         if (links.isEmpty()) {
             if (!isLoading) {
                 EmptyState(
                     icon = Icons.Default.Link,
-                    title = stringResource(R.string.calendar_feed_empty),
+                    title = stringResource(Res.string.calendar_feed_empty),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -281,18 +320,18 @@ private fun FeedLinkRow(link: CalendarFeedLink, enabled: Boolean, onRevoke: () -
     val used = remember(link.lastUsedAtMillis) { formatDay(link.lastUsedAtMillis) }
     SectionRow(
         icon = Icons.Default.Link,
-        title = stringResource(R.string.calendar_feed_link_title, made),
+        title = stringResource(Res.string.calendar_feed_link_title, made),
         // Creating a link stamps it as used at that moment; only a later fetch is a calendar.
         supporting = if (link.lastUsedAtMillis > link.createdAtMillis) {
-            stringResource(R.string.calendar_feed_link_used, used)
+            stringResource(Res.string.calendar_feed_link_used, used)
         } else {
-            stringResource(R.string.calendar_feed_link_unused)
+            stringResource(Res.string.calendar_feed_link_unused)
         },
         trailing = {
             IconButton(onClick = onRevoke, enabled = enabled) {
                 Icon(
                     imageVector = Icons.Default.LinkOff,
-                    contentDescription = stringResource(R.string.calendar_feed_revoke),
+                    contentDescription = stringResource(Res.string.calendar_feed_revoke),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -305,37 +344,24 @@ private fun FeedLinkRow(link: CalendarFeedLink, enabled: Boolean, onRevoke: () -
 private fun RevokeDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.calendar_feed_revoke_confirm_title)) },
-        text = { Text(stringResource(R.string.calendar_feed_revoke_confirm_text)) },
+        title = { Text(stringResource(Res.string.calendar_feed_revoke_confirm_title)) },
+        text = { Text(stringResource(Res.string.calendar_feed_revoke_confirm_text)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
-                    text = stringResource(R.string.calendar_feed_revoke_confirm),
+                    text = stringResource(Res.string.calendar_feed_revoke_confirm),
                     color = MaterialTheme.colorScheme.error
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_dialog_cancel))
+                Text(stringResource(Res.string.common_dialog_cancel))
             }
         }
     )
 }
 
-/** An epoch-millis instant as a medium date in the reader's locale. */
+/** An epoch-millis instant as a medium date in the reader's locale, on the phone's own day. */
 private fun formatDay(millis: Long): String =
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-        .format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate())
-
-/** The share sheet for a new link: the `webcal://` form to tap on an iPhone, and the https one. */
-private fun shareIntent(context: Context, created: CreatedCalendarFeed): Intent {
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(
-            Intent.EXTRA_TEXT,
-            context.getString(R.string.calendar_feed_share_message, created.webcalUrl, created.url)
-        )
-    }
-    return Intent.createChooser(sendIntent, context.getString(R.string.calendar_feed_share_chooser))
-}
+    readerMediumDate(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date)

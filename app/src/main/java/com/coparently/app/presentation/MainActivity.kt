@@ -19,7 +19,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,6 +29,7 @@ import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.InstallReferrer
@@ -51,9 +51,12 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.startDestinationFor
+import com.coparently.app.presentation.platform.LocalGoogleCalendarSignIn
 import com.coparently.app.presentation.platform.ProvideAndroidPlatform
+import com.coparently.app.presentation.sync.AndroidGoogleCalendarSignIn
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.sync.signInAnswer
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
@@ -70,13 +73,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
-
-/**
- * CompositionLocal for providing Google Sign-In callback throughout the app.
- */
-val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Intent) -> Unit)?> {
-    null
-}
 
 /**
  * The longest the system splash is held for the first screen to be known. As long as the Compose
@@ -108,6 +104,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Source of [LocalPhotoViewerUid]: who is signed in decides which record photos draw (L-4). */
     private val firebaseAuthService: FirebaseAuthService by inject()
+
+    /** Google Calendar's sign-in client, and the redeeming of its answer. */
+    private val credentialManagerService: CredentialManagerService by inject()
 
     private val todayWidgetRefresher: TodayWidgetRefresher by inject()
 
@@ -205,7 +204,7 @@ class MainActivity : AppCompatActivity() {
         if (data != null) {
             val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(data)
             lifecycleScope.launch {
-                syncViewModel.handleSignInResult(task)
+                syncViewModel.handleSignInResult(credentialManagerService.signInAnswer(task))
             }
         } else {
             val isCanceled = result.resultCode == RESULT_CANCELED
@@ -361,12 +360,10 @@ class MainActivity : AppCompatActivity() {
                 firebaseAuthService.getAuthStateFlow().map { it?.uid }
             }.collectAsStateWithLifecycle(initialValue = firebaseAuthService.getCurrentUser()?.uid)
 
-            // Provide Google Sign-In callback through CompositionLocal
-            val googleSignInCallback: (android.content.Intent) -> Unit = remember(googleSignInLauncher) {
-                {
-                        intent ->
-                    googleSignInLauncher.launch(intent)
-                }
+            // Google's sign-in for Google Calendar (`presentation/platform/GoogleCalendarSignIn`),
+            // launched through this activity's result, whose answer reaches [syncViewModel].
+            val googleCalendarSignIn = remember(googleSignInLauncher) {
+                AndroidGoogleCalendarSignIn(credentialManagerService) { intent -> googleSignInLauncher.launch(intent) }
             }
 
             // Every platform capability the shared screens read (`presentation/platform/`, MON-24
@@ -383,7 +380,7 @@ class MainActivity : AppCompatActivity() {
                         val appMessages = rememberAppMessages()
 
                         CompositionLocalProvider(
-                            LocalGoogleSignInCallback provides googleSignInCallback,
+                            LocalGoogleCalendarSignIn provides googleCalendarSignIn,
                             LocalParentPalette provides parentPalette,
                             LocalFamilyView provides familyView,
                             LocalAppMessages provides appMessages,

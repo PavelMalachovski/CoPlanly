@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import com.coparently.app.presentation.settings.AppLanguage
 import platform.Foundation.NSByteCountFormatter
 import platform.Foundation.NSByteCountFormatterCountStyleFile
 
@@ -33,6 +34,7 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     images = NoImages,
     fileDetails = IosFileDetails,
     qrCodes = NoQrCodes,
+    appLanguages = NoAppLanguages,
 )
 
 /** A launcher with nothing behind it. */
@@ -165,4 +167,16 @@ private object NoQrCodes : QrCodes {
     override fun encode(content: String): QrMatrix? = null
 
     override fun shareImage(matrix: QrMatrix, chooserTitle: String) = Unit
+}
+
+/**
+ * No language picker in the app: the iPhone sets an app's language in its own Settings app, which
+ * phase 3 links to. Until then the app follows the phone (the owner's rule, `AppLanguageRule`).
+ */
+private object NoAppLanguages : AppLanguages {
+    override val available: Boolean = false
+
+    override fun current(): AppLanguage = AppLanguage.SYSTEM
+
+    override fun apply(language: AppLanguage) = Unit
 }

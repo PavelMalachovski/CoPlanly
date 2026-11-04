@@ -1,28 +1,35 @@
 package com.coparently.app.presentation.settings
 
-import com.coparently.app.R
-import org.junit.Test
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.data_sources_onest_description
+import com.coparently.app.resources.data_sources_onest_title
+import com.coparently.app.resources.data_sources_openholidays_description
+import com.coparently.app.resources.data_sources_openholidays_title
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * The data-sources screen's list: the one thing it must never lose is the OpenHolidays notice and
  * the link to the licence that notice names — that is the attribution ODbL 1.0 asks for.
+ *
+ * In `:shared-ui`'s `commonTest` since the screen moved (MON-24 phase 2, slice 11f), comparing the
+ * `StringResource`s' keys where it compared `R.string` ids.
  */
 class DataSourcesTest {
 
     @Test
-    fun `the OpenHolidays data is attributed, with its licence linked`() {
+    fun `the OpenHolidays data is attributed with its licence linked`() {
         val dataset = DataSources.notices.single { it.kind == DataSourceNotice.Kind.DATASET }
         val licence = DataSources.notices.single { it.kind == DataSourceNotice.Kind.LICENCE }
 
-        assertEquals(R.string.data_sources_openholidays_title, dataset.titleRes)
-        assertEquals(R.string.data_sources_openholidays_description, dataset.descriptionRes)
+        assertEquals(Res.string.data_sources_openholidays_title.key, dataset.titleRes.key)
+        assertEquals(Res.string.data_sources_openholidays_description.key, dataset.descriptionRes?.key)
         assertEquals("https://opendatacommons.org/licenses/odbl/1-0/", licence.url)
     }
 
     @Test
-    fun `the licence row prints its address, since the address is the notice`() {
+    fun `the licence row prints its address - since the address is the notice`() {
         val licence = DataSources.notices.single { it.kind == DataSourceNotice.Kind.LICENCE }
 
         assertEquals(null, licence.descriptionRes)
@@ -43,11 +50,11 @@ class DataSourcesTest {
     }
 
     @Test
-    fun `the bundled typeface is credited, with the licence it is distributed under`() {
+    fun `the bundled typeface is credited with the licence it is distributed under`() {
         val typeface = DataSources.typefaceNotices.single()
 
-        assertEquals(R.string.data_sources_onest_title, typeface.titleRes)
-        assertEquals(R.string.data_sources_onest_description, typeface.descriptionRes)
+        assertEquals(Res.string.data_sources_onest_title.key, typeface.titleRes.key)
+        assertEquals(Res.string.data_sources_onest_description.key, typeface.descriptionRes?.key)
         assertEquals("https://openfontlicense.org", typeface.url)
     }
 }

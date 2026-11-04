@@ -65,6 +65,7 @@ import com.coparently.app.presentation.settings.SettingsViewModel
 import com.coparently.app.presentation.stickers.StickersViewModel
 import com.coparently.app.presentation.support.SupportViewModel
 import com.coparently.app.presentation.sync.AuthStateViewModel
+import com.coparently.app.presentation.sync.SyncViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -204,11 +205,14 @@ val supportUiModule: Module = module {
  * theme, the currency, the country and region, the family's answers and split, the account's
  * erasure — and the read-only calendar links a parent gives an iPhone. The push switch and the
  * erasure go through `PushRegistration` and `AccountDeletion`, which the app binds on Android and
- * [platformDataModule] stands in for on the iPhone.
+ * [platformDataModule] stands in for on the iPhone. Beside them, since Task 11, the sync group's
+ * ViewModel: the co-parent sync and Google Calendar's connection (`GoogleCalendarAccount`), whose
+ * sign-in screen the shell runs.
  */
 val settingsUiModule: Module = module {
     viewModelOf(::CalendarFeedViewModel)
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::SyncViewModel)
 }
 
 /**
@@ -236,8 +240,8 @@ val onboardingUiModule: Module = module {
  * the start destination's one source — and sign-out's undoing of this phone's push token, school
  * tokens, scheduled steps and files, in that order, before the session ends. The session, the token
  * and the files go through `AuthSession`, `PushRegistration` and `AccountTraces`, which the app binds
- * on Android and [platformDataModule] stands in for on the iPhone. (Google Calendar's connection,
- * whose sign-in is an Android activity result, keeps its ViewModel in the app until Task 11.)
+ * on Android and [platformDataModule] stands in for on the iPhone. (Google Calendar's connection is
+ * [settingsUiModule]'s since Task 11.)
  */
 val sessionUiModule: Module = module {
     viewModelOf(::AuthStateViewModel)

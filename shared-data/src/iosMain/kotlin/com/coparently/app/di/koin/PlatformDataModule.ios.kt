@@ -45,6 +45,7 @@ import com.coparently.app.data.remote.firebase.PushQueue
 import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialProvider
+import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.repository.PairingWording
@@ -129,6 +130,7 @@ actual val platformDataModule: Module = module {
     single<SchoolImportScheduler> { NoSchoolImportJob }
     single<SupportReminderScheduler> { NoSupportReminderJob }
     single<SyncRequester> { NoSyncRequests }
+    single<GoogleCalendarAccount> { NoGoogleCalendar }
     single<GoogleCalendarConnectionSource> { NoGoogleCalendar }
     single<CredentialProvider> { NoGoogleCalendar }
     single<PairingWording> { NoWording }

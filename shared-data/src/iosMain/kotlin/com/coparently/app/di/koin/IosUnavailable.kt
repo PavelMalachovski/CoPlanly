@@ -11,10 +11,11 @@ import com.coparently.app.data.remote.firebase.PushRegistration
 import com.coparently.app.data.remote.firebase.SignedInAccount
 import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialProvider
+import com.coparently.app.data.remote.google.GoogleAccess
 import com.coparently.app.data.remote.google.GoogleAccessException
 import com.coparently.app.data.remote.google.GoogleAccessFailure
+import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
-import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.remote.google.GoogleCredential
 import com.coparently.app.data.repository.PairingWording
 import com.coparently.app.data.requests.RequestClockNotices
@@ -91,6 +92,8 @@ internal val NoAccountTraces = AccountTraces { }
  * (CLAUDE.md item 23).
  */
 internal object NoPush : PushDevice, PushRegistration {
+    override val available: Boolean = false
+
     override suspend fun queueNotificationForUser(
         targetUserId: String,
         notificationData: Map<String, String>
@@ -174,9 +177,19 @@ internal object NoRequestClockNotices : RequestClockNotices {
     override suspend fun noAnswer(clock: RequestDeadline) = Unit
 }
 
-/** Google Calendar is not connected here: the iPhone has no Google sign-in yet. */
-internal object NoGoogleCalendar : GoogleCalendarConnectionSource, CredentialProvider {
+/**
+ * Google Calendar is not connected here: the iPhone has no Google sign-in yet. Signing out or
+ * disconnecting has nothing to end, so both succeed.
+ */
+internal object NoGoogleCalendar : GoogleCalendarAccount, CredentialProvider {
     override fun connection(): GoogleCalendarConnection = GoogleCalendarConnection.NOT_CONNECTED
+
+    override suspend fun accessToken(forceRefresh: Boolean): GoogleAccess =
+        GoogleAccess.Denied(GoogleAccessFailure.NOT_CONNECTED)
+
+    override suspend fun signOut(): Pair<Boolean, String?> = Pair(true, null)
+
+    override suspend fun disconnect() = Unit
 
     override suspend fun getCredential(forceRefresh: Boolean): GoogleCredential =
         throw GoogleAccessException(GoogleAccessFailure.NOT_CONNECTED)

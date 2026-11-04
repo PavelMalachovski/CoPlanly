@@ -33,6 +33,7 @@ import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.data.remote.google.CredentialAuthenticator
 import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.data.remote.google.CredentialProviderImpl
+import com.coparently.app.data.remote.google.GoogleCalendarAccount
 import com.coparently.app.data.remote.google.GoogleCalendarApi
 import com.coparently.app.data.remote.google.GoogleCalendarConnectionSource
 import com.coparently.app.data.repository.AndroidPairingWording
@@ -110,6 +111,8 @@ val dataModule = module {
     singleOf(::CredentialManagerService)
     // The Google Calendar connection the automatic import in `:shared-data` reads.
     single<GoogleCalendarConnectionSource> { get<CredentialManagerService>() }
+    // The same connection as Settings manages it, through SyncViewModel in `:shared-ui`.
+    single<GoogleCalendarAccount> { get<CredentialManagerService>() }
     singleOf(::CredentialProviderImpl)
     single { GoogleCalendarApi(get<HttpClient>(GOOGLE_CALENDAR_HTTP_CLIENT)) }
     // The thread title PairingRepositoryImpl (in `:shared-data`) falls back to, from resources.

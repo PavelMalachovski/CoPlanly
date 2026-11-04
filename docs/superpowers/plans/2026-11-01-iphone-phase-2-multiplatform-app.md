@@ -1425,6 +1425,55 @@ Then the export and the school import:
   screen's `SupportActions.setReminder` is null where it is false, so the payer's reminder group is not
   drawn. No visibility widened; no app test sat in `presentation/support/`.
 
+**Slice 11f notes (November 2026).** Settings, pairing, onboarding, the sign-in and the sync.
+- First, the 11e review's six notes: the camera's availability read once (`remember`), the receipt
+  scan effect's KDoc, `caresForSummary`, `FamilyKindDialog`, `SplitRatioDialog` and `MoneyFormat`
+  `internal`, and the two CLAUDE.md lines and this plan's 11d line marked.
+- Group 1, Settings and `SyncViewModel` (`git mv`, packages unchanged, `R.string` → `Res.string`):
+  `settings/SettingsScreen.kt`, `ParentColorDialog.kt` (`ParentColorPicker`, `CUSTOM_COLOUR` and
+  `GridSwatch` public: the screenshots, `ParentColorPickerTest`, onboarding), `CalendarFeedScreen.kt`,
+  `DataSourcesScreen.kt`, `RegionDialog.kt` and `AppLanguage.kt` (the enum alone, its labels
+  `StringResource`s), with `common/CountryPicker.kt` (its labels `StringResource`s) and
+  `consent/HealthConsentUi.kt` and `TelemetryConsentScreen.kt`; and `sync/SyncViewModel.kt`, in
+  `settingsUiModule`. The Android calls, each replaced: `LocalUriHandler` with `PrivacyPolicyLink`,
+  `TermsOfServiceLink` and the data sources' `openExternal` → `OpenUrl.open` over
+  `AppBuildValues.privacyPolicyUrl`/`termsUrl` (a row drawn only while set and `OpenUrl.available`;
+  `AndroidOpenUrl.open` is the `ACTION_VIEW` Compose's handler started, logged when no app takes it);
+  `BuildConfig.VERSION_NAME` → `AppBuildValues.versionName`; `hasNotificationPermission(context)` →
+  `PermissionRequester.isGranted(NOTIFICATIONS)`; the calendar link's `ACTION_SEND` chooser and
+  `copySensitive(context, …)` → `ShareSheet.shareText` and `SensitiveClipboard.copySensitive`, each row
+  offered only where available, the texts read in composition; `LocalConfiguration.locales[0].language`
+  → `readerLanguage()`; `ofLocalizedDate(MEDIUM)` of an `Instant` in the system zone →
+  `readerMediumDate` of kotlin.time's `Instant` in `TimeZone.currentSystemDefault()`; the consent's
+  `localizedDate("yMMMd")` → `ReaderDateText.date`; `format(shortTime())` → `ReaderDateText.time`;
+  `AppLanguage.current()`/`apply(language, context)` → the new platform interface `AppLanguages`
+  (`PlatformServices.appLanguages`, `LocalAppLanguages`; Android `AndroidAppLanguages` in the app, the
+  enum's old companion code; iPhone `NoAppLanguages`, not available); `@StringRes Int` →
+  `StringResource`. **Carried note (push switch):** `PushRegistration.available` (`:shared-data`, true
+  by default; `NoPush` false), `SettingsViewModel.pushAvailable`; the row is not drawn where false.
+  **`SyncViewModel` behind `GoogleCalendarSignIn` (carried note):** the new
+  `presentation/platform/GoogleCalendarSignIn` (`open(): GoogleSignInStart` — opened, unavailable,
+  failed), `GoogleSignInAnswer` (`suspend complete(): GoogleSignInCompletion`, connected with Google's
+  name and address, or failed with the `GoogleSignInFailure`) and `LocalGoogleCalendarSignIn`, which
+  `MainActivity` alone provides (not part of `PlatformServices`: it needs the activity's result
+  launcher and `CredentialManagerService`; read elsewhere it throws). Android:
+  `presentation/sync/AndroidGoogleCalendarSignIn` (the sign-in client's intent, launched through the
+  activity's result; a null client unavailable, a throwing one failed and logged) and
+  `CredentialManagerService.signInAnswer(task)`, which the activity's result hands to
+  `SyncViewModel.handleSignInResult` as before. `startGoogleSignIn(signIn)` replaces
+  `createGoogleSignInIntent()`: "opening" first, then the client, as before. The new
+  `data/remote/google/GoogleCalendarAccount` (`:shared-data`; `connection`, `accessToken`, `signOut`,
+  `disconnect`) is what the ViewModel holds, `CredentialManagerService` answers it (its three methods
+  `override`, `accessToken`'s default from the interface), the iPhone's `NoGoogleCalendar` too; the
+  store is `SecurePreferences`. `signOut` is `CredentialManagerService.signOut`, unchanged (the store
+  cleared before the revoke, CLAUDE.md item 23). Settings draws the Google Calendar row only where
+  `GoogleCalendarSignIn.available`. `LocalGoogleSignInCallback` and `SettingsScreen`'s
+  `onStartGoogleSignIn` are gone. Tests: `DataSourcesTest` → `commonTest` (keys, names without commas);
+  `PlatformServicesTest` builds the new capability; `SyncViewModelTest` (stays in the app: it runs over
+  the device's credential fixture) drives `startGoogleSignIn` through `AndroidGoogleCalendarSignIn` and
+  `handleSignInResult` through `signInAnswer`, with two new cases (no client, a client that throws);
+  `SyncStateTextTest` stays, so `toSyncState`/`toUiText` are public.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**

@@ -39,12 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.CustomHueRange
 import com.coparently.app.presentation.theme.IconSizes
@@ -52,6 +50,12 @@ import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.parent_color_custom
+import com.coparently.app.resources.parent_color_custom_hue
+import com.coparently.app.resources.settings_family_kind_cancel
+import com.coparently.app.resources.settings_family_kind_save
+import com.coparently.app.resources.settings_parent_color
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -86,7 +90,7 @@ internal fun ParentColorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_parent_color)) },
+        title = { Text(stringResource(Res.string.settings_parent_color)) },
         text = {
             // Scrolls so that the slider stays reachable at 200 % text on a short screen.
             ParentColorPicker(
@@ -99,12 +103,12 @@ internal fun ParentColorDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(colourFor(chosen, customHue)) }) {
-                Text(stringResource(R.string.settings_family_kind_save))
+                Text(stringResource(Res.string.settings_family_kind_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_family_kind_cancel))
+                Text(stringResource(Res.string.settings_family_kind_cancel))
             }
         }
     )
@@ -121,7 +125,7 @@ internal fun ParentColorDialog(
  * @param customHue The hue "Custom" stands for, in degrees.
  */
 @Composable
-internal fun ParentColorPicker(
+fun ParentColorPicker(
     chosen: String,
     customHue: Int,
     onChoose: (String) -> Unit,
@@ -147,7 +151,7 @@ internal fun ParentColorPicker(
             }
         }
         ColourOption(
-            label = stringResource(R.string.parent_color_custom),
+            label = stringResource(Res.string.parent_color_custom),
             swatch = ParentColors.choiceFill(ParentColor.custom(customHue)),
             selected = chosen == CUSTOM_COLOUR,
             onClick = { onChoose(CUSTOM_COLOUR) }
@@ -190,7 +194,7 @@ private fun ColourOption(label: String, swatch: Color, selected: Boolean, onClic
  * when it is the choice, so the selection does not rest on colour either.
  */
 @Composable
-internal fun GridSwatch(label: String, swatch: Color, selected: Boolean, onClick: () -> Unit) {
+fun GridSwatch(label: String, swatch: Color, selected: Boolean, onClick: () -> Unit) {
     val ring = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent
     Box(
         modifier = Modifier
@@ -230,7 +234,7 @@ private fun HueSlider(hue: Int, onHue: (Int) -> Unit) {
             position to ParentColor.custom(CustomHueRange.hueAt(position)).fillIn(dark)
         }.toTypedArray()
     }
-    val label = stringResource(R.string.parent_color_custom_hue)
+    val label = stringResource(Res.string.parent_color_custom_hue)
     Text(
         text = label,
         style = MaterialTheme.typography.labelMedium,
@@ -268,7 +272,7 @@ private fun colourFor(chosen: String, hue: Int): ParentColor =
     ParentColorChoice.entries.firstOrNull { it.name == chosen }?.color ?: ParentColor.custom(hue)
 
 /** The picker's key for "Custom"; a preset is keyed by its own name. */
-internal const val CUSTOM_COLOUR = "CUSTOM"
+const val CUSTOM_COLOUR = "CUSTOM"
 
 /** A swatch beside its name, the size the dialog has always drawn. */
 private val SWATCH_SIZE = 20.dp

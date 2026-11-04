@@ -1,8 +1,5 @@
 package com.coparently.app.presentation.settings
 
-import android.content.ActivityNotFoundException
-import android.util.Log
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,15 +24,28 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.data_sources_computed_note
+import com.coparently.app.resources.data_sources_group_holidays
+import com.coparently.app.resources.data_sources_group_typeface
+import com.coparently.app.resources.data_sources_holidays_description
+import com.coparently.app.resources.data_sources_holidays_title
+import com.coparently.app.resources.data_sources_intro
+import com.coparently.app.resources.data_sources_odbl_title
+import com.coparently.app.resources.data_sources_onest_description
+import com.coparently.app.resources.data_sources_onest_title
+import com.coparently.app.resources.data_sources_openholidays_description
+import com.coparently.app.resources.data_sources_openholidays_title
+import com.coparently.app.resources.settings_data_sources_title
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One source the calendar's holiday data was prepared from, as the data-sources screen lists it.
@@ -47,8 +57,8 @@ import com.coparently.app.presentation.theme.Spacing
  * @property kind Which icon the row carries
  */
 internal data class DataSourceNotice(
-    @StringRes val titleRes: Int,
-    @StringRes val descriptionRes: Int?,
+    val titleRes: StringResource,
+    val descriptionRes: StringResource?,
     val url: String,
     val kind: Kind
 ) {
@@ -108,20 +118,20 @@ internal object DataSources {
     /** Every notice, in the order the screen shows them. */
     val notices: List<DataSourceNotice> = listOf(
         DataSourceNotice(
-            titleRes = R.string.data_sources_openholidays_title,
-            descriptionRes = R.string.data_sources_openholidays_description,
+            titleRes = Res.string.data_sources_openholidays_title,
+            descriptionRes = Res.string.data_sources_openholidays_description,
             url = OPEN_HOLIDAYS_URL,
             kind = DataSourceNotice.Kind.DATASET
         ),
         DataSourceNotice(
-            titleRes = R.string.data_sources_odbl_title,
+            titleRes = Res.string.data_sources_odbl_title,
             descriptionRes = null,
             url = ODBL_URL,
             kind = DataSourceNotice.Kind.LICENCE
         ),
         DataSourceNotice(
-            titleRes = R.string.data_sources_holidays_title,
-            descriptionRes = R.string.data_sources_holidays_description,
+            titleRes = Res.string.data_sources_holidays_title,
+            descriptionRes = Res.string.data_sources_holidays_description,
             url = HOLIDAYS_LIBRARY_URL,
             kind = DataSourceNotice.Kind.REFERENCE
         )
@@ -134,8 +144,8 @@ internal object DataSources {
      */
     val typefaceNotices: List<DataSourceNotice> = listOf(
         DataSourceNotice(
-            titleRes = R.string.data_sources_onest_title,
-            descriptionRes = R.string.data_sources_onest_description,
+            titleRes = Res.string.data_sources_onest_title,
+            descriptionRes = Res.string.data_sources_onest_description,
             url = OFL_URL,
             kind = DataSourceNotice.Kind.TYPEFACE
         )
@@ -154,16 +164,19 @@ internal object DataSources {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataSourcesScreen(onNavigateUp: () -> Unit) {
-    val uriHandler = LocalUriHandler.current
+    // Links open in the phone's browser (`OpenUrl`, which logs when no app can); where the phone
+    // opens none (the iPhone, until phase 3), the rows still name each source and its address.
+    val openUrl = LocalOpenUrl.current
+    val open: ((String) -> Unit)? = if (openUrl.available) { url -> openUrl.open(url) } else null
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_data_sources_title)) },
+                title = { Text(stringResource(Res.string.settings_data_sources_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -179,30 +192,30 @@ fun DataSourcesScreen(onNavigateUp: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(Spacing.L)
         ) {
             Text(
-                text = stringResource(R.string.data_sources_intro),
+                text = stringResource(Res.string.data_sources_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Column {
-                GroupLabel(stringResource(R.string.data_sources_group_holidays))
+                GroupLabel(stringResource(Res.string.data_sources_group_holidays))
                 SectionGroup {
                     DataSources.notices.forEachIndexed { index, notice ->
                         if (index > 0) Divider()
-                        NoticeRow(notice = notice, onOpen = { openExternal(uriHandler, notice.url) })
+                        NoticeRow(notice = notice, onOpen = open?.let { { it(notice.url) } })
                     }
                 }
             }
             Text(
-                text = stringResource(R.string.data_sources_computed_note),
+                text = stringResource(Res.string.data_sources_computed_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Column {
-                GroupLabel(stringResource(R.string.data_sources_group_typeface))
+                GroupLabel(stringResource(Res.string.data_sources_group_typeface))
                 SectionGroup {
                     DataSources.typefaceNotices.forEachIndexed { index, notice ->
                         if (index > 0) Divider()
-                        NoticeRow(notice = notice, onOpen = { openExternal(uriHandler, notice.url) })
+                        NoticeRow(notice = notice, onOpen = open?.let { { it(notice.url) } })
                     }
                 }
             }
@@ -215,23 +228,27 @@ fun DataSourcesScreen(onNavigateUp: () -> Unit) {
  * opens its page.
  *
  * @param notice The source
- * @param onOpen Opens [DataSourceNotice.url]
+ * @param onOpen Opens [DataSourceNotice.url], or null where the phone opens no link
  */
 @Composable
-private fun NoticeRow(notice: DataSourceNotice, onOpen: () -> Unit) {
+private fun NoticeRow(notice: DataSourceNotice, onOpen: (() -> Unit)?) {
     SectionRow(
         icon = notice.kind.icon(),
         title = stringResource(notice.titleRes),
         supporting = notice.descriptionRes?.let { stringResource(it) }
             ?: DataSources.displayAddress(notice.url),
         onClick = onOpen,
-        trailing = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(IconSizes.Standard)
-            )
+        trailing = if (onOpen != null) {
+            {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(IconSizes.Standard)
+                )
+            }
+        } else {
+            null
         }
     )
 }
@@ -241,20 +258,4 @@ private fun DataSourceNotice.Kind.icon(): ImageVector = when (this) {
     DataSourceNotice.Kind.LICENCE -> Icons.Default.Gavel
     DataSourceNotice.Kind.REFERENCE -> Icons.Default.Event
     DataSourceNotice.Kind.TYPEFACE -> Icons.Default.TextFields
-}
-
-private const val TAG = "DataSourcesScreen"
-
-/**
- * Opens [url] in the browser, and does nothing but log when no app can — the same handling
- * `PrivacyPolicyLink.open` documents: Compose's handler throws, and a link must not crash the app.
- */
-private fun openExternal(uriHandler: UriHandler, url: String) {
-    try {
-        uriHandler.openUri(url)
-    } catch (e: IllegalArgumentException) {
-        Log.w(TAG, "No app can open a data-source link", e)
-    } catch (e: ActivityNotFoundException) {
-        Log.w(TAG, "No app can open a data-source link", e)
-    }
 }

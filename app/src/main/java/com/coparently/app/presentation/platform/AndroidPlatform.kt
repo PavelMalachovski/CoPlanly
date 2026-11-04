@@ -41,6 +41,7 @@ import com.coparently.app.presentation.common.hasNotificationPermission
 import com.coparently.app.presentation.common.newSharedFileCaptureUri
 import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.pairing.QRScannerActivity
+import com.coparently.app.presentation.settings.AndroidAppLanguages
 import java.io.File
 
 /**
@@ -72,6 +73,7 @@ fun androidPlatformServices(context: Context): PlatformServices = PlatformServic
     images = CoilImages,
     fileDetails = AndroidFileDetails(context),
     qrCodes = AndroidQrCodes(context),
+    appLanguages = AndroidAppLanguages(context),
 )
 
 /** The build's values, from `BuildConfig`; a blank address is null, which hides its row. */

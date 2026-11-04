@@ -28,6 +28,7 @@ class PlatformServices(
     val images: PlatformImages,
     val fileDetails: FileDetails,
     val qrCodes: QrCodes,
+    val appLanguages: AppLanguages,
 ) {
 
     /** One provided value per local in [PlatformLocals.all], in that order. */
@@ -44,6 +45,7 @@ class PlatformServices(
         LocalPlatformImages provides images,
         LocalFileDetails provides fileDetails,
         LocalQrCodes provides qrCodes,
+        LocalAppLanguages provides appLanguages,
     )
 }
 
@@ -102,6 +104,9 @@ val LocalFileDetails = staticCompositionLocalOf<FileDetails> { notProvided("Loca
 /** QR codes drawn from text, and shared as a picture. */
 val LocalQrCodes = staticCompositionLocalOf<QrCodes> { notProvided("LocalQrCodes") }
 
+/** The app's own language, chosen in Settings. */
+val LocalAppLanguages = staticCompositionLocalOf<AppLanguages> { notProvided("LocalAppLanguages") }
+
 /** The platform's locals, for the test that the shell's provider covers each of them. */
 object PlatformLocals {
 
@@ -119,5 +124,6 @@ object PlatformLocals {
         LocalPlatformImages,
         LocalFileDetails,
         LocalQrCodes,
+        LocalAppLanguages,
     )
 }

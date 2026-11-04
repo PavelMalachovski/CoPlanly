@@ -95,7 +95,7 @@ object AppLocale {
 
     /**
      * Mirrors AppCompat's per-app choice below Android 13, where nothing outside an activity can
-     * read it. `AppLanguage.apply` calls it right after handing AppCompat a new choice, and
+     * read it. `AndroidAppLanguages.apply` calls it right after handing AppCompat a new choice, and
      * `MainActivity` after AppCompat has applied one (a cold start restores it from AppCompat's
      * own storage).
      */

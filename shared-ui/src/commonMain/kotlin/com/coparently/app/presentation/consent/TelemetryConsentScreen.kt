@@ -20,13 +20,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.common.HeroIcon
-import com.coparently.app.presentation.common.PrivacyPolicyLink
+import com.coparently.app.presentation.platform.LocalAppBuildValues
+import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.consent_accept
+import com.coparently.app.resources.consent_body
+import com.coparently.app.resources.consent_changeable
+import com.coparently.app.resources.consent_decline
+import com.coparently.app.resources.consent_never
+import com.coparently.app.resources.consent_privacy_policy_link
+import com.coparently.app.resources.consent_title
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -64,12 +71,12 @@ fun TelemetryConsentScreen(
     ) {
         HeroIcon(Icons.Default.Lock)
         Text(
-            text = stringResource(R.string.consent_title),
+            text = stringResource(Res.string.consent_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = stringResource(R.string.consent_body),
+            text = stringResource(Res.string.consent_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -78,12 +85,12 @@ fun TelemetryConsentScreen(
         // unless the boundary is stated, and the boundary is real: nothing a family types
         // has ever been part of this.
         Text(
-            text = stringResource(R.string.consent_never),
+            text = stringResource(Res.string.consent_never),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = stringResource(R.string.consent_changeable),
+            text = stringResource(Res.string.consent_changeable),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -101,7 +108,7 @@ fun TelemetryConsentScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(R.string.consent_decline))
+            Text(stringResource(Res.string.consent_decline))
         }
         Button(
             onClick = {
@@ -110,20 +117,22 @@ fun TelemetryConsentScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(R.string.consent_accept))
+            Text(stringResource(Res.string.consent_accept))
         }
     }
 }
 
 /**
  * The full account of what is processed, for whoever wants more than three sentences before
- * answering (REL-4). Renders nothing until the policy is hosted — see [PrivacyPolicyLink].
+ * answering (REL-4). Renders nothing until the policy is hosted (`AppBuildValues.privacyPolicyUrl`,
+ * blank in the build until then), nor where the phone opens no link.
  */
 @Composable
 private fun ConsentPrivacyPolicyLink() {
-    if (PrivacyPolicyLink.url == null) return
-    val uriHandler = LocalUriHandler.current
-    TextButton(onClick = { PrivacyPolicyLink.open(uriHandler) }) {
-        Text(stringResource(R.string.consent_privacy_policy_link))
+    val openUrl = LocalOpenUrl.current
+    val url = LocalAppBuildValues.current.privacyPolicyUrl
+    if (url == null || !openUrl.available) return
+    TextButton(onClick = { openUrl.open(url) }) {
+        Text(stringResource(Res.string.consent_privacy_policy_link))
     }
 }

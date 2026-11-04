@@ -16,10 +16,12 @@ import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_opening_sign_in
 import com.coparently.app.resources.sync_google_server_failed
 import com.coparently.app.resources.sync_google_sign_in_cancelled
 import com.coparently.app.resources.sync_google_sign_in_failed
 import com.coparently.app.resources.sync_google_sign_in_refused
+import com.coparently.app.resources.sync_google_sign_in_unavailable
 import com.coparently.app.resources.sync_google_signed_in_as
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -205,8 +207,15 @@ class SyncViewModelTest {
         val vm = viewModel()
         assertEquals(GoogleCalendarConnection.NEEDS_RECONNECT, vm.connection.value)
 
-        // The Reconnect button's action: the same sign-in a first connection runs.
-        assertSame(intent, vm.createGoogleSignInIntent())
+        // The Reconnect button's action: the same sign-in a first connection runs, opened through
+        // the shell's launcher (MainActivity's activity result).
+        var launched: Intent? = null
+        vm.startGoogleSignIn(AndroidGoogleCalendarSignIn(credentials) { launched = it })
+        assertSame(intent, launched)
+        assertEquals(
+            GoogleCalendarSyncState.Syncing(UiText.Res(Res.string.sync_google_opening_sign_in)),
+            vm.syncState.value
+        )
 
         val account = mockk<GoogleSignInAccount> {
             every { displayName } returns "Olya"
@@ -217,7 +226,7 @@ class SyncViewModelTest {
         coEvery { credentials.accessToken(any()) } returns GoogleAccess.Granted("access-new")
         every { credentials.connection() } returns GoogleCalendarConnection.CONNECTED
 
-        val state = vm.handleSignInResult(task)
+        val state = vm.handleSignInResult(credentials.signInAnswer(task))
 
         assertEquals(GoogleCalendarConnection.CONNECTED, vm.connection.value)
         assertEquals(
@@ -244,8 +253,43 @@ class SyncViewModelTest {
             val task = Tasks.forResult(mockk<GoogleSignInAccount>())
             coEvery { credentials.handleSignInResult(task) } returns Pair(null, failure)
 
-            assertEquals(GoogleCalendarSyncState.Error(text), vm.handleSignInResult(task), "for $failure")
+            assertEquals(
+                GoogleCalendarSyncState.Error(text),
+                vm.handleSignInResult(credentials.signInAnswer(task)),
+                "for $failure"
+            )
         }
+    }
+
+    @Test
+    fun `a build with no Google sign-in client says sign-in is unavailable and opens nothing`() =
+        runTest(dispatcher) {
+            every { credentials.connection() } returns GoogleCalendarConnection.NOT_CONNECTED
+            every { credentials.getGoogleSignInClient() } returns null
+            val vm = viewModel()
+            var launched = false
+
+            vm.startGoogleSignIn(AndroidGoogleCalendarSignIn(credentials) { launched = true })
+
+            assertFalse(launched)
+            assertEquals(
+                GoogleCalendarSyncState.Error(UiText.Res(Res.string.sync_google_sign_in_unavailable)),
+                vm.syncState.value
+            )
+        }
+
+    @Test
+    fun `a sign-in client that cannot be built says sign-in failed`() = runTest(dispatcher) {
+        every { credentials.connection() } returns GoogleCalendarConnection.NOT_CONNECTED
+        every { credentials.getGoogleSignInClient() } throws IllegalStateException("play services")
+        val vm = viewModel()
+
+        vm.startGoogleSignIn(AndroidGoogleCalendarSignIn(credentials) { error("not launched") })
+
+        assertEquals(
+            GoogleCalendarSyncState.Error(UiText.Res(Res.string.sync_google_sign_in_failed)),
+            vm.syncState.value
+        )
     }
 
     @Test

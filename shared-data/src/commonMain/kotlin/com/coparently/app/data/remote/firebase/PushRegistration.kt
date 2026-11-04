@@ -10,6 +10,13 @@ package com.coparently.app.data.remote.firebase
  */
 interface PushRegistration {
 
+    /**
+     * Whether this phone can register for pushes at all. Settings offers the push switch only when it
+     * can (design item 8): Firebase Messaging on Android always can; the iPhone's stand-in cannot yet,
+     * and turning it on there would always fail (MON-24 phase 2, slice 11f).
+     */
+    val available: Boolean get() = true
+
     /** Whether this person has left push notifications on. On unless they switched it off. */
     fun isPushEnabled(): Boolean
 

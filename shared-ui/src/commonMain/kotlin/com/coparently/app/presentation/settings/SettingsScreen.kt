@@ -76,15 +76,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.data.consent.HealthConsentWithdrawal
 import com.coparently.app.data.remote.google.GoogleCalendarConnection
 import com.coparently.app.data.sync.SyncStatus
@@ -97,13 +93,10 @@ import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.FamilySwitcherDialog
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.GroupLabel
-import com.coparently.app.presentation.common.PrivacyPolicyLink
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.SignedInAsRow
-import com.coparently.app.presentation.common.TermsOfServiceLink
 import com.coparently.app.presentation.common.UiState
-import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.animations.sectionEnter
 import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
@@ -117,6 +110,12 @@ import com.coparently.app.presentation.consent.HealthConsentSettingsRow
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.HealthConsentWithdrawDialog
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
+import com.coparently.app.presentation.platform.LocalAppBuildValues
+import com.coparently.app.presentation.platform.LocalAppLanguages
+import com.coparently.app.presentation.platform.LocalGoogleCalendarSignIn
+import com.coparently.app.presentation.platform.LocalOpenUrl
+import com.coparently.app.presentation.platform.LocalPermissionRequester
+import com.coparently.app.presentation.platform.PlatformPermission
 import com.coparently.app.presentation.sync.GoogleCalendarSyncState
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.IconSizes
@@ -126,10 +125,88 @@ import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
-import com.coparently.app.resources.sync_google_sign_in_failed
-import com.coparently.app.utils.format
-import com.coparently.app.utils.shortTime
+import com.coparently.app.resources.calendar_feed_settings_description
+import com.coparently.app.resources.calendar_feed_settings_title
+import com.coparently.app.resources.country_label
+import com.coparently.app.resources.country_settings_summary
+import com.coparently.app.resources.currency_picker_title
+import com.coparently.app.resources.currency_settings_title
+import com.coparently.app.resources.health_consent_withdraw_failed
+import com.coparently.app.resources.health_consent_withdraw_photos_failed
+import com.coparently.app.resources.health_consent_withdrawn
+import com.coparently.app.resources.privacy_policy_description
+import com.coparently.app.resources.privacy_policy_title
+import com.coparently.app.resources.settings_about
+import com.coparently.app.resources.settings_about_tagline
+import com.coparently.app.resources.settings_account_delete
+import com.coparently.app.resources.settings_account_delete_cancel
+import com.coparently.app.resources.settings_account_delete_confirm_message
+import com.coparently.app.resources.settings_account_delete_confirm_title
+import com.coparently.app.resources.settings_account_delete_description
+import com.coparently.app.resources.settings_account_delete_failed
+import com.coparently.app.resources.settings_account_delete_final_message
+import com.coparently.app.resources.settings_account_delete_final_title
+import com.coparently.app.resources.settings_account_delete_final_yes
+import com.coparently.app.resources.settings_account_delete_progress
+import com.coparently.app.resources.settings_account_description
+import com.coparently.app.resources.settings_account_sign_out
+import com.coparently.app.resources.settings_back
+import com.coparently.app.resources.settings_calendar_sign_out
+import com.coparently.app.resources.settings_co_parent_sync
+import com.coparently.app.resources.settings_collapse
+import com.coparently.app.resources.settings_data_sources_description
+import com.coparently.app.resources.settings_data_sources_title
+import com.coparently.app.resources.settings_expand
+import com.coparently.app.resources.settings_family_kind_cancel
+import com.coparently.app.resources.settings_family_kind_save
+import com.coparently.app.resources.settings_family_shown
+import com.coparently.app.resources.settings_gcal_auto_note
+import com.coparently.app.resources.settings_gcal_enable_sync
+import com.coparently.app.resources.settings_gcal_needs_reconnect
+import com.coparently.app.resources.settings_gcal_not_signed_in
+import com.coparently.app.resources.settings_gcal_private_note
+import com.coparently.app.resources.settings_google_sync
+import com.coparently.app.resources.settings_group_account
+import com.coparently.app.resources.settings_group_app
+import com.coparently.app.resources.settings_group_chat
+import com.coparently.app.resources.settings_group_privacy
+import com.coparently.app.resources.settings_group_sync
+import com.coparently.app.resources.settings_language_picker_cancel
+import com.coparently.app.resources.settings_language_picker_title
+import com.coparently.app.resources.settings_language_title
+import com.coparently.app.resources.settings_my_profile_description
+import com.coparently.app.resources.settings_my_profile_title
+import com.coparently.app.resources.settings_operation_failed
+import com.coparently.app.resources.settings_parent_color
+import com.coparently.app.resources.settings_parent_color_desc
+import com.coparently.app.resources.settings_pause_before_sending_description
+import com.coparently.app.resources.settings_pause_before_sending_title
+import com.coparently.app.resources.settings_push_notifications
+import com.coparently.app.resources.settings_push_notifications_description
+import com.coparently.app.resources.settings_school_import_description
+import com.coparently.app.resources.settings_school_import_title
+import com.coparently.app.resources.settings_sync
+import com.coparently.app.resources.settings_sync_failed
+import com.coparently.app.resources.settings_sync_from_google
+import com.coparently.app.resources.settings_sync_idle
+import com.coparently.app.resources.settings_sync_last
+import com.coparently.app.resources.settings_syncing
+import com.coparently.app.resources.settings_telemetry_description
+import com.coparently.app.resources.settings_telemetry_title
+import com.coparently.app.resources.settings_theme
+import com.coparently.app.resources.settings_theme_dark
+import com.coparently.app.resources.settings_theme_light
+import com.coparently.app.resources.settings_theme_system
+import com.coparently.app.resources.settings_title
+import com.coparently.app.resources.settings_unknown
+import com.coparently.app.resources.sync_google_reconnect
+import com.coparently.app.resources.sync_sign_in_google
+import com.coparently.app.resources.terms_of_service_description
+import com.coparently.app.resources.terms_of_service_title
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -155,7 +232,6 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param onNavigateToCalendarFeed Opens the read-only calendar links (MON-17); the row shows
  *   only while the account is in a family, since a link serves one
  * @param onNavigateToDataSources Opens the data sources and licences (MON-13's ODbL notice)
- * @param onStartGoogleSignIn Launches the Google Sign-In activity
  * @param onSignOut Called after the user signs out of the app
  * @param syncViewModel Sync operations
  * @param settingsViewModel Settings state
@@ -174,7 +250,6 @@ fun SettingsScreen(
     onNavigateToSchoolImport: (() -> Unit)? = null,
     onNavigateToDataSources: (() -> Unit)? = null,
     onNavigateToMyProfile: (() -> Unit)? = null,
-    onStartGoogleSignIn: ((android.content.Intent) -> Unit)? = null,
     onSignOut: (() -> Unit)? = null,
     syncViewModel: SyncViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel(),
@@ -188,8 +263,13 @@ fun SettingsScreen(
     val healthConsentWithdrawing by healthConsentViewModel.withdrawing.collectAsState()
     var showHealthConsentWithdraw by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
+    // The phone's half (MON-24 phase 2, slice 11f): links, the build's values, the notification
+    // permission, the app's language and Google's sign-in, each from the shell.
+    val openUrl = LocalOpenUrl.current
+    val buildValues = LocalAppBuildValues.current
+    val permissions = LocalPermissionRequester.current
+    val appLanguages = LocalAppLanguages.current
+    val googleCalendarSignIn = LocalGoogleCalendarSignIn.current
 
     val googleConnection by syncViewModel.connection.collectAsState()
     val isSyncEnabled by syncViewModel.isSyncEnabled.collectAsState()
@@ -277,14 +357,14 @@ fun SettingsScreen(
     var googleExpanded by remember { mutableStateOf(false) }
     // AppCompat is the source of truth for the per-app language; selecting a new value
     // recreates the activity, so a plain remember is enough to keep the label fresh.
-    var currentLanguage by remember { mutableStateOf(AppLanguage.current()) }
+    var currentLanguage by remember { mutableStateOf(appLanguages.current()) }
 
     // Settings had no way to report a failure at all. Account deletion is the first action
     // here that can fail in a way the user must know about — the account still exists and the
     // attempt has to be repeated — so the screen grows a snackbar rather than letting the
     // error message sit unread in the state.
     val snackbarHostState = remember { SnackbarHostState() }
-    val deletionFailed = stringResource(R.string.settings_account_delete_failed)
+    val deletionFailed = stringResource(Res.string.settings_account_delete_failed)
     LaunchedEffect(settingsUiState.errorMessage) {
         if (settingsUiState.errorMessage != null) {
             snackbarHostState.showSnackbar(deletionFailed)
@@ -296,7 +376,7 @@ fun SettingsScreen(
     // `operationState`, which nothing used to collect, so it failed without a word. It gets its
     // own wording: the deletion snackbar above names an account that is still there.
     val operationState by settingsViewModel.operationState.collectAsState()
-    val operationFailed = stringResource(R.string.settings_operation_failed)
+    val operationFailed = stringResource(Res.string.settings_operation_failed)
     LaunchedEffect(operationState) {
         if (operationState is UiState.Error) {
             snackbarHostState.showSnackbar(operationFailed)
@@ -305,9 +385,9 @@ fun SettingsScreen(
     }
 
     // A withdrawal deletes data on both phones, so how it ended is always said out loud.
-    val healthWithdrawn = stringResource(R.string.health_consent_withdrawn)
-    val healthPhotosKept = stringResource(R.string.health_consent_withdraw_photos_failed)
-    val healthWithdrawFailed = stringResource(R.string.health_consent_withdraw_failed)
+    val healthWithdrawn = stringResource(Res.string.health_consent_withdrawn)
+    val healthPhotosKept = stringResource(Res.string.health_consent_withdraw_photos_failed)
+    val healthWithdrawFailed = stringResource(Res.string.health_consent_withdraw_failed)
     LaunchedEffect(Unit) {
         healthConsentViewModel.withdrawal.collect { outcome ->
             val message = when (outcome) {
@@ -324,13 +404,13 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = { Text(stringResource(Res.string.settings_title)) },
                 navigationIcon = {
                     onNavigateUp?.let { navigateUp ->
                         IconButton(onClick = navigateUp) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.settings_back)
+                                contentDescription = stringResource(Res.string.settings_back)
                             )
                         }
                     }
@@ -348,7 +428,7 @@ fun SettingsScreen(
         ) {
             // ── SYNC ───────────────────────────────────────────────────────────
             Column {
-                GroupLabel(stringResource(R.string.settings_group_sync))
+                GroupLabel(stringResource(Res.string.settings_group_sync))
                 SectionGroup {
                     // **At two, not at one.** A parent with a single co-parent sees the screen
                     // they always saw; a picker for a set of one is design item 8 in miniature.
@@ -356,7 +436,7 @@ fun SettingsScreen(
                     if (familySwitcher.canSwitch) {
                         SectionRow(
                             icon = Icons.Default.SwapHoriz,
-                            title = stringResource(R.string.settings_family_shown),
+                            title = stringResource(Res.string.settings_family_shown),
                             supporting = familyLabel(familySwitcher.selected),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -368,7 +448,7 @@ fun SettingsScreen(
                     }
                     SectionRow(
                         icon = Icons.Default.Sync,
-                        title = stringResource(R.string.settings_co_parent_sync),
+                        title = stringResource(Res.string.settings_co_parent_sync),
                         supporting = firestoreSyncStatus.summary(),
                         supportingColor = firestoreSyncStatus.summaryColor(),
                         supportingIcon = firestoreSyncStatus.summaryDot(),
@@ -379,87 +459,82 @@ fun SettingsScreen(
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
-                                    contentDescription = stringResource(R.string.settings_sync)
+                                    contentDescription = stringResource(Res.string.settings_sync)
                                 )
                             }
                         }
                     )
-                    Divider()
-                    // A connection Google ended opens its section by itself: the Reconnect
-                    // button should not wait behind a chevron.
-                    LaunchedEffect(googleConnection) {
-                        if (googleConnection == GoogleCalendarConnection.NEEDS_RECONNECT) {
-                            googleExpanded = true
-                        }
-                    }
-                    val needsReconnect = googleConnection == GoogleCalendarConnection.NEEDS_RECONNECT
-                    // One row, expanded on demand — the card this replaces stacked a toggle,
-                    // a status line and two full-width buttons into a single surface.
-                    SectionRow(
-                        icon = Icons.Default.EventAvailable,
-                        title = stringResource(R.string.settings_google_sync),
-                        supporting = when (googleConnection) {
-                            GoogleCalendarConnection.CONNECTED ->
-                                userEmail ?: stringResource(R.string.settings_unknown)
-                            GoogleCalendarConnection.NEEDS_RECONNECT ->
-                                stringResource(R.string.settings_gcal_needs_reconnect)
-                            GoogleCalendarConnection.NOT_CONNECTED ->
-                                stringResource(R.string.settings_gcal_not_signed_in)
-                        },
-                        supportingColor = if (needsReconnect) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        onClick = { googleExpanded = !googleExpanded },
-                        // One trailing control, and it is the disclosure (UX-11). The switch
-                        // used to sit here beside the chevron, on a row that is itself
-                        // clickable — three interaction models in one row, against the anatomy
-                        // `SectionRow` exists to enforce. TalkBack announced a switch and never
-                        // mentioned that the row expands, so the actions behind it were
-                        // unreachable without sight.
-                        //
-                        // The toggle moved into the expanded block rather than the chevron
-                        // being dropped, because expanding is what this row *is* — the August
-                        // 2026 refresh replaced a card of stacked buttons with exactly that —
-                        // and because the toggle belongs with the sign-in and sync actions that
-                        // govern whether it can be used at all. It costs one extra tap on a
-                        // control a parent sets once.
-                        trailing = { DisclosureChevron(expanded = googleExpanded) }
-                    )
-                    AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
-                        GoogleCalendarActions(
-                            connection = googleConnection,
-                            isSyncEnabled = isSyncEnabled,
-                            onToggleSync = { enabled ->
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                syncViewModel.toggleSync(enabled)
-                            },
-                            syncState = googleSyncState,
-                            onSignIn = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val signInIntent = syncViewModel.createGoogleSignInIntent()
-                                if (signInIntent != null) {
-                                    if (onStartGoogleSignIn != null) {
-                                        onStartGoogleSignIn(signInIntent)
-                                    } else {
-                                        syncViewModel.handleSignInCancellation(
-                                            UiText.Res(Res.string.sync_google_sign_in_failed)
-                                        )
-                                    }
-                                }
-                            },
-                            onSyncNow = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                syncViewModel.syncFromGoogle()
-                            },
-                            onCalendarSignOut = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                // Google's own keys only. This used to be the app's sign-out,
-                                // which reset the push switch, the family on screen and more.
-                                coroutineScope.launch { syncViewModel.disconnectGoogleCalendar() }
+                    // Google Calendar only where the phone can sign in to Google (the iPhone cannot
+                    // yet): a row whose sign-in button does nothing is design item 8's defect.
+                    if (googleCalendarSignIn.available) {
+                        Divider()
+                        // A connection Google ended opens its section by itself: the Reconnect
+                        // button should not wait behind a chevron.
+                        LaunchedEffect(googleConnection) {
+                            if (googleConnection == GoogleCalendarConnection.NEEDS_RECONNECT) {
+                                googleExpanded = true
                             }
+                        }
+                        val needsReconnect = googleConnection == GoogleCalendarConnection.NEEDS_RECONNECT
+                        // One row, expanded on demand — the card this replaces stacked a toggle,
+                        // a status line and two full-width buttons into a single surface.
+                        SectionRow(
+                            icon = Icons.Default.EventAvailable,
+                            title = stringResource(Res.string.settings_google_sync),
+                            supporting = when (googleConnection) {
+                                GoogleCalendarConnection.CONNECTED ->
+                                    userEmail ?: stringResource(Res.string.settings_unknown)
+                                GoogleCalendarConnection.NEEDS_RECONNECT ->
+                                    stringResource(Res.string.settings_gcal_needs_reconnect)
+                                GoogleCalendarConnection.NOT_CONNECTED ->
+                                    stringResource(Res.string.settings_gcal_not_signed_in)
+                            },
+                            supportingColor = if (needsReconnect) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            onClick = { googleExpanded = !googleExpanded },
+                            // One trailing control, and it is the disclosure (UX-11). The switch
+                            // used to sit here beside the chevron, on a row that is itself
+                            // clickable — three interaction models in one row, against the anatomy
+                            // `SectionRow` exists to enforce. TalkBack announced a switch and never
+                            // mentioned that the row expands, so the actions behind it were
+                            // unreachable without sight.
+                            //
+                            // The toggle moved into the expanded block rather than the chevron
+                            // being dropped, because expanding is what this row *is* — the August
+                            // 2026 refresh replaced a card of stacked buttons with exactly that —
+                            // and because the toggle belongs with the sign-in and sync actions that
+                            // govern whether it can be used at all. It costs one extra tap on a
+                            // control a parent sets once.
+                            trailing = { DisclosureChevron(expanded = googleExpanded) }
                         )
+                        AnimatedVisibility(visible = googleExpanded, enter = sectionEnter(), exit = sectionExit()) {
+                            GoogleCalendarActions(
+                                connection = googleConnection,
+                                isSyncEnabled = isSyncEnabled,
+                                onToggleSync = { enabled ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    syncViewModel.toggleSync(enabled)
+                                },
+                                syncState = googleSyncState,
+                                onSignIn = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    syncViewModel.startGoogleSignIn(googleCalendarSignIn)
+                                },
+                                onSyncNow = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    syncViewModel.syncFromGoogle()
+                                },
+                                onCalendarSignOut = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    // Google's own keys only. This used to be the app's sign-out,
+                                    // which reset the push switch, the family on screen and more.
+                                    coroutineScope.launch { syncViewModel.disconnectGoogleCalendar() }
+                                }
+                            )
+                        }
                     }
                     // Read-only links for a parent on an iPhone (MON-17). Only with a family: a
                     // link serves one family's calendar, and a row that could only answer "pair
@@ -470,8 +545,8 @@ fun SettingsScreen(
                             Divider()
                             SectionRow(
                                 icon = Icons.Default.Link,
-                                title = stringResource(R.string.calendar_feed_settings_title),
-                                supporting = stringResource(R.string.calendar_feed_settings_description),
+                                title = stringResource(Res.string.calendar_feed_settings_title),
+                                supporting = stringResource(Res.string.calendar_feed_settings_description),
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     navigate()
@@ -488,8 +563,8 @@ fun SettingsScreen(
                         Divider()
                         SectionRow(
                             icon = Icons.Default.School,
-                            title = stringResource(R.string.settings_school_import_title),
-                            supporting = stringResource(R.string.settings_school_import_description),
+                            title = stringResource(Res.string.settings_school_import_title),
+                            supporting = stringResource(Res.string.settings_school_import_description),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()
@@ -502,15 +577,15 @@ fun SettingsScreen(
 
             // ── APP ────────────────────────────────────────────────────────────
             Column {
-                GroupLabel(stringResource(R.string.settings_group_app))
+                GroupLabel(stringResource(Res.string.settings_group_app))
                 SectionGroup {
                     // The parent's own colour. In the Family group rather than under App
                     // preferences because it is how this person is identified to the other one —
                     // the same kind of fact as their name, not a device setting like the theme.
                     SectionRow(
                         icon = Icons.Default.Palette,
-                        title = stringResource(R.string.settings_parent_color),
-                        supporting = stringResource(R.string.settings_parent_color_desc),
+                        title = stringResource(Res.string.settings_parent_color),
+                        supporting = stringResource(Res.string.settings_parent_color_desc),
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             showColorPicker = true
@@ -539,8 +614,8 @@ fun SettingsScreen(
                     // and the theme are answers about this device.
                     SectionRow(
                         icon = Icons.Default.Public,
-                        title = stringResource(R.string.country_label),
-                        supporting = stringResource(R.string.country_settings_summary),
+                        title = stringResource(Res.string.country_label),
+                        supporting = stringResource(Res.string.country_settings_summary),
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             showCountryPicker = true
@@ -570,73 +645,81 @@ fun SettingsScreen(
                     Divider()
                     SectionRow(
                         icon = Icons.Default.Palette,
-                        title = stringResource(R.string.settings_theme),
+                        title = stringResource(Res.string.settings_theme),
                         onClick = { showThemePicker = true },
                         trailing = { ValueLabel(stringResource(themeLabelRes(darkTheme))) }
                     )
-                    Divider()
-                    SectionRow(
-                        icon = Icons.Default.Language,
-                        title = stringResource(R.string.settings_language_title),
-                        onClick = { showLanguagePicker = true },
-                        trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
-                    )
+                    // Only where the app chooses its own language (the iPhone's is set in its own
+                    // Settings app).
+                    if (appLanguages.available) {
+                        Divider()
+                        SectionRow(
+                            icon = Icons.Default.Language,
+                            title = stringResource(Res.string.settings_language_title),
+                            onClick = { showLanguagePicker = true },
+                            trailing = { ValueLabel(stringResource(currentLanguage.labelRes)) }
+                        )
+                    }
                     Divider()
                     SectionRow(
                         icon = Icons.Default.Payments,
-                        title = stringResource(R.string.currency_settings_title),
+                        title = stringResource(Res.string.currency_settings_title),
                         onClick = { showCurrencyPicker = true },
                         trailing = {
                             ValueLabel("${defaultCurrency.code} ${defaultCurrency.symbol}")
                         }
                     )
-                    Divider()
-                    // POST_NOTIFICATIONS is requested here, contextually, not on app start.
-                    val notificationPermissionRequester =
-                        com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
-                    SectionRow(
-                        icon = Icons.Default.Notifications,
-                        title = stringResource(R.string.settings_push_notifications),
-                        supporting = stringResource(R.string.settings_push_notifications_description),
-                        trailing = {
-                            val pushLabel = stringResource(R.string.settings_push_notifications)
-                            Switch(
-                                modifier = Modifier.semantics { contentDescription = pushLabel },
-                                checked = settingsUiState.notificationsEnabled &&
-                                    com.coparently.app.presentation.common.hasNotificationPermission(context),
-                                onCheckedChange = { enabled ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    if (enabled) {
-                                        notificationPermissionRequester.request {
-                                            settingsViewModel.toggleNotifications(true)
+                    // Only where this phone can register for pushes (the iPhone's stand-in cannot
+                    // yet, and turning it on there would always fail like a network error).
+                    if (settingsViewModel.pushAvailable) {
+                        Divider()
+                        // POST_NOTIFICATIONS is requested here, contextually, not on app start.
+                        val notificationPermissionRequester =
+                            com.coparently.app.presentation.common.rememberNotificationPermissionRequester()
+                        SectionRow(
+                            icon = Icons.Default.Notifications,
+                            title = stringResource(Res.string.settings_push_notifications),
+                            supporting = stringResource(Res.string.settings_push_notifications_description),
+                            trailing = {
+                                val pushLabel = stringResource(Res.string.settings_push_notifications)
+                                Switch(
+                                    modifier = Modifier.semantics { contentDescription = pushLabel },
+                                    checked = settingsUiState.notificationsEnabled &&
+                                        permissions.isGranted(PlatformPermission.NOTIFICATIONS),
+                                    onCheckedChange = { enabled ->
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (enabled) {
+                                            notificationPermissionRequester.request {
+                                                settingsViewModel.toggleNotifications(true)
+                                            }
+                                        } else {
+                                            settingsViewModel.toggleNotifications(false)
                                         }
-                                    } else {
-                                        settingsViewModel.toggleNotifications(false)
-                                    }
-                                },
-                                enabled = !settingsUiState.isLoading
-                            )
-                        }
-                    )
+                                    },
+                                    enabled = !settingsUiState.isLoading
+                                )
+                            }
+                        )
+                    }
                 }
             }
 
             // ── CHAT ───────────────────────────────────────────────────────────
             // A setting of the chat, grouped as one so it is found where it is about (UX audit M6).
             Column {
-                GroupLabel(stringResource(R.string.settings_group_chat))
+                GroupLabel(stringResource(Res.string.settings_group_chat))
                 SectionGroup {
                     // MON-19. Off by default: a pause and a hint are help a parent asks for, not
                     // one the app imposes on every message.
                     SectionRow(
                         icon = Icons.Default.HourglassTop,
-                        title = stringResource(R.string.settings_pause_before_sending_title),
+                        title = stringResource(Res.string.settings_pause_before_sending_title),
                         supporting = stringResource(
-                            R.string.settings_pause_before_sending_description,
+                            Res.string.settings_pause_before_sending_description,
                             SendHold.PAUSE_SECONDS
                         ),
                         trailing = {
-                            val pauseLabel = stringResource(R.string.settings_pause_before_sending_title)
+                            val pauseLabel = stringResource(Res.string.settings_pause_before_sending_title)
                             Switch(
                                 checked = pauseBeforeSending,
                                 modifier = Modifier.semantics { contentDescription = pauseLabel },
@@ -654,7 +737,7 @@ fun SettingsScreen(
             // Everything a consent was asked for, and where the data comes from, apart from the
             // preferences above (UX audit M6: eleven rows of App mixed the two).
             Column {
-                GroupLabel(stringResource(R.string.settings_group_privacy))
+                GroupLabel(stringResource(Res.string.settings_group_privacy))
                 SectionGroup {
                     // The other half of what makes the first-run question a consent: a decision
                     // you cannot revisit is not one (REL-5). A switch rather than a row that
@@ -662,10 +745,10 @@ fun SettingsScreen(
                     // somebody who has already answered is how a consent turns into nagging.
                     SectionRow(
                         icon = Icons.Default.Lock,
-                        title = stringResource(R.string.settings_telemetry_title),
-                        supporting = stringResource(R.string.settings_telemetry_description),
+                        title = stringResource(Res.string.settings_telemetry_title),
+                        supporting = stringResource(Res.string.settings_telemetry_description),
                         trailing = {
-                            val telemetryLabel = stringResource(R.string.settings_telemetry_title)
+                            val telemetryLabel = stringResource(Res.string.settings_telemetry_title)
                             Switch(
                                 checked = telemetryConsent == TelemetryConsent.GRANTED,
                                 // Named for TalkBack, which otherwise reads only "Switch, on".
@@ -695,8 +778,8 @@ fun SettingsScreen(
                     onNavigateToDataSources?.let { navigate ->
                         SectionRow(
                             icon = Icons.Default.Source,
-                            title = stringResource(R.string.settings_data_sources_title),
-                            supporting = stringResource(R.string.settings_data_sources_description),
+                            title = stringResource(Res.string.settings_data_sources_title),
+                            supporting = stringResource(Res.string.settings_data_sources_description),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 navigate()
@@ -709,7 +792,7 @@ fun SettingsScreen(
 
             // ── ACCOUNT ────────────────────────────────────────────────────────
             Column {
-                GroupLabel(stringResource(R.string.settings_group_account))
+                GroupLabel(stringResource(Res.string.settings_group_account))
                 SectionGroup {
                     // The app account, not the Google Calendar one reported under Sync. Same
                     // strip as the pairing screen, so "who am I signed in as" reads identically
@@ -727,8 +810,8 @@ fun SettingsScreen(
                     onNavigateToMyProfile?.let { navigate ->
                         SectionRow(
                             icon = Icons.Default.Person,
-                            title = stringResource(R.string.settings_my_profile_title),
-                            supporting = stringResource(R.string.settings_my_profile_description),
+                            title = stringResource(Res.string.settings_my_profile_title),
+                            supporting = stringResource(Res.string.settings_my_profile_description),
                             onClick = navigate,
                             trailing = { Chevron() }
                         )
@@ -736,24 +819,25 @@ fun SettingsScreen(
                     }
                     SectionRow(
                         icon = Icons.Default.Info,
-                        title = stringResource(R.string.settings_about),
-                        supporting = stringResource(R.string.settings_about_tagline),
+                        title = stringResource(Res.string.settings_about),
+                        supporting = stringResource(Res.string.settings_about_tagline),
                         trailing = {
                             ValueLabel(
-                                text = com.coparently.app.BuildConfig.VERSION_NAME,
+                                text = buildValues.versionName,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     )
                     Divider()
                     // REL-4: Play wants the policy reachable from inside an app that holds health
-                    // data. Absent until the policy is hosted — see PrivacyPolicyLink.
-                    if (PrivacyPolicyLink.url != null) {
+                    // data. Absent until the policy is hosted (`AppBuildValues.privacyPolicyUrl`), and
+                    // where the phone cannot open a link.
+                    buildValues.privacyPolicyUrl?.takeIf { openUrl.available }?.let { policyUrl ->
                         SectionRow(
                             icon = Icons.Default.PrivacyTip,
-                            title = stringResource(R.string.privacy_policy_title),
-                            supporting = stringResource(R.string.privacy_policy_description),
-                            onClick = { PrivacyPolicyLink.open(uriHandler) },
+                            title = stringResource(Res.string.privacy_policy_title),
+                            supporting = stringResource(Res.string.privacy_policy_description),
+                            onClick = { openUrl.open(policyUrl) },
                             trailing = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
@@ -766,13 +850,13 @@ fun SettingsScreen(
                         Divider()
                     }
                     // The contract the sign-in screen pointed to, readable again afterwards (§ 1751
-                    // of the Civil Code). Absent until hosted — see TermsOfServiceLink.
-                    if (TermsOfServiceLink.url != null) {
+                    // of the Civil Code). Absent until hosted (`AppBuildValues.termsUrl`).
+                    buildValues.termsUrl?.takeIf { openUrl.available }?.let { termsUrl ->
                         SectionRow(
                             icon = Icons.Default.Gavel,
-                            title = stringResource(R.string.terms_of_service_title),
-                            supporting = stringResource(R.string.terms_of_service_description),
-                            onClick = { TermsOfServiceLink.open(uriHandler) },
+                            title = stringResource(Res.string.terms_of_service_title),
+                            supporting = stringResource(Res.string.terms_of_service_description),
+                            onClick = { openUrl.open(termsUrl) },
                             trailing = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
@@ -790,7 +874,7 @@ fun SettingsScreen(
                     SectionRow(
                         icon = Icons.AutoMirrored.Filled.Logout,
                         iconTint = MaterialTheme.colorScheme.error,
-                        title = stringResource(R.string.settings_account_sign_out),
+                        title = stringResource(Res.string.settings_account_sign_out),
                         titleColor = MaterialTheme.colorScheme.error,
                         onClick = { showSignOutConfirm = true }
                     )
@@ -801,12 +885,12 @@ fun SettingsScreen(
                     SectionRow(
                         icon = Icons.Default.DeleteForever,
                         iconTint = MaterialTheme.colorScheme.error,
-                        title = stringResource(R.string.settings_account_delete),
+                        title = stringResource(Res.string.settings_account_delete),
                         titleColor = MaterialTheme.colorScheme.error,
                         supporting = if (settingsUiState.isDeletingAccount) {
-                            stringResource(R.string.settings_account_delete_progress)
+                            stringResource(Res.string.settings_account_delete_progress)
                         } else {
-                            stringResource(R.string.settings_account_delete_description)
+                            stringResource(Res.string.settings_account_delete_description)
                         },
                         onClick = {
                             if (!settingsUiState.isDeletingAccount) showDeleteConfirm = true
@@ -832,10 +916,10 @@ fun SettingsScreen(
 
     if (showSignOutConfirm) {
         ConfirmationDialog(
-            title = stringResource(R.string.settings_account_sign_out),
-            message = stringResource(R.string.settings_account_description),
-            confirmText = stringResource(R.string.settings_account_sign_out),
-            dismissText = stringResource(R.string.settings_language_picker_cancel),
+            title = stringResource(Res.string.settings_account_sign_out),
+            message = stringResource(Res.string.settings_account_description),
+            confirmText = stringResource(Res.string.settings_account_sign_out),
+            dismissText = stringResource(Res.string.settings_language_picker_cancel),
             isDestructive = true,
             onDismiss = { showSignOutConfirm = false },
             onConfirm = {
@@ -855,10 +939,10 @@ fun SettingsScreen(
 
     if (showDeleteConfirm) {
         ConfirmationDialog(
-            title = stringResource(R.string.settings_account_delete_confirm_title),
-            message = stringResource(R.string.settings_account_delete_confirm_message),
-            confirmText = stringResource(R.string.settings_account_delete),
-            dismissText = stringResource(R.string.settings_account_delete_cancel),
+            title = stringResource(Res.string.settings_account_delete_confirm_title),
+            message = stringResource(Res.string.settings_account_delete_confirm_message),
+            confirmText = stringResource(Res.string.settings_account_delete),
+            dismissText = stringResource(Res.string.settings_account_delete_cancel),
             isDestructive = true,
             onDismiss = { showDeleteConfirm = false },
             onConfirm = {
@@ -870,10 +954,10 @@ fun SettingsScreen(
 
     if (showDeleteFinalConfirm) {
         ConfirmationDialog(
-            title = stringResource(R.string.settings_account_delete_final_title),
-            message = stringResource(R.string.settings_account_delete_final_message),
-            confirmText = stringResource(R.string.settings_account_delete_final_yes),
-            dismissText = stringResource(R.string.settings_account_delete_cancel),
+            title = stringResource(Res.string.settings_account_delete_final_title),
+            message = stringResource(Res.string.settings_account_delete_final_message),
+            confirmText = stringResource(Res.string.settings_account_delete_final_yes),
+            dismissText = stringResource(Res.string.settings_account_delete_cancel),
             isDestructive = true,
             onDismiss = { showDeleteFinalConfirm = false },
             onConfirm = {
@@ -905,7 +989,7 @@ fun SettingsScreen(
 
     if (showLanguagePicker) {
         SingleChoiceDialog(
-            title = stringResource(R.string.settings_language_picker_title),
+            title = stringResource(Res.string.settings_language_picker_title),
             options = AppLanguage.entries.map { it to stringResource(it.labelRes) },
             selected = currentLanguage,
             onSelect = { language ->
@@ -914,8 +998,8 @@ fun SettingsScreen(
                     currentLanguage = language
                     // Recreates the activity with the new locale and persists the choice
                     // (autoStoreLocales); below Android 13, "System default" over a choice
-                    // starts the app again (SystemDefaultRelaunch).
-                    AppLanguage.apply(language, context)
+                    // starts the app again (SystemDefaultRelaunch). The phone's own half.
+                    appLanguages.apply(language)
                 }
             },
             onDismiss = { showLanguagePicker = false }
@@ -924,7 +1008,7 @@ fun SettingsScreen(
 
     if (showCurrencyPicker) {
         SingleChoiceDialog(
-            title = stringResource(R.string.currency_picker_title),
+            title = stringResource(Res.string.currency_picker_title),
             options = SupportedCurrency.entries.map { it to "${it.code}  ${it.symbol}" },
             selected = defaultCurrency,
             onSelect = { currency ->
@@ -951,7 +1035,7 @@ private fun DisclosureChevron(expanded: Boolean) {
         // Named, unlike [Chevron]. A navigation chevron repeats what the row already
         // announces; this one carries the row's *state*, which nothing else says aloud.
         contentDescription = stringResource(
-            if (expanded) R.string.settings_collapse else R.string.settings_expand
+            if (expanded) Res.string.settings_collapse else Res.string.settings_expand
         ),
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
@@ -1024,7 +1108,7 @@ private fun GoogleCalendarActions(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val syncLabel = stringResource(R.string.settings_gcal_enable_sync)
+            val syncLabel = stringResource(Res.string.settings_gcal_enable_sync)
             Text(
                 text = syncLabel,
                 style = MaterialTheme.typography.bodyLarge
@@ -1081,13 +1165,13 @@ private fun GoogleCalendarActions(
 @Composable
 private fun GoogleCalendarNotes(isSyncEnabled: Boolean) {
     Text(
-        text = stringResource(R.string.settings_gcal_private_note),
+        text = stringResource(Res.string.settings_gcal_private_note),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     if (isSyncEnabled) {
         Text(
-            text = stringResource(R.string.settings_gcal_auto_note),
+            text = stringResource(Res.string.settings_gcal_auto_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1125,21 +1209,21 @@ private fun GoogleCalendarButtons(
             modifier = Modifier.fillMaxWidth(),
             enabled = !busy
         ) {
-            Text(stringResource(R.string.sync_sign_in_google))
+            Text(stringResource(Res.string.sync_sign_in_google))
         }
         GoogleCalendarConnection.NEEDS_RECONNECT -> Button(
             onClick = onSignIn,
             modifier = Modifier.fillMaxWidth(),
             enabled = !busy
         ) {
-            Text(stringResource(R.string.sync_google_reconnect))
+            Text(stringResource(Res.string.sync_google_reconnect))
         }
         GoogleCalendarConnection.CONNECTED -> Button(
             onClick = onSyncNow,
             modifier = Modifier.fillMaxWidth(),
             enabled = canSyncNow
         ) {
-            Text(stringResource(R.string.settings_sync_from_google))
+            Text(stringResource(Res.string.settings_sync_from_google))
         }
     }
     if (connection != GoogleCalendarConnection.NOT_CONNECTED) {
@@ -1148,7 +1232,7 @@ private fun GoogleCalendarButtons(
             modifier = Modifier.fillMaxWidth(),
             enabled = !busy
         ) {
-            Text(stringResource(R.string.settings_calendar_sign_out))
+            Text(stringResource(Res.string.settings_calendar_sign_out))
         }
     }
 }
@@ -1198,13 +1282,13 @@ private fun ThemePickerDialog(
     onDismiss: () -> Unit
 ) {
     val options = listOf<Pair<Boolean?, String>>(
-        null to stringResource(R.string.settings_theme_system),
-        false to stringResource(R.string.settings_theme_light),
-        true to stringResource(R.string.settings_theme_dark)
+        null to stringResource(Res.string.settings_theme_system),
+        false to stringResource(Res.string.settings_theme_light),
+        true to stringResource(Res.string.settings_theme_dark)
     )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_theme)) },
+        title = { Text(stringResource(Res.string.settings_theme)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { (value, label) ->
@@ -1218,7 +1302,7 @@ private fun ThemePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_language_picker_cancel))
+                Text(stringResource(Res.string.settings_language_picker_cancel))
             }
         }
     )
@@ -1258,7 +1342,7 @@ private fun <T> SingleChoiceDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_language_picker_cancel))
+                Text(stringResource(Res.string.settings_language_picker_cancel))
             }
         }
     )
@@ -1281,21 +1365,21 @@ private fun ChoiceRow(label: String, selected: Boolean, onSelect: () -> Unit) {
     }
 }
 
-private fun themeLabelRes(darkTheme: Boolean?): Int = when (darkTheme) {
-    null -> R.string.settings_theme_system
-    true -> R.string.settings_theme_dark
-    false -> R.string.settings_theme_light
+private fun themeLabelRes(darkTheme: Boolean?): StringResource = when (darkTheme) {
+    null -> Res.string.settings_theme_system
+    true -> Res.string.settings_theme_dark
+    false -> Res.string.settings_theme_light
 }
 
 /** One-line summary of co-parent sync, for the row's supporting text. */
 @Composable
 private fun SyncStatus.summary(): String = when (this) {
-    is SyncStatus.Idle -> stringResource(R.string.settings_sync_idle)
-    is SyncStatus.Syncing -> stringResource(R.string.settings_syncing)
+    is SyncStatus.Idle -> stringResource(Res.string.settings_sync_idle)
+    is SyncStatus.Syncing -> stringResource(Res.string.settings_syncing)
     is SyncStatus.Success ->
-        stringResource(R.string.settings_sync_last, lastSyncTime.format(shortTime()))
+        stringResource(Res.string.settings_sync_last, ReaderDateText.time(lastSyncTime))
     // Not `message`: that is the exception's own English text, kept for the log (CQ-14).
-    is SyncStatus.Error -> stringResource(R.string.settings_sync_failed)
+    is SyncStatus.Error -> stringResource(Res.string.settings_sync_failed)
 }
 
 /** Colour for [summary]; errors are the only state that shouts. */
@@ -1337,7 +1421,7 @@ private fun CountryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.country_label)) },
+        title = { Text(stringResource(Res.string.country_label)) },
         text = {
             Column {
                 HolidayCountry.entries.forEach { entry ->
@@ -1370,12 +1454,12 @@ private fun CountryDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(country) }) {
-                Text(stringResource(R.string.settings_family_kind_save))
+                Text(stringResource(Res.string.settings_family_kind_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_family_kind_cancel))
+                Text(stringResource(Res.string.settings_family_kind_cancel))
             }
         }
     )

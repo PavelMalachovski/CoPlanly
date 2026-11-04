@@ -43,7 +43,6 @@ import androidx.navigation.navArgument
 import com.coparently.app.R
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.domain.telemetry.TelemetryConsent
-import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.auth.AuthScreen
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.changerequests.AgreementScreen
@@ -481,7 +480,6 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) {
-                    val googleSignInCallback = LocalGoogleSignInCallback.current
                     SettingsScreen(
                         // Reached via the gear action in the top-level top bars — it opens as
                         // a detail screen, so it gets a back arrow.
@@ -498,7 +496,6 @@ fun NavGraph(
                         onNavigateToMyProfile = {
                             navController.navigate(Screen.MyProfile.route)
                         },
-                        onStartGoogleSignIn = googleSignInCallback,
                         onSignOut = {
                             navController.navigate(Screen.Auth.route) {
                                 popUpTo(Screen.Home.route) { inclusive = true }
