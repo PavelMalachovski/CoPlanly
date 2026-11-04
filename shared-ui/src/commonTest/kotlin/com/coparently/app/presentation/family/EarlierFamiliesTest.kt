@@ -7,14 +7,12 @@ import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import kotlinx.datetime.toKotlinLocalDate
-import kotlinx.datetime.toKotlinLocalDateTime
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Family → Earlier families (owner decision, 25 October 2026): which families ended, and what
@@ -42,11 +40,11 @@ class EarlierFamiliesTest {
         assertEquals(ZUZANA, zuzana.coParentUid)
         assertEquals(listOf("e1"), zuzana.events.map { it.id })
         assertEquals(listOf("x1"), zuzana.expenses.map { it.id })
-        assertEquals(LocalDate.of(2026, 5, 3), zuzana.lastDay)
+        assertEquals(LocalDate(2026, 5, 3), zuzana.lastDay)
     }
 
     @Test
-    fun `a co-parent's record of no family belongs to the family with them, this parent's own to none`() {
+    fun `a co-parent's record of no family belongs to the family with them - this parent's own to none`() {
         val records = EveryFamilyRecords(
             expenses = listOf(expense("hers", familyId = null, createdBy = ZUZANA), expense("mine", null, ME))
         )
@@ -58,7 +56,7 @@ class EarlierFamiliesTest {
     }
 
     @Test
-    fun `a family kept with no record left here is still listed, and a live or foreign one never`() {
+    fun `a family kept with no record left here is still listed - and a live or foreign one never`() {
         val known = listOf(
             KnownFamilyEntity(zuzanaFamily, ZUZANA, coParentName = "Zuzana", updatedAtMillis = 1L),
             KnownFamilyEntity(lanaFamily, LANA, coParentName = "Lana", updatedAtMillis = 1L)
@@ -72,7 +70,7 @@ class EarlierFamiliesTest {
     }
 
     @Test
-    fun `a private event, a Google import, stays out of the earlier family and is shown in the live one`() {
+    fun `a private event - a Google import - stays out of the earlier family and is shown in the live one`() {
         val imported = event("google-1", zuzanaFamily, ME, day = 4).copy(isPrivate = true)
         val records = EveryFamilyRecords(events = listOf(imported, event("e1", zuzanaFamily, ME, day = 3)))
 
@@ -85,11 +83,11 @@ class EarlierFamiliesTest {
     private fun event(id: String, familyId: String?, createdBy: String, day: Int) = Event(
         id = id,
         title = id,
-        startDateTime = LocalDateTime.of(2026, 5, day, 10, 0).toKotlinLocalDateTime(),
+        startDateTime = LocalDateTime(2026, 5, day, 10, 0),
         eventType = "other",
         parentOwner = "mom",
-        createdAt = LocalDateTime.of(2026, 5, 1, 9, 0).toKotlinLocalDateTime(),
-        updatedAt = LocalDateTime.of(2026, 5, 1, 9, 0).toKotlinLocalDateTime(),
+        createdAt = LocalDateTime(2026, 5, 1, 9, 0),
+        updatedAt = LocalDateTime(2026, 5, 1, 9, 0),
         createdByFirebaseUid = createdBy,
         familyId = familyId
     )
@@ -101,7 +99,7 @@ class EarlierFamiliesTest {
         currency = "CZK",
         category = ExpenseCategory.entries.first(),
         paidBy = createdBy,
-        date = LocalDate.of(2026, 5, 1).toKotlinLocalDate(),
+        date = LocalDate(2026, 5, 1),
         createdByFirebaseUid = createdBy,
         familyId = familyId
     )

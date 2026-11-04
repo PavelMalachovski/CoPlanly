@@ -1597,8 +1597,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              components of presentation/common/ that need no ViewModel and no Android API (the
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
-             group by group (so far common/'s, chat's, the calendar's, the events', custody's and the
-             requests'), with
+             group by group (so far common/'s, chat's, the calendar's, the events', custody's, the
+             requests' and the family's), with
              their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -2085,6 +2085,16 @@ event list, so `MonthView` and the agenda card read the map they did. The screen
 `ScreenshotFixtures.custodyOn` (a kotlinx day). `MiniMonthModelTest` and `SwapMiniMonthsTest` run in
 `commonTest` on kotlinx-datetime literals; `EventsByDayTest` and the four request tests (MockK) in
 `androidUnitTest`, converting at the edge where `java.time` stays their oracle.
+Slice 10d moved **the family**: `FamilyViewModel` (the Family tab's hub), `EarlierFamiliesViewModel`
+with the pure `EarlierFamilies.kt` (`EarlierFamily.lastDay` a kotlinx-datetime `LocalDate`, which
+`EarlierFamiliesScreen` formats through `utils/LocalizedDates.kt`'s kotlinx `format` overload, unchanged)
+and `UnassignedRecordsViewModel` (its log line through `logger`), with what the hub reads of Home:
+`home/MonthMoney.kt`, and `CurrencyAmount`, `MonthSpend` and `MonthSpendDependencies`, split out of
+`HomeViewModel.kt` into `home/MonthSpend.kt` (Home's ViewModel, still in the app, reads them from
+there). They are in `familyUiModule`, `MonthSpendDependencies` a `factory` as it was in
+`presentationModule`. `EarlierFamiliesTest` and `MonthMoneyTest` run in `commonTest` (kotlinx-datetime
+literals; four names lost a comma), `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK)
+in `androidUnitTest`, beside a copy of the app's `testFamilyViewSource`.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller

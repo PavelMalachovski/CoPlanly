@@ -10,9 +10,6 @@ import com.coparently.app.presentation.documents.FamilyDocumentsViewModel
 import com.coparently.app.presentation.expenses.ExpenseViewModel
 import com.coparently.app.presentation.expenses.SettleUpViewModel
 import com.coparently.app.presentation.export.ExportViewModel
-import com.coparently.app.presentation.family.EarlierFamiliesViewModel
-import com.coparently.app.presentation.family.FamilyViewModel
-import com.coparently.app.presentation.family.UnassignedRecordsViewModel
 import com.coparently.app.presentation.friends.FriendCalendarViewModel
 import com.coparently.app.presentation.friends.FriendViewModel
 import com.coparently.app.presentation.guests.GuestAcceptViewModel
@@ -60,9 +57,6 @@ val viewModelModule = module {
     viewModelOf(::ExpenseViewModel)
     viewModelOf(::SettleUpViewModel)
     viewModelOf(::ExportViewModel)
-    viewModelOf(::EarlierFamiliesViewModel)
-    viewModelOf(::FamilyViewModel)
-    viewModelOf(::UnassignedRecordsViewModel)
     viewModelOf(::FriendCalendarViewModel)
     viewModelOf(::FriendViewModel)
     viewModelOf(::GuestAcceptViewModel)

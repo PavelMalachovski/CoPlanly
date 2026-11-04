@@ -10,8 +10,7 @@ import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.Pet
-import kotlinx.datetime.toJavaLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * One family this parent was in and is no longer, with everything this phone holds of it — what
@@ -93,8 +92,8 @@ object EarlierFamilies {
 
     private fun lastDayOf(family: EarlierFamily): LocalDate? =
         listOfNotNull(
-            family.events.maxOfOrNull { it.startDateTime.date.toJavaLocalDate() },
-            family.expenses.maxOfOrNull { it.date.toJavaLocalDate() },
-            family.journal.maxOfOrNull { it.entryDate.toJavaLocalDate() }
+            family.events.maxOfOrNull { it.startDateTime.date },
+            family.expenses.maxOfOrNull { it.date },
+            family.journal.maxOfOrNull { it.entryDate }
         ).maxOrNull()
 }

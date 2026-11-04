@@ -22,6 +22,10 @@ import com.coparently.app.presentation.custody.CustodySetupViewModel
 import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
 import com.coparently.app.presentation.event.EventOwnerViewModel
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.family.EarlierFamiliesViewModel
+import com.coparently.app.presentation.family.FamilyViewModel
+import com.coparently.app.presentation.family.UnassignedRecordsViewModel
+import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
@@ -118,6 +122,19 @@ val requestsUiModule: Module = module {
 }
 
 /**
+ * The family (MON-24 phase 2, Task 10): the Family tab's hub with its month's money, Family →
+ * Earlier families, and "Records without a family" with Home's one question about them. Beside them
+ * the bundle the month's money is computed from, a `factory` as in the app's `presentationModule` it
+ * came from, which Home's ViewModel, still in the app, resolves from here too.
+ */
+val familyUiModule: Module = module {
+    factoryOf(::MonthSpendDependencies)
+    viewModelOf(::EarlierFamiliesViewModel)
+    viewModelOf(::FamilyViewModel)
+    viewModelOf(::UnassignedRecordsViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -129,7 +146,8 @@ val uiModules: List<Module> = listOf(
     calendarUiModule,
     eventUiModule,
     custodyUiModule,
-    requestsUiModule
+    requestsUiModule,
+    familyUiModule
 )
 
 /**

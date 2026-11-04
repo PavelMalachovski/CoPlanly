@@ -6,7 +6,6 @@ package com.coparently.app.presentation.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.ChatReadState
@@ -28,10 +27,8 @@ import com.coparently.app.domain.model.PairingState
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.repository.EventRepository
-import com.coparently.app.domain.repository.ExpenseRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PairingRepository
-import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.changerequests.RequestsSource
@@ -62,35 +59,6 @@ import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.LocalDateTime
-
-/** A per-currency subtotal of this month's spending. */
-data class CurrencyAmount(val currency: String, val amount: Double)
-
-/**
- * This month's shared spending, kept split by currency. The app does no FX conversion, so
- * amounts in different currencies must never be added into one figure — [byCurrency] carries a
- * separate subtotal for each, largest first.
- */
-data class MonthSpend(val byCurrency: List<CurrencyAmount>)
-
-/**
- * The two repositories [HomeViewModel.monthSpend] is derived from, bundled into one
- * constructor-injected value.
- *
- * [HomeViewModel] already sat at the constructor-parameter limit before the currency fallback
- * (finding 4) needed [PreferencesRepository] alongside the existing [ExpenseRepository] — both
- * of which only ever feed `monthSpend`. Bundling them keeps the real dependency count visible
- * (no `@Suppress`, no widened detekt threshold) while still giving `monthSpend` everything it
- * needs.
- *
- * [familyViewSource] joined for the same reason: it decides which of the month's expenses the
- * tile adds up — the family on screen's own (owner decision, October 2026).
- */
-data class MonthSpendDependencies(
-    val expenseRepository: ExpenseRepository,
-    val preferencesRepository: PreferencesRepository,
-    val familyViewSource: FamilyViewSource
-)
 
 /**
  * The two repositories that describe this account's identity and its co-parent link,

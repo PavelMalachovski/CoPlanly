@@ -2940,7 +2940,10 @@ bytes are identical on Android):
   with). Then requests (`requestsUiModule`): the inbox's ViewModel, the change-request form's and
   the one source Home's row, the calendar's banner and the inbox count from, with the mini month's
   model and the day index it reads, both now on kotlinx-datetime, which the screens convert at their
-  edge. Family and expenses, settings to sync and the rest follow as slices 10d–10f.
+  edge. **Slice 10d built, CI pending**: the family (`familyUiModule`) — the Family tab's hub with
+  the month's money it shares with Home (`MonthMoney` and the bundle it is computed from, split out
+  of Home's ViewModel), Earlier families (its last day now a kotlinx-datetime date) and "Records
+  without a family". Expenses, settings to sync and the rest follow.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

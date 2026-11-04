@@ -792,6 +792,19 @@ Then the requests:
   `PairingViewModel` reads `PendingCustodyConflict` and `CustodyConflictResolver`, already moved); the
   rest.
 
+**Slice 10d notes (November 2026).** The family first:
+- `FamilyViewModel`, `EarlierFamiliesViewModel` (with the pure `EarlierFamilies.kt`) and
+  `UnassignedRecordsViewModel` (`Log` → `logger`) in `familyUiModule`, with `home/MonthMoney.kt` and,
+  split out of `HomeViewModel.kt` into `home/MonthSpend.kt`, `CurrencyAmount`, `MonthSpend` and
+  `MonthSpendDependencies` (its `factory` left the app's `presentationModule` for `familyUiModule`;
+  `HomeViewModel`, still in the app, resolves it from there).
+- `EarlierFamily.lastDay` is a kotlinx-datetime `LocalDate` (it was `java.time`, made with
+  `toJavaLocalDate()` from kotlinx dates); `EarlierFamiliesScreen` already formats it through
+  `utils/LocalizedDates.kt`'s kotlinx `format(DateTimeFormatter)`, so it changed nothing.
+- Tests: `EarlierFamiliesTest` and `MonthMoneyTest` to commonTest (kotlinx-datetime literals; four
+  names lost a comma); `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK) to
+  androidUnitTest, with a copy of the app's `testFamilyViewSource` in `data/family/`.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.family
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.AssignOutcome
@@ -10,6 +9,7 @@ import com.coparently.app.data.family.UnassignedKind
 import com.coparently.app.data.family.UnassignedRecord
 import com.coparently.app.data.family.UnassignedRecords
 import com.coparently.app.data.family.UnassignedSnapshot
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.repository.UserRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -169,7 +169,7 @@ class UnassignedRecordsViewModel(
                     throw e
                 } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                     // A failed write must say so rather than end the screen's scope.
-                    Log.w(TAG, "Assigning a record without a family failed", e)
+                    logger.w(TAG, "Assigning a record without a family failed", e)
                     AssignOutcome.NOT_SENT
                 }
                 _notice.value = UnassignedNotice.Assigned(outcome, familyId, putAway)

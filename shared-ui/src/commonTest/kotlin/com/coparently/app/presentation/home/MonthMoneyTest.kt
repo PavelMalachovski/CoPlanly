@@ -7,7 +7,7 @@ import com.coparently.app.domain.money.SupportedCurrency
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
@@ -54,7 +54,7 @@ class MonthMoneyTest {
     }
 
     @Test
-    fun `currencies are never added together, and the larger comes first`() {
+    fun `currencies are never added together - and the larger comes first`() {
         val spend = MonthMoney.spendOf(listOf(spend("a", 40.0, "EUR"), spend("b", 900.0)), SupportedCurrency.CZK)
 
         assertEquals(listOf(CurrencyAmount("CZK", 900.0), CurrencyAmount("EUR", 40.0)), spend.byCurrency)

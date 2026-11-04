@@ -1,7 +1,6 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.home.HomeIdentityDependencies
-import com.coparently.app.presentation.home.MonthSpendDependencies
 import com.coparently.app.presentation.review.MonthReviewAssist
 import com.coparently.app.presentation.review.MonthReviewSources
 import com.coparently.app.presentation.widget.TodayWidgetNames
@@ -16,12 +15,11 @@ import org.koin.dsl.module
  * screens read (a `single` each, as their Hilt `@Singleton` was) and per-screen dependency
  * bundles (a `factory` each, as they were unscoped). `ParentsSource`, `FamilyKindSource` and
  * `FamilyMembersSource` moved to `:shared-ui`'s `commonUiModule` with their classes (MON-24 phase 2,
- * Task 10), `PendingCustodyConflict` and `PlanReferenceSource` to its `custodyUiModule`, and
- * `RequestsSource` to its `requestsUiModule`.
+ * Task 10), `PendingCustodyConflict` and `PlanReferenceSource` to its `custodyUiModule`,
+ * `RequestsSource` to its `requestsUiModule`, and `MonthSpendDependencies` to its `familyUiModule`.
  */
 val presentationModule = module {
     factoryOf(::HomeIdentityDependencies)
-    factoryOf(::MonthSpendDependencies)
     factoryOf(::MonthReviewAssist)
     factoryOf(::MonthReviewSources)
     singleOf(::TodayWidgetNames)
