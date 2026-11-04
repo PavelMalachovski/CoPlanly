@@ -395,8 +395,9 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     and the nearest lighter of the three weights a widget's system font has), its corner is the
     launcher's own `system_app_widget_background_radius`, and its paddings are `Spacing` steps —
     no size of its own. It follows the system's dark theme, because the launcher draws it, not the
-    app's own theme setting. It speaks the context's language: the per-app choice on Android 13 and
-    later, the device's before, as pushes do. `TodayWidgetTextTest` holds the wording (Robolectric,
+    app's own theme setting. It speaks the app's language, as pushes do: `provideGlance` words its
+    lines through `inAppLanguage()` (the owner's rule under "Localization") and draws them in the
+    launcher's own context, so the theme stays the system's. `TodayWidgetTextTest` holds the wording (Robolectric,
     English and Russian), and the UI tour draws the widget's own `RemoteViews` in every variant
     (`UiTourWidget`).
 19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
@@ -2277,8 +2278,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     `MainActivity` accepts only through `fromKey` — the activity is exported) and to one of four
     `PushChannel`s — chat, schedule, money, family — so money can be muted without muting a
     handover. A new type gets both, and `PushRoutingTest` fails until it does. It words
-    through a configuration context because the service does: on API 32 and below AppCompat's
-    per-app language reaches activities only, so a push follows the *device* language there.
+    through the configuration context the service hands it, `inAppLanguage()` (`utils/AppLocale.kt`,
+    made afresh for each message), so a push speaks the language the app does — the owner's rule
+    under "Localization": the per-app choice, on every API level, else the phone's first language
+    when the app ships it, else English.
     **Two client types carry more than names** (21 October 2026): `expense_added` carries the
     expense's `amount`, `currency` and, when it is split with the reader, their `share` (plain
     two-decimal strings the rules bound, worded on the receiving phone), and `event_important` tells
@@ -4096,38 +4099,71 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   `Locale.current`, the process's default locale. `PerAppLocaleTest` holds the two to the same
   language on the API 26 and 30 legs (the 16 KB leg skips it with every `@UsesFakeFirebase` test),
   and `DEVICE-CHECKLIST.md` §3.6 asks for it on Android 12 or older; don't make a moved composable
-  take a `Context` to read `R.string` instead. **The two readers pick the language differently,
-  and the app makes them agree** (9b review; owner decision of 4 November 2026, option (a);
-  corrected in 9c's review against AOSP). Android resolves the locale from what the **whole APK**
-  translates, libraries included (`ResourcesImpl`: the best match of the device's list against the
-  APK's locales), moves it to the front of the resources' configuration and makes it
-  `java.util.Locale.getDefault()`, but leaves `android.os.LocaleList.getDefault()` as the device's
-  raw list — and its first entry is Compose's `Locale.current`, which Compose Multiplatform reads.
-  So when the device's first language is one nothing in the APK translates, `R.string` speaks the
-  resolved language and Compose Multiplatform its `values/` English. `MainActivity.onCreate` calls
-  `presentation/settings/ResolvedAppLocale.follow` after AppCompat and before anything is composed:
-  it puts the resources' resolved locale first in the default list, and touches nothing else
-  (`java.util.Locale.getDefault()`, `java.time`'s formatting and the region the currency hint reads
-  are already the resolved locale's). A per-app choice is always first already. **Mind the
-  libraries**: AppCompat ships `values-sk`, `-pl`, `-be`, `-sr` and more, so a phone in Slovak then
-  Czech resolves Slovak and shows the app in English through both readers — consistent, and not
-  Czech; only `localeFilters` limited to the five shipped languages would make it Czech (an open
-  question to the owner). `ResolvedAppLocaleTest` holds the rule; don't drop the call, and don't
-  move it before `super.onCreate`, where AppCompat would set the default again.
+  take a `Context` to read `R.string` instead. **Both readers speak one language, the one the
+  owner's rule names** (owner decision, 4 November 2026, slice 9d): **the phone's first language
+  when the app ships it (en, cs, de, ru, uk), otherwise English — and a per-app choice still
+  wins.** The phone's second and later languages are never used. Android on its own does
+  otherwise: it matches the device's *whole list* against everything the APK translates,
+  libraries included (AppCompat ships `values-sk`, `-pl`, `-be`, `-sr` …), so a phone in Irish
+  then Czech read Czech and one in Slovak then Czech read English only by accident, and it leaves
+  Compose's `Locale.current` on the raw first locale. The rule is `domain/language/AppLanguageRule`
+  (pure, in `shared/`, so the iPhone can apply it; `AppLanguageRuleTest` runs on the JVM and iOS),
+  and its English fallback **keeps the phone's region** (`sk-SK` reads `en-SK`), so the currency
+  hint, the onboarding's country guess and number formats still see the country. Android's half is
+  `utils/AppLocale.kt`. Six things not to undo.
+  - **An activity gets its base context in that locale** (`attachBaseContext` →
+    `newBase.inAppLanguage()`, before `super`, in `MainActivity` and `QRScannerActivity`). AppCompat
+    1.7's `attachBaseContext2` finds the locale as a difference from the canonical configuration and
+    keeps it in its overlay beside night mode; below Android 13 it puts a per-app choice on top. A
+    new activity does the same, and stays an `AppCompatActivity`.
+  - **Every reader outside an activity words through `Context.inAppLanguage()`**, a configuration
+    context made afresh for each use (only the locale and its layout direction overridden, so night
+    mode and font scale stay the base's): `CoPlanlyMessagingService`'s `PushNotifier` and its
+    channels, `RequestNotices`, `ReminderWorker`, `SupportReminderWorker`, the Today widget's lines
+    (`TodayWidget.provideGlance`), `SchoolImportWordingSource` and `AndroidPairingWording`. Never
+    wrap the application context once and keep it — it would miss a change of language — and never
+    read `R.string` from a bare application or service context: that is Android's resolution, not
+    the rule's. (The credential classes read only the untranslated `default_web_client_id`.)
+  - **The process's defaults follow it** (`AppLocale.follow`: `LocaleList.setDefault` of the one
+    locale, which sets `java.util.Locale`'s too) in `CoPlanlyApplication.onCreate` and
+    `onConfigurationChanged`, and in each activity's `onCreate` after `super` and `MainActivity.
+    onResume`: the framework resets them to its own resolution on every configuration change, before
+    the application hears of it, and a change it counts as none reaches no callback. So Compose
+    Multiplatform's strings, `java.time` and number formats speak what `R.string` does.
+  - **The per-app choice** is `LocaleManager.getApplicationLocales()` on Android 13 and later;
+    below that AppCompat's, which only an activity loads, so `AppLocale.rememberChoice` (in
+    `MainActivity.onCreate`) mirrors it in the plain preference file `app_language` for a push or a
+    worker in a process no activity has started. A push below 13 therefore follows the choice too,
+    which it never did before.
+  - **The phone's first language** is `LocaleManager.getSystemLocales()` on 13 and later (the
+    order the person set) and `Resources.getSystem()`'s below (the framework's display order: a first
+    language the system itself cannot show reads as the one it shows). Never `LocaleList.getDefault()`,
+    which `follow` sets.
+  - **Tests**: `AppLocaleTest` (Robolectric: the contexts read English on a phone in Irish, Czech in
+    Czech, German under a per-app German, the mirror below 13), `ShippedLanguagesTest` (the rule's
+    list is the picker's, `locales_config.xml`'s and the string folders'), and `PerAppLocaleTest`
+    on the emulators. `docs/DEVICE-CHECKLIST.md` §3.6 asks for Slovak then Czech (English), Czech
+    first (Czech) and a per-app choice on a phone. Consequences the rule brings, not defects: on a
+    Slovak phone the holidays' local names, dictation (`rememberDictationLanguageTag`, the app's
+    language) and the dates are English too; what the system draws itself (the launcher's label,
+    the permission dialogs, Credential Manager's sheet, the widget picker's description) stays in
+    the system's own language.
 
-- **Language selection**: device locale by default, plus a manual per-app override — the
+- **Language selection**: the owner's rule above by default (the phone's first language when
+  shipped, else English), plus a manual per-app override — the
   "Language" card in Settings (`presentation/settings/AppLanguage.kt`,
   `AppCompatDelegate.setApplicationLocales`). The choice is persisted by the
   `autoStoreLocales` manifest service and mirrored to the Android 13+ system per-app
   language setting. There is no DataStore/ViewModel state for it — AppCompat is the
-  source of truth.
+  source of truth (the `app_language` preference below 13 is only `AppLocale`'s mirror of it).
 - **Infra invariants**: `MainActivity`/`QRScannerActivity` must stay `AppCompatActivity`
   (not `ComponentActivity`) and `Theme.CoPlanly` must stay an AppCompat theme — per-app
   locales silently stop working otherwise. (It is `Theme.AppCompat.DayNight.NoActionBar` since
   UX-13, with a per-theme `@color/window_background` so a dark cold start does not flash white;
   `values-night/` is a night qualifier holding that colour, not a locale, and holds no strings.)
-  `res/xml/locales_config.xml`, the `AppLanguage` enum, and the `values-<language>` folders under
-  `shared-ui/src/commonMain/composeResources/` must list the same locale set.
+  `res/xml/locales_config.xml`, the `AppLanguage` enum, `AppLanguageRule.SHIPPED` and the
+  `values-<language>` folders under `shared-ui/src/commonMain/composeResources/` must list the same
+  locale set (`ShippedLanguagesTest`).
 - **Adding a string** = add the key to the feature's base
   `shared-ui/src/commonMain/composeResources/values/<feature>_strings.xml` AND to all four locale
   variants of that file; `R.string.<key>` and `Res.string.<key>` are both generated from it. Missing translations fall back to English

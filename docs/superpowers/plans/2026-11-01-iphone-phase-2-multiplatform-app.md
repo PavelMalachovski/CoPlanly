@@ -620,6 +620,19 @@ both parity tests and Steps 1–3; Steps 4–6 are slice 9b.
 - `UiTextParityTest` (app, Robolectric, five languages) compares both resolutions with Android's
   resources and `java.time` for samples of every case and argument kind.
 
+**Slice 9d notes (November 2026).** The owner's language rule (4 November 2026) in place of
+`ResolvedAppLocale`: the phone's first language when the app ships it, otherwise English with the
+phone's region, a per-app choice winning.
+- `shared/`'s `domain/language/AppLanguageRule` is the pure rule over BCP 47 tags, for the iPhone
+  too (`AppLanguageRuleTest`, commonTest).
+- The app's `utils/AppLocale.kt`: activities' base contexts in that locale before AppCompat
+  (`MainActivity`, `QRScannerActivity`), `Context.inAppLanguage()` for every reader outside an
+  activity (the messaging service's notifier, `RequestNotices`, the two reminder workers, the
+  widget, `SchoolImportWordingSource`, `AndroidPairingWording`), the process's default locale set
+  at the application's start, on each configuration change and in the activities, and a below-13
+  mirror of the per-app choice. `AppLocaleTest` (Robolectric) and `ShippedLanguagesTest` hold it.
+- The iPhone applies the same rule in phase 3, when its app decides its bundle's localizations.
+
 - [ ] **Step 1: Write `StringsParityTest`** (Robolectric). For every key in every locale, the
   value from Android resources equals CMP's `getString` for that locale, with the same arguments.
   Use `"A"`/`7` per position and a key with `%%`.

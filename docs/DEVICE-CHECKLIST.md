@@ -629,11 +629,21 @@ system setting or a Play install.
 - [ ] On Android 12 or older, with the app in Deutsch and the phone in another language: Settings →
       App → **My colour** names its colours in German, and a dialog's **Abbrechen** is German too
       (both are read through Compose Multiplatform since MON-24 phase 2).
-- [ ] Phone languages **Slovak then Czech**, app on System default (MON-24 phase 2,
-      `ResolvedAppLocale`): the app reads in one language throughout — a dialog's confirm and
-      cancel, Retry, the offline line, the colour names and the snackbars included. Today that is
-      English (a library ships Slovak, so Android resolves Slovak, which the app does not
-      translate); note it if any line is Czech or Slovak.
+- [ ] The owner's rule (4 November 2026, `AppLocale`): the phone's **first** language when the
+      app ships it, otherwise English, and a per-app choice wins. With the app on **System
+      default**:
+  - [ ] Phone languages **Slovak then Czech**: the whole app is **English** — a dialog's confirm
+        and cancel, Retry, the offline line, the colour names, the snackbars and the dates
+        included. Note any line in Czech or Slovak.
+  - [ ] Phone languages **Czech first** (then anything): the whole app is **Czech**, dates
+        included.
+  - [ ] With the phone in Slovak then Czech, a push (ask the co-parent to send a message or a
+        swap), a request reminder and the Today widget are **English** too; with the phone in
+        Czech first, they are Czech.
+  - [ ] With the phone in Slovak, a new expense still offers euros (the region is kept).
+- [ ] A per-app choice wins: Settings → Language → **Deutsch** on a phone in Slovak then Czech, or
+      in Czech: the app, a push and the widget are **German**. On Android 12 or older, force-stop
+      the app, then have a push arrive before opening it: still German.
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
 - **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text

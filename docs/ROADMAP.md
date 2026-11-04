@@ -2860,12 +2860,21 @@ bytes are identical on Android):
   labels' language follows, follows the app's language too; on Android 12 and older that rests on
   AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Then slice
   9c** (below): `UiText` in its Compose Multiplatform form, with `ErrorText` and `UiState`.
-  **Decided, option (a)** (owner, 4 November 2026; built
-  as `ResolvedAppLocale`, then corrected after 9c's review: Android resolves from the whole APK's
-  locales, libraries included, and Compose reads the device's raw first locale, so `follow` puts
-  the resources' resolved locale first in `LocaleList`'s default and nothing else; a phone in
-  Slovak then Czech resolves Slovak through AppCompat's `values-sk` and reads English in both, and
-  would read Czech only with `localeFilters` limited to the five languages — open, owner) — the question was: the two readers fall back differently when the phone's first language is one the
+  **Decided, the owner's language rule** (owner, 4 November 2026, slice 9d; it replaces option
+  (a), which was built as `ResolvedAppLocale`, corrected after 9c's review and then removed): the
+  app speaks **the phone's first language when it ships it, otherwise English, and a per-app
+  choice wins**; the phone's later languages are never used, and the English fallback keeps the
+  phone's region (`sk-SK` reads `en-SK`). `AppLanguageRule` (`shared/`, pure, tested on the JVM and
+  iOS) decides it; on Android `AppLocale` puts each activity's base context in that locale before
+  AppCompat, hands every reader outside an activity (pushes, request notices, the reminders, the
+  widget, the school import's titles, the pairing thread's name) a configuration context made for
+  that use, sets the process's default locale to it (so Compose Multiplatform, `java.time` and
+  number formats agree with `R.string`), and mirrors a below-13 per-app choice so a push in a cold
+  process follows it too. No `localeFilters`: the activity's one-locale configuration already
+  decides, and the system-drawn surfaces stay the system's. A phone in Slovak then Czech now reads
+  English throughout, dates included; one in Irish then Czech reads English too, where Android
+  alone read Czech. CI's first run, `AppLocaleTest`, `ShippedLanguagesTest` and `PerAppLocaleTest`
+  are the checks, and `DEVICE-CHECKLIST.md` §3.6 the device's — the question was: the two readers fall back differently when the phone's first language is one the
   app does not translate. Android takes the first translated locale of the list; Compose
   Multiplatform 1.9.3 takes the first locale's language or `values/`. A phone in Slovak then Czech
   shows the app in Czech but the moved labels in English. Ways out: (a) set the process's default
