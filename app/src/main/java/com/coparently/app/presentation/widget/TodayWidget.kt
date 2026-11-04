@@ -61,7 +61,8 @@ class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val loadedFor = getAppWidgetState<Preferences>(context, id)[REFRESH_STAMP]
         // Worded in the language the app speaks now (the owner's rule, `AppLocale`), each time the
-        // lines load; drawn in the launcher's context, so the widget follows the system's theme.
+        // lines load; drawn with the context Glance hands this (the app's own, in its process),
+        // unchanged, whose night mode is the system's, so the widget follows the system's theme.
         val initial = contentState(context.inAppLanguage())
         TodayWidgetMidnight.ensureScheduled(context)
         provideContent {

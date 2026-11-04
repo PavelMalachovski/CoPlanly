@@ -394,10 +394,13 @@ replace) the July 2026 overhaul below — those invariants still hold except whe
     vector drawable. Its text takes the today card's type roles through `role()` (the role's size,
     and the nearest lighter of the three weights a widget's system font has), its corner is the
     launcher's own `system_app_widget_background_radius`, and its paddings are `Spacing` steps —
-    no size of its own. It follows the system's dark theme, because the launcher draws it, not the
-    app's own theme setting. It speaks the app's language, as pushes do: `provideGlance` words its
-    lines through `inAppLanguage()` (the owner's rule under "Localization") and draws them in the
-    launcher's own context, so the theme stays the system's. `TodayWidgetTextTest` holds the wording (Robolectric,
+    no size of its own. It follows the system's dark theme, not the app's own theme setting (a
+    Compose state of `MainActivity`'s, which no other context carries): its colours are day-and-night
+    pairs, and the context Glance hands `provideGlance` — the app's own, in the app's process, not
+    the launcher's — has the system's night mode. It speaks the app's language, as pushes do:
+    `provideGlance` words its lines through `inAppLanguage()` (the owner's rule under
+    "Localization"), a configuration context that changes only the locale, and draws with the
+    context it was handed, unchanged. `TodayWidgetTextTest` holds the wording (Robolectric,
     English and Russian), and the UI tour draws the widget's own `RemoteViews` in every variant
     (`UiTourWidget`).
 19. **Every screen that is not a tab is one readable column** (October 2026 audit, week 6). A
