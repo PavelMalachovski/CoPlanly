@@ -2858,8 +2858,8 @@ bytes are identical on Android):
   labels' language follows, follows the app's language too; on Android 12 and older that rests on
   AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Left for slice
   9c**: `UiText` in its Compose Multiplatform form (every ViewModel that builds one from `R.string`
-  changes), with `ErrorText` and `UiState`. **Open, owner's decision before more strings move**
-  (9b review): the two readers fall back differently when the phone's first language is one the
+  changes), with `ErrorText` and `UiState`. **Decided, option (a)** (owner, 4 November 2026; built
+  as `ResolvedAppLocale` in slice 9c's first commit) — the question was: the two readers fall back differently when the phone's first language is one the
   app does not translate. Android takes the first translated locale of the list; Compose
   Multiplatform 1.9.3 takes the first locale's language or `values/`. A phone in Slovak then Czech
   shows the app in Czech but the moved labels in English. Ways out: (a) set the process's default

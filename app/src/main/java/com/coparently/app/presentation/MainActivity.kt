@@ -50,6 +50,7 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.startDestinationFor
+import com.coparently.app.presentation.settings.ResolvedAppLocale
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
@@ -239,6 +240,10 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
+        // After AppCompat has applied a per-app choice and before anything is composed: text read
+        // through Compose Multiplatform's resources follows the process's default locale, which
+        // this makes the language Android's resources resolved (MON-24, option (a)).
+        ResolvedAppLocale.follow(this)
         // Before the first frame, so no time is ever drawn in the language's format first.
         ClockFormat.follow(this)
 
