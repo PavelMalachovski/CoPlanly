@@ -20,9 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.custody.FairnessOccasion
 import com.coparently.app.domain.custody.FairnessRow
 import com.coparently.app.domain.custody.HolidayFairness
@@ -34,9 +32,21 @@ import com.coparently.app.presentation.common.displayName
 import com.coparently.app.presentation.common.holidayDisplayName
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.fairness_birthday
+import com.coparently.app.resources.fairness_christmas_day
+import com.coparently.app.resources.fairness_christmas_eve
+import com.coparently.app.resources.fairness_easter
+import com.coparently.app.resources.fairness_hide_holidays
+import com.coparently.app.resources.fairness_new_year
+import com.coparently.app.resources.fairness_no_schedule
+import com.coparently.app.resources.fairness_not_set
+import com.coparently.app.resources.fairness_note
+import com.coparently.app.resources.fairness_propose
+import com.coparently.app.resources.fairness_show_holidays
+import com.coparently.app.resources.fairness_title
+import com.coparently.app.utils.readerMediumDate
+import org.jetbrains.compose.resources.stringResource
 
 /** The two schema slots, in the order every summary line lists them. */
 private val SLOTS = listOf("mom", "dad")
@@ -64,7 +74,7 @@ fun HolidayFairnessCard(
 ) {
     var showAllHolidays by rememberSaveable { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        GroupLabel(text = stringResource(R.string.fairness_title))
+        GroupLabel(text = stringResource(Res.string.fairness_title))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             state.years.forEach { year ->
                 FilterChip(
@@ -77,24 +87,25 @@ fun HolidayFairnessCard(
         val fairness = state.fairness
         if (fairness == null) {
             Text(
-                text = stringResource(R.string.fairness_no_schedule),
+                text = stringResource(Res.string.fairness_no_schedule),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
             FairnessRows(fairness, parentNames, showAllHolidays)
             TextButton(onClick = { showAllHolidays = !showAllHolidays }) {
-                val toggle = if (showAllHolidays) R.string.fairness_hide_holidays else R.string.fairness_show_holidays
+                val toggle =
+                    if (showAllHolidays) Res.string.fairness_hide_holidays else Res.string.fairness_show_holidays
                 Text(stringResource(toggle))
             }
             Text(
-                text = stringResource(R.string.fairness_note),
+                text = stringResource(Res.string.fairness_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         onProposeChange?.let {
-            OutlinedButton(onClick = it) { Text(stringResource(R.string.fairness_propose)) }
+            OutlinedButton(onClick = it) { Text(stringResource(Res.string.fairness_propose)) }
         }
     }
 }
@@ -130,7 +141,7 @@ private fun FairnessRows(fairness: HolidayFairness, parentNames: ParentNames, sh
 private fun SlotCounts(counts: Map<String, Int>, parentNames: ParentNames, singleDay: Boolean = false) {
     val present = SLOTS.filter { (counts[it] ?: 0) > 0 }
     if (present.isEmpty()) {
-        Text(stringResource(R.string.fairness_not_set), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(Res.string.fairness_not_set), style = MaterialTheme.typography.bodyMedium)
         return
     }
     Column(horizontalAlignment = Alignment.End) {
@@ -156,19 +167,18 @@ private fun SlotCounts(counts: Map<String, Int>, parentNames: ParentNames, singl
 /** An occasion's name: fixed ones from resources, the rest as their data says. */
 @Composable
 private fun occasionLabel(occasion: FairnessOccasion): String = when (occasion) {
-    FairnessOccasion.ChristmasEve -> stringResource(R.string.fairness_christmas_eve)
-    FairnessOccasion.ChristmasDay -> stringResource(R.string.fairness_christmas_day)
-    FairnessOccasion.NewYearsDay -> stringResource(R.string.fairness_new_year)
-    FairnessOccasion.Easter -> stringResource(R.string.fairness_easter)
-    is FairnessOccasion.Birthday -> stringResource(R.string.fairness_birthday, occasion.childName)
+    FairnessOccasion.ChristmasEve -> stringResource(Res.string.fairness_christmas_eve)
+    FairnessOccasion.ChristmasDay -> stringResource(Res.string.fairness_christmas_day)
+    FairnessOccasion.NewYearsDay -> stringResource(Res.string.fairness_new_year)
+    FairnessOccasion.Easter -> stringResource(Res.string.fairness_easter)
+    is FairnessOccasion.Birthday -> stringResource(Res.string.fairness_birthday, occasion.childName)
     is FairnessOccasion.PublicHoliday -> occasion.holiday.displayName()
     is FairnessOccasion.SchoolVacation ->
         holidayDisplayName(occasion.nameEn, occasion.nameLocal, occasion.localLanguage)
 }
 
 private fun datesLabel(row: FairnessRow): String {
-    val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    val start = row.dates.start.format(format)
+    val start = readerMediumDate(row.dates.start)
     if (row.dates.start == row.dates.endInclusive) return start
-    return "$start – ${row.dates.endInclusive.format(format)}"
+    return "$start – ${readerMediumDate(row.dates.endInclusive)}"
 }

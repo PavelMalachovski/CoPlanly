@@ -1,7 +1,5 @@
 package com.coparently.app.presentation.pairing
 
-import androidx.activity.compose.BackHandler
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,12 +30,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.Parents
@@ -45,11 +43,25 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
-import kotlinx.datetime.toKotlinLocalDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_conflict_body
+import com.coparently.app.resources.custody_conflict_keep_local
+import com.coparently.app.resources.custody_conflict_local_label
+import com.coparently.app.resources.custody_conflict_save_failed
+import com.coparently.app.resources.custody_conflict_shared_label
+import com.coparently.app.resources.custody_conflict_title
+import com.coparently.app.resources.custody_conflict_use_shared
+import com.coparently.app.resources.custody_next_14_days
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
+import kotlin.time.Clock
 
 /**
  * The pairing conflict screen: two custody patterns, side by side, one action each.
@@ -97,7 +109,7 @@ fun CustodyConflictScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.custody_conflict_title)) })
+            TopAppBar(title = { Text(stringResource(Res.string.custody_conflict_title)) })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
@@ -133,7 +145,7 @@ private fun LazyListScope.conflictOptions(
 ) {
     item {
         Text(
-            text = stringResource(R.string.custody_conflict_body),
+            text = stringResource(Res.string.custody_conflict_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -141,8 +153,8 @@ private fun LazyListScope.conflictOptions(
     item {
         PatternOption(
             choice = PatternChoice(
-                labelRes = R.string.custody_conflict_local_label,
-                actionRes = R.string.custody_conflict_keep_local,
+                labelRes = Res.string.custody_conflict_local_label,
+                actionRes = Res.string.custody_conflict_keep_local,
                 model = conflict.mine
             ),
             legend = legend,
@@ -153,8 +165,8 @@ private fun LazyListScope.conflictOptions(
     item {
         PatternOption(
             choice = PatternChoice(
-                labelRes = R.string.custody_conflict_shared_label,
-                actionRes = R.string.custody_conflict_use_shared,
+                labelRes = Res.string.custody_conflict_shared_label,
+                actionRes = Res.string.custody_conflict_use_shared,
                 model = conflict.theirs
             ),
             legend = legend,
@@ -176,6 +188,9 @@ private fun LazyListScope.conflictOptions(
  *   all — the process was restarted while this screen was open.
  * @param saveFailed True when a choice could not be written; surfaced once, then consumed.
  */
+// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
+// Android, as before).
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun CustodyConflictEffects(
     viewModel: CustodyConflictViewModel,
@@ -194,7 +209,7 @@ private fun CustodyConflictEffects(
 
     // A choice that could not be written must not look like one that was: the screen stays, both
     // options come back enabled, and this says why.
-    val saveFailedMessage = stringResource(R.string.custody_conflict_save_failed)
+    val saveFailedMessage = stringResource(Res.string.custody_conflict_save_failed)
     LaunchedEffect(saveFailed) {
         if (saveFailed) {
             snackbarHostState.showSnackbar(saveFailedMessage)
@@ -216,8 +231,8 @@ private fun CustodyConflictEffects(
  * @property model The pattern itself.
  */
 private data class PatternChoice(
-    @StringRes val labelRes: Int,
-    @StringRes val actionRes: Int,
+    val labelRes: StringResource,
+    val actionRes: StringResource,
     val model: CustodyModel
 )
 
@@ -248,7 +263,7 @@ private fun PatternOption(
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = stringResource(R.string.custody_next_14_days),
+                text = stringResource(Res.string.custody_next_14_days),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -285,13 +300,13 @@ private fun PatternOption(
  */
 @Composable
 private fun FortnightPreview(model: CustodyModel) {
-    val today = LocalDate.now()
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     Column(verticalArrangement = Arrangement.spacedBy(DAY_CELL_GAP)) {
         repeat(FORTNIGHT_DAYS / DAYS_PER_ROW) { week ->
             Row(horizontalArrangement = Arrangement.spacedBy(DAY_CELL_GAP)) {
                 repeat(DAYS_PER_ROW) { dayInRow ->
-                    val date = today.plusDays((week * DAYS_PER_ROW + dayInRow).toLong())
-                    val slot = model.getCustodyFor(date.toKotlinLocalDate())
+                    val date = today.plus(week * DAYS_PER_ROW + dayInRow, DateTimeUnit.DAY)
+                    val slot = model.getCustodyFor(date)
                     DayCell(date = date, slot = slot, modifier = Modifier.weight(1f))
                 }
             }
@@ -316,13 +331,13 @@ private fun DayCell(date: LocalDate, slot: String, modifier: Modifier = Modifier
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                text = ReaderDateText.pattern(date, "EEEEE"),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
             Text(
-                text = date.dayOfMonth.toString(),
+                text = date.day.toString(),
                 style = MaterialTheme.typography.labelMediumEmphasized,
                 color = ParentColors.text(slot),
                 maxLines = 1

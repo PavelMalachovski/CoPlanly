@@ -11,8 +11,11 @@ import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
+import platform.Foundation.NSDateFormatterFullStyle
 import platform.Foundation.NSDateFormatterMediumStyle
 import platform.Foundation.NSDateFormatterNoStyle
+import platform.Foundation.NSDateFormatterShortStyle
+import platform.Foundation.NSDateFormatterStyle
 import platform.Foundation.NSLocale
 import platform.Foundation.currentLocale
 import kotlin.time.Instant
@@ -80,15 +83,24 @@ actual object ReaderDateText {
 }
 
 /** Foundation's medium date style in the phone's locale, on the Gregorian calendar. */
-actual fun readerMediumDate(date: LocalDate): String {
+actual fun readerMediumDate(date: LocalDate): String = styledDate(date, NSDateFormatterMediumStyle)
+
+/** Foundation's short date style in the phone's locale, on the Gregorian calendar. */
+actual fun readerShortDate(date: LocalDate): String = styledDate(date, NSDateFormatterShortStyle)
+
+/** Foundation's full date style in the phone's locale, on the Gregorian calendar. */
+actual fun readerFullDate(date: LocalDate): String = styledDate(date, NSDateFormatterFullStyle)
+
+/** [date] in one of Foundation's date [style]s, with no time. */
+private fun styledDate(date: LocalDate, style: NSDateFormatterStyle): String {
     val instant = nsDate(LocalDateTime(date, LocalTime(0, 0))) ?: return date.toString()
-    val medium = NSDateFormatter().apply {
+    val formatter = NSDateFormatter().apply {
         locale = NSLocale.currentLocale
         calendar = gregorian
-        dateStyle = NSDateFormatterMediumStyle
+        dateStyle = style
         timeStyle = NSDateFormatterNoStyle
     }
-    return medium.stringFromDate(instant)
+    return formatter.stringFromDate(instant)
 }
 
 /** The calendar `java.time`'s ISO dates are on. */

@@ -7,13 +7,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
-import com.coparently.app.R
 import com.coparently.app.domain.parentingplan.PlanReference
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.parenting_plan_their_answer
+import com.coparently.app.resources.parenting_plan_your_answer
+import com.coparently.app.resources.plan_reference_both_agreed
+import com.coparently.app.resources.plan_reference_note
+import com.coparently.app.resources.plan_reference_title
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -31,7 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PlanReferenceCard(reference: PlanReference, coParentName: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        GroupLabel(text = stringResource(R.string.plan_reference_title))
+        GroupLabel(text = stringResource(Res.string.plan_reference_title))
         SectionGroup {
             Column(
                 modifier = Modifier.padding(Spacing.L),
@@ -41,16 +45,16 @@ fun PlanReferenceCard(reference: PlanReference, coParentName: String, modifier: 
                     Text(text = stringResource(prompt), style = MaterialTheme.typography.titleSmall)
                 }
                 if (reference.sameWording) {
-                    Quote(label = stringResource(R.string.plan_reference_both_agreed), text = reference.yourAnswer)
+                    Quote(label = stringResource(Res.string.plan_reference_both_agreed), text = reference.yourAnswer)
                 } else {
-                    Quote(label = stringResource(R.string.parenting_plan_your_answer), text = reference.yourAnswer)
+                    Quote(label = stringResource(Res.string.parenting_plan_your_answer), text = reference.yourAnswer)
                     Quote(
-                        label = stringResource(R.string.parenting_plan_their_answer, coParentName),
+                        label = stringResource(Res.string.parenting_plan_their_answer, coParentName),
                         text = reference.theirAnswer
                     )
                 }
                 Text(
-                    text = stringResource(R.string.plan_reference_note, coParentName),
+                    text = stringResource(Res.string.plan_reference_note, coParentName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

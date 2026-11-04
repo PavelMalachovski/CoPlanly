@@ -1285,6 +1285,33 @@ Then the export and the school import:
   covered component; kizitonwose 2.9.1 wraps each month in an `onPlaced` box) and the iPhone's link of
   kizitonwose's klib against kotlinx-datetime 0.8 (`shared-ios`).
 
+**Slice 11d notes (November 2026).** Custody and the requests.
+- First, the 11c round 2 review's four notes (docs only): the three stale `MagicNumber:CalendarHeader.kt`
+  baseline entries named beside the `ValidationUtils` ones, the pre-round calendar list marked
+  superseded, ROADMAP's carried list striking the calendar's day model, and the architecture map's
+  `presentation/` line saying which screens have moved.
+- Group 1, custody's screens (`git mv`, packages unchanged, `R.string` → `Res.string`): every file of
+  `presentation/custody/` (`ChildScheduleSection`, `ContactWindowsSection`, `CustodyDiffText`,
+  `CustodyOverview`, `CustodySection`, `CustodySetupScreen`, `HolidayFairnessCard`,
+  `SchedulePreviewMonth`, `SeasonalLayerDialog`, `SeasonalScheduleSection`), with
+  `pairing/CustodyConflictScreen.kt` and `parentingplan/PlanReferenceCard.kt` (the custody editors
+  quote it; it reads only `PlanStrings` and `Res`). The Android calls, each replaced:
+  `DayOfWeek.getDisplayName(TextStyle.SHORT/FULL/NARROW, Locale.getDefault())` →
+  `utils/WeekdayNames.kt`'s `DayOfWeek.readerName("EEE"/"EEEE"/"EEEEE")`, the pattern letters over a
+  date of that day (both reach `DateTimeFormatterBuilder.appendText` with the same style; 189 names in
+  nine locales compared on the JVM, 0 differences); `ofLocalizedDate(FormatStyle.MEDIUM)` →
+  `readerMediumDate`, `SHORT` and `FULL` → the new `readerShortDate` and `readerFullDate` beside it
+  (Android: the same formatter over `toJavaLocalDate()`; iPhone: Foundation's short and full styles,
+  one private `styledDate` for the three); `format(shortTime())` → `ReaderDateText.time`;
+  `format(localizedDate("MMMEd"))` → `ReaderDateText.date`; `getQuantityString` on `LocalContext` →
+  CMP's `pluralStringResource` (`custodyDiffDescription`); `LocalDate.now()` → `Clock.System.todayIn`
+  in the system zone; the conflict screen's fortnight on kotlinx-datetime (`plus(n, DAY)`, `day`);
+  `@StringRes Int` → `StringResource`; androidx.activity's `BackHandler` → CMP's (opted in for
+  `CustodySetupScreen.kt`'s file, so the baseline's `LongMethod` key on the screen's own `@OptIn` still
+  matches). Public for the app: `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel`,
+  `custodyPreviewText` (onboarding) and `SchedulePreviewMonth` (onboarding and `FeatureScreenshots`).
+  No app test sat in `presentation/custody/`.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**

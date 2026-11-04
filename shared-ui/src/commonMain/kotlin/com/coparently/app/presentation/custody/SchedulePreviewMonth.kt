@@ -29,7 +29,7 @@ import kotlinx.datetime.yearMonth
  * @param description What the schedule is, in a sentence, or null for none
  */
 @Composable
-internal fun SchedulePreviewMonth(
+fun SchedulePreviewMonth(
     model: CustodyModel,
     parentNames: ParentNames,
     description: String?,

@@ -3025,6 +3025,10 @@ bytes are identical on Android):
   on kotlinx-datetime and Compose Multiplatform's resources, with what they read from custody, the
   requests and the parenting plan, and the pull to refresh through the data layer's sync request.
   **Slice 11c built (both rounds), CI pending.**
+  Slice 11d, custody and the requests: first custody's screens — the setup screen with its
+  overview and parts, the pattern form, contact windows, seasonal layers, the children's schedules,
+  the holiday fairness card — with the custody-conflict screen and the plan's reference card, every
+  day's name, date and time through the date seam, Back through Compose Multiplatform's handler.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

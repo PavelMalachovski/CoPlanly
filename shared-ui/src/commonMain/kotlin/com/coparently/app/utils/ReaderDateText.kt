@@ -90,3 +90,9 @@ expect object ReaderDateText {
  * Beside [ReaderDateText] rather than in it, which holds the skeleton and pattern rules.
  */
 expect fun readerMediumDate(date: LocalDate): String
+
+/** [date] in the language's own short style ("8/12/26", "12.08.26"), as [readerMediumDate] is the medium. */
+expect fun readerShortDate(date: LocalDate): String
+
+/** [date] in the language's own full style ("Wednesday, August 12, 2026"), as [readerMediumDate] is the medium. */
+expect fun readerFullDate(date: LocalDate): String

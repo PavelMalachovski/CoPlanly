@@ -49,3 +49,11 @@ actual object ReaderDateText {
 /** `FormatStyle.MEDIUM` in `Locale.getDefault()`, the chat's day separator as it was formatted. */
 actual fun readerMediumDate(date: LocalDate): String =
     date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+
+/** `FormatStyle.SHORT` in `Locale.getDefault()`, as the seasonal layer's suggestions were formatted. */
+actual fun readerShortDate(date: LocalDate): String =
+    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
+
+/** `FormatStyle.FULL` in `Locale.getDefault()`, as the custody schedule's start date was formatted. */
+actual fun readerFullDate(date: LocalDate): String =
+    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))

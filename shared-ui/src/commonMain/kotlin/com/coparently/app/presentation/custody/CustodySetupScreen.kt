@@ -1,7 +1,10 @@
+// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
+// Android, as before), opted in for the file so the screen's own annotations, which the detekt
+// baseline keys an entry on, stay as they were.
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package com.coparently.app.presentation.custody
 
-import androidx.activity.compose.BackHandler
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,12 +60,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByOffer
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.SeasonalLayer
@@ -89,16 +92,54 @@ import com.coparently.app.presentation.theme.bodyLargeEmphasized
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.labelMediumEmphasized
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_back
+import com.coparently.app.resources.custody_cancel
+import com.coparently.app.resources.custody_child_schedules_title
+import com.coparently.app.resources.custody_child_scope_title
+import com.coparently.app.resources.custody_custom_pattern
+import com.coparently.app.resources.custody_custom_pattern_hint
+import com.coparently.app.resources.custody_day_abbrev
+import com.coparently.app.resources.custody_midweek_enable
+import com.coparently.app.resources.custody_midweek_every_week
+import com.coparently.app.resources.custody_midweek_off_week_only
+import com.coparently.app.resources.custody_midweek_overnight_warning
+import com.coparently.app.resources.custody_midweek_title
+import com.coparently.app.resources.custody_model_custom_desc
+import com.coparently.app.resources.custody_model_every_other_weekend_desc
+import com.coparently.app.resources.custody_model_three_four_four_three_desc
+import com.coparently.app.resources.custody_model_two_two_three_desc
+import com.coparently.app.resources.custody_model_week_on_week_off_desc
+import com.coparently.app.resources.custody_ok
+import com.coparently.app.resources.custody_overview_pattern
+import com.coparently.app.resources.custody_pattern_start_date
+import com.coparently.app.resources.custody_preview_custom
+import com.coparently.app.resources.custody_preview_every_other_weekend
+import com.coparently.app.resources.custody_preview_every_other_weekend_midweek
+import com.coparently.app.resources.custody_preview_every_other_weekend_midweek_off_week
+import com.coparently.app.resources.custody_preview_three_four_four_three
+import com.coparently.app.resources.custody_preview_two_two_three
+import com.coparently.app.resources.custody_preview_week_on_week_off
+import com.coparently.app.resources.custody_save_button
+import com.coparently.app.resources.custody_select_schedule_type
+import com.coparently.app.resources.custody_send_for_approval
+import com.coparently.app.resources.custody_start_date_hint
+import com.coparently.app.resources.custody_title
+import com.coparently.app.resources.custody_week_abbrev
+import com.coparently.app.resources.custody_week_to
+import com.coparently.app.resources.custody_who_is_resident
+import com.coparently.app.resources.custody_who_starts_first
+import com.coparently.app.resources.custody_windows_title
+import com.coparently.app.resources.seasonal_sent_for_approval
+import com.coparently.app.resources.seasonal_title
+import com.coparently.app.utils.readerFullDate
+import com.coparently.app.utils.readerMediumDate
+import com.coparently.app.utils.readerName
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaDayOfWeek
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.time.format.TextStyle
-import java.util.Locale
 
 /**
  * Screen for setting up custody model/pattern.
@@ -137,7 +178,7 @@ fun CustodySetupScreen(
     // leave silently, so a parent whose choice was sent for approval believed it was the schedule,
     // and the two phones seemed to disagree (tester report, October 2026).
     val appMessages = LocalAppMessages.current
-    val sentForApproval = stringResource(R.string.seasonal_sent_for_approval)
+    val sentForApproval = stringResource(Res.string.seasonal_sent_for_approval)
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
             if (uiState.proposedForApproval) appMessages?.show(sentForApproval)
@@ -179,7 +220,7 @@ fun CustodySetupScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.custody_back)
+                            contentDescription = stringResource(Res.string.custody_back)
                         )
                     }
                 },
@@ -196,7 +237,7 @@ fun CustodySetupScreen(
                 StickyActionBar(
                     // A paired family's save is a proposal (second audit: "Save" read as done).
                     label = stringResource(
-                        if (proposes) R.string.custody_send_for_approval else R.string.custody_save_button
+                        if (proposes) Res.string.custody_send_for_approval else Res.string.custody_save_button
                     ),
                     onClick = { viewModel.save(answerBy = answerBy.takeIf { proposes }) },
                     enabled = uiState.isValid,
@@ -380,15 +421,15 @@ private fun stepBack(
 /** The bar's title: the child's schedule, the open part, or the screen's own. */
 @Composable
 private fun custodyTitle(childScope: ChildScope?, section: CustodySection?): String =
-    childScope?.let { stringResource(R.string.custody_child_scope_title, it.name) }
-        ?: stringResource(section?.titleRes() ?: R.string.custody_title)
+    childScope?.let { stringResource(Res.string.custody_child_scope_title, it.name) }
+        ?: stringResource(section?.titleRes() ?: Res.string.custody_title)
 
 /** The top bar's title while [this] part is open. */
-private fun CustodySection.titleRes(): Int = when (this) {
-    CustodySection.PATTERN -> R.string.custody_overview_pattern
-    CustodySection.WINDOWS -> R.string.custody_windows_title
-    CustodySection.SEASONAL -> R.string.seasonal_title
-    CustodySection.CHILDREN -> R.string.custody_child_schedules_title
+private fun CustodySection.titleRes(): StringResource = when (this) {
+    CustodySection.PATTERN -> Res.string.custody_overview_pattern
+    CustodySection.WINDOWS -> Res.string.custody_windows_title
+    CustodySection.SEASONAL -> Res.string.seasonal_title
+    CustodySection.CHILDREN -> Res.string.custody_child_schedules_title
 }
 
 /**
@@ -407,7 +448,7 @@ private fun CustodySection.titleRes(): Int = when (this) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 @Suppress("LongMethod") // the form's sections in order, moved here whole from the custody screen
-internal fun CustodyPatternForm(
+fun CustodyPatternForm(
     uiState: CustodySetupUiState,
     parentNames: ParentNames,
     actions: CustodyPatternActions,
@@ -419,7 +460,7 @@ internal fun CustodyPatternForm(
     Column(modifier = modifier) {
         // Model type selection
         Text(
-            text = stringResource(R.string.custody_select_schedule_type),
+            text = stringResource(Res.string.custody_select_schedule_type),
             style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
@@ -441,12 +482,12 @@ internal fun CustodyPatternForm(
 
         // Start date picker
         Text(
-            text = stringResource(R.string.custody_pattern_start_date),
+            text = stringResource(Res.string.custody_pattern_start_date),
             style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
         Text(
-            text = stringResource(R.string.custody_start_date_hint),
+            text = stringResource(Res.string.custody_start_date_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -472,9 +513,7 @@ internal fun CustodyPatternForm(
                 Text(
                     // Locale-aware, not a hardcoded US pattern — day and month names
                     // already follow the app language, their order must too.
-                    text = uiState.startDate.format(
-                        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-                    ),
+                    text = readerFullDate(uiState.startDate),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -539,13 +578,13 @@ internal fun CustodyPatternForm(
         ) {
             Column {
                 Text(
-                    text = stringResource(R.string.custody_custom_pattern),
+                    text = stringResource(Res.string.custody_custom_pattern),
                     style = MaterialTheme.typography.titleMediumEmphasized,
                     modifier = Modifier.padding(vertical = dims.paddingSmall)
                 )
                 Text(
                     text = stringResource(
-                        R.string.custody_custom_pattern_hint,
+                        Res.string.custody_custom_pattern_hint,
                         parentNames.labelFor("mom"),
                         parentNames.labelFor("dad")
                     ),
@@ -595,12 +634,12 @@ internal fun CustodyPatternForm(
                                 // partner; the type scale's own smallest size is 11sp, so
                                 // the override goes rather than being nudged.
                                 Text(
-                                    text = stringResource(R.string.custody_week_abbrev, weekNumber),
+                                    text = stringResource(Res.string.custody_week_abbrev, weekNumber),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = ParentColors.text(if (isMomDay) "mom" else "dad")
                                 )
                                 Text(
-                                    text = stringResource(R.string.custody_day_abbrev, dayInWeek),
+                                    text = stringResource(Res.string.custody_day_abbrev, dayInWeek),
                                     style = MaterialTheme.typography.labelMediumEmphasized,
                                     color = ParentColors.text(if (isMomDay) "mom" else "dad")
                                 )
@@ -624,7 +663,7 @@ internal fun CustodyPatternForm(
                     ) {
                         Text(
                             stringResource(
-                                R.string.custody_week_to,
+                                Res.string.custody_week_to,
                                 1,
                                 parentNames.labelFor("mom")
                             )
@@ -638,7 +677,7 @@ internal fun CustodyPatternForm(
                     ) {
                         Text(
                             stringResource(
-                                R.string.custody_week_to,
+                                Res.string.custody_week_to,
                                 2,
                                 parentNames.labelFor("mom")
                             )
@@ -652,8 +691,8 @@ internal fun CustodyPatternForm(
     if (showDatePicker) {
         LocalDatePickerDialog(
             initialDate = uiState.startDate,
-            confirmLabel = stringResource(R.string.custody_ok),
-            dismissLabel = stringResource(R.string.custody_cancel),
+            confirmLabel = stringResource(Res.string.custody_ok),
+            dismissLabel = stringResource(Res.string.custody_cancel),
             onConfirm = { actions.setStartDate(it) },
             onDismiss = { showDatePicker = false }
         )
@@ -663,7 +702,7 @@ internal fun CustodyPatternForm(
 /**
  * The choices [CustodyPatternForm] makes, as callbacks, so the form holds no ViewModel.
  */
-internal data class CustodyPatternActions(
+data class CustodyPatternActions(
     val selectType: (CustodyModelType) -> Unit,
     val setStartDate: (LocalDate) -> Unit,
     val setMomFirst: (Boolean) -> Unit,
@@ -791,7 +830,7 @@ private fun MidweekContactSection(
     val dims = dimensions()
     Column {
         Text(
-            text = stringResource(R.string.custody_midweek_title),
+            text = stringResource(Res.string.custody_midweek_title),
             style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
@@ -804,7 +843,7 @@ private fun MidweekContactSection(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = stringResource(R.string.custody_midweek_enable),
+                text = stringResource(Res.string.custody_midweek_enable),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -815,7 +854,7 @@ private fun MidweekContactSection(
         }
 
         Text(
-            text = stringResource(R.string.custody_midweek_overnight_warning),
+            text = stringResource(Res.string.custody_midweek_overnight_warning),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -836,7 +875,7 @@ private fun MidweekContactSection(
                             Text(
                                 // The device (or app) language decides the name, never a
                                 // hardcoded array — the Localization rule in CLAUDE.md.
-                                day.toJavaDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                                day.readerName("EEE")
                             )
                         }
                     )
@@ -853,9 +892,9 @@ private fun MidweekContactSection(
                 Text(
                     text = stringResource(
                         if (uiState.midweekEveryWeek) {
-                            R.string.custody_midweek_every_week
+                            Res.string.custody_midweek_every_week
                         } else {
-                            R.string.custody_midweek_off_week_only
+                            Res.string.custody_midweek_off_week_only
                         }
                     ),
                     style = MaterialTheme.typography.bodyLarge,
@@ -896,10 +935,9 @@ private fun modelTypeLabel(modelType: CustodyModelType): String = stringResource
  *
  * `CUSTOM` never reaches here: the choice is not rendered for it.
  */
-@StringRes
-private fun rolesQuestionFor(modelType: CustodyModelType): Int = when (modelType) {
-    CustodyModelType.EVERY_OTHER_WEEKEND -> R.string.custody_who_is_resident
-    else -> R.string.custody_who_starts_first
+private fun rolesQuestionFor(modelType: CustodyModelType): StringResource = when (modelType) {
+    CustodyModelType.EVERY_OTHER_WEEKEND -> Res.string.custody_who_is_resident
+    else -> Res.string.custody_who_starts_first
 }
 
 /**
@@ -909,18 +947,18 @@ private fun rolesQuestionFor(modelType: CustodyModelType): Int = when (modelType
 @Composable
 private fun getModelTypeDescription(modelType: CustodyModelType): String = stringResource(
     when (modelType) {
-        CustodyModelType.WEEK_ON_WEEK_OFF -> R.string.custody_model_week_on_week_off_desc
-        CustodyModelType.EVERY_OTHER_WEEKEND -> R.string.custody_model_every_other_weekend_desc
-        CustodyModelType.TWO_TWO_THREE -> R.string.custody_model_two_two_three_desc
-        CustodyModelType.THREE_FOUR_FOUR_THREE -> R.string.custody_model_three_four_four_three_desc
-        CustodyModelType.CUSTOM -> R.string.custody_model_custom_desc
+        CustodyModelType.WEEK_ON_WEEK_OFF -> Res.string.custody_model_week_on_week_off_desc
+        CustodyModelType.EVERY_OTHER_WEEKEND -> Res.string.custody_model_every_other_weekend_desc
+        CustodyModelType.TWO_TWO_THREE -> Res.string.custody_model_two_two_three_desc
+        CustodyModelType.THREE_FOUR_FOUR_THREE -> Res.string.custody_model_three_four_four_three_desc
+        CustodyModelType.CUSTOM -> Res.string.custody_model_custom_desc
     }
 )
 
 /**
  * Creates a temporary CustodyModel from the UI state for preview purposes.
  */
-internal fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
+fun createTempModel(state: CustodySetupUiState): com.coparently.app.domain.model.CustodyModel? {
     // A custom pattern with no slot-1 day yet has nothing to preview for the family schedule; a
     // child's own schedule (FAM-4) may mean exactly that — every day with the other parent.
     val nothingToDraw = state.selectedModelType == CustodyModelType.CUSTOM && state.customMomDays.isEmpty()
@@ -942,40 +980,40 @@ internal fun createTempModel(state: CustodySetupUiState): com.coparently.app.dom
  * @param parentNames Resolves a slot to that parent's name
  */
 @Composable
-internal fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: ParentNames): String {
+fun custodyPreviewText(uiState: CustodySetupUiState, parentNames: ParentNames): String {
     val first = parentNames.labelFor(uiState.firstSlot)
     val second = parentNames.labelFor(uiState.secondSlot)
     return when (uiState.selectedModelType) {
         // Dated, because "first week" read as the first week drawn, which may be the other
         // parent's (second audit).
         CustodyModelType.WEEK_ON_WEEK_OFF -> stringResource(
-            R.string.custody_preview_week_on_week_off,
+            Res.string.custody_preview_week_on_week_off,
             first,
-            uiState.startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+            readerMediumDate(uiState.startDate)
         )
         CustodyModelType.EVERY_OTHER_WEEKEND -> {
             val midweek = uiState.midweek
             if (midweek == null) {
-                stringResource(R.string.custody_preview_every_other_weekend, first, second)
+                stringResource(Res.string.custody_preview_every_other_weekend, first, second)
             } else {
                 stringResource(
                     if (midweek.everyWeek) {
-                        R.string.custody_preview_every_other_weekend_midweek
+                        Res.string.custody_preview_every_other_weekend_midweek
                     } else {
-                        R.string.custody_preview_every_other_weekend_midweek_off_week
+                        Res.string.custody_preview_every_other_weekend_midweek_off_week
                     },
                     first,
                     second,
-                    midweek.dayOfWeek.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, Locale.getDefault())
+                    midweek.dayOfWeek.readerName("EEEE")
                 )
             }
         }
         CustodyModelType.TWO_TWO_THREE ->
-            stringResource(R.string.custody_preview_two_two_three, first, second)
+            stringResource(Res.string.custody_preview_two_two_three, first, second)
         CustodyModelType.THREE_FOUR_FOUR_THREE ->
-            stringResource(R.string.custody_preview_three_four_four_three, first, second)
+            stringResource(Res.string.custody_preview_three_four_four_three, first, second)
         CustodyModelType.CUSTOM -> stringResource(
-            R.string.custody_preview_custom,
+            Res.string.custody_preview_custom,
             uiState.customMomDays.size,
             uiState.customPatternDays,
             parentNames.labelFor("mom")

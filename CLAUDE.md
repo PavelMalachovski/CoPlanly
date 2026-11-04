@@ -1204,7 +1204,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   code calls from `FriendEventDetails`; slice 11c: `SwapDaysButton`, `DaySwapSelectionBar`,
   `DaySwapSheetContent` and its `SwapSheetOffer`/`SwapSheetActions`, `CustodyLegend`, which the
   screenshots render, and `DaySwapSheet`, `SwapSideGroup`, `isConsecutive` and `SwapMonths`, which
-  the requests' screens call). A test that moves with its code to `:shared-ui` keeps `internal`
+  the requests' screens call; slice 11d: `SchedulePreviewMonth`, which the screenshots render, and
+  `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel` and `custodyPreviewText`, which
+  onboarding calls). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1633,7 +1635,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              wording, the message templates and the money seam (utils/ReaderMoneyText); and, from
              slice 11c, the event form (presentation/event/) and the calendar's screens
              (presentation/calendar/, on kizitonwose's multiplatform calendar), with the helpers
-             they read. It makes the iPhone's one framework, Shared (static,
+             they read; and, from slice 11d, custody's screens (presentation/custody/), with the
+             custody-conflict screen and the parenting plan's reference card. It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -1649,8 +1652,8 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
 presentation/ — Compose screens per feature, and the two ViewModels whose sign-ins run on an
              Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
              the design system's components, the shared state and every other ViewModel are in
-             shared-ui/ (Task 10), and so are chat's, the event form's and the calendar's screens
-             (Task 11, slices 11b–11c); the app keeps their previews
+             shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's and
+             custody's screens (Task 11, slices 11b–11d); the app keeps their previews
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2072,7 +2075,21 @@ previews are the app's `calendar/CalendarPreviews.kt`. The ten pure calendar tes
 convert their `java.time` fixtures at the call. Public for the app: `MonthView`, `SwapDaysButton`,
 `DaySwapSelectionBar`, `DaySwapSheet`, `DaySwapSheetContent`, `SwapSheetOffer`, `SwapSheetActions`,
 `SwapSideGroup`, `isConsecutive`, `CustodyLegend` and `SwapMonths` (the calendar's other helpers stay
-`internal`, their tests in the same module).
+`internal`, their tests in the same module). **Then custody's screens** (slice 11d): all of
+`presentation/custody/` (the setup screen with its overview and its four parts, the pattern form,
+the contact windows, the seasonal layers and their dialog, the children's schedules, the holiday
+fairness card, the diff's wording and the preview month), `pairing/CustodyConflictScreen.kt` and
+`parentingplan/PlanReferenceCard.kt`, which the custody editors quote, packages unchanged. A day's
+name, `DayOfWeek.getDisplayName(TextStyle.SHORT, FULL or NARROW)` before, is `utils/WeekdayNames.kt`'s
+`readerName("EEE", "EEEE" or "EEEEE")`, the pattern letters over a date of that day (the same text
+provider; checked in nine locales); a date in a style is `readerMediumDate`, or the new
+`readerShortDate` and `readerFullDate` beside it (`FormatStyle.SHORT` and `FULL` on Android); a time
+`ReaderDateText.time`; the diff's day count Compose Multiplatform's `pluralStringResource`, where it
+was `getQuantityString` on the Activity's resources; today `Clock.System.todayIn` in the system zone;
+and Back Compose Multiplatform's `BackHandler`, opted in for the setup screen's file so the detekt
+baseline's key on its annotations still matches. Public for onboarding and the screenshots:
+`CustodyPatternForm`, `CustodyPatternActions`, `createTempModel`, `custodyPreviewText` and
+`SchedulePreviewMonth`.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

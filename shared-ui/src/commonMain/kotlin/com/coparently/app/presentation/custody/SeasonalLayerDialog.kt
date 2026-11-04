@@ -21,8 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.domain.holidays.VacationSuggestion
@@ -37,9 +35,29 @@ import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.seasonal_cancel
+import com.coparently.app.resources.seasonal_confirm
+import com.coparently.app.resources.seasonal_delete
+import com.coparently.app.resources.seasonal_dialog_add_title
+import com.coparently.app.resources.seasonal_dialog_edit_title
+import com.coparently.app.resources.seasonal_fill_from_school
+import com.coparently.app.resources.seasonal_from
+import com.coparently.app.resources.seasonal_invalid_range
+import com.coparently.app.resources.seasonal_name_label
+import com.coparently.app.resources.seasonal_ok
+import com.coparently.app.resources.seasonal_shape_all
+import com.coparently.app.resources.seasonal_shape_half
+import com.coparently.app.resources.seasonal_shape_keep
+import com.coparently.app.resources.seasonal_shape_label
+import com.coparently.app.resources.seasonal_shape_weeks
+import com.coparently.app.resources.seasonal_starts_with
+import com.coparently.app.resources.seasonal_to
+import com.coparently.app.resources.seasonal_with
+import com.coparently.app.utils.readerMediumDate
+import com.coparently.app.utils.readerShortDate
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Which end of the range the date picker is open on. */
 private enum class RangeEnd { FROM, TO }
@@ -85,7 +103,7 @@ fun SeasonalLayerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            val title = if (isEditing) R.string.seasonal_dialog_edit_title else R.string.seasonal_dialog_add_title
+            val title = if (isEditing) Res.string.seasonal_dialog_edit_title else Res.string.seasonal_dialog_add_title
             Text(stringResource(title))
         },
         text = {
@@ -105,17 +123,17 @@ fun SeasonalLayerDialog(
                 onClick = { onConfirm(draft, answerBy.takeIf { answerByCapOf != null }) },
                 enabled = draft.isValid
             ) {
-                Text(stringResource(R.string.seasonal_confirm))
+                Text(stringResource(Res.string.seasonal_confirm))
             }
         },
         dismissButton = {
             Row {
                 onDelete?.let {
                     TextButton(onClick = it) {
-                        Text(stringResource(R.string.seasonal_delete), color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(Res.string.seasonal_delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.seasonal_cancel)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(Res.string.seasonal_cancel)) }
             }
         }
     )
@@ -123,8 +141,8 @@ fun SeasonalLayerDialog(
     picking?.let { end ->
         LocalDatePickerDialog(
             initialDate = if (end == RangeEnd.FROM) draft.from else draft.to,
-            confirmLabel = stringResource(R.string.seasonal_ok),
-            dismissLabel = stringResource(R.string.seasonal_cancel),
+            confirmLabel = stringResource(Res.string.seasonal_ok),
+            dismissLabel = stringResource(Res.string.seasonal_cancel),
             onConfirm = { date ->
                 draft = if (end == RangeEnd.FROM) draft.copy(from = date) else draft.copy(to = date)
             },
@@ -177,7 +195,7 @@ private fun LayerEditorBody(
         OutlinedTextField(
             value = draft.name,
             onValueChange = { onChange(draft.copy(name = it.take(MAX_NAME_INPUT))) },
-            label = { Text(stringResource(R.string.seasonal_name_label)) },
+            label = { Text(stringResource(Res.string.seasonal_name_label)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -196,7 +214,7 @@ private fun LayerEditorBody(
         LayerShapePicker(draft, isEditing, parentNames, onChange)
         if (!draft.isValid && draft.name.isNotBlank()) {
             Text(
-                text = stringResource(R.string.seasonal_invalid_range),
+                text = stringResource(Res.string.seasonal_invalid_range),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )
@@ -208,13 +226,12 @@ private fun LayerEditorBody(
 /** The two ends of the range, each opening the date picker. */
 @Composable
 private fun LayerRange(draft: SeasonalLayerDraft, onPick: (RangeEnd) -> Unit) {
-    val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         TextButton(onClick = { onPick(RangeEnd.FROM) }) {
-            Text(stringResource(R.string.seasonal_from, draft.from.format(format)))
+            Text(stringResource(Res.string.seasonal_from, readerMediumDate(draft.from)))
         }
         TextButton(onClick = { onPick(RangeEnd.TO) }) {
-            Text(stringResource(R.string.seasonal_to, draft.to.format(format)))
+            Text(stringResource(Res.string.seasonal_to, readerMediumDate(draft.to)))
         }
     }
 }
@@ -226,10 +243,9 @@ private fun LayerSuggestions(
     suggestions: List<VacationSuggestion>,
     onPick: (VacationSuggestion, String) -> Unit
 ) {
-    val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
-            text = stringResource(R.string.seasonal_fill_from_school),
+            text = stringResource(Res.string.seasonal_fill_from_school),
             style = MaterialTheme.typography.labelLarge
         )
         FlowRow(
@@ -239,8 +255,8 @@ private fun LayerSuggestions(
             suggestions.forEach { suggestion ->
                 val name = suggestion.displayName()
                 PillChip(
-                    label = "$name ${suggestion.dates.start.format(format)}" +
-                        "–${suggestion.dates.endInclusive.format(format)}",
+                    label = "$name ${readerShortDate(suggestion.dates.start)}" +
+                        "–${readerShortDate(suggestion.dates.endInclusive)}",
                     onClick = { onPick(suggestion, name) }
                 )
             }
@@ -259,7 +275,7 @@ private fun LayerShapePicker(
 ) {
     val shapes = LayerShape.entries.filter { isEditing || it != LayerShape.KEEP }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
-        Text(text = stringResource(R.string.seasonal_shape_label), style = MaterialTheme.typography.labelLarge)
+        Text(text = stringResource(Res.string.seasonal_shape_label), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
             shapes.forEach { shape ->
                 FilterChip(
@@ -272,7 +288,11 @@ private fun LayerShapePicker(
         if (draft.shape != LayerShape.KEEP) {
             Text(
                 text = stringResource(
-                    if (draft.shape == LayerShape.ALL_WITH) R.string.seasonal_with else R.string.seasonal_starts_with
+                    if (draft.shape == LayerShape.ALL_WITH) {
+                        Res.string.seasonal_with
+                    } else {
+                        Res.string.seasonal_starts_with
+                    }
                 ),
                 style = MaterialTheme.typography.labelLarge
             )
@@ -290,11 +310,11 @@ private fun LayerShapePicker(
 }
 
 /** A shape's chip label. */
-private fun LayerShape.label(): Int = when (this) {
-    LayerShape.KEEP -> R.string.seasonal_shape_keep
-    LayerShape.ALL_WITH -> R.string.seasonal_shape_all
-    LayerShape.ALTERNATING_WEEKS -> R.string.seasonal_shape_weeks
-    LayerShape.SPLIT_IN_HALF -> R.string.seasonal_shape_half
+private fun LayerShape.label(): StringResource = when (this) {
+    LayerShape.KEEP -> Res.string.seasonal_shape_keep
+    LayerShape.ALL_WITH -> Res.string.seasonal_shape_all
+    LayerShape.ALTERNATING_WEEKS -> Res.string.seasonal_shape_weeks
+    LayerShape.SPLIT_IN_HALF -> Res.string.seasonal_shape_half
 }
 
 /** The break's name as every holiday is named on screen (`holidayDisplayName`, L-8). */

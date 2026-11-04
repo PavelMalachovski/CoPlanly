@@ -34,9 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.custody.ContactWindow
 import com.coparently.app.presentation.common.AddItemButton
 import com.coparently.app.presentation.common.ParentNames
@@ -45,16 +43,34 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
 import com.coparently.app.presentation.theme.titleMediumEmphasized
-import com.coparently.app.utils.format
-import com.coparently.app.utils.shortTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_cancel
+import com.coparently.app.resources.custody_window_add_confirm
+import com.coparently.app.resources.custody_window_day_label
+import com.coparently.app.resources.custody_window_dialog_title
+import com.coparently.app.resources.custody_window_every_week
+import com.coparently.app.resources.custody_window_from
+import com.coparently.app.resources.custody_window_invalid
+import com.coparently.app.resources.custody_window_remove
+import com.coparently.app.resources.custody_window_summary
+import com.coparently.app.resources.custody_window_to
+import com.coparently.app.resources.custody_window_week
+import com.coparently.app.resources.custody_window_week_n
+import com.coparently.app.resources.custody_window_weekday
+import com.coparently.app.resources.custody_window_with
+import com.coparently.app.resources.custody_windows_add
+import com.coparently.app.resources.custody_windows_empty
+import com.coparently.app.resources.custody_windows_hint
+import com.coparently.app.resources.custody_windows_title
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.readerName
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.plus
-import kotlinx.datetime.toJavaDayOfWeek
-import java.time.format.TextStyle
-import java.util.Locale
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Where a new window's times start, before the parent picks: the classic after-school afternoon. */
 private val DEFAULT_WINDOW_START: LocalTime = LocalTime(15, 0)
@@ -106,12 +122,12 @@ fun ContactWindowsSection(
 
     Column {
         Text(
-            text = stringResource(R.string.custody_windows_title),
+            text = stringResource(Res.string.custody_windows_title),
             style = MaterialTheme.typography.titleMediumEmphasized,
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
         Text(
-            text = stringResource(R.string.custody_windows_hint),
+            text = stringResource(Res.string.custody_windows_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -119,7 +135,7 @@ fun ContactWindowsSection(
 
         if (windows.isEmpty()) {
             Text(
-                text = stringResource(R.string.custody_windows_empty),
+                text = stringResource(Res.string.custody_windows_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -134,7 +150,7 @@ fun ContactWindowsSection(
         }
 
         AddItemButton(
-            label = stringResource(R.string.custody_windows_add),
+            label = stringResource(Res.string.custody_windows_add),
             onClick = { showEditor = true },
             modifier = Modifier.padding(vertical = dims.paddingSmall)
         )
@@ -175,10 +191,10 @@ private fun ContactWindowRow(
         Spacer(modifier = Modifier.width(Spacing.S))
         Text(
             text = stringResource(
-                R.string.custody_window_summary,
+                Res.string.custody_window_summary,
                 dayLabel,
-                window.start.format(shortTime()),
-                window.end.format(shortTime()),
+                ReaderDateText.time(window.start),
+                ReaderDateText.time(window.end),
                 parentName
             ),
             style = MaterialTheme.typography.bodyLarge,
@@ -187,7 +203,7 @@ private fun ContactWindowRow(
         IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = stringResource(R.string.custody_window_remove)
+                contentDescription = stringResource(Res.string.custody_window_remove)
             )
         }
     }
@@ -196,10 +212,9 @@ private fun ContactWindowRow(
 /** "Week 2, Wed" for a cycle day, from the pattern's start date. */
 @Composable
 private fun cycleDayLabel(startDate: LocalDate, dayIndex: Int): String = stringResource(
-    R.string.custody_window_day_label,
+    Res.string.custody_window_day_label,
     dayIndex / ContactWindowDraft.DAYS_PER_WEEK + 1,
-    startDate.plus(dayIndex, DateTimeUnit.DAY).dayOfWeek.toJavaDayOfWeek()
-        .getDisplayName(TextStyle.SHORT, Locale.getDefault())
+    startDate.plus(dayIndex, DateTimeUnit.DAY).dayOfWeek.readerName("EEE")
 )
 
 /**
@@ -225,7 +240,7 @@ private fun ContactWindowDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.custody_window_dialog_title)) },
+        title = { Text(stringResource(Res.string.custody_window_dialog_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 WeekdayChips(selected = weekday, onSelect = { weekday = it })
@@ -239,12 +254,12 @@ private fun ContactWindowDialog(
                 onClick = { onConfirm(draft) },
                 enabled = draft.toWindows(startDate, cycleDays).isNotEmpty()
             ) {
-                Text(stringResource(R.string.custody_window_add_confirm))
+                Text(stringResource(Res.string.custody_window_add_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.custody_cancel))
+                Text(stringResource(Res.string.custody_cancel))
             }
         }
     )
@@ -267,13 +282,13 @@ private fun ContactWindowDialog(
 /** Monday to Sunday, named in the reader's language. */
 @Composable
 private fun WeekdayChips(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
-    DialogLabel(R.string.custody_window_weekday)
+    DialogLabel(Res.string.custody_window_weekday)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         DayOfWeek.entries.forEach { day ->
             FilterChip(
                 selected = selected == day,
                 onClick = { onSelect(day) },
-                label = { Text(day.toJavaDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.getDefault())) }
+                label = { Text(day.readerName("EEE")) }
             )
         }
     }
@@ -286,18 +301,18 @@ private fun WeekdayChips(selected: DayOfWeek, onSelect: (DayOfWeek) -> Unit) {
 @Composable
 private fun WeekChips(weeks: Int, selected: Int?, onSelect: (Int?) -> Unit) {
     if (weeks <= 1) return
-    DialogLabel(R.string.custody_window_week)
+    DialogLabel(Res.string.custody_window_week)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         FilterChip(
             selected = selected == null,
             onClick = { onSelect(null) },
-            label = { Text(stringResource(R.string.custody_window_every_week)) }
+            label = { Text(stringResource(Res.string.custody_window_every_week)) }
         )
         for (index in 0 until weeks) {
             FilterChip(
                 selected = selected == index,
                 onClick = { onSelect(index) },
-                label = { Text(stringResource(R.string.custody_window_week_n, index + 1)) }
+                label = { Text(stringResource(Res.string.custody_window_week_n, index + 1)) }
             )
         }
     }
@@ -311,15 +326,15 @@ private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) 
         modifier = Modifier.padding(top = Spacing.M)
     ) {
         OutlinedButton(onClick = { onPick(TimeField.START) }) {
-            Text(stringResource(R.string.custody_window_from, draft.start.format(shortTime())))
+            Text(stringResource(Res.string.custody_window_from, ReaderDateText.time(draft.start)))
         }
         OutlinedButton(onClick = { onPick(TimeField.END) }) {
-            Text(stringResource(R.string.custody_window_to, draft.end.format(shortTime())))
+            Text(stringResource(Res.string.custody_window_to, ReaderDateText.time(draft.end)))
         }
     }
     if (!draft.isValid) {
         Text(
-            text = stringResource(R.string.custody_window_invalid),
+            text = stringResource(Res.string.custody_window_invalid),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(top = Spacing.XS)
@@ -330,7 +345,7 @@ private fun TimeButtons(draft: ContactWindowDraft, onPick: (TimeField) -> Unit) 
 /** The two parents, by name and colour; a window may name either. */
 @Composable
 private fun ParentChips(selected: String, parentNames: ParentNames, onSelect: (String) -> Unit) {
-    DialogLabel(R.string.custody_window_with)
+    DialogLabel(Res.string.custody_window_with)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         listOf(ContactWindow.SLOT_ONE, ContactWindow.SLOT_TWO).forEach { slot ->
             FilterChip(
@@ -354,7 +369,7 @@ private enum class TimeField { START, END }
 
 /** A small label over one of the dialog's chip rows. */
 @Composable
-private fun DialogLabel(res: Int) {
+private fun DialogLabel(res: StringResource) {
     Text(
         text = stringResource(res),
         style = MaterialTheme.typography.labelLarge,

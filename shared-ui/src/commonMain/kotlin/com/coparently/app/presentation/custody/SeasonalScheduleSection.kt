@@ -22,9 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.ParentNames
@@ -37,14 +35,21 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.seasonal_add
+import com.coparently.app.resources.seasonal_hint
+import com.coparently.app.resources.seasonal_needs_base_pattern
+import com.coparently.app.resources.seasonal_pending_mine
+import com.coparently.app.resources.seasonal_pending_theirs
+import com.coparently.app.resources.seasonal_title
+import com.coparently.app.utils.readerMediumDate
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import kotlin.time.Clock
 
 /**
  * Which layer the editor is open on: [layerId] null for a new one, opened on [draft]. [fromPlan]
@@ -76,9 +81,9 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = koinViewModel
     OpenOnceForPlan(layers) { editor = newLayerTarget(fromPlan = true) }
 
     Column(modifier = Modifier.padding(vertical = dims.paddingMedium)) {
-        GroupLabel(text = stringResource(R.string.seasonal_title))
+        GroupLabel(text = stringResource(Res.string.seasonal_title))
         Text(
-            text = stringResource(R.string.seasonal_hint),
+            text = stringResource(Res.string.seasonal_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.XS)
@@ -123,7 +128,7 @@ fun SeasonalScheduleSection(viewModel: SeasonalScheduleViewModel = koinViewModel
 
 /** A new layer's editor, opening on the next fortnight; [fromPlan] for one opened from the plan. */
 private fun newLayerTarget(fromPlan: Boolean = false): EditorTarget {
-    val start = LocalDate.now().toKotlinLocalDate()
+    val start = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val draft = SeasonalLayerDraft(from = start, to = start.plus(DEFAULT_LAYER_DAYS, DateTimeUnit.DAY))
     return EditorTarget(null, draft, fromPlan)
 }
@@ -191,13 +196,13 @@ private fun SeasonalLayersGroup(
     val coParent = parentNames.parents.coParent?.let { parentNames.labelForUid(it.uid) }
         ?: parentNames.coParentFallback
     val pending = when {
-        state.coParentProposalPending -> stringResource(R.string.seasonal_pending_theirs, coParent)
-        state.ownProposalPending -> stringResource(R.string.seasonal_pending_mine, coParent)
+        state.coParentProposalPending -> stringResource(Res.string.seasonal_pending_theirs, coParent)
+        state.ownProposalPending -> stringResource(Res.string.seasonal_pending_mine, coParent)
         else -> null
     }
     SectionGroup {
         if (!state.hasBasePattern) {
-            SectionRow(title = stringResource(R.string.seasonal_needs_base_pattern), icon = Icons.Default.DateRange)
+            SectionRow(title = stringResource(Res.string.seasonal_needs_base_pattern), icon = Icons.Default.DateRange)
         } else {
             pending?.let {
                 SectionRow(title = it, icon = Icons.Default.DateRange)
@@ -213,7 +218,7 @@ private fun SeasonalLayersGroup(
                 Divider()
             }
             SectionRow(
-                title = stringResource(R.string.seasonal_add),
+                title = stringResource(Res.string.seasonal_add),
                 icon = Icons.Default.Add,
                 onClick = onAdd.takeIf { !state.isSaving }
             )
@@ -234,14 +239,13 @@ private fun LayerDot(layer: SeasonalLayer) {
 /** "1 Jul 2026 – 31 Aug 2026 · Alice 31 · Bob 31": the range and how its days are shared. */
 @Composable
 private fun layerSummary(layer: SeasonalLayer, parentNames: ParentNames): String {
-    val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     val counts = (0 until layer.spanDays).map { layer.custodyFor(layer.fromDate.plus(it, DateTimeUnit.DAY)) }
         .groupingBy { it }
         .eachCount()
     val shares = listOf("mom", "dad").mapNotNull { slot ->
         counts[slot]?.let { "${parentNames.labelFor(slot)} $it" }
     }
-    return (listOf("${layer.fromDate.format(format)} – ${layer.toDate.format(format)}") + shares)
+    return (listOf("${readerMediumDate(layer.fromDate)} – ${readerMediumDate(layer.toDate)}") + shares)
         .joinToString(" · ")
 }
 

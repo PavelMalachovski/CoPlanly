@@ -1,17 +1,23 @@
 package com.coparently.app.presentation.custody
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_diff_child_schedule_changed
+import com.coparently.app.resources.custody_diff_days_move
+import com.coparently.app.resources.custody_diff_layers_changed
+import com.coparently.app.resources.custody_diff_none
+import com.coparently.app.resources.custody_diff_windows_only
+import com.coparently.app.resources.custody_diff_windows_too
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Turns a [CustodyPatternDiff] into the two lines a parent reads before answering a proposal.
  *
  * In composable scope rather than in the ViewModel for the usual reason: the diff is slots and
- * counts, and only here is there a `Context` to resolve five locales and a [ParentNames] to turn
+ * counts, and only here can the five locales be resolved and a [ParentNames] to turn
  * `"mom"`/`"dad"` into the people they are.
  *
  * @param diff What the proposal would change, or null while nothing has resolved.
@@ -23,33 +29,32 @@ import com.coparently.app.presentation.common.ParentNames
 @Composable
 fun custodyDiffDescription(diff: CustodyPatternDiff?, parentNames: ParentNames): String? {
     if (diff == null || !diff.comparable) return null
-    if (diff.identical) return stringResource(R.string.custody_diff_none)
+    if (diff.identical) return stringResource(Res.string.custody_diff_none)
     // A seasonal layer (MON-14) can change without a day moving inside the compared window — a
     // summer proposed in March — so it always gets its own line. So does a child's own schedule
     // (FAM-4): the days counted below are the family's, and one child's move none of them.
     val layersLine = listOfNotNull(
-        stringResource(R.string.custody_diff_layers_changed).takeIf { diff.seasonalLayersChanged },
-        stringResource(R.string.custody_diff_child_schedule_changed).takeIf { diff.childOverridesChanged }
+        stringResource(Res.string.custody_diff_layers_changed).takeIf { diff.seasonalLayersChanged },
+        stringResource(Res.string.custody_diff_child_schedule_changed).takeIf { diff.childOverridesChanged }
     ).joinToString("\n").ifEmpty { null }
     // Only the afternoons or the layers move: "0 days move" would read as "nothing changes".
     if (diff.movedDays.isEmpty()) {
         val windowsOnly = if (diff.contactWindowsChanged) {
-            stringResource(R.string.custody_diff_windows_only)
+            stringResource(Res.string.custody_diff_windows_only)
         } else {
             null
         }
         return listOfNotNull(windowsOnly, layersLine).joinToString("\n")
     }
     val windowsToo = if (diff.contactWindowsChanged) {
-        stringResource(R.string.custody_diff_windows_too)
+        stringResource(Res.string.custody_diff_windows_too)
     } else {
         null
     }
     val windowsLine = listOfNotNull(windowsToo, layersLine).joinToString("") { "\n$it" }
 
-    val context = LocalContext.current
-    val summary = context.resources.getQuantityString(
-        R.plurals.custody_diff_days_move,
+    val summary = pluralStringResource(
+        Res.plurals.custody_diff_days_move,
         diff.movedDayCount,
         diff.movedDayCount
     )

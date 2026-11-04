@@ -8,8 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.family.FamilyMemberRef
 import com.coparently.app.presentation.common.FamilyMember
 import com.coparently.app.presentation.common.GroupLabel
@@ -17,6 +15,14 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_child_family_schedule
+import com.coparently.app.resources.custody_child_follow_family
+import com.coparently.app.resources.custody_child_own_schedule
+import com.coparently.app.resources.custody_child_schedules_hint
+import com.coparently.app.resources.custody_child_schedules_title
+import com.coparently.app.resources.custody_child_scope_hint
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Different schedule for a child" (FAM-4), under the family's own editor.
@@ -40,9 +46,9 @@ fun ChildSchedulesSection(
     val kids = children.mapNotNull { member -> (member.ref as? FamilyMemberRef.Child)?.let { member to it.id } }
     if (kids.size < 2) return
     Column(modifier = Modifier.padding(vertical = dimensions().paddingMedium)) {
-        GroupLabel(text = stringResource(R.string.custody_child_schedules_title))
+        GroupLabel(text = stringResource(Res.string.custody_child_schedules_title))
         Text(
-            text = stringResource(R.string.custody_child_schedules_hint),
+            text = stringResource(Res.string.custody_child_schedules_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.XS, vertical = Spacing.XS)
@@ -56,9 +62,9 @@ fun ChildSchedulesSection(
                     icon = Icons.Default.ChildCare,
                     supporting = stringResource(
                         if (ownSchedule) {
-                            R.string.custody_child_own_schedule
+                            Res.string.custody_child_own_schedule
                         } else {
-                            R.string.custody_child_family_schedule
+                            Res.string.custody_child_family_schedule
                         }
                     ),
                     onClick = { onEdit(child) }
@@ -81,7 +87,7 @@ fun ChildSchedulesSection(
 fun ChildScopeHeader(childName: String, hasOwnSchedule: Boolean, onFollowFamily: () -> Unit) {
     Column(modifier = Modifier.padding(vertical = dimensions().paddingSmall)) {
         Text(
-            text = stringResource(R.string.custody_child_scope_hint, childName),
+            text = stringResource(Res.string.custody_child_scope_hint, childName),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = dimensions().paddingSmall)
@@ -89,7 +95,7 @@ fun ChildScopeHeader(childName: String, hasOwnSchedule: Boolean, onFollowFamily:
         if (hasOwnSchedule) {
             SectionGroup {
                 SectionRow(
-                    title = stringResource(R.string.custody_child_follow_family),
+                    title = stringResource(Res.string.custody_child_follow_family),
                     icon = Icons.Default.ChildCare,
                     onClick = onFollowFamily
                 )

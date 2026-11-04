@@ -13,17 +13,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.SeasonalLayer
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_child_schedules_title
+import com.coparently.app.resources.custody_overview_children_own
+import com.coparently.app.resources.custody_overview_children_same
+import com.coparently.app.resources.custody_overview_none
+import com.coparently.app.resources.custody_overview_pattern
+import com.coparently.app.resources.custody_overview_pattern_summary
+import com.coparently.app.resources.custody_overview_sent_separately
+import com.coparently.app.resources.custody_overview_windows
+import com.coparently.app.resources.custody_windows_title
+import com.coparently.app.resources.seasonal_title
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -46,36 +54,36 @@ internal fun CustodyOverview(
     coParentName: String?,
     onOpen: (CustodySection) -> Unit
 ) {
-    val none = stringResource(R.string.custody_overview_none)
+    val none = stringResource(Res.string.custody_overview_none)
     Column(
         modifier = Modifier.padding(vertical = Spacing.M),
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
         SectionGroup {
             SectionRow(
-                title = stringResource(R.string.custody_overview_pattern),
+                title = stringResource(Res.string.custody_overview_pattern),
                 icon = Icons.Default.Schedule,
                 supporting = stringResource(
-                    R.string.custody_overview_pattern_summary,
+                    Res.string.custody_overview_pattern_summary,
                     stringResource(uiState.selectedModelType.labelRes()),
-                    uiState.startDate.format(localizedDate("MMMEd"))
+                    ReaderDateText.date(uiState.startDate, "MMMEd")
                 ),
                 onClick = { onOpen(CustodySection.PATTERN) },
                 trailing = { Chevron() }
             )
             Divider()
             SectionRow(
-                title = stringResource(R.string.custody_windows_title),
+                title = stringResource(Res.string.custody_windows_title),
                 icon = Icons.Default.DateRange,
                 supporting = uiState.contactWindows.size.takeIf { it > 0 }?.let {
-                    pluralStringResource(R.plurals.custody_overview_windows, it, it)
+                    pluralStringResource(Res.plurals.custody_overview_windows, it, it)
                 } ?: none,
                 onClick = { onOpen(CustodySection.WINDOWS) },
                 trailing = { Chevron() }
             )
             Divider()
             SectionRow(
-                title = stringResource(R.string.seasonal_title),
+                title = stringResource(Res.string.seasonal_title),
                 icon = Icons.Default.EventRepeat,
                 supporting = layers.map { it.name }.filter { it.isNotBlank() }.joinToString(", ").ifEmpty { none },
                 onClick = { onOpen(CustodySection.SEASONAL) },
@@ -89,7 +97,7 @@ internal fun CustodyOverview(
         }
         coParentName?.let { name ->
             InlineBanner(
-                text = stringResource(R.string.custody_overview_sent_separately, name),
+                text = stringResource(Res.string.custody_overview_sent_separately, name),
                 tone = BannerTone.INFO
             )
         }
@@ -100,16 +108,16 @@ internal fun CustodyOverview(
 @Composable
 private fun ChildrenRow(childrenWithOwnSchedule: Int, onClick: () -> Unit) {
     SectionRow(
-        title = stringResource(R.string.custody_child_schedules_title),
+        title = stringResource(Res.string.custody_child_schedules_title),
         icon = Icons.Default.ChildCare,
         supporting = if (childrenWithOwnSchedule > 0) {
             pluralStringResource(
-                R.plurals.custody_overview_children_own,
+                Res.plurals.custody_overview_children_own,
                 childrenWithOwnSchedule,
                 childrenWithOwnSchedule
             )
         } else {
-            stringResource(R.string.custody_overview_children_same)
+            stringResource(Res.string.custody_overview_children_same)
         },
         onClick = onClick,
         trailing = { Chevron() }
