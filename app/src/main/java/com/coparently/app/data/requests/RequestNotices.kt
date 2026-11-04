@@ -52,7 +52,10 @@ class RequestNotices(
         val until = answerByText(
             clock.answerByMillis,
             locale = words.resources.configuration.locales[0],
-            is24Hour = DateFormat.is24HourFormat(context)
+            // The clock of the language it is worded in, as a push's deadline is (PushNotifier):
+            // the device's setting, else what that language expects — never Android's own
+            // resolution of the bare context.
+            is24Hour = DateFormat.is24HourFormat(words)
         )
         post(
             clock,

@@ -10,7 +10,9 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.utils.format
+import com.coparently.app.utils.inAppLanguage
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
@@ -49,8 +51,10 @@ class EventReminderScheduler(
                     ReminderWorker.KEY_START_AT to plan.occurrenceStart.toString(),
                     ReminderWorker.KEY_START_TIME to
                         // The reader's clock (release audit R-9), read here: no activity need
-                        // have run in the process that schedules a reminder.
-                        plan.occurrenceStart.format(shortTime(is24Hour = DateFormat.is24HourFormat(context)))
+                        // have run in the process that schedules a reminder. In the language the
+                        // app speaks (inAppLanguage), as the notice's words and every push are, so
+                        // "use locale default" means that language's clock.
+                        startTimeText(plan.occurrenceStart)
                 )
             )
             .build()
@@ -76,6 +80,12 @@ class EventReminderScheduler(
     }
 
     private fun uniqueWorkName(eventId: String) = "event_reminder_$eventId"
+
+    /** [start]'s time on the reader's clock, in the language the app speaks now. */
+    private fun startTimeText(start: LocalDateTime): String {
+        val words = context.inAppLanguage()
+        return start.format(shortTime(words.resources.configuration.locales[0], DateFormat.is24HourFormat(words)))
+    }
 
     private companion object {
         /** Carried by every reminder this build enqueues, for [cancelAll]. */
