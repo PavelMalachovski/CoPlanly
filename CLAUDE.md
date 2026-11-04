@@ -1194,7 +1194,8 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   with Kotlin 2.3 (metadata 2.3.0) like every release since 1.61.0, so it needs this project's
   Kotlin 2.3 or later. Never take a Roborazzi built with a newer Kotlin than the project's, because
   the compiler reads metadata at most one minor version ahead. Upgrade the two together. And **a private composable a test needs becomes
-  `internal`**, never public, while it is in the app (`HandoverHero`, `StatTiles`, `TimelineRow`),
+  `internal`**, never public, while it is in the app (`HandoverHero`, `StatTiles` and `TimelineRow` were,
+  until slice 11g),
   and a sheet's body is split out of the sheet (`EventPreviewContent`), because a
   `ModalBottomSheet` opens its own window that a node capture does not see. **Once it moves to
   `:shared-ui` (Task 11), what the app calls across the module boundary becomes public** — its
@@ -1217,6 +1218,7 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives; slice 11f:
 `ParentColorPicker` and `CUSTOM_COLOUR`, which the screenshots and `ParentColorPickerTest` render, and
 `GridSwatch`, which onboarding draws, then `InvitationView`, which `InvitationViewTest` and the
+screenshots render; slice 11g: Home's `HandoverHero`, `StatTiles` and `TimelineRow`, which the
 screenshots render). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
@@ -1658,7 +1660,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              with the country picker and the consent screens) and SyncViewModel, then pairing's and
              onboarding's screens (presentation/pairing/, presentation/onboarding/), then the
              sign-in's and the profile's (presentation/auth/, presentation/profile/) with
-             AuthViewModel.
+             AuthViewModel; and, from slice 11g, Home's, the month review's and the stickers'
+             screens (presentation/home/, presentation/review/, presentation/stickers/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1677,7 +1680,8 @@ presentation/ — Compose screens per feature not moved yet (slice 11g), MainAct
              state and every ViewModel are in shared-ui/ (Task 10; SyncViewModel and AuthViewModel
              since slice 11f), and so are chat's, the event form's, the calendar's, custody's, the
              requests', the family's, the expenses', child support's, Settings', pairing's,
-             onboarding's, the sign-in's and the profile's screens (Task 11, slices 11b–11f); the
+             onboarding's, the sign-in's, the profile's, Home's, the month review's and the
+             stickers' screens (Task 11, slices 11b–11g); the
              app keeps their previews and the Android halves of the platform interfaces
              (presentation/platform/, the language picker's AndroidAppLanguages, Google's
              sign-in's AndroidGoogleCalendarSignIn, the credential sheets' AndroidCredentialSignIn
@@ -2268,6 +2272,18 @@ app's `PrivacyPolicyLink` and `TermsOfServiceLink` are gone. The profile's dates
 `AuthErrorTest` stay in the app (MockK, androidx.credentials, Firebase): the first hands the ViewModel
 `AndroidCredentialSignIn` over the mocked authenticator and `AndroidAuthErrors`, so every case still
 drives the Android halves. The app's `viewModelModule` is gone with its last ViewModel.
+**Then Home's screens, the month in review's and the stickers' shelf** (slice 11g):
+`presentation/home/`'s `HomeScreen` (`HandoverHero`, `StatTiles` and `TimelineRow` public for the
+screenshots), `AwaitingDialogs`, `ChildrenTodayLines` and `HomeAskQueue` (its test in `commonTest`,
+two names without commas), `review/MonthReviewScreen.kt` and `stickers/MyStickersScreen.kt`, packages
+unchanged. Their dates go through `ReaderDateText` (`date`, `month` and `dateWithTime`, what
+`localizedDate` and `shortTime` wrote over the same days), the review's amounts through
+`ReaderMoneyText.amount(value, currency)` (`currencyFormat(currency).format(value)` on Android), the
+summary's language through Compose's `Locale.current.toLanguageTag()` (the configuration's first
+locale before; the owner's rule makes them one), and the review's month title is capitalised with
+`Char.uppercase()`, as the calendar header's is (the five languages' month names capitalise alike
+with and without a locale). An activity's feed label is a `StringResource`. The previews are the
+app's `home/HomePreviews.kt`.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

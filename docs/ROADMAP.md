@@ -3066,6 +3066,8 @@ bytes are identical on Android):
   their failures the data layer's and the app's, every ordering rule unchanged; on a phone with no
   credential sheets (the iPhone for now) the sign-in offers neither Google nor a saved password.
   **Slice 11f built, CI pending.** Task 10's last two ViewModels moved with it.
+  Slice 11g, everything else: first Home, the month in review and the stickers' shelf, their dates
+  and amounts through the date and money seams (the same text on Android).
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

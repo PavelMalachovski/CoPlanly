@@ -1526,6 +1526,18 @@ Then the export and the school import:
   friends, guests, professionals, the parenting plan, Home, the month review, the stickers' screen,
   the school import and `common/`'s last helpers.
 
+**Slice 11g notes (November 2026).** Everything left, the last slice of Task 11.
+- Group 1, Home, the month in review and the stickers' shelf (`git mv`, packages unchanged, `R.` →
+  `Res.`): `home/HomeScreen.kt` (`HandoverHero`, `StatTiles`, `TimelineRow` public: the screenshots),
+  `AwaitingDialogs.kt`, `ChildrenTodayLines.kt`, `HomeAskQueue.kt` (its test to `commonTest`, two
+  names without commas, `kotlin.test.Test`), `review/MonthReviewScreen.kt`,
+  `stickers/MyStickersScreen.kt`. Replaced: `format(localizedDate(skeleton))` →
+  `ReaderDateText.date`/`month`, the feed's date with time → `ReaderDateText.dateWithTime`,
+  `currencyFormat(currency).format(x)` → `ReaderMoneyText.amount(x, currency)`,
+  `LocalConfiguration.locales[0].toLanguageTag()` → Compose's `Locale.current.toLanguageTag()`,
+  `uppercase(locale)` → `uppercase()`, `ActivityKind.labelRes()` and `OutcomeChip`'s label a
+  `StringResource`. The two previews → the app's `home/HomePreviews.kt`.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**

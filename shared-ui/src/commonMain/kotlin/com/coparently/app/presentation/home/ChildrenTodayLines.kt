@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.home_child_with_parent_today
+import com.coparently.app.resources.home_child_with_parent_today_you
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The handover hero's per-child lines (FAM-4): "Anya is with Olya today", one per child, on a day
@@ -31,10 +33,10 @@ internal fun ChildrenTodayLines(children: List<ChildWithParent>, parentNames: Pa
                 // "Emma is with you today" when the child is with the reader (owner request, 28
                 // October 2026), the other parent's name otherwise.
                 text = if (parentNames.isReader(child.slot)) {
-                    stringResource(R.string.home_child_with_parent_today_you, child.childName)
+                    stringResource(Res.string.home_child_with_parent_today_you, child.childName)
                 } else {
                     stringResource(
-                        R.string.home_child_with_parent_today,
+                        Res.string.home_child_with_parent_today,
                         child.childName,
                         parentNames.labelFor(child.slot)
                     )

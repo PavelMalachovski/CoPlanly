@@ -64,15 +64,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.changerequests.HistoryEntry
@@ -110,20 +107,62 @@ import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.headlineSmallEmphasized
 import com.coparently.app.presentation.theme.titleMediumEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
-import com.coparently.app.utils.LightDarkPreviews
-import com.coparently.app.utils.PreviewWrapper
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
-import com.coparently.app.utils.previewParentNames
-import com.coparently.app.utils.shortTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_all_day
+import com.coparently.app.resources.event_important_mark_description
+import com.coparently.app.resources.family_money_this_month
+import com.coparently.app.resources.home_activity_accepted_event
+import com.coparently.app.resources.home_activity_accepted_new_time
+import com.coparently.app.resources.home_activity_accepted_swap
+import com.coparently.app.resources.home_activity_change_requested
+import com.coparently.app.resources.home_activity_declined_event
+import com.coparently.app.resources.home_activity_declined_new_time
+import com.coparently.app.resources.home_activity_declined_swap
+import com.coparently.app.resources.home_activity_event_created
+import com.coparently.app.resources.home_activity_event_updated
+import com.coparently.app.resources.home_activity_pickup_confirmed
+import com.coparently.app.resources.home_activity_review
+import com.coparently.app.resources.home_activity_withdrawn
+import com.coparently.app.resources.home_activity_you_accepted
+import com.coparently.app.resources.home_activity_you_declined
+import com.coparently.app.resources.home_handover_current
+import com.coparently.app.resources.home_handover_current_you
+import com.coparently.app.resources.home_handover_hero_in_days
+import com.coparently.app.resources.home_handover_hero_in_days_you
+import com.coparently.app.resources.home_handover_hero_today
+import com.coparently.app.resources.home_handover_hero_today_you
+import com.coparently.app.resources.home_handover_hero_tomorrow
+import com.coparently.app.resources.home_handover_hero_tomorrow_you
+import com.coparently.app.resources.home_pairing_cta
+import com.coparently.app.resources.home_pairing_prompt
+import com.coparently.app.resources.home_pairing_title
+import com.coparently.app.resources.home_recent_empty_paired
+import com.coparently.app.resources.home_requests_all
+import com.coparently.app.resources.home_requests_title
+import com.coparently.app.resources.home_section_partner_changed
+import com.coparently.app.resources.home_section_recent_changes
+import com.coparently.app.resources.home_section_this_week
+import com.coparently.app.resources.home_stat_open_chat
+import com.coparently.app.resources.home_stat_unread_count
+import com.coparently.app.resources.home_timeline_meta
+import com.coparently.app.resources.home_timeline_meta_you
+import com.coparently.app.resources.home_title
+import com.coparently.app.resources.home_week_days_of
+import com.coparently.app.resources.home_week_days_you
+import com.coparently.app.resources.home_week_empty
+import com.coparently.app.resources.home_week_empty_action
+import com.coparently.app.resources.nav_settings
+import com.coparently.app.resources.request_history_custody
+import com.coparently.app.resources.request_history_split
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toKotlinLocalDate
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDate
 
 /** A date in the locale's order for [skeleton], then the locale's short time (D-18). */
-private fun LocalDateTime.dateAndTime(skeleton: String): String =
-    "${format(localizedDate(skeleton))} · ${format(shortTime())}"
+private fun LocalDateTime.dateAndTime(skeleton: String): String = ReaderDateText.dateWithTime(this, skeleton)
 
 /** Strength of the parent-hue wash behind the handover hero. */
 private const val HERO_TINT_ALPHA = 0.16f
@@ -229,11 +268,11 @@ fun HomeScreen(
                 title = {
                     Column {
                         Text(
-                            text = stringResource(R.string.home_title),
+                            text = stringResource(Res.string.home_title),
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
-                            text = today.format(localizedDate("EEEEMMMMd")),
+                            text = ReaderDateText.date(today, "EEEEMMMMd"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -243,7 +282,7 @@ fun HomeScreen(
                     // Only with two families or more (M-8); nothing at all with one.
                     FamilySwitcherChip()
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings))
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.nav_settings))
                     }
                 }
             )
@@ -395,18 +434,18 @@ private fun PairingInvitation(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = stringResource(R.string.home_pairing_title),
+            text = stringResource(Res.string.home_pairing_title),
             style = MaterialTheme.typography.headlineSmallEmphasized,
             textAlign = TextAlign.Center
         )
         Text(
-            text = stringResource(R.string.home_pairing_prompt),
+            text = stringResource(Res.string.home_pairing_prompt),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Button(onClick = onNavigateToPairing, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.home_pairing_cta))
+            Text(stringResource(Res.string.home_pairing_cta))
         }
     }
 }
@@ -491,15 +530,15 @@ private fun Dashboard(
     }
     val readAfter: LazyListScope.() -> Unit = {
         // The week follows today and the requests.
-        item { SectionHeader(stringResource(R.string.home_section_this_week)) }
+        item { SectionHeader(stringResource(Res.string.home_section_this_week)) }
         if (state.week.isEmpty()) {
             // The shared empty state (UX-9), not the `Card { Text }` the refresh outlawed — and
             // with the one thing an empty week asks for.
             item {
                 EmptyState(
                     icon = Icons.Default.EventAvailable,
-                    title = stringResource(R.string.home_week_empty),
-                    actionLabel = stringResource(R.string.home_week_empty_action),
+                    title = stringResource(Res.string.home_week_empty),
+                    actionLabel = stringResource(Res.string.home_week_empty_action),
                     onAction = onAddEvent,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -542,8 +581,8 @@ private fun Dashboard(
             // branch exists to remove.
             SectionHeader(
                 state.partner?.name?.takeIf { it.isNotBlank() }
-                    ?.let { stringResource(R.string.home_section_partner_changed, it) }
-                    ?: stringResource(R.string.home_section_recent_changes)
+                    ?.let { stringResource(Res.string.home_section_partner_changed, it) }
+                    ?: stringResource(Res.string.home_section_recent_changes)
             )
         }
 
@@ -551,7 +590,7 @@ private fun Dashboard(
             item {
                 EmptyState(
                     icon = Icons.Default.History,
-                    title = stringResource(R.string.home_recent_empty_paired),
+                    title = stringResource(Res.string.home_recent_empty_paired),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -626,7 +665,7 @@ private fun RequestsRow(state: RequestsRowState, coParentName: String, onClick: 
         .map { it.asString() }
         .joinToString(" · ")
     SectionRow(
-        title = stringResource(R.string.home_requests_title),
+        title = stringResource(Res.string.home_requests_title),
         icon = Icons.Default.SwapHoriz,
         supporting = line,
         onClick = onClick,
@@ -682,7 +721,7 @@ private fun SectionHeader(text: String) {
  */
 @Composable
 @Suppress("LongMethod") // one card: gradient, headline, chips and action read as a single block
-internal fun HandoverHero(
+fun HandoverHero(
     info: HandoverInfo,
     parentNames: ParentNames,
     childrenToday: List<ChildWithParent> = emptyList()
@@ -722,9 +761,9 @@ internal fun HandoverHero(
                 )
                 Text(
                     text = if (parentNames.isReader(info.fromParent)) {
-                        stringResource(R.string.home_handover_current_you)
+                        stringResource(Res.string.home_handover_current_you)
                     } else {
-                        stringResource(R.string.home_handover_current, parentNames.labelFor(info.fromParent))
+                        stringResource(Res.string.home_handover_current, parentNames.labelFor(info.fromParent))
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -738,7 +777,7 @@ internal fun HandoverHero(
                 )
             )
             PillChip(
-                label = info.date.format(localizedDate("EEEMMMd")),
+                label = ReaderDateText.date(info.date, "EEEMMMd"),
                 container = ParentColors.container(info.toParent, alpha = 0.2f),
                 contentColor = ParentColors.text(info.toParent)
             )
@@ -756,16 +795,16 @@ private fun handoverHeadline(info: HandoverInfo, parentNames: ParentNames): Stri
     val days = info.daysUntil.toInt()
     return if (parentNames.isReader(info.toParent)) {
         when (info.daysUntil) {
-            0L -> stringResource(R.string.home_handover_hero_today_you)
-            1L -> stringResource(R.string.home_handover_hero_tomorrow_you)
-            else -> pluralStringResource(R.plurals.home_handover_hero_in_days_you, days, days)
+            0L -> stringResource(Res.string.home_handover_hero_today_you)
+            1L -> stringResource(Res.string.home_handover_hero_tomorrow_you)
+            else -> pluralStringResource(Res.plurals.home_handover_hero_in_days_you, days, days)
         }
     } else {
         val to = parentNames.labelFor(info.toParent)
         when (info.daysUntil) {
-            0L -> stringResource(R.string.home_handover_hero_today, to)
-            1L -> stringResource(R.string.home_handover_hero_tomorrow, to)
-            else -> pluralStringResource(R.plurals.home_handover_hero_in_days, days, to, days)
+            0L -> stringResource(Res.string.home_handover_hero_today, to)
+            1L -> stringResource(Res.string.home_handover_hero_tomorrow, to)
+            else -> pluralStringResource(Res.plurals.home_handover_hero_in_days, days, to, days)
         }
     }
 }
@@ -792,7 +831,7 @@ private fun handoverHeadline(info: HandoverInfo, parentNames: ParentNames): Stri
  * @param onOpenChat Deep link for the unread tile
  */
 @Composable
-internal fun StatTiles(
+fun StatTiles(
     spend: MonthSpend,
     balances: List<CurrencyBalance>,
     unreadCount: Int,
@@ -805,7 +844,7 @@ internal fun StatTiles(
             icon = Icons.Default.Payments,
             // Named, as the Family tab's money card is: two bare totals said nothing about which
             // period they were (UX audit M3).
-            label = stringResource(R.string.family_money_this_month),
+            label = stringResource(Res.string.family_money_this_month),
             value = spend.byCurrency.joinToString("\n") { formatMoney(it.amount, it.currency) },
             caption = balanceCaption(balances),
             onClick = onOpenExpenses
@@ -816,8 +855,8 @@ internal fun StatTiles(
             modifier = modifier,
             icon = Icons.AutoMirrored.Filled.Chat,
             badge = unreadCount,
-            value = pluralStringResource(R.plurals.home_stat_unread_count, unreadCount, unreadCount),
-            caption = stringResource(R.string.home_stat_open_chat),
+            value = pluralStringResource(Res.plurals.home_stat_unread_count, unreadCount, unreadCount),
+            caption = stringResource(Res.string.home_stat_open_chat),
             onClick = onOpenChat
         )
     }
@@ -920,7 +959,7 @@ private fun StatTile(
  */
 @Composable
 @Suppress("LongMethod") // rail, node, title, time and custody words: one row
-internal fun TimelineRow(
+fun TimelineRow(
     entry: WeekEntry,
     parentNames: ParentNames,
     isLast: Boolean,
@@ -977,7 +1016,7 @@ internal fun TimelineRow(
                 if (event.isImportant) {
                     Icon(
                         imageVector = Icons.Default.PriorityHigh,
-                        contentDescription = stringResource(R.string.event_important_mark_description),
+                        contentDescription = stringResource(Res.string.event_important_mark_description),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(IconSizes.Inline)
                     )
@@ -991,7 +1030,7 @@ internal fun TimelineRow(
             }
             // An all-day event says so rather than "12:00 AM" (D-18; `AllDayEvent`).
             val timeLabel = if (AllDayEvent.isAllDay(event)) {
-                "${event.startDateTime.format(localizedDate("EEEd"))} · ${stringResource(R.string.event_all_day)}"
+                "${ReaderDateText.date(event.startDateTime.date, "EEEd")} · ${stringResource(Res.string.event_all_day)}"
             } else {
                 event.startDateTime.dateAndTime("EEEd")
             }
@@ -1000,9 +1039,9 @@ internal fun TimelineRow(
                     ?.takeIf { showDayParent }
                     ?.let {
                         if (parentNames.isReader(it)) {
-                            stringResource(R.string.home_timeline_meta_you, timeLabel)
+                            stringResource(Res.string.home_timeline_meta_you, timeLabel)
                         } else {
-                            stringResource(R.string.home_timeline_meta, timeLabel, parentNames.labelFor(it))
+                            stringResource(Res.string.home_timeline_meta, timeLabel, parentNames.labelFor(it))
                         }
                     }
                     ?: timeLabel,
@@ -1066,21 +1105,21 @@ private fun ActivityGroup(
                 // the History already said "Accepted").
                 when (item.requestStatus) {
                     ChangeRequestStatus.PENDING -> PillChip(
-                        label = stringResource(R.string.home_activity_review),
+                        label = stringResource(Res.string.home_activity_review),
                         container = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         onClick = onOpenChangeRequests
                     )
-                    ChangeRequestStatus.ACCEPTED -> OutcomeChip(R.string.home_activity_you_accepted)
-                    ChangeRequestStatus.DECLINED -> OutcomeChip(R.string.home_activity_you_declined)
-                    ChangeRequestStatus.CANCELLED -> OutcomeChip(R.string.home_activity_withdrawn)
+                    ChangeRequestStatus.ACCEPTED -> OutcomeChip(Res.string.home_activity_you_accepted)
+                    ChangeRequestStatus.DECLINED -> OutcomeChip(Res.string.home_activity_you_declined)
+                    ChangeRequestStatus.CANCELLED -> OutcomeChip(Res.string.home_activity_withdrawn)
                     null -> Unit
                 }
             }
             Divider()
         }
         SectionRow(
-            title = stringResource(R.string.home_requests_all),
+            title = stringResource(Res.string.home_requests_all),
             onClick = onOpenRequestHistory,
             trailing = { HomeChevron() }
         )
@@ -1103,9 +1142,9 @@ private fun WeekDaysLabel(slot: String, parentNames: ParentNames) {
         )
         Text(
             text = if (parentNames.isReader(slot)) {
-                stringResource(R.string.home_week_days_you)
+                stringResource(Res.string.home_week_days_you)
             } else {
-                stringResource(R.string.home_week_days_of, parentNames.labelFor(slot))
+                stringResource(Res.string.home_week_days_of, parentNames.labelFor(slot))
             },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1115,7 +1154,7 @@ private fun WeekDaysLabel(slot: String, parentNames: ParentNames) {
 
 /** How a change request in the feed ended, in a neutral chip: a fact, not an action. */
 @Composable
-private fun OutcomeChip(label: Int) {
+private fun OutcomeChip(label: StringResource) {
     PillChip(label = stringResource(label), contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
@@ -1168,20 +1207,20 @@ private fun answerLabel(answer: HistoryEntry): String {
     val accepted = answer.outcome == RequestOutcome.ACCEPTED
     return when (val subject = answer.subject) {
         is RequestSubject.NewTime -> stringResource(
-            if (accepted) R.string.home_activity_accepted_new_time else R.string.home_activity_declined_new_time,
+            if (accepted) Res.string.home_activity_accepted_new_time else Res.string.home_activity_declined_new_time,
             subject.eventTitle
         )
         is RequestSubject.DaySwap -> stringResource(
-            if (accepted) R.string.home_activity_accepted_swap else R.string.home_activity_declined_swap,
+            if (accepted) Res.string.home_activity_accepted_swap else Res.string.home_activity_declined_swap,
             swapDatesText(subject.firstDate, subject.dayCount)
         )
         is RequestSubject.NewEvent -> stringResource(
-            if (accepted) R.string.home_activity_accepted_event else R.string.home_activity_declined_event,
+            if (accepted) Res.string.home_activity_accepted_event else Res.string.home_activity_declined_event,
             subject.eventTitle
         )
         // Never in the feed: a custody or split decision has its own card and banner (HomeFeed).
-        RequestSubject.CustodySchedule -> stringResource(R.string.request_history_custody)
-        RequestSubject.SplitRatio -> stringResource(R.string.request_history_split)
+        RequestSubject.CustodySchedule -> stringResource(Res.string.request_history_custody)
+        RequestSubject.SplitRatio -> stringResource(Res.string.request_history_split)
     }
 }
 
@@ -1194,41 +1233,11 @@ private fun ActivityKind.icon(): ImageVector = when (this) {
     ActivityKind.ANSWER -> Icons.Default.Check
 }
 
-private fun ActivityKind.labelRes(): Int = when (this) {
-    ActivityKind.EVENT_CREATED -> R.string.home_activity_event_created
-    ActivityKind.EVENT_UPDATED -> R.string.home_activity_event_updated
-    ActivityKind.PICKUP_CONFIRMED -> R.string.home_activity_pickup_confirmed
-    ActivityKind.CHANGE_REQUESTED -> R.string.home_activity_change_requested
+private fun ActivityKind.labelRes(): StringResource = when (this) {
+    ActivityKind.EVENT_CREATED -> Res.string.home_activity_event_created
+    ActivityKind.EVENT_UPDATED -> Res.string.home_activity_event_updated
+    ActivityKind.PICKUP_CONFIRMED -> Res.string.home_activity_pickup_confirmed
+    ActivityKind.CHANGE_REQUESTED -> Res.string.home_activity_change_requested
     // An answer is worded from its subject (answerLabel); this is only the kind's own sentence.
-    ActivityKind.ANSWER -> R.string.home_activity_accepted_event
-}
-
-@LightDarkPreviews
-@Composable
-private fun HandoverHeroPreview() {
-    PreviewWrapper {
-        HandoverHero(
-            info = HandoverInfo(
-                date = LocalDate.now().plusDays(1).toKotlinLocalDate(),
-                daysUntil = 1L,
-                fromParent = "mom",
-                toParent = "dad"
-            ),
-            parentNames = previewParentNames
-        )
-    }
-}
-
-@LightDarkPreviews
-@Composable
-private fun StatTilesPreview() {
-    PreviewWrapper {
-        StatTiles(
-            spend = MonthSpend(byCurrency = listOf(CurrencyAmount(currency = "CZK", amount = 4_250.0))),
-            balances = emptyList(),
-            unreadCount = 2,
-            onOpenExpenses = {},
-            onOpenChat = {}
-        )
-    }
+    ActivityKind.ANSWER -> Res.string.home_activity_accepted_event
 }

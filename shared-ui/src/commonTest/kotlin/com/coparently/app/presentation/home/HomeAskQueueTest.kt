@@ -8,7 +8,7 @@ import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.CustodyModel
 import kotlinx.datetime.LocalDate
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -47,7 +47,7 @@ class HomeAskQueueTest {
     )
 
     @Test
-    fun `a proposal, then a split, then each swap, then the requests`() {
+    fun `a proposal then a split then each swap then the requests`() {
         val queue = HomeAskQueue.of(
             HomeAsks(proposal = proposal, split = split()),
             listOf(swap),
@@ -67,7 +67,7 @@ class HomeAskQueueTest {
     }
 
     @Test
-    fun `a split put off gives way to the next ask, and nothing is asked once all are put off`() {
+    fun `a split put off gives way to the next ask - and nothing is asked once all are put off`() {
         val queue = HomeAskQueue.of(HomeAsks(split = split()), listOf(swap), requestIds = emptyList())
 
         assertIs<HomeAsk.Split>(HomeAskQueue.next(queue, putOff = emptySet()))

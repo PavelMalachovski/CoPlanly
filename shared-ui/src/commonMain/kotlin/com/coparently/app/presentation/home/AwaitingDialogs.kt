@@ -16,8 +16,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyPatternDiff
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.domain.custody.DaySwapGroup
@@ -40,6 +38,24 @@ import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyLargeEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_accept
+import com.coparently.app.resources.change_request_decline
+import com.coparently.app.resources.custody_proposal_accept
+import com.coparently.app.resources.custody_proposal_decline
+import com.coparently.app.resources.custody_proposal_inbox_body
+import com.coparently.app.resources.custody_proposal_inbox_title
+import com.coparently.app.resources.day_swap_answer_by_day
+import com.coparently.app.resources.day_swap_decline
+import com.coparently.app.resources.expenses_split_proposal_body_named
+import com.coparently.app.resources.expenses_split_proposal_title
+import com.coparently.app.resources.home_dialog_later
+import com.coparently.app.resources.home_dialog_requests_message
+import com.coparently.app.resources.home_dialog_requests_message_named
+import com.coparently.app.resources.home_dialog_requests_title
+import com.coparently.app.resources.home_dialog_review
+import com.coparently.app.resources.home_dialog_swap_title
+import com.coparently.app.resources.split_request_now
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -207,12 +223,12 @@ private fun ProposalDialog(
     LaunchedEffect(ask.proposal.proposedAt) { actions.onProposalSeen() }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.custody_proposal_inbox_title)) },
+        title = { Text(stringResource(Res.string.custody_proposal_inbox_title)) },
         text = {
             // Who proposed it, and what it would actually do. The agreed pattern and the proposed
             // one sit on the same document, so the diff costs no extra read.
             val who = stringResource(
-                R.string.custody_proposal_inbox_body,
+                Res.string.custody_proposal_inbox_body,
                 parentNames.labelForUid(ask.proposal.proposedBy)
             )
             val diff = custodyDiffDescription(ask.diff, parentNames)
@@ -236,8 +252,8 @@ private fun ProposalDialog(
         },
         confirmButton = {
             AnswerButtons(
-                acceptLabel = stringResource(R.string.custody_proposal_accept),
-                declineLabel = stringResource(R.string.custody_proposal_decline),
+                acceptLabel = stringResource(Res.string.custody_proposal_accept),
+                declineLabel = stringResource(Res.string.custody_proposal_decline),
                 onAccept = {
                     onDismiss()
                     actions.onAcceptProposal()
@@ -246,7 +262,7 @@ private fun ProposalDialog(
                     onDismiss()
                     actions.onDeclineProposal()
                 },
-                later = stringResource(R.string.home_dialog_later) to onDismiss
+                later = stringResource(Res.string.home_dialog_later) to onDismiss
             )
         }
     )
@@ -269,7 +285,7 @@ private fun SplitDialog(
     LaunchedEffect(ask.proposal.proposedAtMillis) { actions.onSplitSeen() }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.expenses_split_proposal_title)) },
+        title = { Text(stringResource(Res.string.expenses_split_proposal_title)) },
         text = {
             // Scrolls: names and money at the largest text can outgrow a small phone, and an amount
             // is never cut off (design item 15).
@@ -279,14 +295,14 @@ private fun SplitDialog(
             ) {
                 Text(
                     stringResource(
-                        R.string.expenses_split_proposal_body_named,
+                        Res.string.expenses_split_proposal_body_named,
                         parentNames.labelForUid(ask.proposal.proposedBy),
                         splitSharesText(ask.proposal.ratio, parentNames)
                     )
                 )
                 ask.agreed?.let { now ->
                     Text(
-                        text = stringResource(R.string.split_request_now, splitSharesText(now, parentNames)),
+                        text = stringResource(Res.string.split_request_now, splitSharesText(now, parentNames)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -295,8 +311,8 @@ private fun SplitDialog(
         },
         confirmButton = {
             AnswerButtons(
-                acceptLabel = stringResource(R.string.change_request_accept),
-                declineLabel = stringResource(R.string.change_request_decline),
+                acceptLabel = stringResource(Res.string.change_request_accept),
+                declineLabel = stringResource(Res.string.change_request_decline),
                 onAccept = {
                     onDismiss()
                     actions.onAcceptSplit()
@@ -305,7 +321,7 @@ private fun SplitDialog(
                     onDismiss()
                     actions.onDeclineSplit()
                 },
-                later = stringResource(R.string.home_dialog_later) to onDismiss
+                later = stringResource(Res.string.home_dialog_later) to onDismiss
             )
         }
     )
@@ -334,7 +350,7 @@ private fun SwapDialog(
     val sides = shown.sidesAsked(parentNames)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.home_dialog_swap_title)) },
+        title = { Text(stringResource(Res.string.home_dialog_swap_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -356,7 +372,7 @@ private fun SwapDialog(
                         onBack = { byDay = false }
                     )
                 } else if (shown.dayCount >= 2) {
-                    TextButton(onClick = { byDay = true }) { Text(stringResource(R.string.day_swap_answer_by_day)) }
+                    TextButton(onClick = { byDay = true }) { Text(stringResource(Res.string.day_swap_answer_by_day)) }
                 }
             }
         },
@@ -366,7 +382,7 @@ private fun SwapDialog(
             if (!byDay) {
                 AnswerButtons(
                     acceptLabel = stringResource(swapAcceptLabel(shown.dayCount)),
-                    declineLabel = stringResource(R.string.day_swap_decline),
+                    declineLabel = stringResource(Res.string.day_swap_decline),
                     onAccept = {
                         onDismiss()
                         actions.onAcceptSwap(swapGroup)
@@ -375,7 +391,7 @@ private fun SwapDialog(
                         onDismiss()
                         actions.onDeclineSwap(swapGroup)
                     },
-                    later = stringResource(R.string.home_dialog_later) to onDismiss
+                    later = stringResource(Res.string.home_dialog_later) to onDismiss
                 )
             }
         }
@@ -390,11 +406,11 @@ private fun SwapDialog(
 private fun RequestsDialog(coParentName: String?, onDismiss: () -> Unit, onReview: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.home_dialog_requests_title)) },
+        title = { Text(stringResource(Res.string.home_dialog_requests_title)) },
         text = {
             Text(
-                coParentName?.let { stringResource(R.string.home_dialog_requests_message_named, it) }
-                    ?: stringResource(R.string.home_dialog_requests_message)
+                coParentName?.let { stringResource(Res.string.home_dialog_requests_message_named, it) }
+                    ?: stringResource(Res.string.home_dialog_requests_message)
             )
         },
         confirmButton = {
@@ -402,11 +418,11 @@ private fun RequestsDialog(coParentName: String?, onDismiss: () -> Unit, onRevie
                 onDismiss()
                 onReview()
             }) {
-                Text(stringResource(R.string.home_dialog_review))
+                Text(stringResource(Res.string.home_dialog_review))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_dialog_later)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.home_dialog_later)) }
         }
     )
 }

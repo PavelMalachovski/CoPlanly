@@ -32,16 +32,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
-import com.coparently.app.R
 import com.coparently.app.domain.review.MonthMoney
 import com.coparently.app.domain.review.MonthReview
 import com.coparently.app.domain.review.MonthStatsWire
@@ -53,12 +49,42 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
-import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.month_review_days
+import com.coparently.app.resources.month_review_days_without_schedule
+import com.coparently.app.resources.month_review_even
+import com.coparently.app.resources.month_review_events
+import com.coparently.app.resources.month_review_group_activity
+import com.coparently.app.resources.month_review_group_money
+import com.coparently.app.resources.month_review_group_schedule
+import com.coparently.app.resources.month_review_group_summary
+import com.coparently.app.resources.month_review_handovers
+import com.coparently.app.resources.month_review_next
+import com.coparently.app.resources.month_review_no_expenses
+import com.coparently.app.resources.month_review_no_schedule
+import com.coparently.app.resources.month_review_note
+import com.coparently.app.resources.month_review_paid_by
+import com.coparently.app.resources.month_review_paid_by_you
+import com.coparently.app.resources.month_review_parent_days
+import com.coparently.app.resources.month_review_previous
+import com.coparently.app.resources.month_review_special_days
+import com.coparently.app.resources.month_review_summarize
+import com.coparently.app.resources.month_review_summarize_subtitle
+import com.coparently.app.resources.month_review_summarizing
+import com.coparently.app.resources.month_review_summary_label
+import com.coparently.app.resources.month_review_swaps_agreed
+import com.coparently.app.resources.month_review_swaps_offered
+import com.coparently.app.resources.month_review_title
+import com.coparently.app.resources.month_review_to_even_out
+import com.coparently.app.resources.month_review_total
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.ReaderMoneyText
 import kotlinx.datetime.YearMonth
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -84,7 +110,6 @@ fun MonthReviewScreen(
     val names = rememberParentNames(viewModel.parents.collectAsState().value)
     val summary by viewModel.summary.collectAsState()
     val summaryState by viewModel.summaryState.collectAsState()
-    val locale = LocalConfiguration.current.locales[0]
 
     Scaffold(
         topBar = { MonthReviewTopBar(onNavigateUp) }
@@ -115,7 +140,7 @@ fun MonthReviewScreen(
                         state = summaryState,
                         onSummarize = {
                             viewModel.dismissFailure()
-                            viewModel.summarize(locale.toLanguageTag(), names)
+                            viewModel.summarize(Locale.current.toLanguageTag(), names)
                         }
                     )
                 }
@@ -123,7 +148,7 @@ fun MonthReviewScreen(
                 ActivitySection(review)
                 MoneySection(review.money, names)
                 Text(
-                    text = stringResource(R.string.month_review_note),
+                    text = stringResource(Res.string.month_review_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -141,12 +166,12 @@ fun MonthReviewScreen(
 @Composable
 private fun MonthReviewTopBar(onNavigateUp: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.month_review_title)) },
+        title = { Text(stringResource(Res.string.month_review_title)) },
         navigationIcon = {
             IconButton(onClick = onNavigateUp) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back)
+                    contentDescription = stringResource(Res.string.common_back)
                 )
             }
         }
@@ -156,17 +181,15 @@ private fun MonthReviewTopBar(onNavigateUp: () -> Unit) {
 /** The month's name between the two arrows; the later arrow stops at the current month. */
 @Composable
 private fun MonthSwitcher(month: YearMonth, canGoForward: Boolean, onPrevious: () -> Unit, onNext: () -> Unit) {
-    val locale = LocalConfiguration.current.locales[0]
-    val formatter = remember(locale) { localizedDate("yMMMM", locale) }
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onPrevious) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.month_review_previous)
+                contentDescription = stringResource(Res.string.month_review_previous)
             )
         }
         Text(
-            text = month.firstDay.format(formatter).replaceFirstChar { it.uppercase(locale) },
+            text = ReaderDateText.month(month, "yMMMM").replaceFirstChar { it.uppercase() },
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
             modifier = Modifier
@@ -176,7 +199,7 @@ private fun MonthSwitcher(month: YearMonth, canGoForward: Boolean, onPrevious: (
         IconButton(onClick = onNext, enabled = canGoForward) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.month_review_next)
+                contentDescription = stringResource(Res.string.month_review_next)
             )
         }
     }
@@ -191,7 +214,7 @@ private fun SummarySection(summary: String?, state: AiAssistState, onSummarize: 
     val working = state == AiAssistState.Working
     val failure = (state as? AiAssistState.Failed)?.message
     Column {
-        GroupLabel(stringResource(R.string.month_review_group_summary))
+        GroupLabel(stringResource(Res.string.month_review_group_summary))
         SectionGroup {
             if (summary != null) {
                 Column(
@@ -199,7 +222,7 @@ private fun SummarySection(summary: String?, state: AiAssistState, onSummarize: 
                     verticalArrangement = Arrangement.spacedBy(Spacing.S)
                 ) {
                     Text(
-                        text = stringResource(R.string.month_review_summary_label),
+                        text = stringResource(Res.string.month_review_summary_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -208,11 +231,11 @@ private fun SummarySection(summary: String?, state: AiAssistState, onSummarize: 
             } else {
                 SectionRow(
                     icon = Icons.Default.AutoAwesome,
-                    title = stringResource(R.string.month_review_summarize),
+                    title = stringResource(Res.string.month_review_summarize),
                     supporting = when {
-                        working -> stringResource(R.string.month_review_summarizing)
+                        working -> stringResource(Res.string.month_review_summarizing)
                         failure != null -> failure.asString()
-                        else -> stringResource(R.string.month_review_summarize_subtitle)
+                        else -> stringResource(Res.string.month_review_summarize_subtitle)
                     },
                     supportingColor = if (failure != null) {
                         MaterialTheme.colorScheme.error
@@ -235,12 +258,12 @@ private fun SummarySection(summary: String?, state: AiAssistState, onSummarize: 
 @Composable
 private fun ScheduleSection(review: MonthReview, names: ParentNames) {
     Column {
-        GroupLabel(stringResource(R.string.month_review_group_schedule))
+        GroupLabel(stringResource(Res.string.month_review_group_schedule))
         SectionGroup {
             if (!review.hasSchedule) {
                 SectionRow(
                     icon = Icons.Default.EventBusy,
-                    title = stringResource(R.string.month_review_no_schedule)
+                    title = stringResource(Res.string.month_review_no_schedule)
                 )
                 return@SectionGroup
             }
@@ -249,18 +272,18 @@ private fun ScheduleSection(review: MonthReview, names: ParentNames) {
                 SectionRow(
                     icon = Icons.Default.Person,
                     title = names.labelFor(slot),
-                    trailing = { Value(pluralStringResource(R.plurals.month_review_days, days, days)) }
+                    trailing = { Value(pluralStringResource(Res.plurals.month_review_days, days, days)) }
                 )
             }
             if (review.daysWithoutSchedule > 0) {
                 Divider()
                 SectionRow(
                     icon = Icons.Default.EventBusy,
-                    title = stringResource(R.string.month_review_days_without_schedule),
+                    title = stringResource(Res.string.month_review_days_without_schedule),
                     trailing = {
                         Value(
                             pluralStringResource(
-                                R.plurals.month_review_days,
+                                Res.plurals.month_review_days,
                                 review.daysWithoutSchedule,
                                 review.daysWithoutSchedule
                             )
@@ -271,7 +294,7 @@ private fun ScheduleSection(review: MonthReview, names: ParentNames) {
             Divider()
             SectionRow(
                 icon = Icons.Default.SyncAlt,
-                title = stringResource(R.string.month_review_handovers),
+                title = stringResource(Res.string.month_review_handovers),
                 trailing = { Value(review.handovers.toString()) }
             )
             if (review.specialDays > 0) {
@@ -287,14 +310,14 @@ private fun ScheduleSection(review: MonthReview, names: ParentNames) {
 private fun SpecialDaysRow(review: MonthReview, names: ParentNames) {
     val perParent = review.specialDaysBySlot.entries.sortedBy { it.key }.map { (slot, days) ->
         stringResource(
-            R.string.month_review_parent_days,
+            Res.string.month_review_parent_days,
             names.labelFor(slot),
-            pluralStringResource(R.plurals.month_review_days, days, days)
+            pluralStringResource(Res.plurals.month_review_days, days, days)
         )
     }
     SectionRow(
         icon = Icons.Default.Celebration,
-        title = stringResource(R.string.month_review_special_days),
+        title = stringResource(Res.string.month_review_special_days),
         supporting = perParent.joinToString(separator = " · ").ifEmpty { null },
         trailing = { Value(review.specialDays.toString()) }
     )
@@ -304,23 +327,23 @@ private fun SpecialDaysRow(review: MonthReview, names: ParentNames) {
 @Composable
 private fun ActivitySection(review: MonthReview) {
     Column {
-        GroupLabel(stringResource(R.string.month_review_group_activity))
+        GroupLabel(stringResource(Res.string.month_review_group_activity))
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.SwapHoriz,
-                title = stringResource(R.string.month_review_swaps_offered),
+                title = stringResource(Res.string.month_review_swaps_offered),
                 trailing = { Value(review.swapDaysOffered.toString()) }
             )
             Divider()
             SectionRow(
                 icon = Icons.Default.SwapHoriz,
-                title = stringResource(R.string.month_review_swaps_agreed),
+                title = stringResource(Res.string.month_review_swaps_agreed),
                 trailing = { Value(review.swapDaysAgreed.toString()) }
             )
             Divider()
             SectionRow(
                 icon = Icons.Default.Event,
-                title = stringResource(R.string.month_review_events),
+                title = stringResource(Res.string.month_review_events),
                 trailing = { Value(review.sharedEvents.toString()) }
             )
         }
@@ -334,38 +357,37 @@ private fun ActivitySection(review: MonthReview) {
 @Composable
 private fun MoneySection(money: List<MonthMoney>, names: ParentNames) {
     Column {
-        GroupLabel(stringResource(R.string.month_review_group_money))
+        GroupLabel(stringResource(Res.string.month_review_group_money))
         SectionGroup {
             if (money.isEmpty()) {
                 SectionRow(
                     icon = Icons.Default.Payments,
-                    title = stringResource(R.string.month_review_no_expenses)
+                    title = stringResource(Res.string.month_review_no_expenses)
                 )
                 return@SectionGroup
             }
             money.forEachIndexed { index, entry ->
                 if (index > 0) Divider()
-                val format = remember(entry.currency) { currencyFormat(entry.currency) }
                 val paid = entry.paidByUid.entries.sortedBy { it.key }.map { (uid, amount) ->
                     if (names.isReaderUid(uid)) {
-                        stringResource(R.string.month_review_paid_by_you, format.format(amount))
+                        stringResource(Res.string.month_review_paid_by_you, ReaderMoneyText.amount(amount, entry.currency))
                     } else {
-                        stringResource(R.string.month_review_paid_by, names.labelForUid(uid), format.format(amount))
+                        stringResource(Res.string.month_review_paid_by, names.labelForUid(uid), ReaderMoneyText.amount(amount, entry.currency))
                     }
                 }
                 val settlement = entry.settlement?.let {
                     stringResource(
-                        R.string.month_review_to_even_out,
-                        format.format(it.amount),
+                        Res.string.month_review_to_even_out,
+                        ReaderMoneyText.amount(it.amount, entry.currency),
                         names.labelForUid(it.fromUid),
                         names.labelForUid(it.toUid)
                     )
-                } ?: stringResource(R.string.month_review_even)
+                } ?: stringResource(Res.string.month_review_even)
                 SectionRow(
                     icon = Icons.Default.Payments,
-                    title = stringResource(R.string.month_review_total, entry.currency),
+                    title = stringResource(Res.string.month_review_total, entry.currency),
                     supporting = (paid + settlement).joinToString(separator = "\n"),
-                    trailing = { Value(format.format(entry.total)) },
+                    trailing = { Value(ReaderMoneyText.amount(entry.total, entry.currency)) },
                     stackTrailingAtLargeFont = true
                 )
             }

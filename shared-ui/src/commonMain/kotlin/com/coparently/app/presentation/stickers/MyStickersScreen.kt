@@ -27,8 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.stickers.ParentRoleAnswer
 import com.coparently.app.domain.stickers.Sticker
 import com.coparently.app.presentation.common.EmptyState
@@ -37,6 +35,18 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.sticker_status_delivered
+import com.coparently.app.resources.sticker_status_seen
+import com.coparently.app.resources.sticker_status_sending
+import com.coparently.app.resources.stickers_empty_body
+import com.coparently.app.resources.stickers_empty_title
+import com.coparently.app.resources.stickers_received_heading
+import com.coparently.app.resources.stickers_role_row
+import com.coparently.app.resources.stickers_role_unanswered
+import com.coparently.app.resources.stickers_sent_heading
+import com.coparently.app.resources.stickers_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -68,12 +78,12 @@ fun MyStickersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.stickers_title)) },
+                title = { Text(stringResource(Res.string.stickers_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -127,9 +137,9 @@ private fun StickerShelf(shelf: Shelf, padding: PaddingValues, onEditRole: () ->
             SectionGroup {
                 SectionRow(
                     icon = Icons.Default.Person,
-                    title = stringResource(R.string.stickers_role_row),
+                    title = stringResource(Res.string.stickers_role_row),
                     supporting = role.roleOrNull()?.let { stringResource(StickerText.roleName(it)) }
-                        ?: stringResource(R.string.stickers_role_unanswered),
+                        ?: stringResource(Res.string.stickers_role_unanswered),
                     onClick = onEditRole.takeIf { role != ParentRoleAnswer.Loading }
                 )
             }
@@ -138,18 +148,18 @@ private fun StickerShelf(shelf: Shelf, padding: PaddingValues, onEditRole: () ->
             item {
                 EmptyState(
                     icon = Icons.Default.Favorite,
-                    title = stringResource(R.string.stickers_empty_title),
-                    description = stringResource(R.string.stickers_empty_body),
+                    title = stringResource(Res.string.stickers_empty_title),
+                    description = stringResource(Res.string.stickers_empty_body),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
         if (received.isNotEmpty()) {
-            item { GroupLabel(stringResource(R.string.stickers_received_heading)) }
+            item { GroupLabel(stringResource(Res.string.stickers_received_heading)) }
             items(received, key = { "r_${it.id}" }) { sticker -> ReceivedSticker(sticker, role, shelf.coParentName) }
         }
         if (sent.isNotEmpty()) {
-            item { GroupLabel(stringResource(R.string.stickers_sent_heading)) }
+            item { GroupLabel(stringResource(Res.string.stickers_sent_heading)) }
             items(sent, key = { "s_${it.id}" }) { sticker -> SentSticker(sticker) }
         }
     }
@@ -175,9 +185,9 @@ private fun ReceivedSticker(sticker: Sticker, role: ParentRoleAnswer, coParentNa
 @Composable
 private fun SentSticker(sticker: Sticker) {
     val status = when {
-        sticker.seenAtMillis != null -> R.string.sticker_status_seen
-        sticker.createdAtMillis != null -> R.string.sticker_status_delivered
-        else -> R.string.sticker_status_sending
+        sticker.seenAtMillis != null -> Res.string.sticker_status_seen
+        sticker.createdAtMillis != null -> Res.string.sticker_status_delivered
+        else -> Res.string.sticker_status_sending
     }
     SectionGroup {
         SectionRow(
