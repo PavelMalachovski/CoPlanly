@@ -2835,9 +2835,30 @@ bytes are identical on Android):
   counts 0–200, and check 7 of `check-invariants.js` refuses the differences offline. **One stands**:
   `%%` beside arguments in the three `expenses_split_shares_*` keys, which `String.format` prints as
   `%` and CMP as `%%`, and which no spelling fixes; they stay `R.string`-only and need a wording both
-  read alike before `SplitShares.kt` moves (Task 11). Slice 9b moves the theme, `presentation/common/`,
-  the fonts and `UiText`. Not yet run anywhere: the CMP Gradle plugin on this build, `Res` on Android
-  and iOS, and the parity tests — CI's first run.
+  read alike before `SplitShares.kt` moves (Task 11). (The branch's full CI run passed with it; the
+  parity tests read Compose Multiplatform's strings through their own context fallback, because
+  Robolectric installs no content provider from the manifest — see slice 9b.)
+- **The theme and the design system's components** — **slice 9b built (phase 2, Task 9, November
+  2026), CI's first run pending**: `presentation/theme/` moved whole to `:shared-ui`'s
+  `commonMain`, packages unchanged, with an `expect` and its Android code for each thing only
+  Android answers (the system bars, the system contrast level, reduced motion, the adaptive
+  dimensions) and an iPhone `actual` for each (nothing, standard contrast, Reduce Motion, the
+  window and VoiceOver). The four Onest files are Compose Multiplatform resources
+  (`composeResources/font/`, `Font(Res.font.…)`): on Android the same bytes from the APK's assets
+  through the same `Font.Builder` with the same weights, so the screenshot baselines should not
+  move, which the `screenshots` job's verify is the check of. `Typography` is the scale without a
+  typeface (the widget reads it), set in Onest in composition. The theme's six JVM tests moved with
+  it (`androidUnitTest`, run by the `shared` job). From `presentation/common/`, the primitives
+  CLAUDE.md's design refresh names and their helpers (`DesignSystem`, `StickyActionBar`,
+  `InlineBanner`, `ErrorState`, `ConfirmationDialog`, `ExpandableDetails`, `ConnectivityBanner`, …,
+  seventeen files) moved, their labels read with Compose Multiplatform's `stringResource`; what
+  stays and why is CLAUDE.md's "Where a `presentation/theme/…` … path lives". Every Robolectric test
+  now runs `RobolectricTestApplication`, which hands Compose Multiplatform's reader the context its
+  content provider would. `PerAppLocaleTest` checks that Compose's `Locale.current`, which those
+  labels' language follows, follows the app's language too; on Android 12 and older that rests on
+  AppCompat setting the default locale, unproven until the API 26 and 30 legs run. **Left for slice
+  9c**: `UiText` in its Compose Multiplatform form (every ViewModel that builds one from `R.string`
+  changes), with `ErrorText` and `UiState`.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

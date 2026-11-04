@@ -35,7 +35,9 @@ id, so REL-1's console half has to be finished before anything is uploaded.
 Second pass over the six main screens, from a Claude Design audit. It builds on (does not
 replace) the July 2026 overhaul below — those invariants still hold except where noted here.
 
-1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt`: `SectionGroup`
+1. **Shared UI primitives** live in `presentation/common/DesignSystem.kt` (in `:shared-ui`'s
+   `commonMain` since MON-24 phase 2, with the theme and most of this item's components: see
+   "Where a `presentation/theme/…` … path lives"): `SectionGroup`
    (one tonal container per run of rows; call its scope's `Divider()` between rows — this line
    used to say they were inserted for you, and they are not), `SectionRow` (icon,
    title, status/value, **at most one** trailing control), `GroupLabel`, `PillChip`,
@@ -540,7 +542,11 @@ When touching the UI, keep these invariants:
    `org.jetbrains.kotlin.plugin.compose` at the Kotlin version; its Android artifacts ask for
    androidx Compose runtime and foundation 1.9.4, so the app's Compose resolves one patch above the
    BOM's 1.9.3, while material3 stays 1.4.0, which CMP material3 1.9.0 asks for; not 1.10, which
-   lifts Compose to 1.10 past the BOM, the reason Koin waits at 4.1.1 below; no multiplatform
+   lifts Compose to 1.10 past the BOM, the reason Koin waits at 4.1.1 below; the theme and the
+   common components there since slice 9b add CMP animation, foundation, ui and material3, CMP's
+   `material3-window-size-class` 1.9.0 and `org.jetbrains.compose.material:material-icons-extended`
+   1.7.3, the last CMP release of the extended icons — on Android each is the androidx artifact the
+   BOM already names, material3 and window-size-class 1.4.0, icons 1.7.8; no multiplatform
    Lifecycle, Navigation, Coil 3 or kizitonwose yet — each arrives with the task that first needs
    it in common code), Room 2.7.2 (2.6.x breaks on
    Kotlin 2.x metadata), Room on **KSP2** (KSP `2.3.11`; kapt is gone) — **Room for Kotlin
@@ -1055,10 +1061,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   "identical" from "never written". **A backticked test name
   in commonTest may not contain a comma or parentheses**: the JVM accepts them and Kotlin/Native
   refuses them (`Name contains illegal characters`), so write "a - b", not "a, b". `build-test` runs the
-  same tests once more, because Kover merges `:shared` and `:shared-data` into the app's coverage
-  report. `shared` also compiles `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with
-  `Res`; the module has no tests of its own yet (the strings' parity tests run in the app, in
-  `build-test`). **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
+  same tests once more, because Kover merges `:shared`, `:shared-data` and `:shared-ui` into the
+  app's coverage report. `shared` also runs `:shared-ui:testDebugUnitTest` — the theme's JVM tests,
+  which moved with it to `shared-ui/src/androidUnitTest/` (slice 9b) — and compiles
+  `:shared-ui:compileKotlinIosSimulatorArm64`, its iOS klib with `Res`, the theme and the common
+  components; the strings' parity tests run in the app, in `build-test`. **`shared-ios`** runs `:shared:iosSimulatorArm64Test`,
   `:shared-data:iosSimulatorArm64Test` and `:shared-ui:linkDebugFrameworkIosSimulatorArm64` (the
   iPhone app's one framework, `Shared`, static, exporting `:shared` and `:shared-data`, which make
   none of their own since Task 9)
@@ -1335,7 +1342,10 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   OFL 1.1 in `third_party/fonts/onest/` and Settings → Data sources and licences). It replaced
   Poppins, which has no Cyrillic, so Russian and Ukrainian fell back to Roboto mid-line. Any
   replacement must cover Czech and German Latin, Russian and Ukrainian Cyrillic (і ї є ґ ʼ), ₴
-  and №. Check that with fontTools against the file, not against a specimen page.
+  and №. Check that with fontTools against the file, not against a specimen page. The files are
+  Compose Multiplatform resources in `shared-ui/src/commonMain/composeResources/font/` since MON-24
+  phase 2 (they were `app/src/main/res/font/`), read with `Font(Res.font.…)`, so both apps draw
+  the same ones; see "Where a `presentation/theme/…` … path lives".
 - **Parent colours identify a person, not a role.** The app never shows the words "Mom" or
   "Dad": every parent label goes through `presentation/common/ParentLabels.kt` and renders
   that person's name. **One exception, by owner decision (October 2026): a sticker's own
@@ -1557,8 +1567,11 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              the UI both apps will run. So far the strings: composeResources/values*/ (every
              string, plural and string array, five locales), from which Res
              (com.coparently.app.resources) is generated, and from which the app generates its
-             R.string copy. The theme, common components, ViewModels and screens follow. It makes
-             the iPhone's one framework, Shared (static, exporting shared/ and shared-data/)
+             R.string copy; the Onest fonts (composeResources/font/); presentation/theme/ (slice
+             9b, its Android-only halves in androidMain behind expects); and the common
+             components of presentation/common/ that need no ViewModel and no Android API (the
+             design system's primitives). ViewModels and screens follow. It makes the iPhone's
+             one framework, Shared (static, exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
              except the phase-1 stay list below (one file), which is still in app/
@@ -1569,7 +1582,8 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature + ViewModels + theme (their strings in shared-ui/)
+presentation/ — Compose screens per feature + ViewModels (their strings, the theme and the
+             design system's components in shared-ui/)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -1882,6 +1896,52 @@ than `EncryptedPreferences`, a `Context` directory, `CrashlyticsManager`, `Analy
 `BuildConfig`,
 and logs with
 `logger.e/w/i/d(TAG, …)`, never `android.util.Log`.
+
+**Where a `presentation/theme/…` or `presentation/common/…` path in this file lives** (MON-24
+phase 2, Task 9, slice 9b, November 2026). The theme moved whole to
+`shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/theme/`, package unchanged, with
+its tests in `shared-ui/src/androidUnitTest/` (JVM, as they were). What only Android can answer is
+an `expect` in the common file and the code it was in `androidMain`, beside an iPhone `actual` in
+`iosMain`: the system bars (`Theme.android.kt`; nothing on the iPhone until its view controller,
+phase 3), `rememberSystemContrastLevel` (`ContrastLevel.android.kt`; standard on the iPhone until
+phase 3 decides what "Increase Contrast" means), `rememberReducedMotion` (`Motion.android.kt`; Reduce
+Motion on the iPhone) and `adaptiveDimensions` (`AdaptiveDimensions.android.kt`; the window,
+VoiceOver and the density's font scale on the iPhone, both through the common `adaptedDimensions`).
+**The fonts are Compose Multiplatform resources**: the four Onest files are in
+`shared-ui/src/commonMain/composeResources/font/` (no `res/font` any more) and `Type.kt` reads them
+with `Font(Res.font.…)` in composition, which on Android opens the same file from the APK's assets
+through the same `Font.Builder`. So `Typography` is the type scale **without a typeface** (the
+widget reads its sizes and weights), and `CoPlanlyTheme` hands `MaterialTheme` that scale set in
+Onest (`rememberAppTypography`); don't put a `fontFamily` back on the plain value, and don't read
+`Typography` in composition instead of `MaterialTheme.typography`. `ParentColorChoice.label` is a
+`StringResource`, read with Compose Multiplatform's `stringResource`; `LightColorScheme` and
+`DarkColorScheme` are public for the widget. From `presentation/common/`, the design system's
+primitives and the helpers they draw with moved the same way: `DesignSystem.kt` (its two previews
+stay in the app, `DesignSystemPreviews.kt`), `AddItemButton`, `AnswerButtons`, `AppMessages`,
+`BannerTone`, `ConfirmationDialog`, `ConnectivityBanner`, `DashedBorder`, `DatePickerField`,
+`ErrorState`, `ExpandableDetails`, `FabScrollVisibility`, `InlineBanner`, `InviteCodeText`,
+`LargeFontLayout`, `StickyActionBar` and `animations/`. Their own labels are `Res.string`, and
+`GroupLabel` uppercases with Compose's `toUpperCase(Locale.current)`, which on Android is the
+`Locale.getDefault()` it used. Still in the app, each for its reason: the sources and ViewModels
+(`ParentsSource`, `FamilyKindSource`, `FamilyMembersSource`, `CoParentOnScreen`, the `*ViewModel`s:
+Koin and the lifecycle, Task 10); Coil's users (`AccountAvatar`, `PhotoStrip`, `ZoomableImage`,
+`SignedInAsRow`, which draws an avatar); the Android requesters and handlers
+(`NotificationPermission`, `MicrophonePermission`, `SharedFileViewer`, `SensitiveClipboard`,
+`OpenedFile`, `PrivacyPolicyLink`, `TermsOfServiceLink`; Task 11's platform interfaces);
+`DiscardGuard` (`PredictiveBackHandler`); `FamilySwitcher` (`koinViewModel`); `TwoPane`
+(`LocalConfiguration`, Task 12 with the navigation); `ListSkeleton` (`components/SkeletonBox`); the
+`java.time` and `java.util.Locale` users (`AnswerByField`, `HolidayNames`, `MonthPaging`,
+`PickerDates`, `Today`, `VaccinationListEditor`); the `@StringRes` label helpers (`BloodTypeLabel`,
+`EventTypeLabel`, `PetSpeciesLabel`, `CountryPicker`) and the components that read them
+(`MedicalProfileEditor`, `FamilyMemberChips`); `UiText` with `ErrorText` and `UiState`, which
+move with `UiText`'s Compose Multiplatform form (its own slice, 9c); and, not moved yet though
+nothing Android holds them, the state the sources and ViewModels share (`Loadable`, `FormDraft`,
+`NamedParent`, `PhotoOwner`, `ParentLabels`, `ParentNames`: Task 10) and `RecordPlaceMark` (with
+the screens that draw it, Task 11). **A Robolectric test runs `RobolectricTestApplication`**
+(`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
+provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
+`AndroidContextProvider` hands it on a device; without it every `stringResource(Res.string.…)` a
+test composes throws "Android context is not initialized".
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -4008,6 +4068,15 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   (`expenses_split_shares_*`), which `String.format` prints as `%` and CMP as `%%`, and which no
   spelling fixes; those keys are read through `R.string` only, and need a wording both read alike
   before `SplitShares.kt` moves to `shared-ui` (Task 11).
+- **Which reader a composable uses follows where it lives.** Code in `:shared-ui` (the theme's
+  colour names, the common components' own labels, since slice 9b) reads
+  `org.jetbrains.compose.resources.stringResource(Res.string.…)`; code still in the app reads
+  `androidx.compose.ui.res.stringResource(R.string.…)`, and one file may import both (the overloads
+  differ by type). They pick the language differently: `R.string` from the Activity's
+  configuration, which AppCompat's per-app choice sets; Compose Multiplatform from Compose's
+  `Locale.current`, the process's default locale. `PerAppLocaleTest` holds the two to the same
+  language on every emulator leg, and `DEVICE-CHECKLIST.md` §3.6 asks for it on Android 12 or
+  older; don't make a moved composable take a `Context` to read `R.string` instead.
 
 - **Language selection**: device locale by default, plus a manual per-app override — the
   "Language" card in Settings (`presentation/settings/AppLanguage.kt`,

@@ -583,6 +583,25 @@ both parity tests and Steps 1–3; Steps 4–6 are slice 9b.
   `tools/check-invariants.js` name them, and they need a new wording before Task 11 moves
   `SplitShares.kt`.
 
+**Slice 9b notes (November 2026).** Step 4, in three commits after a test-only one:
+- Every Robolectric test runs `RobolectricTestApplication` (`app/src/test/.../testing/`), which
+  hands Compose Multiplatform's Android reader the context its `AndroidContextProvider` (a content
+  provider) records on a device: Robolectric installs no provider from the manifest. Without it
+  each `stringResource(Res.string.…)` a test composes throws.
+- `presentation/theme/` moved whole. The Android-only parts are `expect`s with the code they were
+  in `androidMain` (`SystemBarsAppearance`, `rememberSystemContrastLevel`, `rememberReducedMotion`,
+  `adaptiveDimensions`), not CompositionLocals: none needs anything from the app, and each has an
+  iPhone `actual`. The fonts are `Font(Res.font.…)`; `Typography` lost its typeface (the widget
+  reads it outside composition) and the theme sets it in composition. The theme's tests moved to
+  `shared-ui/src/androidUnitTest/`, which keeps `colorSchemeFor` and `ParentToneMath` internal.
+  `ParentColorChoice.labelRes` became `label: StringResource`.
+- Seventeen files of `presentation/common/` moved: the design system's primitives and their
+  helpers. CLAUDE.md's "Where a `presentation/theme/…` … path lives" lists what stayed and why.
+- Material icons: `org.jetbrains.compose.material:material-icons-extended` 1.7.3; the window size
+  class: CMP's `material3-window-size-class` 1.9.0.
+- Not done: `UiText` (slice 9c). Steps 5–6 wait for it; screenshots must verify unchanged on 9b's
+  CI run already.
+
 - [ ] **Step 1: Write `StringsParityTest`** (Robolectric). For every key in every locale, the
   value from Android resources equals CMP's `getString` for that locale, with the same arguments.
   Use `"A"`/`7` per position and a key with `%%`.
