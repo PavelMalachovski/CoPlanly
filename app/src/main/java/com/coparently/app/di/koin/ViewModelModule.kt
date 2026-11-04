@@ -7,8 +7,6 @@ import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
 import com.coparently.app.presentation.contacts.ContactsViewModel
 import com.coparently.app.presentation.documents.FamilyDocumentsViewModel
-import com.coparently.app.presentation.expenses.ExpenseViewModel
-import com.coparently.app.presentation.expenses.SettleUpViewModel
 import com.coparently.app.presentation.export.ExportViewModel
 import com.coparently.app.presentation.friends.FriendCalendarViewModel
 import com.coparently.app.presentation.friends.FriendViewModel
@@ -54,8 +52,6 @@ val viewModelModule = module {
     viewModelOf(::TelemetryConsentViewModel)
     viewModelOf(::ContactsViewModel)
     viewModelOf(::FamilyDocumentsViewModel)
-    viewModelOf(::ExpenseViewModel)
-    viewModelOf(::SettleUpViewModel)
     viewModelOf(::ExportViewModel)
     viewModelOf(::FriendCalendarViewModel)
     viewModelOf(::FriendViewModel)

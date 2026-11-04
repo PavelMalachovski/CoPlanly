@@ -23,6 +23,7 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
+import com.coparently.app.domain.receipts.ReceiptTextRecognizer
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.domain.school.SchoolImportWording
 import kotlinx.coroutines.flow.Flow
@@ -181,6 +182,16 @@ internal object NoRecordPhotoStorage : RecordPhotoStorage {
 
     override suspend fun delete(reference: String, recordFamilyId: String?): Unit =
         throw IOException(UNAVAILABLE)
+}
+
+/**
+ * No on-device text recognition yet (ML Kit's is Android's; the iPhone's comes with its camera,
+ * phase 4): a receipt's text is not read, so the expense form says the scan found nothing and keeps
+ * the photo, as it does when recognition fails on Android (`ExpenseViewModel.scanReceipt`, slice
+ * 10d). Nothing is sent anywhere instead (item 10 of "Things that are easy to get wrong").
+ */
+internal object NoReceiptText : ReceiptTextRecognizer {
+    override suspend fun recognize(imageUri: String): List<String> = throw IOException(UNAVAILABLE)
 }
 
 private const val UNAVAILABLE = "Not available in this iPhone build yet"

@@ -2943,7 +2943,11 @@ bytes are identical on Android):
   edge. **Slice 10d built, CI pending**: the family (`familyUiModule`) — the Family tab's hub with
   the month's money it shares with Home (`MonthMoney` and the bundle it is computed from, split out
   of Home's ViewModel), Earlier families (its last day now a kotlinx-datetime date) and "Records
-  without a family". Expenses, settings to sync and the rest follow.
+  without a family"; then expenses (`expensesUiModule`) — the Expenses screen's and form's ViewModel
+  (its months now kotlinx-datetime, which the screen converts at its edge) and the settle-up
+  dialog's, split out of the dialog. On the iPhone, `platformDataModule` now also stands in for the
+  receipt's on-device text recognition (nothing read, nothing sent). Settings to sync and the rest
+  follow.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

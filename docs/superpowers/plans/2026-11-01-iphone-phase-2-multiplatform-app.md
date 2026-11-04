@@ -805,6 +805,22 @@ Then the requests:
   names lost a comma); `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK) to
   androidUnitTest, with a copy of the app's `testFamilyViewSource` in `data/family/`.
 
+Then expenses:
+- `ExpenseViewModel` and `SettleUpViewModel` (with `SettleUpAsk`, `PendingSettleUp` and `SettleUpSend`,
+  split out of `SettleUpDialog.kt` into `expenses/SettleUpViewModel.kt`) in `expensesUiModule`;
+  `toggling` out of `FamilyMemberChips.kt` into `common/MemberToggling.kt`. `Log` → `logger` (tags
+  kept), `UUID` → `Uuid`, `YearMonth.now()` → `Clock.System.todayIn(…).yearMonth`,
+  `minusMonths(1)`/`plusMonths(1)` → `minusMonth()`/`plusMonth()`, the month filter
+  `it.date.yearMonth == month`. Nothing about money changed.
+- Screen edges: `ExpenseScreen` (`toJavaYearMonth()` for `monthPagingTransition` and the month label;
+  the two `toKotlinYearMonth()` calls before the payments went), `SettleUpDialog`
+  (`pending.month.toJavaYearMonth()` to format).
+- iPhone: `platformDataModule` binds `NoReceiptText` (`ReceiptTextRecognizer`, a data seam beside
+  `NoRecordPhotoStorage`): a scan throws `IOException`, which the form reads as "nothing found".
+  A JVM `verify()` of `dataModules + uiModules` with the iPhone's bindings resolves, and fails without
+  it.
+- Tests: the four `ExpenseViewModel*Test`s (MockK) to androidUnitTest, location only.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

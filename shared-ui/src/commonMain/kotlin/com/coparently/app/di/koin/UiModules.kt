@@ -22,6 +22,8 @@ import com.coparently.app.presentation.custody.CustodySetupViewModel
 import com.coparently.app.presentation.custody.SeasonalScheduleViewModel
 import com.coparently.app.presentation.event.EventOwnerViewModel
 import com.coparently.app.presentation.event.EventViewModel
+import com.coparently.app.presentation.expenses.ExpenseViewModel
+import com.coparently.app.presentation.expenses.SettleUpViewModel
 import com.coparently.app.presentation.family.EarlierFamiliesViewModel
 import com.coparently.app.presentation.family.FamilyViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsViewModel
@@ -135,6 +137,18 @@ val familyUiModule: Module = module {
 }
 
 /**
+ * Expenses (MON-24 phase 2, Task 10): the Expenses screen and the Add Expense form — the family on
+ * screen's expenses, the month's figures, the split and its proposals, a receipt's photo and its
+ * on-device scan — and the settle-up dialog's card and IBAN. The receipt's photo and its text go
+ * through the domain's `RecordPhotoStorage` and `ReceiptTextRecognizer`, which the app binds on
+ * Android and [platformDataModule] stands in for on the iPhone.
+ */
+val expensesUiModule: Module = module {
+    viewModelOf(::ExpenseViewModel)
+    viewModelOf(::SettleUpViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -147,7 +161,8 @@ val uiModules: List<Module> = listOf(
     eventUiModule,
     custodyUiModule,
     requestsUiModule,
-    familyUiModule
+    familyUiModule,
+    expensesUiModule
 )
 
 /**

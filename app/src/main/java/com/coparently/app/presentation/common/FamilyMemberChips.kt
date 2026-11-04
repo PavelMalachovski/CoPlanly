@@ -119,12 +119,3 @@ private fun MemberChips(
         )
     }
 }
-
-/**
- * [ref] added to this list, or removed when it is already there.
- *
- * The toggle every caller of [FamilyMemberChips] needs, in one place so none of them reaches for
- * a `MutableList` and mutates state Compose is holding.
- */
-fun List<FamilyMemberRef>.toggling(ref: FamilyMemberRef): List<FamilyMemberRef> =
-    if (contains(ref)) filterNot { it == ref } else this + ref

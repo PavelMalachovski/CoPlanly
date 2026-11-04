@@ -1,11 +1,13 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.expenses
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.FamilySplit
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -56,9 +58,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDate
-import java.time.YearMonth
-import java.util.UUID
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.plusMonth
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearMonth
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** Keeps derived flows warm across brief unsubscriptions (config changes). */
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -262,7 +270,7 @@ class ExpenseViewModel(
                 // that — it belongs to the Add Expense form — so a refused answer left the
                 // banner sitting there as if the tap had done nothing. A silent refusal is the
                 // exact outcome this whole family of features exists to remove.
-                Log.w(TAG, "The split proposal could not be answered", e)
+                logger.w(TAG, "The split proposal could not be answered", e)
                 _ratioAnswerFailed.trySend(Unit)
             }
         }
@@ -281,7 +289,7 @@ class ExpenseViewModel(
     fun withdrawRatioProposal(shown: FamilyRatioProposal) {
         viewModelScope.launch {
             familySettingsRepository.withdrawProposal(shown.familyId).onFailure { e ->
-                Log.w(TAG, "The split proposal could not be withdrawn", e)
+                logger.w(TAG, "The split proposal could not be withdrawn", e)
                 _ratioAnswerFailed.trySend(Unit)
             }
         }
@@ -360,17 +368,17 @@ class ExpenseViewModel(
      * screen pages it back and forth so expenses dated in other months (e.g. an older receipt)
      * are reachable instead of silently missing from the current-month-only view.
      */
-    private val _selectedMonth = MutableStateFlow(YearMonth.now())
+    private val _selectedMonth = MutableStateFlow(currentMonth())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
 
     /** Shows the month before the one currently selected. */
     fun showPreviousMonth() {
-        _selectedMonth.value = _selectedMonth.value.minusMonths(1)
+        _selectedMonth.value = _selectedMonth.value.minusMonth()
     }
 
     /** Shows the month after the one currently selected. */
     fun showNextMonth() {
-        _selectedMonth.value = _selectedMonth.value.plusMonths(1)
+        _selectedMonth.value = _selectedMonth.value.plusMonth()
     }
 
     /** The children and pets this family cares for, for the filter strip. */
@@ -429,8 +437,7 @@ class ExpenseViewModel(
         roleByUid,
         memberFilter
     ) { (all, view), month, userId, roles, members ->
-        // The screen pages java.time months (the calendar's paging); an expense's date is kotlinx.
-        val ofMonth = all.filter { YearMonth.from(it.date.toJavaLocalDate()) == month }
+        val ofMonth = all.filter { it.date.yearMonth == month }
             .filter { view.shows(it.familyId, it.createdByFirebaseUid) }
             // An untagged expense appears only in the unfiltered month. Reading "names nobody"
             // as "names everybody" would put the family's whole grocery bill under every child's
@@ -451,7 +458,7 @@ class ExpenseViewModel(
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-        MonthOfExpenses(YearMonth.now(), emptyList(), emptyList())
+        MonthOfExpenses(currentMonth(), emptyList(), emptyList())
     )
 
     /** Expenses dated within [selectedMonth], newest first. */
@@ -594,7 +601,7 @@ class ExpenseViewModel(
             // One answer for the whole save, read before the slow part — see [familyOfNewExpense].
             val family = familyOfNewExpense(userId)
 
-            val expenseId = UUID.randomUUID().toString()
+            val expenseId = Uuid.random().toString()
             val (receiptUrl, warning) = receiptImageUri
                 ?.let { uploadNewReceipt(expenseId, family.familyId, it) }
                 ?: (null to null)
@@ -652,7 +659,7 @@ class ExpenseViewModel(
         // Any upload failure (IO, storage, decode) must not lose the expense
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
+        logger.e("CoPlanlyUpload", "Receipt upload failed", e)
         null to UiText.Res(Res.string.expense_warning_receipt_upload_failed)
     }
 
@@ -698,7 +705,7 @@ class ExpenseViewModel(
                 } catch (
                     @Suppress("TooGenericExceptionCaught") e: Exception
                 ) {
-                    android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
+                    logger.e("CoPlanlyUpload", "Receipt upload failed", e)
                     warning = UiText.Res(Res.string.expense_warning_new_receipt_upload_failed)
                     original.receiptUrl
                 }
@@ -752,7 +759,7 @@ class ExpenseViewModel(
                 // Any recognition failure (IO, decode, model load) must not break the form
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                android.util.Log.e("CoPlanlyReceiptScan", "Receipt OCR failed", e)
+                logger.e("CoPlanlyReceiptScan", "Receipt OCR failed", e)
                 ReceiptScanState.Failed
             }
         }
@@ -827,6 +834,9 @@ class ExpenseViewModel(
 
     private companion object {
         const val TAG = "ExpenseViewModel"
+
+        /** This month in the phone's zone, what `java.time.YearMonth.now()` answered. */
+        fun currentMonth(): YearMonth = Clock.System.todayIn(TimeZone.currentSystemDefault()).yearMonth
     }
 }
 

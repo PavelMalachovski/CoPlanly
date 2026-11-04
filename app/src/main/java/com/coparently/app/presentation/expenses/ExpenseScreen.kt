@@ -86,7 +86,7 @@ import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toKotlinYearMonth
+import kotlinx.datetime.toJavaYearMonth
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -347,7 +347,12 @@ fun ExpenseScreen(
                 // instead, which is the half a parent actually sees.
                 AnimatedContent(
                     targetState = monthOfExpenses,
-                    transitionSpec = { monthPagingTransition(initialState.month, targetState.month) },
+                    transitionSpec = {
+                        monthPagingTransition(
+                            initialState.month.toJavaYearMonth(),
+                            targetState.month.toJavaYearMonth()
+                        )
+                    },
                     label = "expenses-month",
                     modifier = Modifier.weight(1f)
                 ) { shownMonth ->
@@ -364,7 +369,7 @@ fun ExpenseScreen(
                     ) {
                         val balancesByCurrency = shownMonth.balances
                         val monthNavigation = MonthNavigation(
-                            label = rememberMonthLabel(shownMonth.month),
+                            label = rememberMonthLabel(shownMonth.month.toJavaYearMonth()),
                             expenseCount = monthExpenses.size,
                             onPrevious = viewModel::showPreviousMonth,
                             onNext = viewModel::showNextMonth
@@ -427,7 +432,7 @@ fun ExpenseScreen(
                                     val recorded = paymentsViewModel.paymentFor(
                                         payments,
                                         PaymentKind.EXPENSES,
-                                        shownMonth.month.toKotlinYearMonth(),
+                                        shownMonth.month,
                                         currencyBalance.currency
                                     )
                                     ExpenseSummaryHeader(
@@ -455,7 +460,7 @@ fun ExpenseScreen(
                                                     paymentsViewModel.markPaid(
                                                         family,
                                                         PaymentKind.EXPENSES,
-                                                        shownMonth.month.toKotlinYearMonth(),
+                                                        shownMonth.month,
                                                         currencyBalance.currency,
                                                         owed
                                                     )

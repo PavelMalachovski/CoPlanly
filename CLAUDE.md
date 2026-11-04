@@ -1598,7 +1598,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
              group by group (so far common/'s, chat's, the calendar's, the events', custody's, the
-             requests' and the family's), with
+             requests', the family's and
+             expenses'), with
              their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -1840,9 +1841,9 @@ app binds the four seams to its classes. Still in the app from `data/repository/
 (WorkManager). Task 8h, the request clocks (item 42) and what waited on them: in `commonMain`, from
 `data/requests/`, `RequestTime` (its zone kotlinx-datetime's `TimeZone.currentSystemDefault()`,
 which on Android is `ZoneId.systemDefault()` itself and is read on every call; `RequestClocksTest`
-holds the zone to `ZoneId.systemDefault()` on every call, as the system zone changes, and the app's
-tests build a fixed clock through `RequestTime.of`, the primary constructor staying `internal` for
-`KoinGraphTest`), `RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a
+holds the zone to `ZoneId.systemDefault()` on every call, as the system zone changes, and a test in
+another module builds a fixed clock through `RequestTime.of` — today `RequestsSourceTest`, in
+`:shared-ui` since slice 10c — the primary constructor staying `internal` for `KoinGraphTest`), `RequestClocks`, `RequestClockActions`, `RequestClockKeeper` (its in-flight set a
 compare-and-set over an immutable set where it took a JVM lock; the sweep's bound, its
 `NonCancellable` tail and everything else unchanged), `RequestClockSteps` and `RequestRecords`, and
 from `data/family/`, `OtherFamiliesSignals` (its "today" and "now" from `kotlin.time`'s system
@@ -2034,8 +2035,9 @@ back with `toKotlinYearMonth()`/`toKotlinLocalDate()`, and `MonthView` and `DayW
 `CustodyHelper` their `java.time` day as `toKotlinLocalDate()` (`MiniMonth` did too, until 10c gave
 it the model's kotlinx days). The grid's other helpers
 (`queryRangeFor`, `DayCellFills`, `OpeningHour`, `SwapSelection`, …) stay with the screens, because
-no ViewModel reads them (`MiniMonthModel` and `eventsByDay` did not, and moved with the requests in
-10c). `CalendarSelectionTest` runs in `commonTest`; the two
+no ViewModel reads them (`MiniMonthModel` moved with the requests in 10c, because
+`ChangeRequestViewModel` builds the inbox's mini months, and `eventsByDay` with it, because
+`MiniMonthModel` reads it). `CalendarSelectionTest` runs in `commonTest`; the two
 ViewModel tests (MockK) in `androidUnitTest`, where they keep `java.time` as their oracle. Then **the
 events**: `EventViewModel` (the new-event draft and the custom event types in `SecurePreferences`,
 under the same keys; the draft written on `Dispatchers.IO`, the common `kotlinx.coroutines.IO`;
@@ -2095,6 +2097,21 @@ there). They are in `familyUiModule`, `MonthSpendDependencies` a `factory` as it
 `presentationModule`. `EarlierFamiliesTest` and `MonthMoneyTest` run in `commonTest` (kotlinx-datetime
 literals; four names lost a comma), `FamilyViewModelTest` and `UnassignedRecordsViewModelTest` (MockK)
 in `androidUnitTest`, beside a copy of the app's `testFamilyViewSource`.
+Then **expenses**: `ExpenseViewModel` (a new expense's id from `Uuid`, its log lines — the
+`CoPlanlyUpload` and `CoPlanlyReceiptScan` tags included — through `logger`; `selectedMonth` and
+`MonthOfExpenses.month` kotlinx-datetime `YearMonth`s, this month from `Clock.System.todayIn` in the
+system zone, what `YearMonth.now()` read, and an expense's month `date.yearMonth`; every amount, share,
+`splitBasisPoints` snapshot and `splitBetween` decided as before) and `SettleUpViewModel` with
+`SettleUpAsk`, `PendingSettleUp` (its month a kotlinx `YearMonth` too) and `SettleUpSend`, split out of
+`SettleUpDialog.kt`, whose dialog stays with the screens, in `expensesUiModule`; the member filter's
+`toggling` left `FamilyMemberChips.kt` for `common/MemberToggling.kt`. The screens convert at their
+edge: `ExpenseScreen` hands `monthPagingTransition` and its month label `toJavaYearMonth()`, and
+the payments' calls and `PendingSettleUp` take the month as it is (they converted it with
+`toKotlinYearMonth()` before); `SettleUpDialog` formats `pending.month.toJavaYearMonth()`. The
+receipt's on-device text goes through the domain's `ReceiptTextRecognizer`, which the iPhone's
+`platformDataModule` stands in for with `NoReceiptText` (every scan an `IOException`, so the form says
+it found nothing and keeps the photo; nothing is sent anywhere, item 10). The four
+`ExpenseViewModel` tests (MockK) run in `androidUnitTest`, unchanged but for their location.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -2106,9 +2123,10 @@ in `shared-data/` `EventDocument`
 (the events and revisions wire contracts, in `shared-data`'s `wire/` since Task 8j and so compiled
 by the app's tests too, and `:shared-ui`'s `ChatEventCardViewModelTest`, since Task 10;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
-(`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in `:shared-ui` since slice 10c; `minuteTicks` beside it is
-public without the marker, because its caller, `AnswerByField`, is presentation code that stays in
-another module and so it never becomes `internal` again, as `governing`), and
+(`ReminderWorker`), `RequestTime.of` (its one caller `RequestsSourceTest`, in `:shared-ui` since
+slice 10c; `minuteTicks` beside it is public without the marker, because its caller,
+`AnswerByField`, is presentation code that stays in another module and so it never becomes
+`internal` again, as `governing`), and
 `ChatMappers`' entity and document mappers (the R8 probe and the messages wire contract; the mark
 mappers are `internal` again since the other families' signals moved, Task 8h, and the export's
 reader moved in Task 8i), `SchoolConnectionCodec` (the app's `GsonParityTest` and
