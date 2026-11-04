@@ -1,7 +1,43 @@
 package com.coparently.app.domain.model
 
-import androidx.annotation.StringRes
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_template_acknowledge_content
+import com.coparently.app.resources.chat_template_acknowledge_title
+import com.coparently.app.resources.chat_template_category_expenses
+import com.coparently.app.resources.chat_template_category_handover
+import com.coparently.app.resources.chat_template_category_health
+import com.coparently.app.resources.chat_template_category_holidays
+import com.coparently.app.resources.chat_template_category_replies
+import com.coparently.app.resources.chat_template_category_school
+import com.coparently.app.resources.chat_template_child_sick_content
+import com.coparently.app.resources.chat_template_child_sick_title
+import com.coparently.app.resources.chat_template_confirm_agreement_content
+import com.coparently.app.resources.chat_template_confirm_agreement_title
+import com.coparently.app.resources.chat_template_doctor_visit_content
+import com.coparently.app.resources.chat_template_doctor_visit_title
+import com.coparently.app.resources.chat_template_expense_share_content
+import com.coparently.app.resources.chat_template_expense_share_title
+import com.coparently.app.resources.chat_template_handover_confirm_content
+import com.coparently.app.resources.chat_template_handover_confirm_title
+import com.coparently.app.resources.chat_template_holiday_plan_content
+import com.coparently.app.resources.chat_template_holiday_plan_title
+import com.coparently.app.resources.chat_template_packing_content
+import com.coparently.app.resources.chat_template_packing_title
+import com.coparently.app.resources.chat_template_parent_teacher_meeting_content
+import com.coparently.app.resources.chat_template_parent_teacher_meeting_title
+import com.coparently.app.resources.chat_template_pickup_delay_content
+import com.coparently.app.resources.chat_template_pickup_delay_title
+import com.coparently.app.resources.chat_template_pickup_early_content
+import com.coparently.app.resources.chat_template_pickup_early_title
+import com.coparently.app.resources.chat_template_schedule_change_content
+import com.coparently.app.resources.chat_template_schedule_change_title
+import com.coparently.app.resources.chat_template_school_event_content
+import com.coparently.app.resources.chat_template_school_event_title
+import com.coparently.app.resources.chat_template_school_update_content
+import com.coparently.app.resources.chat_template_school_update_title
+import com.coparently.app.resources.chat_template_travel_abroad_content
+import com.coparently.app.resources.chat_template_travel_abroad_title
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * A ready-made message for a situation co-parents run into often.
@@ -15,8 +51,10 @@ import com.coparently.app.R
  * them. That shape fits a closed enum: the `when` in the presentation layer is exhaustive, so
  * the compiler catches a constant nobody mapped. The templates are a *list of data* instead —
  * a lookup keyed on [id] would be a parallel table the compiler cannot check, and a template
- * added without its mapping would render blank. `@StringRes` is a compile-time annotation over
- * a plain `Int`, so the domain layer still holds no `Context` and no Android runtime type.
+ * added without its mapping would render blank. The resources are Compose Multiplatform's
+ * `StringResource`s since MON-24 phase 2 (Task 11, slice 11b), when this file left the app's stay
+ * list for `:shared-ui` (a resource is a `:shared-ui` type, which `:shared` cannot name); they were
+ * `@StringRes` ids before, and no `Context` or Android runtime type was ever held here.
  *
  * @property id Unique identifier for the template
  * @property category Category of the template
@@ -36,8 +74,8 @@ import com.coparently.app.R
 data class MessageTemplate(
     val id: String,
     val category: TemplateCategory,
-    @StringRes val titleRes: Int,
-    @StringRes val contentRes: Int,
+    val titleRes: StringResource,
+    val contentRes: StringResource,
     val placeholders: List<String> = emptyList()
 )
 
@@ -49,13 +87,13 @@ data class MessageTemplate(
  *
  * @property labelRes Group heading shown above the category's templates.
  */
-enum class TemplateCategory(@StringRes val labelRes: Int) {
-    HANDOVER(R.string.chat_template_category_handover),
-    HEALTH(R.string.chat_template_category_health),
-    SCHOOL(R.string.chat_template_category_school),
-    HOLIDAYS(R.string.chat_template_category_holidays),
-    EXPENSES(R.string.chat_template_category_expenses),
-    REPLIES(R.string.chat_template_category_replies)
+enum class TemplateCategory(val labelRes: StringResource) {
+    HANDOVER(Res.string.chat_template_category_handover),
+    HEALTH(Res.string.chat_template_category_health),
+    SCHOOL(Res.string.chat_template_category_school),
+    HOLIDAYS(Res.string.chat_template_category_holidays),
+    EXPENSES(Res.string.chat_template_category_expenses),
+    REPLIES(Res.string.chat_template_category_replies)
 }
 
 /**
@@ -80,106 +118,106 @@ object DefaultMessageTemplates {
         MessageTemplate(
             id = "handover_confirm",
             category = TemplateCategory.HANDOVER,
-            titleRes = R.string.chat_template_handover_confirm_title,
-            contentRes = R.string.chat_template_handover_confirm_content,
+            titleRes = Res.string.chat_template_handover_confirm_title,
+            contentRes = Res.string.chat_template_handover_confirm_content,
             placeholders = listOf("day", "time", "place")
         ),
         MessageTemplate(
             id = "pickup_delay",
             category = TemplateCategory.HANDOVER,
-            titleRes = R.string.chat_template_pickup_delay_title,
-            contentRes = R.string.chat_template_pickup_delay_content,
+            titleRes = Res.string.chat_template_pickup_delay_title,
+            contentRes = Res.string.chat_template_pickup_delay_content,
             placeholders = listOf("minutes", "time")
         ),
         MessageTemplate(
             id = "pickup_early",
             category = TemplateCategory.HANDOVER,
-            titleRes = R.string.chat_template_pickup_early_title,
-            contentRes = R.string.chat_template_pickup_early_content,
+            titleRes = Res.string.chat_template_pickup_early_title,
+            contentRes = Res.string.chat_template_pickup_early_content,
             placeholders = listOf("day", "time")
         ),
         MessageTemplate(
             id = "packing",
             category = TemplateCategory.HANDOVER,
-            titleRes = R.string.chat_template_packing_title,
-            contentRes = R.string.chat_template_packing_content,
+            titleRes = Res.string.chat_template_packing_title,
+            contentRes = Res.string.chat_template_packing_content,
             placeholders = listOf("day", "items", "purpose")
         ),
         MessageTemplate(
             id = "schedule_change",
             category = TemplateCategory.HANDOVER,
-            titleRes = R.string.chat_template_schedule_change_title,
-            contentRes = R.string.chat_template_schedule_change_content,
+            titleRes = Res.string.chat_template_schedule_change_title,
+            contentRes = Res.string.chat_template_schedule_change_content,
             placeholders = listOf("date", "other date", "reply by")
         ),
         MessageTemplate(
             id = "child_sick",
             category = TemplateCategory.HEALTH,
-            titleRes = R.string.chat_template_child_sick_title,
-            contentRes = R.string.chat_template_child_sick_content,
+            titleRes = Res.string.chat_template_child_sick_title,
+            contentRes = Res.string.chat_template_child_sick_content,
             placeholders = listOf("child", "symptoms", "temperature", "update by")
         ),
         MessageTemplate(
             id = "doctor_visit",
             category = TemplateCategory.HEALTH,
-            titleRes = R.string.chat_template_doctor_visit_title,
-            contentRes = R.string.chat_template_doctor_visit_content,
+            titleRes = Res.string.chat_template_doctor_visit_title,
+            contentRes = Res.string.chat_template_doctor_visit_content,
             placeholders = listOf("child", "reason", "diagnosis", "medicine", "next check-up")
         ),
         MessageTemplate(
             id = "school_event",
             category = TemplateCategory.SCHOOL,
-            titleRes = R.string.chat_template_school_event_title,
-            contentRes = R.string.chat_template_school_event_content,
+            titleRes = Res.string.chat_template_school_event_title,
+            contentRes = Res.string.chat_template_school_event_content,
             placeholders = listOf("event", "date", "time")
         ),
         MessageTemplate(
             id = "parent_teacher_meeting",
             category = TemplateCategory.SCHOOL,
-            titleRes = R.string.chat_template_parent_teacher_meeting_title,
-            contentRes = R.string.chat_template_parent_teacher_meeting_content,
+            titleRes = Res.string.chat_template_parent_teacher_meeting_title,
+            contentRes = Res.string.chat_template_parent_teacher_meeting_content,
             placeholders = listOf("date", "time", "topic")
         ),
         MessageTemplate(
             id = "school_update",
             category = TemplateCategory.SCHOOL,
-            titleRes = R.string.chat_template_school_update_title,
-            contentRes = R.string.chat_template_school_update_content,
+            titleRes = Res.string.chat_template_school_update_title,
+            contentRes = Res.string.chat_template_school_update_content,
             placeholders = listOf("child", "what happened")
         ),
         MessageTemplate(
             id = "holiday_plan",
             category = TemplateCategory.HOLIDAYS,
-            titleRes = R.string.chat_template_holiday_plan_title,
-            contentRes = R.string.chat_template_holiday_plan_content,
+            titleRes = Res.string.chat_template_holiday_plan_title,
+            contentRes = Res.string.chat_template_holiday_plan_content,
             placeholders = listOf("holiday", "proposal", "reply by")
         ),
         MessageTemplate(
             id = "travel_abroad",
             category = TemplateCategory.HOLIDAYS,
-            titleRes = R.string.chat_template_travel_abroad_title,
-            contentRes = R.string.chat_template_travel_abroad_content,
+            titleRes = Res.string.chat_template_travel_abroad_title,
+            contentRes = Res.string.chat_template_travel_abroad_content,
             placeholders = listOf("child", "country", "from", "to", "address", "phone", "reply by")
         ),
         MessageTemplate(
             id = "expense_share",
             category = TemplateCategory.EXPENSES,
-            titleRes = R.string.chat_template_expense_share_title,
-            contentRes = R.string.chat_template_expense_share_content,
+            titleRes = Res.string.chat_template_expense_share_title,
+            contentRes = Res.string.chat_template_expense_share_content,
             placeholders = listOf("what", "date", "total", "share", "pay by")
         ),
         MessageTemplate(
             id = "acknowledge",
             category = TemplateCategory.REPLIES,
-            titleRes = R.string.chat_template_acknowledge_title,
-            contentRes = R.string.chat_template_acknowledge_content,
+            titleRes = Res.string.chat_template_acknowledge_title,
+            contentRes = Res.string.chat_template_acknowledge_content,
             placeholders = listOf("topic", "reply by")
         ),
         MessageTemplate(
             id = "confirm_agreement",
             category = TemplateCategory.REPLIES,
-            titleRes = R.string.chat_template_confirm_agreement_title,
-            contentRes = R.string.chat_template_confirm_agreement_content,
+            titleRes = Res.string.chat_template_confirm_agreement_title,
+            contentRes = Res.string.chat_template_confirm_agreement_content,
             placeholders = listOf("agreement")
         )
     )

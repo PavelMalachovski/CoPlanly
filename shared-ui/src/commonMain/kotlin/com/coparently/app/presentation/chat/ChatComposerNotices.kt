@@ -18,17 +18,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import com.coparently.app.R
 import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.LightDarkPreviews
-import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_nudge_listed_words
+import com.coparently.app.resources.chat_nudge_punctuation
+import com.coparently.app.resources.chat_nudge_shouting
+import com.coparently.app.resources.chat_pending_send
+import com.coparently.app.resources.chat_pending_send_undo
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A held message (MON-19): "Sending in N s…", what it says, and Undo.
@@ -59,7 +62,7 @@ fun PendingSendNotice(pending: PendingSend, onUndo: () -> Unit, modifier: Modifi
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.chat_pending_send, pending.secondsLeft),
+                text = stringResource(Res.string.chat_pending_send, pending.secondsLeft),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -71,7 +74,7 @@ fun PendingSendNotice(pending: PendingSend, onUndo: () -> Unit, modifier: Modifi
             )
         }
         TextButton(onClick = onUndo) {
-            Text(stringResource(R.string.chat_pending_send_undo))
+            Text(stringResource(Res.string.chat_pending_send_undo))
         }
     }
 }
@@ -85,9 +88,9 @@ fun PendingSendNotice(pending: PendingSend, onUndo: () -> Unit, modifier: Modifi
  */
 @Composable
 fun ToneNudgeHint(nudge: ToneNudge, modifier: Modifier = Modifier) {
-    val shouting = stringResource(R.string.chat_nudge_shouting)
-    val punctuation = stringResource(R.string.chat_nudge_punctuation)
-    val listed = stringResource(R.string.chat_nudge_listed_words, nudge.words.joinToString(", "))
+    val shouting = stringResource(Res.string.chat_nudge_shouting)
+    val punctuation = stringResource(Res.string.chat_nudge_punctuation)
+    val listed = stringResource(Res.string.chat_nudge_listed_words, nudge.words.joinToString(", "))
     val lines = listOfNotNull(
         shouting.takeIf { nudge.shouting },
         punctuation.takeIf { nudge.raisedPunctuation },
@@ -115,17 +118,6 @@ fun ToneNudgeHint(nudge: ToneNudge, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-    }
-}
-
-@LightDarkPreviews
-@Composable
-private fun ComposerNoticesPreview() {
-    PreviewWrapper {
-        Column {
-            ToneNudgeHint(ToneNudge(shouting = true, raisedPunctuation = true, words = listOf("never")))
-            PendingSendNotice(PendingSend("c", "See you at five.", secondsLeft = 3), onUndo = {})
         }
     }
 }

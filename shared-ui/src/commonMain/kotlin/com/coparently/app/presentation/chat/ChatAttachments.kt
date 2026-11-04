@@ -1,11 +1,5 @@
 package com.coparently.app.presentation.chat
 
-import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
-import android.text.format.Formatter
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,12 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.files.SharedFilePolicy
@@ -61,12 +52,28 @@ import com.coparently.app.domain.model.Message
 import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
-import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.platform.AppImage
+import com.coparently.app.presentation.platform.LocalFileDetails
+import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.platform.LocalOpenUrl
+import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_attach
+import com.coparently.app.resources.chat_attach_confirm_body
+import com.coparently.app.resources.chat_attach_confirm_title
+import com.coparently.app.resources.chat_attach_open
+import com.coparently.app.resources.chat_attach_send
+import com.coparently.app.resources.chat_attach_uploading
+import com.coparently.app.resources.chat_attach_waiting
+import com.coparently.app.resources.chat_composer_actions
+import com.coparently.app.resources.chat_request_change
+import com.coparently.app.resources.chat_templates
+import com.coparently.app.resources.shared_file_cancel
+import kotlinx.io.files.Path
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.io.File
 
 /**
  * How a bubble draws the files its message carries (MON-23), or null where no thread provides
@@ -86,7 +93,7 @@ fun ChatAttachmentsHost(
     viewModel: ChatAttachmentViewModel = koinViewModel(),
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
+    val openUrl = LocalOpenUrl.current
     val textResolver = rememberUiTextResolver()
     val appMessages = LocalAppMessages.current
     val error by viewModel.error.collectAsState()
@@ -98,7 +105,7 @@ fun ChatAttachmentsHost(
     }
     LaunchedEffect(viewModel) {
         viewModel.opened.collect { opened ->
-            if (!openSharedFile(context, File(opened.path.toString()), opened.contentType)) viewModel.noViewer()
+            if (!openUrl.openFile(opened.path.toString(), opened.contentType)) viewModel.noViewer()
         }
     }
     CompositionLocalProvider(
@@ -115,7 +122,8 @@ fun ChatAttachmentsHost(
  *
  * Attaching is real, because attachments exist (design item 8 forbade it until they did): it opens
  * the system picker limited to what the rules accept, then asks before sending — a file in the chat
- * stays there for good, like every message.
+ * stays there for good, like every message. Where the phone has no picker (`FilePicker.available`,
+ * the iPhone until phase 3) the entry is left out, and the menu keeps the other two.
  *
  * @param conversationId The thread a file is sent into.
  * @param onRequestChange Opens the event picker that starts a change request.
@@ -129,61 +137,50 @@ fun ChatComposerMenu(
     modifier: Modifier = Modifier,
     viewModel: ChatAttachmentViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
+    val filePicker = LocalFilePicker.current
+    val fileDetails = LocalFileDetails.current
     var picked by rememberSaveable { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        picked = uri?.toString()
-    }
+    // A picker closed without a choice calls nothing, which leaves `picked` as it was: null.
+    val picker = filePicker.rememberDocumentPicker(SharedFilePolicy.CONTENT_TYPES.toList()) { uri -> picked = uri }
     Box(modifier = modifier) {
         IconButton(onClick = { open = true }) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.chat_composer_actions))
+            Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_composer_actions))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            ComposerMenuItem(Icons.Default.AttachFile, stringResource(R.string.chat_attach)) {
-                open = false
-                picker.launch(SharedFilePolicy.CONTENT_TYPES.toTypedArray())
+            if (filePicker.available) {
+                ComposerMenuItem(Icons.Default.AttachFile, stringResource(Res.string.chat_attach)) {
+                    open = false
+                    picker.launch()
+                }
             }
-            ComposerMenuItem(Icons.Default.SwapHoriz, stringResource(R.string.chat_request_change)) {
+            ComposerMenuItem(Icons.Default.SwapHoriz, stringResource(Res.string.chat_request_change)) {
                 open = false
                 onRequestChange()
             }
-            ComposerMenuItem(Icons.Default.Bolt, stringResource(R.string.chat_templates)) {
+            ComposerMenuItem(Icons.Default.Bolt, stringResource(Res.string.chat_templates)) {
                 open = false
                 onTemplates()
             }
         }
     }
     picked?.let { uri ->
-        val name = remember(uri) { displayName(context, uri) }
+        val name = remember(uri) { fileDetails.describe(uri) }
         AlertDialog(
             onDismissRequest = { picked = null },
-            title = { Text(stringResource(R.string.chat_attach_confirm_title)) },
-            text = { Text(stringResource(R.string.chat_attach_confirm_body, name.first, name.second)) },
+            title = { Text(stringResource(Res.string.chat_attach_confirm_title)) },
+            text = { Text(stringResource(Res.string.chat_attach_confirm_body, name.name, name.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.send(conversationId, uri)
                     picked = null
-                }) { Text(stringResource(R.string.chat_attach_send)) }
+                }) { Text(stringResource(Res.string.chat_attach_send)) }
             },
             dismissButton = {
-                TextButton(onClick = { picked = null }) { Text(stringResource(R.string.shared_file_cancel)) }
+                TextButton(onClick = { picked = null }) { Text(stringResource(Res.string.shared_file_cancel)) }
             }
         )
     }
-}
-
-/** The picked file's name and formatted size, for the confirmation; blanks when unknown. */
-private fun displayName(context: Context, uri: String): Pair<String, String> {
-    val parsed = Uri.parse(uri)
-    val columns = arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
-    return runCatching {
-        context.contentResolver.query(parsed, columns, null, null, null)?.use { cursor ->
-            if (!cursor.moveToFirst()) return@use null
-            val size = if (cursor.isNull(1)) "" else Formatter.formatShortFileSize(context, cursor.getLong(1))
-            cursor.getString(0).orEmpty() to size
-        }
-    }.getOrNull() ?: ((parsed.lastPathSegment.orEmpty()) to "")
 }
 
 /**
@@ -216,7 +213,7 @@ internal fun ChatAttachmentBlock(
                 LaunchedEffect(attachment.storagePath) { viewModel.requestThumbnail(message, attachment) }
                 val onOpen = { viewModel.open(message, attachment) }
                 if (attachment.isImage) {
-                    ImageAttachment(attachment, thumbnails[attachment.storagePath]?.let { File(it.toString()) }, onOpen)
+                    ImageAttachment(attachment, thumbnails[attachment.storagePath], onOpen)
                 } else {
                     FileAttachment(attachment, onOpen)
                 }
@@ -227,8 +224,8 @@ internal fun ChatAttachmentBlock(
 }
 
 @Composable
-private fun ImageAttachment(attachment: ChatAttachment, file: File?, onOpen: () -> Unit) {
-    val label = stringResource(R.string.chat_attach_open, attachment.fileName)
+private fun ImageAttachment(attachment: ChatAttachment, file: Path?, onOpen: () -> Unit) {
+    val label = stringResource(Res.string.chat_attach_open, attachment.fileName)
     Box(
         modifier = Modifier
             .size(THUMBNAIL_SIZE)
@@ -237,7 +234,9 @@ private fun ImageAttachment(attachment: ChatAttachment, file: File?, onOpen: () 
             .clickable(onClickLabel = label, role = Role.Image, onClick = onOpen),
         contentAlignment = Alignment.Center
     ) {
-        if (file != null) {
+        // The checked copy, where the platform draws images; else the image glyph, as while the
+        // thumbnail is still on its way (the iPhone until phase 3).
+        if (file != null && LocalPlatformImages.current.available) {
             AppImage(
                 model = file,
                 contentDescription = attachment.fileName,
@@ -252,8 +251,8 @@ private fun ImageAttachment(attachment: ChatAttachment, file: File?, onOpen: () 
 
 @Composable
 private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
-    val context = LocalContext.current
-    val label = stringResource(R.string.chat_attach_open, attachment.fileName)
+    val fileDetails = LocalFileDetails.current
+    val label = stringResource(Res.string.chat_attach_open, attachment.fileName)
     Row(
         modifier = Modifier
             .widthIn(max = THUMBNAIL_SIZE * 2)
@@ -273,7 +272,7 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                Formatter.formatShortFileSize(context, attachment.sizeBytes),
+                fileDetails.formatSize(attachment.sizeBytes),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -286,7 +285,7 @@ private fun FileAttachment(attachment: ChatAttachment, onOpen: () -> Unit) {
 private fun UploadState(progress: Float?) {
     Column(modifier = Modifier.widthIn(max = THUMBNAIL_SIZE), horizontalAlignment = Alignment.End) {
         Text(
-            stringResource(if (progress != null) R.string.chat_attach_uploading else R.string.chat_attach_waiting),
+            stringResource(if (progress != null) Res.string.chat_attach_uploading else Res.string.chat_attach_waiting),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

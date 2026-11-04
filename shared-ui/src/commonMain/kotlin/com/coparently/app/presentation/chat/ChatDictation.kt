@@ -1,9 +1,5 @@
 package com.coparently.app.presentation.chat
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -27,25 +23,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.domain.dictation.DictationFailure
+import com.coparently.app.presentation.platform.LocalOpenUrl
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.rememberReducedMotion
-import com.coparently.app.utils.AppLocale
-import com.coparently.app.utils.LightDarkPreviews
-import com.coparently.app.utils.PreviewWrapper
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.voice_error_busy
+import com.coparently.app.resources.voice_error_language
+import com.coparently.app.resources.voice_error_nothing_heard
+import com.coparently.app.resources.voice_error_other
+import com.coparently.app.resources.voice_error_unavailable
+import com.coparently.app.resources.voice_open_settings
+import com.coparently.app.resources.voice_permission_rationale
+import com.coparently.app.resources.voice_start
+import com.coparently.app.resources.voice_stop
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The composer's microphone: voice dictation, on the phone only (see `OnDeviceSpeechDictation`).
@@ -79,7 +80,7 @@ fun DictationMicButton(listening: Boolean, onClick: () -> Unit, modifier: Modifi
         if (listening) {
             Icon(
                 imageVector = Icons.Filled.Stop,
-                contentDescription = stringResource(R.string.voice_stop),
+                contentDescription = stringResource(Res.string.voice_stop),
                 modifier = Modifier
                     .size(IconSizes.Standard)
                     .alpha(listeningPulse())
@@ -87,7 +88,7 @@ fun DictationMicButton(listening: Boolean, onClick: () -> Unit, modifier: Modifi
         } else {
             Icon(
                 imageVector = Icons.Filled.Mic,
-                contentDescription = stringResource(R.string.voice_start),
+                contentDescription = stringResource(Res.string.voice_start),
                 modifier = Modifier.size(IconSizes.Standard)
             )
         }
@@ -114,13 +115,14 @@ private fun listeningPulse(): Float {
 /**
  * One short line under the composer saying why dictation stopped without text. For a refused
  * microphone it says what the microphone is for and offers the phone's app settings, where a
- * permanently refused permission can still be allowed.
+ * permanently refused permission can still be allowed — where the phone can open them
+ * (`OpenUrl.available`; the iPhone has no dictation to fail yet).
  *
  * @param failure Why the last session ended
  */
 @Composable
 fun DictationFailureNotice(failure: DictationFailure, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
+    val openUrl = LocalOpenUrl.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -142,58 +144,21 @@ fun DictationFailureNotice(failure: DictationFailure, modifier: Modifier = Modif
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        if (failure == DictationFailure.PERMISSION) {
-            TextButton(onClick = {
-                context.startActivity(
-                    Intent(
-                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.fromParts("package", context.packageName, null)
-                    )
-                )
-            }) { Text(stringResource(R.string.voice_open_settings)) }
+        if (failure == DictationFailure.PERMISSION && openUrl.available) {
+            TextButton(onClick = { openUrl.openAppSettings() }) { Text(stringResource(Res.string.voice_open_settings)) }
         }
     }
 }
 
 /** The sentence for each failure (`voice_strings.xml`). */
-internal fun DictationFailure.messageRes(): Int = when (this) {
-    DictationFailure.NOTHING_HEARD -> R.string.voice_error_nothing_heard
-    DictationFailure.LANGUAGE_UNAVAILABLE -> R.string.voice_error_language
-    DictationFailure.BUSY -> R.string.voice_error_busy
-    DictationFailure.PERMISSION -> R.string.voice_permission_rationale
-    DictationFailure.UNAVAILABLE -> R.string.voice_error_unavailable
-    DictationFailure.OTHER -> R.string.voice_error_other
-}
-
-/**
- * The language to dictate in, as a BCP 47 tag: the per-app choice in Settings → Language when one
- * was made, else the phone's first language ([AppLocale.deviceFirst]) — never the English the app
- * falls back to for a language it does not ship (the owner's language rule, MON-24 phase 2). The
- * words are the parent's own, so a Slovak phone dictates Slovak while the app reads English.
- */
-@Composable
-fun rememberDictationLanguageTag(): String {
-    val configuration = LocalConfiguration.current
-    val context = LocalContext.current
-    return remember(configuration) {
-        val chosen = AppCompatDelegate.getApplicationLocales().get(0)
-        (chosen ?: AppLocale.deviceFirst(context)).toLanguageTag()
-    }
+internal fun DictationFailure.messageRes(): StringResource = when (this) {
+    DictationFailure.NOTHING_HEARD -> Res.string.voice_error_nothing_heard
+    DictationFailure.LANGUAGE_UNAVAILABLE -> Res.string.voice_error_language
+    DictationFailure.BUSY -> Res.string.voice_error_busy
+    DictationFailure.PERMISSION -> Res.string.voice_permission_rationale
+    DictationFailure.UNAVAILABLE -> Res.string.voice_error_unavailable
+    DictationFailure.OTHER -> Res.string.voice_error_other
 }
 
 /** How far the listening glyph fades at the bottom of its breath. */
 private const val PULSE_MIN_ALPHA = 0.45f
-
-@LightDarkPreviews
-@Composable
-private fun DictationPreview() {
-    PreviewWrapper {
-        Column {
-            Row {
-                DictationMicButton(listening = false, onClick = {})
-                DictationMicButton(listening = true, onClick = {})
-            }
-            DictationFailureNotice(DictationFailure.PERMISSION)
-        }
-    }
-}

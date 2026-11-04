@@ -1,10 +1,5 @@
 package com.coparently.app.presentation.chat
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
@@ -24,31 +19,42 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.BuildConfig
-import com.coparently.app.R
 import com.coparently.app.domain.chat.MessageReport
 import com.coparently.app.domain.model.Message
-import com.coparently.app.presentation.common.AppMessages
 import com.coparently.app.presentation.common.LocalAppMessages
-
-private const val TAG = "ChatReport"
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.LocalAppBuildValues
+import com.coparently.app.presentation.platform.LocalOpenUrl
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_block
+import com.coparently.app.resources.chat_more_actions
+import com.coparently.app.resources.chat_report_body
+import com.coparently.app.resources.chat_report_message
+import com.coparently.app.resources.chat_report_no_email_app
+import com.coparently.app.resources.chat_report_subject
+import com.coparently.app.resources.nav_settings
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 /**
- * The mailbox a chat message is reported to (`BuildConfig.SUPPORT_EMAIL`), or null while the build
- * names none. Null hides "Report message" everywhere: a report with nowhere to go is the affordance
- * design item 8 forbids.
+ * The mailbox a chat message is reported to (the build's support address, `BuildConfig.SUPPORT_EMAIL`
+ * on Android, read through `AppBuildValues`), or null while the build names none. Null hides
+ * "Report message" everywhere: a report with nowhere to go is the affordance design item 8 forbids.
  */
-internal val chatReportAddress: String? = BuildConfig.SUPPORT_EMAIL.trim().takeIf { it.isNotEmpty() }
+@Composable
+private fun chatReportAddress(): String? =
+    LocalAppBuildValues.current.supportEmail?.trim()?.takeIf { it.isNotEmpty() }
 
 /**
  * Reports a message, or null when reporting is not offered (no support address, or outside a
@@ -61,45 +67,40 @@ val LocalChatMessageReport = compositionLocalOf<((Message) -> Unit)?> { null }
  * Offers "Report message" to the thread in [content] (play-final audit F-10): the parent's own
  * email app opens to the support address with the message's id, conversation id and time — never
  * its text (see [MessageReport]). With no email app the reader is told the address instead.
- * Provides nothing while [chatReportAddress] is null.
+ * Provides nothing while [chatReportAddress] is null, nor where the phone cannot hand a mail draft
+ * to another app (`OpenUrl.available`, the iPhone until phase 3).
  */
 @Composable
 fun ChatReportHost(content: @Composable () -> Unit) {
-    val address = chatReportAddress
-    if (address == null) {
+    val address = chatReportAddress()
+    val openUrl = LocalOpenUrl.current
+    if (address == null || !openUrl.available) {
         content()
         return
     }
-    // The Activity's context, so the subject and body follow the per-app language.
-    val context = LocalContext.current
+    // The composition's resolver, so the subject and body follow the per-app language.
+    val textResolver = rememberUiTextResolver()
+    val scope = rememberCoroutineScope()
     val appMessages = LocalAppMessages.current
-    val report = remember(context, appMessages, address) {
-        val send: (Message) -> Unit = { message -> reportMessage(context, appMessages, address, message) }
+    val report = remember(textResolver, scope, openUrl, appMessages, address) {
+        val send: (Message) -> Unit = { message ->
+            scope.launch {
+                val subject = UiText.Res(Res.string.chat_report_subject).asString(textResolver)
+                val body = UiText.Res(
+                    Res.string.chat_report_body,
+                    listOf(message.id, message.conversationId, MessageReport.sentAtUtc(message.sentAtMillis))
+                ).asString(textResolver)
+                // The address, subject and body ride in the URI (RFC 6068) and again as extras,
+                // because mail apps differ in which of the two they read (`OpenUrl.composeEmail`).
+                if (!openUrl.composeEmail(address, subject, body)) {
+                    val noApp = UiText.Res(Res.string.chat_report_no_email_app, listOf(address))
+                    appMessages?.show(noApp.asString(textResolver))
+                }
+            }
+        }
         send
     }
     CompositionLocalProvider(LocalChatMessageReport provides report, content = content)
-}
-
-private fun reportMessage(context: Context, appMessages: AppMessages?, address: String, message: Message) {
-    val subject = context.getString(R.string.chat_report_subject)
-    val body = context.getString(
-        R.string.chat_report_body,
-        message.id,
-        message.conversationId,
-        MessageReport.sentAtUtc(message.sentAtMillis)
-    )
-    // The address, subject and body ride in the URI (RFC 6068) and again as extras, because mail
-    // apps differ in which of the two they read.
-    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse(MessageReport.mailtoUri(address, subject, body)))
-        .putExtra(Intent.EXTRA_EMAIL, arrayOf(address))
-        .putExtra(Intent.EXTRA_SUBJECT, subject)
-        .putExtra(Intent.EXTRA_TEXT, body)
-    try {
-        context.startActivity(intent)
-    } catch (e: ActivityNotFoundException) {
-        Log.w(TAG, "No email app can send the report", e)
-        appMessages?.show(context.getString(R.string.chat_report_no_email_app, address))
-    }
 }
 
 /**
@@ -120,7 +121,7 @@ internal fun ReportableBubble(message: Message, isCurrentUser: Boolean, content:
     }
     var menuOpen by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    val label = stringResource(R.string.chat_report_message)
+    val label = stringResource(Res.string.chat_report_message)
     Box(
         modifier = Modifier
             .pointerInput(Unit) {
@@ -171,13 +172,13 @@ internal fun ChatOverflowMenu(onOpenSettings: (() -> Unit)?, onBlock: (() -> Uni
         IconButton(onClick = { open = true }) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = stringResource(R.string.chat_more_actions)
+                contentDescription = stringResource(Res.string.chat_more_actions)
             )
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             onOpenSettings?.let { openSettings ->
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.nav_settings)) },
+                    text = { Text(stringResource(Res.string.nav_settings)) },
                     leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     onClick = {
                         open = false
@@ -203,7 +204,7 @@ private fun BlockMenuItem(onClick: () -> Unit) {
     DropdownMenuItem(
         text = {
             Text(
-                text = stringResource(R.string.chat_block),
+                text = stringResource(Res.string.chat_block),
                 color = MaterialTheme.colorScheme.error
             )
         },

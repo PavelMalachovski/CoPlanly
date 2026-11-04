@@ -20,11 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_send
+import com.coparently.app.resources.chat_type_message
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The message composer: a borderless pill field beside a round filled send button — the
@@ -64,7 +66,7 @@ fun MessageInput(
     onSendMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester = remember { FocusRequester() },
-    placeholder: String = stringResource(R.string.chat_type_message),
+    placeholder: String = stringResource(Res.string.chat_type_message),
     trailingIcon: (@Composable () -> Unit)? = null
 ) {
     Row(
@@ -107,7 +109,7 @@ fun MessageInput(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = stringResource(R.string.chat_send),
+                contentDescription = stringResource(Res.string.chat_send),
                 modifier = Modifier.size(IconSizes.Standard)
             )
         }

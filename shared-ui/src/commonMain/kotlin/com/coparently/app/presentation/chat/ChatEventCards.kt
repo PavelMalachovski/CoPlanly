@@ -8,11 +8,12 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.event.EventPreviewSheet
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_event_missing
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -55,7 +56,7 @@ fun ChatEventCardHost(
     // thread's other messages do (`ChatAttachmentsHost`). Resolved here: the effect below is not
     // composable and cannot read a resource itself.
     val appMessages = LocalAppMessages.current
-    val missingText = stringResource(R.string.chat_event_missing)
+    val missingText = stringResource(Res.string.chat_event_missing)
 
     // The inbox and the sentence are acted on once; the preview stays until it is closed.
     val current = outcome

@@ -40,10 +40,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.Conversation
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ListSkeleton
@@ -52,7 +50,18 @@ import com.coparently.app.presentation.common.TwoPanes
 import com.coparently.app.presentation.common.WideColumn
 import com.coparently.app.presentation.common.rememberTwoPane
 import com.coparently.app.presentation.common.valueOrNull
-import com.coparently.app.utils.dateWithTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_coparent_link_pending
+import com.coparently.app.resources.chat_empty_description
+import com.coparently.app.resources.chat_empty_title
+import com.coparently.app.resources.chat_new_conversation
+import com.coparently.app.resources.chat_no_coparent
+import com.coparently.app.resources.chat_no_coparent_action
+import com.coparently.app.resources.chat_no_messages
+import com.coparently.app.resources.chat_title_fallback
+import com.coparently.app.resources.conversations_title
+import com.coparently.app.resources.nav_settings
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -117,9 +126,9 @@ fun ConversationsScreen(
 
     // Captured in composable scope: the collector below is not a composable, so it cannot
     // call stringResource itself.
-    val noCoParentMessage = stringResource(R.string.chat_no_coparent)
-    val noCoParentAction = stringResource(R.string.chat_no_coparent_action)
-    val linkPendingMessage = stringResource(R.string.chat_coparent_link_pending)
+    val noCoParentMessage = stringResource(Res.string.chat_no_coparent)
+    val noCoParentAction = stringResource(Res.string.chat_no_coparent_action)
+    val linkPendingMessage = stringResource(Res.string.chat_coparent_link_pending)
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -229,12 +238,12 @@ private fun ConversationList(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.conversations_title)) },
+                title = { Text(stringResource(Res.string.conversations_title)) },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.nav_settings)
+                            contentDescription = stringResource(Res.string.nav_settings)
                         )
                     }
                 }
@@ -252,7 +261,7 @@ private fun ConversationList(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     } else {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.chat_new_conversation))
+                        Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.chat_new_conversation))
                     }
                 }
             }
@@ -266,9 +275,9 @@ private fun ConversationList(
             // Issue 8.2: Empty state for conversations
             EmptyState(
                 icon = Icons.AutoMirrored.Filled.Chat,
-                title = stringResource(R.string.chat_empty_title),
-                description = stringResource(R.string.chat_empty_description),
-                actionLabel = stringResource(R.string.chat_new_conversation),
+                title = stringResource(Res.string.chat_empty_title),
+                description = stringResource(Res.string.chat_empty_description),
+                actionLabel = stringResource(Res.string.chat_new_conversation),
                 onAction = startChat,
                 modifier = Modifier
                     .fillMaxSize()
@@ -316,7 +325,6 @@ fun ConversationItem(
     currentUserId: String,
     onClick: () -> Unit
 ) {
-    val timeFormatter = dateWithTime("MMMd", separator = ", ")
     val hasUnread = currentUserId.isNotEmpty() &&
         (conversation.lastMessageAtMillis ?: 0L) > (conversation.lastReadAt[currentUserId] ?: 0L)
 
@@ -331,7 +339,7 @@ fun ConversationItem(
                     // A blank (not null) title means this row was mirrored locally before any
                     // successful `ensureConversation` set it — show the fallback rather than
                     // an empty row.
-                    text = conversation.title.ifBlank { stringResource(R.string.chat_title_fallback) },
+                    text = conversation.title.ifBlank { stringResource(Res.string.chat_title_fallback) },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -340,7 +348,7 @@ fun ConversationItem(
 
                 conversation.lastMessage?.let { msg ->
                     Text(
-                        text = formatSentAt(msg.sentAtMillis, timeFormatter),
+                        text = formatSentAt(msg.sentAtMillis, "MMMd", separator = ", "),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -349,7 +357,7 @@ fun ConversationItem(
         },
         supportingContent = {
             Text(
-                text = conversation.lastMessage?.content ?: stringResource(R.string.chat_no_messages),
+                text = conversation.lastMessage?.content ?: stringResource(Res.string.chat_no_messages),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = if (hasUnread) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,

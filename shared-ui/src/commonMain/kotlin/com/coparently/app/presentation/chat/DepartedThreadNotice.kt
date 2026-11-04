@@ -9,17 +9,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.InlineBanner
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_departed_banner
+import com.coparently.app.resources.chat_departed_export
+import com.coparently.app.resources.chat_departed_no_sending
+import com.coparently.app.resources.chat_departed_unnamed
 import com.coparently.app.utils.DAY_IN_SENTENCE
-import com.coparently.app.utils.localizedDate
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The banner over a thread kept after the co-parent deleted their account: who left, the day the
@@ -41,20 +42,20 @@ internal fun DepartedThreadBanner(
     onOpenExport: ((conversationId: String) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    val unnamed = stringResource(R.string.chat_departed_unnamed)
+    val unnamed = stringResource(Res.string.chat_departed_unnamed)
     val name = thread.departedName.ifBlank { unnamed }
-    val day = departureDay(thread.retainedUntilMillis).format(localizedDate(DAY_IN_SENTENCE))
+    val day = ReaderDateText.date(sentAtLocal(thread.retainedUntilMillis).date, DAY_IN_SENTENCE)
     val exportAction: (@Composable () -> Unit)? = if (onOpenExport == null) {
         null
     } else {
         {
             Button(onClick = { onOpenExport(thread.conversationId) }) {
-                Text(stringResource(R.string.chat_departed_export))
+                Text(stringResource(Res.string.chat_departed_export))
             }
         }
     }
     InlineBanner(
-        text = stringResource(R.string.chat_departed_banner, name, day),
+        text = stringResource(Res.string.chat_departed_banner, name, day),
         modifier = modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
         icon = Icons.Default.Schedule,
         tone = BannerTone.ATTENTION,
@@ -70,7 +71,7 @@ internal fun DepartedThreadBanner(
 @Composable
 internal fun DepartedThreadComposerNote(modifier: Modifier = Modifier) {
     Text(
-        text = stringResource(R.string.chat_departed_no_sending),
+        text = stringResource(Res.string.chat_departed_no_sending),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
@@ -78,7 +79,3 @@ internal fun DepartedThreadComposerNote(modifier: Modifier = Modifier) {
             .padding(horizontal = Spacing.L, vertical = Spacing.M)
     )
 }
-
-/** The reader's calendar day of [millis]. `Instant.atZone`, not `LocalDate.ofInstant` (API 34). */
-private fun departureDay(millis: Long): LocalDate =
-    Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()

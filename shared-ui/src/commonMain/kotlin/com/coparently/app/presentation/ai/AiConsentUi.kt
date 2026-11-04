@@ -12,21 +12,33 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.SectionGroupScope
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
-import com.coparently.app.utils.localizedDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.ai_consent_agree
+import com.coparently.app.resources.ai_consent_dialog_message
+import com.coparently.app.resources.ai_consent_dialog_title
+import com.coparently.app.resources.ai_consent_settings_given
+import com.coparently.app.resources.ai_consent_settings_given_now
+import com.coparently.app.resources.ai_consent_settings_not_given
+import com.coparently.app.resources.ai_consent_settings_title
+import com.coparently.app.resources.ai_consent_settings_withdraw
+import com.coparently.app.resources.ai_consent_withdraw_confirm
+import com.coparently.app.resources.ai_consent_withdraw_message
+import com.coparently.app.resources.ai_consent_withdraw_title
+import com.coparently.app.resources.common_dialog_cancel
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
+import kotlin.time.Instant
 
 /**
  * The consent dialog shown before the first AI request (and again after a withdrawal, or when
@@ -42,10 +54,10 @@ import java.time.ZoneId
 @Composable
 fun AiConsentDialog(onAgree: () -> Unit, onCancel: () -> Unit) {
     ConfirmationDialog(
-        title = stringResource(R.string.ai_consent_dialog_title),
-        message = stringResource(R.string.ai_consent_dialog_message),
-        confirmText = stringResource(R.string.ai_consent_agree),
-        dismissText = stringResource(R.string.common_dialog_cancel),
+        title = stringResource(Res.string.ai_consent_dialog_title),
+        message = stringResource(Res.string.ai_consent_dialog_message),
+        confirmText = stringResource(Res.string.ai_consent_agree),
+        dismissText = stringResource(Res.string.common_dialog_cancel),
         onConfirm = onAgree,
         onDismiss = onCancel
     )
@@ -86,9 +98,9 @@ fun SectionGroupScope.AiConsentSettingsEntry(
 
     if (confirming) {
         ConfirmationDialog(
-            title = stringResource(R.string.ai_consent_withdraw_title),
-            message = stringResource(R.string.ai_consent_withdraw_message),
-            confirmText = stringResource(R.string.ai_consent_withdraw_confirm),
+            title = stringResource(Res.string.ai_consent_withdraw_title),
+            message = stringResource(Res.string.ai_consent_withdraw_message),
+            confirmText = stringResource(Res.string.ai_consent_withdraw_confirm),
             isDestructive = true,
             onConfirm = {
                 confirming = false
@@ -112,20 +124,21 @@ internal fun AiConsentSettingsRow(
     withdrawing: Boolean,
     onWithdraw: () -> Unit
 ) {
-    val dateFormatter = remember { localizedDate("yMMMd") }
     // A local: AiConsent lives in the shared module, so its property does not smart-cast here.
     val grantedAtMillis = consent?.grantedAtMillis
     val supporting = when {
-        consent == null -> stringResource(R.string.ai_consent_settings_not_given)
-        grantedAtMillis == null -> stringResource(R.string.ai_consent_settings_given_now)
+        consent == null -> stringResource(Res.string.ai_consent_settings_not_given)
+        grantedAtMillis == null -> stringResource(Res.string.ai_consent_settings_given_now)
         else -> {
-            val day = Instant.ofEpochMilli(grantedAtMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-            stringResource(R.string.ai_consent_settings_given, day.format(dateFormatter))
+            val day = Instant.fromEpochMilliseconds(grantedAtMillis)
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .date
+            stringResource(Res.string.ai_consent_settings_given, ReaderDateText.date(day, "yMMMd"))
         }
     }
     SectionRow(
         icon = Icons.Default.AutoAwesome,
-        title = stringResource(R.string.ai_consent_settings_title),
+        title = stringResource(Res.string.ai_consent_settings_title),
         supporting = supporting,
         trailing = if (consent != null && !withdrawing) {
             {
@@ -133,7 +146,7 @@ internal fun AiConsentSettingsRow(
                     onClick = onWithdraw,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text(stringResource(R.string.ai_consent_settings_withdraw))
+                    Text(stringResource(Res.string.ai_consent_settings_withdraw))
                 }
             }
         } else {

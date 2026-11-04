@@ -1130,6 +1130,33 @@ Then the export and the school import:
   - `readerMediumDate` beside `ReaderDateText` (a thread's day separator, `FormatStyle.MEDIUM` on
     Android; a top-level `expect`, because the object is at detekt's function limit).
   - `CoilImages` maps a kotlinx-io `Path` to the `File` the attachment thumbnail handed Coil.
+- Group 2, the screens (`git mv` to `:shared-ui` `commonMain`, packages unchanged, `R.string` →
+  `Res.string`):
+  - every file of `presentation/chat/`, with `event/EventPreviewSheet.kt` (a card opens the event's
+    preview; `EventPreviewContent` and `eventTimeLine` public for the screenshots and the app's
+    `FriendEventDetails`), `ai/AiConsentUi.kt`, `stickers/StickerText.kt` (`StringResource`s; the app's
+    `MyStickersScreen` and `StickerViews` read them through CMP's `stringResource`) and
+    `domain/model/MessageTemplate.kt` (`StringResource`s; the stay list is empty).
+  - The Android calls, each behind a seam: the document picker (`FilePicker`, the entry hidden when
+    unavailable), the picked file's name and size and the chip's size (`FileDetails`), a file in a
+    viewer, the report's mail draft and the app's settings (`OpenUrl`; the report and the settings
+    button hidden when unavailable), the support address (`AppBuildValues.supportEmail`, trimmed as
+    before), the IBAN's copy (`SensitiveClipboard`, hidden when unavailable), the payment code
+    (`QrCodes`), dictation (`Dictation.rememberLanguageTag`, and `available` beside the ViewModel's
+    own), `BackHandler` (CMP's), the reply's language (Compose's `Locale.current`), a template's body
+    (read in composition, so the sheet hands the text over), the report's text
+    (`rememberUiTextResolver`), every date (`ReaderDateText`, `readerMediumDate`), every amount
+    (`ReaderMoneyText`; `MinorUnits.fromText` as `DecimalText.parseHalfUp`, which it delegates to),
+    and the thumbnail (`AppImage` over its `Path`, hidden when `PlatformImages` is unavailable).
+  - `ActivityCardText.resourceFor` carries an explicit `@Suppress("CyclomaticComplexMethod")`: its
+    signature changed with the `StringResource`, so the baseline entry keyed on the old one no
+    longer matches (left for the next Regenerate). `MessageItem`'s two entries keep their key.
+  - Left in the app: `presentation/chat/ChatPreviews.kt` (the three previews) and
+    `presentation/chat/DictationLanguage.kt` (`rememberDictationLanguageTag`, which `AndroidDictation`
+    answers with).
+  - Tests: `ActivityCardTextTest` and `StickerTextTest` compare `Res.string`s; `ReaderMoneyTextTest`
+    (androidUnitTest) holds the money seam to `currencyFormat`; `ReaderDateTextTest` holds
+    `readerMediumDate` to `FormatStyle.MEDIUM`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

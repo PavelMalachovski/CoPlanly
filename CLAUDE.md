@@ -1194,7 +1194,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   a sheet's body is split out of the sheet (`EventPreviewContent`), because a `ModalBottomSheet`
   opens its own window that a node capture does not see. **Once it moves to `:shared-ui` (Task 11),
   what the app's tests call becomes public**, because `internal` stops at the module (slice 11a:
-  `TwoPane`'s `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`). The screenshot frame
+  `TwoPane`'s `TWO_PANE_MAX_WIDTH`, `WIDE_COLUMN_MAX_WIDTH` and `WideColumn`; slice 11b:
+  `ChatThreadHeader`, `EventPreviewContent` and `eventTimeLine`, which the app's
+  `FriendEventDetails` reads). The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
   `ScreenshotFixtures`) so an image does not change with the calendar — keep it that way, or the
@@ -1617,11 +1619,14 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
              Then the screens (Task 11), from slice 11a's foundation: presentation/platform/ (the
              capabilities a screen asks of the phone, provided by the shell), the date seam
-             (utils/ReaderDateText) and the image seam. It makes the iPhone's one framework, Shared (static,
+             (utils/ReaderDateText) and the image seam; and, from slice 11b, chat's screens
+             (presentation/chat/), with the event preview, the AI consent's rows, the stickers'
+             wording, the message templates and the money seam (utils/ReaderMoneyText). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
-             except the phase-1 stay list below (one file), which is still in app/
+             none of the phase-1 stay list is left in app/ (its last file, MessageTemplate,
+             went to shared-ui/ in Task 11's slice 11b)
 data/      — Room (v46 + migrations), Firestore/Google clients, repository impls, sync — in app/,
              except what has moved to shared-data/ (below): the Room database, the Firestore data
              sources, data/payment/, every repository but the AI assist's, data/files/ but the
@@ -1650,11 +1655,11 @@ data layer's `MessageRepository` and logger; and so, since Task 8f, are the even
 through the data layer's `Analytics`, `CrashReporter`, `logger` and `Connectivity` (their tests in
 `shared-data/src/androidUnitTest/`), and, since Task 8j, `domain/repository/FamilyDocumentRepository.kt`,
 whose local copy is a kotlinx-io `Path` and which `shared/` (no kotlinx-io) cannot declare.
-**The exceptions are the phase-1 stay list**, still under
-`app/src/main/java/com/coparently/app/domain/`, each for a reason `docs/ROADMAP.md` MON-24 records
-file by file:
-- dependency injection, Android or the data layer — `model/MessageTemplate.kt`
-  (`@StringRes`); `repository/FamilyDocumentRepository.kt` left for `shared-data`'s `commonMain` in
+**The phase-1 stay list is empty** (each file's reason is in `docs/ROADMAP.md` MON-24):
+- dependency injection, Android or the data layer — `model/MessageTemplate.kt` (`@StringRes`) left
+  for `:shared-ui`'s `commonMain`, same package, in MON-24 phase 2's Task 11 (slice 11b), its
+  resources Compose Multiplatform's `StringResource`s now (a `:shared-ui` type, which `shared/`
+  cannot name); `repository/FamilyDocumentRepository.kt` left for `shared-data`'s `commonMain` in
   Task 8j (a local copy is a kotlinx-io `Path` there, where it was a `java.io.File`); `activity/ActivityAnnouncer.kt`
   left the list for `shared-data`'s `commonMain`, same package, in MON-24 phase 2's Task 8c, and the
   event use cases with `EventValidator` (`usecase/`, the new id from `kotlin.uuid.Uuid`) and
@@ -2308,6 +2313,27 @@ asked for together. Coil 3 is not part of MON-24 phase 2. `PlatformImages` says 
 `available`: the iPhone's stand-in says no, so a screen whose point is the image (the photo strips,
 an attachment's thumbnail) leaves it out, and an image drawn anyway keeps its place and draws its
 placeholder. `PreviewWrapper` provides the platform too, so a moved screen's preview does not throw.
+**Chat's screens followed in slice 11b**, each with `git mv` to `:shared-ui`'s `commonMain`, package
+unchanged, so `NavGraph` calls `ConversationsScreen` and `ChatScreen` as before: every file of
+`presentation/chat/` (the thread, the list, the bubbles and their hosts, the composer and its menu,
+dictation's controls, the report and the overflow, search, the templates sheet, the reply row, the
+settle-up block and the card texts), with what they draw from other features —
+`event/EventPreviewSheet.kt` (a chat card opens the event's preview), `ai/AiConsentUi.kt`,
+`stickers/StickerText.kt` (its resources `StringResource`s; the app's sticker screens read them
+through Compose Multiplatform's `stringResource`) and `domain/model/MessageTemplate.kt`. What they
+asked of Android goes through the platform: the attachment picker through `FilePicker` (its entry
+left out where there is none), the picked file's name and the chip's size through `FileDetails`, a
+file in a viewer and a report's mail draft through `OpenUrl` (the report offered only where
+`OpenUrl.available`; the support address from `AppBuildValues`), the IBAN through
+`SensitiveClipboard`, the payment code through `QrCodes`, dictation's language and availability
+through `Dictation`, the app's settings through `OpenUrl.openAppSettings`; dates through
+`ReaderDateText` and `readerMediumDate`, amounts through `ReaderMoneyText`, the thumbnail as its
+kotlinx-io `Path` through `AppImage` (left out where `PlatformImages.available` says no); Back while
+searching through Compose Multiplatform's `BackHandler`; the reply's language through Compose's
+`Locale.current`, which `AppLocale.follow` makes the app's; a template's body read in composition
+and a report's subject and body through `rememberUiTextResolver`. Still in the app: the previews
+(`presentation/chat/ChatPreviews.kt`) and `rememberDictationLanguageTag`
+(`presentation/chat/DictationLanguage.kt`, AppCompat's per-app choice and the phone's locales).
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -3112,7 +3138,10 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     never stored, logged or sent, and never calls itself "AI" — a tone model is MON-12.
     **Voice dictation is on-device only, and free** (September 2026, owner decision: the audio must
     not leave the phone). The composer's microphone (`ChatDictation.kt`, the pill's trailing icon,
-    so the send button keeps its place) goes through `domain/dictation/SpeechDictation`, bound to
+    so the send button keeps its place; in `:shared-ui` since MON-24 phase 2, slice 11b, drawn only
+    where the platform's `Dictation.available` agrees too, with its language from
+    `Dictation.rememberLanguageTag`, the app's `presentation/chat/DictationLanguage.kt` on Android)
+    goes through `domain/dictation/SpeechDictation`, bound to
     `data/dictation/OnDeviceSpeechDictation`: `SpeechRecognizer.createOnDeviceSpeechRecognizer`,
     shown only on API 33+ where `isOnDeviceRecognitionAvailable` says so — below that, or without
     one, there is **no button**, because `createSpeechRecognizer` binds whatever service the phone
@@ -3803,7 +3832,8 @@ Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth
     (`ActivityKind.readerPays`, `ActivityCardText.settleUpResource`), and a message cannot be
     edited. Each parent may add the IBAN they are paid on, `users/{uid}.paymentIban` (`PaymentAccounts`,
     Firestore only, mod-97 checked; the rules bound its shape), and under the card, on the payer's
-    phone only, `SettleUpPayment.kt` draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
+    phone only, `SettleUpPayment.kt` (`:shared-ui` since slice 11b; the matrix and the shared PNG from
+    the platform's `QrCodes`, ZXing in the app's `AndroidQrCodes`) draws `PaymentQr`: Czech QR Platba for a CZ account, Slovak PAY
     by square (raw LZMA1 through `org.tukaani:xz`) for an SK one, the EPC code for another euro
     account, and nothing for another currency — the IBAN to copy and **Share QR code** either way,
     because a bank's app cannot scan the screen it runs on. Three things not to undo. **The codes

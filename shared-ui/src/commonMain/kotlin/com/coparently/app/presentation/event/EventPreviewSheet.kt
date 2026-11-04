@@ -40,10 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.family.placementFamilyId
 import com.coparently.app.domain.events.AllDayEvent
@@ -61,9 +59,17 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleLargeEmphasized
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
-import com.coparently.app.utils.shortTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.event_all_day
+import com.coparently.app.resources.event_preview_delete
+import com.coparently.app.resources.event_preview_edit
+import com.coparently.app.resources.event_preview_important_mine
+import com.coparently.app.resources.event_preview_important_yours
+import com.coparently.app.resources.event_preview_photo
+import com.coparently.app.resources.event_preview_private
+import com.coparently.app.resources.image_viewer_open
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Read-only preview of an event shown before the editor: tapping an event in
@@ -113,11 +119,11 @@ private fun importantLine(event: Event, parentNames: ParentNames): String {
     val me = parentNames.parents.me?.uid
     return if (me != null && event.createdByFirebaseUid == me) {
         stringResource(
-            R.string.event_preview_important_mine,
+            Res.string.event_preview_important_mine,
             parentNames.labelForUid(parentNames.parents.coParent?.uid)
         )
     } else {
-        stringResource(R.string.event_preview_important_yours)
+        stringResource(Res.string.event_preview_important_yours)
     }
 }
 
@@ -125,7 +131,8 @@ private fun importantLine(event: Event, parentNames: ParentNames): String {
  * The body of [EventPreviewSheet], without the sheet around it.
  *
  * Split out so the JVM screenshot tests can render it: a `ModalBottomSheet` opens its own window,
- * which a single-view capture does not see. Everything the sheet shows lives here.
+ * which a single-view capture does not see. Everything the sheet shows lives here. Public, because
+ * those tests are in the app and `internal` stops at `:shared-ui`'s edge.
  *
  * @param event Event (or expanded occurrence) to preview
  * @param parentNames Resolves the event's slot to that parent's name
@@ -135,7 +142,7 @@ private fun importantLine(event: Event, parentNames: ParentNames): String {
  */
 @Suppress("LongMethod") // linear declarative layout, no logic to extract
 @Composable
-internal fun EventPreviewContent(
+fun EventPreviewContent(
     event: Event,
     parentNames: ParentNames,
     members: List<FamilyMember>,
@@ -230,7 +237,7 @@ internal fun EventPreviewContent(
         if (event.isPrivate) {
             PreviewRow(icon = Icons.Default.Lock) {
                 Text(
-                    text = stringResource(R.string.event_preview_private),
+                    text = stringResource(Res.string.event_preview_private),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -246,7 +253,7 @@ internal fun EventPreviewContent(
             var viewingPhoto by rememberSaveable { mutableStateOf(false) }
             AppImage(
                 model = photo,
-                contentDescription = stringResource(R.string.image_viewer_open),
+                contentDescription = stringResource(Res.string.image_viewer_open),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -257,7 +264,7 @@ internal fun EventPreviewContent(
             if (viewingPhoto) {
                 FullScreenImageDialog(
                     model = photo,
-                    contentDescription = stringResource(R.string.event_preview_photo),
+                    contentDescription = stringResource(Res.string.event_preview_photo),
                     onDismiss = { viewingPhoto = false }
                 )
             }
@@ -290,7 +297,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
                 modifier = Modifier.size(IconSizes.Small)
             )
             Text(
-                text = stringResource(R.string.event_preview_delete),
+                text = stringResource(Res.string.event_preview_delete),
                 modifier = Modifier.padding(start = Spacing.S)
             )
         }
@@ -303,7 +310,7 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
                 modifier = Modifier.size(IconSizes.Small)
             )
             Text(
-                text = stringResource(R.string.event_preview_edit),
+                text = stringResource(Res.string.event_preview_edit),
                 modifier = Modifier.padding(start = Spacing.S)
             )
         }
@@ -333,33 +340,35 @@ private fun PreviewActions(onEdit: () -> Unit, onDelete: (() -> Unit)?) {
  * (phase 2), so the two never word the same event's time differently.
  */
 @Composable
-internal fun eventTimeLine(event: Event): String {
-    val dateFormat = localizedDate("yMMMEEEd")
-    val timeFormat = shortTime()
-    val dateText = event.startDateTime.format(dateFormat)
+fun eventTimeLine(event: Event): String {
+    val dateText = ReaderDateText.date(event.startDateTime.date, DATE_SKELETON)
     val timeText = buildString {
-        append(event.startDateTime.format(timeFormat))
+        append(ReaderDateText.time(event.startDateTime))
         event.endDateTime?.let { end ->
             append(" – ")
             // An overnight or multi-day event names its end day too; "22:00 – 07:00" under the
             // start date read as ending before it began.
             if (end.date != event.startDateTime.date) {
-                append(end.format(dateFormat))
+                append(ReaderDateText.date(end.date, DATE_SKELETON))
                 append(' ')
             }
-            append(end.format(timeFormat))
+            append(ReaderDateText.time(end))
         }
     }
     // An all-day event names its days and says "All day", never the "12:00 AM" its midnight
     // start would print (`AllDayEvent`).
-    val allDayText = stringResource(R.string.event_all_day)
+    val allDayText = stringResource(Res.string.event_all_day)
     val lastDay = AllDayEvent.lastDay(event)
     return when {
         !AllDayEvent.isAllDay(event) -> "$dateText · $timeText"
-        lastDay != event.startDateTime.date -> "$dateText – ${lastDay.format(dateFormat)} · $allDayText"
+        lastDay != event.startDateTime.date ->
+            "$dateText – ${ReaderDateText.date(lastDay, DATE_SKELETON)} · $allDayText"
         else -> "$dateText · $allDayText"
     }
 }
+
+/** The day an event's time line names: weekday, day, month and year. */
+private const val DATE_SKELETON = "yMMMEEEd"
 
 /** From this font scale the preview's two actions stack instead of sharing a row. */
 private const val STACK_ACTIONS_FONT_SCALE = 1.3f

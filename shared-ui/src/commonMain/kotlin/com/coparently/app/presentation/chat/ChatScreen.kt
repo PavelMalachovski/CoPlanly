@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.chat
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,19 +37,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringArrayResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.coparently.app.R
 import com.coparently.app.domain.chat.ToneCheck
 import com.coparently.app.domain.chat.ToneNudge
 import com.coparently.app.domain.model.Event
@@ -59,13 +56,27 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.rememberMicrophonePermissionRequester
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.presentation.platform.LocalDictation
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.LightDarkPreviews
-import com.coparently.app.utils.PreviewWrapper
-import com.coparently.app.utils.dateWithTime
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_back
+import com.coparently.app.resources.chat_failed_to_send
+import com.coparently.app.resources.chat_header_synced
+import com.coparently.app.resources.chat_no_upcoming_events
+import com.coparently.app.resources.chat_nudge_words
+import com.coparently.app.resources.chat_pick_event_to_reschedule
+import com.coparently.app.resources.chat_request_change_title
+import com.coparently.app.resources.chat_search
+import com.coparently.app.resources.chat_search_close
+import com.coparently.app.resources.chat_sending_ellipsis
+import com.coparently.app.resources.chat_title_fallback
+import com.coparently.app.resources.chat_type_message
+import com.coparently.app.resources.voice_listening
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -102,7 +113,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param dictationViewModel Voice dictation into the composer — on the phone only, and drawn only
  *   where the phone can recognise speech on the device (see `OnDeviceSpeechDictation`)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
+// Android, as before).
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 // One callback per navigation target this screen offers; the body is the thread scaffold, which
 // only reads as one screen when it is written as one — including its kept-thread shape, where the
@@ -160,7 +173,11 @@ fun ChatScreen(
     // Voice dictation: the words land in the composer as they are heard, appended to the draft.
     // The draft is persisted when a session ends, not on every partial result.
     val dictation by dictationViewModel.state.collectAsState()
-    val dictationLanguage = rememberDictationLanguageTag()
+    // The platform's half (`Dictation`): the language to dictate in, and whether this phone can
+    // dictate at all — asked once, as the ViewModel asks its own recogniser once.
+    val dictationPlatform = LocalDictation.current
+    val dictationLanguage = dictationPlatform.rememberLanguageTag()
+    val canDictate = remember(dictationPlatform) { dictationPlatform.available }
     val microphone = rememberMicrophonePermissionRequester(onDenied = dictationViewModel::onPermissionDenied)
     LaunchedEffect(dictationViewModel, conversationId) {
         dictationViewModel.text.collect { dictated ->
@@ -228,7 +245,7 @@ fun ChatScreen(
     // The lexical second look (MON-19): part of "Pause before sending", so only for a parent who
     // asked for it. Computed while rendering and dropped with the frame — never stored, logged or
     // sent, and never a reason the send button is disabled.
-    val nudgeWords = stringArrayResource(R.array.chat_nudge_words).toList()
+    val nudgeWords = stringArrayResource(Res.array.chat_nudge_words).toList()
     val nudge = remember(composerText, pauseBeforeSending, nudgeWords) {
         if (pauseBeforeSending) ToneCheck.check(composerText, nudgeWords) else ToneNudge()
     }
@@ -248,7 +265,7 @@ fun ChatScreen(
                 // successful `ensureConversation` set it — `?:` alone never catches that.
                 val title = conversation?.title?.takeIf { it.isNotBlank() }
                     ?: departed?.departedName?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.chat_title_fallback)
+                    ?: stringResource(Res.string.chat_title_fallback)
                 ChatThreadHeader(title = title, messages = messages, currentUserId = currentUserId)
             }
         }
@@ -354,9 +371,9 @@ fun ChatScreen(
                         modifier = Modifier.weight(1f),
                         focusRequester = composerFocus,
                         placeholder = stringResource(
-                            if (dictation.listening) R.string.voice_listening else R.string.chat_type_message
+                            if (dictation.listening) Res.string.voice_listening else Res.string.chat_type_message
                         ),
-                        trailingIcon = if (dictation.available) {
+                        trailingIcon = if (dictation.available && canDictate) {
                             {
                                 DictationMicButton(
                                     listening = dictation.listening,
@@ -381,15 +398,13 @@ fun ChatScreen(
     }
 
     if (showTemplates) {
-        // The template body is a string resource, and the selection callback is not composable,
-        // so the context is captured here and the body resolved when a template is tapped.
-        val context = LocalContext.current
+        // The template body is read in the sheet, in composition, and handed over on a tap.
         MessageTemplatesBottomSheet(
-            onTemplateSelected = { template ->
+            onTemplateSelected = { content ->
                 // A template prepares the message; it does not send it. Sending on tap put three
                 // identical placeholders-and-all messages into a real thread during the August
                 // 2026 baseline run, because the send was invisible and read as a missed tap.
-                composerText = context.getString(template.contentRes)
+                composerText = content
                 viewModel.onDraftChanged(conversationId, composerText)
                 composerSeeds++
                 showTemplates = false
@@ -475,7 +490,7 @@ private fun ChatTopBar(
                 IconButton(onClick = onCloseSearch) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.chat_search_close)
+                        contentDescription = stringResource(Res.string.chat_search_close)
                     )
                 }
             }
@@ -489,7 +504,7 @@ private fun ChatTopBar(
                 IconButton(onClick = back) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.chat_back)
+                        contentDescription = stringResource(Res.string.chat_back)
                     )
                 }
             }
@@ -498,7 +513,7 @@ private fun ChatTopBar(
             IconButton(onClick = onOpenSearch) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = stringResource(R.string.chat_search)
+                    contentDescription = stringResource(Res.string.chat_search)
                 )
             }
             // Settings sits in the overflow menu here (UX audit M12): the thread's bar carries the
@@ -521,7 +536,6 @@ private fun ChangeRequestEventPicker(
     onEventSelected: (Event) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val dateFormatter = dateWithTime("MMMEd")
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -534,18 +548,18 @@ private fun ChangeRequestEventPicker(
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             Text(
-                text = stringResource(R.string.chat_request_change_title),
+                text = stringResource(Res.string.chat_request_change_title),
                 style = MaterialTheme.typography.titleMedium
             )
             if (events.isEmpty()) {
                 Text(
-                    text = stringResource(R.string.chat_no_upcoming_events),
+                    text = stringResource(Res.string.chat_no_upcoming_events),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Text(
-                    text = stringResource(R.string.chat_pick_event_to_reschedule),
+                    text = stringResource(Res.string.chat_pick_event_to_reschedule),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -554,7 +568,7 @@ private fun ChangeRequestEventPicker(
                         ListItem(
                             headlineContent = { Text(event.title) },
                             supportingContent = {
-                                Text(event.startDateTime.format(dateFormatter))
+                                Text(ReaderDateText.dateWithTime(event.startDateTime, "MMMEd"))
                             },
                             modifier = Modifier.clickable { onEventSelected(event) }
                         )
@@ -579,26 +593,26 @@ private val HEADER_AVATAR_SIZE = 36.dp
  * mock's "synced just now": the app tracks no chat sync timestamp, and printing one it does not
  * have is exactly the kind of affordance this refresh removed elsewhere.
  *
- * Internal rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its
- * subclasses under `app/src/test`) can render it on its own.
+ * Public rather than private so the JVM screenshot tests (`ScreenshotMatrix` and its subclasses
+ * under `app/src/test`) can render it on its own: `internal` stops at `:shared-ui`'s edge.
  *
  * @param title Conversation title — the co-parent's name once `ensureConversation` has run
  * @param messages Thread contents, newest last
  * @param currentUserId Whose messages count towards the status
  */
 @Composable
-internal fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: String) {
+fun ChatThreadHeader(title: String, messages: List<Message>, currentUserId: String) {
     val mine = messages.filter { it.senderId == currentUserId }
     val status = when {
-        mine.any { it.status == MessageSendStatus.ERROR } -> R.string.chat_failed_to_send
-        mine.any { it.status == MessageSendStatus.SENDING } -> R.string.chat_sending_ellipsis
-        else -> R.string.chat_header_synced
+        mine.any { it.status == MessageSendStatus.ERROR } -> Res.string.chat_failed_to_send
+        mine.any { it.status == MessageSendStatus.SENDING } -> Res.string.chat_sending_ellipsis
+        else -> Res.string.chat_header_synced
     }
     // Same three-way colour split as the sync row in Settings: errors shout, in-flight is muted,
     // settled is the tertiary accent.
     val statusColor: Color = when (status) {
-        R.string.chat_failed_to_send -> MaterialTheme.colorScheme.error
-        R.string.chat_sending_ellipsis -> MaterialTheme.colorScheme.onSurfaceVariant
+        Res.string.chat_failed_to_send -> MaterialTheme.colorScheme.error
+        Res.string.chat_sending_ellipsis -> MaterialTheme.colorScheme.onSurfaceVariant
         else -> MaterialTheme.colorScheme.tertiary
     }
 
@@ -632,13 +646,5 @@ internal fun ChatThreadHeader(title: String, messages: List<Message>, currentUse
                 color = statusColor
             )
         }
-    }
-}
-
-@LightDarkPreviews
-@Composable
-private fun ChatThreadHeaderPreview() {
-    PreviewWrapper {
-        ChatThreadHeader(title = "Pavel", messages = emptyList(), currentUserId = "u1")
     }
 }

@@ -17,14 +17,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
+import androidx.compose.ui.text.intl.Locale
 import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.ai.AiConsentDialog
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.ai_reply_suggest_subtitle
+import com.coparently.app.resources.ai_reply_suggest_title
+import com.coparently.app.resources.ai_reply_suggest_working
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -52,8 +55,10 @@ fun ReplySuggestionRow(
     val state by viewModel.state.collectAsState()
     val suggestion by viewModel.suggestion.collectAsState()
     // The language the parent reads the app in — the per-app choice included — is the one the
-    // draft is written in.
-    val locale = LocalConfiguration.current.locales[0].toLanguageTag()
+    // draft is written in: Compose's `Locale.current`, which on Android is the locale the app
+    // speaks (`AppLocale.follow` puts it first in the process's list, as the Activity's
+    // configuration has it).
+    val locale = Locale.current.toLanguageTag()
 
     LaunchedEffect(suggestion) {
         suggestion?.let { text ->
@@ -76,12 +81,12 @@ fun ReplySuggestionRow(
                 modifier = Modifier.size(IconSizes.Standard)
             )
         },
-        headlineContent = { Text(stringResource(R.string.ai_reply_suggest_title)) },
+        headlineContent = { Text(stringResource(Res.string.ai_reply_suggest_title)) },
         supportingContent = {
             when {
-                working -> Text(stringResource(R.string.ai_reply_suggest_working))
+                working -> Text(stringResource(Res.string.ai_reply_suggest_working))
                 failure != null -> Text(text = failure.asString(), color = MaterialTheme.colorScheme.error)
-                else -> Text(stringResource(R.string.ai_reply_suggest_subtitle))
+                else -> Text(stringResource(Res.string.ai_reply_suggest_subtitle))
             }
         },
         trailingContent = if (working) {

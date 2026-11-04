@@ -2681,7 +2681,7 @@ converts their dates.
 | ~~`usecase/EventUseCases.kt`~~ | moved to `shared-data` in Task 8f |
 | ~~`error/ErrorHandler.kt`~~ | moved to `shared-data` in Task 8f: `Connectivity.isOnline()` (which `NetworkMonitor` answers from the system, as before), `kotlinx.io.IOException` (`java.io.IOException` on Android) and an `expect`/`actual` `isPermissionFailure` (`SecurityException` on Android) |
 | ~~`activity/ActivityAnnouncer.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8c (Koin, the common `logger`, `kotlin.uuid.Uuid`) |
-| `model/MessageTemplate.kt` | `@StringRes` and the app's `R` (strings move in phase 2) |
+| ~~`model/MessageTemplate.kt`~~ | moved to `shared-ui/src/commonMain/` in phase 2's Task 11 (slice 11b), with the chat's templates sheet: its resources Compose Multiplatform's `StringResource`s, which `shared/` cannot name. The list is empty |
 | ~~`repository/FamilyDocumentRepository.kt`~~ | moved to `shared-data/src/commonMain/` in phase 2's Task 8j (not `shared/`, which has no kotlinx-io): a local copy is a kotlinx-io `Path` where it was a `java.io.File` |
 | ~~`review/MonthStatsWire.kt`~~ | moved to `shared/` in phase 2's Task 8i; the month is `IsoText.yearMonth`, `java.time.YearMonth`'s text for every year |
 | ~~`export/CommunicationRecord.kt`, `CommunicationRecordBuilder.kt`, `CommunicationRecordCsv.kt`, `PlanCsvRows.kt`, `RecordFormat.kt`, `RecordJournal.kt`, `RecordPlanLayout.kt`~~ | moved to `shared/` in Task 8i on kotlinx-datetime: the printed times were `RecordTimeText` already, an event document is read by `IsoText.parseDateTime`/`parseDate` (`ISO_LOCAL_DATE_TIME`, `LocalDate.parse`), and the message window is `RecordWindow`, held on the iOS simulator by `RecordWindowVectorsTest`'s literal `java.time` instants for midnight-gap days (on the JVM kotlinx-datetime is `java.time` itself) |
@@ -3000,7 +3000,16 @@ bytes are identical on Android):
   Multiplatform's predictive back, androidx.activity's on Android), the family switcher, the two
   panes, the list skeleton, the record-place mark and the notification and microphone requesters.
   What carries `java.time` or `@StringRes` to its callers moves with their screens. **Slice 11a
-  built, CI pending.**
+  built, CI pending.** Slice 11b, chat: first the seams it needs beyond 11a's — a file's name and
+  size (`FileDetails`), a QR code from text and shared as a picture (`QrCodes`, the settle-up
+  payment code's ZXing and PNG on Android), money in the reader's conventions
+  (`utils/ReaderMoneyText`, Android's `currencyFormat`, which moved with it) and a medium date for
+  the day separators; then every chat screen and composable, with the event preview a card opens,
+  the AI consent's rows, the stickers' wording and the message templates (the last file on phase
+  1's stay list). Each Android call went behind a platform interface, the date seam or the money
+  seam; the iPhone hides the attachment picker, the report, the IBAN's copy, the payment code and
+  the thumbnails, as it has none of them yet. The previews and the dictation language's Android
+  half stay in the app. **Slice 11b built, CI pending.**
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

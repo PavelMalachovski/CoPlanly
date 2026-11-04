@@ -29,24 +29,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatSearchHit
 import com.coparently.app.domain.chat.SearchSnippet
 import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.dateWithTime
-import java.time.format.DateTimeFormatter
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_search_clear
+import com.coparently.app.resources.chat_search_failed_description
+import com.coparently.app.resources.chat_search_failed_title
+import com.coparently.app.resources.chat_search_no_results_description
+import com.coparently.app.resources.chat_search_no_results_title
+import com.coparently.app.resources.chat_search_placeholder
+import com.coparently.app.resources.chat_search_prompt_description
+import com.coparently.app.resources.chat_search_prompt_title
+import com.coparently.app.resources.chat_search_result_meta
+import com.coparently.app.resources.chat_search_show_in_thread
+import com.coparently.app.resources.chat_search_truncated
+import org.jetbrains.compose.resources.stringResource
 
 /** Date and time on a search result: the result may be from any day, unlike a bubble's. */
-private fun resultTimeFormatter(): DateTimeFormatter = dateWithTime("yMMMd", separator = ", ")
+private fun resultTime(sentAtMillis: Long): String = formatSentAt(sentAtMillis, "yMMMd", separator = ", ")
 
 /** Most lines a result's snippet takes. */
 private const val SNIPPET_MAX_LINES = 2
@@ -67,12 +76,12 @@ fun ChatSearchField(query: String, onQueryChange: (String) -> Unit, onClear: () 
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(focus),
-        placeholder = { Text(stringResource(R.string.chat_search_placeholder)) },
+        placeholder = { Text(stringResource(Res.string.chat_search_placeholder)) },
         singleLine = true,
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.chat_search_clear))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.chat_search_clear))
                 }
             }
         },
@@ -107,8 +116,8 @@ fun ChatSearchResults(
         // The prompt doubles as the privacy statement: what is searched, and that it stays here.
         ChatSearchState.Prompt -> EmptyState(
             icon = Icons.Default.Search,
-            title = stringResource(R.string.chat_search_prompt_title),
-            description = stringResource(R.string.chat_search_prompt_description),
+            title = stringResource(Res.string.chat_search_prompt_title),
+            description = stringResource(Res.string.chat_search_prompt_description),
             modifier = modifier.fillMaxSize()
         )
         ChatSearchState.Searching -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -116,15 +125,15 @@ fun ChatSearchResults(
         }
         ChatSearchState.Failed -> EmptyState(
             icon = Icons.Default.ErrorOutline,
-            title = stringResource(R.string.chat_search_failed_title),
-            description = stringResource(R.string.chat_search_failed_description),
+            title = stringResource(Res.string.chat_search_failed_title),
+            description = stringResource(Res.string.chat_search_failed_description),
             modifier = modifier.fillMaxSize()
         )
         is ChatSearchState.Results -> if (state.result.hits.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.SearchOff,
-                title = stringResource(R.string.chat_search_no_results_title),
-                description = stringResource(R.string.chat_search_no_results_description, state.query.trim()),
+                title = stringResource(Res.string.chat_search_no_results_title),
+                description = stringResource(Res.string.chat_search_no_results_description, state.query.trim()),
                 modifier = modifier.fillMaxSize()
             )
         } else {
@@ -140,7 +149,7 @@ private fun ResultList(
     onSelect: (ChatSearchHit) -> Unit,
     modifier: Modifier
 ) {
-    val showLabel = stringResource(R.string.chat_search_show_in_thread)
+    val showLabel = stringResource(Res.string.chat_search_show_in_thread)
     LazyColumn(modifier = modifier.fillMaxSize()) {
         // A message id is unique within a thread, and search returns each message once.
         items(state.result.hits, key = { it.message.id }) { hit ->
@@ -148,9 +157,9 @@ private fun ResultList(
                 overlineContent = {
                     Text(
                         text = stringResource(
-                            R.string.chat_search_result_meta,
+                            Res.string.chat_search_result_meta,
                             senderName(hit, names),
-                            formatSentAt(hit.message.sentAtMillis, resultTimeFormatter())
+                            resultTime(hit.message.sentAtMillis)
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -170,7 +179,7 @@ private fun ResultList(
         if (state.result.truncated) {
             item(key = "truncated") {
                 Text(
-                    text = stringResource(R.string.chat_search_truncated, state.result.hits.size),
+                    text = stringResource(Res.string.chat_search_truncated, state.result.hits.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(Spacing.L)

@@ -45,11 +45,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.chat.ChatScrollPolicy
 import com.coparently.app.domain.model.Message
@@ -58,19 +56,34 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.chatBubbleShape
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_day_today
+import com.coparently.app.resources.chat_day_yesterday
+import com.coparently.app.resources.chat_failed_to_send
+import com.coparently.app.resources.chat_failed_to_send_retry
+import com.coparently.app.resources.chat_load_earlier
+import com.coparently.app.resources.chat_messages_empty_description
+import com.coparently.app.resources.chat_messages_empty_title
+import com.coparently.app.resources.chat_open_change_request
+import com.coparently.app.resources.chat_open_event
+import com.coparently.app.resources.chat_status_delivered
+import com.coparently.app.resources.chat_status_error
+import com.coparently.app.resources.chat_status_read
+import com.coparently.app.resources.chat_status_sending
+import com.coparently.app.resources.chat_status_sent
+import com.coparently.app.resources.parent_label_you
 import com.coparently.app.utils.DAY_WITH_WEEKDAY
-import com.coparently.app.utils.isoDateText
-import com.coparently.app.utils.shortTime
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.readerMediumDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-
-private val daySeparatorFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Clock
 
 /** Consecutive messages from the same sender within this gap render as one group. */
 private const val GROUPING_WINDOW_MS = 5 * 60 * 1000L
@@ -82,8 +95,7 @@ private const val GROUPING_WINDOW_MS = 5 * 60 * 1000L
  * locally by [formatSentAt] — so the day has to be derived the same way. Deriving it from the
  * instant alone would put a message sent at 23:30 in one zone under the wrong heading in another.
  */
-private fun Message.localDate(): LocalDate =
-    Instant.ofEpochMilli(sentAtMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+private fun Message.localDate(): LocalDate = sentAtLocal(sentAtMillis).date
 
 /**
  * One entry in the rendered thread: either a day separator or a message with the grouping
@@ -245,8 +257,8 @@ fun MessagesList(
         if (messages.isEmpty()) {
             EmptyState(
                 icon = Icons.AutoMirrored.Filled.Message,
-                title = stringResource(R.string.chat_messages_empty_title),
-                description = stringResource(R.string.chat_messages_empty_description),
+                title = stringResource(Res.string.chat_messages_empty_title),
+                description = stringResource(Res.string.chat_messages_empty_description),
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -266,7 +278,7 @@ fun MessagesList(
                             onClick = loadEarlier,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(stringResource(R.string.chat_load_earlier))
+                            Text(stringResource(Res.string.chat_load_earlier))
                         }
                     }
                 }
@@ -407,10 +419,11 @@ private fun RevealHighlight(highlighted: Boolean, content: @Composable () -> Uni
 /** Small centred pill marking where a new day begins in the thread. */
 @Composable
 private fun DaySeparator(date: LocalDate) {
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val label = when (date) {
-        LocalDate.now() -> stringResource(R.string.chat_day_today)
-        LocalDate.now().minusDays(1) -> stringResource(R.string.chat_day_yesterday)
-        else -> date.format(daySeparatorFormatter)
+        today -> stringResource(Res.string.chat_day_today)
+        today.minus(1, DateTimeUnit.DAY) -> stringResource(Res.string.chat_day_yesterday)
+        else -> readerMediumDate(date)
     }
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Text(
@@ -496,7 +509,7 @@ fun MessageItem(
             // build says it the way the reader's language does (D-18). A custody proposal has no
             // title of its own, so it is worded; anything else is the sender's own title.
             val subject = when (val about = ActivityCardText.subjectOf(card)) {
-                is CardSubjectText.IsoDate -> isoDateText(about.iso, DAY_WITH_WEEKDAY)
+                is CardSubjectText.IsoDate -> ReaderDateText.isoDate(about.iso, DAY_WITH_WEEKDAY)
                 is CardSubjectText.Res -> stringResource(about.id)
                 is CardSubjectText.Raw -> about.text
             }
@@ -511,7 +524,7 @@ fun MessageItem(
     val isCard = activity != null
     val cardActor = when {
         !isCard -> null
-        isCurrentUser -> stringResource(R.string.parent_label_you)
+        isCurrentUser -> stringResource(Res.string.parent_label_you)
         else -> message.senderName.takeIf { it.isNotBlank() }
     }
     Column(
@@ -531,7 +544,7 @@ fun MessageItem(
         }
         // What TalkBack says the tap does: an event card opens the event, not a change request.
         val openLabel = stringResource(
-            if (target is ChatCardTarget.Event) R.string.chat_open_event else R.string.chat_open_change_request
+            if (target is ChatCardTarget.Event) Res.string.chat_open_event else Res.string.chat_open_change_request
         )
         // A co-parent's own words can be reported with a long press (play-final audit F-10); a
         // card the app composed cannot, and nothing changes while no support address is set.
@@ -649,15 +662,15 @@ fun MessageItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Error,
-                    contentDescription = stringResource(R.string.chat_status_error),
+                    contentDescription = stringResource(Res.string.chat_status_error),
                     modifier = Modifier.size(RECEIPT_ICON_SIZE),
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
                     text = if (onRetryFailed == null) {
-                        stringResource(R.string.chat_failed_to_send)
+                        stringResource(Res.string.chat_failed_to_send)
                     } else {
-                        stringResource(R.string.chat_failed_to_send_retry)
+                        stringResource(Res.string.chat_failed_to_send_retry)
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error
@@ -692,7 +705,7 @@ private fun BubbleMeta(
         horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
     ) {
         Text(
-            text = formatSentAt(message.sentAtMillis, shortTime()),
+            text = formatSentAt(message.sentAtMillis),
             style = MaterialTheme.typography.labelSmall,
             color = metaColor
         )
@@ -728,7 +741,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
         MessageSendStatus.SENDING -> {
             Icon(
                 imageVector = Icons.Default.Schedule,
-                contentDescription = stringResource(R.string.chat_status_sending),
+                contentDescription = stringResource(Res.string.chat_status_sending),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
                 tint = baseTint
             )
@@ -736,7 +749,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
         MessageSendStatus.ERROR -> {
             Icon(
                 imageVector = Icons.Default.Error,
-                contentDescription = stringResource(R.string.chat_status_error),
+                contentDescription = stringResource(Res.string.chat_status_error),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
                 tint = baseTint
             )
@@ -744,7 +757,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
         MessageSendStatus.SENT -> {
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = stringResource(R.string.chat_status_sent),
+                contentDescription = stringResource(Res.string.chat_status_sent),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
                 tint = baseTint
             )
@@ -752,7 +765,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
         MessageSendStatus.DELIVERED -> {
             Icon(
                 imageVector = Icons.Default.DoneAll,
-                contentDescription = stringResource(R.string.chat_status_delivered),
+                contentDescription = stringResource(Res.string.chat_status_delivered),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
                 tint = baseTint
             )
@@ -760,7 +773,7 @@ private fun DeliveryReceipt(message: Message, baseTint: Color, readTint: Color) 
         MessageSendStatus.READ -> {
             Icon(
                 imageVector = Icons.Default.DoneAll,
-                contentDescription = stringResource(R.string.chat_status_read),
+                contentDescription = stringResource(Res.string.chat_status_read),
                 modifier = Modifier.size(RECEIPT_ICON_SIZE),
                 tint = readTint
             )

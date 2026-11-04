@@ -212,6 +212,8 @@ const RULES = [
     paths: ['K/presentation/chat/ChatDictation.kt', 'K/presentation/chat/DictationViewModel.kt',
       'K/presentation/chat/MessageInput.kt', 'K/domain/dictation/**', 'K/data/dictation/**',
       'K/presentation/common/PermissionRequesters.kt', 'K/presentation/common/AndroidPermissionChecks.kt',
+      // The language's Android half since MON-24 (`Dictation.rememberLanguageTag`).
+      'K/presentation/chat/DictationLanguage.kt', 'K/presentation/platform/Dictation.kt',
       'S/values*/voice_strings.xml'],
   },
   {
@@ -243,7 +245,11 @@ const RULES = [
     why: 'settle up: the card, the IBAN, or the payment QR code a bank reads',
     paths: ['K/domain/payment/**', 'K/data/payment/**', 'K/presentation/chat/SettleUpPayment.kt',
       'K/presentation/expenses/SettleUpDialog.kt', 'K/presentation/expenses/SettleUpViewModel.kt',
-      'K/presentation/expenses/ExpenseSummaryHeader.kt'],
+      'K/presentation/expenses/ExpenseSummaryHeader.kt',
+      // Since MON-24: the code's matrix and shared PNG (`QrCodes`, ZXing in `AndroidQrCodes`), and
+      // the amounts in the reader's conventions.
+      'K/presentation/platform/*QrCodes.kt', 'K/utils/ReaderMoneyText*',
+      'K/presentation/expenses/CurrencyFormat.kt'],
   },
   {
     sections: ['3.26'],
@@ -418,6 +424,8 @@ const RULES = [
     why: 'the document vault or chat attachments',
     paths: ['K/presentation/documents/**', 'K/domain/documents/**', 'K/data/documents/**',
       'K/domain/files/**', 'K/data/files/**', 'K/**/*Attachment*', 'storage.rules',
+      // A picked file's name and size since MON-24 (the chat's confirmation and chip).
+      'K/presentation/platform/FileDetails.kt',
       'S/values*/shared_files_strings.xml'],
   },
   {

@@ -48,6 +48,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The role this parent's stickers address them by, or null while none is known. */
