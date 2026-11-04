@@ -13,11 +13,13 @@ import com.coparently.app.data.sync.SyncWorker
 import com.coparently.app.data.telemetry.TelemetryConsentApplier
 import com.coparently.app.di.koin.appModules
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
+import com.coparently.app.utils.AppLocale
 import com.google.firebase.FirebaseApp
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.factory.KoinWorkerFactory
 import org.koin.core.context.startKoin
+import android.content.res.Configuration as AndroidConfiguration
 
 /**
  * Application class for CoPlanly.
@@ -69,6 +71,11 @@ class CoPlanlyApplication : Application(), Configuration.Provider, ImageLoaderFa
     override fun onCreate() {
         super.onCreate()
 
+        // The language the app speaks (the owner's rule, `AppLocale`), as the process's default
+        // locale from the first line on, so a push, a worker or the widget in a process no
+        // activity has started formats its dates in the language it words them in.
+        AppLocale.follow(this)
+
         // The graph first: everything below resolves from it. Instrumented tests never get here —
         // their runner substitutes an application that starts nothing, and each test starts its
         // own graph with its overrides (`KoinTestRule`).
@@ -116,6 +123,16 @@ class CoPlanlyApplication : Application(), Configuration.Provider, ImageLoaderFa
         // ...and one right now, plus one every time the app comes back to the foreground.
         SyncWorker.syncNow(this)
         registerActivityLifecycleCallbacks(ForegroundSyncTrigger())
+    }
+
+    /**
+     * The framework has just reset the default locale to the one Android's resources resolved
+     * (`ConfigurationController.updateLocaleListFromAppContext`, before it calls back here): put
+     * the app's own back.
+     */
+    override fun onConfigurationChanged(newConfig: AndroidConfiguration) {
+        super.onConfigurationChanged(newConfig)
+        AppLocale.follow(this)
     }
 
     /**

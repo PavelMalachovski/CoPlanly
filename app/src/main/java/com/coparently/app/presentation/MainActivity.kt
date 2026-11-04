@@ -1,5 +1,6 @@
 package com.coparently.app.presentation
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -50,7 +51,6 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.startDestinationFor
-import com.coparently.app.presentation.settings.ResolvedAppLocale
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
@@ -59,7 +59,9 @@ import com.coparently.app.presentation.widget.TodayWidgetRefresher
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.sync_google_sign_in_cancelled
 import com.coparently.app.resources.sync_google_sign_in_failed
+import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.ClockFormat
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -88,6 +90,11 @@ private const val SPLASH_HOLD_MAX_MS = 1_500L
  * Extends [AppCompatActivity] (not ComponentActivity) so that per-app language
  * preferences set via AppCompatDelegate.setApplicationLocales are applied to this
  * activity's configuration on every recreation, including on Android < 13.
+ *
+ * It speaks the language [AppLocale] decides (the owner's rule: the per-app choice, else the
+ * phone's first language when the app ships it, else English): its base context is put in that
+ * locale before AppCompat's delegate sees it ([attachBaseContext]), and the process's default
+ * locale follows it once AppCompat has applied a per-app choice ([onCreate], [onResume]).
  */
 class MainActivity : AppCompatActivity() {
 
@@ -219,7 +226,20 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // Again here: the framework resets the default locale on a configuration change, and one
+        // it counts as no change at all reaches no callback that would set it back.
+        AppLocale.follow(this)
         ClockFormat.follow(this)
+    }
+
+    /**
+     * Gives the activity its base context in the language the app speaks ([AppLocale]), before
+     * AppCompat's delegate wraps it. AppCompat keeps a locale it finds on the base context as part
+     * of its configuration overlay, applies night mode beside it, and puts a per-app choice below
+     * Android 13 on top, so a choice still wins.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.inAppLanguage())
     }
 
     /**
@@ -243,10 +263,13 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
-        // After AppCompat has applied a per-app choice and before anything is composed: text read
-        // through Compose Multiplatform's resources follows the process's default locale, which
-        // this makes the language Android's resources resolved (MON-24, option (a)).
-        ResolvedAppLocale.follow(this)
+        // After AppCompat has applied a per-app choice (and set the default locale list itself)
+        // and before anything is composed: Compose's Locale.current, and so Compose
+        // Multiplatform's strings, java.time and number formats, follow the process's default,
+        // which this makes the language the app speaks. Below Android 13 the choice is mirrored
+        // for the pushes and workers of a process no activity has started.
+        AppLocale.rememberChoice(this)
+        AppLocale.follow(this)
         // Before the first frame, so no time is ever drawn in the language's format first.
         ClockFormat.follow(this)
 

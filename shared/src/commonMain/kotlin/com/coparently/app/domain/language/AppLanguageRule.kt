@@ -25,7 +25,7 @@ object AppLanguageRule {
     /**
      * The languages the app ships: `values/` (English) and the four `values-<language>` folders
      * of `shared-ui/src/commonMain/composeResources/`, the same set as `res/xml/locales_config.xml`
-     * and the `AppLanguage` picker (the app's `AppLanguageRuleTest` holds the three to one list).
+     * and the `AppLanguage` picker (the app's `ShippedLanguagesTest` holds the four to one list).
      */
     val SHIPPED: Set<String> = setOf("en", "cs", "de", "ru", "uk")
 
@@ -43,10 +43,11 @@ object AppLanguageRule {
      */
     fun effective(perAppChoice: String?, deviceFirst: String, shipped: Set<String> = SHIPPED): String {
         val choice = perAppChoice?.trim()?.takeIf { it.isNotEmpty() && languageOf(it) != UNDETERMINED }
-        if (choice != null) return choice
-        if (languageOf(deviceFirst) in shipped) return deviceFirst
-        val region = regionOf(deviceFirst) ?: return FALLBACK
-        return "$FALLBACK-$region"
+        return when {
+            choice != null -> choice
+            languageOf(deviceFirst) in shipped -> deviceFirst
+            else -> regionOf(deviceFirst)?.let { "$FALLBACK-$it" } ?: FALLBACK
+        }
     }
 
     /** The language subtag of [tag], lower case (`cs` of `cs-CZ`); empty for an empty tag. */
@@ -58,19 +59,18 @@ object AppLanguageRule {
      * singleton are read, so `cs-u-fw-mon` has no region.
      */
     fun regionOf(tag: String): String? {
-        for (subtag in tag.trim().split('-', '_').drop(1)) {
-            when {
-                subtag.length == 1 -> return null
-                subtag.length == REGION_LETTERS && subtag.all { it.isLetter() } -> return subtag.uppercase()
-                subtag.length == REGION_DIGITS && subtag.all { it.isDigit() } -> return subtag
-                // An extended language subtag (three letters) or a script (four) comes before the
-                // region; a variant comes after it, so a tag that reaches one has no region.
-                subtag.length == EXTLANG_LETTERS && subtag.all { it.isLetter() } -> continue
-                subtag.length == SCRIPT_LETTERS && subtag.all { it.isLetter() } -> continue
-                else -> return null
-            }
+        // An extended language subtag (three letters) or a script (four) comes before the region; a
+        // variant comes after it, so the first subtag past those is the region or there is none.
+        val candidate = tag.trim().split('-', '_').drop(1)
+            .takeWhile { it.length > 1 }
+            .dropWhile { it.all(Char::isLetter) && (it.length == EXTLANG_LETTERS || it.length == SCRIPT_LETTERS) }
+            .firstOrNull()
+        return when {
+            candidate == null -> null
+            candidate.length == REGION_LETTERS && candidate.all(Char::isLetter) -> candidate.uppercase()
+            candidate.length == REGION_DIGITS && candidate.all(Char::isDigit) -> candidate
+            else -> null
         }
-        return null
     }
 
     private const val UNDETERMINED = "und"

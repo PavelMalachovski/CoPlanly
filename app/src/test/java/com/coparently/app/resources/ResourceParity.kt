@@ -17,7 +17,7 @@ import java.util.Locale
  * resource plugin into `Res`. Compose Multiplatform picks the language from Compose's
  * `Locale.current`, the first entry of `android.os.LocaleList.getDefault()`, which follows
  * [Locale.setDefault] while no list was set explicitly, so a case sets that; Android's side reads a
- * configuration context in the same language. On a device the two can differ (`ResolvedAppLocale`).
+ * configuration context in the same language. On a device the app makes them one (`AppLocale`).
  */
 internal object ResourceParity {
 

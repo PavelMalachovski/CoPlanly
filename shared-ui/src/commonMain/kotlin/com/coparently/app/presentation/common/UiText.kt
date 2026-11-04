@@ -28,8 +28,9 @@ import org.jetbrains.compose.resources.stringResource
  *
  * The strings are Compose Multiplatform's (`Res.string`, `Res.plurals`; MON-24 phase 2, slice
  * 9c), so the same type serves both apps. Their language is Compose's `Locale.current`, which on
- * Android `ResolvedAppLocale` makes the locale `R.string` resolved; the dates follow the
- * reader's locale as before (on Android the configuration's first locale).
+ * Android the app's `AppLocale` sets to the language it speaks, the one its activities' `R.string`
+ * reads too (the owner's rule); the dates follow the reader's locale as before (on Android the
+ * configuration's first locale).
  *
  * Prefer a typed code (an enum the screen maps to a resource) where the screen *branches* on the
  * outcome; a `UiText` is for text the screen only shows. Never compare one to decide behaviour —

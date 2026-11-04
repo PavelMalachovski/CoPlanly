@@ -40,7 +40,7 @@ import java.util.Locale
  * the Slavic languages (1, 2, 5, 21). The Android side is what `UiText` resolved to before:
  * `getString`/`getQuantityString` with the arguments resolved first, and `java.time`'s medium date
  * and full day name in the configuration's locale. The language is set as the app sets it: the
- * configuration's and the process's default (`ResolvedAppLocale`), before the activity starts.
+ * configuration's and the process's default (`AppLocale`), before the activity starts.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [34], application = RobolectricTestApplication::class)
