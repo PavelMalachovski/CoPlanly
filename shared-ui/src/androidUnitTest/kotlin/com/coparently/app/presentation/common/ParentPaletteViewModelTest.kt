@@ -1,5 +1,6 @@
 package com.coparently.app.presentation.common
 
+import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
 import com.coparently.app.domain.model.PartnerSummary
 import com.coparently.app.domain.model.User
@@ -7,7 +8,8 @@ import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -42,19 +44,32 @@ class ParentPaletteViewModelTest {
         colorCode = ParentColorChoice.PURPLE.storedCode
     )
 
+    /** Every ViewModel a test made, so tear-down can stop what it left running. */
+    private val viewModels = mutableListOf<ParentPaletteViewModel>()
+
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        // Standard, not unconfined: `ParentsSource` answers from the real `Dispatchers.Default`,
+        // and under an unconfined Main its answer ran this ViewModel's `viewModelScope` (the
+        // `stateIn` sharing and its `WhileSubscribed` bookkeeping) inline on that thread. A
+        // collector cancelled while it was running there left the sharing's next step to that
+        // thread, which could run it after `resetMain`: a `delay` on the absent Main dispatcher,
+        // reported as a `CompletionHandlerException` by whichever `runTest` was running. Standard
+        // queues every such resumption on the test scheduler, which only the test thread runs.
+        Dispatchers.setMain(StandardTestDispatcher())
     }
 
     @After
     fun tearDown() {
+        // Nothing calls onCleared in a test. Cancel while Main is still the test dispatcher, as
+        // ExportViewModelTest does, so nothing of this ViewModel outlives the test.
+        viewModels.forEach { it.viewModelScope.cancel() }
         Dispatchers.resetMain()
     }
 
     @Test
     fun `starts on the default and then draws what the two parents chose`() = runTest {
-        val viewModel = ParentPaletteViewModel(testParentsSource(me = me, partner = partner))
+        val viewModel = ParentPaletteViewModel(testParentsSource(me = me, partner = partner)).also { viewModels += it }
 
         // The first frame, before anything collects the parents: what the app always drew.
         assertEquals(ParentPalette.Default, viewModel.palette.value)
