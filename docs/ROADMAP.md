@@ -3014,7 +3014,10 @@ bytes are identical on Android):
   today's date, the date and time pickers, the "Answer by" block, holiday and event-type names, the
   member chips and the month-paging tween — each with a `java.time` twin in the app for the screens
   not yet moved; then the event form, onto kotlinx-datetime, its photo through the platform's picker
-  (none on the iPhone yet, so no attach button there).
+  (none on the iPhone yet, so no attach button there). The calendar's screens are next, in one
+  round: kizitonwose's multiplatform `HorizontalCalendar` 2.9.1 fits (kotlinx-datetime's months and
+  days, Compose Multiplatform 1.9) and replaces the Android artifact in the same commit.
+  **Slice 11c in progress: the helpers and the event form built, CI pending.**
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

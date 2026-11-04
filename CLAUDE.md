@@ -2032,7 +2032,9 @@ and left out where the platform can neither pick nor draw one, its log line thro
 the strings its lambdas used read in composition. `utils/ValidationUtils` moved with it, its one
 caller, without its email and URL checks (Android's `Patterns`; nothing called them). `NavGraph`
 parses the route's date with kotlinx-datetime. `EventFormEndTest` and `AddEditEventScreenTest` run
-in `commonTest`.
+in `commonTest`. **The calendar's screens are still in the app** (`presentation/calendar/` but its
+ViewModels and models, and `calendar/components/`): the plan's slice 11c notes list what their move
+takes, kizitonwose's multiplatform 2.9.1 in place of the Android 2.6.1 among it.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

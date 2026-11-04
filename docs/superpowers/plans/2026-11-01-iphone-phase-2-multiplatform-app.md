@@ -1185,6 +1185,53 @@ Then the export and the school import:
   lambdas used are read in composition. `utils/ValidationUtils` moved with it (its unused email and URL
   checks, on Android's `Patterns`, left out). `NavGraph` parses the date with kotlinx-datetime. Its two
   JVM tests run in `commonTest`, their names without commas.
+- **Left for 11c's next round: the calendar** (`presentation/calendar/` but the ViewModels and models
+  Task 10 moved, and `calendar/components/`). Moving it piece by piece costs more than moving it at
+  once: the helpers (`SwapSelection`, `SwapTap`, `SwapMark`, `OpeningHour`, `ChildCustodyBand`,
+  `DateRangeHelper`, `DayCellColors`, `DayCellFills`, `EventMemberMark`) are called from about twenty
+  places in `CalendarScreen`, `MonthView` and `DayWeekView` over `java.time` days, so a partial move
+  would convert at each and convert back a commit later. Group 3 should move the calendar whole:
+  - **kizitonwose:** take `com.kizitonwose.calendar:compose-multiplatform:2.9.1` in `:shared-ui`
+    `commonMain`. Its API is kotlinx-datetime's `YearMonth`/`LocalDate`/`DayOfWeek` (it asks for
+    kotlinx-datetime 0.7.1; every kotlinx-datetime member its desktop jar references exists in
+    0.8.0's JVM jar, checked with `javap`), Compose Multiplatform 1.9.0 (on Android androidx Compose
+    1.9.0, below the BOM's), kotlin-stdlib 2.2.20 and kotlinx-serialization 1.9.0. 2.10.x asks for
+    Compose Multiplatform 1.10, which lifts Compose past the BOM: not allowed. Its packages are the
+    Android artifact's (`com.kizitonwose.calendar.compose`, `.core`), so the same commit removes
+    `com.kizitonwose.calendar:compose:2.6.1` from `app/build.gradle.kts`, or the classes clash.
+    Between 2.6.1 and 2.9.1 `HorizontalCalendar`, `CalendarMonths` and the month data are the same
+    layout (2.9.1 wraps each month in a `Box(Modifier.onPlaced(…))` and keys and saves months by
+    their ISO text); `calendarScrollPaged`, `animateScrollToMonth`, `firstVisibleMonth` and
+    `layoutInfo`, which `MonthView`'s own settle (design item 5) reads, keep their API.
+  - **What the calendar reads from other features, each to move or put behind a seam:**
+    `utils/SwapDateList.kt` (`swapDateList`, `java.util.Locale` → `ReaderDateText`);
+    `parentingplan/PlanReferenceCard.kt`'s `planCitationShortLine` and `ParentNames.coParentLabel`;
+    `custody/CustodyModelTypeLabel.kt`'s `labelRes` (`@StringRes`); `changerequests/SwapMonths`;
+    `navigation/CalendarTabTaps` (Task 12) and `data/sync/SyncWorker` (WorkManager), which
+    `CalendarScreen` should take as parameters or a seam; `utils.format`, `localizedDate`,
+    `shortTime` and `hourLabel` → `ReaderDateText`; `DayOfWeek`/`Month.getDisplayName(TextStyle…)` →
+    `ReaderDateText.pattern` with "EEEEE", "EEE" or "LLLL" (`getDisplayName` formats through
+    `DateTimeFormatterBuilder.appendText`, the same text provider a pattern letter reads);
+    `LocalConfiguration.locales[0]` (the swap bar and chips) → the reader's language;
+    androidx.activity's `BackHandler` → Compose Multiplatform's; the previews to app files.
+  - **Visibility:** what the app calls once the calendar is in `:shared-ui` — `DayCellColors`'
+    `internal` helpers and constants, `SwapSelection`, `SwapTap`, `swapTapFor`, `LocalDateSetSaver`,
+    `OpeningHour`, `GridCustody`, `ChildCustodyBand`, `swapMarks`, `drawSwapMark`, and, for
+    `changerequests/` and `home/` (11d), `MiniMonth`, `DayAgendaCard`, `DaySwapSheet`,
+    `SwapSheetOffer`, `SwapSheetActions`, `SwapSideGroup` and `isConsecutive`; and what the
+    screenshots render (`MonthView`, `SwapDaysButton`, the banners, `CustodyLegend`,
+    `DaySwapSelectionBar`, `DaySwapSheetContent`).
+  - **`EventMemberMark.of`'s `locale` parameter can go:** the initial is upper-cased in
+    `Locale.getDefault()`, which is always one of the five languages, none of which cases a letter
+    differently from `uppercase()`; its first code point is a surrogate-pair check in common code.
+  - **Tests to port** to `:shared-ui` (`commonTest`, names without commas): `CalendarQueryRangeTest`,
+    `ChildCustodyBandTest`, `DayCellFillsTest`, `EventMemberMarkTest`, `OpeningHourTest`,
+    `SwapMarkTest`, `SwapSelectionTest` (its `isConsecutive` case with `DaySwapSheet`), `SwapTapTest`,
+    `TitleLinesTest` and `components/DaySwapStripStateTest`; and `CalendarScreenshots`,
+    `HomeScreenshots` and `RequestScreenshots` convert their fixtures' days at the call.
+  - **The app's calendar screens call `rememberJavaToday()`** (group 1) until they move; the moved
+    calendar reads `rememberToday()`, and `JavaToday.kt` stays for Home, custody and the requests
+    until 11d.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
