@@ -33,6 +33,9 @@ import com.coparently.app.presentation.expenses.SettleUpViewModel
 import com.coparently.app.presentation.family.EarlierFamiliesViewModel
 import com.coparently.app.presentation.family.FamilyViewModel
 import com.coparently.app.presentation.family.UnassignedRecordsViewModel
+import com.coparently.app.presentation.friends.FriendCalendarViewModel
+import com.coparently.app.presentation.friends.FriendViewModel
+import com.coparently.app.presentation.guests.GuestAcceptViewModel
 import com.coparently.app.presentation.home.HomeIdentityDependencies
 import com.coparently.app.presentation.home.HomeViewModel
 import com.coparently.app.presentation.home.MonthSpendDependencies
@@ -43,9 +46,13 @@ import com.coparently.app.presentation.onboarding.OnboardingViewModel
 import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PairingViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
+import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.pets.PetsViewModel
+import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
+import com.coparently.app.presentation.professionals.ProfessionalPlanViewModel
+import com.coparently.app.presentation.professionals.ProfessionalsViewModel
 import com.coparently.app.presentation.profile.ProfileViewModel
 import com.coparently.app.presentation.review.MonthReviewAssist
 import com.coparently.app.presentation.review.MonthReviewSources
@@ -330,6 +337,41 @@ val journalUiModule: Module = module {
 }
 
 /**
+ * Family friends (MON-24 phase 2, Task 10; CLAUDE.md's calendar-friend rule): the parents' list
+ * and invitation, the friend's own grants, profile and redemption, and the friend's read-only
+ * calendar of one family, read live and never kept in Room.
+ */
+val friendsUiModule: Module = module {
+    viewModelOf(::FriendCalendarViewModel)
+    viewModelOf(::FriendViewModel)
+}
+
+/** A child's guest (MON-24 phase 2, Task 10): an invitation code redeemed for one child's record. */
+val guestsUiModule: Module = module {
+    viewModelOf(::GuestAcceptViewModel)
+}
+
+/**
+ * Professionals (MON-24 phase 2, Task 10; CLAUDE.md item 29): the parents' grants with their
+ * consents, the professional's own, and the professional's read-only calendar and parenting plan
+ * of one family.
+ */
+val professionalsUiModule: Module = module {
+    viewModelOf(::ProfessionalCalendarViewModel)
+    viewModelOf(::ProfessionalPlanViewModel)
+    viewModelOf(::ProfessionalsViewModel)
+}
+
+/**
+ * The parenting plan (MON-24 phase 2, Task 10; CLAUDE.md items 21 and 32): both parents' answers
+ * in the family on screen, this parent's half written, agreements ticked, and an agreed schedule
+ * answer offered as a proposal.
+ */
+val parentingPlanUiModule: Module = module {
+    viewModelOf(::ParentingPlanViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -360,7 +402,11 @@ val uiModules: List<Module> = listOf(
     petsUiModule,
     contactsUiModule,
     documentsUiModule,
-    journalUiModule
+    journalUiModule,
+    friendsUiModule,
+    guestsUiModule,
+    professionalsUiModule,
+    parentingPlanUiModule
 )
 
 /**

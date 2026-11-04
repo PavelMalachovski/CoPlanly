@@ -17,8 +17,13 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /** What the professional's calendar is showing. */
 sealed interface ProfessionalCalendarUiState {
@@ -55,14 +60,14 @@ class ProfessionalCalendarViewModel(
 
     private val grantId: String = savedStateHandle.get<String>(ARG_GRANT_ID).orEmpty()
 
-    private val windowStart = MutableStateFlow(LocalDate.now())
+    private val windowStart = MutableStateFlow(Clock.System.todayIn(TimeZone.currentSystemDefault()))
 
     /** The first day shown; the screen's header reads it. */
     val start: StateFlow<LocalDate> = windowStart
 
     private val grant: Flow<ProfessionalGrant?> = repository.observeMyGrants()
         .map { grants -> grants.firstOrNull { it.id == grantId } }
-        .map { it?.takeIf { g -> ProfessionalGrantPolicy.isActive(g, System.currentTimeMillis()) } }
+        .map { it?.takeIf { g -> ProfessionalGrantPolicy.isActive(g, Clock.System.now().toEpochMilliseconds()) } }
         .distinctUntilChanged()
 
     /** The window, or why there is none. */
@@ -72,9 +77,9 @@ class ProfessionalCalendarViewModel(
             if (g == null) {
                 flowOf(ProfessionalCalendarUiState.Unavailable)
             } else {
-                val end = start.plusDays(WINDOW_DAYS - 1)
+                val end = start.plus(WINDOW_DAYS - 1, DateTimeUnit.DAY)
                 combine(
-                    repository.observeFamilyEvents(g, start.toKotlinLocalDate(), end.toKotlinLocalDate()),
+                    repository.observeFamilyEvents(g, start, end),
                     repository.observeCustody(g)
                 ) { events, custody ->
                     ProfessionalCalendarUiState.Ready(
@@ -92,12 +97,12 @@ class ProfessionalCalendarViewModel(
 
     /** Moves the window one step earlier. */
     fun previous() {
-        windowStart.value = windowStart.value.minusDays(WINDOW_DAYS)
+        windowStart.value = windowStart.value.minus(WINDOW_DAYS, DateTimeUnit.DAY)
     }
 
     /** Moves the window one step later. */
     fun next() {
-        windowStart.value = windowStart.value.plusDays(WINDOW_DAYS)
+        windowStart.value = windowStart.value.plus(WINDOW_DAYS, DateTimeUnit.DAY)
     }
 
     companion object {

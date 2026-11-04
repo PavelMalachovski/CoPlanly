@@ -1,17 +1,13 @@
-// `coParentOnScreen` and its helpers are public in `:shared-ui` only for the ViewModels still here (MON-24).
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.presentation.parentingplan
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentingPlanRepository
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.CustodyProposalTransition
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.model.PairingState
@@ -41,6 +37,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Clock
 
 /** What the parenting-plan screen is showing. */
 sealed interface ParentingPlanUiState {
@@ -107,7 +104,7 @@ class ParentingPlanViewModel(
     private val userRepository: UserRepository,
     private val pairingRepository: PairingRepository,
     parentsSource: ParentsSource,
-    private val crashlyticsManager: CrashlyticsManager,
+    private val crashlyticsManager: CrashReporter,
     private val custodyModelRepository: CustodyModelRepository
 ) : ViewModel() {
 
@@ -215,7 +212,7 @@ class ParentingPlanViewModel(
                 repository.save(
                     familyId = planScope.familyId,
                     myUid = planScope.myUid,
-                    entry = change(current, System.currentTimeMillis())
+                    entry = change(current, Clock.System.now().toEpochMilliseconds())
                 )
             } catch (e: CancellationException) {
                 throw e
@@ -226,8 +223,8 @@ class ParentingPlanViewModel(
     }
 
     private fun report(operation: String, cause: Throwable) {
-        Log.w(TAG, "Could not $operation", cause)
-        crashlyticsManager.recordException(cause)
+        logger.w(TAG, "Could not $operation", cause)
+        crashlyticsManager.record(cause)
     }
 
     /** The family a plan belongs to, and which half of it is this parent's. */

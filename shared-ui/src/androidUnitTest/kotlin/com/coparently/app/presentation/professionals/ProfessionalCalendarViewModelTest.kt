@@ -112,7 +112,7 @@ class ProfessionalCalendarViewModelTest {
             updatedAt = created.toKotlinLocalDateTime()
         )
 
-        val days = ProfessionalAgenda.days(start, 14, listOf(trip), custody)
+        val days = ProfessionalAgenda.days(start.toKotlinLocalDate(), 14, listOf(trip), custody)
 
         assertEquals("mom", days[0].custodySlot)
         assertEquals("dad", days[7].custodySlot)

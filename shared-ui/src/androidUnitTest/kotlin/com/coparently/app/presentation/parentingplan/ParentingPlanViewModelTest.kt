@@ -1,6 +1,6 @@
 package com.coparently.app.presentation.parentingplan
 
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentingPlanRepository
 import com.coparently.app.domain.custody.CustodyProposal
@@ -52,7 +52,7 @@ class ParentingPlanViewModelTest {
     private val partner = PartnerSummary(id = "u2", name = "Pavel", email = "pavel@example.com", pairedSinceMillis = 1L)
     private val familyId = "u1__u2"
     private val repository = mockk<ParentingPlanRepository>()
-    private val crashlytics = mockk<CrashlyticsManager>(relaxed = true)
+    private val crashlytics = mockk<CrashReporter>(relaxed = true)
 
     private val shared = MutableStateFlow<SharedCustody?>(null)
     private val custody = mockk<CustodyModelRepository> {
@@ -253,7 +253,7 @@ class ParentingPlanViewModelTest {
         vm.answer("q1", "Weekends")
         advanceUntilIdle()
 
-        verify(exactly = 1) { crashlytics.recordException(failure) }
+        verify(exactly = 1) { crashlytics.record(failure) }
     }
 
     /** Both parents wrote and ticked [text] for [questionId] — an agreed answer. */

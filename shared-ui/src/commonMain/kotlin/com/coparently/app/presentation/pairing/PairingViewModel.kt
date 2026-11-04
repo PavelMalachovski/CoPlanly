@@ -1,7 +1,3 @@
-// `coParentOnScreen` and its helpers are public behind the marker for the app's ViewModels, and the
-// marker applies in its own module too (MON-24).
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.presentation.pairing
 
 import androidx.compose.ui.graphics.ImageBitmap
@@ -16,7 +12,6 @@ import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.ParentSlotMigrator
 import com.coparently.app.data.session.SignedInAccountSource
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.custody.SharedCustodyRead
 import com.coparently.app.domain.model.AccountSummary
 import com.coparently.app.domain.model.InvitePreview

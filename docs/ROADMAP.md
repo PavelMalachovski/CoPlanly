@@ -2971,7 +2971,11 @@ bytes are identical on Android):
   the family's records: the child's and pet's records (`childInfoUiModule`, `petsUiModule`, on the
   signed-in account's, the analytics and the crash report's seams; a crash report keeps its
   identifiers through a new `CrashReporter.recordWithContext`), the contacts, the documents and the
-  private journal (its day now kotlinx-datetime).
+  private journal (its day now kotlinx-datetime). Then the people outside the pair and the plan:
+  family friends (`friendsUiModule`), a child's guest (`guestsUiModule`), professionals
+  (`professionalsUiModule`, with the agenda both read-only calendars build, now on kotlinx-datetime)
+  and the parenting plan (`parentingPlanUiModule`); with the last ViewModel in the app that read the
+  co-parent on screen gone, those three helpers are `internal` to `:shared-ui` again.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

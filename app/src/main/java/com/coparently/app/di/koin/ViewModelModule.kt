@@ -2,13 +2,6 @@ package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.auth.AuthViewModel
 import com.coparently.app.presentation.export.ExportViewModel
-import com.coparently.app.presentation.friends.FriendCalendarViewModel
-import com.coparently.app.presentation.friends.FriendViewModel
-import com.coparently.app.presentation.guests.GuestAcceptViewModel
-import com.coparently.app.presentation.parentingplan.ParentingPlanViewModel
-import com.coparently.app.presentation.professionals.ProfessionalCalendarViewModel
-import com.coparently.app.presentation.professionals.ProfessionalPlanViewModel
-import com.coparently.app.presentation.professionals.ProfessionalsViewModel
 import com.coparently.app.presentation.school.ConnectSchoolViewModel
 import com.coparently.app.presentation.school.SchoolImportViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
@@ -26,13 +19,6 @@ import org.koin.dsl.module
 val viewModelModule = module {
     viewModelOf(::AuthViewModel)
     viewModelOf(::ExportViewModel)
-    viewModelOf(::FriendCalendarViewModel)
-    viewModelOf(::FriendViewModel)
-    viewModelOf(::GuestAcceptViewModel)
-    viewModelOf(::ParentingPlanViewModel)
-    viewModelOf(::ProfessionalCalendarViewModel)
-    viewModelOf(::ProfessionalPlanViewModel)
-    viewModelOf(::ProfessionalsViewModel)
     viewModelOf(::ConnectSchoolViewModel)
     viewModelOf(::SchoolImportViewModel)
     viewModelOf(::SyncViewModel)

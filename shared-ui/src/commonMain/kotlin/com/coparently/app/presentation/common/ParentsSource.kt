@@ -1,9 +1,6 @@
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.presentation.common
 
 import com.coparently.app.data.platform.logger
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.family.FamilySlots
 import com.coparently.app.domain.family.FamilySlotsSource

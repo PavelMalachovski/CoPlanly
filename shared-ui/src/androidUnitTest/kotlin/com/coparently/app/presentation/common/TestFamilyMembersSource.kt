@@ -12,9 +12,8 @@ import kotlinx.datetime.LocalDateTime
 /**
  * A real [FamilyMembersSource] over stubbed repositories.
  *
- * A copy of the app's `app/src/test/.../presentation/common/TestFamilyMembersSource.kt` (MON-24
- * phase 2, Task 10), for the reason `testParentsSource` gives for its own copy: a test source set
- * is not shared between modules. Keep the two alike; the app's goes when its last user has moved.
+ * Moved here from the app's tests with the ViewModel tests that use it (MON-24 phase 2, Task 10:
+ * a copy from slice 10b; the app's went in slice 10f, when its last user had moved).
  *
  * The real class rather than a mock of it, for the reason [testParentsSource] gives: the thing
  * under test is the combining, and a mock would let the two halves describe different families.

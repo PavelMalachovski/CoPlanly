@@ -937,6 +937,26 @@ Then the family's records:
 - Tests: the six to androidUnitTest (MockK); `PetsViewModelTest` verifies `Analytics.log("pet_updated",
   emptyMap())` and its uid answers a string where it answered a `FirebaseUser`.
 
+Then the people outside the pair, and the plan:
+- `FriendViewModel` and `FriendCalendarViewModel` (`friendsUiModule`), `GuestAcceptViewModel`
+  (`guestsUiModule`; `errorRes`/`messageFor` → `StringResource`), `ProfessionalsViewModel`,
+  `ProfessionalCalendarViewModel` and `ProfessionalPlanViewModel` (`professionalsUiModule`;
+  `actionError` → `StringResource`) with `ProfessionalAgenda.kt`, `ParentingPlanViewModel`
+  (`parentingPlanUiModule`; `CrashlyticsManager` → `CrashReporter`, `Log` → `logger`).
+- kotlinx-datetime: `ProfessionalDay.date`, both calendars' window and
+  `ProfessionalCalendarViewModel.start` (today `Clock.System.todayIn`, `plusDays`/`minusDays` → `plus`/`minus(n, DateTimeUnit.DAY)`,
+  `isBefore`/`isAfter` → comparisons); `System.currentTimeMillis()` → `Clock.System`.
+- Screen edges: `FriendCalendarScreen` and `ProfessionalCalendarScreen` format `day.date.toJavaLocalDate()`;
+  `ProfessionalsScreen`'s snackbar through `rememberUiTextResolver` (its `LocalContext` went);
+  `GuestAcceptScreen` CMP `stringResource`; `FriendScreenshots`' fixture day `toKotlinLocalDate()`.
+- `@InternalSharedApi`: `coParentOnScreen`, `observeSignedInUser` and `projectedCoParentUid` are
+  `internal` again (their last app caller moved), and the seven `:shared-ui` files that opted in for
+  them no longer do.
+- Tests: the seven to androidUnitTest, `java.time` still the calendars' oracle (converted at the
+  edge), `Res.string` where they compared `R.string`, `CrashReporter.record` where they verified
+  `recordException`. The app's `TestFamilyViewSource.kt` and `TestFamilyMembersSource.kt` were
+  deleted (no user left); its `testParentsSource` stays for `FriendsScreenTest`.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

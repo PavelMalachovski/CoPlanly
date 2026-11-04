@@ -1601,7 +1601,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              calendar's, the events', custody's, the requests', the family's, expenses', payments',
              child support's, settings', pairing's, onboarding's, the session's, the profile's,
              Home's, the month review's, the stickers', the consents', the AI consent's, the
-             child's and pet's records', the contacts', the documents' and the journal's),
+             child's and pet's records', the contacts', the documents', the journal's, family
+             friends', the guest's, professionals' and the parenting plan's),
              with their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -2025,10 +2026,10 @@ code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFi
 `SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
 On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
-`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
-`projectedCoParentUid` are public behind `@InternalSharedApi` until the ViewModels still in the app
-that call them move (one since `HomeViewModel` moved in 10f; see the `@InternalSharedApi`
-paragraph below). Slice 10b moved **the calendar**: `CalendarViewModel` (its
+`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`,
+`observeSignedInUser` and `projectedCoParentUid` were public behind `@InternalSharedApi` while
+ViewModels in the app called them, and are `internal` again since slice 10f moved the last
+(`ParentingPlanViewModel`). Slice 10b moved **the calendar**: `CalendarViewModel` (its
 filters and the dismissed custody change in `SecurePreferences`,
 under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
 `YearMonth`s and `LocalDate`s, today from `Clock.System.todayIn` in the system zone, a swap's group id
@@ -2215,7 +2216,23 @@ the editors still in the app. `FamilyDocumentsViewModel` asks `SignedInUser` for
 journal editor's day (`JournalEditorState.entryDate`, `seededDate`, `setDate`) is a kotlinx-datetime
 `LocalDate`, which `JournalEditorScreen` converts for the date picker; a new entry's id is a `Uuid`
 and its times `Clock.System`. The six tests (MockK) run in `androidUnitTest`, the pet test verifying
-`Analytics.log("pet_updated", …)` where it verified `logPetUpdated()`.
+`Analytics.log("pet_updated", …)` where it verified `logPetUpdated()`. The third group is **the
+people outside the pair, and the plan**: `FriendViewModel` and `FriendCalendarViewModel`
+(`friendsUiModule`), `GuestAcceptViewModel` (`guestsUiModule`), `ProfessionalsViewModel`,
+`ProfessionalCalendarViewModel` and `ProfessionalPlanViewModel` (`professionalsUiModule`) with
+`professionals/ProfessionalAgenda.kt`, and `ParentingPlanViewModel` (`parentingPlanUiModule`).
+`ProfessionalDay.date`, the two calendars' window and `ProfessionalCalendarViewModel.start` are
+kotlinx-datetime days (today `Clock.System.todayIn`, the window moved with `plus`/`minus` in
+`DateTimeUnit.DAY`), which the two calendar screens convert to format (`toJavaLocalDate()`); a
+grant's "now" is `Clock.System.now().toEpochMilliseconds()`. `GuestAcceptUiState.errorRes` and
+`ProfessionalsViewModel.actionError` are `StringResource`s (`GuestAcceptScreen` reads the first
+through Compose Multiplatform's `stringResource`, `ProfessionalsScreen`'s snackbar the second through
+`rememberUiTextResolver`). `ParentingPlanViewModel` reports through `CrashReporter` (`record`) and
+logs through `logger`. It was the last ViewModel in the app to call `coParentOnScreen`,
+`observeSignedInUser` and `projectedCoParentUid`, so they are `internal` again and the seven files
+in `:shared-ui` that opted in to `@InternalSharedApi` for them no longer do. The seven tests (MockK)
+run in `androidUnitTest`; the app's copies of `testFamilyViewSource` and `testFamilyMembersSource`
+are gone with their last users (the app keeps `testParentsSource` for `FriendsScreenTest`).
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -2243,12 +2260,10 @@ app), the four expense mappers in
 `ExpenseMappers.kt` (the expenses wire contract, in `wire/` like the pets'),
 `ChatMirror.mirror` (the on-screen
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
-`GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and in `shared-ui/` (Task 10)
-`CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
-`User.projectedCoParentUid` (`ParentingPlanViewModel`, in the app until slice 10f's third group
-moves it; `ParentsSource`, `FamilyKindSource`, since slice 10c `RequestsSource`, since slice 10e
-`PairingViewModel` and `ProfileViewModel` and since slice 10f `HomeViewModel` opt in beside them in
-`:shared-ui`). This list
+`GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and none in `shared-ui/`
+(`CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
+`User.projectedCoParentUid` carried the marker through Task 10 while ViewModels in the app called
+them, and are `internal` again since slice 10f moved the last, `ParentingPlanViewModel`). This list
 is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.

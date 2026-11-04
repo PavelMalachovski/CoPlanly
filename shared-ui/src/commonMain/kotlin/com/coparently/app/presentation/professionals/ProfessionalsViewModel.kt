@@ -2,13 +2,14 @@ package com.coparently.app.presentation.professionals
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.presentation.pairing.pairingMessageRes
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.professional_action_failed
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
+import kotlin.time.Clock
 
 /**
  * The invite sheet's state (MON-18).
@@ -91,10 +93,10 @@ class ProfessionalsViewModel(
     /** The grant whose card is open, by id, or null. */
     val openGrantId: StateFlow<String?> = _openGrantId.asStateFlow()
 
-    private val _actionError = MutableStateFlow<Int?>(null)
+    private val _actionError = MutableStateFlow<StringResource?>(null)
 
     /** Why the last consent or revoke failed, or null. */
-    val actionError: StateFlow<Int?> = _actionError.asStateFlow()
+    val actionError: StateFlow<StringResource?> = _actionError.asStateFlow()
 
     /** The signed-in uid, which decides whose consent a row is waiting for. */
     fun viewerUid(): String? = repository.currentUid()
@@ -120,7 +122,7 @@ class ProfessionalsViewModel(
         if (state.isBusy || state.invite != null) return
         _invite.value = state.copy(isBusy = true, errorRes = null)
         viewModelScope.launch {
-            repository.invite(state.role, state.duration.expiryFrom(System.currentTimeMillis())).fold(
+            repository.invite(state.role, state.duration.expiryFrom(Clock.System.now().toEpochMilliseconds())).fold(
                 onSuccess = { created -> _invite.update { it.copy(invite = created, isBusy = false) } },
                 onFailure = { e -> _invite.update { it.copy(isBusy = false, errorRes = e.pairingMessageRes()) } }
             )
@@ -175,7 +177,7 @@ class ProfessionalsViewModel(
         viewModelScope.launch {
             call().fold(
                 onSuccess = { _openGrantId.value = null },
-                onFailure = { _actionError.value = R.string.professional_action_failed }
+                onFailure = { _actionError.value = Res.string.professional_action_failed }
             )
         }
     }

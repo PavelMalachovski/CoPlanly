@@ -1,13 +1,9 @@
-// `coParentOnScreen` and its helpers are public in `:shared-ui` only for the ViewModels still here (MON-24).
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.custody.CustodyResolver

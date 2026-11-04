@@ -1,10 +1,12 @@
 package com.coparently.app.presentation.guests
 
-import com.coparently.app.R
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.guests.AcceptGuestResult
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.GuestRepository
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.guest_error_grant_ended
+import com.coparently.app.resources.pairing_error_unknown
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -87,7 +89,7 @@ class GuestAcceptViewModelTest {
         vm.accept()
         advanceUntilIdle()
 
-        assertEquals(R.string.guest_error_grant_ended, vm.uiState.value.errorRes)
+        assertEquals(Res.string.guest_error_grant_ended, vm.uiState.value.errorRes)
         assertFalse(vm.uiState.value.isBusy)
         assertNull(vm.uiState.value.acceptedUntilMillis)
     }
@@ -101,7 +103,7 @@ class GuestAcceptViewModelTest {
         vm.accept()
         advanceUntilIdle()
 
-        assertEquals(R.string.pairing_error_unknown, vm.uiState.value.errorRes)
+        assertEquals(Res.string.pairing_error_unknown, vm.uiState.value.errorRes)
     }
 
     @Test

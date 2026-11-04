@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.professionals
 
-import com.coparently.app.R
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.guests.GuestInvite
 import com.coparently.app.domain.model.PairingError
@@ -9,6 +8,7 @@ import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.repository.ProfessionalRepository
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.professional_action_failed
 import com.coparently.app.resources.professional_error_not_professional_invitation
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -108,7 +108,7 @@ class ProfessionalsViewModelTest {
         advanceUntilIdle()
 
         assertEquals("g", vm.openGrantId.value)
-        assertEquals(R.string.professional_action_failed, vm.actionError.value)
+        assertEquals(Res.string.professional_action_failed, vm.actionError.value)
     }
 
     @Test

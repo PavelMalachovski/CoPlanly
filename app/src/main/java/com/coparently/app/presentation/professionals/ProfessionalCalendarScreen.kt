@@ -39,6 +39,7 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
+import kotlinx.datetime.toJavaLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -161,7 +162,7 @@ internal fun WindowPager(onPrevious: () -> Unit, onNext: () -> Unit) {
 @Composable
 private fun DayCard(day: ProfessionalDay, grant: ProfessionalGrant) {
     val dateText = remember(day.date) {
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).format(day.date)
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).format(day.date.toJavaLocalDate())
     }
     SectionGroup {
         SectionRow(

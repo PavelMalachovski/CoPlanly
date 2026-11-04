@@ -3,9 +3,9 @@ package com.coparently.app.presentation.professionals
 import com.coparently.app.domain.custody.CustodyResolver
 import com.coparently.app.domain.custody.SharedCustody
 import com.coparently.app.domain.model.Event
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 
 /**
  * One day of a professional's read-only calendar (MON-18).
@@ -40,18 +40,18 @@ object ProfessionalAgenda {
         val model = custody?.model?.takeIf { it.isActive }
         val overrides = custody?.dayOverrides.orEmpty()
         return (0 until dayCount).map { offset ->
-            val date = start.plusDays(offset.toLong())
+            val date = start.plus(offset, DateTimeUnit.DAY)
             ProfessionalDay(
                 date = date,
-                custodySlot = CustodyResolver.custodyFor(model, overrides, { null }, date.toKotlinLocalDate()),
+                custodySlot = CustodyResolver.custodyFor(model, overrides, { null }, date),
                 events = events.filter { it.overlaps(date) }.sortedBy { it.startDateTime }
             )
         }
     }
 
     private fun Event.overlaps(date: LocalDate): Boolean {
-        val first = startDateTime.date.toJavaLocalDate()
-        val last = (endDateTime ?: startDateTime).date.toJavaLocalDate()
-        return !date.isBefore(first) && !date.isAfter(last)
+        val first = startDateTime.date
+        val last = (endDateTime ?: startDateTime).date
+        return date >= first && date <= last
     }
 }

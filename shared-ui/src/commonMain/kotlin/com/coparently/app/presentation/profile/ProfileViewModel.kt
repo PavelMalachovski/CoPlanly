@@ -1,7 +1,3 @@
-// `coParentOnScreen` and its helpers are public behind the marker for the app's ViewModels, and the
-// marker applies in its own module too (MON-24).
-@file:OptIn(InternalSharedApi::class)
-
 package com.coparently.app.presentation.profile
 
 import androidx.lifecycle.ViewModel
@@ -9,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.platform.logger
-import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.model.User
 import com.coparently.app.domain.repository.PairingRepository
 import com.coparently.app.domain.repository.UserRepository

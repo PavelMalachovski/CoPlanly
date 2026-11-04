@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.time.Clock
 
 /** What the professional's parenting-plan view is showing. */
 sealed interface ProfessionalPlanUiState {
@@ -56,7 +57,7 @@ class ProfessionalPlanViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ProfessionalPlanUiState> = repository.observeMyGrants()
         .map { grants -> grants.firstOrNull { it.id == grantId } }
-        .map { it?.takeIf { g -> ProfessionalGrantPolicy.isActive(g, System.currentTimeMillis()) } }
+        .map { it?.takeIf { g -> ProfessionalGrantPolicy.isActive(g, Clock.System.now().toEpochMilliseconds()) } }
         .distinctUntilChanged()
         .flatMapLatest { grant ->
             if (grant == null) {

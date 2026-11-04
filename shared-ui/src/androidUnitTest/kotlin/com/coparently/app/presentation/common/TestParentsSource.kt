@@ -16,7 +16,8 @@ import kotlinx.coroutines.flow.flowOf
  *
  * A copy of the app's `app/src/test/.../presentation/common/TestParentsSource.kt` (MON-24 phase 2,
  * Task 10): a test source set is not shared between modules, and the ViewModel tests that use it
- * move here slice by slice. Keep the two alike; the app's goes when its last user has moved.
+ * move here slice by slice. Keep the two alike. The app keeps its own for `FriendsScreenTest`, a
+ * screen test that stays with the screen (Task 11).
  *
  * Deliberately the real class rather than a mock of it: the derivation it performs — matching
  * the signed-in row *by uid*, and dropping a co-parent whose slot is unknown — is the part that

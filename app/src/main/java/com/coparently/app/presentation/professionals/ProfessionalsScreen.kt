@@ -35,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -46,6 +45,9 @@ import com.coparently.app.presentation.common.EmptyState
 import com.coparently.app.presentation.common.GroupLabel
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.common.UiText
+import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -81,11 +83,11 @@ fun ProfessionalsScreen(
     val actionError by viewModel.actionError.collectAsState()
     val viewerUid = remember { viewModel.viewerUid() }
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
 
     LaunchedEffect(actionError) {
         actionError?.let { res ->
-            snackbarHostState.showSnackbar(context.getString(res))
+            snackbarHostState.showSnackbar(UiText.Res(res).asString(textResolver))
             viewModel.clearActionError()
         }
     }

@@ -19,8 +19,13 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /** What a family friend's calendar is showing. */
 sealed interface FriendCalendarUiState {
@@ -67,7 +72,7 @@ class FriendCalendarViewModel(
 
     private val familyId: String = savedStateHandle.get<String>(ARG_FAMILY_ID).orEmpty()
 
-    private val windowStart = MutableStateFlow(LocalDate.now())
+    private val windowStart = MutableStateFlow(Clock.System.todayIn(TimeZone.currentSystemDefault()))
 
     /** Bumped by [retry]; each value re-subscribes the read. */
     private val attempt = MutableStateFlow(0)
@@ -91,8 +96,8 @@ class FriendCalendarViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val read: Flow<Pair<LocalDate, FriendCalendarRead>> = combine(windowStart, attempt) { start, _ -> start }
         .flatMapLatest { start ->
-            val last = start.plusDays(WINDOW_DAYS - 1L)
-            friendRepository.observeFamilyEvents(familyId, start.toKotlinLocalDate(), last.toKotlinLocalDate())
+            val last = start.plus(WINDOW_DAYS - 1, DateTimeUnit.DAY)
+            friendRepository.observeFamilyEvents(familyId, start, last)
                 .map { start to it }
         }
 
@@ -118,12 +123,12 @@ class FriendCalendarViewModel(
 
     /** Moves the window four weeks earlier. */
     fun previous() {
-        windowStart.value = windowStart.value.minusDays(WINDOW_DAYS.toLong())
+        windowStart.value = windowStart.value.minus(WINDOW_DAYS, DateTimeUnit.DAY)
     }
 
     /** Moves the window four weeks later. */
     fun next() {
-        windowStart.value = windowStart.value.plusDays(WINDOW_DAYS.toLong())
+        windowStart.value = windowStart.value.plus(WINDOW_DAYS, DateTimeUnit.DAY)
     }
 
     /** Reads the window again after a failure. */

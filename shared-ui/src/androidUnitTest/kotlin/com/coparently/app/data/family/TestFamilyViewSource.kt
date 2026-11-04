@@ -12,9 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * A real [FamilyViewSource] over a stubbed sign-in and the signed-in parent's Room row.
  *
- * A copy of the app's `app/src/test/.../data/family/TestFamilyViewSource.kt` (MON-24 phase 2, Task
- * 10, slice 10d): a test source set is not shared between modules, and the ViewModel tests that use
- * it move here slice by slice. Keep the two alike; the app's goes when its last user has moved.
+ * Moved here from the app's tests with the ViewModel tests that use it (MON-24 phase 2, Task 10:
+ * a copy from slice 10d; the app's went in slice 10f, when its last user had moved).
  *
  * The real class rather than a mock, for the reason `testParentsSource` gives: what a screen does
  * with a switch is the point, and a mock would let the view and the row describe different

@@ -1,17 +1,28 @@
 package com.coparently.app.presentation.guests
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.remote.firebase.PairingException
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.model.PairingError
 import com.coparently.app.domain.repository.GuestRepository
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.guest_error_already_entitled
+import com.coparently.app.resources.guest_error_grant_ended
+import com.coparently.app.resources.guest_error_inviter_not_entitled
+import com.coparently.app.resources.guest_error_not_guest_invitation
+import com.coparently.app.resources.pairing_error_expired
+import com.coparently.app.resources.pairing_error_network
+import com.coparently.app.resources.pairing_error_not_found
+import com.coparently.app.resources.pairing_error_not_pending
+import com.coparently.app.resources.pairing_error_self_pairing
+import com.coparently.app.resources.pairing_error_unknown
+import com.coparently.app.resources.pairing_error_wrong_recipient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * What the guest-accept screen shows.
@@ -26,7 +37,7 @@ import kotlinx.coroutines.launch
 data class GuestAcceptUiState(
     val code: String = "",
     val isBusy: Boolean = false,
-    @StringRes val errorRes: Int? = null,
+    val errorRes: StringResource? = null,
     val acceptedUntilMillis: Long? = null
 )
 
@@ -93,19 +104,18 @@ class GuestAcceptViewModel(
      * invitation" tells somebody they are on the wrong screen; "the access has already ended"
      * tells them to ask for a new invitation rather than re-typing the same code.
      */
-    @StringRes
-    private fun messageFor(throwable: Throwable): Int =
+    private fun messageFor(throwable: Throwable): StringResource =
         when ((throwable as? PairingException)?.error) {
-            PairingError.NotFound -> R.string.pairing_error_not_found
-            PairingError.Expired -> R.string.pairing_error_expired
-            PairingError.NotPending -> R.string.pairing_error_not_pending
-            PairingError.SelfPairing -> R.string.pairing_error_self_pairing
-            PairingError.WrongRecipient -> R.string.pairing_error_wrong_recipient
-            PairingError.Network -> R.string.pairing_error_network
-            PairingError.NotGuestInvitation -> R.string.guest_error_not_guest_invitation
-            PairingError.GrantEnded -> R.string.guest_error_grant_ended
-            PairingError.InviterNotEntitled -> R.string.guest_error_inviter_not_entitled
-            PairingError.AlreadyEntitled -> R.string.guest_error_already_entitled
-            else -> R.string.pairing_error_unknown
+            PairingError.NotFound -> Res.string.pairing_error_not_found
+            PairingError.Expired -> Res.string.pairing_error_expired
+            PairingError.NotPending -> Res.string.pairing_error_not_pending
+            PairingError.SelfPairing -> Res.string.pairing_error_self_pairing
+            PairingError.WrongRecipient -> Res.string.pairing_error_wrong_recipient
+            PairingError.Network -> Res.string.pairing_error_network
+            PairingError.NotGuestInvitation -> Res.string.guest_error_not_guest_invitation
+            PairingError.GrantEnded -> Res.string.guest_error_grant_ended
+            PairingError.InviterNotEntitled -> Res.string.guest_error_inviter_not_entitled
+            PairingError.AlreadyEntitled -> Res.string.guest_error_already_entitled
+            else -> Res.string.pairing_error_unknown
         }
 }

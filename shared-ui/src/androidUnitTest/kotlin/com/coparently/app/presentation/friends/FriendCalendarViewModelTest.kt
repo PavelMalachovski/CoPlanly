@@ -109,7 +109,7 @@ class FriendCalendarViewModelTest {
         val ready = assertIs<FriendCalendarUiState.Ready>(model.uiState.value)
         assertEquals(grant, ready.grant)
         assertEquals(FriendCalendarViewModel.WINDOW_DAYS, ready.days.size)
-        assertEquals(today, ready.days.first().date)
+        assertEquals(today, ready.days.first().date.toJavaLocalDate())
         assertEquals(listOf("dentist"), ready.days[3].events.map { it.id })
         assertEquals(listOf("dentist"), ready.days.flatMap { it.events }.map { it.id })
         // A friend reads no custody document, so no day says whose it is.
@@ -192,7 +192,10 @@ class FriendCalendarViewModelTest {
         assertEquals(LocalDate.now(), today)
         assertEquals(listOf(today, today.plusDays(28), today), froms.map { it.toJavaLocalDate() })
         assertEquals(today.plusDays(27), tos.first().toJavaLocalDate())
-        assertEquals(today, assertIs<FriendCalendarUiState.Ready>(model.uiState.value).days.first().date)
+        assertEquals(
+            today,
+            assertIs<FriendCalendarUiState.Ready>(model.uiState.value).days.first().date.toJavaLocalDate()
+        )
     }
 
     private companion object {

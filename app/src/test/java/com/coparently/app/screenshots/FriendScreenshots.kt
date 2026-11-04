@@ -10,6 +10,7 @@ import com.coparently.app.presentation.friends.FriendInviteContent
 import com.coparently.app.presentation.friends.FriendInviteState
 import com.coparently.app.presentation.professionals.ProfessionalDay
 import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -62,7 +63,11 @@ class FriendScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) 
     @Test
     fun agendaDay() = snap("friends_agenda_day") {
         FriendAgendaDay(
-            day = ProfessionalDay(date = ScreenshotFixtures.TODAY, custodySlot = null, events = dayEvents),
+            day = ProfessionalDay(
+                date = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
+                custodySlot = null,
+                events = dayEvents
+            ),
             grant = grant,
             onOpenEvent = {}
         )
