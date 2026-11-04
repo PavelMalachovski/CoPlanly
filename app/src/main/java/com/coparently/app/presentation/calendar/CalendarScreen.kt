@@ -498,8 +498,11 @@ fun CalendarScreen(
 
     // One pass over the filtered list, reused by all 42 month cells and by the agenda card
     // underneath. Built here rather than inside MonthView so the grid and the card read the
-    // same buckets by construction.
-    val eventsByDay = remember(filteredEvents) { eventsByDay(filteredEvents) }
+    // same buckets by construction. The index is kotlinx-datetime's (`:shared-ui`, MON-24) and the
+    // grid's days are java.time, so it is re-keyed here, once per list, not per cell.
+    val eventsByDay = remember(filteredEvents) {
+        eventsByDay(filteredEvents).mapKeys { (day, _) -> day.toJavaLocalDate() }
+    }
 
     // Public holidays and school vacations for the visible range, in **this parent's** country
     // (MON-13). This used to call `CzechHolidays` outright, which is how a family in Germany or
@@ -1139,11 +1142,11 @@ fun CalendarScreen(
         val months = remember(sides) {
             swapMiniMonths(
                 days = sides.offerable.mapNotNull { offered ->
-                    val day = offered.toJavaLocalDate()
-                    receiverOf(getCustody(day))?.let { day to it }
+                    receiverOf(getCustody(offered.toJavaLocalDate()))?.let { offered to it }
                 }.toMap(),
                 familyEvents = emptyList(),
-                custodyFor = getCustody
+                // The mini months' days are kotlinx-datetime's (`:shared-ui`); the grid's are java.time.
+                custodyFor = { day -> getCustody(day.toJavaLocalDate()) }
             )
         }
         // From the grid, closing the sheet goes back to choosing with the days kept; from Day

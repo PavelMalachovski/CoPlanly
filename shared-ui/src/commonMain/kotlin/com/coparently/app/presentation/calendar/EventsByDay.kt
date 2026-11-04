@@ -2,11 +2,9 @@ package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.model.Event
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.atTime
 import kotlinx.datetime.plus
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
 
 /**
  * Events covering [date], including multi-day and overnight spans, in start order.
@@ -16,16 +14,16 @@ import java.time.LocalDate
  * index is held to: `EventsByDayTest` asserts the two agree on every day they touch, so the
  * agenda card under the grid can never disagree with the dots above it.
  *
- * The days are `java.time`, as the grid's calendar library hands them out; an event's times are
- * kotlinx-datetime (MON-24) and are compared on the event's side.
+ * The days are kotlinx-datetime's, as an event's times are, since the index moved to `:shared-ui`
+ * with the mini month that reads it (MON-24 phase 2, slice 10c); the grid, whose calendar library
+ * hands out `java.time` days, re-keys the index once per event list.
  *
  * @param events Events already filtered by parent and type
  * @param date The day to collect
  */
 internal fun eventsOn(events: List<Event>, date: LocalDate): List<Event> {
-    val day = date.toKotlinLocalDate()
-    val dayStart = day.atTime(0, 0)
-    val dayEnd = day.plus(1, DateTimeUnit.DAY).atTime(0, 0)
+    val dayStart = date.atTime(0, 0)
+    val dayEnd = date.plus(1, DateTimeUnit.DAY).atTime(0, 0)
     return events
         .filter { event ->
             val end = event.endDateTime ?: event.startDateTime
@@ -47,21 +45,24 @@ internal fun eventsOn(events: List<Event>, date: LocalDate): List<Event> {
  * range/day-query note in CLAUDE.md). Equivalent to calling [eventsOn] per day, which is what
  * `EventsByDayTest` checks.
  *
+ * Public, where [eventsOn] is `internal`, because `CalendarScreen`, still in the app, builds the
+ * grid's index with it (MON-24 phase 2, slice 10c).
+ *
  * @param events Events already filtered by parent and type
  */
-internal fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
+fun eventsByDay(events: List<Event>): Map<LocalDate, List<Event>> {
     val buckets = mutableMapOf<LocalDate, MutableList<Event>>()
     for (event in events) {
-        val firstDay = event.startDateTime.date.toJavaLocalDate()
+        val firstDay = event.startDateTime.date
         // `eventsOn` keeps an event whose end lands exactly on a day's 00:00 (`end >= dayStart`),
         // so the last covered day is the end's own date, not the day before it.
-        val lastDay = (event.endDateTime ?: event.startDateTime).date.toJavaLocalDate()
+        val lastDay = (event.endDateTime ?: event.startDateTime).date
         var day = firstDay
         // An end before the start covers nothing, and this loop yields nothing for it — same
         // answer `eventsOn` gives such an event on every date.
-        while (!day.isAfter(lastDay)) {
+        while (day <= lastDay) {
             buckets.getOrPut(day) { mutableListOf() }.add(event)
-            day = day.plusDays(1)
+            day = day.plus(1, DateTimeUnit.DAY)
         }
     }
     // sortedBy is stable, so events sharing a start time keep the incoming order, exactly as the

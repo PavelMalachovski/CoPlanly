@@ -1,6 +1,9 @@
 package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.calendar.CalendarViewModel
+import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
+import com.coparently.app.presentation.changerequests.RequestChangeViewModel
+import com.coparently.app.presentation.changerequests.RequestsSource
 import com.coparently.app.presentation.chat.ChatAttachmentViewModel
 import com.coparently.app.presentation.chat.ChatEventCardViewModel
 import com.coparently.app.presentation.chat.ChatSearchViewModel
@@ -23,6 +26,7 @@ import com.coparently.app.presentation.pairing.CustodyConflictViewModel
 import com.coparently.app.presentation.pairing.PendingCustodyConflict
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -101,6 +105,19 @@ val custodyUiModule: Module = module {
 }
 
 /**
+ * Requests (MON-24 phase 2, Task 10): the inbox of what waits on either parent — change requests,
+ * day swaps, events waiting for an answer, the custody and split proposals and the agreements beside
+ * them — with its answers and withdrawals, and the form that asks to move an event. Beside them the
+ * one source Home's Requests row, the calendar's banner and the inbox count from, a `factory` as in
+ * the app's `presentationModule` it came from.
+ */
+val requestsUiModule: Module = module {
+    factoryOf(::RequestsSource)
+    viewModelOf(::ChangeRequestViewModel)
+    viewModelOf(::RequestChangeViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
@@ -111,7 +128,8 @@ val uiModules: List<Module> = listOf(
     chatUiModule,
     calendarUiModule,
     eventUiModule,
-    custodyUiModule
+    custodyUiModule,
+    requestsUiModule
 )
 
 /**

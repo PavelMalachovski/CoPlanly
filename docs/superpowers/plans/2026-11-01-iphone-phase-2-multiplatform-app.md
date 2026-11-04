@@ -768,6 +768,30 @@ Then the events:
   `CustodySetupViewModelTest`, `SeasonalScheduleViewModelTest` and `CustodyConflictViewModelTest`
   (MockK) to androidUnitTest, unchanged but for their location.
 
+Then the requests:
+- `ChangeRequestViewModel`, `RequestChangeViewModel` and `RequestsSource` (with `RequestsState`) in
+  `requestsUiModule`; `RequestsSource` left the app's `presentationModule` (a `factory`). `Log` →
+  `logger`, `UUID` → `Uuid`, `LocalDateTime.now().toString()` → `IsoText.dateTimeShortest(wallClockNow())`,
+  `LocalDate.now()` → `Clock.System.todayIn(TimeZone.currentSystemDefault())`,
+  `System.currentTimeMillis()` → `Clock.System.now().toEpochMilliseconds()`. `RequestsSource` keeps its
+  `@InternalSharedApi` opt-in (the marker applies in its own module too).
+- The inbox builds the mini months, so `calendar/MiniMonthModel.kt` moved, converted to
+  kotlinx-datetime, and with it `calendar/EventsByDay.kt` (`eventsByDay` public for `CalendarScreen`).
+  The custody lookups the inbox hands it are the resolver's own kotlinx lambdas, no longer wrapped.
+- Screen edges: `MiniMonth` (kotlinx grid days; `toJavaYearMonth()`/`toJavaLocalDate()` to format;
+  today through `toKotlinLocalDate()`), `ProposedSchedulePreview` and `SchedulePreviewMonth`
+  (`toKotlinYearMonth()`, the model's kotlinx `getCustodyFor`), `CalendarScreen` (the swap sheet's days
+  keyed by `SwapSides`' kotlinx days, custody through `toJavaLocalDate()`; `eventsByDay`'s index re-keyed
+  to `java.time` once per list for `MonthView`), and the screenshot fixtures (`custodyOn`, a kotlinx
+  day; `toKotlinYearMonth()`, `toKotlinLocalDate()`).
+- Tests: `MiniMonthModelTest` and `SwapMiniMonthsTest` to commonTest, on kotlinx-datetime literals
+  (two names lost a comma); `EventsByDayTest`, `ChangeRequestViewModelTest`, `ChangeRequestWithdrawTest`,
+  `RequestChangeViewModelTest` and `RequestsSourceTest` to androidUnitTest, the first and second
+  converting at the edge (`toKotlinLocalDate()`, `toJavaYearMonth()`), `java.time` still their oracle.
+- Left for 10d–10f: family and expenses; settings, pairing, onboarding, auth and sync (pairing's
+  `PairingViewModel` reads `PendingCustodyConflict` and `CustodyConflictResolver`, already moved); the
+  rest.
+
 ### Task 11: The screens to `commonMain`
 
 **Files:**

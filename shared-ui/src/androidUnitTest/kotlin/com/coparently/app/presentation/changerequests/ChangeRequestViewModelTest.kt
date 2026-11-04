@@ -66,6 +66,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.After
 import org.junit.Before
@@ -347,7 +348,7 @@ class ChangeRequestViewModelTest {
         val months = vm.miniMonths.first { it.isNotEmpty() }
 
         assertEquals(setOf("e-waiting"), months.keys)
-        assertEquals(YearMonth.of(2026, 10), months.getValue("e-waiting").month)
+        assertEquals(YearMonth.of(2026, 10), months.getValue("e-waiting").month.toJavaYearMonth())
     }
 
     /** An event Pavel created on 21 October, waiting for Olya's answer. */

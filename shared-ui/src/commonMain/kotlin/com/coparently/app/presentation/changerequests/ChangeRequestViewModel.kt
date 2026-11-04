@@ -1,8 +1,10 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.changerequests
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.SwapOfferer
@@ -71,10 +73,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDateTime
-import java.util.UUID
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private const val TAG = "ChangeRequestViewModel"
 
@@ -169,9 +172,8 @@ class ChangeRequestViewModel(
                     custody?.dayOverrides.orEmpty(),
                     legacy = { null }
                 )
-                val custodyFor: (java.time.LocalDate) -> String? = { day -> resolve(day.toKotlinLocalDate()) }
                 (ready.inbox.waitingOnMe.events + ready.inbox.waitingOnThem.events).associate { event ->
-                    event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, custodyFor)
+                    event.id to MiniMonthModel.forAwaitingEvent(event, ready.events, resolve)
                 }
             }
         }
@@ -192,11 +194,9 @@ class ChangeRequestViewModel(
                     custody?.dayOverrides.orEmpty(),
                     legacy = { null }
                 )
-                val agreed: (java.time.LocalDate) -> String? = { day -> resolve(day.toKotlinLocalDate()) }
                 (ready.inbox.waitingOnMe.swaps + ready.inbox.waitingOnThem.swaps).associate { group ->
                     // Only the days still waiting: an answered one no longer moves (final review #3).
-                    val days = group.pendingDays.mapKeys { (day, _) -> day.toJavaLocalDate() }
-                    group.key to swapMiniMonths(days, ready.events, agreed)
+                    group.key to swapMiniMonths(group.pendingDays, ready.events, resolve)
                 }
             }
         }
@@ -241,7 +241,7 @@ class ChangeRequestViewModel(
                     changeRequestRepository.updateStatus(requestId, ChangeRequestStatus.ACCEPTED)
                 },
                 onFailure = { e ->
-                    Log.w(TAG, "Applying change request failed", e)
+                    logger.w(TAG, "Applying change request failed", e)
                     _errorMessage.value = UiText.Res(Res.string.change_request_error_apply_failed)
                 }
             )
@@ -316,7 +316,7 @@ class ChangeRequestViewModel(
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
                 ?: userRepository.getCurrentUserId()
                 ?: return@launch
-            val now = LocalDateTime.now().toString()
+            val now = IsoText.dateTimeShortest(wallClockNow())
             if (!group.awaitsAnswerFrom(uid)) {
                 _errorMessage.value = UiText.Res(Res.string.change_request_error_offer_answered)
                 return@launch
@@ -345,7 +345,7 @@ class ChangeRequestViewModel(
                 }
             }
         ).onFailure { e ->
-            Log.w(TAG, "Answering a day swap failed", e)
+            logger.w(TAG, "Answering a day swap failed", e)
             _errorMessage.value = UiText.Res(Res.string.change_request_error_swap_failed)
         }.isSuccess
 
@@ -370,7 +370,7 @@ class ChangeRequestViewModel(
                 return@launch
             }
             if (!stillShowsItsFamily()) return@launch
-            val now = LocalDateTime.now().toString()
+            val now = IsoText.dateTimeShortest(wallClockNow())
             custodyModelRepository.applyDayOverridesForDates(
                 dates = group.dates,
                 transform = { current, date ->
@@ -382,7 +382,7 @@ class ChangeRequestViewModel(
                     }
                 }
             ).onFailure { e ->
-                Log.w(TAG, "Withdrawing a day swap failed", e)
+                logger.w(TAG, "Withdrawing a day swap failed", e)
                 _errorMessage.value = UiText.Res(Res.string.change_request_error_withdraw_failed)
             }
         }
@@ -413,8 +413,8 @@ class ChangeRequestViewModel(
                 ?: return@launch
             val days = dates.distinct().sorted().map(IsoText::date)
             if (days.isEmpty() || !stillShowsItsFamily()) return@launch
-            val atIso = LocalDateTime.now().toString()
-            val groupId = UUID.randomUUID().toString()
+            val atIso = IsoText.dateTimeShortest(wallClockNow())
+            val groupId = Uuid.random().toString()
             val reoffer = { current: Map<String, DayOverride>, date: String ->
                 val agreed = current[date]?.agreedToParent
                 if (agreed == null) {
@@ -439,7 +439,7 @@ class ChangeRequestViewModel(
                 custodyModelRepository.applyDayOverridesForDates(days, reoffer, answerBy, offerer)
             }
             result.onFailure { e ->
-                Log.w(TAG, "Asking to change an agreed swap failed", e)
+                logger.w(TAG, "Asking to change an agreed swap failed", e)
                 _errorMessage.value = UiText.Res(Res.string.change_request_error_swap_failed)
             }
         }
@@ -506,7 +506,7 @@ class ChangeRequestViewModel(
             planReferenceSource.observeCitation(proposal.planCitationWire, uid, proposal.proposedBy)
         }
     }.catch { e ->
-        Log.w(TAG, "Could not read the parenting plan a proposal cites", e)
+        logger.w(TAG, "Could not read the parenting plan a proposal cites", e)
         emit(CitationStatus.None)
     }.stateIn(
         scope = viewModelScope,
@@ -533,7 +533,7 @@ class ChangeRequestViewModel(
         CustodyPatternDiff.of(
             agreed = shared.model,
             proposed = proposal.model,
-            from = java.time.LocalDate.now().toKotlinLocalDate()
+            from = Clock.System.todayIn(TimeZone.currentSystemDefault())
         )
     }.stateIn(
         scope = viewModelScope,
@@ -547,7 +547,7 @@ class ChangeRequestViewModel(
             if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.acceptProposal()
                 .onFailure { e ->
-                    Log.w(TAG, "Accepting a custody proposal failed", e)
+                    logger.w(TAG, "Accepting a custody proposal failed", e)
                     _errorMessage.value = UiText.Res(Res.string.change_request_error_proposal_accept_failed)
                 }
         }
@@ -559,7 +559,7 @@ class ChangeRequestViewModel(
             if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.declineProposal()
                 .onFailure { e ->
-                    Log.w(TAG, "Declining a custody proposal failed", e)
+                    logger.w(TAG, "Declining a custody proposal failed", e)
                     _errorMessage.value = UiText.Res(Res.string.change_request_error_proposal_decline_failed)
                 }
         }
@@ -574,7 +574,7 @@ class ChangeRequestViewModel(
         viewModelScope.launch {
             if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.withdrawProposal().onFailure { e ->
-                Log.w(TAG, "Withdrawing a custody proposal failed", e)
+                logger.w(TAG, "Withdrawing a custody proposal failed", e)
                 _errorMessage.value = UiText.Res(Res.string.change_request_error_withdraw_failed)
             }
         }
@@ -641,7 +641,7 @@ class ChangeRequestViewModel(
         val me = ready.scope.myUid
         val stillWaiting = ready.agreements.professionals.any {
             it.id == grantId && me in it.consents &&
-                ProfessionalGrantPolicy.statusFor(it, me, System.currentTimeMillis()) ==
+                ProfessionalGrantPolicy.statusFor(it, me, Clock.System.now().toEpochMilliseconds()) ==
                 ProfessionalGrantStatus.WAITING_FOR_CO_PARENT
         }
         if (!stillWaiting) {
@@ -654,7 +654,7 @@ class ChangeRequestViewModel(
     private fun withdrawAgreement(what: String, write: suspend () -> Boolean) {
         viewModelScope.launch {
             if (!write()) {
-                Log.w(TAG, "Withdrawing $what failed")
+                logger.w(TAG, "Withdrawing $what failed")
                 _errorMessage.value = UiText.Res(Res.string.request_agreement_withdraw_failed)
             }
         }
@@ -678,7 +678,7 @@ class ChangeRequestViewModel(
             val result = inboxFamilyId()?.let { write(it) }
                 ?: Result.failure(IllegalStateException("No family's split is on screen"))
             result.onFailure { e ->
-                Log.w(TAG, "$what an expense split failed", e)
+                logger.w(TAG, "$what an expense split failed", e)
                 _errorMessage.value = UiText.Res(Res.string.expenses_split_answer_failed)
             }
         }
@@ -748,7 +748,7 @@ class ChangeRequestViewModel(
                 return@launch
             }
             eventUseCases.deleteEvent(fresh).onFailure { e ->
-                Log.w(TAG, "Withdrawing an event failed", e)
+                logger.w(TAG, "Withdrawing an event failed", e)
                 _errorMessage.value = UiText.Res(Res.string.change_request_error_withdraw_failed)
             }
         }
@@ -787,7 +787,7 @@ class ChangeRequestViewModel(
             result.fold(
                 onSuccess = { eventRepository.updateEvent(it) },
                 onFailure = { e ->
-                    Log.w(TAG, "Answering an event failed", e)
+                    logger.w(TAG, "Answering an event failed", e)
                     _errorMessage.value = UiText.Res(Res.string.change_request_error_answer_failed)
                 }
             )

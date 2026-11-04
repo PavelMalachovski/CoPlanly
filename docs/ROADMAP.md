@@ -2937,8 +2937,10 @@ bytes are identical on Android):
   the holiday-fairness card, and the choice between two patterns that pairing can leave, with the
   parenting plan's source they quote and cite (`custodyUiModule`; JetBrains'
   `lifecycle-viewmodel-savedstate` 2.9.6, androidx's 2.9.4, for the plan question they are opened
-  with). Requests follow in the same slice; family and expenses, settings to sync and the rest as
-  slices 10d–10f.
+  with). Then requests (`requestsUiModule`): the inbox's ViewModel, the change-request form's and
+  the one source Home's row, the calendar's banner and the inbox count from, with the mini month's
+  model and the day index it reads, both now on kotlinx-datetime, which the screens convert at their
+  edge. Family and expenses, settings to sync and the rest follow as slices 10d–10f.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

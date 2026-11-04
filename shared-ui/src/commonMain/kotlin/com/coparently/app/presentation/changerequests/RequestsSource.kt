@@ -1,4 +1,3 @@
-// `coParentOnScreen` and its helpers are public in `:shared-ui` only for the ViewModels still here (MON-24).
 @file:OptIn(InternalSharedApi::class)
 
 package com.coparently.app.presentation.changerequests
@@ -35,8 +34,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /** Where the requests of the family on screen stand. */
 sealed interface RequestsState {
@@ -161,10 +161,10 @@ class RequestsSource(
                 swaps,
                 custody,
                 // Read per emission rather than once: this flow outlives midnight.
-                LocalDate.now().toKotlinLocalDate(),
+                Clock.System.todayIn(TimeZone.currentSystemDefault()),
                 clocks,
                 settings = settings
-            ).withAgreements(scope, agreements, System.currentTimeMillis()),
+            ).withAgreements(scope, agreements, Clock.System.now().toEpochMilliseconds()),
             changeRequests = familyRequests,
             events = familyEvents,
             custody = custody,

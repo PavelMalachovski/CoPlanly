@@ -19,7 +19,7 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.format
 import com.coparently.app.utils.localizedDate
 import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinYearMonth
 import java.time.YearMonth
 
 /**
@@ -46,8 +46,8 @@ fun ProposedSchedulePreview(
     val from = maxOf(today, model.startDate.toJavaLocalDate())
     val month = remember(model, from) {
         MiniMonthModel.build(
-            month = YearMonth.from(from),
-            custodyFor = { date -> model.getCustodyFor(date.toKotlinLocalDate()) },
+            month = YearMonth.from(from).toKotlinYearMonth(),
+            custodyFor = { date -> model.getCustodyFor(date) },
             events = emptyList(),
             marks = emptyMap()
         )

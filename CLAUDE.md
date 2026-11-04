@@ -1597,7 +1597,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              components of presentation/common/ that need no ViewModel and no Android API (the
              design system's primitives), with UiText (slice 9c); and, from Task 10, the shared
              state of presentation/common/ (ParentsSource and its siblings) and the ViewModels,
-             group by group (so far common/'s, chat's, the calendar's, the events' and custody's), with
+             group by group (so far common/'s, chat's, the calendar's, the events', custody's and the
+             requests'), with
              their Koin modules: uiModules and platformUiModule, which appModules includes.
              Screens follow (Task 11). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
@@ -2017,8 +2018,9 @@ code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFi
 On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
 dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
 `NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
-`projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
-app that call them move (see the `@InternalSharedApi` paragraph below). Slice 10b moved **the
+`projectedCoParentUid` are public behind `@InternalSharedApi` until the ViewModels still in the
+app that call them move (four since `RequestsSource` moved in 10c; see the `@InternalSharedApi`
+paragraph below). Slice 10b moved **the
 calendar**: `CalendarViewModel` (its filters and the dismissed custody change in `SecurePreferences`,
 under the same keys; its displayed month, query anchor, selection and custody lookup kotlinx-datetime
 `YearMonth`s and `LocalDate`s, today from `Clock.System.todayIn` in the system zone, a swap's group id
@@ -2028,10 +2030,12 @@ from `Uuid` and its time `IsoText.dateTimeShortest(wallClockNow())`, the text
 — in `calendarUiModule`. `CalendarScreen` converts at its edge: it reads the month and the selected
 day through `collectAsJavaMonth`/`collectAsJavaDate` (a `derivedStateOf` over `collectAsState`, so a
 click handler reads the value the ViewModel holds now, as the delegated `collectAsState` did), calls
-back with `toKotlinYearMonth()`/`toKotlinLocalDate()`, and `MonthView`, `DayWeekView` and `MiniMonth`
-hand `CustodyHelper` their `java.time` day as `toKotlinLocalDate()`. The grid's other helpers
-(`queryRangeFor`, `DayCellFills`, `MiniMonthModel`, `OpeningHour`, `SwapSelection`, …) stay with the
-screens, because no ViewModel reads them. `CalendarSelectionTest` runs in `commonTest`; the two
+back with `toKotlinYearMonth()`/`toKotlinLocalDate()`, and `MonthView` and `DayWeekView` hand
+`CustodyHelper` their `java.time` day as `toKotlinLocalDate()` (`MiniMonth` did too, until 10c gave
+it the model's kotlinx days). The grid's other helpers
+(`queryRangeFor`, `DayCellFills`, `OpeningHour`, `SwapSelection`, …) stay with the screens, because
+no ViewModel reads them (`MiniMonthModel` and `eventsByDay` did not, and moved with the requests in
+10c). `CalendarSelectionTest` runs in `commonTest`; the two
 ViewModel tests (MockK) in `androidUnitTest`, where they keep `java.time` as their oracle. Then **the
 events**: `EventViewModel` (the new-event draft and the custom event types in `SecurePreferences`,
 under the same keys; the draft written on `Dispatchers.IO`, the common `kotlinx.coroutines.IO`;
@@ -2060,6 +2064,27 @@ public API was kotlinx-datetime already, so no screen converts anything. `Candid
 `ChildScheduleFormTest`, `ContactWindowDraftTest` and `CustodyConflictResolverTest` run in
 `commonTest` (seven names lost a comma for Kotlin/Native); the three ViewModel tests (MockK) in
 `androidUnitTest`, where `java.time` stays their oracle for today.
+Then **the requests**: `ChangeRequestViewModel` (the inbox; a swap answer's and withdrawal's time
+`IsoText.dateTimeShortest(wallClockNow())`, the text `LocalDateTime.now().toString()` wrote, a
+re-offer's group id from `Uuid`, a proposal's diff anchored on `Clock.System.todayIn`, a
+professional grant's status read at `Clock.System.now()`), `RequestChangeViewModel` (a request's id
+from `Uuid`) and `RequestsSource` with `RequestsState` (today from `Clock.System.todayIn`, the
+agreements placed at `Clock.System.now()`, both read per emission as before), in `requestsUiModule`,
+`RequestsSource` a `factory` as it was in `presentationModule`. The inbox builds the mini months, so
+`calendar/MiniMonthModel.kt` (`MiniMonthModel`, `MiniMonthDot`, `MiniMonthMark`, `MiniMonthGrid`,
+`swapMiniMonths`) moved with it on kotlinx-datetime (`YearMonth`, `LocalDate`; `firstDay`/`lastDay`
+for `atDay(1)`/`atEndOfMonth()`), and with it `calendar/EventsByDay.kt` (`eventsByDay`, public
+because `CalendarScreen` builds the grid's index with it, and `eventsOn`), whose days are kotlinx's
+too. The screens convert at their edge: `MiniMonth` draws the kotlinx grid (`date.day`,
+`date.yearMonth`, `toJavaYearMonth()`/`toJavaLocalDate()` to format, today compared through
+`toKotlinLocalDate()`), `ProposedSchedulePreview` and `SchedulePreviewMonth` hand it
+`YearMonth.from(from).toKotlinYearMonth()` and the model's own kotlinx lookup, `CalendarScreen`'s
+swap sheet keys its days by the kotlinx days `SwapSides` holds and looks custody up through
+`toJavaLocalDate()`, and `CalendarScreen` re-keys `eventsByDay`'s index to `java.time` once per
+event list, so `MonthView` and the agenda card read the map they did. The screenshot fixtures gained
+`ScreenshotFixtures.custodyOn` (a kotlinx day). `MiniMonthModelTest` and `SwapMiniMonthsTest` run in
+`commonTest` on kotlinx-datetime literals; `EventsByDayTest` and the four request tests (MockK) in
+`androidUnitTest`, converting at the edge where `java.time` stays their oracle.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -2071,7 +2096,7 @@ in `shared-data/` `EventDocument`
 (the events and revisions wire contracts, in `shared-data`'s `wire/` since Task 8j and so compiled
 by the app's tests too, and `:shared-ui`'s `ChatEventCardViewModelTest`, since Task 10;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
-(`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app; `minuteTicks` beside it is
+(`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in `:shared-ui` since slice 10c; `minuteTicks` beside it is
 public without the marker, because its caller, `AnswerByField`, is presentation code that stays in
 another module and so it never becomes `internal` again, as `governing`), and
 `ChatMappers`' entity and document mappers (the R8 probe and the messages wire contract; the mark
@@ -2088,8 +2113,9 @@ app), the four expense mappers in
 e2e tests, which start the mirror themselves), and the engine overload of `httpClient` and
 `GitLiveFirestoreClient`'s `plainToGitLive` (the R8 probe); and in `shared-ui/` (Task 10)
 `CoParentOnScreen.kt`'s `coParentOnScreen`, `UserRepository.observeSignedInUser` and
-`User.projectedCoParentUid` (`HomeViewModel`, `PairingViewModel`, `ProfileViewModel`,
-`ParentingPlanViewModel` and `RequestsSource`, in the app until their slices move them). This list
+`User.projectedCoParentUid` (`HomeViewModel`, `PairingViewModel`, `ProfileViewModel` and
+`ParentingPlanViewModel`, in the app until their slices move them; `ParentsSource`, `FamilyKindSource`
+and, since slice 10c, `RequestsSource` opt in beside them in `:shared-ui`). This list
 is the one place they are recorded; `InternalSharedApi`'s KDoc points here.
 
 Data flow: UI → ViewModel → UseCase → Repository → Room (source of truth) → Firestore sync.

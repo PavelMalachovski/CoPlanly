@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.calendar
 
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -12,6 +13,8 @@ import java.time.LocalDateTime
  * each of its 42 cells. That is only safe if the index answers exactly what [eventsOn] answers —
  * the agenda card under the grid and the dots above it must never disagree about which day an
  * event belongs to, and multi-day/overnight spans are a documented past bug in this project.
+ *
+ * `java.time` stays the oracle for the days, converted at the index's edge (MON-24).
  */
 class EventsByDayTest {
 
@@ -33,7 +36,7 @@ class EventsByDayTest {
     )
 
     private fun idsOn(events: List<Event>, date: LocalDate): List<String> =
-        eventsByDay(events)[date].orEmpty().map { it.id }
+        eventsByDay(events)[date.toKotlinLocalDate()].orEmpty().map { it.id }
 
     @Test
     fun `an event inside one day lands on that day only`() {
@@ -98,7 +101,7 @@ class EventsByDayTest {
         )
 
         val index = eventsByDay(events)
-        assertEquals(setOf(base.plusMonths(2)), index.keys)
+        assertEquals(setOf(base.plusMonths(2).toKotlinLocalDate()), index.keys)
     }
 
     @Test
@@ -128,14 +131,14 @@ class EventsByDayTest {
             val date = base.plusDays(offset)
             assertEquals(
                 "index disagrees with eventsOn on $date",
-                eventsOn(events, date),
-                index[date].orEmpty()
+                eventsOn(events, date.toKotlinLocalDate()),
+                index[date.toKotlinLocalDate()].orEmpty()
             )
         }
     }
 
     @Test
     fun `an empty list produces an empty index`() {
-        assertEquals(emptyMap<LocalDate, List<Event>>(), eventsByDay(emptyList()))
+        assertEquals(emptyMap<kotlinx.datetime.LocalDate, List<Event>>(), eventsByDay(emptyList()))
     }
 }

@@ -44,10 +44,12 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.localizedDate
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.yearMonth
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -75,7 +77,9 @@ fun MiniMonth(
     modifier: Modifier = Modifier,
     today: LocalDate = rememberToday().value
 ) {
+    // The model's dates are kotlinx-datetime's (`:shared-ui`, MON-24); today is the screen's own.
     val weeks = remember(model.month) { MiniMonthGrid.weeks(model.month) }
+    val todayInModel = today.toKotlinLocalDate()
     val description = miniMonthDescription(model, parentNames)
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -94,7 +98,7 @@ fun MiniMonth(
                         MiniMonthCell(
                             date = date,
                             model = model,
-                            isToday = date == today,
+                            isToday = date == todayInModel,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -126,12 +130,17 @@ private fun WeekdayHeader() {
 
 /** One day: the base and the custody wash, its number, its mark and its dot. */
 @Composable
-private fun MiniMonthCell(date: LocalDate, model: MiniMonthModel, isToday: Boolean, modifier: Modifier) {
-    val inMonth = YearMonth.from(date) == model.month
+private fun MiniMonthCell(
+    date: kotlinx.datetime.LocalDate,
+    model: MiniMonthModel,
+    isToday: Boolean,
+    modifier: Modifier
+) {
+    val inMonth = date.yearMonth == model.month
     // The month grid's two layers. No previous day and no holiday, so no handover diagonal and no
     // holiday tint: neither reads at this size, and the spec leaves both to the full grid.
     val fill = DayCellFills.monthCell(
-        isWeekend = CustodyHelper.isWeekend(date.toKotlinLocalDate()),
+        isWeekend = CustodyHelper.isWeekend(date),
         isCurrentMonth = inMonth,
         custody = model.custody[date],
         previousCustody = null,
@@ -158,7 +167,7 @@ private fun MiniMonthCell(date: LocalDate, model: MiniMonthModel, isToday: Boole
 
 /** The day number: a filled disc for today, a ring for a marked day, as `MonthView` marks today. */
 @Composable
-private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marked: Boolean) {
+private fun DayNumber(date: kotlinx.datetime.LocalDate, isToday: Boolean, inMonth: Boolean, marked: Boolean) {
     val ring = if (marked) {
         Modifier.border(MARK_RING_WIDTH, MaterialTheme.colorScheme.primary, CircleShape)
     } else {
@@ -175,7 +184,7 @@ private fun DayNumber(date: LocalDate, isToday: Boolean, inMonth: Boolean, marke
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = date.dayOfMonth.toString(),
+            text = date.day.toString(),
             style = MaterialTheme.typography.labelMedium,
             color = when {
                 isToday -> MaterialTheme.colorScheme.onPrimary
@@ -248,9 +257,9 @@ private fun MiniMonthLegend(model: MiniMonthModel, parentNames: ParentNames) {
  */
 @Composable
 private fun miniMonthDescription(model: MiniMonthModel, parentNames: ParentNames): String {
-    val month = model.month.atDay(1).format(localizedDate("yMMMM"))
+    val month = model.month.toJavaYearMonth().atDay(1).format(localizedDate("yMMMM"))
     val markedDays = model.marks.entries.sortedBy { it.key }.map { (date, mark) ->
-        val day = date.format(localizedDate("EEEEMMMMd"))
+        val day = date.toJavaLocalDate().format(localizedDate("EEEEMMMMd"))
         val meaning = when (mark) {
             MiniMonthMark.NEW_EVENT -> stringResource(R.string.mini_month_mark_new_event)
             MiniMonthMark.SWAP_DAY -> stringResource(R.string.mini_month_mark_swap_day)

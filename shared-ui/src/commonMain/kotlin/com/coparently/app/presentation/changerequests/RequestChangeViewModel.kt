@@ -1,8 +1,10 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.changerequests
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -36,7 +38,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * State of the "request a change" form.
@@ -130,7 +133,7 @@ class RequestChangeViewModel(
             try {
                 changeRequestRepository.createChangeRequest(
                     ChangeRequest(
-                        id = UUID.randomUUID().toString(),
+                        id = Uuid.random().toString(),
                         eventId = event.id,
                         eventTitle = event.title,
                         requestedBy = user.id,
@@ -185,7 +188,7 @@ class RequestChangeViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 // The exception's own text is English and technical: it goes to the log.
-                Log.w("RequestChangeViewModel", "Creating a change request failed", e)
+                logger.w("RequestChangeViewModel", "Creating a change request failed", e)
                 _uiState.value =
                     RequestChangeUiState.Error(UiText.Res(Res.string.change_request_error_send_failed))
             }

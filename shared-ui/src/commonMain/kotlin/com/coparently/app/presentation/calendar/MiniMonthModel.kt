@@ -4,13 +4,15 @@ import com.coparently.app.domain.events.CalendarVisibility
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.time.LAST_INSTANT_OF_DAY
 import com.coparently.app.domain.usecase.RecurrenceExpander
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.atTime
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.YearMonth
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.yearMonth
 
 /**
  * What the mini month marks on a day besides its custody colour and its dot.
@@ -41,6 +43,10 @@ data class MiniMonthDot(val parentOwner: String, val friendParticipates: Boolean
  * Keyed by the grid's dates, borrowed days from the neighbouring months included, because the
  * custody band runs to the edge of the grid (design refresh item 10) and a dot on a borrowed day
  * is drawn the way `MonthView` draws it.
+ *
+ * Its dates are kotlinx-datetime's since it moved to `:shared-ui` with the requests inbox's
+ * ViewModel, which builds it (MON-24 phase 2, slice 10c); the screens still in the app hand it
+ * `java.time` dates at their edge.
  *
  * @property month The month shown.
  * @property custody The custody slot of each grid date that has one; a date absent here has none.
@@ -102,8 +108,8 @@ data class MiniMonthModel(
             familyEvents: List<Event>,
             custodyFor: (LocalDate) -> String?
         ): MiniMonthModel {
-            val start = event.startDateTime.date.toJavaLocalDate()
-            val month = YearMonth.from(start)
+            val start = event.startDateTime.date
+            val month = start.yearMonth
             val dates = MiniMonthGrid.weeks(month).flatten()
             val shown = RecurrenceExpander.expandAll(
                 CalendarVisibility.visible(familyEvents),
@@ -128,7 +134,7 @@ fun swapMiniMonths(
     familyEvents: List<Event>,
     custodyFor: (LocalDate) -> String?
 ): List<MiniMonthModel> =
-    days.keys.map(YearMonth::from).distinct().sorted().map { month ->
+    days.keys.map { it.yearMonth }.distinct().sorted().map { month ->
         val dates = MiniMonthGrid.weeks(month).flatten()
         val shown = RecurrenceExpander.expandAll(
             CalendarVisibility.visible(familyEvents),
@@ -144,14 +150,11 @@ fun swapMiniMonths(
         )
     }
 
-/**
- * 00:00 of a grid [day], where an expansion window opens. The grid's days are `java.time`, as the
- * calendar's library hands them out; an event's times are kotlinx-datetime (MON-24).
- */
-private fun startOf(day: LocalDate): LocalDateTime = day.toKotlinLocalDate().atTime(0, 0)
+/** 00:00 of a grid [day], where an expansion window opens. */
+private fun startOf(day: LocalDate): LocalDateTime = day.atTime(0, 0)
 
 /** The last instant of a grid [day] (`java.time.LocalTime.MAX`), where an expansion window closes. */
-private fun endOf(day: LocalDate): LocalDateTime = day.toKotlinLocalDate().atTime(LAST_INSTANT_OF_DAY)
+private fun endOf(day: LocalDate): LocalDateTime = day.atTime(LAST_INSTANT_OF_DAY)
 
 /** The mini month's layout: whole weeks, Monday first, as `MonthView` lays out its grid. */
 object MiniMonthGrid {
@@ -161,11 +164,11 @@ object MiniMonthGrid {
      * after its last, so four to six rows.
      */
     fun weeks(month: YearMonth): List<List<LocalDate>> {
-        var first = month.atDay(1)
-        while (first.dayOfWeek != DayOfWeek.MONDAY) first = first.minusDays(1)
-        var last = month.atEndOfMonth()
-        while (last.dayOfWeek != DayOfWeek.SUNDAY) last = last.plusDays(1)
-        val days = generateSequence(first) { it.plusDays(1) }.takeWhile { !it.isAfter(last) }.toList()
+        var first = month.firstDay
+        while (first.dayOfWeek != DayOfWeek.MONDAY) first = first.minus(1, DateTimeUnit.DAY)
+        var last = month.lastDay
+        while (last.dayOfWeek != DayOfWeek.SUNDAY) last = last.plus(1, DateTimeUnit.DAY)
+        val days = generateSequence(first) { it.plus(1, DateTimeUnit.DAY) }.takeWhile { it <= last }.toList()
         return days.chunked(DAYS_IN_WEEK)
     }
 

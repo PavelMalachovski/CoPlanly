@@ -1,4 +1,4 @@
-// `RequestTime.of` is public in `:shared-data` only for the app's tests (MON-24).
+// `RequestTime.of` is public in `:shared-data` only for this test, in `:shared-ui` (MON-24).
 @file:OptIn(InternalSharedApi::class)
 
 package com.coparently.app.presentation.changerequests

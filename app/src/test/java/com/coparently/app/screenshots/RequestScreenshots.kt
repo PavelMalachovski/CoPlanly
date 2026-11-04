@@ -24,6 +24,7 @@ import com.coparently.app.testing.RobolectricTestApplication
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toKotlinYearMonth
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -47,10 +48,12 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
     fun miniMonth() = snap("requests_mini_month") {
         MiniMonth(
             model = MiniMonthModel.build(
-                month = ScreenshotFixtures.MONTH,
-                custodyFor = ScreenshotFixtures::custodyFor,
+                month = ScreenshotFixtures.MONTH.toKotlinYearMonth(),
+                custodyFor = ScreenshotFixtures::custodyOn,
                 events = ScreenshotFixtures.monthEvents.values.flatten(),
-                marks = mapOf(ScreenshotFixtures.TODAY.plusDays(MARKED_DAY_OFFSET) to MiniMonthMark.NEW_EVENT)
+                marks = mapOf(
+                    ScreenshotFixtures.TODAY.plusDays(MARKED_DAY_OFFSET).toKotlinLocalDate() to MiniMonthMark.NEW_EVENT
+                )
             ),
             parentNames = ScreenshotFixtures.parentNames,
             today = ScreenshotFixtures.TODAY
@@ -78,7 +81,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
         AwaitingEventCard(
             event = event,
-            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyFor),
+            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyOn),
             parentNames = ScreenshotFixtures.parentNames,
             actions = AwaitingEventActions(onAccept = {}, onDecline = {})
         )
@@ -98,7 +101,7 @@ class RequestScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         )
         AwaitingEventCard(
             event = event,
-            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyFor),
+            miniMonth = MiniMonthModel.forAwaitingEvent(event, monthEvents, ScreenshotFixtures::custodyOn),
             parentNames = ScreenshotFixtures.parentNames,
             actions = null
         )

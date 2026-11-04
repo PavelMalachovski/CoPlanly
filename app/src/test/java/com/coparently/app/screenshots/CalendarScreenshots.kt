@@ -100,9 +100,10 @@ class CalendarScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant
                 ),
                 coParentName = "Bob",
                 months = swapMiniMonths(
-                    days = give.associateWith { "dad" } + take.associateWith { "mom" },
+                    days = (give.associateWith { "dad" } + take.associateWith { "mom" })
+                        .mapKeys { (day, _) -> day.toKotlinLocalDate() },
                     familyEvents = emptyList(),
-                    custodyFor = ScreenshotFixtures::custodyFor
+                    custodyFor = ScreenshotFixtures::custodyOn
                 )
             ),
             parentNames = ScreenshotFixtures.parentNames,

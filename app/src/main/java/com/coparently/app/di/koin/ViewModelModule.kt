@@ -2,8 +2,6 @@ package com.coparently.app.di.koin
 
 import com.coparently.app.presentation.ai.AiConsentViewModel
 import com.coparently.app.presentation.auth.AuthViewModel
-import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
-import com.coparently.app.presentation.changerequests.RequestChangeViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoViewModel
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -54,8 +52,6 @@ import org.koin.dsl.module
 val viewModelModule = module {
     viewModelOf(::AiConsentViewModel)
     viewModelOf(::AuthViewModel)
-    viewModelOf(::ChangeRequestViewModel)
-    viewModelOf(::RequestChangeViewModel)
     viewModelOf(::ChildInfoViewModel)
     viewModelOf(::HealthConsentViewModel)
     viewModelOf(::TelemetryConsentViewModel)

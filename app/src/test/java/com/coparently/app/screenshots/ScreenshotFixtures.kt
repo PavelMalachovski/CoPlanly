@@ -65,6 +65,9 @@ object ScreenshotFixtures {
     fun custodyFor(date: LocalDate): String =
         if (date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) % 2 == 0) SLOT_ONE else SLOT_TWO
 
+    /** [custodyFor] for a kotlinx-datetime day, the one `MiniMonthModel` asks about (MON-24). */
+    fun custodyOn(date: kotlinx.datetime.LocalDate): String = custodyFor(date.toJavaLocalDate())
+
     /** A Wednesday-afternoon contact window for whichever parent does not have the week. */
     fun contactWindowsFor(date: LocalDate): List<ContactWindow> =
         if (date.dayOfWeek == DayOfWeek.WEDNESDAY) {
