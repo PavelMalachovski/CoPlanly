@@ -72,17 +72,18 @@ class StringsParityTest {
     }
 
     @Test
-    fun `a percent sign beside arguments is the one known difference, and it is still there`() = runBlocking {
-        // Compose Multiplatform 1.9.3's formatter replaces `%<n>$s` and `%<n>$d` and nothing else, so
-        // a literal `%%` stays doubled, while `String.format` prints `%`; no spelling reads as one
-        // percent sign in both. When an upgrade formats `%%`, this fails: empty
-        // PERCENT_WITH_ARGUMENTS here and in check 7 of tools/check-invariants.js.
+    fun `the split shares read alike now that the percent sign is an argument`() = runBlocking {
+        // They held a literal `%%` beside their arguments, which `String.format` prints as `%` and
+        // Compose Multiplatform 1.9.3's formatter leaves doubled. Since slice 11e of MON-24 the sign
+        // is `expenses_percent_sign`, passed as an argument, so both print one (check 7 refuses
+        // `%%` beside arguments in every key now).
         val name = "expenses_split_shares_named"
-        val arguments = arrayOf<Any>("Alice", 70, "Bob", 30)
+        val percent = androidResources("en").getString(androidId(STRING, "expenses_percent_sign")!!)
+        val arguments = arrayOf<Any>("Alice", 70, "Bob", 30, percent)
         val android = androidResources("en").getString(androidId(STRING, name)!!, *arguments)
         val compose = inLanguage("en") { getString(Res.allStringResources.getValue(name), *arguments) }
         assertEquals("Alice pays 70 %, Bob pays 30 %", android)
-        assertEquals("Alice pays 70 %%, Bob pays 30 %%", compose)
+        assertEquals(android, compose)
     }
 
     private suspend fun stringDifferences(
@@ -100,9 +101,7 @@ class StringsParityTest {
         if (arguments.isNotEmpty()) {
             val formatted = android.getString(id, *arguments)
             val composeFormatted = getString(resource, *arguments)
-            // The known difference, pinned by its own test above.
-            val expected = if (name in PERCENT_WITH_ARGUMENTS) formatted.replace("%", "%%") else formatted
-            if (composeFormatted != expected) {
+            if (composeFormatted != formatted) {
                 out += difference(language, name, "formatted", formatted, composeFormatted)
             }
         }
@@ -127,16 +126,5 @@ class StringsParityTest {
     private companion object {
         /** The app had about 2,300 strings when they moved; far fewer means `Res` is incomplete. */
         const val MINIMUM_STRINGS = 2000
-
-        /**
-         * The keys whose text holds `%%` beside arguments: check 7's `PERCENT_WITH_ARGUMENTS`
-         * (tools/check-invariants.js). Read through `R.string` alone until `SplitShares.kt` moves to
-         * `:shared-ui` (Task 11), which needs a wording both read alike first.
-         */
-        val PERCENT_WITH_ARGUMENTS = setOf(
-            "expenses_split_shares_named",
-            "expenses_split_shares_you_first",
-            "expenses_split_shares_you_second",
-        )
     }
 }

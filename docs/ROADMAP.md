@@ -2839,7 +2839,9 @@ bytes are identical on Android):
   counts 0–200, and check 7 of `check-invariants.js` refuses the differences offline. **One stands**:
   `%%` beside arguments in the three `expenses_split_shares_*` keys, which `String.format` prints as
   `%` and CMP as `%%`, and which no spelling fixes; they stay `R.string`-only and need a wording both
-  read alike before `SplitShares.kt` moves (Task 11). (The branch's full CI run passed with it; the
+  read alike before `SplitShares.kt` moves (Task 11). *(Slice 11e: they take the percent sign as an
+  argument, `expenses_percent_sign`, and read alike; the exception is gone from check 7 and the
+  parity test.)* (The branch's full CI run passed with it; the
   parity tests read Compose Multiplatform's strings through their own context fallback, because
   Robolectric installs no content provider from the manifest — see slice 9b.)
 - **The theme and the design system's components** — **slice 9b built (phase 2, Task 9, November
@@ -2910,7 +2912,7 @@ bytes are identical on Android):
   reaches a `%<n>$d` is an `Int`, no key read through `Res` holds a `%` other than
   `%<n>$s`/`%<n>$d`, and the three `%%` keys
   (`expenses_split_shares_*`) are read by `SplitShares.kt` through `R.string`, never through a
-  `UiText`. `UiTextParityTest` (Robolectric, five languages) compares both resolutions with what
+  `UiText` *(until slice 11e, which made the sign an argument)*. `UiTextParityTest` (Robolectric, five languages) compares both resolutions with what
   Android's resources and `java.time` made of the same samples; the screenshot baselines should not
   move. Task 9's Steps 5 and 6 are what remains of it.
 - **The ViewModels to `:shared-ui`** — **done but for the two sign-in ViewModels (phase 2, Task 10,

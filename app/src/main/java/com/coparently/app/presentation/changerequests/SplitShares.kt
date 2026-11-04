@@ -13,35 +13,39 @@ import com.coparently.app.presentation.common.ParentNames
  * number was theirs (tester report, October 2026). The inbox's split card and Home's pop-up say it
  * the same way.
  *
- * It stays in the app, read through Android's resources, while the rest of the inbox is in
- * `:shared-ui` (MON-24 phase 2, slice 11d): its three strings put a literal `%%` beside arguments,
- * which Compose Multiplatform's reader prints as written (CLAUDE.md "Localization"). The shared
- * `ChangeRequestsScreen` takes it as a parameter, which `NavGraph` passes; slice 11e rewords the
- * strings and moves it.
+ * The percent sign is an argument, `expenses_percent_sign`, never a literal `%%` beside the
+ * arguments, which Compose Multiplatform's reader would print as written (CLAUDE.md
+ * "Localization"; MON-24 phase 2, slice 11e): "70 %" reads the same through both readers.
  *
  * @param ratio The split; its stored share is slot 1's, and slot 2 pays the rest.
  * @param parentNames Names each slot — never "Mom" or "Dad".
  */
 @Composable
-internal fun splitSharesText(ratio: SplitRatio, parentNames: ParentNames): String = when {
-    // The reader's own share is "you pay" (UX audit H4), in the slot order the split bar draws.
-    parentNames.isReader(ContactWindow.SLOT_ONE) -> stringResource(
-        R.string.expenses_split_shares_you_first,
-        ratio.momPercent,
-        parentNames.labelFor(ContactWindow.SLOT_TWO),
-        ratio.dadPercent
-    )
-    parentNames.isReader(ContactWindow.SLOT_TWO) -> stringResource(
-        R.string.expenses_split_shares_you_second,
-        parentNames.labelFor(ContactWindow.SLOT_ONE),
-        ratio.momPercent,
-        ratio.dadPercent
-    )
-    else -> stringResource(
-        R.string.expenses_split_shares_named,
-        parentNames.labelFor(ContactWindow.SLOT_ONE),
-        ratio.momPercent,
-        parentNames.labelFor(ContactWindow.SLOT_TWO),
-        ratio.dadPercent
-    )
+internal fun splitSharesText(ratio: SplitRatio, parentNames: ParentNames): String {
+    val percent = stringResource(R.string.expenses_percent_sign)
+    return when {
+        // The reader's own share is "you pay" (UX audit H4), in the slot order the split bar draws.
+        parentNames.isReader(ContactWindow.SLOT_ONE) -> stringResource(
+            R.string.expenses_split_shares_you_first,
+            ratio.momPercent,
+            parentNames.labelFor(ContactWindow.SLOT_TWO),
+            ratio.dadPercent,
+            percent
+        )
+        parentNames.isReader(ContactWindow.SLOT_TWO) -> stringResource(
+            R.string.expenses_split_shares_you_second,
+            parentNames.labelFor(ContactWindow.SLOT_ONE),
+            ratio.momPercent,
+            ratio.dadPercent,
+            percent
+        )
+        else -> stringResource(
+            R.string.expenses_split_shares_named,
+            parentNames.labelFor(ContactWindow.SLOT_ONE),
+            ratio.momPercent,
+            parentNames.labelFor(ContactWindow.SLOT_TWO),
+            ratio.dadPercent,
+            percent
+        )
+    }
 }

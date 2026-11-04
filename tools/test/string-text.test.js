@@ -8,11 +8,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { stringTextProblems, PERCENT_WITH_ARGUMENTS } = require('../check-invariants');
+const { stringTextProblems } = require('../check-invariants');
 
-const ok = (text, name = 'k') => assert.deepStrictEqual(stringTextProblems(text, name), [], text);
-const refused = (text, pattern, name = 'k') => {
-  const problems = stringTextProblems(text, name);
+const ok = (text) => assert.deepStrictEqual(stringTextProblems(text), [], text);
+const refused = (text, pattern) => {
+  const problems = stringTextProblems(text);
   assert.ok(problems.some((p) => pattern.test(p)), `${text}: ${problems.join('; ') || 'no problem found'}`);
 };
 
@@ -61,10 +61,11 @@ test('only %<n>$s and %<n>$d are format arguments both replace', () => {
   refused('%1$,d', /%1\$,d/);
 });
 
-test('%% beside format arguments is refused unless the key is a known exception', () => {
+test('%% beside format arguments is refused in every key, and the sign as an argument passes', () => {
   ok('100 %% sure');
+  ok('%');
   refused('%1$s pays %2$d %%', /%% beside format arguments/);
-  for (const name of PERCENT_WITH_ARGUMENTS) ok('%1$s pays %2$d %%', name);
+  ok('%1$s pays %2$d %3$s');
 });
 
 test('markup and quote entities are refused until the two parsers are compared on them', () => {

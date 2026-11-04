@@ -4518,7 +4518,7 @@ whatever you were doing; a stale "known issue" costs more than a missing one.
   `asString(context)` with the Activity's `Context`; never resolve with the application's). An
   argument that is not a `UiText` is printed with `toString()`, all Compose Multiplatform's
   `%<n>$s` and `%<n>$d` do, so pass a `%<n>$d` an `Int` or a `Long`, never a formatted number, and
-  don't put the three `%%` keys of "Localization" in a `UiText`. Still don't inject `Context` into
+  a percent sign as an argument, never `%%` beside the arguments ("Localization"). Still don't inject `Context` into
   a ViewModel: the application's configuration can lag AppCompat's per-app locale on older APIs,
   while composition follows the Activity. Three rules. **A screen that branches on an outcome
   gets a typed code, not text** — `CalendarScreen` used to compare the literal
@@ -4581,13 +4581,14 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   `%d` or `%.1f`, and no markup. Check 7 of `node tools/check-invariants.js` refuses each of those
   offline, and `StringsParityTest`/`PluralsParityTest` (`app/src/test/.../resources/`, Robolectric)
   compare both readings of every string, array and plural (counts 0–200) in the five languages.
-  Where they differ, the **source text** changes so both read it alike, never one consumer. One
-  difference stands, pinned by both: a literal `%%` beside arguments
-  (`expenses_split_shares_*`), which `String.format` prints as `%` and CMP as `%%`, and which no
-  spelling fixes; those keys are read through `R.string` only, and need a wording both read alike
-  before `SplitShares.kt` moves to `shared-ui` (Task 11, slice 11e). Until then the shared requests
-  inbox takes the app's `splitSharesText` as a parameter of `ChangeRequestsScreen`, which `NavGraph`
-  passes (slice 11d).
+  Where they differ, the **source text** changes so both read it alike, never one consumer. **A
+  literal percent sign beside arguments is an argument too**: `String.format` prints `%%` as `%`
+  and CMP leaves it doubled, and no spelling of the sign reads as one in both (a bare `%` beside
+  arguments is refused by `String.format`), so check 7 refuses `%%` beside arguments in every key.
+  The expense split's shares (`expenses_split_shares_*`, "You pay 70 %, Bob pays 30 %") were the
+  one exception until slice 11e of MON-24, read through `R.string` alone; they take the sign as
+  their last argument now, `expenses_percent_sign` (`%`, not translated), and read the same text in
+  both readers, held by `StringsParityTest` like every other key.
 - **Which reader a composable uses follows where it lives.** Code in `:shared-ui` (the theme's
   colour names, the common components' own labels, since slice 9b, and every `UiText`, since
   slice 9c) reads

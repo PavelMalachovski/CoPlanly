@@ -189,7 +189,14 @@ internal fun InlineBannerFixture() {
         text = stringResource(
             R.string.expenses_split_proposal_body_named,
             "Bob",
-            stringResource(R.string.expenses_split_shares_named, "Alice", 70, "Bob", 30)
+            stringResource(
+                R.string.expenses_split_shares_named,
+                "Alice",
+                70,
+                "Bob",
+                30,
+                stringResource(R.string.expenses_percent_sign)
+            )
         ),
         tone = BannerTone.ATTENTION,
         actions = {

@@ -1351,6 +1351,18 @@ Then the export and the school import:
   stays for `ExportScreen`, `AddExpenseScreen`, the child records' `DatePickerDialog`, `PickerDatesTest`
   and `LocalDatePickerDialogTest`.
 
+**Slice 11e notes (November 2026).** The family's and the money's screens.
+- Group 1, the `%%` keys: the three `expenses_split_shares_*` take the percent sign as their last
+  argument (`%5$s` in `_named`, `%4$s` in the two "you" forms), from the new base-only
+  `expenses_percent_sign` (`%`, `translatable="false"`), in all five languages, so the rendered text
+  is what it was ("Alice pays 70 %, Bob pays 30 %", checked through Compose Multiplatform 1.9.3's own
+  `replaceWithArgs` and `String.format`). A bare `%` with no arguments reads alike in both (aapt2 does
+  not count a trailing `%`, Android's `getString` and CMP's `getString` return it as written). Check
+  7 lost its `PERCENT_WITH_ARGUMENTS` exception, so `%%` beside arguments is refused in every key;
+  `StringsParityTest` lost its special case and its pinned-difference test, which now holds the
+  shares alike. The app's `SplitShares.kt` and the `InlineBanner` screenshot fixture pass the sign;
+  no screenshot's text changes.
+
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
 **Files:**

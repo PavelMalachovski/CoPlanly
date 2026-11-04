@@ -83,9 +83,13 @@
     <string name="expenses_row_meta_with_receipt">%1$s · %2$s · receipt</string>
     <string name="expenses_split_proposal_title">New expense split proposed</string>
     <string name="expenses_split_proposal_body_named">%1$s proposes a new split for shared expenses from now on: %2$s. Already recorded expenses keep their split.</string>
-    <string name="expenses_split_shares_named">%1$s pays %2$d %%, %3$s pays %4$d %%</string>
-    <string name="expenses_split_shares_you_first">You pay %1$d %%, %2$s pays %3$d %%</string>
-    <string name="expenses_split_shares_you_second">%1$s pays %2$d %%, you pay %3$d %%</string>
+    <!-- A share of the split, "70 %": the sign is an argument (%5$s / %4$s, expenses_percent_sign)
+         rather than a literal percent beside arguments, which Compose Multiplatform would print as
+         written (CLAUDE.md "Localization"). -->
+    <string name="expenses_percent_sign" translatable="false">%</string>
+    <string name="expenses_split_shares_named">%1$s pays %2$d %5$s, %3$s pays %4$d %5$s</string>
+    <string name="expenses_split_shares_you_first">You pay %1$d %4$s, %2$s pays %3$d %4$s</string>
+    <string name="expenses_split_shares_you_second">%1$s pays %2$d %4$s, you pay %3$d %4$s</string>
     <string name="expenses_split_proposal_confirm">Confirm</string>
     <string name="expenses_split_proposal_decline">Decline</string>
     <string name="expenses_split_proposal_later">Later</string>

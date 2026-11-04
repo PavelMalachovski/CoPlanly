@@ -453,27 +453,18 @@ function checkGoogleScopeDisclosed() {
 // ---- 7. the strings read the same on Android and in Compose Multiplatform ---
 
 /**
- * The keys whose text holds a literal `%%` beside format arguments. `String.format` prints `%`;
- * Compose Multiplatform 1.9.3's formatter leaves `%%` as it is, and no spelling of a literal percent
- * sign reads as one in both (`%` becomes a bare `%`, which `String.format` refuses). They are
- * read through `R.string` today (`presentation/changerequests/SplitShares.kt`); before that file
- * moves to `:shared-ui` (MON-24 Task 11) they need a wording or a format both read alike.
- * `StringsParityTest` holds the same list.
- */
-const PERCENT_WITH_ARGUMENTS = new Set([
-  'expenses_split_shares_named',
-  'expenses_split_shares_you_first',
-  'expenses_split_shares_you_second',
-]);
-
-/**
  * What in one resource text Android and Compose Multiplatform 1.9.3 would read differently.
  *
+ * `%%` beside format arguments is one of them: `String.format` prints `%`, Compose Multiplatform
+ * 1.9.3's formatter leaves it doubled, and no spelling of a literal percent sign reads as one in both
+ * (a bare `%` is refused by `String.format`). The sign goes in as an argument instead, as the expense
+ * split's shares do (`expenses_percent_sign`, MON-24 phase 2, slice 11e); they were the one exception
+ * until then.
+ *
  * @param {string} text the text between the tags, as written in the file (comments stripped)
- * @param {string} name the resource name, for the `%%` allowance
  * @return {string[]} one line per problem; empty when both read it alike
  */
-function stringTextProblems(text, name) {
+function stringTextProblems(text) {
   const out = [];
   if (/[<]|&(?:quot|apos|#34|#39|#x22|#x27);/i.test(text)) {
     out.push('markup, CDATA or a quote entity, which the two parsers have not been compared on');
@@ -505,7 +496,7 @@ function stringTextProblems(text, name) {
     out.push(`the format ${m[0]}, which Compose Multiplatform does not replace (only %<n>$s and %<n>$d)`);
   }
   const hasArgs = args.some((m) => m[3] !== '%');
-  if (hasArgs && /%%/.test(text) && !PERCENT_WITH_ARGUMENTS.has(name)) {
+  if (hasArgs && /%%/.test(text)) {
     out.push('%% beside format arguments, which Compose Multiplatform prints as %% and Android as %');
   }
   return out;
@@ -533,7 +524,7 @@ function checkStringTexts() {
   for (const dir of [BASE_DIR, ...LOCALE_DIRS]) {
     for (const { file, name, text } of resourceTexts(dir)) {
       count++;
-      for (const p of stringTextProblems(text, name)) fail(`${RES_DIR}/${dir}/${file} "${name}": ${p}`);
+      for (const p of stringTextProblems(text)) fail(`${RES_DIR}/${dir}/${file} "${name}": ${p}`);
     }
   }
   console.log(`string texts: ${count} checked for what Android and Compose Multiplatform read differently`);
@@ -557,4 +548,4 @@ if (require.main === module) {
   console.log('\nAll invariants hold.');
 }
 
-module.exports = { storedJsonModels, gsonImports, googleScopeProblems, stringTextProblems, PERCENT_WITH_ARGUMENTS };
+module.exports = { storedJsonModels, gsonImports, googleScopeProblems, stringTextProblems };
