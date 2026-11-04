@@ -50,7 +50,6 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toJavaLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
 /** How much of an entry's first line the list shows under its date. */
@@ -223,7 +222,7 @@ private fun SwipeableJournalRow(entry: JournalEntry, onOpen: () -> Unit, onDelet
             color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             SectionRow(
-                title = UiText.Date(entry.entryDate.toJavaLocalDate()).asString(),
+                title = UiText.Date(entry.entryDate).asString(),
                 supporting = entry.text.lineSequence().firstOrNull().orEmpty().take(PREVIEW_CHARS),
                 onClick = onOpen
             )

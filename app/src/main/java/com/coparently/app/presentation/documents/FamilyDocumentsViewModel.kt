@@ -3,7 +3,6 @@ package com.coparently.app.presentation.documents
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.documents.DocumentCategory
@@ -14,6 +13,11 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.sharedFileError
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.documents_error_delete
+import com.coparently.app.resources.documents_error_upload
+import com.coparently.app.resources.shared_file_error_open
+import com.coparently.app.resources.shared_file_no_viewer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -144,7 +148,7 @@ class FamilyDocumentsViewModel(
             _state.update {
                 it.copy(
                     uploading = false,
-                    error = result.exceptionOrNull()?.let { e -> sharedFileError(e, R.string.documents_error_upload) }
+                    error = result.exceptionOrNull()?.let { e -> sharedFileError(e, Res.string.documents_error_upload) }
                 )
             }
         }
@@ -155,7 +159,7 @@ class FamilyDocumentsViewModel(
         if (earlierFamily != null) return
         viewModelScope.launch {
             repository.delete(document).onFailure {
-                _state.update { it.copy(error = UiText.Res(R.string.documents_error_delete)) }
+                _state.update { it.copy(error = UiText.Res(Res.string.documents_error_delete)) }
             }
         }
     }
@@ -166,14 +170,14 @@ class FamilyDocumentsViewModel(
             repository.localCopy(document)
                 .onSuccess { _opened.trySend(OpenedFile(File(it.toString()), document.contentType)) }
                 .onFailure { e ->
-                    _state.update { it.copy(error = sharedFileError(e, R.string.shared_file_error_open)) }
+                    _state.update { it.copy(error = sharedFileError(e, Res.string.shared_file_error_open)) }
                 }
         }
     }
 
     /** The screen could not find an app to open a file with. */
     fun noViewer() {
-        _state.update { it.copy(error = UiText.Res(R.string.shared_file_no_viewer)) }
+        _state.update { it.copy(error = UiText.Res(Res.string.shared_file_no_viewer)) }
     }
 
     /** The snackbar has shown [DocumentsUiState.error]. */

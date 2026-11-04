@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.changerequests
 
-import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.AgreementWithdrawals
@@ -33,6 +32,12 @@ import com.coparently.app.domain.usecase.EventUseCases
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_error_family_changed
+import com.coparently.app.resources.change_request_error_offer_answered
+import com.coparently.app.resources.change_request_error_withdraw_failed
+import com.coparently.app.resources.request_agreement_withdraw_failed
+import com.coparently.app.resources.request_agreement_withdraw_stale
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -258,12 +263,12 @@ class ChangeRequestWithdrawTest {
 
         vm.withdrawSwapGroup(groupOf(30 to offer(by = "u2")))
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.change_request_error_offer_answered), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_offer_answered), vm.errorMessage.value)
         vm.clearError()
         vm.withdrawSwapGroup(groupOf(30 to offer(DayOverrideStatus.DECLINED)))
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_offer_answered), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_offer_answered), vm.errorMessage.value)
         coVerify(exactly = 0) { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) }
     }
 
@@ -276,7 +281,7 @@ class ChangeRequestWithdrawTest {
         vm.withdrawSwapGroup(groupOf(30 to offer()))
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_withdraw_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_withdraw_failed), vm.errorMessage.value)
     }
 
     @Test
@@ -286,7 +291,7 @@ class ChangeRequestWithdrawTest {
         vm.withdrawSwapGroup(groupOf(30 to offer()))
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_family_changed), vm.errorMessage.value)
         coVerify(exactly = 0) { custodyModelRepository.applyDayOverridesForDates(any(), any(), any(), any()) }
     }
 
@@ -304,7 +309,7 @@ class ChangeRequestWithdrawTest {
             coEvery { custodyModelRepository.withdrawProposal() } returns Result.failure(IllegalStateException("gone"))
             vm.withdrawProposal()
             advanceUntilIdle()
-            assertEquals(UiText.Res(R.string.change_request_error_withdraw_failed), vm.errorMessage.value)
+            assertEquals(UiText.Res(Res.string.change_request_error_withdraw_failed), vm.errorMessage.value)
         }
 
     @Test
@@ -315,7 +320,7 @@ class ChangeRequestWithdrawTest {
             vm.withdrawProposal()
             advanceUntilIdle()
 
-            assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+            assertEquals(UiText.Res(Res.string.change_request_error_family_changed), vm.errorMessage.value)
             coVerify(exactly = 0) { custodyModelRepository.withdrawProposal() }
         }
 
@@ -343,14 +348,14 @@ class ChangeRequestWithdrawTest {
             event.copy(createdByFirebaseUid = "u2", acceptance = EventAcceptance.PENDING)
         vm.withdrawEvent("e1")
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.change_request_error_offer_answered), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_offer_answered), vm.errorMessage.value)
         vm.clearError()
         coEvery { eventRepository.getEventById("e1") } returns
             event.copy(createdByFirebaseUid = "u1", acceptance = EventAcceptance.ACCEPTED)
         vm.withdrawEvent("e1")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_offer_answered), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_offer_answered), vm.errorMessage.value)
         coVerify(exactly = 0) { deleteEvent.invoke(any(), any()) }
     }
 
@@ -365,7 +370,7 @@ class ChangeRequestWithdrawTest {
         vm.withdrawEvent("e1")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_withdraw_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_withdraw_failed), vm.errorMessage.value)
     }
 
     private fun supportBy(uid: String) = SupportAgreement(
@@ -438,7 +443,7 @@ class ChangeRequestWithdrawTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { agreementWithdrawals.withdrawProfessional(any()) }
-        assertEquals(UiText.Res(R.string.request_agreement_withdraw_stale), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.request_agreement_withdraw_stale), vm.errorMessage.value)
     }
 
     @Test
@@ -461,7 +466,7 @@ class ChangeRequestWithdrawTest {
         vm.withdrawSupport("u1__u2")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.request_agreement_withdraw_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.request_agreement_withdraw_failed), vm.errorMessage.value)
     }
 }
 

@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
@@ -26,6 +25,9 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_setup_answer_pending_first
+import com.coparently.app.resources.custody_setup_save_failed
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -379,8 +381,8 @@ class CustodySetupViewModel(
                 // A refusal wrote nothing: the form stays open, as it was, with the reason.
                 val refusal = when (submission) {
                     PatternSubmission.COPARENT_PROPOSAL_WAITING ->
-                        UiText.Res(R.string.custody_setup_answer_pending_first)
-                    PatternSubmission.NOT_SENT -> UiText.Res(R.string.custody_setup_save_failed)
+                        UiText.Res(Res.string.custody_setup_answer_pending_first)
+                    PatternSubmission.NOT_SENT -> UiText.Res(Res.string.custody_setup_save_failed)
                     PatternSubmission.ACTIVATED, PatternSubmission.PROPOSED -> null
                 }
                 if (refusal != null) {
@@ -400,7 +402,7 @@ class CustodySetupViewModel(
                 Log.w(TAG, "Saving the custody model failed", e)
                 _uiState.value = state.copy(
                     isLoading = false,
-                    error = UiText.Res(R.string.custody_setup_save_failed)
+                    error = UiText.Res(Res.string.custody_setup_save_failed)
                 )
             }
         }
@@ -473,7 +475,7 @@ class CustodySetupViewModel(
                 }
                 FirstSchedule.Unavailable -> _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = UiText.Res(R.string.custody_setup_save_failed)
+                    error = UiText.Res(Res.string.custody_setup_save_failed)
                 )
             }
         }

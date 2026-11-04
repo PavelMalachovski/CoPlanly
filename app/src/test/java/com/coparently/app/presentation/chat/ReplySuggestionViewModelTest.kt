@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.chat
 
-import com.coparently.app.R
 import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.domain.ai.AI_CONSENT_VERSION
 import com.coparently.app.domain.ai.AiAssistAvailability
@@ -9,6 +8,9 @@ import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.presentation.ai.AiAssistState
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.ai_consent_not_saved
+import com.coparently.app.resources.ai_error_empty_thread
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -148,7 +150,7 @@ class ReplySuggestionViewModelTest {
         vm.suggest(THREAD, "en", draftHint = null)
         advanceUntilIdle()
 
-        assertEquals(AiAssistState.Failed(UiText.Res(R.string.ai_error_empty_thread)), vm.state.value)
+        assertEquals(AiAssistState.Failed(UiText.Res(Res.string.ai_error_empty_thread)), vm.state.value)
         assertNull(vm.suggestion.value)
         vm.dismissFailure()
         assertEquals(AiAssistState.Idle, vm.state.value)
@@ -164,7 +166,7 @@ class ReplySuggestionViewModelTest {
         vm.agree()
         advanceUntilIdle()
 
-        assertEquals(AiAssistState.Failed(UiText.Res(R.string.ai_consent_not_saved)), vm.state.value)
+        assertEquals(AiAssistState.Failed(UiText.Res(Res.string.ai_consent_not_saved)), vm.state.value)
         coVerify(exactly = 0) { repository.suggestReply(any(), any(), any()) }
     }
 

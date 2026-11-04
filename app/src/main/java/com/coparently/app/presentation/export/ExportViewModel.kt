@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
@@ -28,6 +27,9 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.parentLabel
 import com.coparently.app.presentation.common.parentLabelByUid
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.export_error_failed
+import com.coparently.app.resources.export_error_signed_out
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -219,7 +221,7 @@ class ExportViewModel(
             try {
                 val finished = produce(format, request, labels, fallbacks)
                 if (finished == null) {
-                    _state.update { it.copy(error = UiText.Res(R.string.export_error_signed_out)) }
+                    _state.update { it.copy(error = UiText.Res(Res.string.export_error_signed_out)) }
                 } else {
                     _files.send(finished)
                 }
@@ -227,7 +229,7 @@ class ExportViewModel(
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Log.e(TAG, "Export failed", e)
-                _state.update { it.copy(error = UiText.Res(R.string.export_error_failed)) }
+                _state.update { it.copy(error = UiText.Res(Res.string.export_error_failed)) }
             } finally {
                 _state.update { it.copy(working = null) }
             }

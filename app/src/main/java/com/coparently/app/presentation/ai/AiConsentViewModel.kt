@@ -2,11 +2,13 @@ package com.coparently.app.presentation.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.ai_consent_withdraw_failed
+import com.coparently.app.resources.ai_consent_withdrawn
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -59,9 +61,8 @@ class AiConsentViewModel(
         viewModelScope.launch {
             try {
                 val withdrawn = manager.withdraw()
-                _messages.emit(
-                    UiText.Res(if (withdrawn) R.string.ai_consent_withdrawn else R.string.ai_consent_withdraw_failed)
-                )
+                val words = if (withdrawn) Res.string.ai_consent_withdrawn else Res.string.ai_consent_withdraw_failed
+                _messages.emit(UiText.Res(words))
             } finally {
                 _withdrawing.value = false
             }

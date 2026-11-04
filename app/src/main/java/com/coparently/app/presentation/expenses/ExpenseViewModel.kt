@@ -3,7 +3,6 @@ package com.coparently.app.presentation.expenses
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.family.RecordPlace
@@ -38,6 +37,10 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.stateInLoadable
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.common.valueOrNull
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expense_error_signed_out
+import com.coparently.app.resources.expense_warning_new_receipt_upload_failed
+import com.coparently.app.resources.expense_warning_receipt_upload_failed
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -584,7 +587,7 @@ class ExpenseViewModel(
             // be no local profile row, so fall back to the auth uid directly.
             val userId = _currentUserId.value.ifEmpty { userRepository.getCurrentUserId() ?: "" }
             if (userId.isEmpty()) {
-                _saveState.value = ExpenseSaveState.Error(UiText.Res(R.string.expense_error_signed_out))
+                _saveState.value = ExpenseSaveState.Error(UiText.Res(Res.string.expense_error_signed_out))
                 return@launch
             }
             _currentUserId.value = userId
@@ -650,7 +653,7 @@ class ExpenseViewModel(
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
         android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
-        null to UiText.Res(R.string.expense_warning_receipt_upload_failed)
+        null to UiText.Res(Res.string.expense_warning_receipt_upload_failed)
     }
 
     /** Loads a single expense for the edit form, or null when it no longer exists. */
@@ -696,7 +699,7 @@ class ExpenseViewModel(
                     @Suppress("TooGenericExceptionCaught") e: Exception
                 ) {
                     android.util.Log.e("CoPlanlyUpload", "Receipt upload failed", e)
-                    warning = UiText.Res(R.string.expense_warning_new_receipt_upload_failed)
+                    warning = UiText.Res(Res.string.expense_warning_new_receipt_upload_failed)
                     original.receiptUrl
                 }
             }

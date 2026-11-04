@@ -1,14 +1,22 @@
 package com.coparently.app.presentation.home
 
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.home_requests_answer_accepted
+import com.coparently.app.resources.home_requests_answer_declined
+import com.coparently.app.resources.home_requests_day_today
+import com.coparently.app.resources.home_requests_day_yesterday
+import com.coparently.app.resources.home_requests_none
+import com.coparently.app.resources.home_requests_waiting_on_them
+import com.coparently.app.resources.home_requests_waiting_on_you
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
@@ -49,7 +57,7 @@ class RequestsRowTextTest {
     @Test
     fun `nothing waiting and no recent answer reads no requests yet`() {
         assertEquals(
-            listOf(UiText.Res(R.string.home_requests_none)),
+            listOf(UiText.Res(Res.string.home_requests_none)),
             RequestsRowText.parts(RequestsRowState(), "Pavel", today)
         )
     }
@@ -61,19 +69,19 @@ class RequestsRowTextTest {
             for (waitingOnThem in listOf(0, 1)) {
                 for (latest in listOf(accepted, null)) {
                     val expected = buildList {
-                        if (waitingOnMe > 0) add(UiText.Plural(R.plurals.home_requests_waiting_on_you, 2))
+                        if (waitingOnMe > 0) add(UiText.Plural(Res.plurals.home_requests_waiting_on_you, 2))
                         if (waitingOnThem > 0) {
-                            add(UiText.Plural(R.plurals.home_requests_waiting_on_them, 1, listOf(1, "Pavel")))
+                            add(UiText.Plural(Res.plurals.home_requests_waiting_on_them, 1, listOf(1, "Pavel")))
                         }
                         if (latest != null) {
                             add(
                                 UiText.Res(
-                                    R.string.home_requests_answer_accepted,
-                                    listOf(UiText.Res(R.string.home_requests_day_yesterday), "Pavel")
+                                    Res.string.home_requests_answer_accepted,
+                                    listOf(UiText.Res(Res.string.home_requests_day_yesterday), "Pavel")
                                 )
                             )
                         }
-                    }.ifEmpty { listOf(UiText.Res(R.string.home_requests_none)) }
+                    }.ifEmpty { listOf(UiText.Res(Res.string.home_requests_none)) }
 
                     assertEquals(
                         expected,
@@ -88,8 +96,8 @@ class RequestsRowTextTest {
         assertEquals(
             listOf(
                 UiText.Res(
-                    R.string.home_requests_answer_declined,
-                    listOf(UiText.Res(R.string.home_requests_day_today), "Pavel")
+                    Res.string.home_requests_answer_declined,
+                    listOf(UiText.Res(Res.string.home_requests_day_today), "Pavel")
                 )
             ),
             RequestsRowText.parts(RequestsRowState(latestAnswer = declined), "Pavel", today)
@@ -136,12 +144,15 @@ class RequestsRowTextTest {
 
     @Test
     fun `relative days`() {
-        assertEquals(UiText.Res(R.string.home_requests_day_today), RequestsRowText.relativeDay(today, today))
+        assertEquals(UiText.Res(Res.string.home_requests_day_today), RequestsRowText.relativeDay(today, today))
         assertEquals(
-            UiText.Res(R.string.home_requests_day_yesterday),
+            UiText.Res(Res.string.home_requests_day_yesterday),
             RequestsRowText.relativeDay(today.minusDays(1), today)
         )
         assertEquals(UiText.Weekday(DayOfWeek.SUNDAY), RequestsRowText.relativeDay(LocalDate.of(2026, 10, 11), today))
-        assertEquals(UiText.Date(today.minusDays(7)), RequestsRowText.relativeDay(today.minusDays(7), today))
+        assertEquals(
+            UiText.Date(today.minusDays(7).toKotlinLocalDate()),
+            RequestsRowText.relativeDay(today.minusDays(7), today)
+        )
     }
 }

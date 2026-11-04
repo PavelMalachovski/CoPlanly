@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.school
 
 import androidx.lifecycle.SavedStateHandle
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.school.SchoolAccounts
@@ -20,6 +19,10 @@ import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolStudent
 import com.coparently.app.domain.school.SchoolSyncResult
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.school_connect_url_invalid
+import com.coparently.app.resources.school_connect_url_not_bakalari
+import com.coparently.app.resources.school_connect_wrong_password
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -197,7 +200,7 @@ class ConnectSchoolViewModelTest {
         val vm = signedIn()
 
         assertEquals(ConnectStep.CREDENTIALS, vm.state.value.step)
-        assertEquals(UiText.Res(R.string.school_connect_wrong_password), vm.state.value.error)
+        assertEquals(UiText.Res(Res.string.school_connect_wrong_password), vm.state.value.error)
         assertFalse(vm.state.value.isBusy)
     }
 
@@ -225,12 +228,12 @@ class ConnectSchoolViewModelTest {
 
         vm.onManualUrl("http://skola.example.cz")
         vm.checkManualUrl()
-        assertEquals(UiText.Res(R.string.school_connect_url_invalid), vm.state.value.error)
+        assertEquals(UiText.Res(Res.string.school_connect_url_invalid), vm.state.value.error)
 
         vm.onManualUrl("nothing.example.cz")
         vm.checkManualUrl()
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.school_connect_url_not_bakalari), vm.state.value.error)
+        assertEquals(UiText.Res(Res.string.school_connect_url_not_bakalari), vm.state.value.error)
 
         vm.onManualUrl("skola.example.cz/login")
         vm.checkManualUrl()

@@ -96,6 +96,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.CoPlanlyShapes
@@ -531,17 +532,17 @@ private fun ExpenseSaveEffect(
     onSaved: () -> Unit,
     onConsumed: () -> Unit
 ) {
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val appMessages = LocalAppMessages.current
     LaunchedEffect(saveState) {
         when (val state = saveState) {
             is ExpenseSaveState.Saved -> {
-                state.warning?.let { appMessages?.show(it.asString(context)) }
+                state.warning?.let { appMessages?.show(it.asString(textResolver)) }
                 onConsumed()
                 onSaved()
             }
             is ExpenseSaveState.Error -> {
-                appMessages?.show(state.message.asString(context))
+                appMessages?.show(state.message.asString(textResolver))
                 onConsumed()
             }
             else -> Unit

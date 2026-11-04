@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.pets
 
-import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.files.RecordPhotoKind
@@ -8,6 +7,8 @@ import com.coparently.app.domain.model.Pet
 import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pets_delete_failed
 import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -193,7 +194,7 @@ class PetsViewModelTest {
         vm.deletePet(rex)
         advanceUntilIdle()
 
-        assertEquals(PetsUiState.Error(UiText.Res(R.string.pets_delete_failed)), vm.uiState.value)
+        assertEquals(PetsUiState.Error(UiText.Res(Res.string.pets_delete_failed)), vm.uiState.value)
     }
 
     private companion object {

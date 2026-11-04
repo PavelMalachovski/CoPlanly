@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.custody
 
 import androidx.lifecycle.SavedStateHandle
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.repository.CustodyModelRepository
@@ -28,6 +27,9 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_setup_answer_pending_first
+import com.coparently.app.resources.custody_setup_save_failed
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -366,7 +368,7 @@ class CustodySetupViewModelTest {
         advanceUntilIdle()
 
         assertFalse(done)
-        assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
+        assertEquals(UiText.Res(Res.string.custody_setup_save_failed), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isLoading)
     }
 
@@ -410,7 +412,7 @@ class CustodySetupViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals(UiText.Res(R.string.custody_setup_save_failed), state.error)
+        assertEquals(UiText.Res(Res.string.custody_setup_save_failed), state.error)
         assertFalse(state.isLoading)
         assertFalse(state.isSaved)
         assertFalse(succeeded)
@@ -428,7 +430,7 @@ class CustodySetupViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals(UiText.Res(R.string.custody_setup_answer_pending_first), state.error)
+        assertEquals(UiText.Res(Res.string.custody_setup_answer_pending_first), state.error)
         assertFalse(state.isSaved)
         assertFalse(state.isLoading)
         assertFalse(succeeded)
@@ -444,7 +446,7 @@ class CustodySetupViewModelTest {
         vm.save { succeeded = true }
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
+        assertEquals(UiText.Res(Res.string.custody_setup_save_failed), vm.uiState.value.error)
         assertFalse(vm.uiState.value.isSaved)
         assertFalse(succeeded)
     }
@@ -613,7 +615,7 @@ class CustodySetupViewModelTest {
             vm.save()
             advanceUntilIdle()
 
-            assertEquals(UiText.Res(R.string.custody_setup_save_failed), vm.uiState.value.error)
+            assertEquals(UiText.Res(Res.string.custody_setup_save_failed), vm.uiState.value.error)
             assertFalse(vm.uiState.value.isSaved)
         }
 

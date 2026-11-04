@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.coparently.app.R
@@ -43,7 +42,9 @@ import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
+import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -59,7 +60,7 @@ fun JournalEditorScreen(
     viewModel: JournalEditorViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val snackbarHostState = remember { SnackbarHostState() }
     var picking by rememberSaveable { mutableStateOf(false) }
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
@@ -69,7 +70,7 @@ fun JournalEditorScreen(
     }
     LaunchedEffect(state.error) {
         state.error?.let {
-            snackbarHostState.showSnackbar(it.asString(context))
+            snackbarHostState.showSnackbar(it.asString(textResolver))
             viewModel.errorShown()
         }
     }
@@ -165,7 +166,7 @@ private fun EditorForm(
             SectionRow(
                 icon = Icons.Default.DateRange,
                 title = stringResource(R.string.journal_entry_date),
-                supporting = UiText.Date(state.entryDate).asString(),
+                supporting = UiText.Date(state.entryDate.toKotlinLocalDate()).asString(),
                 onClick = onPickDate.takeIf { editable }
             )
         }

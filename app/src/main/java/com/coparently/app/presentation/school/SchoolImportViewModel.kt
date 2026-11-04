@@ -2,7 +2,6 @@ package com.coparently.app.presentation.school
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.school.SchoolAccounts
 import com.coparently.app.data.school.SchoolImporter
@@ -11,6 +10,13 @@ import com.coparently.app.domain.school.SchoolConnection
 import com.coparently.app.domain.school.SchoolSyncFailure
 import com.coparently.app.domain.school.SchoolSyncResult
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.school_import_disconnected
+import com.coparently.app.resources.school_import_sync_done
+import com.coparently.app.resources.school_import_sync_needs_family
+import com.coparently.app.resources.school_import_sync_needs_password
+import com.coparently.app.resources.school_import_sync_network
+import com.coparently.app.resources.school_import_sync_server
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,7 +118,7 @@ class SchoolImportViewModel(
     fun disconnect(connectionId: String) {
         viewModelScope.launch {
             accounts.disconnect(connectionId)
-            _state.update { it.copy(message = UiText.Res(R.string.school_import_disconnected)) }
+            _state.update { it.copy(message = UiText.Res(Res.string.school_import_disconnected)) }
         }
     }
 
@@ -122,13 +128,13 @@ class SchoolImportViewModel(
     }
 
     private fun messageFor(result: SchoolSyncResult): UiText = when (result) {
-        is SchoolSyncResult.Success -> UiText.Res(R.string.school_import_sync_done)
-        SchoolSyncResult.NeedsPassword -> UiText.Res(R.string.school_import_sync_needs_password)
+        is SchoolSyncResult.Success -> UiText.Res(Res.string.school_import_sync_done)
+        SchoolSyncResult.NeedsPassword -> UiText.Res(Res.string.school_import_sync_needs_password)
         is SchoolSyncResult.Failed -> when (result.reason) {
-            SchoolSyncFailure.NETWORK -> UiText.Res(R.string.school_import_sync_network)
-            SchoolSyncFailure.SERVER -> UiText.Res(R.string.school_import_sync_server)
+            SchoolSyncFailure.NETWORK -> UiText.Res(Res.string.school_import_sync_network)
+            SchoolSyncFailure.SERVER -> UiText.Res(Res.string.school_import_sync_server)
         }
-        SchoolSyncResult.NotFound -> UiText.Res(R.string.school_import_sync_server)
-        SchoolSyncResult.NeedsFamily -> UiText.Res(R.string.school_import_sync_needs_family)
+        SchoolSyncResult.NotFound -> UiText.Res(Res.string.school_import_sync_server)
+        SchoolSyncResult.NeedsFamily -> UiText.Res(Res.string.school_import_sync_needs_family)
     }
 }

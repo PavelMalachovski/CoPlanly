@@ -136,6 +136,8 @@ import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_sign_in_failed
 import com.coparently.app.utils.format
 import com.coparently.app.utils.shortTime
 import kotlinx.coroutines.launch
@@ -454,7 +456,7 @@ fun SettingsScreen(
                                         onStartGoogleSignIn(signInIntent)
                                     } else {
                                         syncViewModel.handleSignInCancellation(
-                                            UiText.Res(R.string.sync_google_sign_in_failed)
+                                            UiText.Res(Res.string.sync_google_sign_in_failed)
                                         )
                                     }
                                 }

@@ -59,7 +59,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -81,6 +80,7 @@ import com.coparently.app.presentation.common.animations.sectionExit
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.parentingplan.PlanReferenceCard
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.ParentColors
@@ -126,10 +126,10 @@ fun CustodySetupScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Show error snackbar
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error.asString(context))
+            snackbarHostState.showSnackbar(error.asString(textResolver))
             viewModel.clearError()
         }
     }

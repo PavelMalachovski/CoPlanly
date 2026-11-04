@@ -3,7 +3,6 @@ package com.coparently.app.presentation.changerequests
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityEntityType
@@ -22,6 +21,12 @@ import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_error_not_in_family
+import com.coparently.app.resources.change_request_error_not_paired
+import com.coparently.app.resources.change_request_error_send_failed
+import com.coparently.app.resources.change_request_error_signed_out
+import com.coparently.app.resources.event_form_not_found
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -88,7 +93,7 @@ class RequestChangeViewModel(
             _uiState.value = if (event != null) {
                 RequestChangeUiState.Ready(event)
             } else {
-                RequestChangeUiState.Error(UiText.Res(R.string.event_form_not_found))
+                RequestChangeUiState.Error(UiText.Res(Res.string.event_form_not_found))
             }
         }
     }
@@ -182,7 +187,7 @@ class RequestChangeViewModel(
                 // The exception's own text is English and technical: it goes to the log.
                 Log.w("RequestChangeViewModel", "Creating a change request failed", e)
                 _uiState.value =
-                    RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_send_failed))
+                    RequestChangeUiState.Error(UiText.Res(Res.string.change_request_error_send_failed))
             }
         }
     }
@@ -196,14 +201,14 @@ class RequestChangeViewModel(
     private suspend fun recipientOf(event: Event): Pair<User, String>? {
         val user = userRepository.getCurrentUser()
         val error = when {
-            user == null -> R.string.change_request_error_signed_out
-            user.partnerId.isNullOrEmpty() -> R.string.change_request_error_not_paired
+            user == null -> Res.string.change_request_error_signed_out
+            user.partnerId.isNullOrEmpty() -> Res.string.change_request_error_not_paired
             else -> null
         }
         val partnerId = user?.takeIf { error == null }?.let { coParentOf(event, it) }
         if (user == null || partnerId == null) {
             _uiState.value = RequestChangeUiState.Error(
-                UiText.Res(error ?: R.string.change_request_error_not_in_family)
+                UiText.Res(error ?: Res.string.change_request_error_not_in_family)
             )
             return null
         }

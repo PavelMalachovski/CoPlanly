@@ -2,7 +2,6 @@ package com.coparently.app.presentation.event
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.error.AppError
@@ -18,6 +17,10 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.toUiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_error_generic
+import com.coparently.app.resources.event_error_title_invalid
+import com.coparently.app.resources.event_form_end_before_start
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -180,7 +183,7 @@ class EventViewModel(
                     // is English, and often a stack-trace fragment no parent should read.
                     val message = runCatching { errorHandler.handleError(e).toEventText() }
                         .getOrNull()
-                        ?: UiText.Res(R.string.common_error_generic)
+                        ?: UiText.Res(Res.string.common_error_generic)
                     _uiState.value = EventUiState.Error(message)
                 }
         }
@@ -428,7 +431,7 @@ class EventViewModel(
 
                 // Validate that end is after start
                 if (updatedEnd <= updatedStart) {
-                    _uiState.value = EventUiState.Error(UiText.Res(R.string.event_form_end_before_start))
+                    _uiState.value = EventUiState.Error(UiText.Res(Res.string.event_form_end_before_start))
                     return@launch
                 }
 
@@ -607,7 +610,7 @@ enum class EventOperation {
  * validator reported, where the generic [toUiText] can only say "check the details".
  */
 private fun AppError.toEventText(): UiText = when {
-    this is AppError.ValidationError && field == "title" -> UiText.Res(R.string.event_error_title_invalid)
-    this is AppError.ValidationError && field == "endDateTime" -> UiText.Res(R.string.event_form_end_before_start)
+    this is AppError.ValidationError && field == "title" -> UiText.Res(Res.string.event_error_title_invalid)
+    this is AppError.ValidationError && field == "endDateTime" -> UiText.Res(Res.string.event_form_end_before_start)
     else -> toUiText()
 }

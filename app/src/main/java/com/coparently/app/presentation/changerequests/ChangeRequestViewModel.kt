@@ -3,7 +3,6 @@ package com.coparently.app.presentation.changerequests
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.repository.SwapOfferer
@@ -37,6 +36,20 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_error_answer_failed
+import com.coparently.app.resources.change_request_error_apply_failed
+import com.coparently.app.resources.change_request_error_event_missing
+import com.coparently.app.resources.change_request_error_family_changed
+import com.coparently.app.resources.change_request_error_offer_answered
+import com.coparently.app.resources.change_request_error_proposal_accept_failed
+import com.coparently.app.resources.change_request_error_proposal_decline_failed
+import com.coparently.app.resources.change_request_error_swap_failed
+import com.coparently.app.resources.change_request_error_withdraw_failed
+import com.coparently.app.resources.expenses_split_answer_failed
+import com.coparently.app.resources.request_agreement_withdraw_failed
+import com.coparently.app.resources.request_agreement_withdraw_stale
+import com.coparently.app.resources.request_last_chance_failed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -211,7 +224,7 @@ class ChangeRequestViewModel(
             val request = changeRequestRepository.getChangeRequestById(requestId) ?: return@launch
             val event = resolveEvent(request.eventId)
             if (event == null) {
-                _errorMessage.value = UiText.Res(R.string.change_request_error_event_missing)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_event_missing)
                 return@launch
             }
             val result = eventUseCases.updateEvent(
@@ -229,7 +242,7 @@ class ChangeRequestViewModel(
                 },
                 onFailure = { e ->
                     Log.w(TAG, "Applying change request failed", e)
-                    _errorMessage.value = UiText.Res(R.string.change_request_error_apply_failed)
+                    _errorMessage.value = UiText.Res(Res.string.change_request_error_apply_failed)
                 }
             )
         }
@@ -305,7 +318,7 @@ class ChangeRequestViewModel(
                 ?: return@launch
             val now = LocalDateTime.now().toString()
             if (!group.awaitsAnswerFrom(uid)) {
-                _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_offer_answered)
                 return@launch
             }
             if (!stillShowsItsFamily()) return@launch
@@ -333,7 +346,7 @@ class ChangeRequestViewModel(
             }
         ).onFailure { e ->
             Log.w(TAG, "Answering a day swap failed", e)
-            _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
+            _errorMessage.value = UiText.Res(Res.string.change_request_error_swap_failed)
         }.isSuccess
 
     /**
@@ -353,7 +366,7 @@ class ChangeRequestViewModel(
                 ?: userRepository.getCurrentUserId()
                 ?: return@launch
             if (!group.withdrawableBy(uid)) {
-                _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_offer_answered)
                 return@launch
             }
             if (!stillShowsItsFamily()) return@launch
@@ -370,7 +383,7 @@ class ChangeRequestViewModel(
                 }
             ).onFailure { e ->
                 Log.w(TAG, "Withdrawing a day swap failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_withdraw_failed)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_withdraw_failed)
             }
         }
     }
@@ -427,7 +440,7 @@ class ChangeRequestViewModel(
             }
             result.onFailure { e ->
                 Log.w(TAG, "Asking to change an agreed swap failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_swap_failed)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_swap_failed)
             }
         }
     }
@@ -446,7 +459,7 @@ class ChangeRequestViewModel(
         val shown = (requests.value as? RequestsState.Ready)?.scope?.familyId
         val onScreen = parentsSource.familyOnScreen()
         val same = shown == null || onScreen == null || shown == onScreen
-        if (!same) _errorMessage.value = UiText.Res(R.string.change_request_error_family_changed)
+        if (!same) _errorMessage.value = UiText.Res(Res.string.change_request_error_family_changed)
         return same
     }
 
@@ -535,7 +548,7 @@ class ChangeRequestViewModel(
             custodyModelRepository.acceptProposal()
                 .onFailure { e ->
                     Log.w(TAG, "Accepting a custody proposal failed", e)
-                    _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_accept_failed)
+                    _errorMessage.value = UiText.Res(Res.string.change_request_error_proposal_accept_failed)
                 }
         }
     }
@@ -547,7 +560,7 @@ class ChangeRequestViewModel(
             custodyModelRepository.declineProposal()
                 .onFailure { e ->
                     Log.w(TAG, "Declining a custody proposal failed", e)
-                    _errorMessage.value = UiText.Res(R.string.change_request_error_proposal_decline_failed)
+                    _errorMessage.value = UiText.Res(Res.string.change_request_error_proposal_decline_failed)
                 }
         }
     }
@@ -562,7 +575,7 @@ class ChangeRequestViewModel(
             if (!stillShowsItsFamily()) return@launch
             custodyModelRepository.withdrawProposal().onFailure { e ->
                 Log.w(TAG, "Withdrawing a custody proposal failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_withdraw_failed)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_withdraw_failed)
             }
         }
     }
@@ -632,7 +645,7 @@ class ChangeRequestViewModel(
                 ProfessionalGrantStatus.WAITING_FOR_CO_PARENT
         }
         if (!stillWaiting) {
-            _errorMessage.value = UiText.Res(R.string.request_agreement_withdraw_stale)
+            _errorMessage.value = UiText.Res(Res.string.request_agreement_withdraw_stale)
             return
         }
         withdrawAgreement("a professional grant") { agreementWithdrawals.withdrawProfessional(grantId) }
@@ -642,7 +655,7 @@ class ChangeRequestViewModel(
         viewModelScope.launch {
             if (!write()) {
                 Log.w(TAG, "Withdrawing $what failed")
-                _errorMessage.value = UiText.Res(R.string.request_agreement_withdraw_failed)
+                _errorMessage.value = UiText.Res(Res.string.request_agreement_withdraw_failed)
             }
         }
     }
@@ -666,7 +679,7 @@ class ChangeRequestViewModel(
                 ?: Result.failure(IllegalStateException("No family's split is on screen"))
             result.onFailure { e ->
                 Log.w(TAG, "$what an expense split failed", e)
-                _errorMessage.value = UiText.Res(R.string.expenses_split_answer_failed)
+                _errorMessage.value = UiText.Res(Res.string.expenses_split_answer_failed)
             }
         }
     }
@@ -724,19 +737,19 @@ class ChangeRequestViewModel(
         viewModelScope.launch {
             val fresh = resolveEvent(eventId)
             if (fresh == null) {
-                _errorMessage.value = UiText.Res(R.string.change_request_error_event_missing)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_event_missing)
                 return@launch
             }
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
                 ?: userRepository.getCurrentUserId()
                 ?: return@launch
             if (fresh.createdByFirebaseUid != uid || !fresh.acceptance.isPending) {
-                _errorMessage.value = UiText.Res(R.string.change_request_error_offer_answered)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_offer_answered)
                 return@launch
             }
             eventUseCases.deleteEvent(fresh).onFailure { e ->
                 Log.w(TAG, "Withdrawing an event failed", e)
-                _errorMessage.value = UiText.Res(R.string.change_request_error_withdraw_failed)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_withdraw_failed)
             }
         }
     }
@@ -759,7 +772,7 @@ class ChangeRequestViewModel(
             // path at least printed.
             val fresh = resolveEvent(eventId)
             if (fresh == null) {
-                _errorMessage.value = UiText.Res(R.string.change_request_error_event_missing)
+                _errorMessage.value = UiText.Res(Res.string.change_request_error_event_missing)
                 return@launch
             }
             val uid = _currentUserId.value.takeIf { it.isNotEmpty() }
@@ -775,7 +788,7 @@ class ChangeRequestViewModel(
                 onSuccess = { eventRepository.updateEvent(it) },
                 onFailure = { e ->
                     Log.w(TAG, "Answering an event failed", e)
-                    _errorMessage.value = UiText.Res(R.string.change_request_error_answer_failed)
+                    _errorMessage.value = UiText.Res(Res.string.change_request_error_answer_failed)
                 }
             )
         }
@@ -828,7 +841,7 @@ class ChangeRequestViewModel(
         viewModelScope.launch {
             try {
                 if (!requestClockActions.giveLastChance(clockId)) {
-                    _errorMessage.value = UiText.Res(R.string.request_last_chance_failed)
+                    _errorMessage.value = UiText.Res(Res.string.request_last_chance_failed)
                 }
             } finally {
                 _lastChanceInFlight.update { it - clockId }

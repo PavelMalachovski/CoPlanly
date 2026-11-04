@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.school
 
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.school.SchoolAccounts
@@ -12,6 +11,12 @@ import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.domain.school.SchoolSyncFailure
 import com.coparently.app.domain.school.SchoolSyncResult
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.school_import_disconnected
+import com.coparently.app.resources.school_import_sync_done
+import com.coparently.app.resources.school_import_sync_needs_family
+import com.coparently.app.resources.school_import_sync_needs_password
+import com.coparently.app.resources.school_import_sync_network
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -104,7 +109,7 @@ class SchoolImportViewModelTest {
 
         coVerify(exactly = 1) { importer.sync("conn1") }
         assertTrue(vm.state.value.updating.isEmpty())
-        assertEquals(UiText.Res(R.string.school_import_sync_done), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.school_import_sync_done), vm.state.value.message)
     }
 
     @Test
@@ -118,12 +123,12 @@ class SchoolImportViewModelTest {
 
         vm.updateNow("conn1")
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.school_import_sync_needs_password), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.school_import_sync_needs_password), vm.state.value.message)
         vm.messageShown()
 
         vm.updateNow("conn1")
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.school_import_sync_network), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.school_import_sync_network), vm.state.value.message)
     }
 
     @Test
@@ -135,7 +140,7 @@ class SchoolImportViewModelTest {
         advanceUntilIdle()
 
         coVerify { accounts.disconnect("conn1") }
-        assertEquals(UiText.Res(R.string.school_import_disconnected), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.school_import_disconnected), vm.state.value.message)
     }
 
     // ---- two families (isolation audit, October 2026) --------------------------------------
@@ -185,7 +190,7 @@ class SchoolImportViewModelTest {
         vm.updateNow("conn1")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.school_import_sync_needs_family), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.school_import_sync_needs_family), vm.state.value.message)
     }
 
     private fun child(id: String, name: String, familyId: String? = null) = ChildInfo(

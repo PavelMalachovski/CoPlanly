@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -29,6 +28,12 @@ import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.seasonal_answer_pending_first
+import com.coparently.app.resources.seasonal_needs_base_pattern
+import com.coparently.app.resources.seasonal_save_failed
+import com.coparently.app.resources.seasonal_saved
+import com.coparently.app.resources.seasonal_sent_for_approval
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -310,7 +315,7 @@ class SeasonalScheduleViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 Log.w(TAG, "Submitting the seasonal layers failed", e)
-                UiText.Res(R.string.seasonal_save_failed)
+                UiText.Res(Res.string.seasonal_save_failed)
             }
             transient.update { it.copy(isSaving = false, message = message) }
         }
@@ -322,19 +327,19 @@ class SeasonalScheduleViewModel(
         edit: (List<SeasonalLayer>) -> List<SeasonalLayer>?
     ): UiText? {
         val active = custodyModelRepository.getActiveModelSync()
-            ?: return UiText.Res(R.string.seasonal_needs_base_pattern)
+            ?: return UiText.Res(Res.string.seasonal_needs_base_pattern)
         val next = edit(active.seasonalLayers)
         return when {
             next == null -> null
-            coParentProposalWaiting() -> UiText.Res(R.string.seasonal_answer_pending_first)
+            coParentProposalWaiting() -> UiText.Res(Res.string.seasonal_answer_pending_first)
             else -> when (custodyModelRepository.submitSeasonalLayers(next, planCitation, answerBy)) {
-                PatternSubmission.PROPOSED -> UiText.Res(R.string.seasonal_sent_for_approval)
-                PatternSubmission.ACTIVATED -> UiText.Res(R.string.seasonal_saved)
+                PatternSubmission.PROPOSED -> UiText.Res(Res.string.seasonal_sent_for_approval)
+                PatternSubmission.ACTIVATED -> UiText.Res(Res.string.seasonal_saved)
                 // The repository's own refusals: the check above can race a proposal that lands
                 // in between, and a document that cannot be read or written sends nothing.
-                PatternSubmission.COPARENT_PROPOSAL_WAITING -> UiText.Res(R.string.seasonal_answer_pending_first)
-                PatternSubmission.NOT_SENT -> UiText.Res(R.string.seasonal_save_failed)
-                null -> UiText.Res(R.string.seasonal_needs_base_pattern)
+                PatternSubmission.COPARENT_PROPOSAL_WAITING -> UiText.Res(Res.string.seasonal_answer_pending_first)
+                PatternSubmission.NOT_SENT -> UiText.Res(Res.string.seasonal_save_failed)
+                null -> UiText.Res(Res.string.seasonal_needs_base_pattern)
             }
         }
     }

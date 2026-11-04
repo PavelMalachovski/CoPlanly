@@ -1,14 +1,23 @@
 package com.coparently.app.presentation.home
 
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestScope
 import com.coparently.app.domain.changerequests.RequestSubject
 import com.coparently.app.domain.time.minus
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.home_requests_answer_accepted
+import com.coparently.app.resources.home_requests_answer_declined
+import com.coparently.app.resources.home_requests_day_today
+import com.coparently.app.resources.home_requests_day_yesterday
+import com.coparently.app.resources.home_requests_none
+import com.coparently.app.resources.home_requests_waiting_on_them
+import com.coparently.app.resources.home_requests_waiting_on_you
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinDayOfWeek
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import kotlin.time.Duration
@@ -72,12 +81,12 @@ object RequestsRowText {
     fun parts(state: RequestsRowState, coParentName: String, today: LocalDate): List<UiText> {
         val parts = buildList {
             if (state.waitingOnMe > 0) {
-                add(UiText.Plural(R.plurals.home_requests_waiting_on_you, state.waitingOnMe))
+                add(UiText.Plural(Res.plurals.home_requests_waiting_on_you, state.waitingOnMe))
             }
             if (state.waitingOnThem > 0) {
                 add(
                     UiText.Plural(
-                        R.plurals.home_requests_waiting_on_them,
+                        Res.plurals.home_requests_waiting_on_them,
                         state.waitingOnThem,
                         listOf(state.waitingOnThem, coParentName)
                     )
@@ -85,25 +94,25 @@ object RequestsRowText {
             }
             state.latestAnswer?.let { answer ->
                 val words = if (answer.outcome == RequestOutcome.ACCEPTED) {
-                    R.string.home_requests_answer_accepted
+                    Res.string.home_requests_answer_accepted
                 } else {
-                    R.string.home_requests_answer_declined
+                    Res.string.home_requests_answer_declined
                 }
                 val day = relativeDay(answer.decidedAt.date.toJavaLocalDate(), today)
                 add(UiText.Res(words, listOf(day, coParentName)))
             }
         }
-        return parts.ifEmpty { listOf(UiText.Res(R.string.home_requests_none)) }
+        return parts.ifEmpty { listOf(UiText.Res(Res.string.home_requests_none)) }
     }
 
     /** Today, Yesterday, a weekday for two to six days ago, else the date. */
     fun relativeDay(date: LocalDate, today: LocalDate): UiText {
         val daysAgo = ChronoUnit.DAYS.between(date, today)
         return when (daysAgo) {
-            0L -> UiText.Res(R.string.home_requests_day_today)
-            1L -> UiText.Res(R.string.home_requests_day_yesterday)
-            in 2L..WEEKDAY_DAYS -> UiText.Weekday(date.dayOfWeek)
-            else -> UiText.Date(date)
+            0L -> UiText.Res(Res.string.home_requests_day_today)
+            1L -> UiText.Res(Res.string.home_requests_day_yesterday)
+            in 2L..WEEKDAY_DAYS -> UiText.Weekday(date.dayOfWeek.toKotlinDayOfWeek())
+            else -> UiText.Date(date.toKotlinLocalDate())
         }
     }
 }

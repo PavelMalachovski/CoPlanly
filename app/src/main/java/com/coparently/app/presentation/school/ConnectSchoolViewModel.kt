@@ -3,7 +3,6 @@ package com.coparently.app.presentation.school
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.school.SchoolAccounts
@@ -17,6 +16,14 @@ import com.coparently.app.data.school.bakalari.SchoolTown
 import com.coparently.app.domain.model.ChildInfo
 import com.coparently.app.domain.repository.ChildInfoRepository
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.school_connect_network_error
+import com.coparently.app.resources.school_connect_schools_failed
+import com.coparently.app.resources.school_connect_server_error
+import com.coparently.app.resources.school_connect_towns_failed
+import com.coparently.app.resources.school_connect_url_invalid
+import com.coparently.app.resources.school_connect_url_not_bakalari
+import com.coparently.app.resources.school_connect_wrong_password
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import java.util.Locale
 
 /** The steps of connecting a school, in order (MON-8). */
@@ -171,7 +179,7 @@ class ConnectSchoolViewModel(
             val towns = attempt { directory.towns() }
             _state.update {
                 if (towns == null) {
-                    it.copy(isLoading = false, error = UiText.Res(R.string.school_connect_towns_failed))
+                    it.copy(isLoading = false, error = UiText.Res(Res.string.school_connect_towns_failed))
                 } else {
                     it.copy(isLoading = false, towns = towns)
                 }
@@ -193,7 +201,7 @@ class ConnectSchoolViewModel(
             val schools = attempt { directory.schools(town) }
             _state.update {
                 if (schools == null) {
-                    it.copy(isLoading = false, error = UiText.Res(R.string.school_connect_schools_failed))
+                    it.copy(isLoading = false, error = UiText.Res(Res.string.school_connect_schools_failed))
                 } else {
                     it.copy(isLoading = false, schools = schools)
                 }
@@ -222,7 +230,7 @@ class ConnectSchoolViewModel(
     fun checkManualUrl() {
         val baseUrl = BakalariUrls.normalize(_state.value.manualUrl)
         if (baseUrl == null) {
-            _state.update { it.copy(error = UiText.Res(R.string.school_connect_url_invalid)) }
+            _state.update { it.copy(error = UiText.Res(Res.string.school_connect_url_invalid)) }
             return
         }
         _state.update { it.copy(isBusy = true, error = null) }
@@ -422,9 +430,9 @@ private suspend fun failureOf(block: suspend () -> Unit): UiText? = try {
     UiText.Res(messageFor(e))
 }
 
-private fun messageFor(error: BakalariException): Int = when (error) {
-    is BakalariException.InvalidGrant -> R.string.school_connect_wrong_password
-    is BakalariException.Network -> R.string.school_connect_network_error
-    is BakalariException.NotBakalari, is BakalariException.InsecureUrl -> R.string.school_connect_url_not_bakalari
-    else -> R.string.school_connect_server_error
+private fun messageFor(error: BakalariException): StringResource = when (error) {
+    is BakalariException.InvalidGrant -> Res.string.school_connect_wrong_password
+    is BakalariException.Network -> Res.string.school_connect_network_error
+    is BakalariException.NotBakalari, is BakalariException.InsecureUrl -> Res.string.school_connect_url_not_bakalari
+    else -> Res.string.school_connect_server_error
 }

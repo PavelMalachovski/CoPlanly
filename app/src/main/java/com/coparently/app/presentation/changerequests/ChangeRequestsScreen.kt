@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -72,6 +71,7 @@ import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.custody.custodyDiffDescription
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationLine
@@ -252,11 +252,11 @@ private fun SwapChangeSheet(
 /** Shows why the last answer did not go through, once, then clears it. */
 @Composable
 private fun ShowErrorOnce(message: UiText?, onShown: () -> Unit) {
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val appMessages = LocalAppMessages.current
     LaunchedEffect(message) {
         message?.let {
-            appMessages?.show(it.asString(context))
+            appMessages?.show(it.asString(textResolver))
             onShown()
         }
     }

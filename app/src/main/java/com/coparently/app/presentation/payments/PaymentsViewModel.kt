@@ -2,13 +2,14 @@ package com.coparently.app.presentation.payments
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.data.payment.PaymentStore
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.payment_error_not_saved
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -82,7 +83,7 @@ class PaymentsViewModel(
         viewModelScope.launch {
             val landed = block()
             _busy.value = false
-            if (!landed) _error.update { UiText.Res(R.string.payment_error_not_saved) }
+            if (!landed) _error.update { UiText.Res(Res.string.payment_error_not_saved) }
         }
     }
 

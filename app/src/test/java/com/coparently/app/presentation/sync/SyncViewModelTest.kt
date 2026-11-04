@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.sync
 
 import android.content.Intent
-import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.google.CredentialManagerService
@@ -16,6 +15,12 @@ import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_server_failed
+import com.coparently.app.resources.sync_google_sign_in_cancelled
+import com.coparently.app.resources.sync_google_sign_in_failed
+import com.coparently.app.resources.sync_google_sign_in_refused
+import com.coparently.app.resources.sync_google_signed_in_as
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.tasks.Tasks
@@ -216,7 +221,7 @@ class SyncViewModelTest {
 
         assertEquals(GoogleCalendarConnection.CONNECTED, vm.connection.value)
         assertEquals(
-            GoogleCalendarSyncState.Success(UiText.Res(R.string.sync_google_signed_in_as, listOf("Olya"))),
+            GoogleCalendarSyncState.Success(UiText.Res(Res.string.sync_google_signed_in_as, listOf("Olya"))),
             state
         )
     }
@@ -228,11 +233,11 @@ class SyncViewModelTest {
         val vm = viewModel()
         val expected = mapOf(
             GoogleSignInFailure.Server("google-refused: unauthorized_client") to
-                UiText.Res(R.string.sync_google_server_failed, listOf("google-refused: unauthorized_client")),
-            GoogleSignInFailure.Google(10) to UiText.Res(R.string.sync_google_sign_in_refused, listOf(10)),
-            GoogleSignInFailure.Cancelled to UiText.Res(R.string.sync_google_sign_in_cancelled),
-            GoogleSignInFailure.NoAuthCode to UiText.Res(R.string.sync_google_sign_in_failed),
-            GoogleSignInFailure.Unexpected to UiText.Res(R.string.sync_google_sign_in_failed)
+                UiText.Res(Res.string.sync_google_server_failed, listOf("google-refused: unauthorized_client")),
+            GoogleSignInFailure.Google(10) to UiText.Res(Res.string.sync_google_sign_in_refused, listOf(10)),
+            GoogleSignInFailure.Cancelled to UiText.Res(Res.string.sync_google_sign_in_cancelled),
+            GoogleSignInFailure.NoAuthCode to UiText.Res(Res.string.sync_google_sign_in_failed),
+            GoogleSignInFailure.Unexpected to UiText.Res(Res.string.sync_google_sign_in_failed)
         )
 
         expected.forEach { (failure, text) ->

@@ -3,7 +3,6 @@ package com.coparently.app.presentation.chat
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
@@ -17,6 +16,10 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.OpenedFile
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.sharedFileError
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.chat_attach_stage_error
+import com.coparently.app.resources.shared_file_error_open
+import com.coparently.app.resources.shared_file_no_viewer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -87,7 +90,7 @@ class ChatAttachmentViewModel(
             ) {
                 outbox.discard(messageId)
                 Log.w(TAG, "Staging an attachment failed", e)
-                _error.value = sharedFileError(e, R.string.chat_attach_stage_error)
+                _error.value = sharedFileError(e, Res.string.chat_attach_stage_error)
                 return@launch
             }
             val message = Message(
@@ -129,13 +132,13 @@ class ChatAttachmentViewModel(
             }
             runCatching { cache.localCopy(attachment.storagePath, attachment.fileName, attachment.sha256) }
                 .onSuccess { _opened.trySend(OpenedFile(File(it.toString()), attachment.contentType)) }
-                .onFailure { e -> _error.value = sharedFileError(e, R.string.shared_file_error_open) }
+                .onFailure { e -> _error.value = sharedFileError(e, Res.string.shared_file_error_open) }
         }
     }
 
     /** No installed app can open the file. */
     fun noViewer() {
-        _error.value = UiText.Res(R.string.shared_file_no_viewer)
+        _error.value = UiText.Res(Res.string.shared_file_no_viewer)
     }
 
     /** The screen has shown [error]. */

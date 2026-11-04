@@ -46,6 +46,7 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.newSharedFileCaptureUri
 import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.common.rememberParentNames
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -73,13 +74,14 @@ fun FamilyDocumentsScreen(
     val state by viewModel.state.collectAsState()
     val names = rememberParentNames(viewModel.parents.collectAsState().value)
     val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingUri by rememberSaveable { mutableStateOf<String?>(null) }
     var deleting by remember { mutableStateOf<FamilyDocument?>(null) }
 
     LaunchedEffect(state.error) {
         state.error?.let { error ->
-            snackbarHostState.showSnackbar(error.asString(context))
+            snackbarHostState.showSnackbar(error.asString(textResolver))
             viewModel.errorShown()
         }
     }

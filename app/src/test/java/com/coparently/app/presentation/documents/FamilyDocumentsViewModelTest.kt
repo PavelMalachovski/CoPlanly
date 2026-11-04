@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.documents
 
 import androidx.lifecycle.SavedStateHandle
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
 import com.coparently.app.data.files.SharedFileIntegrityException
@@ -15,6 +14,9 @@ import com.coparently.app.domain.repository.FamilyDocumentRepository
 import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.shared_file_error_integrity
+import com.coparently.app.resources.shared_file_error_type
 import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -147,7 +149,7 @@ class FamilyDocumentsViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.state.value.uploading)
-        assertEquals(UiText.Res(R.string.shared_file_error_type), vm.state.value.error)
+        assertEquals(UiText.Res(Res.string.shared_file_error_type), vm.state.value.error)
     }
 
     @Test
@@ -159,7 +161,7 @@ class FamilyDocumentsViewModelTest {
         vm.open(DOCUMENT)
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.shared_file_error_integrity), vm.state.value.error)
+        assertEquals(UiText.Res(Res.string.shared_file_error_integrity), vm.state.value.error)
     }
 
     @Test

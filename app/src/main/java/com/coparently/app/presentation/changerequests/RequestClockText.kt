@@ -1,9 +1,18 @@
 package com.coparently.app.presentation.changerequests
 
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.request_history_meta_deadline
+import com.coparently.app.resources.request_history_meta_last_chance
+import com.coparently.app.resources.request_history_meta_opened
+import com.coparently.app.resources.request_history_meta_reminders
+import com.coparently.app.resources.request_history_meta_unchanged
+import com.coparently.app.resources.request_left_days
+import com.coparently.app.resources.request_left_hours
+import com.coparently.app.resources.request_left_minutes
 import com.coparently.app.utils.answerByText
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.Instant
 import java.time.ZoneId
 
@@ -27,9 +36,9 @@ object RequestClockText {
      * its last seconds does not say "0 min" while it can still be answered.
      */
     fun left(millis: Long): UiText = when {
-        millis >= DAYS_FROM_MILLIS -> UiText.Plural(R.plurals.request_left_days, (millis / DAY_MILLIS).toInt())
-        millis >= HOUR_MILLIS -> UiText.Plural(R.plurals.request_left_hours, (millis / HOUR_MILLIS).toInt())
-        else -> UiText.Plural(R.plurals.request_left_minutes, (millis / MINUTE_MILLIS).toInt().coerceAtLeast(1))
+        millis >= DAYS_FROM_MILLIS -> UiText.Plural(Res.plurals.request_left_days, (millis / DAY_MILLIS).toInt())
+        millis >= HOUR_MILLIS -> UiText.Plural(Res.plurals.request_left_hours, (millis / HOUR_MILLIS).toInt())
+        else -> UiText.Plural(Res.plurals.request_left_minutes, (millis / MINUTE_MILLIS).toInt().coerceAtLeast(1))
     }
 
     /**
@@ -42,17 +51,17 @@ object RequestClockText {
      * @param zone The zone the dates and the time fall in: the device's.
      */
     fun historyMeta(clock: RequestDeadline, zone: ZoneId = ZoneId.systemDefault()): List<UiText> = buildList {
-        add(UiText.Res(R.string.request_history_meta_deadline, listOf(dateOf(clock.answerByMillis, zone))))
+        add(UiText.Res(Res.string.request_history_meta_deadline, listOf(dateOf(clock.answerByMillis, zone))))
         clock.lastChanceUntilMillis?.let {
-            add(UiText.Res(R.string.request_history_meta_last_chance, listOf(UiText.Raw(answerByText(it, zone)))))
+            add(UiText.Res(Res.string.request_history_meta_last_chance, listOf(UiText.Raw(answerByText(it, zone)))))
         }
-        clock.seenAtMillis?.let { add(UiText.Res(R.string.request_history_meta_opened, listOf(dateOf(it, zone)))) }
+        clock.seenAtMillis?.let { add(UiText.Res(Res.string.request_history_meta_opened, listOf(dateOf(it, zone)))) }
         if (clock.remindersPlanned != null) {
-            add(UiText.Plural(R.plurals.request_history_meta_reminders, clock.remindersShown))
+            add(UiText.Plural(Res.plurals.request_history_meta_reminders, clock.remindersShown))
         }
-        add(UiText.Res(R.string.request_history_meta_unchanged))
+        add(UiText.Res(Res.string.request_history_meta_unchanged))
     }
 
     private fun dateOf(millis: Long, zone: ZoneId): UiText =
-        UiText.Date(Instant.ofEpochMilli(millis).atZone(zone).toLocalDate())
+        UiText.Date(Instant.ofEpochMilli(millis).atZone(zone).toLocalDate().toKotlinLocalDate())
 }

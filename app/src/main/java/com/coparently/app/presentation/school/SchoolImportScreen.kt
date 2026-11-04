@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.coparently.app.R
 import com.coparently.app.domain.school.SchoolConnectionStatus
@@ -42,6 +41,7 @@ import com.coparently.app.presentation.common.ListSkeleton
 import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.utils.dateWithTime
 import org.koin.compose.viewmodel.koinViewModel
@@ -67,13 +67,13 @@ fun SchoolImportScreen(
     viewModel: SchoolImportViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val snackbarHostState = remember { SnackbarHostState() }
     var disconnecting by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.message) {
         state.message?.let { message ->
-            snackbarHostState.showSnackbar(message.asString(context))
+            snackbarHostState.showSnackbar(message.asString(textResolver))
             viewModel.messageShown()
         }
     }

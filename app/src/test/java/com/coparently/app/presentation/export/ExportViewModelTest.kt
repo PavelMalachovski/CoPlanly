@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
-import com.coparently.app.R
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.export.CommunicationRecordSource
 import com.coparently.app.data.export.ExportFileWriter
@@ -30,6 +29,9 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.export_error_failed
+import com.coparently.app.resources.export_error_signed_out
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -268,7 +270,7 @@ class ExportViewModelTest {
         vm.export(ExportFormat.CSV, labels, fallbacks)
         val state = vm.state.first { it.error != null && it.working == null }
 
-        assertEquals(UiText.Res(R.string.export_error_failed), state.error)
+        assertEquals(UiText.Res(Res.string.export_error_failed), state.error)
         vm.errorShown()
         assertEquals(null, vm.state.value.error)
     }
@@ -281,7 +283,7 @@ class ExportViewModelTest {
         vm.export(ExportFormat.PDF, labels, fallbacks)
         val state = vm.state.first { it.error != null && it.working == null }
 
-        assertEquals(UiText.Res(R.string.export_error_signed_out), state.error)
+        assertEquals(UiText.Res(Res.string.export_error_signed_out), state.error)
         coVerify(exactly = 0) { source.gather(any(), any(), any(), any(), any()) }
     }
 

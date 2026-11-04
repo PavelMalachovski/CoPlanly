@@ -3,7 +3,6 @@ package com.coparently.app.presentation.pets
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.crashlytics.CrashlyticsManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
@@ -14,6 +13,9 @@ import com.coparently.app.domain.repository.PetRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.pets_delete_failed
+import com.coparently.app.resources.pets_load_failed
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -129,7 +131,7 @@ class PetsViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 Log.w(TAG, "Loading pets failed", e)
-                _uiState.value = PetsUiState.Error(UiText.Res(R.string.pets_load_failed))
+                _uiState.value = PetsUiState.Error(UiText.Res(Res.string.pets_load_failed))
             }
         }
     }
@@ -307,7 +309,7 @@ class PetsViewModel(
                     e,
                     mapOf("action" to "delete_pet", "pet_id" to pet.id)
                 )
-                _uiState.value = PetsUiState.Error(UiText.Res(R.string.pets_delete_failed))
+                _uiState.value = PetsUiState.Error(UiText.Res(Res.string.pets_delete_failed))
             }
         }
     }

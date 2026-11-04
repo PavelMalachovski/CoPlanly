@@ -4,13 +4,16 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.domain.family.FamilyKey
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.journal_error_delete
+import com.coparently.app.resources.journal_error_save
+import com.coparently.app.resources.journal_error_signed_out
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -128,7 +131,7 @@ class JournalEditorViewModel(
             try {
                 val uid = userRepository.getCurrentUserId()
                 if (uid == null) {
-                    _state.update { it.copy(error = UiText.Res(R.string.journal_error_signed_out)) }
+                    _state.update { it.copy(error = UiText.Res(Res.string.journal_error_signed_out)) }
                 } else {
                     repository.save(entryFrom(form, uid))
                     _state.update { it.copy(saved = true) }
@@ -137,7 +140,7 @@ class JournalEditorViewModel(
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Log.e(TAG, "Journal entry not saved", e)
-                _state.update { it.copy(error = UiText.Res(R.string.journal_error_save)) }
+                _state.update { it.copy(error = UiText.Res(Res.string.journal_error_save)) }
             } finally {
                 _state.update { it.copy(saving = false) }
             }
@@ -160,7 +163,7 @@ class JournalEditorViewModel(
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 Log.e(TAG, "Journal entry not deleted", e)
-                _state.update { it.copy(error = UiText.Res(R.string.journal_error_delete)) }
+                _state.update { it.copy(error = UiText.Res(Res.string.journal_error_delete)) }
             } finally {
                 _state.update { it.copy(saving = false) }
             }

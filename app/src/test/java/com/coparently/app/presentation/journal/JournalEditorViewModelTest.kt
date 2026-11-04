@@ -1,12 +1,15 @@
 package com.coparently.app.presentation.journal
 
 import androidx.lifecycle.SavedStateHandle
-import com.coparently.app.R
 import com.coparently.app.domain.journal.JournalEntry
 import com.coparently.app.domain.repository.JournalRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.journal_error_delete
+import com.coparently.app.resources.journal_error_save
+import com.coparently.app.resources.journal_error_signed_out
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -169,7 +172,7 @@ class JournalEditorViewModelTest {
         model.save()
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.journal_error_save), model.state.value.error)
+        assertEquals(UiText.Res(Res.string.journal_error_save), model.state.value.error)
         assertFalse(model.state.value.saved)
         assertFalse(model.state.value.saving)
     }
@@ -185,7 +188,7 @@ class JournalEditorViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { repository.save(any()) }
-        assertEquals(UiText.Res(R.string.journal_error_signed_out), model.state.value.error)
+        assertEquals(UiText.Res(Res.string.journal_error_signed_out), model.state.value.error)
     }
 
     @Test
@@ -224,7 +227,7 @@ class JournalEditorViewModelTest {
         model.delete()
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.journal_error_delete), model.state.value.error)
+        assertEquals(UiText.Res(Res.string.journal_error_delete), model.state.value.error)
         assertFalse(model.state.value.deleted)
         assertFalse(model.state.value.saving)
     }

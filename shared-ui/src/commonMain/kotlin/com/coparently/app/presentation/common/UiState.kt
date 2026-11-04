@@ -1,5 +1,7 @@
 package com.coparently.app.presentation.common
 
+import kotlinx.io.IOException
+
 /**
  * Generic UI state wrapper with comprehensive error handling.
  * Supports idle, loading, success, and error states with retry capability.
@@ -92,7 +94,7 @@ data class UiError(
             retry: (() -> Unit)? = null
         ): UiError {
             val type = when {
-                throwable is java.io.IOException -> ErrorType.NETWORK
+                throwable is IOException -> ErrorType.NETWORK
                 throwable.message?.contains("auth", ignoreCase = true) == true -> ErrorType.AUTHENTICATION
                 throwable.message?.contains("permission", ignoreCase = true) == true -> ErrorType.PERMISSION
                 throwable.message?.contains("not found", ignoreCase = true) == true -> ErrorType.NOT_FOUND

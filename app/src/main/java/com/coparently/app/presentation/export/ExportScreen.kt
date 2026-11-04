@@ -63,9 +63,11 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.asString
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.parentingplan.PlanStrings
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.toKotlinLocalDate
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 
@@ -86,7 +88,7 @@ fun ExportScreen(
     viewModel: ExportViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val snackbarHostState = remember { SnackbarHostState() }
     val labels = rememberRecordLabels()
     val fallbacks = NameFallbacks(
@@ -99,7 +101,7 @@ fun ExportScreen(
     ShareWhenFinished(viewModel.files)
     LaunchedEffect(state.error) {
         state.error?.let {
-            snackbarHostState.showSnackbar(it.asString(context))
+            snackbarHostState.showSnackbar(it.asString(textResolver))
             viewModel.errorShown()
         }
     }
@@ -220,14 +222,14 @@ private fun RangeGroup(state: ExportUiState, onPick: (RangeEnd) -> Unit) {
             SectionRow(
                 icon = Icons.Default.DateRange,
                 title = stringResource(R.string.export_from),
-                supporting = UiText.Date(state.from).asString(),
+                supporting = UiText.Date(state.from.toKotlinLocalDate()).asString(),
                 onClick = { onPick(RangeEnd.FROM) }.takeIf { state.working == null }
             )
             Divider()
             SectionRow(
                 icon = Icons.Default.DateRange,
                 title = stringResource(R.string.export_to),
-                supporting = UiText.Date(state.to).asString(),
+                supporting = UiText.Date(state.to.toKotlinLocalDate()).asString(),
                 onClick = { onPick(RangeEnd.TO) }.takeIf { state.working == null }
             )
         }

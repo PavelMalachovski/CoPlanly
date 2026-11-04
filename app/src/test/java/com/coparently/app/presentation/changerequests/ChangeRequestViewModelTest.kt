@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.changerequests
 
-import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.FamilySettingsRepository
 import com.coparently.app.data.requests.FamilyAgreementsSource
@@ -37,6 +36,13 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_error_apply_failed
+import com.coparently.app.resources.change_request_error_event_missing
+import com.coparently.app.resources.change_request_error_family_changed
+import com.coparently.app.resources.change_request_error_proposal_decline_failed
+import com.coparently.app.resources.expenses_split_answer_failed
+import com.coparently.app.resources.request_last_chance_failed
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -248,7 +254,7 @@ class ChangeRequestViewModelTest {
         vm.accept("r1")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_event_missing), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_event_missing), vm.errorMessage.value)
         coVerify(exactly = 0) { changeRequestRepository.updateStatus(any(), any()) }
     }
 
@@ -263,7 +269,7 @@ class ChangeRequestViewModelTest {
         vm.accept("r1")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_apply_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_apply_failed), vm.errorMessage.value)
         coVerify(exactly = 0) { changeRequestRepository.updateStatus(any(), any()) }
 
         vm.clearError()
@@ -280,7 +286,7 @@ class ChangeRequestViewModelTest {
         vm.declineProposal()
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_proposal_decline_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_proposal_decline_failed), vm.errorMessage.value)
     }
 
     @Test
@@ -296,12 +302,12 @@ class ChangeRequestViewModelTest {
 
         vm.acceptProposal()
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_family_changed), vm.errorMessage.value)
         vm.clearError()
         vm.proposeSwapChange(listOf(LocalDate(2026, 10, 23)), note = null, answerBy = null)
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_family_changed), vm.errorMessage.value)
         coVerify(exactly = 0) { custodyModelRepository.acceptProposal() }
         coVerify(exactly = 0) { custodyModelRepository.applyDayOverrides(any(), any(), any(), any()) }
     }
@@ -487,7 +493,7 @@ class ChangeRequestViewModelTest {
         vm.giveLastChance("clock-1")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.request_last_chance_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.request_last_chance_failed), vm.errorMessage.value)
     }
 
     @Test
@@ -551,12 +557,12 @@ class ChangeRequestViewModelTest {
 
         vm.acceptSplit()
         advanceUntilIdle()
-        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_family_changed), vm.errorMessage.value)
         vm.clearError()
         vm.withdrawSplit()
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.change_request_error_family_changed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.change_request_error_family_changed), vm.errorMessage.value)
         coVerify(exactly = 0) { familySettingsRepository.acceptProposal(any()) }
         coVerify(exactly = 0) { familySettingsRepository.withdrawProposal(any()) }
     }
@@ -570,7 +576,7 @@ class ChangeRequestViewModelTest {
         vm.declineSplit()
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.expenses_split_answer_failed), vm.errorMessage.value)
+        assertEquals(UiText.Res(Res.string.expenses_split_answer_failed), vm.errorMessage.value)
     }
 
     @Test

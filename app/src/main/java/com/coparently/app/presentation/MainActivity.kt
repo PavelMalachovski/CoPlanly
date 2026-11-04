@@ -56,6 +56,9 @@ import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_sign_in_cancelled
+import com.coparently.app.resources.sync_google_sign_in_failed
 import com.coparently.app.utils.ClockFormat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -199,9 +202,9 @@ class MainActivity : AppCompatActivity() {
             val isCanceled = result.resultCode == RESULT_CANCELED
             val message = UiText.Res(
                 if (isCanceled) {
-                    com.coparently.app.R.string.sync_google_sign_in_cancelled
+                    Res.string.sync_google_sign_in_cancelled
                 } else {
-                    com.coparently.app.R.string.sync_google_sign_in_failed
+                    Res.string.sync_google_sign_in_failed
                 }
             )
             Log.w("MainActivity", "Google sign-in aborted: resultCode=${result.resultCode}")

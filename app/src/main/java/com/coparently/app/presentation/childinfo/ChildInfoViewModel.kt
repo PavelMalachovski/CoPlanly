@@ -20,6 +20,9 @@ import com.coparently.app.domain.repository.GuestRepository
 import com.coparently.app.domain.repository.RecordPhotoStorage
 import com.coparently.app.presentation.common.FormDraft
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_delete_failed
+import com.coparently.app.resources.childinfo_load_failed
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -274,7 +277,7 @@ class ChildInfoViewModel(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading child info failed", e)
-                _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_load_failed))
+                _uiState.value = ChildInfoUiState.Error(UiText.Res(Res.string.childinfo_load_failed))
             }
         }
     }
@@ -468,7 +471,7 @@ class ChildInfoViewModel(
                     e,
                     mapOf("action" to "delete_child_info", "child_id" to childInfo.id)
                 )
-                _uiState.value = ChildInfoUiState.Error(UiText.Res(R.string.childinfo_delete_failed))
+                _uiState.value = ChildInfoUiState.Error(UiText.Res(Res.string.childinfo_delete_failed))
             }
         }
     }

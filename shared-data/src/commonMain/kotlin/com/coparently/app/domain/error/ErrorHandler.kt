@@ -12,7 +12,7 @@ import kotlinx.io.IOException
  * validator's refusal, an I/O error, a rules denial — and whose screen shows one sentence per
  * *kind*. That is the only place in the app where the kind is all a ViewModel knows; everywhere
  * else the ViewModel knows which operation failed and says so with its own resource
- * (`UiText.Res(R.string.change_request_error_apply_failed)` and the like), which is more useful to
+ * (`UiText.Res(Res.string.change_request_error_apply_failed)` and the like), which is more useful to
  * a parent than a sentence chosen by exception type. Do not route those through here.
  *
  * In `:shared-data` since MON-24 phase 2 (Task 8f), with the device's connection read through

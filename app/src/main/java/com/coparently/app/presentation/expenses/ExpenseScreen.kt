@@ -49,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -80,6 +79,7 @@ import com.coparently.app.presentation.common.monthPagingTransition
 import com.coparently.app.presentation.common.rememberFabScrollVisibility
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberTwoPane
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.valueOrNull
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.payments.PaymentsViewModel
@@ -197,7 +197,7 @@ fun ExpenseScreen(
     var showAnalytics by rememberSaveable { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val pendingRatioProposal by viewModel.pendingRatioProposal.collectAsState()
     val myPendingRatioProposal by viewModel.myPendingRatioProposal.collectAsState()
     // Plain `remember`: putting the banner off is for this visit to the screen. A dismissal that
@@ -222,7 +222,7 @@ fun ExpenseScreen(
     val answerFailedMessage = stringResource(R.string.expenses_split_answer_failed)
     LaunchedEffect(paymentError) {
         paymentError?.let { error ->
-            snackbarHostState.showSnackbar(error.asString(context))
+            snackbarHostState.showSnackbar(error.asString(textResolver))
             paymentsViewModel.errorShown()
         }
     }

@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.settings
 
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.FamilyView
 import com.coparently.app.data.family.FamilyViewSource
@@ -9,6 +8,12 @@ import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_feed_create_failed
+import com.coparently.app.resources.calendar_feed_limit_reached
+import com.coparently.app.resources.calendar_feed_load_failed
+import com.coparently.app.resources.calendar_feed_revoke_failed
+import com.coparently.app.resources.calendar_feed_revoked
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -100,7 +105,7 @@ class CalendarFeedViewModelTest {
         vm.create("en")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.calendar_feed_limit_reached), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.calendar_feed_limit_reached), vm.state.value.message)
         assertNull(vm.state.value.created)
     }
 
@@ -113,7 +118,7 @@ class CalendarFeedViewModelTest {
         vm.create("en")
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.calendar_feed_create_failed), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.calendar_feed_create_failed), vm.state.value.message)
         vm.messageShown()
         assertNull(vm.state.value.message)
     }
@@ -135,7 +140,7 @@ class CalendarFeedViewModelTest {
 
         assertEquals(listOf(MINE), vm.state.value.links)
         assertNull(vm.state.value.created)
-        assertEquals(UiText.Res(R.string.calendar_feed_revoked), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.calendar_feed_revoked), vm.state.value.message)
     }
 
     @Test
@@ -148,7 +153,7 @@ class CalendarFeedViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(MINE), vm.state.value.links)
-        assertEquals(UiText.Res(R.string.calendar_feed_revoke_failed), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.calendar_feed_revoke_failed), vm.state.value.message)
         assertFalse(vm.state.value.isBusy)
     }
 
@@ -160,7 +165,7 @@ class CalendarFeedViewModelTest {
 
         assertEquals(FAMILY.familyId, vm.state.value.familyId)
         assertFalse(vm.state.value.isLoading)
-        assertEquals(UiText.Res(R.string.calendar_feed_load_failed), vm.state.value.message)
+        assertEquals(UiText.Res(Res.string.calendar_feed_load_failed), vm.state.value.message)
     }
 
     @Test

@@ -49,6 +49,7 @@ import com.coparently.app.presentation.common.SectionGroup
 import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.copySensitive
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
@@ -74,14 +75,14 @@ fun CalendarFeedScreen(
     viewModel: CalendarFeedViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val language = LocalConfiguration.current.locales[0].language
     val snackbarHostState = remember { SnackbarHostState() }
     var revoking by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.message) {
         state.message?.let { message ->
-            snackbarHostState.showSnackbar(message.asString(context))
+            snackbarHostState.showSnackbar(message.asString(textResolver))
             viewModel.messageShown()
         }
     }

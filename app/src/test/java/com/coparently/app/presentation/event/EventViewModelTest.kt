@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.event
 
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.AnswerByPreset
@@ -18,6 +17,9 @@ import com.coparently.app.domain.usecase.UpdateEventUseCase
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testFamilyMembersSource
 import com.coparently.app.presentation.common.testParentsSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_error_generic
+import com.coparently.app.resources.event_error_title_invalid
 import com.google.gson.Gson
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -288,7 +290,7 @@ class EventViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            EventUiState.Error(UiText.Res(R.string.common_error_generic)),
+            EventUiState.Error(UiText.Res(Res.string.common_error_generic)),
             viewModel.uiState.value
         )
 
@@ -315,7 +317,7 @@ class EventViewModelTest {
         viewModel.loadEventsForDateRange(start, end)
         advanceUntilIdle()
         assertEquals(
-            EventUiState.Error(UiText.Res(R.string.common_error_generic)),
+            EventUiState.Error(UiText.Res(Res.string.common_error_generic)),
             viewModel.uiState.value
         )
 
@@ -393,7 +395,7 @@ class EventViewModelTest {
         runCurrent()
 
         assertEquals(
-            EventUiState.Error(UiText.Res(R.string.event_error_title_invalid)),
+            EventUiState.Error(UiText.Res(Res.string.event_error_title_invalid)),
             viewModel.uiState.value
         )
     }

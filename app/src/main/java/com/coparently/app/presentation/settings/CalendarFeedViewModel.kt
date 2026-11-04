@@ -2,13 +2,18 @@ package com.coparently.app.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyViewSource
 import com.coparently.app.domain.feed.CalendarFeedLimitException
 import com.coparently.app.domain.feed.CalendarFeedLink
 import com.coparently.app.domain.feed.CreatedCalendarFeed
 import com.coparently.app.domain.repository.CalendarFeedRepository
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_feed_create_failed
+import com.coparently.app.resources.calendar_feed_limit_reached
+import com.coparently.app.resources.calendar_feed_load_failed
+import com.coparently.app.resources.calendar_feed_revoke_failed
+import com.coparently.app.resources.calendar_feed_revoked
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -99,7 +104,7 @@ class CalendarFeedViewModel(
                     if (current.familyId != familyId) {
                         current
                     } else {
-                        current.copy(isLoading = false, message = UiText.Res(R.string.calendar_feed_load_failed))
+                        current.copy(isLoading = false, message = UiText.Res(Res.string.calendar_feed_load_failed))
                     }
                 }
             }
@@ -123,9 +128,9 @@ class CalendarFeedViewModel(
                 }
                 .onFailure { error ->
                     val message = if (error is CalendarFeedLimitException) {
-                        R.string.calendar_feed_limit_reached
+                        Res.string.calendar_feed_limit_reached
                     } else {
-                        R.string.calendar_feed_create_failed
+                        Res.string.calendar_feed_create_failed
                     }
                     _state.update { it.copy(isBusy = false, message = UiText.Res(message)) }
                 }
@@ -145,13 +150,13 @@ class CalendarFeedViewModel(
                             links = current.links.filterNot { it.feedId == feedId },
                             // A revoked link must not stay on screen ready to be shared.
                             created = current.created?.takeUnless { it.feedId == feedId },
-                            message = UiText.Res(R.string.calendar_feed_revoked)
+                            message = UiText.Res(Res.string.calendar_feed_revoked)
                         )
                     }
                 }
                 .onFailure {
                     _state.update {
-                        it.copy(isBusy = false, message = UiText.Res(R.string.calendar_feed_revoke_failed))
+                        it.copy(isBusy = false, message = UiText.Res(Res.string.calendar_feed_revoke_failed))
                     }
                 }
         }

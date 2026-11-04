@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.changerequests
 
 import androidx.lifecycle.viewModelScope
-import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityAnnouncer
 import com.coparently.app.domain.activity.ActivityKind
@@ -19,6 +18,11 @@ import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_error_not_in_family
+import com.coparently.app.resources.change_request_error_not_paired
+import com.coparently.app.resources.change_request_error_send_failed
+import com.coparently.app.resources.event_form_not_found
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -107,7 +111,7 @@ class RequestChangeViewModelTest {
         vm.loadEvent("gone")
         advanceUntilIdle()
 
-        assertEquals(RequestChangeUiState.Error(UiText.Res(R.string.event_form_not_found)), vm.uiState.value)
+        assertEquals(RequestChangeUiState.Error(UiText.Res(Res.string.event_form_not_found)), vm.uiState.value)
     }
 
     @Test
@@ -119,7 +123,7 @@ class RequestChangeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_paired)),
+            RequestChangeUiState.Error(UiText.Res(Res.string.change_request_error_not_paired)),
             vm.uiState.value
         )
         coVerify(exactly = 0) { changeRequestRepository.createChangeRequest(any()) }
@@ -149,14 +153,14 @@ class RequestChangeViewModelTest {
         vm.submit(event.copy(familyId = FamilyKey.of("u1", "ex")), proposedStart, null, null)
         advanceUntilIdle()
         assertEquals(
-            RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_in_family)),
+            RequestChangeUiState.Error(UiText.Res(Res.string.change_request_error_not_in_family)),
             vm.uiState.value
         )
 
         vm.submit(event.copy(familyId = null), proposedStart, null, null)
         advanceUntilIdle()
         assertEquals(
-            RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_not_in_family)),
+            RequestChangeUiState.Error(UiText.Res(Res.string.change_request_error_not_in_family)),
             vm.uiState.value
         )
         coVerify(exactly = 0) { changeRequestRepository.createChangeRequest(any(), any()) }
@@ -228,7 +232,7 @@ class RequestChangeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            RequestChangeUiState.Error(UiText.Res(R.string.change_request_error_send_failed)),
+            RequestChangeUiState.Error(UiText.Res(Res.string.change_request_error_send_failed)),
             vm.uiState.value
         )
         coVerify(exactly = 0) { announcer.announce(any(), any(), any(), any()) }

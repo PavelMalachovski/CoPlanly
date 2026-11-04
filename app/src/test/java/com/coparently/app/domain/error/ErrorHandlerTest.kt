@@ -1,10 +1,12 @@
 package com.coparently.app.domain.error
 
-import com.coparently.app.R
 import com.coparently.app.data.platform.CrashReporter
 import com.coparently.app.domain.usecase.ValidationException
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.toUiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_error_generic
+import com.coparently.app.resources.common_error_permission
 import com.coparently.app.utils.NetworkMonitor
 import io.mockk.every
 import io.mockk.mockk
@@ -64,7 +66,7 @@ class ErrorHandlerTest {
         val error = handler.handleError(failure)
 
         assertEquals(AppError.UnknownError(originalException = failure), error)
-        assertEquals(UiText.Res(R.string.common_error_generic), error.toUiText())
+        assertEquals(UiText.Res(Res.string.common_error_generic), error.toUiText())
         verify(exactly = 1) { crashlytics.record(failure) }
     }
 
@@ -75,6 +77,6 @@ class ErrorHandlerTest {
         val error = handler.handleError(failure)
 
         assertEquals(AppError.PermissionError(originalException = failure), error)
-        assertEquals(UiText.Res(R.string.common_error_permission), error.toUiText())
+        assertEquals(UiText.Res(Res.string.common_error_permission), error.toUiText())
     }
 }

@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.custody
 
 import androidx.lifecycle.SavedStateHandle
-import com.coparently.app.R
 import com.coparently.app.data.repository.CustodyModelRepository
 import com.coparently.app.data.repository.PatternSubmission
 import com.coparently.app.domain.changerequests.AnswerByPick
@@ -23,6 +22,11 @@ import com.coparently.app.presentation.common.ParentsSource
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.presentation.common.testParentsSource
 import com.coparently.app.presentation.parentingplan.PlanReferenceSource
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.seasonal_answer_pending_first
+import com.coparently.app.resources.seasonal_needs_base_pattern
+import com.coparently.app.resources.seasonal_save_failed
+import com.coparently.app.resources.seasonal_sent_for_approval
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -141,7 +145,7 @@ class SeasonalScheduleViewModelTest {
             assertEquals(2, sent.captured.size)
             assertTrue(sent.captured.any { it.id == "summer" })
             assertTrue(sent.captured.any { it.name == "Christmas" && it.id != "summer" })
-            assertEquals(UiText.Res(R.string.seasonal_sent_for_approval), vm.firstMessage())
+            assertEquals(UiText.Res(Res.string.seasonal_sent_for_approval), vm.firstMessage())
         }
 
     @Test
@@ -154,7 +158,7 @@ class SeasonalScheduleViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { repository.submitSeasonalLayers(any()) }
-        assertEquals(UiText.Res(R.string.seasonal_answer_pending_first), vm.firstMessage())
+        assertEquals(UiText.Res(Res.string.seasonal_answer_pending_first), vm.firstMessage())
     }
 
     @Test
@@ -166,7 +170,7 @@ class SeasonalScheduleViewModelTest {
         vm.saveLayer(draft("X", "2026-07-01", "2026-07-02"), null)
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.seasonal_answer_pending_first), vm.firstMessage())
+        assertEquals(UiText.Res(Res.string.seasonal_answer_pending_first), vm.firstMessage())
     }
 
     @Test
@@ -177,7 +181,7 @@ class SeasonalScheduleViewModelTest {
         vm.saveLayer(draft("X", "2026-07-01", "2026-07-02"), null)
         advanceUntilIdle()
 
-        assertEquals(UiText.Res(R.string.seasonal_save_failed), vm.firstMessage())
+        assertEquals(UiText.Res(Res.string.seasonal_save_failed), vm.firstMessage())
     }
 
     @Test
@@ -308,7 +312,7 @@ class SeasonalScheduleViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { repository.submitSeasonalLayers(any()) }
-        assertEquals(UiText.Res(R.string.seasonal_needs_base_pattern), vm.firstMessage())
+        assertEquals(UiText.Res(Res.string.seasonal_needs_base_pattern), vm.firstMessage())
     }
 
     @Test

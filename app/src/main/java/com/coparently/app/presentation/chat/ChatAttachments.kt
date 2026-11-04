@@ -63,6 +63,7 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.openSharedFile
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
@@ -86,11 +87,12 @@ fun ChatAttachmentsHost(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     val appMessages = LocalAppMessages.current
     val error by viewModel.error.collectAsState()
     LaunchedEffect(error) {
         error?.let {
-            appMessages?.show(it.asString(context))
+            appMessages?.show(it.asString(textResolver))
             viewModel.errorShown()
         }
     }

@@ -63,7 +63,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -100,6 +99,7 @@ import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberTwoPane
+import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.components.SkeletonBox
 import com.coparently.app.presentation.family.UnassignedRecordsPrompt
 import com.coparently.app.presentation.stickers.ParentRolePrompt
@@ -195,10 +195,10 @@ fun HomeScreen(
     // closed either way — while the co-parent went on waiting.
     val snackbarHostState = remember { SnackbarHostState() }
     val changeRequestError by changeRequestViewModel.errorMessage.collectAsState()
-    val errorContext = LocalContext.current
+    val textResolver = rememberUiTextResolver()
     LaunchedEffect(changeRequestError) {
         changeRequestError?.let { message ->
-            snackbarHostState.showSnackbar(message.asString(errorContext))
+            snackbarHostState.showSnackbar(message.asString(textResolver))
             changeRequestViewModel.clearError()
         }
     }

@@ -1,10 +1,19 @@
 package com.coparently.app.presentation.ai
 
-import com.coparently.app.R
 import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.domain.ai.AiAssistResult
 import com.coparently.app.domain.ai.isCurrent
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.ai_consent_not_saved
+import com.coparently.app.resources.ai_error_disabled
+import com.coparently.app.resources.ai_error_empty_thread
+import com.coparently.app.resources.ai_error_failed
+import com.coparently.app.resources.ai_error_invalid_request
+import com.coparently.app.resources.ai_error_not_participant
+import com.coparently.app.resources.ai_error_pairing_not_live
+import com.coparently.app.resources.ai_error_rate_limited
+import com.coparently.app.resources.ai_error_unavailable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,7 +91,7 @@ class AiAssistSession(
             if (consent.grant()) {
                 send(call)
             } else {
-                _state.value = AiAssistState.Failed(UiText.Res(R.string.ai_consent_not_saved))
+                _state.value = AiAssistState.Failed(UiText.Res(Res.string.ai_consent_not_saved))
             }
         }
     }
@@ -130,13 +139,13 @@ class AiAssistSession(
 /** What to tell the parent about a request that brought back no text. */
 internal fun AiAssistResult.failureText(): UiText = UiText.Res(
     when (this) {
-        AiAssistResult.Disabled -> R.string.ai_error_disabled
-        AiAssistResult.RateLimited -> R.string.ai_error_rate_limited
-        AiAssistResult.Unavailable -> R.string.ai_error_unavailable
-        AiAssistResult.InvalidRequest -> R.string.ai_error_invalid_request
-        AiAssistResult.EmptyThread -> R.string.ai_error_empty_thread
-        AiAssistResult.NotParticipant -> R.string.ai_error_not_participant
-        AiAssistResult.PairingNotLive -> R.string.ai_error_pairing_not_live
-        AiAssistResult.ConsentRequired, AiAssistResult.Failed, is AiAssistResult.Text -> R.string.ai_error_failed
+        AiAssistResult.Disabled -> Res.string.ai_error_disabled
+        AiAssistResult.RateLimited -> Res.string.ai_error_rate_limited
+        AiAssistResult.Unavailable -> Res.string.ai_error_unavailable
+        AiAssistResult.InvalidRequest -> Res.string.ai_error_invalid_request
+        AiAssistResult.EmptyThread -> Res.string.ai_error_empty_thread
+        AiAssistResult.NotParticipant -> Res.string.ai_error_not_participant
+        AiAssistResult.PairingNotLive -> Res.string.ai_error_pairing_not_live
+        AiAssistResult.ConsentRequired, AiAssistResult.Failed, is AiAssistResult.Text -> Res.string.ai_error_failed
     }
 )

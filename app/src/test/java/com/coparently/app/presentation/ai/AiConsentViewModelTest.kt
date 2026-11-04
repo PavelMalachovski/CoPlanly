@@ -1,12 +1,14 @@
 package com.coparently.app.presentation.ai
 
 import app.cash.turbine.test
-import com.coparently.app.R
 import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.domain.ai.AI_CONSENT_VERSION
 import com.coparently.app.domain.ai.AiAssistAvailability
 import com.coparently.app.domain.ai.AiConsent
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.ai_consent_withdraw_failed
+import com.coparently.app.resources.ai_consent_withdrawn
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -71,7 +73,7 @@ class AiConsentViewModelTest {
         vm.messages.test {
             vm.withdraw()
             advanceUntilIdle()
-            assertEquals(UiText.Res(R.string.ai_consent_withdrawn), awaitItem())
+            assertEquals(UiText.Res(Res.string.ai_consent_withdrawn), awaitItem())
         }
         assertNull(vm.consent.value)
         assertFalse(vm.withdrawing.value)
@@ -86,7 +88,7 @@ class AiConsentViewModelTest {
         vm.messages.test {
             vm.withdraw()
             advanceUntilIdle()
-            assertEquals(UiText.Res(R.string.ai_consent_withdraw_failed), awaitItem())
+            assertEquals(UiText.Res(Res.string.ai_consent_withdraw_failed), awaitItem())
         }
         assertEquals(AI_CONSENT_VERSION, vm.consent.value?.version)
     }

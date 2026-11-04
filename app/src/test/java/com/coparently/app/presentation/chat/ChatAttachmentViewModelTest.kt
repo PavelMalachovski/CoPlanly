@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.chat
 
-import com.coparently.app.R
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileRejectedException
@@ -13,6 +12,8 @@ import com.coparently.app.domain.model.MessageSendStatus
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.shared_file_error_size
 import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -97,7 +98,7 @@ class ChatAttachmentViewModelTest {
 
         coVerify(exactly = 0) { messageRepository.sendMessage(any()) }
         verify { outbox.discard(any()) }
-        assertEquals(UiText.Res(R.string.shared_file_error_size), vm.error.value)
+        assertEquals(UiText.Res(Res.string.shared_file_error_size), vm.error.value)
     }
 
     private fun attachment(messageId: String) = ChatAttachment(
