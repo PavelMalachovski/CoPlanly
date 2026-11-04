@@ -2,7 +2,6 @@ package com.coparently.app.utils
 
 import android.content.Context
 import android.text.format.DateFormat
-import androidx.compose.runtime.mutableStateOf
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaLocalTime
@@ -56,30 +55,6 @@ fun kotlinx.datetime.LocalTime.format(formatter: DateTimeFormatter): String = to
  */
 fun kotlinx.datetime.LocalDateTime.format(formatter: DateTimeFormatter): String =
     toJavaLocalDateTime().format(formatter)
-
-/**
- * [pattern] with a stand-alone month (`L`) written in its format form (`M`) whenever the pattern
- * also carries a day of the month (`d`) — a month inside a date is declined ("25 сентября",
- * "25. září"), a month on its own is not ("září 2026"). Quoted literals are left alone.
- *
- * @param pattern a `java.time` date pattern
- * @return the pattern, with `L` turned into `M` when a day stands beside it
- */
-fun monthInFormatForm(pattern: String): String {
-    var quoted = false
-    var hasDay = false
-    for (c in pattern) {
-        if (c == '\'') quoted = !quoted else if (!quoted && c == 'd') hasDay = true
-    }
-    if (!hasDay) return pattern
-    quoted = false
-    return buildString(pattern.length) {
-        for (c in pattern) {
-            if (c == '\'') quoted = !quoted
-            append(if (!quoted && c == 'L') 'M' else c)
-        }
-    }
-}
 
 /**
  * The time of day as the reader's clock shows it: "15:30" or "3:30 PM" (release audit R-9, owner
@@ -168,22 +143,6 @@ fun answerByText(
     return moment.format(localizedDate(ANSWER_BY_DAY, locale)) + ", " + moment.format(shortTime(locale, is24Hour))
 }
 
-/**
- * [text] — a formatted date — with its spaces made no-break, so a line never ends between a day
- * and its month ("4 | октября"). A space after a comma stays breakable: the weekday of a full
- * date ("суббота, 4 октября 2026 г.") may still take a line of its own when the rest does not fit.
- *
- * @param text a date as a formatter wrote it
- * @return the same text, unbreakable between its parts
- */
-fun unbreakableDate(text: String): String = buildString(text.length) {
-    text.forEachIndexed { index, c ->
-        val afterComma = index > 0 && text[index - 1] == ','
-        append(if (c == ' ' && !afterComma) NO_BREAK_SPACE else c)
-    }
-}
-
-private const val NO_BREAK_SPACE = ' '
 private const val PATTERN_24_HOUR = "HH:mm"
 private const val PATTERN_12_HOUR = "h:mm a"
 private const val PATTERN_12_HOUR_GUTTER = "h a"
@@ -192,37 +151,26 @@ private const val PATTERN_12_HOUR_GUTTER = "h a"
 private const val ANSWER_BY_DAY = "EEEMMMd"
 
 /**
- * Whether the reader's clock is 24-hour: the device's "Use 24-hour format" setting, which
- * `MainActivity` and the widget read through [follow] — or, until one of them has, whatever the
- * language expects, which is also what a JVM test and a screenshot see.
- *
- * Held in Compose state, so a screen that formatted a time recomposes when the setting changes
- * while the app was in the background.
+ * Reads the device's "Use 24-hour format" setting into [ClockFormat]; `MainActivity` calls it
+ * whenever the app comes to the foreground.
  */
-object ClockFormat {
-
-    private val followed = mutableStateOf<Boolean?>(null)
-
-    /** Whether times are written on a 24-hour clock. */
-    val is24Hour: Boolean
-        get() = followed.value ?: localeUses24Hour(Locale.getDefault())
-
-    /** Reads the device setting; called whenever the app comes to the foreground. */
-    fun follow(context: Context) {
-        followed.value = DateFormat.is24HourFormat(context)
-    }
-
-    /** Whether [locale]'s own short time style is 24-hour. */
-    fun localeUses24Hour(locale: Locale): Boolean =
-        runCatching {
-            DateTimeFormatterBuilder.getLocalizedDateTimePattern(
-                null,
-                FormatStyle.SHORT,
-                IsoChronology.INSTANCE,
-                locale
-            ).contains('H')
-        }.getOrDefault(true)
+fun ClockFormat.follow(context: Context) {
+    follow(DateFormat.is24HourFormat(context))
 }
+
+/** Whether [locale]'s own short time style is 24-hour: `java.time`'s localized short pattern. */
+fun ClockFormat.localeUses24Hour(locale: Locale): Boolean =
+    runCatching {
+        DateTimeFormatterBuilder.getLocalizedDateTimePattern(
+            null,
+            FormatStyle.SHORT,
+            IsoChronology.INSTANCE,
+            locale
+        ).contains('H')
+    }.getOrDefault(true)
+
+/** The default [ClockFormat] answers until the setting was read: the language's own short style. */
+internal actual fun languageUses24Hour(): Boolean = ClockFormat.localeUses24Hour(Locale.getDefault())
 
 /**
  * An ISO date (`2026-10-03`, the form dates travel in) written the way [locale] writes
@@ -237,13 +185,3 @@ fun isoDateText(iso: String?, skeleton: String, locale: Locale = Locale.getDefau
         text
     }
 }
-
-/**
- * The skeleton for a day inside a sentence: day and month in full, no weekday, no year
- * ("3 октября", "am 3. Oktober"). A formatter's weekday is nominative, which breaks the case the
- * sentence around it asks for in Czech, Russian and Ukrainian ("поменяться на суббота").
- */
-const val DAY_IN_SENTENCE = "MMMMd"
-
-/** The skeleton for a day standing on its own or after a colon: with its weekday, no year. */
-const val DAY_WITH_WEEKDAY = "MMMMEEEEd"

@@ -1053,6 +1053,19 @@ Then the export and the school import:
     `iosPlatformServices(buildValues)`, every capability unavailable.
   - Tests: `PlatformServicesTest` (commonTest), `AndroidPlatformTest` (app, Robolectric).
   - No screen reads the locals yet; each slice moves its screens onto them.
+- Group 2, the date seam:
+  - `utils/LocalizedDates.kt` → `:shared-ui` `androidMain`, same package and public names, so the app's
+    callers (screens, widget, pushes, notices) compile unchanged. `ClockFormat` (now `follow(Boolean)`),
+    `monthInFormatForm`, `unbreakableDate`, `DAY_IN_SENTENCE` and `DAY_WITH_WEEKDAY` →
+    `commonMain` `utils/ClockFormat.kt`; `ClockFormat.follow(context)` and
+    `ClockFormat.localeUses24Hour(locale)` stay Android extensions (`MainActivity` imports `follow`).
+  - `utils/ReaderDateText` (`expect object`): `date(LocalDate, skeleton)`, `month(YearMonth,
+    skeleton)` (the first day formatted, as the mini month and the month review do), `pattern(date
+    or month, fixed pattern)` (the money screens' "LLLL yyyy", "EEE", "d MMMM"), `time(LocalTime or
+    LocalDateTime)`, `dateWithTime`, `hour`, `answerBy`, `isoDate`. Android: those `java.time`
+    functions in `Locale.getDefault()`; `ReaderDateTextTest` (androidUnitTest) holds each to them in
+    six languages and both clocks. iPhone: `NSDateFormatter` templates and fixed patterns in the
+    current locale, Gregorian; `languageUses24Hour` from the `j` template.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

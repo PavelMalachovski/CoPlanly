@@ -62,6 +62,7 @@ import com.coparently.app.resources.sync_google_sign_in_cancelled
 import com.coparently.app.resources.sync_google_sign_in_failed
 import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.ClockFormat
+import com.coparently.app.utils.follow
 import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

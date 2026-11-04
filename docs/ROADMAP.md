@@ -2988,7 +2988,11 @@ bytes are identical on Android):
   a file to another app, copy a credential, read the build's values), each saying whether it is
   available, provided by the shell through composition locals that throw when nobody provided them.
   Android's are today's code (`ProvideAndroidPlatform`, in `MainActivity`, `QRScannerActivity` and the
-  screenshot frame); the iPhone's are stand-ins until phase 3 and 4.
+  screenshot frame); the iPhone's are stand-ins until phase 3 and 4. Then the date seam:
+  `utils/ReaderDateText`, the app's date and time rules over kotlinx-datetime values for common
+  code, whose Android half is `LocalizedDates.kt`'s `java.time` code itself (moved to `:shared-ui`'s
+  `androidMain` with its names), so a moved screen prints exactly what it printed; the iPhone's is
+  Foundation's.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

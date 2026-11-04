@@ -4551,7 +4551,15 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
 - Dates/day/month names come from `java.time` formatters with the default locale —
   never from string arrays.
 - **A time of day goes through `utils/LocalizedDates.kt`'s `shortTime()`** (or `dateWithTime`),
-  never a literal `"HH:mm"` (release audit R-9, owner decision: the reader's clock). It follows
+  never a literal `"HH:mm"` (release audit R-9, owner decision: the reader's clock). Since MON-24
+  phase 2 (Task 11, slice 11a) that file is in `:shared-ui`'s `androidMain`, package and names
+  unchanged, and a shared screen reaches the same rules through `utils/ReaderDateText` (an `expect`
+  over kotlinx-datetime values: `date`, `month`, `pattern`, `time`, `dateWithTime`, `hour`,
+  `answerBy`, `isoDate`), whose Android `actual` calls those `java.time` functions, so the text is
+  byte for byte the same (`ReaderDateTextTest`), and whose iPhone `actual` is Foundation's.
+  `ClockFormat`, `monthInFormatForm`, `unbreakableDate` and the skeleton constants are common
+  (`utils/ClockFormat.kt`); `ClockFormat.follow(context)` and `localeUses24Hour(locale)` are
+  Android extensions beside the `java.time` code. It follows
   the device's 12/24-hour setting, which `MainActivity` reads into `ClockFormat` on create and on
   every resume; code that can run without the activity — the widget, a reminder — passes
   `DateFormat.is24HourFormat(context)` itself. The one `"HH:mm"` left is a wire format
