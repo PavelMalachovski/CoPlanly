@@ -73,7 +73,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.WHOLE_PERCENT
@@ -99,6 +98,7 @@ import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.datetime.toJavaLocalDate
@@ -881,7 +881,7 @@ private fun ReceiptPicker(
         // entry point to the full-screen zoomable viewer rather than an inert decoration.
         var viewingFullScreen by rememberSaveable { mutableStateOf(false) }
         Box(modifier = Modifier.fillMaxWidth()) {
-            AsyncImage(
+            AppImage(
                 model = receipt,
                 contentDescription = stringResource(R.string.image_viewer_open),
                 contentScale = ContentScale.Crop,

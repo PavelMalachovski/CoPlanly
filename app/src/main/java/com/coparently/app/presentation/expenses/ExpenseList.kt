@@ -45,7 +45,6 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.expenses.SplitRatio
@@ -60,6 +59,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.RecordPlaceMark
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.stacksAtLargeFont
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -283,7 +283,7 @@ fun ExpenseItem(
             // regression. Without a photo the slot shows a payer-tinted category mark instead.
             // Drawn at 40dp, up from 30dp, and tappable across 48dp.
             if (receipt != null) {
-                AsyncImage(
+                AppImage(
                     model = receipt,
                     contentDescription = stringResource(R.string.expenses_receipt_photo),
                     contentScale = ContentScale.Crop,

@@ -2284,6 +2284,12 @@ capability goes in all three places. And **a capability's Android half is today'
 rewritten: a screen that moves to it keeps its behaviour, so check its old call against the
 interface's Android half when it moves (the vault's camera button, which never asked whether the
 phone has a camera, now has `CameraCapture.available` to ask).
+**Every image a screen loads goes through `AppImage`** (`PlatformImages`, the image seam, slice 11a),
+never Coil itself: on Android `CoilImages` in `AndroidPlatform.kt` is the Coil 2 call each screen made
+(`AsyncImage`; `SubcomposeAsyncImage` when a placeholder is given, the account picture's initial;
+`Size.ORIGINAL` with a crossfade for `fullResolution`, the zoomable viewer's), with the app's
+`ImageLoaderFactory` and `RecordPhotoFetcher` unchanged. Coil 3 is not part of MON-24 phase 2; the
+iPhone's stand-in keeps the image's place and draws its placeholder.
 
 A new domain file goes to `shared/` unless it needs one of those, since the iPhone app can use
 nothing that stays in `app/`. `internal` stops at the module, so a shared declaration that is public only for a caller
@@ -4028,8 +4034,9 @@ below hold what it fixed in place.
      pinned by `RecordPhotoTest`). The flat layouts from before L-4 match no block.
    - **No download URL, ever.** The record's existing field (`imageUrl`, `receiptUrl`, the entries
      of `medicalPhotos`/`photos` — names kept, no schema bump) holds a `RecordPhotoCodec` string,
-     `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through Coil's
-     `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which
+     `ph1|path|contentType|size|sha256`, never Gson. A screen draws it through `AppImage` (the image
+     seam, `presentation/platform/PlatformImages.kt`, MON-24 phase 2), whose Android half is Coil 2
+     with `RecordPhotoFetcher` (registered by `CoPlanlyApplication` as `ImageLoaderFactory`), which
      downloads as the signed-in user into `SharedFileCache` and keeps a copy only when the digest
      matches.
    - **Only the two parents see a photo** (owner decision). `RecordPhotoAccess.viewable` answers null

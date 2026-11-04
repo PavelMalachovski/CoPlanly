@@ -25,6 +25,7 @@ class PlatformServices(
     val openUrl: OpenUrl,
     val clipboard: SensitiveClipboard,
     val buildValues: AppBuildValues,
+    val images: PlatformImages,
 ) {
 
     /** One provided value per local in [PlatformLocals.all], in that order. */
@@ -38,6 +39,7 @@ class PlatformServices(
         LocalOpenUrl provides openUrl,
         LocalSensitiveClipboard provides clipboard,
         LocalAppBuildValues provides buildValues,
+        LocalPlatformImages provides images,
     )
 }
 
@@ -87,6 +89,9 @@ val LocalSensitiveClipboard =
 /** The build's values. */
 val LocalAppBuildValues = staticCompositionLocalOf<AppBuildValues> { notProvided("LocalAppBuildValues") }
 
+/** How images are loaded and drawn. */
+val LocalPlatformImages = staticCompositionLocalOf<PlatformImages> { notProvided("LocalPlatformImages") }
+
 /** The platform's locals, for the test that the shell's provider covers each of them. */
 object PlatformLocals {
 
@@ -101,5 +106,6 @@ object PlatformLocals {
         LocalOpenUrl,
         LocalSensitiveClipboard,
         LocalAppBuildValues,
+        LocalPlatformImages,
     )
 }

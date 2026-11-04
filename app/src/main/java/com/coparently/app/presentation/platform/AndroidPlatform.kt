@@ -20,9 +20,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import com.coparently.app.BuildConfig
 import com.coparently.app.data.dictation.OnDeviceSpeechDictation
 import com.coparently.app.domain.chat.MessageReport
@@ -61,6 +67,7 @@ fun androidPlatformServices(context: Context): PlatformServices = PlatformServic
     openUrl = AndroidOpenUrl(context),
     clipboard = AndroidSensitiveClipboard(context),
     buildValues = androidBuildValues(),
+    images = CoilImages,
 )
 
 /** The build's values, from `BuildConfig`; a blank address is null, which hides its row. */
@@ -322,4 +329,51 @@ private class AndroidSensitiveClipboard(private val context: Context) : Sensitiv
     override val available: Boolean = true
 
     override fun copySensitive(label: String, text: String) = copySensitive(context, label, text)
+}
+
+/**
+ * Coil 2, as the screens drew with it: the app's `ImageLoaderFactory` (`CoPlanlyApplication`) and
+ * its `RecordPhotoFetcher` answer every model, so a record photo is fetched as the signed-in parent.
+ */
+private object CoilImages : PlatformImages {
+
+    @Composable
+    override fun Image(
+        model: Any?,
+        contentDescription: String?,
+        modifier: Modifier,
+        contentScale: ContentScale,
+        fullResolution: Boolean,
+        placeholder: (@Composable () -> Unit)?,
+    ) {
+        when {
+            // The account picture's shape (`AccountAvatar`): the initial while loading and on failure.
+            placeholder != null -> SubcomposeAsyncImage(
+                model = model,
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                loading = { placeholder() },
+                error = { placeholder() },
+                modifier = modifier
+            )
+            // The zoomable viewer's (`ZoomableImage`): the photo at its own size, so zooming in shows
+            // detail rather than an upscaled thumbnail.
+            fullResolution -> AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(model)
+                    .size(Size.ORIGINAL)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                modifier = modifier
+            )
+            else -> AsyncImage(
+                model = model,
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                modifier = modifier
+            )
+        }
+    }
 }

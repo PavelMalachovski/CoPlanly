@@ -1,6 +1,8 @@
 package com.coparently.app.presentation.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -80,5 +82,16 @@ class PlatformServicesTest {
             supportEmail = null,
             pairingWebLink = false
         ),
+        images = object : PlatformImages {
+            @Composable
+            override fun Image(
+                model: Any?,
+                contentDescription: String?,
+                modifier: Modifier,
+                contentScale: ContentScale,
+                fullResolution: Boolean,
+                placeholder: (@Composable () -> Unit)?,
+            ) = Unit
+        },
     )
 }

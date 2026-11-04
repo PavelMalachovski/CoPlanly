@@ -91,7 +91,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
@@ -118,6 +117,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.ParentColors
@@ -1879,7 +1879,7 @@ private fun EventPhotoSection(
                     )
                 }
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    AsyncImage(
+                    AppImage(
                         model = displayImage,
                         contentDescription = stringResource(R.string.image_viewer_open),
                         contentScale = ContentScale.Crop,

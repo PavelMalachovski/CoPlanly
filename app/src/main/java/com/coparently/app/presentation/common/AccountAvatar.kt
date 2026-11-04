@@ -14,7 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
+import com.coparently.app.presentation.platform.AppImage
 
 /**
  * A person's avatar: their photo if there is one, otherwise the first letter of their name
@@ -75,12 +75,11 @@ fun AccountAvatar(
         if (photoUrl.isNullOrBlank()) {
             initialFallback()
         } else {
-            SubcomposeAsyncImage(
+            AppImage(
                 model = photoUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                loading = { initialFallback() },
-                error = { initialFallback() },
+                placeholder = initialFallback,
                 modifier = Modifier.fillMaxSize()
             )
         }

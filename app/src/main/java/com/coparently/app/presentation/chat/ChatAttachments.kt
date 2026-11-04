@@ -53,7 +53,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
@@ -64,6 +63,7 @@ import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.openSharedFile
 import com.coparently.app.presentation.common.rememberUiTextResolver
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.Spacing
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
@@ -238,7 +238,7 @@ private fun ImageAttachment(attachment: ChatAttachment, file: File?, onOpen: () 
         contentAlignment = Alignment.Center
     ) {
         if (file != null) {
-            AsyncImage(
+            AppImage(
                 model = file,
                 contentDescription = attachment.fileName,
                 contentScale = ContentScale.Crop,

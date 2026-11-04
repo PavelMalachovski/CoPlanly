@@ -36,8 +36,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
 import com.coparently.app.domain.files.RecordPhotoAccess
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
 
@@ -189,7 +189,7 @@ private fun Thumbnail(
     onRemove: ((String) -> Unit)?
 ) {
     Box(modifier = Modifier.size(THUMBNAIL_SIZE)) {
-        AsyncImage(
+        AppImage(
             model = photo.model,
             contentDescription = stringResource(strings.thumbnailDescription, position, total),
             contentScale = ContentScale.Crop,

@@ -1,13 +1,17 @@
 package com.coparently.app.presentation.platform
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 
 /*
  * The iPhone's platform capabilities (MON-24 phase 2, Task 11): what the iPhone app's view
  * controller will hand `ProvidePlatform` (phase 3). Until each capability is built there, it is a
  * stand-in that says it is not available, so the shared screens draw no affordance for it (design
  * item 8): camera, QR scanning and dictation until phase 4, the rest until phase 3. A launch that
- * comes anyway does nothing and reports nothing it did not do.
+ * comes anyway does nothing and reports nothing it did not do. Images are not loaded yet either.
  */
 
 /**
@@ -24,6 +28,7 @@ fun iosPlatformServices(buildValues: AppBuildValues): PlatformServices = Platfor
     openUrl = NoOpenUrl,
     clipboard = NoClipboard,
     buildValues = buildValues,
+    images = NoImages,
 )
 
 /** A launcher with nothing behind it. */
@@ -111,4 +116,22 @@ private object NoClipboard : SensitiveClipboard {
     override val available: Boolean = false
 
     override fun copySensitive(label: String, text: String) = Unit
+}
+
+/**
+ * No image loading until phase 3: the image's place keeps its size and shows its placeholder (an
+ * account's initial, for example), so the screen around it lays out as it will.
+ */
+private object NoImages : PlatformImages {
+    @Composable
+    override fun Image(
+        model: Any?,
+        contentDescription: String?,
+        modifier: Modifier,
+        contentScale: ContentScale,
+        fullResolution: Boolean,
+        placeholder: (@Composable () -> Unit)?,
+    ) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) { placeholder?.invoke() }
+    }
 }

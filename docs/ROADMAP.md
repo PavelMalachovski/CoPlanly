@@ -2992,7 +2992,9 @@ bytes are identical on Android):
   `utils/ReaderDateText`, the app's date and time rules over kotlinx-datetime values for common
   code, whose Android half is `LocalizedDates.kt`'s `java.time` code itself (moved to `:shared-ui`'s
   `androidMain` with its names), so a moved screen prints exactly what it printed; the iPhone's is
-  Foundation's.
+  Foundation's. Then the image seam: `AppImage`, through which every image a screen loads is drawn,
+  Coil 2 on Android exactly as each screen called it (the record photo fetcher and the image loader
+  factory unchanged; no Coil 3), a placeholder on the iPhone for now.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

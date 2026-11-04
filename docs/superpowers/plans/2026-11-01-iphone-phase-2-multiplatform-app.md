@@ -1066,6 +1066,17 @@ Then the export and the school import:
     functions in `Locale.getDefault()`; `ReaderDateTextTest` (androidUnitTest) holds each to them in
     six languages and both clocks. iPhone: `NSDateFormatter` templates and fixed patterns in the
     current locale, Gregorian; `languageUses24Hour` from the `j` template.
+- Group 3, the image seam:
+  - `presentation/platform/PlatformImages` (`Image(model, contentDescription, modifier, contentScale,
+    fullResolution, placeholder)`) and `AppImage`, provided as `PlatformServices.images`
+    (`LocalPlatformImages`).
+  - Android `CoilImages`: `SubcomposeAsyncImage` with the placeholder as `loading` and `error`;
+    `ImageRequest` with `Size.ORIGINAL` and `crossfade(true)` for `fullResolution`; else `AsyncImage`.
+    iPhone `NoImages`: a `Box` with the modifier and the placeholder.
+  - Every `AsyncImage`/`SubcomposeAsyncImage` in the app's screens now calls `AppImage` with the same
+    arguments: `AccountAvatar`, `ZoomableImage`, `PhotoStrip`, the event form and preview, the
+    expense list and form, the chat's attachment thumbnail. No `coil` import is left outside
+    `AndroidPlatform.kt`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

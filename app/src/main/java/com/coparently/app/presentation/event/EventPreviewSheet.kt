@@ -43,7 +43,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.data.family.placementFamilyId
@@ -56,6 +55,7 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.RecordPlaceMark
 import com.coparently.app.presentation.common.placeOf
 import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
@@ -244,7 +244,7 @@ internal fun EventPreviewContent(
             // Cropped to 180dp here, so the photo is a hint at what is attached rather than
             // the thing itself; tapping opens the zoomable viewer that shows all of it.
             var viewingPhoto by rememberSaveable { mutableStateOf(false) }
-            AsyncImage(
+            AppImage(
                 model = photo,
                 contentDescription = stringResource(R.string.image_viewer_open),
                 contentScale = ContentScale.Crop,

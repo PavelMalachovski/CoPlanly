@@ -25,15 +25,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import coil.size.Size
 import com.coparently.app.R
+import com.coparently.app.presentation.platform.AppImage
 import com.coparently.app.presentation.theme.Spacing
 
 /** Furthest in a pinch may go. Beyond this a 1600px upload is only bigger, not clearer. */
@@ -117,14 +114,11 @@ fun ZoomableImage(
             },
         contentAlignment = Alignment.Center
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(model)
-                .size(Size.ORIGINAL)
-                .crossfade(true)
-                .build(),
+        AppImage(
+            model = model,
             contentDescription = contentDescription,
             contentScale = ContentScale.Fit,
+            fullResolution = true,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
