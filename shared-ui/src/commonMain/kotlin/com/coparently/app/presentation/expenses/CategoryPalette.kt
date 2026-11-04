@@ -1,6 +1,7 @@
 package com.coparently.app.presentation.expenses
 
 import com.coparently.app.domain.model.ExpenseCategory
+import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cbrt
 import kotlin.math.cos
@@ -149,12 +150,12 @@ object CategoryPalette {
         val l = cbrt(dot(SRGB_TO_L, r, g, b))
         val m = cbrt(dot(SRGB_TO_M, r, g, b))
         val s = cbrt(dot(SRGB_TO_S, r, g, b))
-        return Math.toDegrees(atan2(dot(LMS_TO_B, l, m, s), dot(LMS_TO_A, l, m, s)))
+        return atan2(dot(LMS_TO_B, l, m, s), dot(LMS_TO_A, l, m, s)) * RADIANS_TO_DEGREES
     }
 
     /** A point in OKLCH as an opaque packed ARGB colour, clamped into sRGB. */
     private fun oklchToArgb(lightness: Double, chroma: Double, hueDegrees: Double): Int {
-        val h = Math.toRadians(hueDegrees)
+        val h = hueDegrees * DEGREES_TO_RADIANS
         val a = chroma * cos(h)
         val b = chroma * sin(h)
         val lCube = (lightness + LAB_TO_L[0] * a + LAB_TO_L[1] * b).pow(CUBE)
@@ -187,3 +188,9 @@ object CategoryPalette {
         return (encoded * CHANNEL_MAX).roundToInt().coerceIn(0, CHANNEL_MAX)
     }
 }
+
+/** `java.lang.Math.toDegrees`' factor (JDK 9 and later multiply by this constant), for common code. */
+private const val RADIANS_TO_DEGREES = 180.0 / PI
+
+/** `java.lang.Math.toRadians`' factor (JDK 9 and later multiply by this constant), for common code. */
+private const val DEGREES_TO_RADIANS = PI / 180.0
