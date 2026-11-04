@@ -11,11 +11,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.domain.money.SupportedCurrency
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.currency_selector_label
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Compact currency picker shown next to an amount field.
@@ -33,7 +34,7 @@ fun CurrencySelector(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val label = stringResource(R.string.currency_selector_label)
+    val label = stringResource(Res.string.currency_selector_label)
 
     Box(modifier = modifier) {
         OutlinedButton(

@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -30,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.expenses.CategorySlice
 import com.coparently.app.domain.expenses.CurrencyBreakdown
 import com.coparently.app.domain.model.Expense
@@ -45,8 +43,19 @@ import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.bodySmallEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
-import java.text.NumberFormat
-import java.util.Locale
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expense_analytics_column_amount
+import com.coparently.app.resources.expense_analytics_column_category
+import com.coparently.app.resources.expense_analytics_column_empty
+import com.coparently.app.resources.expense_analytics_column_share
+import com.coparently.app.resources.expense_analytics_currency_label
+import com.coparently.app.resources.expense_analytics_empty
+import com.coparently.app.resources.expense_analytics_empty_filtered
+import com.coparently.app.resources.expense_analytics_payer_everyone
+import com.coparently.app.resources.expense_analytics_payer_label
+import com.coparently.app.resources.expense_analytics_total
+import com.coparently.app.utils.ReaderMoneyText
+import org.jetbrains.compose.resources.stringResource
 
 /** Width of the amount column, wide enough for a five-figure sum with its symbol. */
 private val AMOUNT_COLUMN_WIDTH = 96.dp
@@ -139,12 +148,12 @@ fun ExpenseAnalytics(
         if (breakdown == null) {
             Text(
                 text = if (selectedPayer == null) {
-                    stringResource(R.string.expense_analytics_empty)
+                    stringResource(Res.string.expense_analytics_empty)
                 } else {
                     // A different sentence, because it has a different remedy: the month is not
                     // empty, the filter is. Saying "nothing spent this month" under a filter the
                     // user just set would read as a bug.
-                    stringResource(R.string.expense_analytics_empty_filtered)
+                    stringResource(Res.string.expense_analytics_empty_filtered)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -182,7 +191,7 @@ private fun PayerFilter(
     parentNames: ParentNames,
     onSelectPayer: (String?) -> Unit
 ) {
-    val label = stringResource(R.string.expense_analytics_payer_label)
+    val label = stringResource(Res.string.expense_analytics_payer_label)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -191,7 +200,7 @@ private fun PayerFilter(
         horizontalArrangement = Arrangement.spacedBy(Spacing.S)
     ) {
         FilterChip(
-            label = stringResource(R.string.expense_analytics_payer_everyone),
+            label = stringResource(Res.string.expense_analytics_payer_everyone),
             selected = selectedPayer == null,
             onClick = { onSelectPayer(null) }
         )
@@ -213,7 +222,7 @@ internal fun CurrencyChips(
     onSelectCurrency: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val label = stringResource(R.string.expense_analytics_currency_label)
+    val label = stringResource(Res.string.expense_analytics_currency_label)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -265,7 +274,7 @@ private fun FilterChip(
  */
 @Composable
 private fun BreakdownTable(breakdown: CurrencyBreakdown) {
-    val total = remember(breakdown) { currencyFormat(breakdown.currency).format(breakdown.total) }
+    val total = remember(breakdown) { ReaderMoneyText.amount(breakdown.total, breakdown.currency) }
     val amountWidth = amountColumnWidth(breakdown)
     val largestShare = breakdown.slices.maxOfOrNull { it.share }?.takeIf { it > 0.0 } ?: 1.0
 
@@ -276,14 +285,14 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
                 .padding(start = Spacing.L + SWATCH_SIZE + Spacing.M, end = Spacing.L),
             horizontalArrangement = Arrangement.spacedBy(Spacing.M)
         ) {
-            ColumnHeader(stringResource(R.string.expense_analytics_column_category), Modifier.weight(1f))
+            ColumnHeader(stringResource(Res.string.expense_analytics_column_category), Modifier.weight(1f))
             ColumnHeader(
-                stringResource(R.string.expense_analytics_column_amount),
+                stringResource(Res.string.expense_analytics_column_amount),
                 Modifier.width(amountWidth),
                 TextAlign.End
             )
             ColumnHeader(
-                stringResource(R.string.expense_analytics_column_share),
+                stringResource(Res.string.expense_analytics_column_share),
                 Modifier.width(SHARE_COLUMN_WIDTH),
                 TextAlign.End
             )
@@ -306,7 +315,7 @@ private fun BreakdownTable(breakdown: CurrencyBreakdown) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = stringResource(R.string.expense_analytics_total),
+                text = stringResource(Res.string.expense_analytics_total),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -349,7 +358,7 @@ private fun amountColumnWidth(breakdown: CurrencyBreakdown): Dp {
     val style = MaterialTheme.typography.bodyMedium
     val density = LocalDensity.current
     return remember(breakdown, style, density, measurer) {
-        val format = currencyFormat(breakdown.currency)
+        val format = MoneyFormat(breakdown.currency)
         val widest = breakdown.slices.maxOfOrNull { measurer.measure(format.format(it.amount), style).size.width } ?: 0
         maxOf(AMOUNT_COLUMN_WIDTH, with(density) { widest.toDp() })
     }
@@ -364,7 +373,7 @@ private fun amountColumnWidth(breakdown: CurrencyBreakdown): Dp {
 @Composable
 private fun BreakdownRow(slice: CategorySlice, currency: String, amountWidth: Dp, barFraction: Float) {
     val name = stringResource(slice.category.labelRes)
-    val amount = currencyFormat(currency).format(slice.amount)
+    val amount = ReaderMoneyText.amount(slice.amount, currency)
     val share = formatShare(slice.share)
     Column(
         modifier = Modifier
@@ -456,11 +465,7 @@ private fun BreakdownFigures(slice: CategorySlice, name: String, amount: String,
 }
 
 /** "34%" — rounded, because a share is not a figure anyone reads to a decimal place. */
-private fun formatShare(share: Double): String {
-    val format = NumberFormat.getPercentInstance(Locale.getDefault())
-    format.maximumFractionDigits = 0
-    return format.format(share)
-}
+private fun formatShare(share: Double): String = ReaderMoneyText.percent(share)
 
 /**
  * The month's expenses as one column per parent — who spent what, side by side, each row marked
@@ -562,7 +567,7 @@ private fun LedgerColumn(
         }
         if (expenses.isEmpty()) {
             Text(
-                text = stringResource(R.string.expense_analytics_column_empty),
+                text = stringResource(Res.string.expense_analytics_column_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = Spacing.XS, top = Spacing.XXS)
@@ -582,7 +587,7 @@ private fun LedgerColumn(
 @Composable
 private fun LedgerRow(expense: Expense, currency: String) {
     val name = stringResource(expense.category.labelRes)
-    val amount = currencyFormat(currency).format(expense.amount)
+    val amount = ReaderMoneyText.amount(expense.amount, currency)
     Row(
         modifier = Modifier
             .fillMaxWidth()

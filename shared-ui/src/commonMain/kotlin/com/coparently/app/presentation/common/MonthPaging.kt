@@ -8,10 +8,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import java.time.YearMonth
+import kotlinx.datetime.YearMonth
 
-// MONTH_PAGING_MS and monthPagingTween are in :shared-ui's MonthPagingTween.kt (MON-24 phase 2,
-// slice 11c); the direction and the transition follow with Expenses (slice 11e).
+// MONTH_PAGING_MS and monthPagingTween are in MonthPagingTween.kt (MON-24 phase 2, slice 11c); the
+// direction and the transition followed with Expenses (slice 11e), on kotlinx-datetime's YearMonth,
+// whose `compareTo` orders months as java.time's did.
 
 /**
  * Which way a month change should travel on screen.

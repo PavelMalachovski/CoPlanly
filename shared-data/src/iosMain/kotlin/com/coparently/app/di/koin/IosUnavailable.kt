@@ -249,12 +249,17 @@ internal object NoRecordPhotoStorage : RecordPhotoStorage {
 
 /**
  * No on-device text recognition yet (ML Kit's is Android's; the iPhone's comes with its camera,
- * phase 4): a receipt's text is not read, so the expense form shows its failed-scan message
- * ("Couldn't read the receipt", `ReceiptScanState.Failed`) and keeps the photo, as it does when
- * recognition fails on Android (`ExpenseViewModel.scanReceipt`, slice 10d). Nothing is sent anywhere
- * instead (item 10 of "Things that are easy to get wrong").
+ * phase 4): a receipt's text is not read, and [available] says so, so the shared expense form never
+ * scans a photo here (slice 11e: it offers no receipt at all while the iPhone has no picker or image
+ * loader either). Were a scan asked for, it would fail and the form would show its failed-scan
+ * message and keep the photo, as when recognition fails on Android (`ExpenseViewModel.scanReceipt`,
+ * slice 10d). Nothing is sent anywhere instead (item 10 of "Things that are easy to get wrong").
  */
 internal object NoReceiptText : ReceiptTextRecognizer {
+
+    /** Says so, so the shared expense form never scans here (slice 11e). */
+    override val available: Boolean = false
+
     override suspend fun recognize(imageUri: String): List<String> = throw IOException(UNAVAILABLE)
 }
 

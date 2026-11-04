@@ -2724,13 +2724,14 @@ bytes are identical on Android):
 - **`java.time` beyond the edges** in app code, converting losslessly with kotlinx's own
   converters: ~~the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
   `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at~~ (kotlinx-datetime since
-  phase 2, slice 11c); the ~~event,~~ expense ~~and change-request~~ forms (the change request's
-  since slice 11d), whose `rememberSaveable`
+  phase 2, slice 11c); the ~~event, expense and change-request~~ forms (the change request's
+  since slice 11d, the expense form's since slice 11e), whose `rememberSaveable`
   state is Java-serialised (give each saved date a `Saver` over its text, never a raw kotlinx value —
   the event form's are `common/DateTimeSavers.kt`'s since phase 2, slice 11c); `AnswerByField`'s picker,
   `VaccinationListEditor` and the child-info `DatePickerDialog`; ~~`RequestTime.zone()` (`ZoneId`)~~
-  (a kotlinx-datetime `TimeZone` since phase 2, Task 8h), `RequestsRowText` and `answerByText`; `ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
-  with the calendar's paging); ~~`UnassignedRecord.date`~~ (kotlinx-datetime since phase 2, Task 8i).
+  (a kotlinx-datetime `TimeZone` since phase 2, Task 8h), `RequestsRowText` and `answerByText`; ~~`ExpenseViewModel.selectedMonth` (java `YearMonth`, shared
+  with the calendar's paging)~~ (kotlinx-datetime since phase 2, slice 10d; the paging's direction since
+  slice 11e); ~~`UnassignedRecord.date`~~ (kotlinx-datetime since phase 2, Task 8i).
 - **One idiom for "now"**: `java.time.LocalDateTime.now().toKotlinLocalDateTime()` in
   `AddEditEventScreen`, `ChatViewModel`, `HomeViewModel` and `ChangeRequestViewModel`, beside
   `wallClockNow()` elsewhere. They are equal; use `wallClockNow()`.
@@ -3041,7 +3042,11 @@ bytes are identical on Android):
   argument and so read alike in both string readers (the last exception check 7 made); then the
   Family tab, its earlier families and the records of no family, with the split's wording, the
   stickers' views, the family's two dialogs and Home's money text moved beside them, every amount
-  through the money seam's `Double` overload, which is the `NumberFormat` call they made.
+  through the money seam's `Double` overload, which is the `NumberFormat` call they made. Then
+  Expenses: the month's list with swipe to delete, the summary header and its folded line, the
+  analytics, the settle-up question and the expense form, its date a kotlinx-datetime day kept as
+  text and its receipt's photo through the shell's picker and camera; on a phone with no picker,
+  image loader or text recognition (the iPhone for now) the form offers no receipt and scans nothing.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

@@ -1,13 +1,5 @@
 package com.coparently.app.presentation.expenses
 
-import android.Manifest
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.pm.PackageManager
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -67,13 +59,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import com.coparently.app.R
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.WHOLE_PERCENT
 import com.coparently.app.domain.family.FamilyMemberRef
@@ -89,30 +76,68 @@ import com.coparently.app.presentation.common.FamilyMemberRefListSaver
 import com.coparently.app.presentation.common.FullScreenImageDialog
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.LocalDateSaver
 import com.coparently.app.presentation.common.SideBySideOrStacked
 import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberDiscardGuard
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberRecordPhoto
+import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.common.toggling
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.platform.AppImage
+import com.coparently.app.presentation.platform.CaptureResult
+import com.coparently.app.presentation.platform.CaptureTarget
+import com.coparently.app.presentation.platform.LocalCameraCapture
+import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.platform.LocalPlatformImages
 import com.coparently.app.presentation.theme.CoPlanlyShapes
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.budgets_back
+import com.coparently.app.resources.expense_add_title
+import com.coparently.app.resources.expense_date_cancel
+import com.coparently.app.resources.expense_date_confirm
+import com.coparently.app.resources.expense_date_other_month_confirm
+import com.coparently.app.resources.expense_date_other_month_message
+import com.coparently.app.resources.expense_date_other_month_title
+import com.coparently.app.resources.expense_edit_title
+import com.coparently.app.resources.expense_field_amount
+import com.coparently.app.resources.expense_field_category
+import com.coparently.app.resources.expense_field_date
+import com.coparently.app.resources.expense_field_notes
+import com.coparently.app.resources.expense_field_title
 import com.coparently.app.resources.expense_for_members
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toKotlinLocalDate
+import com.coparently.app.resources.expense_paid_by_title
+import com.coparently.app.resources.expense_paid_by_you
+import com.coparently.app.resources.expense_remove_receipt
+import com.coparently.app.resources.expense_save
+import com.coparently.app.resources.expense_split_not_shared_hint
+import com.coparently.app.resources.expense_split_override_hint
+import com.coparently.app.resources.expense_split_ratio
+import com.coparently.app.resources.expense_split_shared
+import com.coparently.app.resources.expenses_receipt_photo
+import com.coparently.app.resources.image_viewer_open
+import com.coparently.app.resources.receipt_camera_denied
+import com.coparently.app.resources.receipt_camera_unavailable
+import com.coparently.app.resources.receipt_pick_photo
+import com.coparently.app.resources.receipt_scan_applied
+import com.coparently.app.resources.receipt_scan_failed
+import com.coparently.app.resources.receipt_scan_undo
+import com.coparently.app.resources.receipt_scanning
+import com.coparently.app.resources.receipt_take_photo
+import com.coparently.app.utils.readerMediumDate
+import com.coparently.app.utils.readerMonthTitle
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearMonth
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.io.File
-import java.time.LocalDate
-import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,7 +154,8 @@ fun AddExpenseScreen(
     var category by rememberSaveable { mutableStateOf(ExpenseCategory.OTHER) }
     var notes by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    var receiptUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    // The receipt as text: a picked or photographed image's content URI, or the stored reference.
+    var receiptUri by rememberSaveable { mutableStateOf<String?>(null) }
 
     // The expense being edited (null in add mode). Kept whole so save can copy() it and preserve
     // fields the form does not touch — id, payer, createdAt, split — instead of rebuilding it.
@@ -147,10 +173,11 @@ fun AddExpenseScreen(
         mutableStateOf(emptyList<FamilyMemberRef>())
     }
 
-    var date by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    // Saved as its ISO text (`LocalDateSaver`), never through Java serialization.
+    val today = rememberToday().value
+    var date by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(today) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showOtherMonthWarning by remember { mutableStateOf(false) }
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
 
     // In edit mode, load the expense and prefill every field from it — once. After a rotation the
     // saved fields hold the parent's edits, and prefilling again would put the stored ones back.
@@ -164,14 +191,14 @@ fun AddExpenseScreen(
                     amount = expense.amount.toString()
                     category = expense.category
                     notes = expense.notes.orEmpty()
-                    date = expense.date.toJavaLocalDate()
+                    date = expense.date
                     currency = SupportedCurrency.fromCode(expense.currency)
                     forMembers = expense.forMembers
                     // A legacy download URL (before L-4) is not a receipt this build shows; the
                     // form opens without one, and saving drops it.
                     expense.receiptUrl
                         ?.takeIf { RecordPhotoCodec.isReference(it) }
-                        ?.let { receiptUri = Uri.parse(it) }
+                        ?.let { receiptUri = it }
                     prefilled = true
                 }
             }
@@ -193,45 +220,32 @@ fun AddExpenseScreen(
     var overrideMomPercent by rememberSaveable { mutableStateOf<Int?>(null) }
     val amountValue = amount.toDoubleOrNull()
     val isFormValid = title.isNotBlank() && amountValue != null
-    val context = LocalContext.current
     val appMessages = LocalAppMessages.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val photoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri -> if (uri != null) receiptUri = uri }
+    val filePicker = LocalFilePicker.current
+    val photoPicker = filePicker.rememberImagePicker { uri -> receiptUri = uri }
 
-    val hasCamera = remember {
-        context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
-    }
-
-    // Saveable: the camera app often takes this activity down while it runs, and the photo's
-    // address has to be here when it comes back, or the receipt is lost.
-    var pendingCaptureUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { success -> if (success) receiptUri = pendingCaptureUri }
-
-    val takePhoto = {
-        val uri = createReceiptCaptureUri(context)
-        pendingCaptureUri = uri
-        try {
-            cameraLauncher.launch(uri)
-        } catch (e: ActivityNotFoundException) {
-            appMessages?.show(context.getString(R.string.receipt_camera_unavailable))
+    // The camera asks for its permission first, as the form did; a refusal and a phone with no
+    // camera app are said through the app's message host.
+    val cameraCapture = LocalCameraCapture.current
+    val hasCamera = cameraCapture.available
+    val cameraUnavailable = stringResource(Res.string.receipt_camera_unavailable)
+    val cameraDenied = stringResource(Res.string.receipt_camera_denied)
+    val camera = cameraCapture.rememberCapture(CaptureTarget.RECEIPT) { result ->
+        when (result) {
+            is CaptureResult.Taken -> receiptUri = result.contentUri
+            CaptureResult.Cancelled -> Unit
+            CaptureResult.NoCameraApp -> appMessages?.show(cameraUnavailable)
+            CaptureResult.PermissionDenied -> appMessages?.show(cameraDenied)
         }
     }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            takePhoto()
-        } else {
-            appMessages?.show(context.getString(R.string.receipt_camera_denied))
-        }
-    }
+    // The receipt's photo, its scan and its preview need the picker and the image loader; on a
+    // phone that has neither yet (the iPhone, MON-24 phase 2), the form offers no receipt at all
+    // rather than a button that cannot keep its promise (design item 8).
+    val receiptsOffered = filePicker.available && LocalPlatformImages.current.available
+    // On-device text recognition only (CLAUDE.md item 10); where there is none, no photo is scanned.
+    val scansReceipts = viewModel.receiptScanAvailable
 
     ExpenseSaveEffect(
         saveState = saveState,
@@ -247,7 +261,8 @@ fun AddExpenseScreen(
     // over what the parent corrected.
     var lastScannedReceipt by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(receiptUri) {
-        val uri = receiptUri?.toString() ?: return@LaunchedEffect
+        val uri = receiptUri ?: return@LaunchedEffect
+        if (!scansReceipts) return@LaunchedEffect
         if (RecordPhotoCodec.isReference(uri) || uri == lastScannedReceipt) return@LaunchedEffect
         lastScannedReceipt = uri
         viewModel.scanReceipt(uri)
@@ -276,9 +291,9 @@ fun AddExpenseScreen(
                 category = category,
                 currency = effectiveCurrency.code,
                 forMembers = forMembers,
-                date = date.toKotlinLocalDate(),
+                date = date,
                 notes = notes.takeIf { it.isNotBlank() },
-                receiptImageUri = receiptUri?.toString(),
+                receiptImageUri = receiptUri,
                 shared = shared,
                 splitOverride = overrideMomPercent?.let { SplitRatio.ofMomPercent(it) },
                 paidByCoParent = paidByCoParent
@@ -290,9 +305,9 @@ fun AddExpenseScreen(
                 amount = requireNotNull(amountValue),
                 category = category,
                 currency = effectiveCurrency.code,
-                date = date.toKotlinLocalDate(),
+                date = date,
                 notes = notes.takeIf { it.isNotBlank() },
-                receiptImageUri = receiptUri?.toString(),
+                receiptImageUri = receiptUri,
                 forMembers = forMembers
             )
         }
@@ -303,13 +318,13 @@ fun AddExpenseScreen(
     // receipt-scan bug).
     val onSaveClick = {
         if (isFormValid) {
-            if (YearMonth.from(date) == YearMonth.now()) performSave() else showOtherMonthWarning = true
+            if (date.yearMonth == today.yearMonth) performSave() else showOtherMonthWarning = true
         }
     }
 
     // What leaving now would lose (D-11): in edit mode, any field that no longer matches the expense
     // as stored; in add mode, anything typed or attached at all.
-    val fields = ExpenseFields(title, amount, category, notes, date, currency, forMembers, receiptUri?.toString())
+    val fields = ExpenseFields(title, amount, category, notes, date, currency, forMembers, receiptUri)
     val dirty = when (val original = editedExpense) {
         null -> expenseId == null && fields.hasContent()
         else -> fields != ExpenseFields.of(original)
@@ -324,13 +339,13 @@ fun AddExpenseScreen(
                 title = {
                     Text(
                         stringResource(
-                            if (expenseId == null) R.string.expense_add_title else R.string.expense_edit_title
+                            if (expenseId == null) Res.string.expense_add_title else Res.string.expense_edit_title
                         )
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = leave, enabled = !isSaving) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.budgets_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.budgets_back))
                     }
                 }
             )
@@ -340,7 +355,7 @@ fun AddExpenseScreen(
         // the fold on a long expense, where the thumb is not.
         bottomBar = {
             StickyActionBar(
-                label = stringResource(R.string.expense_save),
+                label = stringResource(Res.string.expense_save),
                 onClick = onSaveClick,
                 enabled = !isSaving && isFormValid,
                 busy = isSaving
@@ -358,7 +373,7 @@ fun AddExpenseScreen(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text(stringResource(R.string.expense_field_title)) },
+                label = { Text(stringResource(Res.string.expense_field_title)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -370,7 +385,7 @@ fun AddExpenseScreen(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text(stringResource(R.string.expense_field_amount)) },
+                    label = { Text(stringResource(Res.string.expense_field_amount)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f)
                 )
@@ -393,8 +408,8 @@ fun AddExpenseScreen(
 
             // A picker, not a text field (docs/AUDIT-2026-10-design.md D-7): the one date anatomy.
             DatePickerField(
-                label = stringResource(R.string.expense_field_date),
-                value = date.format(dateFormatter),
+                label = stringResource(Res.string.expense_field_date),
+                value = readerMediumDate(date),
                 onClick = { showDatePicker = true },
                 enabled = !isSaving
             )
@@ -409,7 +424,7 @@ fun AddExpenseScreen(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text(stringResource(R.string.expense_field_notes)) },
+                label = { Text(stringResource(Res.string.expense_field_notes)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3
             )
@@ -422,29 +437,21 @@ fun AddExpenseScreen(
                 recordId = editedExpense?.id.orEmpty(),
                 recordFamilyId = editedExpense?.familyId
             )
-            ReceiptSection(
-                pickerState = ReceiptPickerState(
-                    receipt = receiptUri?.let { uri ->
-                        if (uri.toString() == editedExpense?.receiptUrl) storedReceipt else uri
-                    },
-                    enabled = !isSaving,
-                    hasCamera = hasCamera
-                ),
-                scanState = scanState,
-                onTakePhoto = {
-                    val granted = ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.CAMERA
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) takePhoto() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                },
-                onPickPhoto = {
-                    photoPicker.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                },
-                onRemovePhoto = { receiptUri = null }
-            )
+            if (receiptsOffered) {
+                ReceiptSection(
+                    pickerState = ReceiptPickerState(
+                        receipt = receiptUri?.let { uri ->
+                            if (uri == editedExpense?.receiptUrl) storedReceipt else uri
+                        },
+                        enabled = !isSaving,
+                        hasCamera = hasCamera
+                    ),
+                    scanState = scanState,
+                    onTakePhoto = camera::launch,
+                    onPickPhoto = photoPicker::launch,
+                    onRemovePhoto = { receiptUri = null }
+                )
+            }
 
             // Only on a new expense: an edit keeps the split it was recorded under, which is the
             // whole point of snapshotting it — re-opening a settled month must not re-price it.
@@ -501,22 +508,19 @@ private fun OtherMonthWarningDialog(
 ) {
     if (!visible) return
 
-    val monthLabel = remember(date) {
-        date.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-    }
+    val monthLabel = remember(date) { readerMonthTitle(date.yearMonth) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.expense_date_other_month_title)) },
-        text = { Text(stringResource(R.string.expense_date_other_month_message, monthLabel)) },
+        title = { Text(stringResource(Res.string.expense_date_other_month_title)) },
+        text = { Text(stringResource(Res.string.expense_date_other_month_message, monthLabel)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.expense_date_other_month_confirm))
+                Text(stringResource(Res.string.expense_date_other_month_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.expense_date_cancel))
+                Text(stringResource(Res.string.expense_date_cancel))
             }
         }
     )
@@ -573,7 +577,7 @@ private fun ExpenseCategoryDropdown(
             value = stringResource(category.labelRes),
             onValueChange = {},
             readOnly = true,
-            label = { Text(stringResource(R.string.expense_field_category)) },
+            label = { Text(stringResource(Res.string.expense_field_category)) },
             // The selected category's dot, in the same colour its slice wears on the analytics
             // chart — one palette, every surface (owner ask, Aug 2026 walkthrough).
             leadingIcon = { CategoryDot(category) },
@@ -625,8 +629,8 @@ private fun ExpenseDatePickerDialog(
 
     LocalDatePickerDialog(
         initialDate = date,
-        confirmLabel = stringResource(R.string.expense_date_confirm),
-        dismissLabel = stringResource(R.string.expense_date_cancel),
+        confirmLabel = stringResource(Res.string.expense_date_confirm),
+        dismissLabel = stringResource(Res.string.expense_date_cancel),
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )
@@ -639,7 +643,7 @@ private fun ExpenseDatePickerDialog(
  * Internal rather than private so the timing behaviour of [ReceiptScanEffect] can be driven
  * directly from a Compose UI test (`ReceiptScanEffectTest`) without standing up the whole form.
  */
-internal data class ReceiptScanFormState(
+data class ReceiptScanFormState(
     val title: String,
     val amount: String,
     val category: ExpenseCategory,
@@ -651,7 +655,7 @@ internal data class ReceiptScanFormState(
  * Setters back into the Add Expense form, used by [ReceiptScanEffect] to apply or undo a scan.
  * Internal for the same reason as [ReceiptScanFormState].
  */
-internal data class ReceiptScanCallbacks(
+data class ReceiptScanCallbacks(
     val onTitleChange: (String) -> Unit,
     val onAmountChange: (String) -> Unit,
     val onCategoryChange: (ExpenseCategory) -> Unit,
@@ -695,7 +699,7 @@ internal data class ReceiptScanUpdate(
  * still [today], category only while it is still [ExpenseCategory.OTHER], and currency only
  * while the selector has not been touched ([ReceiptScanFormState.currency] is still null).
  *
- * Internal (not private) — and takes [today] rather than reading `LocalDate.now()` itself — so
+ * Internal (not private) — and takes [today] rather than reading the clock itself — so
  * `BuildReceiptScanUpdateTest` can exercise the non-overwrite rule as a plain JVM unit test,
  * without a wall-clock dependency or a Compose UI test.
  *
@@ -706,13 +710,13 @@ internal data class ReceiptScanUpdate(
 internal fun buildReceiptScanUpdate(
     scan: ReceiptScan,
     formState: ReceiptScanFormState,
-    today: LocalDate = LocalDate.now()
+    today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
 ): ReceiptScanUpdate =
     ReceiptScanUpdate(
         title = scan.merchant?.takeIf { formState.title.isBlank() },
         amount = scan.total?.takeIf { formState.amount.isBlank() }?.toString(),
         category = scan.category?.takeIf { formState.category == ExpenseCategory.OTHER },
-        date = scan.date?.toJavaLocalDate()?.takeIf { formState.date == today },
+        date = scan.date?.takeIf { formState.date == today },
         currency = SupportedCurrency.fromCode(scan.currency)?.takeIf { formState.currency == null }
     )
 
@@ -747,13 +751,15 @@ private fun restoreReceiptScanSnapshot(snapshot: ReceiptUndoSnapshot, callbacks:
  * that follows [ReceiptScanCallbacks.onScanConsumed].
  */
 @Composable
-internal fun ReceiptScanEffect(
+fun ReceiptScanEffect(
     scanState: ReceiptScanState,
     formState: ReceiptScanFormState,
     callbacks: ReceiptScanCallbacks,
     snackbarHostState: SnackbarHostState
 ) {
-    val context = LocalContext.current
+    val applied = stringResource(Res.string.receipt_scan_applied)
+    val undo = stringResource(Res.string.receipt_scan_undo)
+    val failed = stringResource(Res.string.receipt_scan_failed)
 
     LaunchedEffect(scanState) {
         when (val state = scanState) {
@@ -776,8 +782,8 @@ internal fun ReceiptScanEffect(
                         )
                         applyReceiptScanUpdate(update, callbacks)
                         val result = snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.receipt_scan_applied),
-                            actionLabel = context.getString(R.string.receipt_scan_undo),
+                            message = applied,
+                            actionLabel = undo,
                             duration = SnackbarDuration.Short
                         )
                         if (result == SnackbarResult.ActionPerformed) {
@@ -792,7 +798,7 @@ internal fun ReceiptScanEffect(
             ReceiptScanState.Failed -> {
                 try {
                     snackbarHostState.showSnackbar(
-                        message = context.getString(R.string.receipt_scan_failed),
+                        message = failed,
                         duration = SnackbarDuration.Short
                     )
                 } finally {
@@ -836,7 +842,7 @@ private fun ReceiptSection(
                 strokeWidth = 2.dp
             )
             Spacer(modifier = Modifier.size(8.dp))
-            Text(stringResource(R.string.receipt_scanning))
+            Text(stringResource(Res.string.receipt_scanning))
         }
     }
     ReceiptPicker(
@@ -866,14 +872,14 @@ private fun ReceiptPicker(
             OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = modifier) {
                 Icon(Icons.Default.PhotoCamera, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(stringResource(R.string.receipt_take_photo))
+                Text(stringResource(Res.string.receipt_take_photo))
             }
         }
         val pickPhoto: @Composable (Modifier) -> Unit = { modifier ->
             OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = modifier) {
                 Icon(Icons.Default.AddAPhoto, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
-                Text(stringResource(R.string.receipt_pick_photo))
+                Text(stringResource(Res.string.receipt_pick_photo))
             }
         }
         SideBySideOrStacked(controls = if (hasCamera) listOf(takePhoto, pickPhoto) else listOf(pickPhoto))
@@ -885,7 +891,7 @@ private fun ReceiptPicker(
         Box(modifier = Modifier.fillMaxWidth()) {
             AppImage(
                 model = receipt,
-                contentDescription = stringResource(R.string.image_viewer_open),
+                contentDescription = stringResource(Res.string.image_viewer_open),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -900,29 +906,17 @@ private fun ReceiptPicker(
                     .align(Alignment.TopEnd)
                     .padding(Spacing.S)
             ) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.expense_remove_receipt))
+                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.expense_remove_receipt))
             }
         }
         if (viewingFullScreen) {
             FullScreenImageDialog(
                 model = receipt,
-                contentDescription = stringResource(R.string.expenses_receipt_photo),
+                contentDescription = stringResource(Res.string.expenses_receipt_photo),
                 onDismiss = { viewingFullScreen = false }
             )
         }
     }
-}
-
-/**
- * Creates a shareable URI for a new receipt photo in the app cache.
- *
- * @param context Context used to resolve the cache directory and the FileProvider authority
- * @return URI the camera app may write to
- */
-private fun createReceiptCaptureUri(context: Context): Uri {
-    val directory = File(context.cacheDir, "receipts").apply { mkdirs() }
-    val file = File(directory, "receipt_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
 /**
@@ -943,9 +937,9 @@ private fun PaidBySection(
     enabled: Boolean
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
-        Text(text = stringResource(R.string.expense_paid_by_title), style = MaterialTheme.typography.bodyLarge)
+        Text(text = stringResource(Res.string.expense_paid_by_title), style = MaterialTheme.typography.bodyLarge)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            listOf(false to stringResource(R.string.expense_paid_by_you), true to coParentName)
+            listOf(false to stringResource(Res.string.expense_paid_by_you), true to coParentName)
                 .forEachIndexed { index, (coParentPaid, label) ->
                     SegmentedButton(
                         selected = paidByCoParent == coParentPaid,
@@ -996,7 +990,7 @@ private fun SplitSection(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = stringResource(R.string.expense_split_shared),
+                text = stringResource(Res.string.expense_split_shared),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
@@ -1005,7 +999,7 @@ private fun SplitSection(
 
         if (!shared) {
             Text(
-                text = stringResource(R.string.expense_split_not_shared_hint),
+                text = stringResource(Res.string.expense_split_not_shared_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1020,7 +1014,7 @@ private fun SplitSection(
         ) {
             Text(
                 text = stringResource(
-                    R.string.expense_split_ratio,
+                    Res.string.expense_split_ratio,
                     effective,
                     WHOLE_PERCENT - effective
                 ),
@@ -1036,7 +1030,7 @@ private fun SplitSection(
             )
         }
         Text(
-            text = stringResource(R.string.expense_split_override_hint),
+            text = stringResource(Res.string.expense_split_override_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1080,7 +1074,7 @@ private data class ExpenseFields(
             amount = expense.amount.toString(),
             category = expense.category,
             notes = expense.notes.orEmpty(),
-            date = expense.date.toJavaLocalDate(),
+            date = expense.date,
             currency = SupportedCurrency.fromCode(expense.currency),
             forMembers = expense.forMembers,
             receipt = expense.receiptUrl?.takeIf { RecordPhotoCodec.isReference(it) }

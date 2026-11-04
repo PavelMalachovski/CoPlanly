@@ -17,15 +17,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import com.coparently.app.R
 import com.coparently.app.domain.payment.Iban
 import com.coparently.app.presentation.theme.Spacing
-import kotlinx.datetime.toJavaYearMonth
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.settle_up_cancel
+import com.coparently.app.resources.settle_up_dialog_owed
+import com.coparently.app.resources.settle_up_dialog_owing
+import com.coparently.app.resources.settle_up_dialog_title
+import com.coparently.app.resources.settle_up_iban_invalid
+import com.coparently.app.resources.settle_up_iban_label
+import com.coparently.app.resources.settle_up_iban_save_failed
+import com.coparently.app.resources.settle_up_send
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.ReaderMoneyText
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -51,20 +58,20 @@ fun SettleUpDialog(
     var iban by rememberSaveable { mutableStateOf<String?>(null) }
     val shownIban = iban ?: savedIban?.let(Iban::grouped).orEmpty()
     val ibanInvalid = owedToMe && shownIban.isNotBlank() && Iban.normalize(shownIban) == null
-    val amount = remember(pending) { currencyFormat(pending.ask.currency).format(abs(pending.ask.netForMe)) }
+    val amount = remember(pending) { ReaderMoneyText.amount(abs(pending.ask.netForMe), pending.ask.currency) }
     val month = remember(pending.month) {
-        pending.month.toJavaYearMonth().format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
+        ReaderDateText.pattern(pending.month, "LLLL yyyy")
     }
     LaunchedEffect(send) { if (send == SettleUpSend.SENT) onSent() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settle_up_dialog_title, month)) },
+        title = { Text(stringResource(Res.string.settle_up_dialog_title, month)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
                 Text(
                     stringResource(
-                        if (owedToMe) R.string.settle_up_dialog_owed else R.string.settle_up_dialog_owing,
+                        if (owedToMe) Res.string.settle_up_dialog_owed else Res.string.settle_up_dialog_owing,
                         coParentName,
                         amount
                     )
@@ -73,10 +80,10 @@ fun SettleUpDialog(
                     OutlinedTextField(
                         value = shownIban,
                         onValueChange = { iban = it },
-                        label = { Text(stringResource(R.string.settle_up_iban_label)) },
+                        label = { Text(stringResource(Res.string.settle_up_iban_label)) },
                         isError = ibanInvalid,
                         supportingText = if (ibanInvalid) {
-                            { Text(stringResource(R.string.settle_up_iban_invalid)) }
+                            { Text(stringResource(Res.string.settle_up_iban_invalid)) }
                         } else {
                             null
                         },
@@ -86,7 +93,7 @@ fun SettleUpDialog(
                     )
                 }
                 if (send == SettleUpSend.IBAN_NOT_SAVED) {
-                    Text(stringResource(R.string.settle_up_iban_save_failed))
+                    Text(stringResource(Res.string.settle_up_iban_save_failed))
                 }
             }
         },
@@ -95,11 +102,11 @@ fun SettleUpDialog(
                 onClick = { viewModel.send(pending, shownIban.takeIf { owedToMe }) },
                 enabled = !ibanInvalid && send != SettleUpSend.SENDING
             ) {
-                Text(stringResource(R.string.settle_up_send))
+                Text(stringResource(Res.string.settle_up_send))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.settle_up_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.settle_up_cancel)) }
         }
     )
 }

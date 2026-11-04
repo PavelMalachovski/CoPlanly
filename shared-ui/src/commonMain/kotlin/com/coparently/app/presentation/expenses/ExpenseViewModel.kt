@@ -740,6 +740,13 @@ class ExpenseViewModel(
     val scanState: StateFlow<ReceiptScanState> = _scanState.asStateFlow()
 
     /**
+     * Whether this phone reads a receipt's text ([ReceiptTextRecognizer.available]); the form scans
+     * a photo only when it does (MON-24 phase 2, slice 11e: the iPhone's stand-in does not).
+     */
+    val receiptScanAvailable: Boolean
+        get() = receiptTextRecognizer.available
+
+    /**
      * Runs on-device OCR over a receipt photo and parses it into form fields.
      *
      * Failures are not fatal: the photo is still a valid receipt, so the expense can be saved

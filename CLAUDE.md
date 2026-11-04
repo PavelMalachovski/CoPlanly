@@ -1212,7 +1212,9 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   `SwapDayAnswers`, `SwapOfferSides`, `SwapNoteQuote`, `sidesAsked`, `swapOfferHeading`,
   `swapAcceptLabel` and `swapDatesText`, which Home calls; slice 11e: `FamilyMoneyCard`, which the
   screenshots render, `splitSharesText`, `formatMoney` and `balanceCaption`, which Home calls, and
-  the stickers' `roleOrNull` and `senderLine`, which `MyStickersScreen` calls). A test that moves with its code to `:shared-ui` keeps `internal`
+  the stickers' `roleOrNull` and `senderLine`, which `MyStickersScreen` calls, then the expenses'
+  `CollapsedMonthSummary`, which the screenshots render, and `ReceiptScanEffect` with its
+  `ReceiptScanFormState` and `ReceiptScanCallbacks`, which an androidTest drives). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1645,7 +1647,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              custody-conflict screen and the parenting plan's reference card, and the requests'
              screens (presentation/changerequests/: the inbox, its cards and the change request
              form); and, from slice 11e, the family's screens (presentation/family/), with the
-             split's wording, the stickers' views, the family's two dialogs and Home's money text.
+             split's wording, the stickers' views, the family's two dialogs and Home's money text,
+             and the expenses' screens (presentation/expenses/).
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1663,8 +1666,8 @@ presentation/ — Compose screens per feature, and the two ViewModels whose sign
              Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
              the design system's components, the shared state and every other ViewModel are in
              shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's, custody's,
-             the requests' and the family's screens (Task 11, slices 11b–11e); the app keeps
-             their previews
+             the requests', the family's and the expenses' screens (Task 11, slices 11b–11e); the
+             app keeps their previews
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2039,8 +2042,8 @@ packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx
 app's `JavaToday.kt` gave the screens that still held a `java.time.LocalDate` the same state
 converted, until the calendar's move left it no caller), `PickerDates` (the UTC rule in kotlinx-datetime; `JavaPickerDates.kt` in
 the app keeps a `java.time` overload of `LocalDatePickerDialog` and of `PickerDates.toPickerMillis`,
-and `fromPickerMillisJava`, each calling the shared one, for the export, expenses, the child records'
-picker and two androidTest classes), `components/TimePicker`
+and `fromPickerMillisJava`, each calling the shared one, for the export, the child records' picker
+and two androidTest classes; expenses left it in slice 11e), `components/TimePicker`
 (`TimePickerDialog` on a kotlinx `LocalTime`, its dial's 12/24 hours `ClockFormat.is24Hour`, which
 `MainActivity` follows from `DateFormat.is24HourFormat` of the activity; the app's `java.time`
 overload went with its last caller, the change request form, in slice 11d, and the previews are the
@@ -2136,7 +2139,32 @@ new `ReaderMoneyText.amount(value: Double, currency)`, which on Android is
 `currencyFormat(currency).format(value)`, the call each of them made, and every date through
 `ReaderDateText.date`; the unassigned records' snackbar is a `UiText` resolved through
 `rememberUiTextResolver()` where it read the Activity's `Context`; `@StringRes Int` labels are
-`StringResource`s. `FamilyMoneyCard` is public for the screenshots.
+`StringResource`s. `FamilyMoneyCard` is public for the screenshots. **Then the money's screens**
+(slice 11e): every file of `presentation/expenses/` but the ViewModels Task 10 moved (`ExpenseScreen`
+with `ExpenseList` and its `SwipeToDeleteRow`, `ExpenseSummaryHeader`, `ExpenseAnalytics`,
+`AddExpenseScreen`, `SettleUpDialog`, `CurrencySelector`, `ExpenseCategoryLabel`, `CategoryPalette`,
+`MonthSwipe`), with `common/MonthPaging.kt` (the month's direction and transition, on a kotlinx-datetime
+`YearMonth`). Each `currencyFormat(currency)` the screens held is a `MoneyFormat(currency)` (new,
+`expenses/MoneyFormat.kt`: the money seam's `Double` and plain-text amounts, which on Android are
+that `NumberFormat`), the analytics' shares `ReaderMoneyText.percent`, a payment's amount on the
+header's strip plain decimal text (`PaymentStrip.amount`, `DecimalText.plain`, where it was a
+`BigDecimal`), "I paid"'s minor units `DecimalText.parseHalfUp` of the double's text (what
+`MinorUnits.fromDouble` read through `BigDecimal.valueOf`), each "LLLL yyyy" month title the new
+`utils/MonthTitle.kt`'s `readerMonthTitle` (child support's `supportMonth` reads it too) or, in the
+settle-up question, `ReaderDateText.pattern`. The expense form's date is a kotlinx-datetime day saved
+as ISO text (`LocalDateSaver`), its receipt a content URI or reference saved as text where it was a
+`Uri`, its photo the shell's `FilePicker` and `CameraCapture` (`CaptureTarget.RECEIPT`, the same
+`cache/receipts/` file and permission flow the form had), its date picker the kotlinx
+`LocalDatePickerDialog`, its scan's snackbars read in composition. **The receipt is offered only where
+the picker and the image loader are** (`FilePicker.available` and `PlatformImages.available`), and a
+photo is **scanned only where the phone reads text** (`ReceiptTextRecognizer.available`, new, true
+by default; the iPhone's `NoReceiptText` says false; `ExpenseViewModel.receiptScanAvailable`), the
+carried note's hiding. Public for the app's tests: `CollapsedMonthSummary` (the screenshots) and
+`ReceiptScanEffect` with `ReceiptScanFormState` and `ReceiptScanCallbacks` (`ReceiptScanEffectTest`,
+androidTest, its form's date a kotlinx-datetime day now). The header's previews are the app's
+`expenses/ExpensePreviews.kt`. `BuildReceiptScanUpdateTest`, `CategoryPaletteTest`,
+`ExpenseSummaryChoiceTest`, `MonthSwipeTest` and `MonthPagingTest` run in `commonTest` (kotlinx-datetime
+fixtures, names without commas).
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

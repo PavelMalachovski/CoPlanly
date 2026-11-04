@@ -3,8 +3,8 @@ package com.coparently.app.presentation.support
 import com.coparently.app.domain.money.DecimalText
 import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.support.SupportTerms
-import com.coparently.app.utils.ReaderDateText
 import com.coparently.app.utils.ReaderMoneyText
+import com.coparently.app.utils.readerMonthTitle
 import kotlinx.datetime.YearMonth
 
 /*
@@ -24,5 +24,4 @@ fun supportAmount(terms: SupportTerms): String =
  * [month] as the reader's language names it, capitalised: "October 2026", "Říjen 2026" — the
  * month's own form "LLLL yyyy" in the language the app speaks.
  */
-fun supportMonth(month: YearMonth): String =
-    ReaderDateText.pattern(month, "LLLL yyyy").replaceFirstChar { it.titlecase() }
+fun supportMonth(month: YearMonth): String = readerMonthTitle(month)

@@ -32,16 +32,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.payments.PaymentState
-import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.ParentNames
-import com.coparently.app.presentation.common.Parents
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.CoPlanlyCorners
 import com.coparently.app.presentation.theme.IconSizes
@@ -49,9 +44,30 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.labelLargeEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
-import com.coparently.app.utils.LightDarkPreviews
-import com.coparently.app.utils.PreviewWrapper
-import java.text.NumberFormat
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expenses_balance_owed_to_you
+import com.coparently.app.resources.expenses_balance_owed_to_you_named
+import com.coparently.app.resources.expenses_balance_settled
+import com.coparently.app.resources.expenses_balance_you_owe
+import com.coparently.app.resources.expenses_balance_you_owe_named
+import com.coparently.app.resources.expenses_collapsed_totals
+import com.coparently.app.resources.expenses_count
+import com.coparently.app.resources.expenses_month_and_count
+import com.coparently.app.resources.expenses_next_month
+import com.coparently.app.resources.expenses_paid_by
+import com.coparently.app.resources.expenses_prev_month
+import com.coparently.app.resources.expenses_settle_up
+import com.coparently.app.resources.expenses_shared_spend
+import com.coparently.app.resources.payment_i_paid
+import com.coparently.app.resources.payment_money_arrived
+import com.coparently.app.resources.payment_paid_to_you
+import com.coparently.app.resources.payment_paid_to_you_named
+import com.coparently.app.resources.payment_settled
+import com.coparently.app.resources.payment_waiting
+import com.coparently.app.resources.payment_waiting_named
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 
 /** Height of the who-paid split bar. */
@@ -114,7 +130,7 @@ fun ExpenseSummaryHeader(
     monthNavigation: MonthNavigation? = null,
     payment: PaymentStrip? = null
 ) {
-    val format = remember(currency) { currencyFormat(currency) }
+    val format = remember(currency) { MoneyFormat(currency) }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -140,12 +156,12 @@ fun ExpenseSummaryHeader(
                 )
                 PaidByRow(
                     momLine = stringResource(
-                        R.string.expenses_paid_by,
+                        Res.string.expenses_paid_by,
                         parentNames.labelOrYou("mom"),
                         format.format(balance.momPaid)
                     ),
                     dadLine = stringResource(
-                        R.string.expenses_paid_by,
+                        Res.string.expenses_paid_by,
                         parentNames.labelOrYou("dad"),
                         format.format(balance.dadPaid)
                     )
@@ -245,16 +261,16 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
         IconButton(onClick = navigation.onPrevious, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.expenses_prev_month),
+                contentDescription = stringResource(Res.string.expenses_prev_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Text(
             text = stringResource(
-                R.string.expenses_month_and_count,
+                Res.string.expenses_month_and_count,
                 navigation.label,
                 pluralStringResource(
-                    R.plurals.expenses_count,
+                    Res.plurals.expenses_count,
                     navigation.expenseCount,
                     navigation.expenseCount
                 )
@@ -267,7 +283,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
         IconButton(onClick = navigation.onNext, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.expenses_next_month),
+                contentDescription = stringResource(Res.string.expenses_next_month),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -288,7 +304,7 @@ internal fun MonthSwitcherBar(navigation: MonthNavigation, modifier: Modifier = 
  * @param modifier Modifier for the bar
  */
 @Composable
-internal fun CollapsedMonthSummary(
+fun CollapsedMonthSummary(
     navigation: MonthNavigation,
     totals: List<String>,
     modifier: Modifier = Modifier
@@ -303,7 +319,7 @@ internal fun CollapsedMonthSummary(
             MonthSwitcherBar(navigation = navigation)
             Text(
                 text = stringResource(
-                    R.string.expenses_collapsed_totals,
+                    Res.string.expenses_collapsed_totals,
                     // A no-break space before the dot keeps it with the amount it follows, so
                     // a wrapped second line starts with an amount, never with "·".
                     totals.joinToString(separator = "\u00A0· ")
@@ -364,7 +380,7 @@ private fun TotalWithLabel(total: String) {
             style = MaterialTheme.typography.headlineMedium
         )
     }
-    val label = stringResource(R.string.expenses_shared_spend)
+    val label = stringResource(Res.string.expenses_shared_spend)
     if (LocalDensity.current.fontScale >= STACK_FONT_SCALE) {
         Column {
             totalText()
@@ -435,7 +451,7 @@ private fun SplitBar(momShare: Float, modifier: Modifier = Modifier) {
 @Suppress("LongParameterList") // the month's figures, who they are with, and the two actions
 private fun BalanceRow(
     balance: ExpenseBalance,
-    format: NumberFormat,
+    format: MoneyFormat,
     coParentName: String?,
     onSettleUp: (net: Double) -> Unit,
     modifier: Modifier = Modifier,
@@ -452,12 +468,12 @@ private fun BalanceRow(
     }
 
     val label = when {
-        settled -> stringResource(R.string.expenses_balance_settled)
+        settled -> stringResource(Res.string.expenses_balance_settled)
         net > 0 && coParentName != null ->
-            stringResource(R.string.expenses_balance_owed_to_you_named, coParentName, amount)
-        net > 0 -> stringResource(R.string.expenses_balance_owed_to_you, amount)
-        coParentName != null -> stringResource(R.string.expenses_balance_you_owe_named, coParentName, amount)
-        else -> stringResource(R.string.expenses_balance_you_owe, amount)
+            stringResource(Res.string.expenses_balance_owed_to_you_named, coParentName, amount)
+        net > 0 -> stringResource(Res.string.expenses_balance_owed_to_you, amount)
+        coParentName != null -> stringResource(Res.string.expenses_balance_you_owe_named, coParentName, amount)
+        else -> stringResource(Res.string.expenses_balance_you_owe, amount)
     }
     // Settled is a neutral fact, being owed is good news, owing is a nudge — but never an
     // error: owing your co-parent for half the school shoes is not a failure state.
@@ -478,11 +494,12 @@ private fun BalanceRow(
 
 /**
  * Where a month's payment stands, for [ExpenseSummaryHeader]: its [state] for this parent, the
- * amount recorded, and the one step this parent can take — say they paid, or that it arrived.
+ * amount recorded (plain decimal text, "450.00", the payment's minor units with two places), and
+ * the one step this parent can take — say they paid, or that it arrived.
  */
 data class PaymentStrip(
     val state: PaymentState,
-    val amount: java.math.BigDecimal? = null,
+    val amount: String? = null,
     val onMarkPaid: (() -> Unit)? = null,
     val onConfirm: (() -> Unit)? = null
 )
@@ -491,17 +508,17 @@ data class PaymentStrip(
 @Composable
 private fun PaymentBalanceStrip(
     payment: PaymentStrip,
-    format: NumberFormat,
+    format: MoneyFormat,
     coParentName: String?,
     modifier: Modifier
 ) {
     val amount = payment.amount?.let { format.format(it) }.orEmpty()
     val label = when (payment.state) {
-        PaymentState.CONFIRMED -> stringResource(R.string.payment_settled, amount)
-        PaymentState.PAID_BY_ME -> coParentName?.let { stringResource(R.string.payment_waiting_named, amount, it) }
-            ?: stringResource(R.string.payment_waiting, amount)
-        else -> coParentName?.let { stringResource(R.string.payment_paid_to_you_named, it, amount) }
-            ?: stringResource(R.string.payment_paid_to_you, amount)
+        PaymentState.CONFIRMED -> stringResource(Res.string.payment_settled, amount)
+        PaymentState.PAID_BY_ME -> coParentName?.let { stringResource(Res.string.payment_waiting_named, amount, it) }
+            ?: stringResource(Res.string.payment_waiting, amount)
+        else -> coParentName?.let { stringResource(Res.string.payment_paid_to_you_named, it, amount) }
+            ?: stringResource(Res.string.payment_paid_to_you, amount)
     }
     BalanceStrip(
         label = label,
@@ -555,7 +572,7 @@ private fun BalanceStrip(
     }
     val settleUp: @Composable (Modifier, () -> Unit) -> Unit = { chipModifier, onClick ->
         PillChip(
-            label = stringResource(R.string.expenses_settle_up),
+            label = stringResource(Res.string.expenses_settle_up),
             modifier = chipModifier,
             container = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -564,8 +581,8 @@ private fun BalanceStrip(
     }
     // "I paid" and "Money arrived" (25 October 2026) sit under the sentence, as a second action
     // beside Settle up would squeeze the sentence to a word per line.
-    val payStep: Pair<Int, () -> Unit>? = onMoneyArrived?.let { R.string.payment_money_arrived to it }
-        ?: onIPaid?.let { R.string.payment_i_paid to it }
+    val payStep: Pair<StringResource, () -> Unit>? = onMoneyArrived?.let { Res.string.payment_money_arrived to it }
+        ?: onIPaid?.let { Res.string.payment_i_paid to it }
     if (LocalDensity.current.fontScale >= STACK_FONT_SCALE || payStep != null) {
         Column(modifier = strip, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
             Row(
@@ -597,55 +614,5 @@ private fun BalanceStrip(
             sentence()
             if (onSettleUp != null) settleUp(Modifier, onSettleUp)
         }
-    }
-}
-
-/** Two named parents, so the previews render the same shape a paired device does. */
-private val previewParentNames = ParentNames(
-    parents = Parents(
-        me = NamedParent(uid = "u1", slot = "mom", name = "Olya"),
-        coParent = NamedParent(uid = "u2", slot = "dad", name = "Pavel"),
-        loaded = true
-    ),
-    youFallback = "You",
-    coParentFallback = "Co-parent",
-    unknownFallback = "Parent"
-)
-
-@LightDarkPreviews
-@Composable
-private fun ExpenseSummaryHeaderPairedPreview() {
-    PreviewWrapper {
-        ExpenseSummaryHeader(
-            balance = ExpenseBalance(
-                momPaid = 154.10,
-                dadPaid = 94.40,
-                total = 248.50,
-                netForCurrentUser = 29.85,
-                splitKnown = true
-            ),
-            currency = "USD",
-            parentNames = previewParentNames,
-            onSettleUp = {}
-        )
-    }
-}
-
-@LightDarkPreviews
-@Composable
-private fun ExpenseSummaryHeaderUnpairedPreview() {
-    PreviewWrapper {
-        ExpenseSummaryHeader(
-            balance = ExpenseBalance(
-                momPaid = 248.50,
-                dadPaid = 0.0,
-                total = 248.50,
-                netForCurrentUser = 0.0,
-                splitKnown = false
-            ),
-            currency = "USD",
-            parentNames = previewParentNames,
-            onSettleUp = {}
-        )
     }
 }

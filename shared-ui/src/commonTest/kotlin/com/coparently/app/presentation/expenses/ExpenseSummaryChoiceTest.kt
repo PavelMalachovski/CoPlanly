@@ -5,7 +5,7 @@ import com.coparently.app.domain.expenses.ExpenseBalance
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.model.Expense
 import com.coparently.app.domain.model.ExpenseCategory
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -51,7 +51,7 @@ class ExpenseSummaryChoiceTest {
     }
 
     @Test
-    fun `the picked currency is shown while the month holds it, else the first`() {
+    fun `the picked currency is shown while the month holds it - else the first`() {
         val balances = listOf(balance("CZK"), balance("EUR"))
         assertEquals("EUR", shownSummary(balances, "EUR")?.currency)
         assertEquals("CZK", shownSummary(balances, "USD")?.currency)

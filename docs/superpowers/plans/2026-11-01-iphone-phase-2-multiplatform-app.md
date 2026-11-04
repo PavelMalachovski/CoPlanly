@@ -1383,6 +1383,39 @@ Then the export and the school import:
   `utils.format(localizedDate(skeleton))` → `ReaderDateText.date`; the unassigned records' snackbar,
   worded with the Activity's `Context`, → a `UiText` resolved by `rememberUiTextResolver()`; `@StringRes
   Int` → `StringResource`. Public for the screenshots: `FamilyMoneyCard`.
+- Group 3, the money's screens (`git mv`, packages unchanged): every file of `presentation/expenses/` but
+  the two ViewModels (`AddExpenseScreen`, `CategoryPalette`, `CurrencySelector`, `ExpenseAnalytics`,
+  `ExpenseCategoryLabel`, `ExpenseList`, `ExpenseScreen`, `ExpenseSummaryHeader`, `MonthSwipe`,
+  `SettleUpDialog`) and `common/MonthPaging.kt` (on kotlinx-datetime's `YearMonth`, whose `compareTo`
+  orders months as `java.time`'s; `monthPagingDirection` still coerced to one step). The Android calls,
+  each replaced: `currencyFormat(currency)` held as a `NumberFormat` → `MoneyFormat(currency)` (new,
+  `expenses/MoneyFormat.kt`, `format(Double)` and `format(plain text)` over the money seam, the same
+  `NumberFormat` on Android); `currencyFormat(…).format(…)` → `ReaderMoneyText.amount(value, currency)`;
+  `NumberFormat.getPercentInstance` → `ReaderMoneyText.percent`; `PaymentStrip.amount`'s `BigDecimal` →
+  plain decimal text (`DecimalText.plain(minor, 2)`, which `BigDecimal(text)` reads back as the same
+  value and scale); `MinorUnits.fromDouble` → `DecimalText.parseHalfUp(value.toString(), 2)` (the
+  double's own text, half up, null past a Long, as `BigDecimal.valueOf` read it); "LLLL yyyy" titles →
+  `utils/MonthTitle.kt`'s `readerMonthTitle` (which `supportMonth` now calls), and the settle-up
+  question's untitled month → `ReaderDateText.pattern`; `localizedDate("MMMd")` → `ReaderDateText.date`;
+  `ofLocalizedDate(MEDIUM)` → `readerMediumDate`; the form's `rememberSaveable` `java.time.LocalDate` →
+  kotlinx-datetime with `LocalDateSaver`, its `Uri` receipt → text; `LocalDate.now()`/`YearMonth.now()` →
+  `rememberToday()` (the other-month check compares `yearMonth`s); the photo picker and the camera
+  (`TakePicture` into `cache/receipts/`, the CAMERA permission, `ActivityNotFoundException`) →
+  `FilePicker.rememberImagePicker` and `CameraCapture.rememberCapture(CaptureTarget.RECEIPT)`, whose
+  Android half is that code (`CaptureResult.NoCameraApp` and `PermissionDenied` show the form's two
+  messages); `context.getString` in the scan's snackbars → strings read in composition; `@StringRes`
+  → `StringResource`. **The carried note:** the receipt section shows only where `FilePicker` and
+  `PlatformImages` are available, and a photo is scanned only where `ReceiptTextRecognizer.available`
+  (new, `true` by default; `NoReceiptText` answers `false`; read through
+  `ExpenseViewModel.receiptScanAvailable`). Public for the app: `CollapsedMonthSummary` (screenshots),
+  `ReceiptScanEffect`, `ReceiptScanFormState`, `ReceiptScanCallbacks` (`ReceiptScanEffectTest`, whose
+  form date is now a kotlinx-datetime day). The header's previews moved to the app's
+  `expenses/ExpensePreviews.kt`. Tests to `commonTest`: `BuildReceiptScanUpdateTest`,
+  `CategoryPaletteTest` (its hex through `toString(16)`, not `String.format`), `ExpenseSummaryChoiceTest`,
+  `MonthSwipeTest`, `MonthPagingTest` (kotlinx-datetime fixtures, names without commas);
+  `ReaderMoneyTextTest` holds the `Double` overload and the percent to `NumberFormat`.
+  `JavaPickerDates.kt` keeps the export, the child records' picker and the two androidTest classes
+  (11g).
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

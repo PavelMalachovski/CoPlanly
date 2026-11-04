@@ -38,14 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.data.family.RecordPlace
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.bothSlotsKnown
@@ -65,9 +63,19 @@ import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
 import com.coparently.app.presentation.theme.titleSmallEmphasized
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
-import java.util.Locale
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expenses_delete
+import com.coparently.app.resources.expenses_receipt_photo
+import com.coparently.app.resources.expenses_row_meta
+import com.coparently.app.resources.expenses_row_meta_with_receipt
+import com.coparently.app.resources.expenses_row_subtitle
+import com.coparently.app.resources.expenses_row_subtitle_unknown_payer
+import com.coparently.app.resources.expenses_row_subtitle_you
+import com.coparently.app.resources.expenses_split_even
+import com.coparently.app.resources.expenses_split_n_ways
+import com.coparently.app.resources.expenses_split_none
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 
 /** Alpha of the payer-tinted circle behind a row's leading icon. */
 private const val PAYER_TINT_ALPHA = 0.18f
@@ -187,7 +195,7 @@ fun ExpenseList(
         // replaces — does not close on the first exploratory tap.
         FullScreenImageDialog(
             model = photo,
-            contentDescription = stringResource(R.string.expenses_receipt_photo),
+            contentDescription = stringResource(Res.string.expenses_receipt_photo),
             onDismiss = { viewedReceipt = null }
         )
     }
@@ -231,8 +239,7 @@ fun ExpenseItem(
     place: RecordPlace = RecordPlace.ON_SCREEN
 ) {
     val receipt = rememberRecordPhoto(expense.receiptUrl, RecordPhotoKind.RECEIPT, expense.id, expense.familyId)
-    val dateFormatter = remember(Locale.getDefault()) { localizedDate("MMMd") }
-    val format = remember(expense.currency) { currencyFormat(expense.currency) }
+    val format = remember(expense.currency) { MoneyFormat(expense.currency) }
     val counted = place == RecordPlace.ON_SCREEN
 
     // Neutral for a row the family does not count: a parent colour names a person, and an earlier
@@ -244,7 +251,7 @@ fun ExpenseItem(
     }
     val subtitle = rowSubtitle(
         category = stringResource(expense.category.labelRes),
-        date = expense.date.format(dateFormatter),
+        date = ReaderDateText.date(expense.date, "MMMd"),
         payerRole = payerRole,
         parentNames = parentNames
     )
@@ -260,8 +267,8 @@ fun ExpenseItem(
     }
     val meta = when {
         splitLabel == null -> subtitle
-        receipt != null -> stringResource(R.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
-        else -> stringResource(R.string.expenses_row_meta, subtitle, splitLabel)
+        receipt != null -> stringResource(Res.string.expenses_row_meta_with_receipt, subtitle, splitLabel)
+        else -> stringResource(Res.string.expenses_row_meta, subtitle, splitLabel)
     }
 
     Surface(
@@ -285,7 +292,7 @@ fun ExpenseItem(
             if (receipt != null) {
                 AppImage(
                     model = receipt,
-                    contentDescription = stringResource(R.string.expenses_receipt_photo),
+                    contentDescription = stringResource(Res.string.expenses_receipt_photo),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
@@ -357,10 +364,10 @@ fun ExpenseItem(
 @Composable
 private fun rowSubtitle(category: String, date: String, payerRole: String?, parentNames: ParentNames): String =
     when {
-        parentNames.isReader(payerRole) -> stringResource(R.string.expenses_row_subtitle_you, category, date)
+        parentNames.isReader(payerRole) -> stringResource(Res.string.expenses_row_subtitle_you, category, date)
         payerRole != null ->
-            stringResource(R.string.expenses_row_subtitle, category, parentNames.labelFor(payerRole), date)
-        else -> stringResource(R.string.expenses_row_subtitle_unknown_payer, category, date)
+            stringResource(Res.string.expenses_row_subtitle, category, parentNames.labelFor(payerRole), date)
+        else -> stringResource(Res.string.expenses_row_subtitle_unknown_payer, category, date)
     }
 
 /**
@@ -396,10 +403,10 @@ private fun splitLabelOf(expense: Expense, splitKnown: Boolean, parentNames: Par
         // Each name with its own share (second audit: "split Alice 60/40" left the 40 to guess).
         ratio != null -> splitSharesText(ratio, parentNames)
         expense.isTwoWaySplit() ->
-            stringResource(R.string.expenses_split_even)
+            stringResource(Res.string.expenses_split_even)
         expense.splitBetween.size > 2 ->
-            stringResource(R.string.expenses_split_n_ways, expense.splitBetween.size)
-        else -> stringResource(R.string.expenses_split_none)
+            stringResource(Res.string.expenses_split_n_ways, expense.splitBetween.size)
+        else -> stringResource(Res.string.expenses_split_none)
     }
 }
 
@@ -429,7 +436,7 @@ private fun SwipeToDeleteRow(
 
     // A swipe is invisible to TalkBack and Switch Access, so the same delete is offered as a
     // custom accessibility action — otherwise those users could not remove an expense at all.
-    val deleteLabel = stringResource(R.string.expenses_delete)
+    val deleteLabel = stringResource(Res.string.expenses_delete)
     SwipeToDismissBox(
         state = dismissState,
         modifier = Modifier.semantics {
@@ -455,7 +462,7 @@ private fun SwipeToDeleteRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.expenses_delete),
+                    contentDescription = stringResource(Res.string.expenses_delete),
                     tint = MaterialTheme.colorScheme.onError
                 )
             }

@@ -1,7 +1,7 @@
 package com.coparently.app.presentation.expenses
 
 import com.coparently.app.domain.model.ExpenseCategory
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -41,7 +41,7 @@ class CategoryPaletteTest {
     }
 
     @Test
-    fun `the dark palette is separately chosen, not the light one flipped`() {
+    fun `the dark palette is separately chosen - not the light one flipped`() {
         // Reported: worst adjacent pair ΔE 11.1 under deuteranopia, ΔE 25.0 under full colour
         // vision, and — unlike light — every one of the nine clears 3:1 against the surface.
         assertEquals(
@@ -83,7 +83,7 @@ class CategoryPaletteTest {
     }
 
     @Test
-    fun `every category has a colour, whatever gets added later`() {
+    fun `every category has a colour - whatever gets added later`() {
         // The slot is the ordinal, so a tenth category would silently reuse slot 0's lightness
         // and chroma at a new hue rather than failing to compile. That is the one thing this
         // design cannot enforce at the type level, so it is asserted here instead: nine, and
@@ -98,5 +98,5 @@ class CategoryPaletteTest {
     private fun hexes(seed: Int, dark: Boolean): List<String> =
         ExpenseCategory.entries.map { hex(CategoryPalette.sliceArgb(it, seed, dark)) }
 
-    private fun hex(argb: Int): String = "#%06x".format(argb and 0xFFFFFF)
+    private fun hex(argb: Int): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
 }

@@ -34,6 +34,13 @@ data class ReceiptScan(
 interface ReceiptTextRecognizer {
 
     /**
+     * Whether this phone reads a receipt's text at all. The expense form scans a photo only when it
+     * does, and says nothing about a scan otherwise (design item 8): ML Kit's recognizer on Android
+     * always does; the iPhone's stand-in does not yet (MON-24 phase 2, slice 11e).
+     */
+    val available: Boolean get() = true
+
+    /**
      * Recognises the text on the image behind [imageUri].
      *
      * @param imageUri Content or file URI string of a local image

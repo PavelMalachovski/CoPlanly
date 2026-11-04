@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.expenses
 
-import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Checkroom
@@ -17,9 +16,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.coparently.app.R
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.expenses_category_activities
+import com.coparently.app.resources.expenses_category_clothing
+import com.coparently.app.resources.expenses_category_education
+import com.coparently.app.resources.expenses_category_food
+import com.coparently.app.resources.expenses_category_household
+import com.coparently.app.resources.expenses_category_medical
+import com.coparently.app.resources.expenses_category_other
+import com.coparently.app.resources.expenses_category_toys
+import com.coparently.app.resources.expenses_category_transportation
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Localized label resource for an [ExpenseCategory].
@@ -27,18 +36,17 @@ import com.coparently.app.presentation.theme.CoPlanlyColors
  * Presentation-layer mapping: the enum names remain the persisted wire values, while the
  * user-facing label is resolved through string resources so it follows the app locale.
  */
-@get:StringRes
-internal val ExpenseCategory.labelRes: Int
+internal val ExpenseCategory.labelRes: StringResource
     get() = when (this) {
-        ExpenseCategory.EDUCATION -> R.string.expenses_category_education
-        ExpenseCategory.MEDICAL -> R.string.expenses_category_medical
-        ExpenseCategory.CLOTHING -> R.string.expenses_category_clothing
-        ExpenseCategory.FOOD -> R.string.expenses_category_food
-        ExpenseCategory.ACTIVITIES -> R.string.expenses_category_activities
-        ExpenseCategory.TRANSPORTATION -> R.string.expenses_category_transportation
-        ExpenseCategory.TOYS -> R.string.expenses_category_toys
-        ExpenseCategory.HOUSEHOLD -> R.string.expenses_category_household
-        ExpenseCategory.OTHER -> R.string.expenses_category_other
+        ExpenseCategory.EDUCATION -> Res.string.expenses_category_education
+        ExpenseCategory.MEDICAL -> Res.string.expenses_category_medical
+        ExpenseCategory.CLOTHING -> Res.string.expenses_category_clothing
+        ExpenseCategory.FOOD -> Res.string.expenses_category_food
+        ExpenseCategory.ACTIVITIES -> Res.string.expenses_category_activities
+        ExpenseCategory.TRANSPORTATION -> Res.string.expenses_category_transportation
+        ExpenseCategory.TOYS -> Res.string.expenses_category_toys
+        ExpenseCategory.HOUSEHOLD -> Res.string.expenses_category_household
+        ExpenseCategory.OTHER -> Res.string.expenses_category_other
     }
 
 /**

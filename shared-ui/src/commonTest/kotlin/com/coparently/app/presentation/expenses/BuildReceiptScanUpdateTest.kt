@@ -3,9 +3,8 @@ package com.coparently.app.presentation.expenses
 import com.coparently.app.domain.model.ExpenseCategory
 import com.coparently.app.domain.money.SupportedCurrency
 import com.coparently.app.domain.receipts.ReceiptScan
-import kotlinx.datetime.toJavaLocalDate
-import org.junit.Test
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -19,13 +18,13 @@ import kotlin.test.assertNull
  */
 class BuildReceiptScanUpdateTest {
 
-    private val today = LocalDate.of(2026, 7, 30)
+    private val today = LocalDate(2026, 7, 30)
 
     private val scan = ReceiptScan(
         total = 299.0,
         currency = "CZK",
         merchant = "LEKARNA DR.MAX",
-        date = kotlinx.datetime.LocalDate(2026, 7, 12),
+        date = LocalDate(2026, 7, 12),
         category = ExpenseCategory.MEDICAL
     )
 
@@ -55,7 +54,7 @@ class BuildReceiptScanUpdateTest {
     @Test
     fun `date still at today is filled from the scan`() {
         val update = buildReceiptScanUpdate(scan, untouchedForm, today)
-        assertEquals(scan.date?.toJavaLocalDate(), update.date)
+        assertEquals(scan.date, update.date)
     }
 
     @Test
@@ -88,7 +87,7 @@ class BuildReceiptScanUpdateTest {
 
     @Test
     fun `a date moved off today is not overwritten`() {
-        val formState = untouchedForm.copy(date = today.minusDays(3))
+        val formState = untouchedForm.copy(date = LocalDate(2026, 7, 27))
         val update = buildReceiptScanUpdate(scan, formState, today)
         assertNull(update.date)
     }

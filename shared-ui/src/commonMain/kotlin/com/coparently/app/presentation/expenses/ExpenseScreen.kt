@@ -49,16 +49,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
-import com.coparently.app.data.money.MinorUnits
 import com.coparently.app.domain.expenses.CurrencyBalance
 import com.coparently.app.domain.expenses.SplitRatio
 import com.coparently.app.domain.expenses.SplitRatioProposal
 import com.coparently.app.domain.model.Expense
+import com.coparently.app.domain.money.DecimalText
+import com.coparently.app.domain.payment.PaymentQr
 import com.coparently.app.domain.payments.Payment
 import com.coparently.app.domain.payments.PaymentKind
 import com.coparently.app.domain.payments.PaymentState
@@ -86,13 +85,39 @@ import com.coparently.app.presentation.payments.PaymentsViewModel
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.resources.Res
+import com.coparently.app.resources.expense_analytics_tab_analytics
+import com.coparently.app.resources.expense_analytics_tab_list
+import com.coparently.app.resources.expense_analytics_view_label
+import com.coparently.app.resources.expense_question_body
+import com.coparently.app.resources.expense_question_cancel
+import com.coparently.app.resources.expense_question_confirm
+import com.coparently.app.resources.expense_question_failed
+import com.coparently.app.resources.expense_question_sent
+import com.coparently.app.resources.expense_question_title
+import com.coparently.app.resources.expenses_add
+import com.coparently.app.resources.expenses_back
+import com.coparently.app.resources.expenses_deleted
+import com.coparently.app.resources.expenses_deleted_undo
+import com.coparently.app.resources.expenses_empty_description
+import com.coparently.app.resources.expenses_empty_title
 import com.coparently.app.resources.expenses_filter_members
+import com.coparently.app.resources.expenses_month_empty
+import com.coparently.app.resources.expenses_split_answer_failed
+import com.coparently.app.resources.expenses_split_proposal_body_named
+import com.coparently.app.resources.expenses_split_proposal_confirm
+import com.coparently.app.resources.expenses_split_proposal_decline
+import com.coparently.app.resources.expenses_split_proposal_later
+import com.coparently.app.resources.expenses_split_proposal_title
+import com.coparently.app.resources.expenses_split_proposal_waiting_body_named
+import com.coparently.app.resources.expenses_split_proposal_waiting_title
+import com.coparently.app.resources.expenses_split_proposal_withdraw
+import com.coparently.app.resources.expenses_title
+import com.coparently.app.utils.ReaderMoneyText
+import com.coparently.app.utils.readerMonthTitle
 import kotlinx.coroutines.launch
-import kotlinx.datetime.toJavaYearMonth
+import kotlinx.datetime.YearMonth
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -212,16 +237,16 @@ fun ExpenseScreen(
     val scope = rememberCoroutineScope()
     // The co-parent's expense this parent tapped, while its dialog asks whether to question it.
     var questioned by remember { mutableStateOf<Expense?>(null) }
-    val questionSent = stringResource(R.string.expense_question_sent)
-    val questionFailed = stringResource(R.string.expense_question_failed)
-    val deletedMessage = stringResource(R.string.expenses_deleted)
-    val undoLabel = stringResource(R.string.expenses_deleted_undo)
+    val questionSent = stringResource(Res.string.expense_question_sent)
+    val questionFailed = stringResource(Res.string.expense_question_failed)
+    val deletedMessage = stringResource(Res.string.expenses_deleted)
+    val undoLabel = stringResource(Res.string.expenses_deleted_undo)
 
     // A refused answer has to say so. The banner is the only route to accepting or declining a
     // split, and the ViewModel used to report the refusal into `saveState`, which belongs to the
     // Add Expense form and nothing here reads — so the tap looked like it had simply done
     // nothing while the co-parent went on waiting.
-    val answerFailedMessage = stringResource(R.string.expenses_split_answer_failed)
+    val answerFailedMessage = stringResource(Res.string.expenses_split_answer_failed)
     LaunchedEffect(paymentError) {
         paymentError?.let { error ->
             snackbarHostState.showSnackbar(error.asString(textResolver))
@@ -261,7 +286,7 @@ fun ExpenseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.expenses_title)) },
+                title = { Text(stringResource(Res.string.expenses_title)) },
                 // A detail screen since the Family tab replaced the Expenses tab (new-user review,
                 // October 2026): opened from the tab's money card, Home's tile or a push.
                 navigationIcon = {
@@ -269,7 +294,7 @@ fun ExpenseScreen(
                         IconButton(onClick = navigateUp) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.expenses_back)
+                                contentDescription = stringResource(Res.string.expenses_back)
                             )
                         }
                     }
@@ -287,7 +312,7 @@ fun ExpenseScreen(
             // column, exactly where the button floats, so something was always under it.
             ScrollAwareFab(fabVisibility) {
                 FloatingActionButton(onClick = onAddExpense) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.expenses_add))
+                    Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.expenses_add))
                 }
             }
         }
@@ -333,9 +358,9 @@ fun ExpenseScreen(
             } else if (expenses.isEmpty()) {
                 EmptyState(
                     icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                    title = stringResource(R.string.expenses_empty_title),
-                    description = stringResource(R.string.expenses_empty_description),
-                    actionLabel = stringResource(R.string.expenses_add),
+                    title = stringResource(Res.string.expenses_empty_title),
+                    description = stringResource(Res.string.expenses_empty_description),
+                    actionLabel = stringResource(Res.string.expenses_add),
                     onAction = onAddExpense,
                     modifier = Modifier
                         .weight(1f)
@@ -350,10 +375,7 @@ fun ExpenseScreen(
                 AnimatedContent(
                     targetState = monthOfExpenses,
                     transitionSpec = {
-                        monthPagingTransition(
-                            initialState.month.toJavaYearMonth(),
-                            targetState.month.toJavaYearMonth()
-                        )
+                        monthPagingTransition(initialState.month, targetState.month)
                     },
                     label = "expenses-month",
                     modifier = Modifier.weight(1f)
@@ -371,7 +393,7 @@ fun ExpenseScreen(
                     ) {
                         val balancesByCurrency = shownMonth.balances
                         val monthNavigation = MonthNavigation(
-                            label = rememberMonthLabel(shownMonth.month.toJavaYearMonth()),
+                            label = rememberMonthLabel(shownMonth.month),
                             expenseCount = monthExpenses.size,
                             onPrevious = viewModel::showPreviousMonth,
                             onNext = viewModel::showNextMonth
@@ -399,7 +421,7 @@ fun ExpenseScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = stringResource(R.string.expenses_month_empty),
+                                    text = stringResource(Res.string.expenses_month_empty),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -456,7 +478,7 @@ fun ExpenseScreen(
                                             enabled = !paymentBusy,
                                             onMarkPaid = {
                                                 shownMonth.familyId?.let { family ->
-                                                    val owed = MinorUnits.fromDouble(
+                                                    val owed = minorUnitsOf(
                                                         abs(currencyBalance.balance.netForCurrentUser)
                                                     ) ?: return@let
                                                     paymentsViewModel.markPaid(
@@ -618,8 +640,10 @@ fun ExpenseScreen(
                                         CollapsedMonthSummary(
                                             navigation = monthNavigation,
                                             totals = balancesByCurrency.map { currencyBalance ->
-                                                currencyFormat(currencyBalance.currency)
-                                                    .format(currencyBalance.balance.total)
+                                                ReaderMoneyText.amount(
+                                                    currencyBalance.balance.total,
+                                                    currencyBalance.currency
+                                                )
                                             },
                                             modifier = Modifier.monthSwipe(monthNavigation)
                                         )
@@ -673,13 +697,13 @@ private fun QuestionExpenseDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.expense_question_title)) },
-        text = { Text(stringResource(R.string.expense_question_body, coParentName, expense.title)) },
+        title = { Text(stringResource(Res.string.expense_question_title)) },
+        text = { Text(stringResource(Res.string.expense_question_body, coParentName, expense.title)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text(stringResource(R.string.expense_question_confirm)) }
+            TextButton(onClick = onConfirm) { Text(stringResource(Res.string.expense_question_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.expense_question_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.expense_question_cancel)) }
         }
     )
 }
@@ -700,7 +724,7 @@ private fun ViewSwitcher(
 ) {
     // The row itself is labelled: two unlabelled-in-context buttons announce "List" and
     // "Analytics" with nothing saying what they switch.
-    val label = stringResource(R.string.expense_analytics_view_label)
+    val label = stringResource(Res.string.expense_analytics_view_label)
     SingleChoiceSegmentedButtonRow(
         modifier = modifier
             .fillMaxWidth()
@@ -711,19 +735,18 @@ private fun ViewSwitcher(
             onClick = { onSelect(false) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
         ) {
-            Text(stringResource(R.string.expense_analytics_tab_list))
+            Text(stringResource(Res.string.expense_analytics_tab_list))
         }
         SegmentedButton(
             selected = showAnalytics,
             onClick = { onSelect(true) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
         ) {
-            Text(stringResource(R.string.expense_analytics_tab_analytics))
+            Text(stringResource(Res.string.expense_analytics_tab_analytics))
         }
     }
 }
 
-/** The selected month formatted as "August 2026", capitalised for the current locale. */
 /**
  * The currency whose summary is shown: the one the parent picked while the month still holds it,
  * else the month's first. Null for a month with nothing counted.
@@ -731,11 +754,16 @@ private fun ViewSwitcher(
 internal fun shownSummary(balances: List<CurrencyBalance>, picked: String?): CurrencyBalance? =
     balances.firstOrNull { it.currency == picked } ?: balances.firstOrNull()
 
+/** The selected month formatted as "August 2026", capitalised for the current locale. */
 @Composable
-private fun rememberMonthLabel(month: YearMonth): String = remember(month) {
-    month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-}
+private fun rememberMonthLabel(month: YearMonth): String = remember(month) { readerMonthTitle(month) }
+
+/**
+ * [value] in minor units rounded half up, or null when it does not fit a Long: what the app's
+ * `MinorUnits.fromDouble` answered through `BigDecimal.valueOf(value)`, whose text is the double's
+ * own (`toString()`), read by [DecimalText.parseHalfUp] as the money documents read theirs.
+ */
+private fun minorUnitsOf(value: Double): Long? = DecimalText.parseHalfUp(value.toString(), PaymentQr.MONEY_SCALE)
 
 /**
  * This parent proposed a split and is waiting for an answer (UX-17).
@@ -760,16 +788,16 @@ private fun SplitRatioWaitingBanner(
     onWithdraw: () -> Unit
 ) {
     InlineBanner(
-        title = stringResource(R.string.expenses_split_proposal_waiting_title),
+        title = stringResource(Res.string.expenses_split_proposal_waiting_title),
         text = stringResource(
-            R.string.expenses_split_proposal_waiting_body_named,
+            Res.string.expenses_split_proposal_waiting_body_named,
             namedShares(proposal.ratio, parentNames),
             coParentName(parentNames)
         ),
         modifier = Modifier.padding(horizontal = Spacing.L, vertical = Spacing.S),
         actions = {
             TextButton(onClick = onWithdraw) {
-                Text(stringResource(R.string.expenses_split_proposal_withdraw))
+                Text(stringResource(Res.string.expenses_split_proposal_withdraw))
             }
         }
     )
@@ -800,9 +828,9 @@ private fun SplitRatioProposalBanner(
     onLater: () -> Unit
 ) {
     InlineBanner(
-        title = stringResource(R.string.expenses_split_proposal_title),
+        title = stringResource(Res.string.expenses_split_proposal_title),
         text = stringResource(
-            R.string.expenses_split_proposal_body_named,
+            Res.string.expenses_split_proposal_body_named,
             coParentName(parentNames),
             namedShares(proposal.ratio, parentNames)
         ),
@@ -810,13 +838,13 @@ private fun SplitRatioProposalBanner(
         tone = BannerTone.ATTENTION,
         actions = {
             Button(onClick = onAccept) {
-                Text(stringResource(R.string.expenses_split_proposal_confirm))
+                Text(stringResource(Res.string.expenses_split_proposal_confirm))
             }
             TextButton(onClick = onDecline) {
-                Text(stringResource(R.string.expenses_split_proposal_decline))
+                Text(stringResource(Res.string.expenses_split_proposal_decline))
             }
             TextButton(onClick = onLater) {
-                Text(stringResource(R.string.expenses_split_proposal_later))
+                Text(stringResource(Res.string.expenses_split_proposal_later))
             }
         }
     )
@@ -850,7 +878,7 @@ internal fun paymentStripFor(
     val state = PaymentState.of(recorded, myUid)
     return PaymentStrip(
         state = state,
-        amount = recorded?.amountMinor?.let(MinorUnits::toDecimal),
+        amount = recorded?.amountMinor?.let { DecimalText.plain(it, PaymentQr.MONEY_SCALE) },
         onMarkPaid = onMarkPaid.takeIf { enabled && state == PaymentState.NONE && owed < 0 },
         onConfirm = onConfirm.takeIf { enabled && state == PaymentState.PAID_TO_ME }
     )
