@@ -3076,6 +3076,9 @@ bytes are identical on Android):
   iPhone for now) the export offers no format. The app's `java.time` picker overloads are gone.
   Then family friends, professionals and the parenting plan: their codes shared through the share
   sheet, no Share button where there is none.
+  Then the school import. **Slice 11g built, CI pending: every screen is in `:shared-ui`** — the app
+  keeps `MainActivity`, the widget, navigation (Task 12), the previews and the Android halves of the
+  platform interfaces.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

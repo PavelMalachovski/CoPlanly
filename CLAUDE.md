@@ -1666,7 +1666,8 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              family's records (presentation/childinfo/, pets/, contacts/, guests/), then the
              vault's, the export's and the journal's (presentation/documents/, export/, journal/),
              then family friends', professionals' and the parenting plan's (presentation/friends/,
-             professionals/, parentingplan/).
+             professionals/, parentingplan/), then the school import's (presentation/school/):
+             every screen, Task 11 done.
              It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
@@ -1680,20 +1681,16 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
              sync but its WorkManager classes, the request clocks but their notices and worker,
              data/family/, the school import but its wording and worker, the export but its file
              writer, and some of data/chat/, data/support/ and data/session/
-presentation/ — Compose screens per feature not moved yet (slice 11g), MainActivity, the widget
-             and navigation. The strings, the theme, the design system's components, the shared
-             state and every ViewModel are in shared-ui/ (Task 10; SyncViewModel and AuthViewModel
-             since slice 11f), and so are chat's, the event form's, the calendar's, custody's, the
-             requests', the family's, the expenses', child support's, Settings', pairing's,
-             onboarding's, the sign-in's, the profile's, Home's, the month review's, the
-             stickers', the child and pet records', the contacts', the guest's, the vault's, the
-             export's, the journal's, family friends', professionals' and the parenting plan's
-             screens (Task 11, slices 11b–11g); the
-             app keeps their previews and the Android halves of the platform interfaces
-             (presentation/platform/, the language picker's AndroidAppLanguages, Google's
-             sign-in's AndroidGoogleCalendarSignIn, the credential sheets' AndroidCredentialSignIn
-             with AndroidAuthErrors, the QR scanner's QRScannerActivity and QrScannerScreen, the
-             invitation QR's AndroidInviteQrCodes)
+presentation/ — MainActivity, the widget and navigation (Task 12). Every screen is in shared-ui/
+             since Task 11 (slices 11b–11g), with the strings, the theme, the design system's
+             components, the shared state and every ViewModel (Task 10; SyncViewModel and
+             AuthViewModel since slice 11f); the app keeps their previews and the Android halves
+             of the platform interfaces (presentation/platform/, the language picker's
+             AndroidAppLanguages, Google's sign-in's AndroidGoogleCalendarSignIn, the credential
+             sheets' AndroidCredentialSignIn with AndroidAuthErrors, the QR scanner's
+             QRScannerActivity and QrScannerScreen, the invitation QR's AndroidInviteQrCodes, the
+             export's RecordShareIntent, the dictation language, the file viewer and clipboard
+             helpers and the permission checks)
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2342,6 +2339,12 @@ clash with the Android actuals' `ReaderDateTextKt` class), a grant's
 through `ShareSheet` (worded through `rememberUiTextResolver` at the tap), and neither sheet offers
 Share where there is none (`FriendInviteContent`'s `onShare` is null then); `FriendsScreenTest`
 (Robolectric, in the app) composes the screen with the sheet closed, so it reads no platform local.
+**Then the school import** (slice 11g): `presentation/school/`'s `ConnectSchoolScreen` and
+`SchoolImportScreen`. Back goes through Compose Multiplatform's `BackHandler` (opted in as the
+onboarding's is), and the last import's time through `ReaderDateText.dateWithTime` of the instant in
+the system zone. **Task 11 is done with it**: what is left under `app/.../presentation/` is
+`MainActivity`, `widget/`, `navigation/` (Task 12), the previews and the Android halves of the
+platform interfaces.
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its

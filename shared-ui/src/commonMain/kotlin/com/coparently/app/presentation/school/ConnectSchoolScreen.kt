@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.school
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,11 +35,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import com.coparently.app.R
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.presentation.common.BannerTone
 import com.coparently.app.presentation.common.EmptyState
@@ -54,6 +53,42 @@ import com.coparently.app.presentation.common.StickyActionBar
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.titleMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.school_connect_child_label
+import com.coparently.app.resources.school_connect_confirm_days_off
+import com.coparently.app.resources.school_connect_confirm_events
+import com.coparently.app.resources.school_connect_confirm_hours
+import com.coparently.app.resources.school_connect_confirm_label
+import com.coparently.app.resources.school_connect_confirm_not_imported
+import com.coparently.app.resources.school_connect_confirm_shared
+import com.coparently.app.resources.school_connect_continue
+import com.coparently.app.resources.school_connect_family_label
+import com.coparently.app.resources.school_connect_family_unnamed
+import com.coparently.app.resources.school_connect_family_with
+import com.coparently.app.resources.school_connect_manual
+import com.coparently.app.resources.school_connect_more_towns
+import com.coparently.app.resources.school_connect_no_children
+import com.coparently.app.resources.school_connect_no_events
+import com.coparently.app.resources.school_connect_no_rights
+import com.coparently.app.resources.school_connect_no_schools
+import com.coparently.app.resources.school_connect_no_timetable
+import com.coparently.app.resources.school_connect_no_towns
+import com.coparently.app.resources.school_connect_password
+import com.coparently.app.resources.school_connect_password_note
+import com.coparently.app.resources.school_connect_reconnect_title
+import com.coparently.app.resources.school_connect_save
+import com.coparently.app.resources.school_connect_school_label
+import com.coparently.app.resources.school_connect_sign_in
+import com.coparently.app.resources.school_connect_signed_in_as
+import com.coparently.app.resources.school_connect_title
+import com.coparently.app.resources.school_connect_town_hint
+import com.coparently.app.resources.school_connect_town_label
+import com.coparently.app.resources.school_connect_url_check
+import com.coparently.app.resources.school_connect_url_hint
+import com.coparently.app.resources.school_connect_url_label
+import com.coparently.app.resources.school_connect_username
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -68,7 +103,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * @param onDone Called once the connection is saved (or signed in again).
  * @param viewModel Screen state.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+// `ExperimentalComposeUiApi`: Compose Multiplatform's common `BackHandler` (androidx.activity's on
+// Android, as before).
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ConnectSchoolScreen(
     onNavigateUp: () -> Unit,
@@ -89,9 +126,9 @@ fun ConnectSchoolScreen(
             TopAppBar(
                 title = {
                     val title = if (state.reconnecting) {
-                        R.string.school_connect_reconnect_title
+                        Res.string.school_connect_reconnect_title
                     } else {
-                        R.string.school_connect_title
+                        Res.string.school_connect_title
                     }
                     Text(stringResource(title))
                 },
@@ -99,7 +136,7 @@ fun ConnectSchoolScreen(
                     IconButton(onClick = goBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -145,8 +182,8 @@ private fun StepContent(
             OutlinedTextField(
                 value = state.manualUrl,
                 onValueChange = viewModel::onManualUrl,
-                label = { Text(stringResource(R.string.school_connect_url_label)) },
-                supportingText = { Text(stringResource(R.string.school_connect_url_hint)) },
+                label = { Text(stringResource(Res.string.school_connect_url_label)) },
+                supportingText = { Text(stringResource(Res.string.school_connect_url_hint)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -176,24 +213,24 @@ private fun PrimaryAction(
     when (state.step) {
         ConnectStep.TOWN, ConnectStep.SCHOOL -> Unit
         ConnectStep.MANUAL -> StickyActionBar(
-            label = stringResource(R.string.school_connect_url_check),
+            label = stringResource(Res.string.school_connect_url_check),
             onClick = viewModel::checkManualUrl,
             enabled = state.manualUrl.isNotBlank(),
             busy = state.isBusy
         )
         ConnectStep.CREDENTIALS -> StickyActionBar(
-            label = stringResource(R.string.school_connect_sign_in),
+            label = stringResource(Res.string.school_connect_sign_in),
             onClick = onSignIn,
             enabled = !state.isLoading && state.username.isNotBlank() && passwordEntered,
             busy = state.isBusy
         )
         ConnectStep.CHOOSE -> StickyActionBar(
-            label = stringResource(R.string.school_connect_continue),
+            label = stringResource(Res.string.school_connect_continue),
             onClick = viewModel::toConfirm,
             enabled = state.canContinue
         )
         ConnectStep.CONFIRM -> StickyActionBar(
-            label = stringResource(R.string.school_connect_save),
+            label = stringResource(Res.string.school_connect_save),
             onClick = viewModel::connect,
             busy = state.isBusy
         )
@@ -226,15 +263,15 @@ private fun TownStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewMo
         OutlinedTextField(
             value = state.townQuery,
             onValueChange = viewModel::onTownQuery,
-            label = { Text(stringResource(R.string.school_connect_town_label)) },
-            supportingText = { Text(stringResource(R.string.school_connect_town_hint)) },
+            label = { Text(stringResource(Res.string.school_connect_town_label)) },
+            supportingText = { Text(stringResource(Res.string.school_connect_town_hint)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.EditNote,
-                title = stringResource(R.string.school_connect_manual),
+                title = stringResource(Res.string.school_connect_manual),
                 onClick = viewModel::enterManually
             )
         }
@@ -250,7 +287,7 @@ private fun TownList(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewMo
     val towns = state.visibleTowns
     if (towns.isEmpty()) {
         Text(
-            text = stringResource(R.string.school_connect_no_towns),
+            text = stringResource(Res.string.school_connect_no_towns),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -268,7 +305,7 @@ private fun TownList(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewMo
     }
     if (towns.size > MAX_TOWNS) {
         Text(
-            text = stringResource(R.string.school_connect_more_towns),
+            text = stringResource(Res.string.school_connect_more_towns),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -286,13 +323,13 @@ private fun SchoolStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolView
     }
     StepColumn(state, modifier) {
         Column {
-            GroupLabel(stringResource(R.string.school_connect_school_label, town))
+            GroupLabel(stringResource(Res.string.school_connect_school_label, town))
             when {
                 state.isLoading -> ListSkeleton()
                 state.schools.isEmpty() -> EmptyState(
                     icon = Icons.Default.School,
-                    title = stringResource(R.string.school_connect_no_schools),
-                    actionLabel = stringResource(R.string.school_connect_manual),
+                    title = stringResource(Res.string.school_connect_no_schools),
+                    actionLabel = stringResource(Res.string.school_connect_manual),
                     onAction = viewModel::enterManually
                 )
                 else -> SectionGroup {
@@ -310,7 +347,7 @@ private fun SchoolStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolView
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.EditNote,
-                title = stringResource(R.string.school_connect_manual),
+                title = stringResource(Res.string.school_connect_manual),
                 onClick = viewModel::enterManually
             )
         }
@@ -332,7 +369,7 @@ private fun CredentialsFields(
     OutlinedTextField(
         value = state.username,
         onValueChange = onUsername,
-        label = { Text(stringResource(R.string.school_connect_username)) },
+        label = { Text(stringResource(Res.string.school_connect_username)) },
         readOnly = state.reconnecting,
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
@@ -340,14 +377,14 @@ private fun CredentialsFields(
     OutlinedTextField(
         value = password,
         onValueChange = onPassword,
-        label = { Text(stringResource(R.string.school_connect_password)) },
+        label = { Text(stringResource(Res.string.school_connect_password)) },
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
     InlineBanner(
-        text = stringResource(R.string.school_connect_password_note),
+        text = stringResource(Res.string.school_connect_password_note),
         icon = Icons.Default.Lock
     )
 }
@@ -357,7 +394,7 @@ private fun CredentialsFields(
 private fun ChooseStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewModel) {
     val account = state.account ?: return
     Column {
-        GroupLabel(stringResource(R.string.school_connect_signed_in_as))
+        GroupLabel(stringResource(Res.string.school_connect_signed_in_as))
         SectionGroup {
             SectionRow(icon = Icons.Default.AccountCircle, title = account.displayName)
         }
@@ -365,7 +402,7 @@ private fun ChooseStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolView
     RightsNotice(account)
     if (state.choosesFamily) {
         Column {
-            GroupLabel(stringResource(R.string.school_connect_family_label))
+            GroupLabel(stringResource(Res.string.school_connect_family_label))
             SectionGroup {
                 state.families.forEachIndexed { index, family ->
                     if (index > 0) Divider()
@@ -385,9 +422,9 @@ private fun ChooseStep(state: ConnectSchoolUiState, viewModel: ConnectSchoolView
 @Composable
 private fun RightsNotice(account: SignedInAccount) {
     val text = when {
-        !account.canImport -> R.string.school_connect_no_rights
-        !account.canReadTimetable -> R.string.school_connect_no_timetable
-        !account.canReadEvents -> R.string.school_connect_no_events
+        !account.canImport -> Res.string.school_connect_no_rights
+        !account.canReadTimetable -> Res.string.school_connect_no_timetable
+        !account.canReadEvents -> Res.string.school_connect_no_events
         else -> null
     } ?: return
     InlineBanner(text = stringResource(text), tone = BannerTone.ATTENTION)
@@ -396,11 +433,11 @@ private fun RightsNotice(account: SignedInAccount) {
 @Composable
 private fun ChildChoices(state: ConnectSchoolUiState, viewModel: ConnectSchoolViewModel) {
     if (state.children.isEmpty()) {
-        InlineBanner(text = stringResource(R.string.school_connect_no_children), tone = BannerTone.ATTENTION)
+        InlineBanner(text = stringResource(Res.string.school_connect_no_children), tone = BannerTone.ATTENTION)
         return
     }
     Column {
-        GroupLabel(stringResource(R.string.school_connect_child_label))
+        GroupLabel(stringResource(Res.string.school_connect_child_label))
         SectionGroup {
             state.children.forEachIndexed { index, child ->
                 if (index > 0) Divider()
@@ -420,30 +457,30 @@ private fun ConfirmStep(state: ConnectSchoolUiState) {
     val account = state.account ?: return
     val childName = state.children.firstOrNull { it.id == state.childId }?.name.orEmpty()
     Column {
-        GroupLabel(stringResource(R.string.school_connect_confirm_label))
+        GroupLabel(stringResource(Res.string.school_connect_confirm_label))
         SectionGroup {
             var first = true
             if (account.canReadEvents) {
-                SectionRow(icon = Icons.Default.Event, title = stringResource(R.string.school_connect_confirm_events))
+                SectionRow(icon = Icons.Default.Event, title = stringResource(Res.string.school_connect_confirm_events))
                 first = false
             }
             if (account.canReadTimetable) {
                 if (!first) Divider()
                 SectionRow(
                     icon = Icons.Default.CalendarMonth,
-                    title = stringResource(R.string.school_connect_confirm_hours)
+                    title = stringResource(Res.string.school_connect_confirm_hours)
                 )
                 Divider()
                 SectionRow(
                     icon = Icons.Default.EventBusy,
-                    title = stringResource(R.string.school_connect_confirm_days_off)
+                    title = stringResource(Res.string.school_connect_confirm_days_off)
                 )
             }
         }
     }
-    InlineBanner(text = stringResource(R.string.school_connect_confirm_shared, childName))
+    InlineBanner(text = stringResource(Res.string.school_connect_confirm_shared, childName))
     Text(
-        text = stringResource(R.string.school_connect_confirm_not_imported),
+        text = stringResource(Res.string.school_connect_confirm_not_imported),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -453,9 +490,9 @@ private fun ConfirmStep(state: ConnectSchoolUiState) {
 @Composable
 private fun familyName(family: FamilyOption, index: Int): String =
     if (family.partnerName.isNotBlank()) {
-        stringResource(R.string.school_connect_family_with, family.partnerName)
+        stringResource(Res.string.school_connect_family_with, family.partnerName)
     } else {
-        stringResource(R.string.school_connect_family_unnamed, index + 1)
+        stringResource(Res.string.school_connect_family_unnamed, index + 1)
     }
 
 /** At most this many towns are listed; typing more narrows the list. */

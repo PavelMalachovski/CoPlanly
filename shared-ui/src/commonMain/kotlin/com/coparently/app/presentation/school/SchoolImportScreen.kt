@@ -31,8 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.school.SchoolConnectionStatus
 import com.coparently.app.presentation.common.ConfirmationDialog
 import com.coparently.app.presentation.common.EmptyState
@@ -43,10 +41,31 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.dateWithTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.school_import_connect
+import com.coparently.app.resources.school_import_connect_another
+import com.coparently.app.resources.school_import_disconnect
+import com.coparently.app.resources.school_import_disconnect_message
+import com.coparently.app.resources.school_import_disconnect_title
+import com.coparently.app.resources.school_import_empty_description
+import com.coparently.app.resources.school_import_empty_title
+import com.coparently.app.resources.school_import_intro
+import com.coparently.app.resources.school_import_last_sync
+import com.coparently.app.resources.school_import_never_synced
+import com.coparently.app.resources.school_import_reconnect
+import com.coparently.app.resources.school_import_status_error
+import com.coparently.app.resources.school_import_status_needs_family
+import com.coparently.app.resources.school_import_status_needs_password
+import com.coparently.app.resources.school_import_title
+import com.coparently.app.resources.school_import_update_now
+import com.coparently.app.resources.school_import_updating
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
+import kotlin.time.Instant
 
 /**
  * Settings → Sync → the school import (MON-8): one group per connection — the child, the school,
@@ -82,12 +101,12 @@ fun SchoolImportScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.school_import_title)) },
+                title = { Text(stringResource(Res.string.school_import_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.common_back)
+                            contentDescription = stringResource(Res.string.common_back)
                         )
                     }
                 }
@@ -110,9 +129,9 @@ fun SchoolImportScreen(
 
     disconnecting?.let { connectionId ->
         ConfirmationDialog(
-            title = stringResource(R.string.school_import_disconnect_title),
-            message = stringResource(R.string.school_import_disconnect_message),
-            confirmText = stringResource(R.string.school_import_disconnect),
+            title = stringResource(Res.string.school_import_disconnect_title),
+            message = stringResource(Res.string.school_import_disconnect_message),
+            confirmText = stringResource(Res.string.school_import_disconnect),
             onConfirm = {
                 viewModel.disconnect(connectionId)
                 disconnecting = null
@@ -138,9 +157,9 @@ private fun SchoolImportBody(state: SchoolImportUiState, actions: ConnectionActi
         state.isLoading -> ListSkeleton(modifier = modifier)
         state.rows.isEmpty() -> EmptyState(
             icon = Icons.Default.School,
-            title = stringResource(R.string.school_import_empty_title),
-            description = stringResource(R.string.school_import_empty_description),
-            actionLabel = stringResource(R.string.school_import_connect),
+            title = stringResource(Res.string.school_import_empty_title),
+            description = stringResource(Res.string.school_import_empty_description),
+            actionLabel = stringResource(Res.string.school_import_connect),
             onAction = actions.onConnect,
             modifier = modifier
         )
@@ -156,14 +175,14 @@ private fun ConnectionList(state: SchoolImportUiState, actions: ConnectionAction
             .padding(Spacing.L),
         verticalArrangement = Arrangement.spacedBy(Spacing.L)
     ) {
-        InlineBanner(text = stringResource(R.string.school_import_intro))
+        InlineBanner(text = stringResource(Res.string.school_import_intro))
         state.rows.forEach { row ->
             ConnectionGroup(row = row, updating = row.connection.id in state.updating, actions = actions)
         }
         SectionGroup {
             SectionRow(
                 icon = Icons.Default.Add,
-                title = stringResource(R.string.school_import_connect_another),
+                title = stringResource(Res.string.school_import_connect_another),
                 onClick = actions.onConnect
             )
         }
@@ -191,14 +210,14 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
         if (connection.status == SchoolConnectionStatus.NEEDS_PASSWORD) {
             SectionRow(
                 icon = Icons.Default.Key,
-                title = stringResource(R.string.school_import_reconnect),
+                title = stringResource(Res.string.school_import_reconnect),
                 onClick = { actions.onReconnect(id) }
             )
         } else {
             SectionRow(
                 icon = Icons.Default.Sync,
                 title = stringResource(
-                    if (updating) R.string.school_import_updating else R.string.school_import_update_now
+                    if (updating) Res.string.school_import_updating else Res.string.school_import_update_now
                 ),
                 onClick = if (updating) null else ({ actions.onUpdate(id) })
             )
@@ -207,7 +226,7 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
         SectionRow(
             icon = Icons.Default.LinkOff,
             iconTint = MaterialTheme.colorScheme.error,
-            title = stringResource(R.string.school_import_disconnect),
+            title = stringResource(Res.string.school_import_disconnect),
             titleColor = MaterialTheme.colorScheme.error,
             onClick = { actions.onDisconnect(id) }
         )
@@ -219,17 +238,19 @@ private fun ConnectionGroup(row: SchoolConnectionRow, updating: Boolean, actions
 private fun statusLine(row: SchoolConnectionRow): String {
     val connection = row.connection
     if (row.needsFamily && connection.status == SchoolConnectionStatus.OK) {
-        return stringResource(R.string.school_import_status_needs_family)
+        return stringResource(Res.string.school_import_status_needs_family)
     }
     return when (connection.status) {
-        SchoolConnectionStatus.NEEDS_PASSWORD -> stringResource(R.string.school_import_status_needs_password)
-        SchoolConnectionStatus.ERROR -> stringResource(R.string.school_import_status_error)
+        SchoolConnectionStatus.NEEDS_PASSWORD -> stringResource(Res.string.school_import_status_needs_password)
+        SchoolConnectionStatus.ERROR -> stringResource(Res.string.school_import_status_error)
         SchoolConnectionStatus.OK -> connection.lastSuccessAtMillis?.let { millis ->
             // Not remembered: the time follows the reader's 12/24-hour setting, which can change.
-            val time = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
-                .format(dateWithTime(DATE_SKELETON))
-            stringResource(R.string.school_import_last_sync, time)
-        } ?: stringResource(R.string.school_import_never_synced)
+            val time = ReaderDateText.dateWithTime(
+                Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()),
+                DATE_SKELETON
+            )
+            stringResource(Res.string.school_import_last_sync, time)
+        } ?: stringResource(Res.string.school_import_never_synced)
     }
 }
 

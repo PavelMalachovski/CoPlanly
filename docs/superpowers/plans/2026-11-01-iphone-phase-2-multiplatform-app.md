@@ -1571,6 +1571,11 @@ Then the export and the school import:
   `StringResource`, the friend's and professional's share intents → `ShareSheet.shareText` (worded at
   the tap; no Share where unavailable). Public for the screenshots: `FriendAgendaDay`,
   `FriendComparisonTable`, `FriendEventDetails`, `FriendInviteContent`.
+- Group 5, the school import: `school/ConnectSchoolScreen.kt` (`androidx.activity`'s `BackHandler` →
+  Compose Multiplatform's, `ExperimentalComposeUiApi` opted in), `SchoolImportScreen.kt` (the last
+  import's `Instant…format(dateWithTime(…))` → `ReaderDateText.dateWithTime`). **Task 11 done**: the
+  app's `presentation/` holds `MainActivity`, `widget/`, `navigation/`, the previews and the Android
+  halves of the platform interfaces (`RecordShareIntent.kt` new, for `ExportFileWriterTest`).
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 
