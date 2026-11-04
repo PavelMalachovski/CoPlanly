@@ -101,6 +101,15 @@ test('shared-ui code is planned as the app source it was (MON-24 phase 2)', () =
   assert.equal(plan.asAppSource(plan.S + 'values/chat_strings.xml'), plan.S + 'values/chat_strings.xml');
 });
 
+test('the theme\'s platform halves ask for the checks their common file does (slice 9b)', () => {
+  const theme = 'shared-ui/src/androidMain/kotlin/com/coparently/app/presentation/theme/';
+  assert.ok(sectionsFor([theme + 'Theme.android.kt']).includes('3.14'));
+  assert.ok(sectionsFor([theme + 'ContrastLevel.android.kt']).includes('3.14'));
+  assert.ok(sectionsFor([theme + 'Motion.android.kt']).includes('3.2'));
+  assert.ok(sectionsFor(['shared-ui/src/iosMain/kotlin/com/coparently/app/presentation/theme/Motion.ios.kt'])
+      .includes('3.2'));
+});
+
 test('the push strings add the push check to the locale ones', () => {
   assert.deepEqual(sectionsFor([plan.S + 'values/push_strings.xml']), ['3.6', '3.7', '4.2']);
 });

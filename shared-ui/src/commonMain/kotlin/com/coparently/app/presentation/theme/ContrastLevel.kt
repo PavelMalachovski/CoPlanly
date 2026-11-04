@@ -1,16 +1,7 @@
 package com.coparently.app.presentation.theme
 
-import android.app.UiModeManager
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 
 /**
  * How much contrast the person asked the system for: Material's three steps.
@@ -67,37 +58,12 @@ internal fun colorSchemeFor(darkTheme: Boolean, contrast: ContrastLevel): ColorS
  * The contrast level the system asks for, followed while it changes: the setting can be moved
  * with the app open, and does not recreate the activity.
  *
- * @return [ContrastLevel.STANDARD] before Android 14, otherwise the system's step
- */
-@Composable
-fun rememberSystemContrastLevel(): ContrastLevel =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        ContrastLevel.of(rememberSystemContrast())
-    } else {
-        ContrastLevel.STANDARD
-    }
-
-/**
- * The system's contrast value, and a listener that keeps it current.
+ * On Android (`ContrastLevel.android.kt`): [ContrastLevel.STANDARD] before Android 14, otherwise
+ * the system's step. On the iPhone [ContrastLevel.STANDARD] for now: iOS has one "Increase
+ * Contrast" switch rather than Material's three steps, and which step it means is decided with the
+ * iPhone app (phase 3).
  *
- * Read defensively: a device (or a test environment) without the service answers standard
- * contrast rather than failing the whole theme.
+ * @return The system's contrast level
  */
-@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @Composable
-private fun rememberSystemContrast(): Float {
-    val context = LocalContext.current
-    val uiModeManager = remember(context) { context.getSystemService(UiModeManager::class.java) }
-    var contrast by remember(uiModeManager) {
-        mutableFloatStateOf(runCatching { uiModeManager?.contrast }.getOrNull() ?: 0f)
-    }
-    DisposableEffect(uiModeManager) {
-        val listener = UiModeManager.ContrastChangeListener { contrast = it }
-        val registered = uiModeManager != null &&
-            runCatching { uiModeManager.addContrastChangeListener(context.mainExecutor, listener) }.isSuccess
-        onDispose {
-            if (registered) runCatching { uiModeManager?.removeContrastChangeListener(listener) }
-        }
-    }
-    return contrast
-}
+expect fun rememberSystemContrastLevel(): ContrastLevel

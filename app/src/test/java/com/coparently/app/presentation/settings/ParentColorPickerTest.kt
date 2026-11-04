@@ -11,6 +11,8 @@ import com.coparently.app.R
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.getString
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -53,7 +55,7 @@ class ParentColorPickerTest {
         render(selected = ParentColorChoice.PINK.name)
 
         ParentColorChoice.GRID.forEach { choice ->
-            val node = rule.onNodeWithContentDescription(context.getString(choice.labelRes))
+            val node = rule.onNodeWithContentDescription(runBlocking { getString(choice.label) })
             if (choice == ParentColorChoice.PINK) node.assertIsSelected() else node.assertIsNotSelected()
         }
     }

@@ -128,8 +128,9 @@ internal object DataSources {
     )
 
     /**
-     * The typeface bundled in `res/font` (D-8), under a group of its own: it is not holiday data,
-     * and the SIL Open Font License asks for its notice to travel with the fonts.
+     * The typeface bundled in `:shared-ui`'s `composeResources/font` (D-8; `res/font` until MON-24
+     * phase 2), under a group of its own: it is not holiday data, and the SIL Open Font License
+     * asks for its notice to travel with the fonts.
      */
     val typefaceNotices: List<DataSourceNotice> = listOf(
         DataSourceNotice(

@@ -7,8 +7,10 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // the five locales), where Compose Multiplatform's resource plugin generates `Res` (package
 // `com.coparently.app.resources`) from them. The app keeps `R.string` and Android's own reading of
 // the same files through `:app`'s `stringsToAndroidRes` task, which copies them unchanged into
-// the app's generated resources. The theme, the common components, the ViewModels and the screens
-// follow here task by task, packages unchanged.
+// the app's generated resources. Then the theme (`presentation/theme/`, slice 9b), with the Onest
+// font files in `composeResources/font/`, and the common components (`presentation/common/`) that
+// need neither a ViewModel nor an Android API. The ViewModels and the screens follow task by
+// task, packages unchanged.
 //
 // Built like `:shared-data`: an `androidTarget()` on the `com.android.library` plugin and the two
 // iPhone targets. It depends on both other shared modules, and its framework is the one the iPhone
@@ -19,6 +21,7 @@ plugins {
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
     id("io.gitlab.arturbosch.detekt")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 kotlin {
@@ -57,6 +60,30 @@ kotlin {
             // would lift Compose to 1.10 (see the root build file).
             api(compose.runtime)
             api(compose.components.resources)
+            // The theme and the common components (slice 9b). `api`, because their public
+            // signatures carry Material 3's `ColorScheme`, `Typography` and `WindowSizeClass` and
+            // Compose's `Modifier`, `Color` and `ImageVector`. On Android each of these is the
+            // androidx artifact the app's BOM 2025.10.00 already names: material3 and its
+            // window-size-class 1.4.0, foundation and ui at the 1.9.4 above.
+            api(compose.foundation)
+            api(compose.ui)
+            api(compose.material3)
+            // `CoPlanlyTheme(windowSizeClass = …)` and the adaptive dimensions. Not among the
+            // plugin's `compose.*` accessors, so named here, at the material3 version Compose
+            // Multiplatform 1.9.3 itself uses (`composeMaterial3Version`).
+            api("org.jetbrains.compose.material3:material3-window-size-class:1.9.0")
+        }
+        androidMain.dependencies {
+            // `WindowCompat`, for the system bars (`Theme.android.kt`). The app's version.
+            implementation("androidx.core:core-ktx:1.13.1")
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+        androidUnitTest.dependencies {
+            // The theme's tests (moved with it from the app, slice 9b) run here as the Android unit
+            // tests, on JUnit 4 like the app's.
+            implementation("junit:junit:4.13.2")
         }
     }
 }

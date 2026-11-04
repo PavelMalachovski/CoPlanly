@@ -52,6 +52,7 @@ import com.coparently.app.presentation.theme.ParentColor
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 /**
@@ -135,7 +136,7 @@ internal fun ParentColorPicker(
             ) {
                 row.forEach { choice ->
                     GridSwatch(
-                        label = stringResource(choice.labelRes),
+                        label = stringResource(choice.label),
                         swatch = ParentColors.choiceFill(choice),
                         selected = chosen == choice.name,
                         onClick = { onChoose(choice.name) }

@@ -106,7 +106,7 @@ const RULES = [
   {
     sections: ['3.2'],
     why: 'motion or navigation',
-    paths: ['K/presentation/theme/Motion.kt', 'K/presentation/navigation/**',
+    paths: ['K/presentation/theme/Motion*.kt', 'K/presentation/navigation/**',
       'K/presentation/calendar/MonthView.kt'],
   },
   {
@@ -119,7 +119,7 @@ const RULES = [
   {
     sections: ['3.14'],
     why: 'the colour schemes or the contrast level',
-    paths: ['K/presentation/theme/Theme.kt', 'K/presentation/theme/Contrast*',
+    paths: ['K/presentation/theme/Theme*.kt', 'K/presentation/theme/Contrast*',
       'tools/generate-contrast-schemes.py'],
   },
   {

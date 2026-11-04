@@ -356,6 +356,8 @@ style:
   ForbiddenImport:
     # A corner is chosen in presentation/theme/Shape.kt and nowhere else
     # (docs/AUDIT-2026-10-design.md D-19): the audit counted 71 hand-written corners in 20 radii.
+    # The theme lives in :shared-ui since MON-24 phase 2 (shared-ui/src/commonMain/kotlin/...);
+    # the glob below matches it there, as it matched app/src/main/java/... before.
     active: true
     excludes: ['**/presentation/theme/**', '**/test/**', '**/androidTest/**']
     imports:

@@ -1,12 +1,18 @@
 package com.coparently.app.presentation.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.onest_bold
+import com.coparently.app.resources.onest_medium
+import com.coparently.app.resources.onest_regular
+import com.coparently.app.resources.onest_semibold
+import org.jetbrains.compose.resources.Font
 
 /**
  * The app's typeface: Onest, in four static weights.
@@ -27,15 +33,35 @@ import com.coparently.app.R
  * - onest_medium.ttf - Medium weight (500)
  * - onest_semibold.ttf - SemiBold weight (600)
  * - onest_bold.ttf - Bold weight (700)
+ *
+ * They are Compose Multiplatform resources since MON-24 phase 2 (Task 9), in `:shared-ui`'s
+ * `composeResources/font/`, so the iPhone draws the same files. On Android each is read from the
+ * APK's assets (`composeResources/com.coparently.app.resources/font/`), where it used to be read
+ * from `res/font`: the same bytes, through the same `Font.Builder`, with the same weights declared
+ * here, so the glyphs are the ones the screenshot baselines hold. Composable because a resource is
+ * resolved in composition; the family is remembered, so a recomposition does not hand
+ * [MaterialTheme][androidx.compose.material3.MaterialTheme] a new typography.
+ *
+ * @return Onest, in its four weights
  */
-private val AppFontFamily = FontFamily(
-    Font(R.font.onest_regular, FontWeight.Normal),
-    Font(R.font.onest_medium, FontWeight.Medium),
-    Font(R.font.onest_semibold, FontWeight.SemiBold),
-    Font(R.font.onest_bold, FontWeight.Bold)
-)
+@Composable
+fun onestFontFamily(): FontFamily {
+    val regular = Font(Res.font.onest_regular, FontWeight.Normal)
+    val medium = Font(Res.font.onest_medium, FontWeight.Medium)
+    val semiBold = Font(Res.font.onest_semibold, FontWeight.SemiBold)
+    val bold = Font(Res.font.onest_bold, FontWeight.Bold)
+    return remember(regular, medium, semiBold, bold) { FontFamily(regular, medium, semiBold, bold) }
+}
 
 /**
+ * The app's type scale: each role's weight, size, line height and spacing, **without a typeface**.
+ *
+ * A role's typeface is a resource, and a resource is resolved in composition, so the theme sets
+ * this scale in Onest there ([rememberAppTypography]) and every screen reads the result from
+ * `MaterialTheme.typography`. This value stays a plain one for what is not composed in the theme:
+ * the home-screen widget, whose text takes these sizes and weights in the launcher's own font
+ * (CLAUDE.md design item 18).
+ *
  * Enhanced Typography for CoPlanly app.
  * Uses full Material 3 type scale with customizations.
  *
@@ -49,21 +75,18 @@ private val AppFontFamily = FontFamily(
 val Typography = Typography(
     // Display styles - for large, prominent text
     displayLarge = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
         letterSpacing = (-0.25).sp
     ),
     displayMedium = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
         letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
@@ -72,21 +95,18 @@ val Typography = Typography(
 
     // Headline styles - for headings and section titles
     headlineLarge = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
         letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
@@ -95,21 +115,18 @@ val Typography = Typography(
 
     // Title styles - for emphasized text and card headers
     titleLarge = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -118,21 +135,18 @@ val Typography = Typography(
 
     // Body styles - for main content text
     bodyLarge = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -141,26 +155,58 @@ val Typography = Typography(
 
     // Label styles - for buttons and small text
     labelLarge = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = AppFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )
+)
+
+/**
+ * [Typography] set in Onest: what the theme gives `MaterialTheme`.
+ *
+ * @return The type scale, every role in [onestFontFamily]
+ */
+@Composable
+internal fun rememberAppTypography(): Typography {
+    val family = onestFontFamily()
+    return remember(family) { Typography.withFontFamily(family) }
+}
+
+/**
+ * This scale with every one of its fifteen roles set in [family], built as [Typography] itself is,
+ * so the styles Material derives from its own tokens are the ones it always had.
+ *
+ * @param family The typeface
+ */
+internal fun Typography.withFontFamily(family: FontFamily): Typography = Typography(
+    displayLarge = displayLarge.copy(fontFamily = family),
+    displayMedium = displayMedium.copy(fontFamily = family),
+    displaySmall = displaySmall.copy(fontFamily = family),
+    headlineLarge = headlineLarge.copy(fontFamily = family),
+    headlineMedium = headlineMedium.copy(fontFamily = family),
+    headlineSmall = headlineSmall.copy(fontFamily = family),
+    titleLarge = titleLarge.copy(fontFamily = family),
+    titleMedium = titleMedium.copy(fontFamily = family),
+    titleSmall = titleSmall.copy(fontFamily = family),
+    bodyLarge = bodyLarge.copy(fontFamily = family),
+    bodyMedium = bodyMedium.copy(fontFamily = family),
+    bodySmall = bodySmall.copy(fontFamily = family),
+    labelLarge = labelLarge.copy(fontFamily = family),
+    labelMedium = labelMedium.copy(fontFamily = family),
+    labelSmall = labelSmall.copy(fontFamily = family)
 )
 
 /*

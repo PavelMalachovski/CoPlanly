@@ -1902,13 +1902,14 @@ jobs:
 
   # The shared Kotlin Multiplatform modules (MON-24): `shared/`, the domain the Android app and the
   # iPhone app both run, `shared-data/`, the data layer (phase 2), and `shared-ui/`, the UI (from
-  # phase 2's Task 9: the strings as Compose Multiplatform resources). Two jobs, gated on `changes`'
-  # `shared` output (`shared/**`, `shared-data/**`, `shared-ui/**`, the build files, the workflow).
-  # `build-test` runs these tests too, because Kover merges `:shared` and `:shared-data` into the
-  # app's coverage; this job is where they get a check run of their own, beside the iOS compile.
-  # `:shared-ui` has no tests of its own yet: its strings are checked by the app's parity tests
-  # (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib — `Res` included —
-  # is compiled here.
+  # phase 2's Task 9: the strings as Compose Multiplatform resources, the theme and the common
+  # components). Two jobs, gated on `changes`' `shared` output (`shared/**`, `shared-data/**`,
+  # `shared-ui/**`, the build files, the workflow). `build-test` runs these tests too, because Kover
+  # merges `:shared`, `:shared-data` and `:shared-ui` into the app's coverage; this job is where they
+  # get a check run of their own, beside the iOS compile. `:shared-ui`'s own tests are the theme's,
+  # on the JVM (`androidUnitTest`, moved with it in slice 9b); its strings are checked by the app's
+  # parity tests (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib —
+  # `Res`, the theme and the common components — is compiled here.
   #
   # `compileKotlinIosSimulatorArm64` builds the iOS klib on Linux. Kotlin has done that without a
   # flag since 2.2.20 ("stable cross-platform compilation"), so a common-code change that does not
@@ -1990,7 +1991,7 @@ jobs:
           :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
           :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
           :shared-data:compileTestKotlinIosSimulatorArm64
-          :shared-ui:compileKotlinIosSimulatorArm64
+          :shared-ui:testDebugUnitTest :shared-ui:compileKotlinIosSimulatorArm64
 
       - name: Upload reports
         if: always()
@@ -2003,6 +2004,7 @@ jobs:
             shared-data/build/reports/
             shared-data/build/test-results/
             shared-ui/build/reports/
+            shared-ui/build/test-results/
           if-no-files-found: ignore
           retention-days: 14
 

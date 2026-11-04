@@ -24,7 +24,7 @@ const path = require('path');
 const { SLIDES, FEATURE, FEATURE_SHOT } = require('./captions');
 
 const REPO = path.resolve(__dirname, '..', '..');
-const FONT_DIR = path.join(REPO, 'app', 'src', 'main', 'res', 'font');
+const FONT_DIR = path.join(REPO, 'shared-ui', 'src', 'commonMain', 'composeResources', 'font');
 
 // presentation/theme/Color.kt — BrandPrimary and its container, the parent fills as accents.
 const COLORS = {

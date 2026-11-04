@@ -1,9 +1,27 @@
 package com.coparently.app.presentation.theme
 
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import com.coparently.app.R
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.parent_color_banana
+import com.coparently.app.resources.parent_color_basil
+import com.coparently.app.resources.parent_color_blue
+import com.coparently.app.resources.parent_color_blueberry
+import com.coparently.app.resources.parent_color_cherry
+import com.coparently.app.resources.parent_color_cocoa
+import com.coparently.app.resources.parent_color_flamingo
+import com.coparently.app.resources.parent_color_grape
+import com.coparently.app.resources.parent_color_indigo
+import com.coparently.app.resources.parent_color_lavender
+import com.coparently.app.resources.parent_color_olive
+import com.coparently.app.resources.parent_color_orange
+import com.coparently.app.resources.parent_color_peacock
+import com.coparently.app.resources.parent_color_pink
+import com.coparently.app.resources.parent_color_purple
+import com.coparently.app.resources.parent_color_sage
+import com.coparently.app.resources.parent_color_tangerine
+import com.coparently.app.resources.parent_color_tomato
+import org.jetbrains.compose.resources.StringResource
 import kotlin.math.abs
 
 /**
@@ -37,9 +55,10 @@ import kotlin.math.abs
  * @property storedCode The value written to `users/{uid}.colorCode`. **An identifier, not the
  *   colour:** it is a stored value two devices compare, so an entry is never re-lettered, and it
  *   kept its original hex when the tones it names were brightened.
- * @property labelRes What the picker calls it. A name and not a swatch alone, because a colour
+ * @property label What the picker calls it. A name and not a swatch alone, because a colour
  *   with no label is unusable to anyone who cannot tell two of them apart — and because a
- *   screen reader has nothing else to announce.
+ *   screen reader has nothing else to announce. A Compose Multiplatform resource (it was an
+ *   Android `@StringRes` until the theme moved to `:shared-ui`), read with its `stringResource`.
  */
 enum class ParentColorChoice(
     val storedCode: String,
@@ -47,13 +66,13 @@ enum class ParentColorChoice(
     private val darkFillArgb: Long,
     private val lightArgb: Long,
     private val darkArgb: Long,
-    @StringRes val labelRes: Int
+    val label: StringResource
 ) {
     /** Material Pink 500, Pink A200 in the dark theme. The app's original slot-1 colour. */
-    PINK("#E91E63", PINK_500, PINK_A200, PINK_TEXT_ON_DARK, PINK_TEXT_ON_LIGHT, R.string.parent_color_pink),
+    PINK("#E91E63", PINK_500, PINK_A200, PINK_TEXT_ON_DARK, PINK_TEXT_ON_LIGHT, Res.string.parent_color_pink),
 
     /** Material Blue A400, Blue A200 in the dark theme. The original slot-2 colour, brighter. */
-    BLUE("#1976D2", BLUE_A400, BLUE_A200, BLUE_TEXT_ON_DARK, BLUE_TEXT_ON_LIGHT, R.string.parent_color_blue),
+    BLUE("#1976D2", BLUE_A400, BLUE_A200, BLUE_TEXT_ON_DARK, BLUE_TEXT_ON_LIGHT, Res.string.parent_color_blue),
 
     /**
      * Material Purple A700, Purple A200 in the dark theme.
@@ -63,7 +82,7 @@ enum class ParentColorChoice(
      * that collided with either would undo what `DayCellFills` protects. (A parent may still
      * pick a green on the wheel; teal stays out of reach — see [CustomHueRange].)
      */
-    PURPLE("#7B1FA2", PURPLE_A700, PURPLE_A200, PURPLE_TEXT_ON_DARK, PURPLE_700, R.string.parent_color_purple),
+    PURPLE("#7B1FA2", PURPLE_A700, PURPLE_A200, PURPLE_TEXT_ON_DARK, PURPLE_700, Res.string.parent_color_purple),
 
     /** Material Deep Orange 700, Deep Orange A200 in the dark theme. */
     ORANGE(
@@ -72,7 +91,7 @@ enum class ParentColorChoice(
         DEEP_ORANGE_A200,
         DEEP_ORANGE_TEXT_ON_DARK,
         DEEP_ORANGE_TEXT_ON_LIGHT,
-        R.string.parent_color_orange
+        Res.string.parent_color_orange
     ),
 
     // The grid's other fourteen (October 2026, owner decision: "more ready colours, as a grid like
@@ -89,7 +108,7 @@ enum class ParentColorChoice(
         TOMATO_DARK_FILL,
         TOMATO_TEXT_ON_DARK,
         TOMATO_TEXT_ON_LIGHT,
-        R.string.parent_color_tomato
+        Res.string.parent_color_tomato
     ),
 
     /** Reference #E67C73; the light theme's fill is a deeper coral. */
@@ -99,7 +118,7 @@ enum class ParentColorChoice(
         FLAMINGO_DARK_FILL,
         FLAMINGO_TEXT_ON_DARK,
         FLAMINGO_TEXT_ON_LIGHT,
-        R.string.parent_color_flamingo
+        Res.string.parent_color_flamingo
     ),
 
     /** Reference #F4511E. */
@@ -109,7 +128,7 @@ enum class ParentColorChoice(
         TANGERINE_DARK_FILL,
         TANGERINE_TEXT_ON_DARK,
         TANGERINE_TEXT_ON_LIGHT,
-        R.string.parent_color_tangerine
+        Res.string.parent_color_tangerine
     ),
 
     /** Reference #F6BF26; ochre on the light theme, where a yellow could not show on white. */
@@ -119,11 +138,18 @@ enum class ParentColorChoice(
         BANANA_DARK_FILL,
         BANANA_TEXT_ON_DARK,
         BANANA_TEXT_ON_LIGHT,
-        R.string.parent_color_banana
+        Res.string.parent_color_banana
     ),
 
     /** Reference #33B679. */
-    SAGE(swatch("sage"), SAGE_FILL, SAGE_DARK_FILL, SAGE_TEXT_ON_DARK, SAGE_TEXT_ON_LIGHT, R.string.parent_color_sage),
+    SAGE(
+        swatch("sage"),
+        SAGE_FILL,
+        SAGE_DARK_FILL,
+        SAGE_TEXT_ON_DARK,
+        SAGE_TEXT_ON_LIGHT,
+        Res.string.parent_color_sage
+    ),
 
     /** Reference #0B8043. */
     BASIL(
@@ -132,7 +158,7 @@ enum class ParentColorChoice(
         BASIL_DARK_FILL,
         BASIL_TEXT_ON_DARK,
         BASIL_TEXT_ON_LIGHT,
-        R.string.parent_color_basil
+        Res.string.parent_color_basil
     ),
 
     /** Reference #039BE5, hue 200° — outside the calendar friend's teal band. */
@@ -142,7 +168,7 @@ enum class ParentColorChoice(
         PEACOCK_DARK_FILL,
         PEACOCK_TEXT_ON_DARK,
         PEACOCK_TEXT_ON_LIGHT,
-        R.string.parent_color_peacock
+        Res.string.parent_color_peacock
     ),
 
     /** Reference #3F51B5. */
@@ -152,7 +178,7 @@ enum class ParentColorChoice(
         BLUEBERRY_DARK_FILL,
         BLUEBERRY_TEXT_ON_DARK,
         BLUEBERRY_TEXT_ON_LIGHT,
-        R.string.parent_color_blueberry
+        Res.string.parent_color_blueberry
     ),
 
     /** Reference #7986CB. */
@@ -162,7 +188,7 @@ enum class ParentColorChoice(
         LAVENDER_DARK_FILL,
         LAVENDER_TEXT_ON_DARK,
         LAVENDER_TEXT_ON_LIGHT,
-        R.string.parent_color_lavender
+        Res.string.parent_color_lavender
     ),
 
     /** Reference #8E24AA. */
@@ -172,7 +198,7 @@ enum class ParentColorChoice(
         GRAPE_DARK_FILL,
         GRAPE_TEXT_ON_DARK,
         GRAPE_TEXT_ON_LIGHT,
-        R.string.parent_color_grape
+        Res.string.parent_color_grape
     ),
 
     /** Reference #795548. */
@@ -182,7 +208,7 @@ enum class ParentColorChoice(
         COCOA_DARK_FILL,
         COCOA_TEXT_ON_DARK,
         COCOA_TEXT_ON_LIGHT,
-        R.string.parent_color_cocoa
+        Res.string.parent_color_cocoa
     ),
 
     /** Reference #AD1457. */
@@ -192,7 +218,7 @@ enum class ParentColorChoice(
         CHERRY_DARK_FILL,
         CHERRY_TEXT_ON_DARK,
         CHERRY_TEXT_ON_LIGHT,
-        R.string.parent_color_cherry
+        Res.string.parent_color_cherry
     ),
 
     /** Reference #827717. */
@@ -202,7 +228,7 @@ enum class ParentColorChoice(
         OLIVE_DARK_FILL,
         OLIVE_TEXT_ON_DARK,
         OLIVE_TEXT_ON_LIGHT,
-        R.string.parent_color_olive
+        Res.string.parent_color_olive
     ),
 
     /** Reference #283593. */
@@ -212,7 +238,7 @@ enum class ParentColorChoice(
         INDIGO_DARK_FILL,
         INDIGO_TEXT_ON_DARK,
         INDIGO_TEXT_ON_LIGHT,
-        R.string.parent_color_indigo
+        Res.string.parent_color_indigo
     );
 
     /** This preset as the palette draws it. */

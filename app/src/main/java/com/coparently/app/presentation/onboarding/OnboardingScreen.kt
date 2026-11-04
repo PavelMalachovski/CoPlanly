@@ -77,6 +77,7 @@ import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.ParentColorChoice
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -443,7 +444,7 @@ private fun ParentColorSwatches(
     // rest on colour, and named under it, so a parent who cannot tell two hues apart can still pick.
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
         ParentColorChoice.ORIGINAL.forEach { choice ->
-            val label = stringResource(choice.labelRes)
+            val label = stringResource(choice.label)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.XS)

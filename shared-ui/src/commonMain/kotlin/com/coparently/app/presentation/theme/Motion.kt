@@ -1,9 +1,6 @@
 package com.coparently.app.presentation.theme
 
-import android.provider.Settings
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 
 /**
  * The app's motion durations — the one place a timing is chosen.
@@ -46,11 +43,10 @@ object Motion {
  * Compose tweens and springs already honour that scale; what does not is anything the app
  * *times itself* — a `delay` — and decoration that loops forever. Those read this: the sign-in
  * logo's pulse stands still and the loading skeletons stop shimmering.
+ *
+ * On the iPhone it is Settings → Accessibility → Motion → Reduce Motion (`Motion.ios.kt`).
+ *
+ * @return Whether looping decoration and self-timed delays should stand still
  */
 @Composable
-fun rememberReducedMotion(): Boolean {
-    val resolver = LocalContext.current.contentResolver
-    return remember(resolver) {
-        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-    }
-}
+expect fun rememberReducedMotion(): Boolean

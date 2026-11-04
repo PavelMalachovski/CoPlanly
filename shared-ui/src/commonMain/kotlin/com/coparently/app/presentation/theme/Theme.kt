@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.theme
 
-import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -8,17 +7,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
 /**
  * Light color scheme for CoPlanly app.
  * Enhanced with better contrast and brand colors.
+ *
+ * Public, where it used to be internal, because the home-screen widget, which stays in the app,
+ * fills its Glance colours from it (MON-24 phase 2, Task 9).
  */
-internal val LightColorScheme = lightColorScheme(
+val LightColorScheme = lightColorScheme(
     primary = CoPlanlyColors.BrandPrimary,
     onPrimary = Color.White,
     primaryContainer = CoPlanlyColors.BrandPrimaryContainer,
@@ -64,8 +62,10 @@ internal val LightColorScheme = lightColorScheme(
 /**
  * Dark color scheme for CoPlanly app.
  * Enhanced with better contrast and brand colors.
+ *
+ * Public for the widget, as [LightColorScheme] is.
  */
-internal val DarkColorScheme = darkColorScheme(
+val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFC2C1FF),
     onPrimary = Color(0xFF201F60),
     primaryContainer = Color(0xFF373678),
@@ -148,40 +148,25 @@ fun CoPlanlyTheme(
     // there is no window to measure.
     val dimensions = windowSizeClass?.getDimensions() ?: adaptiveDimensions()
 
-    // Configure system UI appearance using EdgeToEdge API
-    // This is the modern approach recommended by Google (replaces Accompanist)
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-
-            // Set transparent status and navigation bars for edge-to-edge experience.
-            // Deprecated at API 35, where they are no-ops; on 26–34 they still override the
-            // scrim `enableEdgeToEdge()` picks from the *system* theme, which would disagree
-            // with an app-level dark/light choice. No replacement covers minSdk 26 without
-            // that change, so the calls stay until the scrim is decided as a design question.
-            @Suppress("DEPRECATION")
-            window.statusBarColor = Color.Transparent.toArgb()
-            @Suppress("DEPRECATION")
-            window.navigationBarColor = Color.Transparent.toArgb()
-
-            // Configure system bar icons based on theme
-            val windowInsetsController = WindowCompat.getInsetsController(window, view)
-            windowInsetsController.isAppearanceLightStatusBars = !darkTheme
-            windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
-
-            // Note: For full edge-to-edge experience, ensure:
-            // 1. enableEdgeToEdge() is called in MainActivity.onCreate()
-            // 2. Scaffold with appropriate padding for system bars
-        }
-    }
+    // The system bars' icons follow the app's theme rather than the system's: Android's window
+    // flags (`Theme.android.kt`); on the iPhone the hosting view controller's, from phase 3.
+    SystemBarsAppearance(darkTheme)
 
     CompositionLocalProvider(LocalDimensions provides dimensions) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = rememberAppTypography(),
             shapes = CoPlanlyShapes,
             content = content
         )
     }
 }
+
+/**
+ * Makes the system bars' icons light or dark to match [darkTheme], and the bars themselves
+ * transparent, where the platform lets an app say so.
+ *
+ * @param darkTheme Whether the app is drawing its dark theme
+ */
+@Composable
+internal expect fun SystemBarsAppearance(darkTheme: Boolean)

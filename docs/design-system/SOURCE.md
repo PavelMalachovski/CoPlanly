@@ -13,4 +13,5 @@ The files in this folder are what the published Design System artifact holds
 - `design-system.json` — the artifact's index (names the uploaded logo files).
 
 The Kotlin theme is the source of truth: when a token changes there, change `tokens.json` here in the
-same pull request. The Onest font files are not duplicated: they live in `app/src/main/res/font/`.
+same pull request. The Onest font files are not duplicated: they live in
+`shared-ui/src/commonMain/composeResources/font/` (they were `app/src/main/res/font/` until MON-24).

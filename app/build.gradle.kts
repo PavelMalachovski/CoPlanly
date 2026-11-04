@@ -357,10 +357,12 @@ dependencies {
     // joins the same report.
     implementation(project(":shared-data"))
     kover(project(":shared-data"))
-    // The UI both apps share (MON-24 phase 2, Task 9): so far the strings, as Compose
-    // Multiplatform resources (`Res`, which the parity tests read). The app reads the same files
-    // as Android resources through the `stringsToAndroidRes` task below.
+    // The UI both apps share (MON-24 phase 2, Task 9): the strings, as Compose Multiplatform
+    // resources (`Res`), the theme with its fonts and the common components. The app reads the
+    // same string files as Android resources through the `stringsToAndroidRes` task below. Its
+    // tests' coverage (the theme's) joins the same report.
     implementation(project(":shared-ui"))
+    kover(project(":shared-ui"))
 
     // Core Android - Updated to latest stable versions
     implementation("androidx.core:core-ktx:1.13.1")
@@ -660,7 +662,8 @@ kotlin {
 // rewritten: where Android and Compose Multiplatform would read a text differently, the source text
 // changes (`StringsParityTest`, `PluralsParityTest`; check 7 of `tools/check-invariants.js`).
 //
-// Only `values*/*.xml`: fonts and drawables join `composeResources/` later and are read there.
+// Only `values*/*.xml`: the fonts (`composeResources/font/`, slice 9b) are not Android resources any
+// more; the theme reads them through Compose Multiplatform, from the APK's assets.
 // Declared in this file, not in a script plugin under `tools/`, because a script applied with
 // `apply(from = …)` cannot see the Android Gradle plugin's classes (they are loaded by the
 // `plugins {}` blocks), and the wiring below needs them. One task serves every variant: AGP places
@@ -818,6 +821,8 @@ kover {
                     "*_AutoMigration_*",
                     "*ComposableSingletons*",
                     "*.BuildConfig",
+                    // `Res` and its accessors, which Compose Multiplatform generates in `:shared-ui`.
+                    "com.coparently.app.resources.*",
                 )
                 annotatedBy(
                     "androidx.compose.ui.tooling.preview.Preview",
