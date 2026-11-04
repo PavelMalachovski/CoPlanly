@@ -1576,7 +1576,8 @@ shared-data/ — Kotlin Multiplatform module (MON-24 phase 2): the data layer bo
              RecordPhotoFetcher, behind StorageBucket and PickedFiles), the chat attachment
              outbox and the vault's repository (data/documents/), data/session/'s
              SessionProfileSynchronizer and SignedInAccountSource, and the export's
-             ExportReceipts (on CallableFunctions, behind ExportVerifyAddress).
+             ExportReceipts (on CallableFunctions, behind ExportVerifyAddress), and (Task 10)
+             the AI-assist consent (data/ai/AiConsentManager), with the ViewModels that ask it.
              Its Koin modules are dataModules and platformDataModule, which appModules includes;
              on the iPhone platformDataModule binds every seam itself (Task 8j: stand-ins in
              di/koin/IosUnavailable.kt where the iPhone has nothing yet).
@@ -1951,7 +1952,7 @@ stay in the app, `DesignSystemPreviews.kt`), `AddItemButton`, `AnswerButtons`, `
 yet (Task 10's later slices, below); Coil's users (`AccountAvatar`, `PhotoStrip`, `ZoomableImage`,
 `SignedInAsRow`, which draws an avatar); the Android requesters and handlers
 (`NotificationPermission`, `MicrophonePermission`, `SharedFileViewer`, `SensitiveClipboard`,
-`OpenedFile`, `PrivacyPolicyLink`, `TermsOfServiceLink`; Task 11's platform interfaces);
+`PrivacyPolicyLink`, `TermsOfServiceLink`; Task 11's platform interfaces);
 `DiscardGuard` (`PredictiveBackHandler`); `FamilySwitcher` (`koinViewModel`); `TwoPane`
 (`LocalConfiguration`, Task 12 with the navigation); `ListSkeleton` (`components/SkeletonBox`); the
 `java.time` and `java.util.Locale` users (`AnswerByField`, `HolidayNames`, `MonthPaging`,
@@ -1971,7 +1972,8 @@ its `DayOfWeek`, worded by `rememberReaderDates` (an `expect`: `java.time` in th
 first locale on Android, as before; Foundation on the iPhone). `asString()` reads through Compose
 Multiplatform, and a snackbar or a Toast resolves through `rememberUiTextResolver()` (see CQ-14 in
 Known issues). Every ViewModel, state class and screen that builds a `UiText` names `Res`, with the
-same keys and arguments; `SharedFileViewer.sharedFileError` takes a `StringResource` fallback.
+same keys and arguments; `sharedFileError` takes a `StringResource` fallback (in `:shared-ui`'s
+`SharedFileErrors.kt` since Task 10).
 `UiTextParityTest` (`app/src/test/.../resources/`) holds both resolutions to what Android's resources
 made of the same samples, in the five languages.
 **The shared state and the ViewModels follow in Task 10**, slice by slice (10a: the shared state,
@@ -1993,7 +1995,18 @@ from the activity's level: `ConnectivityViewModel` (on the data layer's `Connect
 `online` is `NetworkMonitor`'s `networkStatus` held as a state, in place of `NetworkMonitor`
 itself), `FamilySwitcherViewModel`, `FamilyViewViewModel` and `ParentPaletteViewModel`, in
 `commonUiModule` too. A moved test that builds a `ParentsSource` uses `androidUnitTest`'s copy of
-`testParentsSource`; the app keeps its own for the tests still there. `coParentOnScreen`, `observeSignedInUser` and
+`testParentsSource`; the app keeps its own for the tests still there. Then **chat**: `ChatViewModel`
+(its drafts in the data layer's `SecurePreferences`, its "now" from `wallClockNow()` and
+`Clock.System`, a message's id from `kotlin.uuid.Uuid`), `SendHold`, `ChatAttachmentViewModel` (the
+uid from `SignedInUser`, its thumbnails and `OpenedFile` a kotlinx-io `Path`, which `ChatAttachments`
+and `FamilyDocumentsScreen` open as `File(path.toString())`), `ChatEventCardViewModel`,
+`ChatSearchViewModel`, `DictationViewModel`, `ReplySuggestionViewModel` with `presentation/ai/`'s
+`AiAssistSession`, and `SettleUpPaymentViewModel` (out of `SettleUpPayment.kt`, whose ZXing and share
+code stays with the screen), in `chatUiModule`; `sharedFileError` left `SharedFileViewer.kt` for
+`SharedFileErrors.kt`, and `data/ai/AiConsentManager` moved to `:shared-data` (`aiDataModule`).
+On the iPhone `platformUiModule` binds the chat's two platform seams the data layer does not: no
+dictation (`NoSpeechDictation`, unavailable) and no AI assist (`AiAssistAvailability(false)`,
+`NoAiAssist` answering `Disabled`), in `di/koin/IosUiUnavailable.kt`. `coParentOnScreen`, `observeSignedInUser` and
 `projectedCoParentUid` are public behind `@InternalSharedApi` until the five ViewModels still in the
 app that call them move (see the `@InternalSharedApi` paragraph below).
 
@@ -2005,7 +2018,7 @@ since `RequestInbox` moved, Task 8e, and `ClocksAt.governing` lost its marker wh
 `OtherFamiliesSignals` moved to `shared-data`, Task 8h — public, since that is another module), and
 in `shared-data/` `EventDocument`
 (the events and revisions wire contracts, in `shared-data`'s `wire/` since Task 8j and so compiled
-by the app's tests too, and the app's `ChatEventCardViewModelTest`;
+by the app's tests too, and `:shared-ui`'s `ChatEventCardViewModelTest`, since Task 10;
 `StampedFamily` is `internal` again since `SyncService` moved, Task 8g), `toReminderEvent`
 (`ReminderWorker`), `RequestTime.of` (`RequestsSourceTest`, in the app; `minuteTicks` beside it is
 public without the marker, because its caller, `AnswerByField`, is presentation code that stays in

@@ -98,7 +98,7 @@ fun ChatAttachmentsHost(
     }
     LaunchedEffect(viewModel) {
         viewModel.opened.collect { opened ->
-            if (!openSharedFile(context, opened.file, opened.contentType)) viewModel.noViewer()
+            if (!openSharedFile(context, File(opened.path.toString()), opened.contentType)) viewModel.noViewer()
         }
     }
     CompositionLocalProvider(
@@ -216,7 +216,7 @@ internal fun ChatAttachmentBlock(
                 LaunchedEffect(attachment.storagePath) { viewModel.requestThumbnail(message, attachment) }
                 val onOpen = { viewModel.open(message, attachment) }
                 if (attachment.isImage) {
-                    ImageAttachment(attachment, thumbnails[attachment.storagePath], onOpen)
+                    ImageAttachment(attachment, thumbnails[attachment.storagePath]?.let { File(it.toString()) }, onOpen)
                 } else {
                     FileAttachment(attachment, onOpen)
                 }

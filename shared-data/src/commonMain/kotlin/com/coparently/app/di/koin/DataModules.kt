@@ -1,5 +1,6 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.chat.ChatMirror
 import com.coparently.app.data.chat.ChatPartnerSource
@@ -439,6 +440,16 @@ val useCaseDataModule: Module = module {
 }
 
 /**
+ * The AI-assist consent (MON-12; CLAUDE.md item 36), moved here from the app with the ViewModels
+ * that ask it (MON-24 phase 2, Task 10): one per process, so the remembered answer is one. The
+ * callable it gates, `AiAssistRepository`, and whether the build offers it, `AiAssistAvailability`,
+ * are the platform's.
+ */
+val aiDataModule: Module = module {
+    singleOf(::AiConsentManager)
+}
+
+/**
  * Every module of this layer both apps use. The app's `appModules` includes them, with
  * [platformDataModule]; the iPhone app's will.
  */
@@ -457,7 +468,8 @@ val dataModules: List<Module> = listOf(
     exportDataModule,
     schoolDataModule,
     sessionDataModule,
-    useCaseDataModule
+    useCaseDataModule,
+    aiDataModule
 )
 
 /**

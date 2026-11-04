@@ -1,5 +1,12 @@
 package com.coparently.app.di.koin
 
+import com.coparently.app.presentation.chat.ChatAttachmentViewModel
+import com.coparently.app.presentation.chat.ChatEventCardViewModel
+import com.coparently.app.presentation.chat.ChatSearchViewModel
+import com.coparently.app.presentation.chat.ChatViewModel
+import com.coparently.app.presentation.chat.DictationViewModel
+import com.coparently.app.presentation.chat.ReplySuggestionViewModel
+import com.coparently.app.presentation.chat.SettleUpPaymentViewModel
 import com.coparently.app.presentation.common.ConnectivityViewModel
 import com.coparently.app.presentation.common.FamilyKindSource
 import com.coparently.app.presentation.common.FamilyMembersSource
@@ -33,13 +40,32 @@ val commonUiModule: Module = module {
 }
 
 /**
+ * The chat (MON-24 phase 2, Task 10): the thread and its conversations, a file's sending and
+ * opening, the card that names an event, the search, dictation, the suggested reply and the
+ * payment a settle-up card shows. What they take from the platform — the sealed preference store,
+ * the signed-in account, on-device speech and the AI callable with whether the build offers it — is
+ * bound by [platformDataModule] and the app's modules on Android, and by [platformDataModule] and
+ * [platformUiModule] on the iPhone.
+ */
+val chatUiModule: Module = module {
+    viewModelOf(::ChatAttachmentViewModel)
+    viewModelOf(::ChatEventCardViewModel)
+    viewModelOf(::ChatSearchViewModel)
+    viewModelOf(::ChatViewModel)
+    viewModelOf(::DictationViewModel)
+    viewModelOf(::ReplySuggestionViewModel)
+    viewModelOf(::SettleUpPaymentViewModel)
+}
+
+/**
  * Every module of the UI both apps run, grouped by feature as [dataModules] is. The app's
  * `appModules` includes them, with [platformUiModule]; the iPhone app's will (phase 3). The
  * ViewModels move here group by group (Task 10's slices); a screen still in the app resolves a moved
  * one with `koinViewModel()` exactly as before, since the definition is the same.
  */
 val uiModules: List<Module> = listOf(
-    commonUiModule
+    commonUiModule,
+    chatUiModule
 )
 
 /**

@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.chat
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.changerequests.AwaitingAnswers
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
@@ -122,7 +122,7 @@ class ChatEventCardViewModel(
     ) {
         // Room failing to answer is not something the parent can act on; there is still nothing
         // to open, and the tap must not look as if it was ignored.
-        Log.w(TAG, "Looking up the event a chat card names failed", e)
+        logger.w(TAG, "Looking up the event a chat card names failed", e)
         EventCardOutcome.Missing
     }
 

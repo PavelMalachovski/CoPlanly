@@ -1,8 +1,8 @@
 package com.coparently.app.presentation.chat
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.chat.ChatSearch
 import com.coparently.app.domain.chat.ChatSearchHit
 import com.coparently.app.domain.chat.ChatSearchResult
@@ -143,7 +143,7 @@ class ChatSearchViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 // The query itself is the reader's words; it is not logged.
-                Log.w(TAG, "Chat search failed", e)
+                logger.w(TAG, "Chat search failed", e)
                 ChatSearchState.Failed
             }
         }
@@ -163,7 +163,7 @@ class ChatSearchViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Could not size the window for a search result", e)
+                logger.w(TAG, "Could not size the window for a search result", e)
                 0
             }
             _jumps.emit(ChatSearchJump(hit.message.id, needed))

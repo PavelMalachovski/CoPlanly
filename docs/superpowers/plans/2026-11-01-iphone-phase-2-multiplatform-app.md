@@ -694,6 +694,19 @@ ViewModels are about 57 of those files.
   `NetworkMonitor.networkStatus` as a state; its test, with a fake `Connectivity`, in commonTest),
   `FamilySwitcherViewModel`, `FamilyViewViewModel` and `ParentPaletteViewModel` (tests in
   androidUnitTest, with a copy of `testParentsSource`).
+- Chat: `ChatViewModel` (`SecurePreferences`, `wallClockNow`, `Uuid`), `SendHold`,
+  `ChatAttachmentViewModel` (`SignedInUser`; `OpenedFile` and the thumbnails hold a `Path`, opened
+  as `File(path.toString())` by `ChatAttachments` and `FamilyDocumentsScreen`),
+  `ChatEventCardViewModel`, `ChatSearchViewModel`, `DictationViewModel`, `ReplySuggestionViewModel`
+  with `ai/AiAssistSession`, and `SettleUpPaymentViewModel` (split out of `SettleUpPayment.kt`), in
+  `chatUiModule`. `sharedFileError` moved to `common/SharedFileErrors.kt`; `AiConsentManager` to
+  `:shared-data` (`aiDataModule`, its test to shared-data's androidUnitTest). The iPhone's
+  `platformUiModule` binds `NoSpeechDictation`, `AiAssistAvailability(false)` and `NoAiAssist`.
+  `DictationViewModelTest` and `SendHoldTest` run in commonTest (four test names lost a comma for
+  Kotlin/Native); the other five chat tests (MockK) in androidUnitTest.
+- Left for 10b–10f: every other ViewModel (calendar and event; custody and requests; family and
+  expenses; settings, pairing, onboarding, auth and sync; the rest), and the app's copy of
+  `testParentsSource` until its last user moves.
 
 ### Task 11: The screens to `commonMain`
 

@@ -49,6 +49,7 @@ import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberUiTextResolver
 import com.coparently.app.presentation.theme.Spacing
 import org.koin.compose.viewmodel.koinViewModel
+import java.io.File
 
 /**
  * The family's document vault (MON-23): court orders, school letters, identity scans.
@@ -87,7 +88,7 @@ fun FamilyDocumentsScreen(
     }
     LaunchedEffect(viewModel) {
         viewModel.opened.collect { opened ->
-            if (!openSharedFile(context, opened.file, opened.contentType)) viewModel.noViewer()
+            if (!openSharedFile(context, File(opened.path.toString()), opened.contentType)) viewModel.noViewer()
         }
     }
 

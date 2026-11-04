@@ -1,12 +1,14 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.chat
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.ChatPartner
 import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.chat.ChatReadState
 import com.coparently.app.domain.chat.ChatWindow
 import com.coparently.app.domain.chat.ConversationKey
@@ -20,6 +22,8 @@ import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.domain.repository.MessageRepository
 import com.coparently.app.domain.repository.PreferencesRepository
 import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.domain.time.plus
+import com.coparently.app.domain.time.wallClockNow
 import com.coparently.app.presentation.common.Loadable
 import com.coparently.app.presentation.common.valueOrNull
 import kotlinx.coroutines.CancellationException
@@ -45,9 +49,10 @@ import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.datetime.toKotlinLocalDateTime
-import java.time.LocalDateTime
-import java.util.UUID
+import kotlinx.datetime.DateTimeUnit
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Whether this account has a co-parent to chat with, as far as the chat screen knows
@@ -105,7 +110,7 @@ class ChatViewModel(
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,
     private val chatPartnerSource: ChatPartnerSource,
-    private val preferences: EncryptedPreferences,
+    private val preferences: SecurePreferences,
     private val preferencesRepository: PreferencesRepository,
     departedThreadSource: DepartedThreadSource
 ) : ViewModel() {
@@ -247,7 +252,7 @@ class ChatViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
-                Log.w(TAG, "Chat operation failed: $operation", e)
+                logger.w(TAG, "Chat operation failed: $operation", e)
             }
         }
     }
@@ -267,7 +272,7 @@ class ChatViewModel(
      */
     private suspend fun failSoft(operation: String, cause: Throwable, fallback: suspend () -> Unit) {
         if (cause is CancellationException) throw cause
-        Log.w(TAG, "Chat flow failed: $operation", cause)
+        logger.w(TAG, "Chat flow failed: $operation", cause)
         fallback()
     }
 
@@ -515,7 +520,7 @@ class ChatViewModel(
             openedThreadMessages
                 .retry { cause ->
                     if (cause is CancellationException) throw cause
-                    Log.w(TAG, "Re-assert read/delivered marks failed; retrying", cause)
+                    logger.w(TAG, "Re-assert read/delivered marks failed; retrying", cause)
                     delay(MARK_RETRY_DELAY_MS)
                     true
                 }
@@ -536,8 +541,8 @@ class ChatViewModel(
      */
     val upcomingEvents: StateFlow<List<Event>> = eventRepository
         .getEventsByDateRange(
-            LocalDateTime.now().toKotlinLocalDateTime(),
-            LocalDateTime.now().plusDays(UPCOMING_DAYS).toKotlinLocalDateTime()
+            wallClockNow(),
+            wallClockNow().plus(UPCOMING_DAYS, DateTimeUnit.DAY)
         )
         .map { events ->
             events.filter { !it.isPrivate }.sortedBy { it.startDateTime }
@@ -655,12 +660,12 @@ class ChatViewModel(
     fun sendMessage(content: String, type: MessageType = MessageType.TEXT, attachments: List<String> = emptyList()) {
         val conversationId = _currentConversationId.value
         if (conversationId == null) {
-            Log.w(TAG, "Send ignored: no conversation is open")
+            logger.w(TAG, "Send ignored: no conversation is open")
             return
         }
         val userId = currentUserId.value
         if (userId.isEmpty()) {
-            Log.w(TAG, "Send ignored: the session has not resolved a uid yet")
+            logger.w(TAG, "Send ignored: the session has not resolved a uid yet")
             return
         }
 
@@ -682,12 +687,12 @@ class ChatViewModel(
                 val senderName = user?.name ?: "Unknown"
 
                 val message = Message(
-                    id = UUID.randomUUID().toString(),
+                    id = Uuid.random().toString(),
                     conversationId = conversationId,
                     senderId = userId,
                     senderName = senderName,
                     content = content,
-                    sentAtMillis = System.currentTimeMillis(),
+                    sentAtMillis = Clock.System.now().toEpochMilliseconds(),
                     messageType = type,
                     attachments = attachments,
                     status = MessageSendStatus.SENDING

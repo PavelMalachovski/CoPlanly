@@ -5,13 +5,6 @@ import com.coparently.app.presentation.auth.AuthViewModel
 import com.coparently.app.presentation.calendar.CalendarViewModel
 import com.coparently.app.presentation.changerequests.ChangeRequestViewModel
 import com.coparently.app.presentation.changerequests.RequestChangeViewModel
-import com.coparently.app.presentation.chat.ChatAttachmentViewModel
-import com.coparently.app.presentation.chat.ChatEventCardViewModel
-import com.coparently.app.presentation.chat.ChatSearchViewModel
-import com.coparently.app.presentation.chat.ChatViewModel
-import com.coparently.app.presentation.chat.DictationViewModel
-import com.coparently.app.presentation.chat.ReplySuggestionViewModel
-import com.coparently.app.presentation.chat.SettleUpPaymentViewModel
 import com.coparently.app.presentation.childinfo.ChildInfoViewModel
 import com.coparently.app.presentation.consent.HealthConsentViewModel
 import com.coparently.app.presentation.consent.TelemetryConsentViewModel
@@ -57,7 +50,9 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 /**
- * Every ViewModel. `koinViewModel()` in a composable and `by viewModel()` in `MainActivity` create
+ * Every ViewModel still in the app; the ones that have moved to `:shared-ui` are defined in its
+ * `uiModules` (MON-24 phase 2, Task 10), and resolve the same way. `koinViewModel()` in a
+ * composable and `by viewModel()` in `MainActivity` create
  * them in the caller's `ViewModelStoreOwner`, exactly as Hilt's ViewModel helpers did, and hand a
  * `SavedStateHandle` holding the destination's arguments to a constructor that asks for one
  * (`ViewModelScopeTest` holds both).
@@ -68,13 +63,6 @@ val viewModelModule = module {
     viewModelOf(::CalendarViewModel)
     viewModelOf(::ChangeRequestViewModel)
     viewModelOf(::RequestChangeViewModel)
-    viewModelOf(::ChatAttachmentViewModel)
-    viewModelOf(::ChatEventCardViewModel)
-    viewModelOf(::ChatSearchViewModel)
-    viewModelOf(::ChatViewModel)
-    viewModelOf(::DictationViewModel)
-    viewModelOf(::ReplySuggestionViewModel)
-    viewModelOf(::SettleUpPaymentViewModel)
     viewModelOf(::ChildInfoViewModel)
     viewModelOf(::HealthConsentViewModel)
     viewModelOf(::TelemetryConsentViewModel)

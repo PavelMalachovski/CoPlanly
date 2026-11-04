@@ -1,11 +1,13 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.coparently.app.presentation.chat
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.files.SharedFileCache
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.platform.logger
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.model.Message
@@ -30,8 +32,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
-import java.io.File
-import java.util.UUID
+import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Files in the chat thread (MON-23): sending one, drawing its thumbnail, opening it.
@@ -52,16 +55,19 @@ class ChatAttachmentViewModel(
     private val cache: SharedFileCache,
     private val messageRepository: MessageRepository,
     private val userRepository: UserRepository,
-    private val authService: FirebaseAuthService
+    private val authService: SignedInUser
 ) : ViewModel() {
 
     /** Upload progress by message id, 0 to 1, while a file is going up. */
     val progress: StateFlow<Map<String, Float>> = outbox.progress
 
-    private val _thumbnails = MutableStateFlow<Map<String, File>>(emptyMap())
+    private val _thumbnails = MutableStateFlow<Map<String, Path>>(emptyMap())
 
-    /** Local copies of image attachments by storage path, as they become available. */
-    val thumbnails: StateFlow<Map<String, File>> = _thumbnails.asStateFlow()
+    /**
+     * Local copies of image attachments by storage path, as they become available: kotlinx-io paths
+     * (MON-24 phase 2, Task 10), which the screen opens as `File(path.toString())`.
+     */
+    val thumbnails: StateFlow<Map<String, Path>> = _thumbnails.asStateFlow()
 
     private val requested = mutableSetOf<String>()
 
@@ -78,8 +84,8 @@ class ChatAttachmentViewModel(
     /** Sends the file at [contentUri] into [conversationId] as a message of its own. */
     fun send(conversationId: String, contentUri: String) {
         viewModelScope.launch {
-            val uid = authService.getCurrentUser()?.uid ?: return@launch
-            val messageId = UUID.randomUUID().toString()
+            val uid = authService.getCurrentUid() ?: return@launch
+            val messageId = Uuid.random().toString()
             val attachment = try {
                 outbox.stage(conversationId, messageId, contentUri)
             } catch (e: CancellationException) {
@@ -89,7 +95,7 @@ class ChatAttachmentViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Exception
             ) {
                 outbox.discard(messageId)
-                Log.w(TAG, "Staging an attachment failed", e)
+                logger.w(TAG, "Staging an attachment failed", e)
                 _error.value = sharedFileError(e, Res.string.chat_attach_stage_error)
                 return@launch
             }
@@ -101,7 +107,7 @@ class ChatAttachmentViewModel(
                 senderName = userRepository.getCurrentUser()?.name ?: "Unknown",
                 // What a build that knows nothing of attachments shows: the file's name.
                 content = attachment.fileName,
-                sentAtMillis = System.currentTimeMillis(),
+                sentAtMillis = Clock.System.now().toEpochMilliseconds(),
                 messageType = MessageType.TEXT,
                 attachments = listOf(ChatAttachmentCodec.encode(attachment)),
                 status = MessageSendStatus.SENDING
@@ -117,7 +123,7 @@ class ChatAttachmentViewModel(
             val local = outbox.stagedFile(message.id, attachment)
                 ?: cache.cached(attachment.fileName, attachment.sha256)
                 ?: fetch(attachment)
-            if (local != null) _thumbnails.update { it + (attachment.storagePath to File(local.toString())) }
+            if (local != null) _thumbnails.update { it + (attachment.storagePath to local) }
         }
     }
 
@@ -127,11 +133,11 @@ class ChatAttachmentViewModel(
         viewModelScope.launch {
             val local = outbox.stagedFile(message.id, attachment)
             if (local != null) {
-                _opened.send(OpenedFile(File(local.toString()), attachment.contentType))
+                _opened.send(OpenedFile(local, attachment.contentType))
                 return@launch
             }
             runCatching { cache.localCopy(attachment.storagePath, attachment.fileName, attachment.sha256) }
-                .onSuccess { _opened.trySend(OpenedFile(File(it.toString()), attachment.contentType)) }
+                .onSuccess { _opened.trySend(OpenedFile(it, attachment.contentType)) }
                 .onFailure { e -> _error.value = sharedFileError(e, Res.string.shared_file_error_open) }
         }
     }
@@ -153,7 +159,7 @@ class ChatAttachmentViewModel(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "Thumbnail download failed", e)
+        logger.w(TAG, "Thumbnail download failed", e)
         null
     }
 
@@ -169,7 +175,7 @@ class ChatAttachmentViewModel(
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception
         ) {
-            Log.w(TAG, "Attachment message left in the outbox", e)
+            logger.w(TAG, "Attachment message left in the outbox", e)
         }
     }
 

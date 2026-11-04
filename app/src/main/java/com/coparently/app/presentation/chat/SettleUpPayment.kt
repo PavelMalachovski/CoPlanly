@@ -32,13 +32,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.coparently.app.R
-import com.coparently.app.data.chat.ChatPartner
-import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.money.MinorUnits
-import com.coparently.app.data.payment.PaymentAccounts
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
@@ -62,13 +57,6 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
 import java.time.LocalDate
@@ -83,37 +71,6 @@ import java.util.Locale
  * baseline keys entries on `MessageItem`'s signature.
  */
 val LocalSettleUpPayment = compositionLocalOf<(@Composable (Message, Boolean) -> Unit)?> { null }
-
-/**
- * The account the co-parent of the thread on screen receives payments on.
- *
- * @property uid The co-parent.
- * @property iban Their IBAN, or null when they have added none.
- */
-data class PayeeAccount(val uid: String, val iban: String?)
-
-/** Follows the co-parent of the family on screen and the IBAN they receive payments on. */
-class SettleUpPaymentViewModel(
-    chatPartnerSource: ChatPartnerSource,
-    paymentAccounts: PaymentAccounts
-) : ViewModel() {
-
-    /** The co-parent's account, or null while there is none to show. */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val payee: StateFlow<PayeeAccount?> = chatPartnerSource.observe()
-        .flatMapLatest { partner ->
-            if (partner is ChatPartner.Linked) {
-                paymentAccounts.observeIban(partner.partnerUid).map { PayeeAccount(partner.partnerUid, it) }
-            } else {
-                flowOf(null)
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
-
-    private companion object {
-        const val STOP_TIMEOUT_MS = 5_000L
-    }
-}
 
 /**
  * Provides [LocalSettleUpPayment] for [content], and [LocalOpenSupport]: where a child support

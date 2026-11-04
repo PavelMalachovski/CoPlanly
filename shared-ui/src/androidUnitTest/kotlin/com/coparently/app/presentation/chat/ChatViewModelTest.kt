@@ -5,7 +5,7 @@ import com.coparently.app.data.chat.ChatPartnerSource
 import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.family.FamilyOption
 import com.coparently.app.data.family.SelectedFamilySource
-import com.coparently.app.data.local.preferences.EncryptedPreferences
+import com.coparently.app.data.platform.SecurePreferences
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.model.Conversation
@@ -719,7 +719,7 @@ class ChatViewModelTest {
     }
 
     private fun createViewModel(
-        preferences: EncryptedPreferences = draftStore(),
+        preferences: SecurePreferences = draftStore(),
         departedFlow: Flow<List<DepartedThread>> = departed
     ): ChatViewModel {
         val eventRepository = mockk<EventRepository> {
@@ -748,7 +748,7 @@ class ChatViewModelTest {
     }
 
     /** An empty draft store, which is what a device that has never typed one holds. */
-    private fun draftStore() = mockk<EncryptedPreferences>(relaxed = true) {
+    private fun draftStore() = mockk<SecurePreferences>(relaxed = true) {
         every { getChatDraft(any()) } returns ""
     }
 

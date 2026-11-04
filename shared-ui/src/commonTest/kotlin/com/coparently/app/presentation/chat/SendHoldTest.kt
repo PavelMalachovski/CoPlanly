@@ -5,9 +5,9 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * The hold behind "Pause before sending" (MON-19), on its own: the message is sent exactly once,
@@ -17,7 +17,7 @@ import org.junit.Test
 class SendHoldTest {
 
     @Test
-    fun `a held message is sent once, when the pause runs out`() = runTest {
+    fun `a held message is sent once when the pause runs out`() = runTest {
         val hold = SendHold(this)
         var sent = 0
 

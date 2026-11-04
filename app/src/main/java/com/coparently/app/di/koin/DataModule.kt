@@ -2,7 +2,6 @@ package com.coparently.app.di.koin
 
 import android.content.Context
 import com.coparently.app.BuildConfig
-import com.coparently.app.data.ai.AiConsentManager
 import com.coparently.app.data.ai.FunctionsAiAssistRepository
 import com.coparently.app.data.analytics.AnalyticsManager
 import com.coparently.app.data.consent.HealthConsentManager
@@ -66,7 +65,6 @@ import org.koin.dsl.module
  * be ambiguous there or would skip the default the way Hilt never did.
  */
 val dataModule = module {
-    singleOf(::AiConsentManager)
     singleOf(::FunctionsAiAssistRepository)
     singleOf(::AnalyticsManager)
     singleOf(::HealthConsentManager)

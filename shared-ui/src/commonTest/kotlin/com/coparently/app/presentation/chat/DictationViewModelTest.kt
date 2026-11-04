@@ -6,7 +6,7 @@ import com.coparently.app.domain.dictation.SpeechDictation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -52,7 +52,7 @@ class DictationViewModelTest {
     }
 
     @Test
-    fun `partial results are appended to the draft live, in the app's language`() = runTest {
+    fun `partial results are appended to the draft live in the app's language`() = runTest {
         val fake = FakeDictation()
         val viewModel = DictationViewModel(fake)
 
@@ -130,7 +130,7 @@ class DictationViewModelTest {
     }
 
     @Test
-    fun `stop asks for the final result, cancel drops later callbacks`() {
+    fun `stop asks for the final result and cancel drops later callbacks`() {
         val fake = FakeDictation()
         val viewModel = DictationViewModel(fake)
 
@@ -150,7 +150,7 @@ class DictationViewModelTest {
     }
 
     @Test
-    fun `a refused microphone is explained, and the next start clears it`() {
+    fun `a refused microphone is explained and the next start clears it`() {
         val fake = FakeDictation()
         val viewModel = DictationViewModel(fake)
 

@@ -3,7 +3,7 @@ package com.coparently.app.presentation.chat
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.files.SharedFileCache
 import com.coparently.app.data.files.SharedFileRejectedException
-import com.coparently.app.data.remote.firebase.FirebaseAuthService
+import com.coparently.app.data.remote.firebase.SignedInUser
 import com.coparently.app.domain.chat.ChatAttachment
 import com.coparently.app.domain.chat.ChatAttachmentCodec
 import com.coparently.app.domain.files.SharedFilePolicy
@@ -14,7 +14,6 @@ import com.coparently.app.domain.repository.UserRepository
 import com.coparently.app.presentation.common.UiText
 import com.coparently.app.resources.Res
 import com.coparently.app.resources.shared_file_error_size
-import com.google.firebase.auth.FirebaseUser
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -50,8 +49,8 @@ class ChatAttachmentViewModelTest {
     private val cache = mockk<SharedFileCache>(relaxed = true)
     private val messageRepository = mockk<MessageRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository> { coEvery { getCurrentUser() } returns null }
-    private val authService = mockk<FirebaseAuthService> {
-        every { getCurrentUser() } returns mockk<FirebaseUser> { every { uid } returns "alice" }
+    private val authService = mockk<SignedInUser> {
+        every { getCurrentUid() } returns "alice"
     }
 
     @Before

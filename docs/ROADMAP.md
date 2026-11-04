@@ -2921,7 +2921,12 @@ bytes are identical on Android):
   `FormDraft`, `NamedParent`, `ParentNames`, `ParentLabels` and `PhotoOwner`, packages unchanged,
   with their tests (on `kotlin.test` in `commonTest` where nothing is mocked); then `common/`'s four
   tree-wide ViewModels (the offline banner's on the data layer's `Connectivity`, the family
-  switcher's, the family view's and the palette's). Calendar and event,
+  switcher's, the family view's and the palette's); then chat — the thread's ViewModel (its drafts
+  in `SecurePreferences`, ids from `kotlin.uuid`), the attachment's (on `SignedInUser`, its files
+  kotlinx-io `Path`s the screens open as `File`s), the event card's, the search's, dictation's, the
+  suggested reply's with `AiAssistSession`, and the settle-up payment's — with `AiConsentManager`
+  moved to `:shared-data`. On the iPhone, `platformUiModule` stands in for dictation and the AI
+  assist (neither offered). Calendar and event,
   custody and requests, family and expenses, settings to sync and the rest follow as slices 10b–10f.
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
