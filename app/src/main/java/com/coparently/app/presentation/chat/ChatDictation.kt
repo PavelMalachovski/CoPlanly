@@ -37,13 +37,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.core.os.ConfigurationCompat
 import com.coparently.app.R
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Motion
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.rememberReducedMotion
+import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 
@@ -166,16 +166,18 @@ internal fun DictationFailure.messageRes(): Int = when (this) {
 }
 
 /**
- * The language to dictate in: the app's own (the per-app choice in Settings → Language when one
- * was made, else what the activity's configuration resolved), as a BCP 47 tag — the parent is
- * writing in the language the app speaks to them in.
+ * The language to dictate in, as a BCP 47 tag: the per-app choice in Settings → Language when one
+ * was made, else the phone's first language ([AppLocale.deviceFirst]) — never the English the app
+ * falls back to for a language it does not ship (the owner's language rule, MON-24 phase 2). The
+ * words are the parent's own, so a Slovak phone dictates Slovak while the app reads English.
  */
 @Composable
 fun rememberDictationLanguageTag(): String? {
     val configuration = LocalConfiguration.current
+    val context = LocalContext.current
     return remember(configuration) {
         val chosen = AppCompatDelegate.getApplicationLocales().get(0)
-        (chosen ?: ConfigurationCompat.getLocales(configuration).get(0))?.toLanguageTag()
+        (chosen ?: AppLocale.deviceFirst(context)).toLanguageTag()
     }
 }
 

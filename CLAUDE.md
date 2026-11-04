@@ -4144,10 +4144,12 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
     list is the picker's, `locales_config.xml`'s and the string folders'), and `PerAppLocaleTest`
     on the emulators. `docs/DEVICE-CHECKLIST.md` §3.6 asks for Slovak then Czech (English), Czech
     first (Czech) and a per-app choice on a phone. Consequences the rule brings, not defects: on a
-    Slovak phone the holidays' local names, dictation (`rememberDictationLanguageTag`, the app's
-    language) and the dates are English too; what the system draws itself (the launcher's label,
-    the permission dialogs, Credential Manager's sheet, the widget picker's description) stays in
-    the system's own language.
+    Slovak phone the holidays' local names and the dates are English too; what the system draws
+    itself (the launcher's label, the permission dialogs, Credential Manager's sheet, the widget
+    picker's description) stays in the system's own language. **Dictation is the exception**: the
+    words are the parent's, so `rememberDictationLanguageTag` dictates in the per-app choice, else
+    the phone's first language (`AppLocale.deviceFirst`), never the English fallback — a Slovak
+    phone dictates Slovak, as it did before the rule.
 
 - **Language selection**: the owner's rule above by default (the phone's first language when
   shipped, else English), plus a manual per-app override — the
