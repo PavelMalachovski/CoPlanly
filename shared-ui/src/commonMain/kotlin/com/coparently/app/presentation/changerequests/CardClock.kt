@@ -23,8 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.ClockState
 import com.coparently.app.domain.changerequests.RequestClock
 import com.coparently.app.domain.changerequests.RequestKind
@@ -35,7 +33,25 @@ import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.theme.IconSizes
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.answerByText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.request_clock_answer_by
+import com.coparently.app.resources.request_clock_calendar_unchanged
+import com.coparently.app.resources.request_clock_deadline_passed
+import com.coparently.app.resources.request_clock_give_last_chance
+import com.coparently.app.resources.request_clock_give_last_chance_until
+import com.coparently.app.resources.request_clock_last_chance_once
+import com.coparently.app.resources.request_clock_last_chance_until
+import com.coparently.app.resources.request_clock_no_answer
+import com.coparently.app.resources.request_clock_not_opened
+import com.coparently.app.resources.request_clock_opened
+import com.coparently.app.resources.request_clock_reminders
+import com.coparently.app.resources.request_clock_reminders_next
+import com.coparently.app.resources.request_clock_responder_unanswered
+import com.coparently.app.resources.request_clock_sent
+import com.coparently.app.resources.request_last_chance_banner_text
+import com.coparently.app.resources.request_last_chance_banner_title
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 
 /** Which side of a request the parent reading its card is on (phase 3a). */
 enum class ClockRole {
@@ -108,16 +124,16 @@ val LocalCardClock: ProvidableCompositionLocal<CardClock?> = staticCompositionLo
  * runs: how long is left, and what happens without an answer. Nothing otherwise.
  */
 @Composable
-internal fun CardClockBanner() {
+fun CardClockBanner() {
     val clock = LocalCardClock.current ?: return
     if (clock.role != ClockRole.RESPONDER || clock.timed.state != ClockState.LAST_CHANCE) return
     val until = RequestClock.endMillis(clock.timed.clock)
     InlineBanner(
         title = stringResource(
-            R.string.request_last_chance_banner_title,
+            Res.string.request_last_chance_banner_title,
             RequestClockText.left(until - clock.timed.nowMillis).asString()
         ),
-        text = stringResource(R.string.request_last_chance_banner_text, answerByText(until)),
+        text = stringResource(Res.string.request_last_chance_banner_text, ReaderDateText.answerBy(until)),
         icon = Icons.Default.Schedule,
         tone = BannerTone.ATTENTION
     )
@@ -128,10 +144,10 @@ internal fun CardClockBanner() {
  * History's outlined, neutral chip — never the error colour, which is "Declined". Nothing otherwise.
  */
 @Composable
-internal fun CardClockChip() {
+fun CardClockChip() {
     if (LocalCardClock.current?.showsNoAnswer != true) return
     PillChip(
-        label = stringResource(R.string.request_clock_no_answer),
+        label = stringResource(Res.string.request_clock_no_answer),
         container = null,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -143,7 +159,7 @@ internal fun CardClockChip() {
  * last-chance button. Records the answering parent's first look, once, when it is drawn.
  */
 @Composable
-internal fun CardClockDetails() {
+fun CardClockDetails() {
     val clock = LocalCardClock.current ?: return
     clock.onSeen?.let { seen -> LaunchedEffect(clock.timed.clock.id) { seen() } }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
@@ -161,9 +177,9 @@ private fun ResponderRows(clock: CardClock) {
         ClockState.OPEN -> AnswerByRow(timed, MaterialTheme.colorScheme.primary)
         ClockState.NO_ANSWER_LAST_CHANCE_POSSIBLE -> Text(
             text = stringResource(
-                R.string.request_clock_responder_unanswered,
+                Res.string.request_clock_responder_unanswered,
                 clock.otherName,
-                answerByText(RequestClock.buttonUntilMillis(timed.clock))
+                ReaderDateText.answerBy(RequestClock.buttonUntilMillis(timed.clock))
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -180,7 +196,7 @@ private fun ProposerRows(clock: CardClock) {
         ClockState.OPEN -> if (timed.clock.deliveredAtMillis == null) {
             ClockRow(
                 Icons.Default.Schedule,
-                stringResource(R.string.request_clock_sent, answerByText(timed.clock.answerByMillis))
+                stringResource(Res.string.request_clock_sent, ReaderDateText.answerBy(timed.clock.answerByMillis))
             )
         } else {
             OpenedRow(clock)
@@ -193,8 +209,8 @@ private fun ProposerRows(clock: CardClock) {
             ClockRow(
                 Icons.Default.Schedule,
                 stringResource(
-                    R.string.request_clock_last_chance_until,
-                    answerByText(until),
+                    Res.string.request_clock_last_chance_until,
+                    ReaderDateText.answerBy(until),
                     RequestClockText.left(until - timed.nowMillis).asString()
                 )
             )
@@ -211,12 +227,12 @@ private fun DeadlinePassedRows(clock: CardClock) {
     val timed = clock.timed
     ClockRow(
         Icons.Default.Schedule,
-        stringResource(R.string.request_clock_deadline_passed, answerByText(timed.clock.answerByMillis))
+        stringResource(Res.string.request_clock_deadline_passed, ReaderDateText.answerBy(timed.clock.answerByMillis))
     )
     OpenedRow(clock)
     RemindersRow(timed)
     Text(
-        text = stringResource(R.string.request_clock_calendar_unchanged),
+        text = stringResource(Res.string.request_clock_calendar_unchanged),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -228,14 +244,18 @@ private fun DeadlinePassedRows(clock: CardClock) {
         Button(onClick = give, enabled = !clock.lastChanceInFlight) {
             Text(
                 if (window == RequestClock.LAST_CHANCE_MILLIS) {
-                    stringResource(R.string.request_clock_give_last_chance)
+                    stringResource(Res.string.request_clock_give_last_chance)
                 } else {
-                    stringResource(R.string.request_clock_give_last_chance_until, answerByText(until))
+                    stringResource(Res.string.request_clock_give_last_chance_until, ReaderDateText.answerBy(until))
                 }
             )
         }
         Text(
-            text = stringResource(R.string.request_clock_last_chance_once, clock.otherName, answerByText(until)),
+            text = stringResource(
+                Res.string.request_clock_last_chance_once,
+                clock.otherName,
+                ReaderDateText.answerBy(until)
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -248,8 +268,8 @@ private fun AnswerByRow(timed: TimedRequest, color: Color) {
     ClockRow(
         Icons.Default.Schedule,
         stringResource(
-            R.string.request_clock_answer_by,
-            answerByText(timed.clock.answerByMillis),
+            Res.string.request_clock_answer_by,
+            ReaderDateText.answerBy(timed.clock.answerByMillis),
             RequestClockText.left(timed.clock.answerByMillis - timed.nowMillis).asString()
         ),
         color
@@ -266,11 +286,11 @@ private fun OpenedRow(clock: CardClock) {
     when {
         seenAt != null -> ClockRow(
             Icons.Default.Visibility,
-            stringResource(R.string.request_clock_opened, clock.otherName, answerByText(seenAt))
+            stringResource(Res.string.request_clock_opened, clock.otherName, ReaderDateText.answerBy(seenAt))
         )
         clock.timed.clock.deliveredAtMillis != null -> ClockRow(
             Icons.Default.VisibilityOff,
-            stringResource(R.string.request_clock_not_opened, clock.otherName)
+            stringResource(Res.string.request_clock_not_opened, clock.otherName)
         )
     }
 }
@@ -285,9 +305,9 @@ private fun RemindersRow(timed: TimedRequest) {
     ClockRow(
         Icons.Default.Notifications,
         if (next != null) {
-            stringResource(R.string.request_clock_reminders_next, shown, planned, answerByText(next))
+            stringResource(Res.string.request_clock_reminders_next, shown, planned, ReaderDateText.answerBy(next))
         } else {
-            stringResource(R.string.request_clock_reminders, shown, planned)
+            stringResource(Res.string.request_clock_reminders, shown, planned)
         }
     )
 }

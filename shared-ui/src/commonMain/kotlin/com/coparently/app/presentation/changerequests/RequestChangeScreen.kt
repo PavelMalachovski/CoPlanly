@@ -36,30 +36,41 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.RequestCap
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.common.AnswerByField
 import com.coparently.app.presentation.common.AnswerByPickSaver
 import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.LocalDateSaver
+import com.coparently.app.presentation.common.LocalTimeSaver
+import com.coparently.app.presentation.common.NullableLocalTimeSaver
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberAnswerByOffer
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.components.TimePickerDialog
+import com.coparently.app.presentation.event.plusHour
 import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
-import com.coparently.app.utils.shortTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_back
+import com.coparently.app.resources.change_request_cancel
+import com.coparently.app.resources.change_request_currently
+import com.coparently.app.resources.change_request_form_title
+import com.coparently.app.resources.change_request_from_time
+import com.coparently.app.resources.change_request_note_label
+import com.coparently.app.resources.change_request_ok
+import com.coparently.app.resources.change_request_proposed_new_time
+import com.coparently.app.resources.change_request_send
+import com.coparently.app.resources.change_request_to_time
+import com.coparently.app.resources.change_request_to_unset
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalTime
-import kotlinx.datetime.toKotlinLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.LocalDateTime
+import kotlin.time.Clock
 
 /**
  * Form for proposing a new date/time for [eventId] to the co-parent.
@@ -91,12 +102,12 @@ fun RequestChangeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.change_request_form_title)) },
+                title = { Text(stringResource(Res.string.change_request_form_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            stringResource(R.string.change_request_back)
+                            stringResource(Res.string.change_request_back)
                         )
                     }
                 }
@@ -160,28 +171,25 @@ private fun RequestChangeForm(
     event: Event,
     isSending: Boolean,
     coParentName: String,
-    onSubmit: (kotlinx.datetime.LocalDateTime, kotlinx.datetime.LocalDateTime?, String?, AnswerByPick) -> Unit,
+    onSubmit: (LocalDateTime, LocalDateTime?, String?, AnswerByPick) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dateFormatter = localizedDate("yMMMEEEd")
-    val timeFormatter = shortTime()
-
-    // Saveable, so a rotation keeps what the parent proposed and wrote (D-11's rule). The fields are
-    // java.time, which a saved-state Bundle holds; the event's own times are kotlinx-datetime.
-    var proposedDate by rememberSaveable { mutableStateOf(event.startDateTime.date.toJavaLocalDate()) }
-    var proposedStartTime by rememberSaveable { mutableStateOf(event.startDateTime.time.toJavaLocalTime()) }
-    var proposedEndTime by rememberSaveable {
-        mutableStateOf(event.endDateTime?.time?.toJavaLocalTime())
+    // Saveable, so a rotation keeps what the parent proposed and wrote (D-11's rule). Each field is
+    // kept as its ISO text (`DateTimeSavers`), never Java-serialised into the Bundle.
+    var proposedDate by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(event.startDateTime.date) }
+    var proposedStartTime by rememberSaveable(stateSaver = LocalTimeSaver) { mutableStateOf(event.startDateTime.time) }
+    var proposedEndTime by rememberSaveable(stateSaver = NullableLocalTimeSaver) {
+        mutableStateOf(event.endDateTime?.time)
     }
     var note by rememberSaveable { mutableStateOf("") }
     var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
     // The cap follows the proposed time, so it is worked out when that changes and not per frame.
-    val proposedStart = LocalDateTime.of(proposedDate, proposedStartTime)
+    val proposedStart = LocalDateTime(proposedDate, proposedStartTime)
     val cap = remember(event.startDateTime, proposedStart) {
         RequestCap.forChange(
             event.startDateTime,
-            proposedStart.toKotlinLocalDateTime(),
-            System.currentTimeMillis(),
+            proposedStart,
+            Clock.System.now().toEpochMilliseconds(),
             TimeZone.currentSystemDefault()
         )
     }
@@ -208,12 +216,12 @@ private fun RequestChangeForm(
                 )
                 // The resource takes the date and the time as two arguments; the end time,
                 // when the event has one, is appended to the second one as a range.
-                val currentTime = event.startDateTime.format(timeFormatter) +
-                    (event.endDateTime?.let { " – " + it.format(timeFormatter) } ?: "")
+                val currentTime = ReaderDateText.time(event.startDateTime) +
+                    (event.endDateTime?.let { " – " + ReaderDateText.time(it) } ?: "")
                 Text(
                     text = stringResource(
-                        R.string.change_request_currently,
-                        event.startDateTime.format(dateFormatter),
+                        Res.string.change_request_currently,
+                        ReaderDateText.date(event.startDateTime.date, DATE_SKELETON),
                         currentTime
                     ),
                     style = MaterialTheme.typography.bodyMedium,
@@ -223,7 +231,7 @@ private fun RequestChangeForm(
         }
 
         Text(
-            text = stringResource(R.string.change_request_proposed_new_time),
+            text = stringResource(Res.string.change_request_proposed_new_time),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary
         )
@@ -232,7 +240,7 @@ private fun RequestChangeForm(
             onClick = { showDatePicker = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(proposedDate.format(dateFormatter))
+            Text(ReaderDateText.date(proposedDate, DATE_SKELETON))
         }
 
         Row(
@@ -245,8 +253,8 @@ private fun RequestChangeForm(
             ) {
                 Text(
                     stringResource(
-                        R.string.change_request_from_time,
-                        proposedStartTime.format(timeFormatter)
+                        Res.string.change_request_from_time,
+                        ReaderDateText.time(proposedStartTime)
                     )
                 )
             }
@@ -257,9 +265,9 @@ private fun RequestChangeForm(
                 val endTime = proposedEndTime
                 Text(
                     if (endTime != null) {
-                        stringResource(R.string.change_request_to_time, endTime.format(timeFormatter))
+                        stringResource(Res.string.change_request_to_time, ReaderDateText.time(endTime))
                     } else {
-                        stringResource(R.string.change_request_to_unset)
+                        stringResource(Res.string.change_request_to_unset)
                     }
                 )
             }
@@ -268,7 +276,7 @@ private fun RequestChangeForm(
         OutlinedTextField(
             value = note,
             onValueChange = { note = it },
-            label = { Text(stringResource(R.string.change_request_note_label)) },
+            label = { Text(stringResource(Res.string.change_request_note_label)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3
         )
@@ -284,8 +292,8 @@ private fun RequestChangeForm(
 
         Button(
             onClick = {
-                val end = proposedEndTime?.let { LocalDateTime.of(proposedDate, it) }
-                onSubmit(proposedStart.toKotlinLocalDateTime(), end?.toKotlinLocalDateTime(), note, answerBy)
+                val end = proposedEndTime?.let { LocalDateTime(proposedDate, it) }
+                onSubmit(proposedStart, end, note, answerBy)
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isSending
@@ -296,7 +304,7 @@ private fun RequestChangeForm(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text(stringResource(R.string.change_request_send))
+                Text(stringResource(Res.string.change_request_send))
             }
         }
     }
@@ -304,8 +312,8 @@ private fun RequestChangeForm(
     if (showDatePicker) {
         LocalDatePickerDialog(
             initialDate = proposedDate,
-            confirmLabel = stringResource(R.string.change_request_ok),
-            dismissLabel = stringResource(R.string.change_request_cancel),
+            confirmLabel = stringResource(Res.string.change_request_ok),
+            dismissLabel = stringResource(Res.string.change_request_cancel),
             onConfirm = { proposedDate = it },
             onDismiss = { showDatePicker = false }
         )
@@ -324,7 +332,7 @@ private fun RequestChangeForm(
 
     if (showEndTimePicker) {
         TimePickerDialog(
-            initialTime = proposedEndTime ?: proposedStartTime.plusHours(1),
+            initialTime = proposedEndTime ?: proposedStartTime.plusHour(),
             onTimeSelected = {
                 proposedEndTime = it
                 showEndTimePicker = false
@@ -333,3 +341,6 @@ private fun RequestChangeForm(
         )
     }
 }
+
+/** The proposed day's skeleton: "Wed, May 13, 2026". */
+private const val DATE_SKELETON = "yMMMEEEd"

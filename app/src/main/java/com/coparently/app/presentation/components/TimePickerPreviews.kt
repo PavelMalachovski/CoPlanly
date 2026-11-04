@@ -8,28 +8,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.coparently.app.utils.LightDarkPreviews
 import com.coparently.app.utils.PreviewWrapper
 import kotlinx.datetime.LocalTime
-import kotlinx.datetime.toJavaLocalTime
-import kotlinx.datetime.toKotlinLocalTime
 
-/**
- * [TimePickerDialog] for a `java.time.LocalTime`, for the app's screens that still hold one until
- * their slice moves them to `:shared-ui` (MON-24 phase 2, Task 11): the same dialog, the time
- * converted on the way in and out.
+/*
+ * Previews of `:shared-ui`'s [TimePickerDialog]. Its `java.time` overload, for the screens still in
+ * the app, went with the last of them, the change request form (MON-24 phase 2, slice 11d).
  */
-@Composable
-fun TimePickerDialog(
-    initialTime: java.time.LocalTime,
-    onTimeSelected: (java.time.LocalTime) -> Unit,
-    onDismiss: () -> Unit
-) {
-    TimePickerDialog(
-        initialTime = initialTime.toKotlinLocalTime(),
-        onTimeSelected = { onTimeSelected(it.toJavaLocalTime()) },
-        onDismiss = onDismiss
-    )
-}
-
-// ==================== Previews ====================
 
 /**
  * Preview of TimePickerDialog in both light and dark themes.

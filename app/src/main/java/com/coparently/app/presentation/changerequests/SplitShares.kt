@@ -13,6 +13,12 @@ import com.coparently.app.presentation.common.ParentNames
  * number was theirs (tester report, October 2026). The inbox's split card and Home's pop-up say it
  * the same way.
  *
+ * It stays in the app, read through Android's resources, while the rest of the inbox is in
+ * `:shared-ui` (MON-24 phase 2, slice 11d): its three strings put a literal `%%` beside arguments,
+ * which Compose Multiplatform's reader prints as written (CLAUDE.md "Localization"). The shared
+ * `ChangeRequestsScreen` takes it as a parameter, which `NavGraph` passes; slice 11e rewords the
+ * strings and moves it.
+ *
  * @param ratio The split; its stored share is slot 1's, and slot 2 pays the rest.
  * @param parentNames Names each slot — never "Mom" or "Dad".
  */

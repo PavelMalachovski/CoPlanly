@@ -1311,6 +1311,45 @@ Then the export and the school import:
   matches). Public for the app: `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel`,
   `custodyPreviewText` (onboarding) and `SchedulePreviewMonth` (onboarding and `FeatureScreenshots`).
   No app test sat in `presentation/custody/`.
+- Group 2, the requests' screens (`git mv`, packages unchanged): `changerequests/`'s `AgreementRows`,
+  `AwaitingEventCard`, `CardClock`, `ChangeRequestsScreen`, `DaySwapCard`, `FoldedMonth`, `InboxItems`,
+  `ProposedSchedulePreview`, `RequestChangeScreen`, `RequestClockText`, `RequestHistoryGroup`,
+  `RequestText`, `SwapDayAnswers` and `SwapOfferContent`. The Android calls, each replaced:
+  `answerByText` → `ReaderDateText.answerBy` (Android: `answerByText` in `zone.toJavaZoneId()`, the
+  system zone by default, as before); `format(localizedDate(…))`, `format(shortTime())` and
+  `format(dateWithTime(…))` → `ReaderDateText.date`, `time` and `dateWithTime` (a `LocalDateTime`
+  formatted with a date skeleton is its date's text); `ofLocalizedDate(MEDIUM)` → `readerMediumDate`;
+  `swapDateList(dates, LocalConfiguration.current.locales[0])` → `swapDateList(dates)` (the reader's
+  locale, as the calendar's swap bar since 11c); `RequestClockText.historyMeta`'s `ZoneId` → a
+  kotlinx-datetime `TimeZone` (`Instant.fromEpochMilliseconds(…).toLocalDateTime(zone).date`);
+  `@StringRes Int` → `StringResource` (`statusLabel`, `daySwapStatusLabel`, `swapAcceptLabel`, whose
+  caller in the app, Home's `AwaitingDialogs`, reads it with CMP's `stringResource`); and
+  `RequestChangeScreen`'s saved `java.time` fields → kotlinx-datetime with `LocalDateSaver`,
+  `LocalTimeSaver` and a new `NullableLocalTimeSaver` (never Java serialization), `LocalDateTime(…)`
+  for `LocalDateTime.of`, the event form's `plusHour()` for `plusHours(1)`, and
+  `Clock.System.now().toEpochMilliseconds()` for `System.currentTimeMillis()`. Moved beside it, because
+  the inbox's rows read them: `support/SupportText.kt` (`supportAmount` as
+  `ReaderMoneyText.amount(DecimalText.plain(amountMinor, 2), currency)`, which on Android is
+  `currencyFormat` over the same `BigDecimal`; `supportMonth` as `ReaderDateText.pattern(month,
+  "LLLL yyyy")` with `titlecase()`, which equals `titlecase(Locale.getDefault())` in the five
+  languages) out of the app's `SupportScreen.kt`, and `professionals/ProfessionalRoleLabel.kt`
+  (`ProfessionalRole.labelRes()` a `StringResource`) out of `ProfessionalText.kt`, whose three callers
+  now read it through CMP's `stringResource`. **Kept in the app: `changerequests/SplitShares.kt`**,
+  whose three `%%` keys Compose Multiplatform would print as written (the brief gives their rewording
+  to 11e). `ChangeRequestsScreen` takes `splitSharesText: @Composable (SplitRatio, ParentNames) ->
+  String`, which `NavGraph` passes as the app's own and the screen provides to the split card through
+  a file-private local (its default throws: nothing else draws the card); the screen's body is
+  `InboxScreen`, unchanged. Public for the app: `AwaitingEventCard`, `SupportRequestRow`,
+  `ProfessionalRequestRow`, `PlanRequestRow`, `RequestHistoryGroup`, `CardClockBanner`,
+  `CardClockChip`, `CardClockDetails` (screenshots, `RequestHistoryGroupTest`), `SwapDayAnswers`,
+  `SwapOfferSides`, `SwapNoteQuote`, `sidesAsked`, `swapOfferHeading`, `swapAcceptLabel`,
+  `swapDatesText` (Home). Tests: `CardClockTest` and `InboxItemsTest` → `commonTest` (kotlin.test,
+  kotlinx-datetime fixtures, `domain/time`'s `plus` for `plusDays`, names without commas);
+  `RequestClockTextTest` → `androidUnitTest` (it holds the history line to `answerByText` in UTC);
+  `RequestHistoryGroupTest` stays in the app. The java twins: `JavaTimePicker.kt`'s overload had no
+  caller left and is gone (the previews are `components/TimePickerPreviews.kt`); `JavaPickerDates.kt`
+  stays for `ExportScreen`, `AddExpenseScreen`, the child records' `DatePickerDialog`, `PickerDatesTest`
+  and `LocalDatePickerDialogTest`.
 
 ### Task 12: Navigation in `commonMain`, and the thin Android shell
 

@@ -11,13 +11,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.SwapDirection
@@ -26,9 +22,20 @@ import com.coparently.app.presentation.calendar.components.isConsecutive
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_withdraw
+import com.coparently.app.resources.day_swap_answer_by_day
+import com.coparently.app.resources.day_swap_decline
+import com.coparently.app.resources.day_swap_inbox_asked_by_you_days
+import com.coparently.app.resources.day_swap_inbox_asked_of_you_days
+import com.coparently.app.resources.day_swap_inbox_offered_by_you_days
+import com.coparently.app.resources.day_swap_inbox_offered_to_you_days
+import com.coparently.app.resources.day_swap_inbox_swap_by_you_days
+import com.coparently.app.resources.day_swap_inbox_swap_with_you_days
+import com.coparently.app.resources.day_swap_range
+import com.coparently.app.utils.readerMediumDate
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One day swap in the inbox.
@@ -96,17 +103,16 @@ internal fun DaySwapCard(
 /** This parent's own offer: its days as a title, and the sentence saying which way they go. */
 @Composable
 private fun OwnSwapHeader(group: DaySwapGroup, parentNames: ParentNames) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
     TitleWithClockChip(
         if (group.dayCount == 1) {
-            group.firstDate.format(dateFormatter)
+            readerMediumDate(group.firstDate)
         } else if (!isConsecutive(group.swaps.map { it.date })) {
-            group.swaps.joinToString(", ") { it.date.format(dateFormatter) }
+            group.swaps.joinToString(", ") { readerMediumDate(it.date) }
         } else {
             stringResource(
-                R.string.day_swap_range,
-                group.firstDate.format(dateFormatter),
-                group.lastDate.format(dateFormatter)
+                Res.string.day_swap_range,
+                readerMediumDate(group.firstDate),
+                readerMediumDate(group.lastDate)
             )
         }
     )
@@ -143,7 +149,7 @@ private fun SwapAnswerArea(group: DaySwapGroup, uid: String, parentNames: Parent
     } else {
         DaySwapButtons(group, uid, answers)
         if (waitingDays >= 2 && !hidesAnswers) {
-            TextButton(onClick = { byDay = true }) { Text(stringResource(R.string.day_swap_answer_by_day)) }
+            TextButton(onClick = { byDay = true }) { Text(stringResource(Res.string.day_swap_answer_by_day)) }
         }
     }
 }
@@ -165,11 +171,12 @@ private fun daySwapSentence(group: DaySwapGroup, offeredByMe: Boolean, parentNam
     )
     val (mine, theirs) = when (direction) {
         SwapDirection.GIVES ->
-            R.plurals.day_swap_inbox_offered_by_you_days to R.plurals.day_swap_inbox_offered_to_you_days
-        SwapDirection.ASKS -> R.plurals.day_swap_inbox_asked_by_you_days to R.plurals.day_swap_inbox_asked_of_you_days
+            Res.plurals.day_swap_inbox_offered_by_you_days to Res.plurals.day_swap_inbox_offered_to_you_days
+        SwapDirection.ASKS ->
+            Res.plurals.day_swap_inbox_asked_by_you_days to Res.plurals.day_swap_inbox_asked_of_you_days
         // "Proposes swapping" claims no direction, which is all an unknown slot allows.
         SwapDirection.BOTH, SwapDirection.UNKNOWN ->
-            R.plurals.day_swap_inbox_swap_by_you_days to R.plurals.day_swap_inbox_swap_with_you_days
+            Res.plurals.day_swap_inbox_swap_by_you_days to Res.plurals.day_swap_inbox_swap_with_you_days
     }
     val resource = if (offeredByMe) mine else theirs
     // The other parent: whom the offerer's days go to, or who offered them.
@@ -194,13 +201,13 @@ private fun DaySwapButtons(group: DaySwapGroup, currentUserId: String, answers: 
         group.awaitsAnswerFrom(currentUserId) -> if (!hidesAnswers) {
             AnswerButtons(
                 acceptLabel = stringResource(swapAcceptLabel(group.waitingOn(currentUserId)?.dayCount ?: 0)),
-                declineLabel = stringResource(R.string.day_swap_decline),
+                declineLabel = stringResource(Res.string.day_swap_decline),
                 onAccept = { answers.answerSwap(group, true) },
                 onDecline = { answers.answerSwap(group, false) }
             )
         }
         group.withdrawableBy(currentUserId) -> TextButton(onClick = { answers.withdrawSwap(group) }) {
-            Text(stringResource(R.string.change_request_withdraw))
+            Text(stringResource(Res.string.change_request_withdraw))
         }
     }
 }

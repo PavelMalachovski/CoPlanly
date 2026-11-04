@@ -17,6 +17,7 @@ import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.professionals.ProfessionalGrantStatus
 import com.coparently.app.presentation.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One professional's card, as a parent reads it (MON-18): who they are, what they can read and

@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.changerequests
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,10 +38,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.AnswerByPick
 import com.coparently.app.domain.changerequests.ChangeRequestHighlight
 import com.coparently.app.domain.changerequests.HistoryEntry
@@ -77,9 +75,45 @@ import com.coparently.app.presentation.parentingplan.coParentLabel
 import com.coparently.app.presentation.parentingplan.planCitationLine
 import com.coparently.app.presentation.theme.Spacing
 import com.coparently.app.presentation.theme.bodyMediumEmphasized
-import com.coparently.app.utils.dateWithTime
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_accept
+import com.coparently.app.resources.change_request_back
+import com.coparently.app.resources.change_request_current
+import com.coparently.app.resources.change_request_decline
+import com.coparently.app.resources.change_request_empty_hint
+import com.coparently.app.resources.change_request_empty_title
+import com.coparently.app.resources.change_request_inbox_title
+import com.coparently.app.resources.change_request_link_missing
+import com.coparently.app.resources.change_request_note_quoted
+import com.coparently.app.resources.change_request_proposed
+import com.coparently.app.resources.change_request_status_accepted
+import com.coparently.app.resources.change_request_status_cancelled
+import com.coparently.app.resources.change_request_status_declined
+import com.coparently.app.resources.change_request_status_pending
+import com.coparently.app.resources.change_request_status_queued
+import com.coparently.app.resources.change_request_status_queued_desc
+import com.coparently.app.resources.change_request_withdraw
+import com.coparently.app.resources.custody_proposal_accept
+import com.coparently.app.resources.custody_proposal_decline
+import com.coparently.app.resources.custody_proposal_inbox_body
+import com.coparently.app.resources.custody_proposal_inbox_body_yours
+import com.coparently.app.resources.custody_proposal_inbox_title
+import com.coparently.app.resources.event_acceptance_waiting
+import com.coparently.app.resources.expenses_split_proposal_withdraw
+import com.coparently.app.resources.professional_dialog_revoke
+import com.coparently.app.resources.professional_revoke_confirm
+import com.coparently.app.resources.request_section_history
+import com.coparently.app.resources.request_section_waiting_on_them
+import com.coparently.app.resources.request_section_waiting_on_you
+import com.coparently.app.resources.split_request_body_theirs
+import com.coparently.app.resources.split_request_body_yours
+import com.coparently.app.resources.split_request_now
+import com.coparently.app.resources.split_request_proposed
+import com.coparently.app.resources.split_request_title
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -100,20 +134,41 @@ import org.koin.compose.viewmodel.koinViewModel
  *   snackbar says so once the inbox has loaded.
  * @param openSection A section to scroll to on arrival, or null — Home opens History this way.
  * @param onOpenAgreement Opens the screen a child support, professional or plan row is answered on.
+ * @param splitSharesText Words a split with each share beside the name of the parent who pays it
+ *   ("Zuzana pays 35 %, Pavel pays 65 %"), for the split proposal's card. The app's own, read through
+ *   Android's resources, until its strings read alike in Compose Multiplatform's reader (their
+ *   `%%` beside arguments, CLAUDE.md "Localization"; MON-24 phase 2, slice 11e).
  * @param viewModel Change-request state
  */
 @Composable
-// One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
-// change an agreed swap. Splitting it for the metric would scatter state the screen owns; the parameters
-// are its three ways out, its two arrival targets and its ViewModel.
-@Suppress("LongMethod", "LongParameterList")
+// The parameters are its three ways out, its two arrival targets, the split's wording and its ViewModel.
+@Suppress("LongParameterList")
 fun ChangeRequestsScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit,
     linkedEventId: String? = null,
     openSection: InboxSection? = null,
     onOpenAgreement: (AgreementScreen) -> Unit = {},
+    splitSharesText: @Composable (SplitRatio, ParentNames) -> String,
     viewModel: ChangeRequestViewModel = koinViewModel()
+) {
+    CompositionLocalProvider(LocalSplitSharesText provides splitSharesText) {
+        InboxScreen(onBack, onOpenEvent, linkedEventId, openSection, onOpenAgreement, viewModel)
+    }
+}
+
+/** [ChangeRequestsScreen]'s body, under the split wording it was handed. */
+@Composable
+// One screen: its sections, the scroll to a chat card's request on arrival, and the sheet that asks to
+// change an agreed swap. Splitting it for the metric would scatter state the screen owns.
+@Suppress("LongMethod", "LongParameterList")
+private fun InboxScreen(
+    onBack: () -> Unit,
+    onOpenEvent: (String) -> Unit,
+    linkedEventId: String?,
+    openSection: InboxSection?,
+    onOpenAgreement: (AgreementScreen) -> Unit,
+    viewModel: ChangeRequestViewModel
 ) {
     val state by viewModel.requests.collectAsState()
     val miniMonths by viewModel.miniMonths.collectAsState()
@@ -143,9 +198,9 @@ fun ChangeRequestsScreen(
         ?.let { id -> ready?.agreements?.professionals?.firstOrNull { it.id == id } }
     if (withdrawing != null) {
         ConfirmationDialog(
-            title = stringResource(R.string.change_request_withdraw),
-            message = stringResource(R.string.professional_revoke_confirm, withdrawing.name),
-            confirmText = stringResource(R.string.professional_dialog_revoke),
+            title = stringResource(Res.string.change_request_withdraw),
+            message = stringResource(Res.string.professional_revoke_confirm, withdrawing.name),
+            confirmText = stringResource(Res.string.professional_dialog_revoke),
             onConfirm = {
                 viewModel.withdrawProfessional(withdrawing.id)
                 confirmingGrantId.value = null
@@ -156,7 +211,7 @@ fun ChangeRequestsScreen(
     }
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val missingMessage = stringResource(R.string.change_request_link_missing)
+    val missingMessage = stringResource(Res.string.change_request_link_missing)
 
     // Arriving from a chat card, or for a section: scroll once the inbox is Ready — never on its
     // lists merely being empty, which a loading inbox and an empty one both are. Keyed on
@@ -184,8 +239,8 @@ fun ChangeRequestsScreen(
             ready == null -> Unit
             ready.inbox.isEmpty -> EmptyState(
                 icon = Icons.Default.SwapHoriz,
-                title = stringResource(R.string.change_request_empty_title),
-                description = stringResource(R.string.change_request_empty_hint),
+                title = stringResource(Res.string.change_request_empty_title),
+                description = stringResource(Res.string.change_request_empty_hint),
                 modifier = modifier
             )
             else -> InboxList(
@@ -208,6 +263,11 @@ fun ChangeRequestsScreen(
         }
     }
     SwapChangeSheet(changingSwap, parentNames, onOffer = viewModel::proposeSwapChange)
+}
+
+/** The split wording [ChangeRequestsScreen] was handed; nothing else provides it. */
+private val LocalSplitSharesText = staticCompositionLocalOf<@Composable (SplitRatio, ParentNames) -> String> {
+    error("ChangeRequestsScreen provides the split wording")
 }
 
 /**
@@ -265,12 +325,12 @@ private fun ShowErrorOnce(message: UiText?, onShown: () -> Unit) {
 @Composable
 private fun InboxTopBar(onBack: () -> Unit) {
     TopAppBar(
-        title = { Text(stringResource(R.string.change_request_inbox_title)) },
+        title = { Text(stringResource(Res.string.change_request_inbox_title)) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    stringResource(R.string.change_request_back)
+                    stringResource(Res.string.change_request_back)
                 )
             }
         }
@@ -516,12 +576,12 @@ private fun AgreementItemRow(item: InboxItem, cards: InboxCards, answers: InboxA
 /** A section's heading; the co-parent's section names them. */
 @Composable
 private fun sectionTitle(section: InboxSection, cards: InboxCards): String = when (section) {
-    InboxSection.WAITING_ON_ME -> stringResource(R.string.request_section_waiting_on_you)
+    InboxSection.WAITING_ON_ME -> stringResource(Res.string.request_section_waiting_on_you)
     InboxSection.WAITING_ON_THEM -> stringResource(
-        R.string.request_section_waiting_on_them,
+        Res.string.request_section_waiting_on_them,
         cards.parentNames.labelForUid(cards.scope.coParentUid)
     )
-    InboxSection.HISTORY -> stringResource(R.string.request_section_history)
+    InboxSection.HISTORY -> stringResource(Res.string.request_section_history)
 }
 
 /**
@@ -552,21 +612,21 @@ private fun CustodyProposalCard(
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             CardClockBanner()
-            TitleWithClockChip(stringResource(R.string.custody_proposal_inbox_title))
+            TitleWithClockChip(stringResource(Res.string.custody_proposal_inbox_title))
             if (mine) {
                 Text(
-                    text = stringResource(R.string.custody_proposal_inbox_body_yours),
+                    text = stringResource(Res.string.custody_proposal_inbox_body_yours),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = stringResource(R.string.event_acceptance_waiting),
+                    text = stringResource(Res.string.event_acceptance_waiting),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 CardClockDetails()
                 TextButton(onClick = answers.withdrawProposal) {
-                    Text(stringResource(R.string.change_request_withdraw))
+                    Text(stringResource(Res.string.change_request_withdraw))
                 }
             } else {
                 ProposalToAnswer(
@@ -595,7 +655,7 @@ private fun ProposalToAnswer(
 ) {
     Text(
         text = stringResource(
-            R.string.custody_proposal_inbox_body,
+            Res.string.custody_proposal_inbox_body,
             parentNames.labelForUid(proposal.proposedBy)
         ),
         style = MaterialTheme.typography.bodyMedium,
@@ -625,8 +685,8 @@ private fun ProposalToAnswer(
     // phone withdraws it, the proposal blocks every schedule change this parent could make.
     val declineOnly = LocalCardClock.current?.declineOnly == true
     AnswerButtons(
-        acceptLabel = stringResource(R.string.custody_proposal_accept),
-        declineLabel = stringResource(R.string.custody_proposal_decline),
+        acceptLabel = stringResource(Res.string.custody_proposal_accept),
+        declineLabel = stringResource(Res.string.custody_proposal_decline),
         onAccept = onAccept.takeUnless { declineOnly },
         onDecline = onDecline
     )
@@ -658,12 +718,12 @@ private fun SplitProposalCard(
             verticalArrangement = Arrangement.spacedBy(Spacing.S)
         ) {
             CardClockBanner()
-            TitleWithClockChip(stringResource(R.string.split_request_title))
+            TitleWithClockChip(stringResource(Res.string.split_request_title))
             Text(
                 text = if (mine) {
-                    stringResource(R.string.split_request_body_yours)
+                    stringResource(Res.string.split_request_body_yours)
                 } else {
-                    stringResource(R.string.split_request_body_theirs, parentNames.labelForUid(proposal.proposedBy))
+                    stringResource(Res.string.split_request_body_theirs, parentNames.labelForUid(proposal.proposedBy))
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -671,17 +731,20 @@ private fun SplitProposalCard(
             // Money is never cut off (design item 15): both lines wrap rather than end in an ellipsis.
             agreed?.let { now ->
                 Text(
-                    text = stringResource(R.string.split_request_now, splitSharesText(now, parentNames)),
+                    text = stringResource(Res.string.split_request_now, LocalSplitSharesText.current(now, parentNames)),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             Text(
-                text = stringResource(R.string.split_request_proposed, splitSharesText(proposal.ratio, parentNames)),
+                text = stringResource(
+                    Res.string.split_request_proposed,
+                    LocalSplitSharesText.current(proposal.ratio, parentNames)
+                ),
                 style = MaterialTheme.typography.bodyMediumEmphasized
             )
             if (mine) {
                 Text(
-                    text = stringResource(R.string.event_acceptance_waiting),
+                    text = stringResource(Res.string.event_acceptance_waiting),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -697,15 +760,15 @@ private fun SplitProposalCard(
 private fun SplitProposalButtons(mine: Boolean, answers: InboxAnswers) {
     if (mine) {
         TextButton(onClick = answers.withdrawSplit) {
-            Text(stringResource(R.string.expenses_split_proposal_withdraw))
+            Text(stringResource(Res.string.expenses_split_proposal_withdraw))
         }
         return
     }
     // Past the deadline Accept waits for a last chance, but Decline stays (CardClock.declineOnly).
     val declineOnly = LocalCardClock.current?.declineOnly == true
     AnswerButtons(
-        acceptLabel = stringResource(R.string.change_request_accept),
-        declineLabel = stringResource(R.string.change_request_decline),
+        acceptLabel = stringResource(Res.string.change_request_accept),
+        declineLabel = stringResource(Res.string.change_request_decline),
         onAccept = { answers.answerSplit(true) }.takeUnless { declineOnly },
         onDecline = { answers.answerSplit(false) }
     )
@@ -733,12 +796,11 @@ internal fun TitleWithClockChip(title: String) {
  * [ChangeRequestStatus.displayName] stays hardcoded English on the domain enum on purpose — the
  * domain layer has no `Context` and must not grow one — so the screen does the mapping itself.
  */
-@StringRes
-private fun statusLabel(status: ChangeRequestStatus): Int = when (status) {
-    ChangeRequestStatus.PENDING -> R.string.change_request_status_pending
-    ChangeRequestStatus.ACCEPTED -> R.string.change_request_status_accepted
-    ChangeRequestStatus.DECLINED -> R.string.change_request_status_declined
-    ChangeRequestStatus.CANCELLED -> R.string.change_request_status_cancelled
+private fun statusLabel(status: ChangeRequestStatus): StringResource = when (status) {
+    ChangeRequestStatus.PENDING -> Res.string.change_request_status_pending
+    ChangeRequestStatus.ACCEPTED -> Res.string.change_request_status_accepted
+    ChangeRequestStatus.DECLINED -> Res.string.change_request_status_declined
+    ChangeRequestStatus.CANCELLED -> Res.string.change_request_status_cancelled
 }
 
 /**
@@ -807,9 +869,9 @@ fun ChangeRequestCard(
                     )
                 } else {
                     PillChip(
-                        label = stringResource(R.string.change_request_status_queued),
+                        label = stringResource(Res.string.change_request_status_queued),
                         icon = Icons.Default.Schedule,
-                        iconDescription = stringResource(R.string.change_request_status_queued_desc),
+                        iconDescription = stringResource(Res.string.change_request_status_queued_desc),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -818,12 +880,12 @@ fun ChangeRequestCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.change_request_current),
+                        text = stringResource(Res.string.change_request_current),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = request.currentStartDateTime.format(dateWithTime("MMMEd")),
+                        text = ReaderDateText.dateWithTime(request.currentStartDateTime, "MMMEd"),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -837,12 +899,12 @@ fun ChangeRequestCard(
                     horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = stringResource(R.string.change_request_proposed),
+                        text = stringResource(Res.string.change_request_proposed),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = request.proposedStartDateTime.format(dateWithTime("MMMEd")),
+                        text = ReaderDateText.dateWithTime(request.proposedStartDateTime, "MMMEd"),
                         style = MaterialTheme.typography.bodyMediumEmphasized
                     )
                 }
@@ -850,7 +912,7 @@ fun ChangeRequestCard(
 
             request.note?.let { note ->
                 Text(
-                    text = stringResource(R.string.change_request_note_quoted, note),
+                    text = stringResource(Res.string.change_request_note_quoted, note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -862,8 +924,8 @@ fun ChangeRequestCard(
                 // Past the deadline the answering parent's next move waits on a last chance.
                 if (isIncoming && clock?.hidesAnswers != true) {
                     AnswerButtons(
-                        acceptLabel = stringResource(R.string.change_request_accept),
-                        declineLabel = stringResource(R.string.change_request_decline),
+                        acceptLabel = stringResource(Res.string.change_request_accept),
+                        declineLabel = stringResource(Res.string.change_request_decline),
                         onAccept = onAccept,
                         onDecline = onDecline
                     )
@@ -872,7 +934,7 @@ fun ChangeRequestCard(
                         onClick = onCancel,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.change_request_withdraw))
+                        Text(stringResource(Res.string.change_request_withdraw))
                     }
                 }
             }

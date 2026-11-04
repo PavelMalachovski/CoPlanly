@@ -17,21 +17,28 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.coparently.app.R
 import com.coparently.app.domain.model.Event
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.common.AnswerButtons
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.ParentColors
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.dateWithTime
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
-import com.coparently.app.utils.shortTime
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_withdraw
+import com.coparently.app.resources.event_acceptance_accept
+import com.coparently.app.resources.event_acceptance_decline
+import com.coparently.app.resources.event_acceptance_hidden_note
+import com.coparently.app.resources.event_acceptance_offered_by_you
+import com.coparently.app.resources.event_acceptance_offered_to_you
+import com.coparently.app.resources.event_acceptance_waiting
+import com.coparently.app.resources.event_acceptance_when
+import com.coparently.app.resources.event_acceptance_when_span
+import com.coparently.app.resources.event_acceptance_when_start
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 
 /** The creator's initial sits on a disc this wide, beside the bubble holding their words. */
 private val CREATOR_DISC_SIZE = 28.dp
@@ -60,7 +67,7 @@ private const val CREATOR_WORDS_MAX_LINES = 6
  *   Withdraw for the creator ([AwaitingEventWithdrawal]); null for a creator's card with no button.
  */
 @Composable
-internal fun AwaitingEventCard(
+fun AwaitingEventCard(
     event: Event,
     miniMonth: MiniMonthModel?,
     parentNames: ParentNames,
@@ -89,11 +96,11 @@ internal fun AwaitingEventCard(
             Text(
                 text = if (actions is AwaitingEventActions) {
                     stringResource(
-                        R.string.event_acceptance_offered_to_you,
+                        Res.string.event_acceptance_offered_to_you,
                         parentNames.labelForUid(event.createdByFirebaseUid)
                     )
                 } else {
-                    stringResource(R.string.event_acceptance_offered_by_you, parentNames.labelFor(event.parentOwner))
+                    stringResource(Res.string.event_acceptance_offered_by_you, parentNames.labelFor(event.parentOwner))
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -103,7 +110,7 @@ internal fun AwaitingEventCard(
             }
             miniMonth?.let { FoldedMonth(model = it, parentNames = parentNames, key = event.id) }
             Text(
-                text = stringResource(R.string.event_acceptance_hidden_note),
+                text = stringResource(Res.string.event_acceptance_hidden_note),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -123,8 +130,8 @@ private fun AnswersOrWaiting(actions: AwaitingEventButtons?) {
     when (actions) {
         is AwaitingEventActions -> if (LocalCardClock.current?.hidesAnswers != true) {
             AnswerButtons(
-                acceptLabel = stringResource(R.string.event_acceptance_accept),
-                declineLabel = stringResource(R.string.event_acceptance_decline),
+                acceptLabel = stringResource(Res.string.event_acceptance_accept),
+                declineLabel = stringResource(Res.string.event_acceptance_decline),
                 onAccept = actions.onAccept,
                 onDecline = actions.onDecline
             )
@@ -132,7 +139,7 @@ private fun AnswersOrWaiting(actions: AwaitingEventButtons?) {
         is AwaitingEventWithdrawal -> {
             WaitingLine()
             TextButton(onClick = actions.onWithdraw) {
-                Text(stringResource(R.string.change_request_withdraw))
+                Text(stringResource(Res.string.change_request_withdraw))
             }
         }
         null -> WaitingLine()
@@ -143,7 +150,7 @@ private fun AnswersOrWaiting(actions: AwaitingEventButtons?) {
 @Composable
 private fun WaitingLine() {
     Text(
-        text = stringResource(R.string.event_acceptance_waiting),
+        text = stringResource(Res.string.event_acceptance_waiting),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -159,20 +166,20 @@ private fun eventWhenText(event: Event): String {
     val end = event.endDateTime
     return when {
         end == null -> stringResource(
-            R.string.event_acceptance_when_start,
-            start.format(localizedDate("MMMEd")),
-            start.format(shortTime())
+            Res.string.event_acceptance_when_start,
+            ReaderDateText.date(start.date, "MMMEd"),
+            ReaderDateText.time(start)
         )
         end.date == start.date -> stringResource(
-            R.string.event_acceptance_when,
-            start.format(localizedDate("MMMEd")),
-            start.format(shortTime()),
-            end.format(shortTime())
+            Res.string.event_acceptance_when,
+            ReaderDateText.date(start.date, "MMMEd"),
+            ReaderDateText.time(start),
+            ReaderDateText.time(end)
         )
         else -> stringResource(
-            R.string.event_acceptance_when_span,
-            start.format(dateWithTime("MMMEd")),
-            end.format(dateWithTime("MMMEd"))
+            Res.string.event_acceptance_when_span,
+            ReaderDateText.dateWithTime(start, "MMMEd"),
+            ReaderDateText.dateWithTime(end, "MMMEd")
         )
     }
 }

@@ -9,21 +9,10 @@ import com.coparently.app.domain.professionals.ProfessionalAccessDuration
 import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalGrantPolicy
 import com.coparently.app.domain.professionals.ProfessionalGrantStatus
-import com.coparently.app.domain.professionals.ProfessionalRole
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-
-/** The localized name of a profession. */
-@StringRes
-fun ProfessionalRole.labelRes(): Int = when (this) {
-    ProfessionalRole.MEDIATOR -> R.string.professional_role_mediator
-    ProfessionalRole.LAWYER -> R.string.professional_role_lawyer
-    ProfessionalRole.GUARDIAN_AD_LITEM -> R.string.professional_role_guardian_ad_litem
-    ProfessionalRole.THERAPIST -> R.string.professional_role_therapist
-    ProfessionalRole.OTHER -> R.string.professional_role_other
-}
 
 /** The localized name of a grant length. */
 @StringRes

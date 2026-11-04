@@ -11,10 +11,10 @@ import com.coparently.app.resources.request_history_meta_unchanged
 import com.coparently.app.resources.request_left_days
 import com.coparently.app.resources.request_left_hours
 import com.coparently.app.resources.request_left_minutes
-import com.coparently.app.utils.answerByText
-import kotlinx.datetime.toKotlinLocalDate
-import java.time.Instant
-import java.time.ZoneId
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /**
  * The words a request's clock is said in on its card and in History (phase 3a, spec §6.2–§6.6),
@@ -50,10 +50,14 @@ object RequestClockText {
      *
      * @param zone The zone the dates and the time fall in: the device's.
      */
-    fun historyMeta(clock: RequestDeadline, zone: ZoneId = ZoneId.systemDefault()): List<UiText> = buildList {
+    fun historyMeta(
+        clock: RequestDeadline,
+        zone: TimeZone = TimeZone.currentSystemDefault()
+    ): List<UiText> = buildList {
         add(UiText.Res(Res.string.request_history_meta_deadline, listOf(dateOf(clock.answerByMillis, zone))))
         clock.lastChanceUntilMillis?.let {
-            add(UiText.Res(Res.string.request_history_meta_last_chance, listOf(UiText.Raw(answerByText(it, zone)))))
+            val until = UiText.Raw(ReaderDateText.answerBy(it, zone))
+            add(UiText.Res(Res.string.request_history_meta_last_chance, listOf(until)))
         }
         clock.seenAtMillis?.let { add(UiText.Res(Res.string.request_history_meta_opened, listOf(dateOf(it, zone)))) }
         if (clock.remindersPlanned != null) {
@@ -62,6 +66,6 @@ object RequestClockText {
         add(UiText.Res(Res.string.request_history_meta_unchanged))
     }
 
-    private fun dateOf(millis: Long, zone: ZoneId): UiText =
-        UiText.Date(Instant.ofEpochMilli(millis).atZone(zone).toLocalDate().toKotlinLocalDate())
+    private fun dateOf(millis: Long, zone: TimeZone): UiText =
+        UiText.Date(Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone).date)
 }

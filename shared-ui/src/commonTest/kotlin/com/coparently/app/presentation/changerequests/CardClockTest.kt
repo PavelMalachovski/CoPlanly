@@ -4,10 +4,10 @@ import com.coparently.app.domain.changerequests.ClockState
 import com.coparently.app.domain.changerequests.RequestDeadline
 import com.coparently.app.domain.changerequests.RequestKind
 import com.coparently.app.domain.changerequests.TimedRequest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * [CardClock]: which answers a request's card offers once the clock has passed the deadline
@@ -22,12 +22,12 @@ import org.junit.Test
 class CardClockTest {
 
     @Test
-    fun `past the deadline the answering parent may still decline a proposal, never accept it`() {
+    fun `past the deadline the answering parent may still decline a proposal but never accept it`() {
         val card = card(RequestKind.PROPOSAL, ClockRole.RESPONDER, pastDeadline())
 
         assertEquals(ClockState.NO_ANSWER_LAST_CHANCE_POSSIBLE, card.timed.state)
-        assertTrue("Decline stays", card.declineOnly)
-        assertFalse("not both hidden", card.hidesAnswers)
+        assertTrue(card.declineOnly, "Decline stays")
+        assertFalse(card.hidesAnswers, "not both hidden")
     }
 
     @Test
@@ -36,8 +36,8 @@ class CardClockTest {
         // withdraws it, so they may still turn it down.
         val card = card(RequestKind.SPLIT, ClockRole.RESPONDER, pastDeadline())
 
-        assertTrue("Decline stays", card.declineOnly)
-        assertFalse("not both hidden", card.hidesAnswers)
+        assertTrue(card.declineOnly, "Decline stays")
+        assertFalse(card.hidesAnswers, "not both hidden")
 
         val proposer = card(RequestKind.SPLIT, ClockRole.PROPOSER, pastDeadline())
         assertFalse(proposer.declineOnly)
@@ -45,11 +45,11 @@ class CardClockTest {
     }
 
     @Test
-    fun `past the deadline a swap, a change request and an event still hide both answers`() {
+    fun `past the deadline a swap and a change request and an event still hide both answers`() {
         listOf(RequestKind.SWAP, RequestKind.CHANGE, RequestKind.EVENT).forEach { kind ->
             val card = card(kind, ClockRole.RESPONDER, pastDeadline())
-            assertTrue("$kind hides both", card.hidesAnswers)
-            assertFalse("$kind offers no Decline alone", card.declineOnly)
+            assertTrue(card.hidesAnswers, "$kind hides both")
+            assertFalse(card.declineOnly, "$kind offers no Decline alone")
         }
     }
 

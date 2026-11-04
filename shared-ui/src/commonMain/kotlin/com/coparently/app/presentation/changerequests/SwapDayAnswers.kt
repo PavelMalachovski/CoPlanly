@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.changerequests
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,19 +17,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.custody.DaySwapGroup
 import com.coparently.app.domain.custody.DaySwapInbox
 import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_status_cancelled
+import com.coparently.app.resources.day_swap_by_day_back
+import com.coparently.app.resources.day_swap_by_day_heading
+import com.coparently.app.resources.day_swap_day_answered
+import com.coparently.app.resources.day_swap_day_to
+import com.coparently.app.resources.day_swap_day_to_you
+import com.coparently.app.resources.day_swap_inbox_accepted
+import com.coparently.app.resources.day_swap_inbox_declined
+import com.coparently.app.resources.day_swap_inbox_waiting
+import com.coparently.app.resources.day_swap_no
+import com.coparently.app.resources.day_swap_send_answers
+import com.coparently.app.resources.day_swap_yes
+import com.coparently.app.utils.readerMediumDate
 import com.coparently.app.utils.swapDateList
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * An offer answered day by day, as a mode of its own (day swap design, board SW-6; owner decision,
@@ -45,7 +54,7 @@ import java.time.format.FormatStyle
  * @param onBack Back to the main answer.
  */
 @Composable
-internal fun SwapDayAnswers(
+fun SwapDayAnswers(
     group: DaySwapGroup,
     uid: String,
     parentNames: ParentNames,
@@ -54,22 +63,21 @@ internal fun SwapDayAnswers(
 ) {
     val waiting = group.swaps.filter { DaySwapInbox.awaitsAnswerFrom(it, uid) }
     var picks by remember(group.revision) { mutableStateOf(emptyMap<String, Boolean>()) }
-    val locale = LocalConfiguration.current.locales[0]
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
-            text = stringResource(R.string.day_swap_by_day_heading),
+            text = stringResource(Res.string.day_swap_by_day_heading),
             style = MaterialTheme.typography.labelLarge
         )
         waiting.forEach { swap ->
             val iso = IsoText.date(swap.date)
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.XXS)) {
-                val day = swapDateList(listOf(swap.date), locale)
+                val day = swapDateList(listOf(swap.date))
                 Text(
                     // "→ you" in the dative the grid's pill uses, not the capitalised "You" label.
                     text = if (parentNames.isReader(swap.override.toParent)) {
-                        stringResource(R.string.day_swap_day_to_you, day)
+                        stringResource(Res.string.day_swap_day_to_you, day)
                     } else {
-                        stringResource(R.string.day_swap_day_to, day, parentNames.labelFor(swap.override.toParent))
+                        stringResource(Res.string.day_swap_day_to, day, parentNames.labelFor(swap.override.toParent))
                     },
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -86,26 +94,25 @@ internal fun SwapDayAnswers(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.day_swap_by_day_back)) }
+            TextButton(onClick = onBack) { Text(stringResource(Res.string.day_swap_by_day_back)) }
             Button(enabled = picks.isNotEmpty(), onClick = { onAnswer(picks) }) {
-                Text(stringResource(R.string.day_swap_send_answers))
+                Text(stringResource(Res.string.day_swap_send_answers))
             }
         }
     }
 }
 
 /** Each day's two chips: the answer and its label. */
-private val ANSWERS = listOf(true to R.string.day_swap_yes, false to R.string.day_swap_no)
+private val ANSWERS = listOf(true to Res.string.day_swap_yes, false to Res.string.day_swap_no)
 
 /** The days of an offer answered so far, each with its answer, while the rest still wait. */
 @Composable
 internal fun AnsweredDays(group: DaySwapGroup) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
     group.swaps.filterNot { it.override.isPending }.forEach { answered ->
         Text(
             text = stringResource(
-                R.string.day_swap_day_answered,
-                answered.date.format(dateFormatter),
+                Res.string.day_swap_day_answered,
+                readerMediumDate(answered.date),
                 stringResource(daySwapStatusLabel(answered.override.status))
             ),
             style = MaterialTheme.typography.bodySmall,
@@ -115,10 +122,9 @@ internal fun AnsweredDays(group: DaySwapGroup) {
 }
 
 /** The line saying where an offer stands. */
-@StringRes
-internal fun daySwapStatusLabel(status: DayOverrideStatus): Int = when (status) {
-    DayOverrideStatus.ACCEPTED -> R.string.day_swap_inbox_accepted
-    DayOverrideStatus.DECLINED -> R.string.day_swap_inbox_declined
-    DayOverrideStatus.PENDING -> R.string.day_swap_inbox_waiting
-    DayOverrideStatus.CANCELLED -> R.string.change_request_status_cancelled
+internal fun daySwapStatusLabel(status: DayOverrideStatus): StringResource = when (status) {
+    DayOverrideStatus.ACCEPTED -> Res.string.day_swap_inbox_accepted
+    DayOverrideStatus.DECLINED -> Res.string.day_swap_inbox_declined
+    DayOverrideStatus.PENDING -> Res.string.day_swap_inbox_waiting
+    DayOverrideStatus.CANCELLED -> Res.string.change_request_status_cancelled
 }

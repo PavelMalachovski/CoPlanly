@@ -2724,7 +2724,8 @@ bytes are identical on Android):
 - **`java.time` beyond the edges** in app code, converting losslessly with kotlinx's own
   converters: ~~the calendar's day model (`EventsByDay`, `OpeningHour`, `MiniMonthModel`,
   `DayWeekView`, `queryRangeFor`) and the holiday lookups it converts at~~ (kotlinx-datetime since
-  phase 2, slice 11c); the ~~event,~~ expense and change-request forms, whose `rememberSaveable`
+  phase 2, slice 11c); the ~~event,~~ expense ~~and change-request~~ forms (the change request's
+  since slice 11d), whose `rememberSaveable`
   state is Java-serialised (give each saved date a `Saver` over its text, never a raw kotlinx value —
   the event form's are `common/DateTimeSavers.kt`'s since phase 2, slice 11c); `AnswerByField`'s picker,
   `VaccinationListEditor` and the child-info `DatePickerDialog`; ~~`RequestTime.zone()` (`ZoneId`)~~
@@ -3029,6 +3030,11 @@ bytes are identical on Android):
   overview and parts, the pattern form, contact windows, seasonal layers, the children's schedules,
   the holiday fairness card — with the custody-conflict screen and the plan's reference card, every
   day's name, date and time through the date seam, Back through Compose Multiplatform's handler.
+  Then the requests: the inbox with its three sections, every card, the clocks' lines and the
+  change request form (its saved proposal now kotlinx-datetime, kept as text), with child support's
+  amount and month and a profession's name, which the inbox's rows read. The expense split's
+  wording stays in the app until 11e rewords its `%%` strings; the inbox takes it as a parameter.
+  **Slice 11d built, CI pending.**
 - **Firebase on GitLive, first slice** — **done (phase 2, Task 8a, November 2026)**: the
   Firestore data sources, `PairingFunctions`, `GoogleOAuthFunctions`, `PushPayload` and the Google
   access types moved to `:shared-data`'s `commonMain` with their packages. They call

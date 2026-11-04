@@ -1206,7 +1206,11 @@ tools/e2e/run-two-parent-tests.sh           # two parents on Auth/Firestore/Func
   screenshots render, and `DaySwapSheet`, `SwapSideGroup`, `isConsecutive` and `SwapMonths`, which
   the requests' screens call; slice 11d: `SchedulePreviewMonth`, which the screenshots render, and
   `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel` and `custodyPreviewText`, which
-  onboarding calls). A test that moves with its code to `:shared-ui` keeps `internal`
+  onboarding calls, then the inbox's `AwaitingEventCard`, `SupportRequestRow`,
+  `ProfessionalRequestRow`, `PlanRequestRow`, `RequestHistoryGroup`, `CardClockBanner`, `CardClockChip`
+  and `CardClockDetails`, which the screenshots and `RequestHistoryGroupTest` render, and
+  `SwapDayAnswers`, `SwapOfferSides`, `SwapNoteQuote`, `sidesAsked`, `swapOfferHeading`,
+  `swapAcceptLabel` and `swapDatesText`, which Home calls). A test that moves with its code to `:shared-ui` keeps `internal`
   reachable, as the calendar's ten pure tests do. The screenshot frame
   provides the platform capabilities as the app does (`ProvideAndroidPlatform`), so a moved screen
   that reads one renders as it does on a phone. Every fixture date is pinned (May 2026,
@@ -1636,7 +1640,9 @@ shared-ui/ — Kotlin Multiplatform module on Compose Multiplatform (MON-24 phas
              slice 11c, the event form (presentation/event/) and the calendar's screens
              (presentation/calendar/, on kizitonwose's multiplatform calendar), with the helpers
              they read; and, from slice 11d, custody's screens (presentation/custody/), with the
-             custody-conflict screen and the parenting plan's reference card. It makes the iPhone's one framework, Shared (static,
+             custody-conflict screen and the parenting plan's reference card, and the requests'
+             screens (presentation/changerequests/: the inbox, its cards and the change request
+             form; but SplitShares.kt, for slice 11e). It makes the iPhone's one framework, Shared (static,
              exporting shared/ and shared-data/)
 domain/    — models, repository interfaces, use cases (the event ones in shared-data/), holidays,
              ReminderScheduler, the export's record and the school import's plan — in shared/,
@@ -1652,8 +1658,8 @@ data/      — Room (v46 + migrations), Firestore/Google clients, repository imp
 presentation/ — Compose screens per feature, and the two ViewModels whose sign-ins run on an
              Android activity (AuthViewModel, SyncViewModel; Task 11). Their strings, the theme,
              the design system's components, the shared state and every other ViewModel are in
-             shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's and
-             custody's screens (Task 11, slices 11b–11d); the app keeps their previews
+             shared-ui/ (Task 10), and so are chat's, the event form's, the calendar's, custody's
+             and the requests' screens (Task 11, slices 11b–11d); the app keeps their previews
 di/        — Koin modules in di/koin/ (database, Firebase, Google, use cases, notifications, …,
              listed in appModules); the database builder (DatabaseBuilder.kt) and the file name
              (DatabaseName.kt) are in shared-data/ since MON-24 phase 2
@@ -2028,10 +2034,12 @@ packages unchanged: `Today` (`rememberToday()` and `LocalFixedToday` are kotlinx
 app's `JavaToday.kt` gave the screens that still held a `java.time.LocalDate` the same state
 converted, until the calendar's move left it no caller), `PickerDates` (the UTC rule in kotlinx-datetime; `JavaPickerDates.kt` in
 the app keeps a `java.time` overload of `LocalDatePickerDialog` and of `PickerDates.toPickerMillis`,
-and `fromPickerMillisJava`, each calling the shared one), `components/TimePicker`
+and `fromPickerMillisJava`, each calling the shared one, for the export, expenses, the child records'
+picker and two androidTest classes), `components/TimePicker`
 (`TimePickerDialog` on a kotlinx `LocalTime`, its dial's 12/24 hours `ClockFormat.is24Hour`, which
-`MainActivity` follows from `DateFormat.is24HourFormat` of the activity; `JavaTimePicker.kt` keeps a
-`java.time` overload and the previews), `AnswerByField` (its clock `kotlin.time`, its times
+`MainActivity` follows from `DateFormat.is24HourFormat` of the activity; the app's `java.time`
+overload went with its last caller, the change request form, in slice 11d, and the previews are the
+app's `components/TimePickerPreviews.kt`), `AnswerByField` (its clock `kotlin.time`, its times
 `ReaderDateText.answerBy`, its reminders line `pluralStringResource`), `HolidayNames` (the reader's
 language through an `expect`, `Locale.getDefault().language` on Android; `CzechSchoolBreak.nameRes()`
 a `StringResource`), `EventTypeLabel` (`eventTypeLabelRes` a `StringResource`), `FamilyMemberChips`
@@ -2089,7 +2097,25 @@ was `getQuantityString` on the Activity's resources; today `Clock.System.todayIn
 and Back Compose Multiplatform's `BackHandler`, opted in for the setup screen's file so the detekt
 baseline's key on its annotations still matches. Public for onboarding and the screenshots:
 `CustodyPatternForm`, `CustodyPatternActions`, `createTempModel`, `custodyPreviewText` and
-`SchedulePreviewMonth`.
+`SchedulePreviewMonth`. **Then the requests' screens** (slice 11d): `presentation/changerequests/`'s
+inbox (`ChangeRequestsScreen` with `InboxItems`, its one flat list), its cards (`DaySwapCard`,
+`AwaitingEventCard`, the split card, `AgreementRows`, `RequestHistoryGroup`, `FoldedMonth`,
+`ProposedSchedulePreview`, `SwapDayAnswers`, `SwapOfferContent`), the clocks' `CardClock` with
+`LocalCardClock` and `RequestClockText` (its zone a kotlinx-datetime `TimeZone`), `RequestText`, and
+`RequestChangeScreen`, whose saved proposal is a kotlinx-datetime date and times kept as ISO text
+(`LocalDateSaver`, `LocalTimeSaver`, the new `NullableLocalTimeSaver`), where it held `java.time`.
+Every deadline is `ReaderDateText.answerBy`, every date and time `ReaderDateText` or
+`readerMediumDate`, the swap's day list `swapDateList(dates)` (the reader's locale, which the app's
+rule keeps equal to the configuration's first). What the inbox reads from screens still in the app
+moved beside it: `support/SupportText.kt` (`supportAmount`, through the money seam over
+`DecimalText.plain`, and `supportMonth`, out of `SupportScreen.kt`) and
+`professionals/ProfessionalRoleLabel.kt` (`ProfessionalRole.labelRes()` a `StringResource`, out of
+`ProfessionalText.kt`; the Professionals screens read it with Compose Multiplatform's
+`stringResource`). **`SplitShares.kt` stays in the app**, for its `%%` strings ("Localization"):
+`ChangeRequestsScreen` takes a `splitSharesText` parameter, which `NavGraph` passes, until slice 11e.
+`CardClockTest` and `InboxItemsTest` run in `commonTest` (their names without commas),
+`RequestClockTextTest` in `androidUnitTest` (it compares with `answerByText`);
+`RequestHistoryGroupTest` stays in the app (Robolectric).
 **A Robolectric test runs `RobolectricTestApplication`**
 (`app/src/test/.../testing/`, `@Config(application = …)`): Robolectric installs no content
 provider from the manifest, so it hands Compose Multiplatform's resource reader the context its
@@ -4559,7 +4585,9 @@ Ukrainian** (`values-cs/`, `values-de/`, `values-ru/`, `values-uk/`). Rules:
   difference stands, pinned by both: a literal `%%` beside arguments
   (`expenses_split_shares_*`), which `String.format` prints as `%` and CMP as `%%`, and which no
   spelling fixes; those keys are read through `R.string` only, and need a wording both read alike
-  before `SplitShares.kt` moves to `shared-ui` (Task 11).
+  before `SplitShares.kt` moves to `shared-ui` (Task 11, slice 11e). Until then the shared requests
+  inbox takes the app's `splitSharesText` as a parameter of `ChangeRequestsScreen`, which `NavGraph`
+  passes (slice 11d).
 - **Which reader a composable uses follows where it lives.** Code in `:shared-ui` (the theme's
   colour names, the common components' own labels, since slice 9b, and every `UiText`, since
   slice 9c) reads

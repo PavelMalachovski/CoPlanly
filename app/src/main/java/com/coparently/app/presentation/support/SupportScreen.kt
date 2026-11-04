@@ -67,11 +67,9 @@ import com.coparently.app.presentation.common.SectionRow
 import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberParentNames
 import com.coparently.app.presentation.common.rememberUiTextResolver
-import com.coparently.app.presentation.expenses.currencyFormat
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaYearMonth
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinYearMonth
 import org.koin.compose.viewmodel.koinViewModel
@@ -464,15 +462,6 @@ private fun ProposeSupportDialog(
         }
     )
 }
-
-/** [terms]' monthly amount in the reader's conventions. */
-internal fun supportAmount(terms: SupportTerms): String =
-    currencyFormat(terms.currency).format(MinorUnits.toDecimal(terms.amountMinor))
-
-/** [month] as the reader's language names it: "October 2026". */
-internal fun supportMonth(month: YearMonth): String =
-    month.toJavaYearMonth().format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
-        .replaceFirstChar { it.titlecase(Locale.getDefault()) }
 
 /** The day a first proposal starts on. */
 private const val DEFAULT_DAY = 5

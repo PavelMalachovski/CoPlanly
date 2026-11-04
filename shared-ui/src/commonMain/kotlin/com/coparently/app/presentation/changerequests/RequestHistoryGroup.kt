@@ -17,10 +17,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.coparently.app.R
 import com.coparently.app.domain.changerequests.HistoryEntry
 import com.coparently.app.domain.changerequests.RequestOutcome
 import com.coparently.app.domain.changerequests.RequestSubject
@@ -31,8 +29,22 @@ import com.coparently.app.presentation.common.asString
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.common.stacksAtLargeFont
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.dateWithTime
-import com.coparently.app.utils.format
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_status_accepted
+import com.coparently.app.resources.change_request_status_cancelled
+import com.coparently.app.resources.change_request_status_declined
+import com.coparently.app.resources.change_request_status_queued
+import com.coparently.app.resources.change_request_status_queued_desc
+import com.coparently.app.resources.request_clock_no_answer
+import com.coparently.app.resources.request_history_propose_change
+import com.coparently.app.resources.request_history_propose_change_description
+import com.coparently.app.resources.request_history_theirs_answered
+import com.coparently.app.resources.request_history_when
+import com.coparently.app.resources.request_history_withdrawn_by
+import com.coparently.app.resources.request_history_withdrawn_by_you
+import com.coparently.app.resources.request_history_yours_answered
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The inbox's History (phase 2, spec §6.2): every request of the family on screen that was
@@ -57,7 +69,7 @@ import com.coparently.app.utils.format
  */
 @Composable
 @Suppress("LongParameterList") // the rows, who reads them, the one highlighted, its one action
-internal fun RequestHistoryGroup(
+fun RequestHistoryGroup(
     entries: List<HistoryEntry>,
     parentNames: ParentNames,
     myUid: String,
@@ -119,7 +131,7 @@ private fun HistoryRow(
             }
         }
         proposedTime(entry.subject)?.let { time ->
-            Text(text = time.format(dateWithTime("MMMEd")), style = MaterialTheme.typography.bodyMedium)
+            Text(text = ReaderDateText.dateWithTime(time, "MMMEd"), style = MaterialTheme.typography.bodyMedium)
         }
         // Nobody answered a "No answer", so its row claims no answer and names nobody as answering:
         // it says what its clock knows instead (phase 3a, spec §6.6).
@@ -134,18 +146,18 @@ private fun HistoryRow(
         } else {
             Text(
                 text = stringResource(
-                    R.string.request_history_when,
+                    Res.string.request_history_when,
                     whoAnswered(entry, parentNames, myUid),
-                    entry.decidedAt.format(dateWithTime("MMMd"))
+                    ReaderDateText.dateWithTime(entry.decidedAt, "MMMd")
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         onProposeChange?.let { open ->
-            val description = stringResource(R.string.request_history_propose_change_description)
+            val description = stringResource(Res.string.request_history_propose_change_description)
             TextButton(onClick = open, modifier = Modifier.semantics { contentDescription = description }) {
-                Text(stringResource(R.string.request_history_propose_change))
+                Text(stringResource(Res.string.request_history_propose_change))
             }
         }
     }
@@ -161,9 +173,9 @@ private fun HistoryRow(
 private fun OutcomeChip(entry: HistoryEntry) {
     if (entry.queued) {
         PillChip(
-            label = stringResource(R.string.change_request_status_queued),
+            label = stringResource(Res.string.change_request_status_queued),
             icon = Icons.Default.Schedule,
-            iconDescription = stringResource(R.string.change_request_status_queued_desc),
+            iconDescription = stringResource(Res.string.change_request_status_queued_desc),
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     } else {
@@ -172,10 +184,10 @@ private fun OutcomeChip(entry: HistoryEntry) {
         PillChip(
             label = stringResource(
                 when (entry.outcome) {
-                    RequestOutcome.ACCEPTED -> R.string.change_request_status_accepted
-                    RequestOutcome.DECLINED -> R.string.change_request_status_declined
-                    RequestOutcome.WITHDRAWN -> R.string.change_request_status_cancelled
-                    RequestOutcome.NO_ANSWER -> R.string.request_clock_no_answer
+                    RequestOutcome.ACCEPTED -> Res.string.change_request_status_accepted
+                    RequestOutcome.DECLINED -> Res.string.change_request_status_declined
+                    RequestOutcome.WITHDRAWN -> Res.string.change_request_status_cancelled
+                    RequestOutcome.NO_ANSWER -> Res.string.request_clock_no_answer
                 }
             ),
             icon = when (entry.outcome) {
@@ -201,10 +213,10 @@ private fun proposedTime(subject: RequestSubject) = when (subject) {
 @Composable
 private fun whoAnswered(entry: HistoryEntry, parentNames: ParentNames, myUid: String): String = when {
     entry.outcome == RequestOutcome.WITHDRAWN && entry.decidedBy == myUid ->
-        stringResource(R.string.request_history_withdrawn_by_you)
+        stringResource(Res.string.request_history_withdrawn_by_you)
     entry.outcome == RequestOutcome.WITHDRAWN ->
-        stringResource(R.string.request_history_withdrawn_by, parentNames.labelForUid(entry.decidedBy))
+        stringResource(Res.string.request_history_withdrawn_by, parentNames.labelForUid(entry.decidedBy))
     entry.askedBy == myUid ->
-        stringResource(R.string.request_history_yours_answered, parentNames.labelForUid(entry.decidedBy))
-    else -> stringResource(R.string.request_history_theirs_answered, parentNames.labelForUid(entry.askedBy))
+        stringResource(Res.string.request_history_yours_answered, parentNames.labelForUid(entry.decidedBy))
+    else -> stringResource(Res.string.request_history_theirs_answered, parentNames.labelForUid(entry.askedBy))
 }

@@ -26,11 +26,12 @@ import com.coparently.app.domain.professionals.ProfessionalGrant
 import com.coparently.app.domain.professionals.ProfessionalRole
 import com.coparently.app.domain.support.SupportProposal
 import com.coparently.app.domain.support.SupportTerms
+import com.coparently.app.domain.time.plus
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.YearMonth
-import kotlinx.datetime.toKotlinLocalDateTime
-import org.junit.Test
-import java.time.LocalDateTime
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -47,7 +48,7 @@ class InboxItemsTest {
 
     private val scope = RequestScope(myUid = "u1", coParentUid = "u2", familyId = "u1__u2", soleFamily = false)
     private val today = LocalDate(2026, 10, 14)
-    private val created = LocalDateTime.of(2026, 10, 10, 9, 0)
+    private val created = LocalDateTime(2026, 10, 10, 9, 0)
 
     private fun request(
         id: String,
@@ -61,21 +62,21 @@ class InboxItemsTest {
             eventTitle = "Swimming",
             requestedBy = from,
             requestedTo = to,
-            currentStartDateTime = LocalDateTime.of(2026, 10, 15, 17, 0).toKotlinLocalDateTime(),
-            proposedStartDateTime = LocalDateTime.of(2026, 10, 16, 18, 30).toKotlinLocalDateTime(),
+            currentStartDateTime = LocalDateTime(2026, 10, 15, 17, 0),
+            proposedStartDateTime = LocalDateTime(2026, 10, 16, 18, 30),
             status = status,
-            createdAt = created.toKotlinLocalDateTime(),
-            respondedAt = created.plusDays(1).toKotlinLocalDateTime().takeIf { status != ChangeRequestStatus.PENDING }
+            createdAt = created,
+            respondedAt = created.plus(1, DateTimeUnit.DAY).takeIf { status != ChangeRequestStatus.PENDING }
         )
 
     private fun event(id: String, creator: String) = Event(
         id = id,
         title = id,
-        startDateTime = LocalDateTime.of(2026, 10, 21, 16, 0).toKotlinLocalDateTime(),
+        startDateTime = LocalDateTime(2026, 10, 21, 16, 0),
         eventType = "other",
         parentOwner = if (creator == "u1") "dad" else "mom",
-        createdAt = created.toKotlinLocalDateTime(),
-        updatedAt = created.toKotlinLocalDateTime(),
+        createdAt = created,
+        updatedAt = created,
         createdByFirebaseUid = creator,
         familyId = "u1__u2",
         acceptance = EventAcceptance.PENDING
@@ -148,7 +149,7 @@ class InboxItemsTest {
     )
 
     @Test
-    fun `sections come in order with their items, and an empty section has no header`() {
+    fun `sections come in order with their items - and an empty section has no header`() {
         assertEquals(
             listOf(
                 "h_waiting", "p_theirs", "ev_for-me", "sw_g-theirs", "cr_theirs",
@@ -216,7 +217,7 @@ class InboxItemsTest {
     }
 
     @Test
-    fun `arriving for a section scrolls to its heading, and stays put when it is not drawn`() {
+    fun `arriving for a section scrolls to its heading - and stays put when it is not drawn`() {
         val items = InboxItems.of(full, scope)
 
         assertEquals(
@@ -234,7 +235,7 @@ class InboxItemsTest {
     }
 
     @Test
-    fun `arriving from a chat card scrolls to its request, and says so when the event has none`() {
+    fun `arriving from a chat card scrolls to its request - and says so when the event has none`() {
         val items = InboxItems.of(full, scope)
 
         assertEquals(
@@ -323,7 +324,7 @@ class InboxItemsTest {
     }
 
     @Test
-    fun `a request past its deadline is still the co-parent's on its card, under their name`() {
+    fun `a request past its deadline is still the co-parent's on its card - under their name`() {
         // Bob's proposal and event, past their deadlines with his last chance still to give: they
         // wait in his section on Alice's phone, but she did not make them, and her cards must not
         // say she did.
@@ -352,7 +353,7 @@ class InboxItemsTest {
     }
 
     @Test
-    fun `a proposed split comes right after the custody proposal, on the side of whoever must answer it`() {
+    fun `a proposed split comes right after the custody proposal - on the side of whoever must answer it`() {
         val theirs = RequestInbox.build(
             scope,
             changeRequests = listOf(request("theirs", from = "u2", to = "u1")),
@@ -381,7 +382,7 @@ class InboxItemsTest {
     }
 
     @Test
-    fun `a proposed split carries its clock, named in its family`() {
+    fun `a proposed split carries its clock - named in its family`() {
         val split = splitBy("u2")
         val splitClock = clock(RequestKind.SPLIT, SPLIT_AT.toString(), from = "u2")
         assertEquals(RequestDeadlineId.forSplit(split.proposal!!, "u1__u2"), splitClock.id)

@@ -7,8 +7,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.domain.custody.CustodyProposal
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
@@ -16,8 +14,9 @@ import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.common.rememberToday
 import com.coparently.app.presentation.custody.labelRes
 import com.coparently.app.presentation.theme.Spacing
-import com.coparently.app.utils.format
-import com.coparently.app.utils.localizedDate
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.custody_proposal_preview
+import com.coparently.app.utils.ReaderDateText
 import kotlinx.datetime.yearMonth
 import org.jetbrains.compose.resources.stringResource
 
@@ -54,9 +53,9 @@ fun ProposedSchedulePreview(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
         Text(
             text = stringResource(
-                R.string.custody_proposal_preview,
+                Res.string.custody_proposal_preview,
                 stringResource(model.modelType.labelRes()),
-                model.startDate.format(localizedDate("yMMMd"))
+                ReaderDateText.date(model.startDate, "yMMMd")
             ),
             style = MaterialTheme.typography.bodyMedium
         )

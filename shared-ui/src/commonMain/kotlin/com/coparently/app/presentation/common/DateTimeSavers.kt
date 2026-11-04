@@ -32,3 +32,9 @@ val LocalTimeSaver: Saver<LocalTime, String> = Saver(
     save = { it.toString() },
     restore = { LocalTime.parse(it) }
 )
+
+/** A [LocalTime] that may be null, as its ISO text, or an empty text for none. */
+val NullableLocalTimeSaver: Saver<LocalTime?, String> = Saver(
+    save = { it?.toString().orEmpty() },
+    restore = { text -> if (text.isEmpty()) null else LocalTime.parse(text) }
+)

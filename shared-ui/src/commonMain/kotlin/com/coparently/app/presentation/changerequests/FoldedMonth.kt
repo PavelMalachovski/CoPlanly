@@ -14,12 +14,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.coparently.app.R
 import com.coparently.app.presentation.calendar.MiniMonthModel
 import com.coparently.app.presentation.calendar.components.MiniMonth
 import com.coparently.app.presentation.common.ParentNames
 import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.request_card_hide_month
+import com.coparently.app.resources.request_card_show_month
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A request card's month, folded behind "Show the month" (second audit: with a whole month on
@@ -41,7 +43,7 @@ internal fun FoldedMonth(model: MiniMonthModel, parentNames: ParentNames, key: S
                 contentDescription = null,
                 modifier = Modifier.size(IconSizes.Small)
             )
-            Text(stringResource(if (open) R.string.request_card_hide_month else R.string.request_card_show_month))
+            Text(stringResource(if (open) Res.string.request_card_hide_month else Res.string.request_card_show_month))
         }
         if (open) MiniMonth(model = model, parentNames = parentNames)
     }

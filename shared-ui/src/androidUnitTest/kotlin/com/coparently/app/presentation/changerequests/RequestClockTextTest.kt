@@ -14,6 +14,7 @@ import com.coparently.app.resources.request_left_days
 import com.coparently.app.resources.request_left_hours
 import com.coparently.app.resources.request_left_minutes
 import com.coparently.app.utils.answerByText
+import kotlinx.datetime.TimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
@@ -55,7 +56,7 @@ class RequestClockTextTest {
                 UiText.Plural(Res.plurals.request_history_meta_reminders, 2),
                 UiText.Res(Res.string.request_history_meta_unchanged)
             ),
-            RequestClockText.historyMeta(full, ZoneOffset.UTC)
+            RequestClockText.historyMeta(full, TimeZone.UTC)
         )
 
         val neverDelivered = CLOCK.copy(outcome = RequestClockOutcome.NO_ANSWER)
@@ -64,7 +65,7 @@ class RequestClockTextTest {
                 UiText.Res(Res.string.request_history_meta_deadline, listOf(dateText(2026, 5, 16))),
                 UiText.Res(Res.string.request_history_meta_unchanged)
             ),
-            RequestClockText.historyMeta(neverDelivered, ZoneOffset.UTC)
+            RequestClockText.historyMeta(neverDelivered, TimeZone.UTC)
         )
     }
 
