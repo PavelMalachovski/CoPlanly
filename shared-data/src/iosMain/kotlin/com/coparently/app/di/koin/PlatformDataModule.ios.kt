@@ -53,6 +53,7 @@ import com.coparently.app.data.session.AccountConsistency
 import com.coparently.app.data.sync.SyncRequester
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
+import com.coparently.app.domain.repository.RecordPhotoStorage
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.functions.functions
