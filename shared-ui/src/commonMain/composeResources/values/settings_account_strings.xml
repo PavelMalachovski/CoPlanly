@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings account / navigation / sync card strings. Kept out of strings.xml
+     because strings.xml is gitignored in this project (it holds local OAuth values). -->
+<resources>
+    <string name="settings_co_parent_sync">Co-parent sync</string>
+    <string name="settings_co_parent_sync_description">Automatically syncs events and child information with your co-parent</string>
+    <string name="settings_sync">Sync</string>
+    <string name="settings_google_sync">Google Calendar sync</string>
+    <string name="settings_gcal_enable_sync">Enable sync</string>
+    <string name="settings_gcal_private_note">Imported events stay on this device. Your Google Calendar is personal, so nothing from it is shared with your co-parent.</string>
+    <string name="settings_gcal_auto_note">While sync is on, new and changed events arrive on their own: when you open the app and about every 15 minutes.</string>
+    <string name="settings_parent_color">My colour</string>
+    <string name="settings_parent_color_desc">How your events, custody days and expenses are marked. Your co-parent picks their own.</string>
+    <string name="parent_color_pink">Pink</string>
+    <string name="parent_color_blue">Blue</string>
+    <string name="parent_color_purple">Purple</string>
+    <string name="parent_color_orange">Orange</string>
+    <string name="parent_color_tomato">Tomato</string>
+    <string name="parent_color_flamingo">Flamingo</string>
+    <string name="parent_color_tangerine">Tangerine</string>
+    <string name="parent_color_banana">Banana</string>
+    <string name="parent_color_sage">Sage</string>
+    <string name="parent_color_basil">Basil</string>
+    <string name="parent_color_peacock">Peacock</string>
+    <string name="parent_color_blueberry">Blueberry</string>
+    <string name="parent_color_lavender">Lavender</string>
+    <string name="parent_color_grape">Grape</string>
+    <string name="parent_color_cocoa">Cocoa</string>
+    <string name="parent_color_cherry">Cherry</string>
+    <string name="parent_color_olive">Olive</string>
+    <string name="parent_color_indigo">Indigo</string>
+    <string name="parent_color_custom">Custom</string>
+    <string name="parent_color_custom_hue">Shade</string>
+    <string name="settings_signed_in_as">Signed in as: %1$s</string>
+    <string name="settings_gcal_not_signed_in">Not signed in</string>
+    <string name="settings_gcal_needs_reconnect">Access expired or was revoked</string>
+    <string name="settings_unknown">Unknown</string>
+    <string name="settings_calendar_sign_out">Sign out from Calendar sync</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_account_description">Sign out of the app completely. This will require you to sign in again to access your account.</string>
+    <string name="settings_account_sign_out">Sign out of app</string>
+    <string name="settings_pairing_title">Co-parent</string>
+    <string name="settings_pairing_description">Your child\u0027s other parent: shared calendar, custody schedule, expenses and chat</string>
+    <string name="settings_child_info_title">Child information</string>
+    <string name="settings_child_info_description">Medications, activities, allergies</string>
+    <string name="settings_pets_title">Pets</string>
+    <string name="settings_pets_description">Photos, medications, special needs</string>
+    <string name="settings_custody_title">Custody schedule</string>
+    <string name="settings_custody_description">Set up your custody pattern (week-on/week-off, 2-2-3, etc.)</string>
+    <string name="settings_about">About CoPlanly</string>
+    <string name="settings_about_tagline">Shared calendar for co-parenting</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_navigate">Open</string>
+
+    <!-- Group headers for the four settings sections. -->
+    <string name="settings_group_sync">SYNC</string>
+    <string name="settings_group_app">APP</string>
+    <string name="settings_group_chat">Chat</string>
+    <string name="settings_group_privacy">Privacy and data</string>
+    <string name="settings_group_account">ACCOUNT</string>
+
+    <!-- Co-parent sync status line. %1$s = time of the last successful sync. -->
+    <string name="settings_sync_idle">Up to date</string>
+    <string name="settings_sync_last">Synced at %1$s</string>
+
+    <!-- Account deletion. Irreversible: the server erases the account and everything it
+         holds, and the device is wiped. The second dialog is deliberate, matching unpair. -->
+    <string name="settings_account_delete">Delete account</string>
+    <string name="settings_account_delete_description">Erase this account and all its data</string>
+    <string name="settings_account_delete_confirm_title">Delete this account?</string>
+    <string name="settings_account_delete_confirm_message">Everything you entered is erased from our servers and from this phone: your events, expenses and your child\u0027s records. Your chat is kept for your co-parent for 30 days so they can export it, and then deleted; they are told. Your co-parent keeps what they created, and their phone keeps the copies it has already downloaded. This cannot be undone.</string>
+    <string name="settings_account_delete_final_title">Delete permanently?</string>
+    <string name="settings_account_delete_final_message">There is no way back: we keep no copy to restore it from. If you only want to leave this device, sign out instead.</string>
+    <string name="settings_account_delete_final_yes">Delete permanently</string>
+    <string name="settings_account_delete_cancel">Keep my account</string>
+    <string name="settings_account_delete_progress">Deleting your account…</string>
+    <string name="settings_account_delete_failed">Your account was not deleted. Please try again.</string>
+    <string name="settings_family_kind_title">What you co-parent</string>
+    <string name="settings_family_kind_both">Children and pets</string>
+    <string name="settings_family_kind_save">Save</string>
+    <string name="settings_family_kind_cancel">Cancel</string>
+    <string name="settings_family_kind_kept_by_co_parent">Saved. A section you removed stays visible because your co-parent still keeps it.</string>
+    <string name="settings_family_kind_records_kept">Removed. Those records stay on your device — turn the section back on here to see them again.</string>
+    <string name="settings_family_kind_not_saved">Could not save that — your profile has not finished loading. Try again in a moment.</string>
+    <string name="settings_split_ratio_title">Expense split</string>
+    <string name="settings_split_ratio_value">%1$d / %2$d</string>
+    <string name="settings_split_ratio_value_named">%1$s %2$d / %3$s %4$d</string>
+    <string name="settings_split_ratio_hint">Applies to expenses recorded from now on. Ones already recorded keep the split they were entered under.</string>
+    <string name="settings_split_ratio_applied">Split saved</string>
+    <string name="settings_split_ratio_proposed">Sent to your co-parent to confirm</string>
+    <string name="settings_split_ratio_refused">That split could not be proposed</string>
+    <!-- Content descriptions for the disclosure chevron on the Google Calendar row (UX-11).
+         The row's trailing slot used to hold a switch and an unnamed chevron, so TalkBack
+         announced a switch and never said the row expands. -->
+    <string name="settings_expand">Show options</string>
+    <string name="settings_collapse">Hide options</string>
+    <string name="settings_family_shown">Family shown</string>
+    <string name="settings_family_switch">Switch family</string>
+    <string name="settings_family_unnamed">Not named yet</string>
+    <!-- The family switcher's dot (M-8): another family has something waiting - chat newer than
+         this parent's read mark, a change request, or a schedule proposal or day swap to answer.
+         A dot, never a count; see OtherFamiliesSignals. -->
+    <string name="family_switcher_unread_other">New messages in another family</string>
+    <string name="family_switcher_unread_row">New messages</string>
+    <string name="family_switcher_request_other">A change request is waiting in another family</string>
+    <string name="family_switcher_request_row">A change request is waiting</string>
+    <string name="family_switcher_schedule_other">A schedule proposal is waiting in another family</string>
+    <string name="family_switcher_schedule_row">A schedule proposal is waiting</string>
+    <string name="family_switcher_split_other">An expense split proposal is waiting in another family</string>
+    <string name="family_switcher_split_row">An expense split proposal is waiting</string>
+    <!-- The school import row (MON-8). Bakaláři opens the import. EduPage's inert "Coming soon" row
+         was removed before the first release (owner decision, September 2026); it returns only
+         with a real import. -->
+    <string name="settings_school_import_title">Import from Bakaláři</string>
+    <string name="settings_school_import_description">Your child’s school events and school hours, straight into the calendar.</string>
+    <string name="settings_operation_failed">That didn\u0027t work. Check your connection and try again.</string>
+
+    <!-- CQ-14: text a ViewModel or service used to hardcode in English. -->
+    <string name="settings_sync_failed">Last sync failed</string>
+
+    <!-- MON-19: Settings → App. The argument is the pause, in seconds. -->
+    <string name="settings_pause_before_sending_title">Pause before sending</string>
+    <string name="settings_pause_before_sending_description">Hold each chat message for %1$d seconds with an Undo, and point out capitals, !!! and sharp words while you type. Checked on this phone only.</string>
+    <!-- The family switcher's dot for child support, a professional's access and the plan (board SW-7) -->
+    <string name="family_switcher_support_other">A child support proposal is waiting in another family</string>
+    <string name="family_switcher_support_row">A child support proposal is waiting</string>
+    <string name="family_switcher_professional_other">A professional’s access waits for your consent in another family</string>
+    <string name="family_switcher_professional_row">A professional’s access waits for your consent</string>
+    <string name="family_switcher_plan_other">Parenting plan answers are waiting in another family</string>
+    <string name="family_switcher_plan_row">Parenting plan answers are waiting</string>
+</resources>

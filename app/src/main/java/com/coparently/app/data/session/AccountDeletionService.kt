@@ -1,9 +1,9 @@
 package com.coparently.app.data.session
 
-import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
@@ -12,8 +12,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Erases the signed-in account: everything the server holds, then everything this device does.
@@ -32,25 +30,27 @@ import javax.inject.Singleton
  * and medical profile included, sitting on the device. So the wipe is performed here,
  * explicitly, and only after the server reports success: clearing first would destroy the
  * user's data even on a run that failed and has to be retried.
+ *
+ * It is the Android [AccountDeletion], which Settings' ViewModel in `:shared-ui` calls (MON-24
+ * phase 2, Task 10).
  */
-@Singleton
 @Suppress("LongParameterList") // one collaborator per piece of the account this phone holds
-class AccountDeletionService @Inject constructor(
+class AccountDeletionService(
     private val functions: FirebaseFunctions,
     private val database: CoPlanlyDatabase,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val fcmService: FcmService,
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler,
     private val deviceTraces: DeviceTraces
-) {
+) : AccountDeletion {
 
     /**
      * Deletes the account and wipes this device.
      *
      * @return success once the server has erased the account and the local database is clear.
      */
-    suspend fun deleteAccount(): Result<Unit> = try {
+    override suspend fun deleteAccount(): Result<Unit> = try {
         functions.getHttpsCallable(CALLABLE).call(emptyMap<String, Any>()).await()
         wipeLocalData()
         Result.success(Unit)
@@ -62,7 +62,7 @@ class AccountDeletionService @Inject constructor(
     } catch (
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.e(TAG, "Account deletion failed", e)
+        logger.e(TAG, "Account deletion failed", e)
         Result.failure(e)
     }
 

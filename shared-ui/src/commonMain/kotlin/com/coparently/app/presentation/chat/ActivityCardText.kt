@@ -1,0 +1,190 @@
+package com.coparently.app.presentation.chat
+
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.presentation.stickers.StickerText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.activity_change_accepted
+import com.coparently.app.resources.activity_change_declined
+import com.coparently.app.resources.activity_change_requested
+import com.coparently.app.resources.activity_custody_accepted
+import com.coparently.app.resources.activity_custody_declined
+import com.coparently.app.resources.activity_custody_proposed
+import com.coparently.app.resources.activity_custody_withdrawn
+import com.coparently.app.resources.activity_day_swap_accepted
+import com.coparently.app.resources.activity_day_swap_declined
+import com.coparently.app.resources.activity_day_swap_offered
+import com.coparently.app.resources.activity_day_swap_withdrawn
+import com.coparently.app.resources.activity_event_accepted
+import com.coparently.app.resources.activity_event_created
+import com.coparently.app.resources.activity_event_declined
+import com.coparently.app.resources.activity_event_deleted
+import com.coparently.app.resources.activity_event_updated
+import com.coparently.app.resources.activity_expense_added
+import com.coparently.app.resources.activity_expense_deleted
+import com.coparently.app.resources.activity_expense_questioned
+import com.coparently.app.resources.activity_expense_updated
+import com.coparently.app.resources.activity_request_last_chance
+import com.coparently.app.resources.activity_request_unanswered
+import com.coparently.app.resources.activity_settle_up_confirmed
+import com.coparently.app.resources.activity_settle_up_owed_to_you
+import com.coparently.app.resources.activity_settle_up_paid
+import com.coparently.app.resources.activity_settle_up_you_owe
+import com.coparently.app.resources.activity_split_accepted
+import com.coparently.app.resources.activity_split_declined
+import com.coparently.app.resources.activity_split_proposed
+import com.coparently.app.resources.activity_split_withdrawn
+import com.coparently.app.resources.activity_sticker_sent
+import com.coparently.app.resources.activity_subject_custody_schedule
+import com.coparently.app.resources.activity_subject_expense_split
+import com.coparently.app.resources.activity_subject_sticker
+import com.coparently.app.resources.activity_support_accepted
+import com.coparently.app.resources.activity_support_confirmed
+import com.coparently.app.resources.activity_support_declined
+import com.coparently.app.resources.activity_support_paid
+import com.coparently.app.resources.activity_support_proposed
+import com.coparently.app.resources.activity_support_withdrawn
+import org.jetbrains.compose.resources.StringResource
+
+/**
+ * What an announcement's sentence is about — the `%1$s` of its string — before the reading device
+ * words it. A tagged value rather than a `String`, because not everything a card is about is the
+ * sender's text: a day is written the way the reader's language writes it, and a schedule is a
+ * noun this app words itself.
+ */
+sealed interface CardSubjectText {
+
+    /** A day, as ISO text on the wire. The reader's language says it, with its weekday. */
+    data class IsoDate(val iso: String) : CardSubjectText
+
+    /** A noun the app words itself, in the reader's language. */
+    data class Res(val id: StringResource) : CardSubjectText
+
+    /** What the sender wrote, shown as it is: an event's title, an expense's description. */
+    data class Raw(val text: String) : CardSubjectText
+}
+
+/**
+ * Turns an announcement's [ActivityKind] into the sentence *this* device speaks.
+ *
+ * The whole point of the payload is that the sentence is composed by the reader, not the sender:
+ * the two parents may not read the same language, and a card written in the sender's locale is a
+ * card the recipient may not be able to read.
+ *
+ * `when` with **no `else`**, deliberately. Adding a member to [ActivityKind] then fails to
+ * compile until it has been given a sentence — and, because every key must exist in all five
+ * locale files, until it has been translated. A silent fallback is how an announcement ends up
+ * saying nothing.
+ */
+object ActivityCardText {
+
+    /**
+     * The string resource for [kind]. Each takes the entity's own name as `%1$s`; it is passed as
+     * a format argument and never concatenated, because word order differs by language. The two
+     * settle-up kinds are the exception: they take the month and the amount, and a reader words
+     * them through [settleUpResource].
+     */
+    // One branch per kind, with no `else` (above): a `when` over the whole enum is as complex as
+    // the enum is long, and that is the point.
+    @Suppress("CyclomaticComplexMethod")
+    fun resourceFor(kind: ActivityKind): StringResource = when (kind) {
+        ActivityKind.EVENT_CREATED -> Res.string.activity_event_created
+        ActivityKind.EVENT_UPDATED -> Res.string.activity_event_updated
+        ActivityKind.EVENT_DELETED -> Res.string.activity_event_deleted
+        ActivityKind.EVENT_ACCEPTED -> Res.string.activity_event_accepted
+        ActivityKind.EVENT_DECLINED -> Res.string.activity_event_declined
+        ActivityKind.CHANGE_REQUESTED -> Res.string.activity_change_requested
+        ActivityKind.CHANGE_ACCEPTED -> Res.string.activity_change_accepted
+        ActivityKind.CHANGE_DECLINED -> Res.string.activity_change_declined
+        ActivityKind.EXPENSE_ADDED -> Res.string.activity_expense_added
+        ActivityKind.EXPENSE_UPDATED -> Res.string.activity_expense_updated
+        ActivityKind.EXPENSE_DELETED -> Res.string.activity_expense_deleted
+        ActivityKind.EXPENSE_QUESTIONED -> Res.string.activity_expense_questioned
+        ActivityKind.DAY_SWAP_OFFERED -> Res.string.activity_day_swap_offered
+        ActivityKind.DAY_SWAP_ACCEPTED -> Res.string.activity_day_swap_accepted
+        ActivityKind.DAY_SWAP_DECLINED -> Res.string.activity_day_swap_declined
+        ActivityKind.CUSTODY_PROPOSED -> Res.string.activity_custody_proposed
+        ActivityKind.CUSTODY_ACCEPTED -> Res.string.activity_custody_accepted
+        ActivityKind.CUSTODY_DECLINED -> Res.string.activity_custody_declined
+        ActivityKind.REQUEST_LAST_CHANCE -> Res.string.activity_request_last_chance
+        ActivityKind.REQUEST_UNANSWERED -> Res.string.activity_request_unanswered
+        // As the sender's own phone says it; [settleUpResource] picks by who reads it, and both
+        // take the month and the amount rather than one subject.
+        ActivityKind.SETTLE_UP_OWED -> Res.string.activity_settle_up_owed_to_you
+        ActivityKind.SETTLE_UP_OWING -> Res.string.activity_settle_up_you_owe
+        // Plain sentences, like a custody proposal's: the card cannot reach the reader's parent
+        // names, and a share without a name would not say whose it is. The fallback text, which the
+        // export prints, carries the shares in the proposer's first person.
+        ActivityKind.SPLIT_PROPOSED -> Res.string.activity_split_proposed
+        ActivityKind.SPLIT_ACCEPTED -> Res.string.activity_split_accepted
+        ActivityKind.SPLIT_DECLINED -> Res.string.activity_split_declined
+        ActivityKind.SPLIT_WITHDRAWN -> Res.string.activity_split_withdrawn
+        ActivityKind.DAY_SWAP_WITHDRAWN -> Res.string.activity_day_swap_withdrawn
+        ActivityKind.CUSTODY_WITHDRAWN -> Res.string.activity_custody_withdrawn
+        ActivityKind.STICKER_SENT -> Res.string.activity_sticker_sent
+        // The payment and alimony cards take two arguments and are worded by [moneyResource];
+        // these are their sentences, so the mapping stays total.
+        ActivityKind.SETTLE_UP_PAID -> Res.string.activity_settle_up_paid
+        ActivityKind.SETTLE_UP_CONFIRMED -> Res.string.activity_settle_up_confirmed
+        ActivityKind.SUPPORT_PROPOSED -> Res.string.activity_support_proposed
+        ActivityKind.SUPPORT_ACCEPTED -> Res.string.activity_support_accepted
+        ActivityKind.SUPPORT_DECLINED -> Res.string.activity_support_declined
+        ActivityKind.SUPPORT_WITHDRAWN -> Res.string.activity_support_withdrawn
+        ActivityKind.SUPPORT_PAID -> Res.string.activity_support_paid
+        ActivityKind.SUPPORT_CONFIRMED -> Res.string.activity_support_confirmed
+    }
+
+    /**
+     * Whether [kind]'s sentence takes the card's money as two arguments rather than one subject: a
+     * payment (`%1$s` the month, `%2$s` the amount) or an alimony agreement (`%1$s` the amount,
+     * `%2$s` the day of the month).
+     */
+    fun takesMoney(kind: ActivityKind): Boolean =
+        kind.isPayment || kind == ActivityKind.SUPPORT_PROPOSED || kind == ActivityKind.SUPPORT_ACCEPTED
+
+    /**
+     * A settle-up card's sentence on this phone: who owes is a matter of who reads it, so the
+     * sentence is chosen by [ActivityKind.readerPays]. Takes the month as `%1$s` and the amount
+     * as `%2$s`.
+     *
+     * @param readerIsSender Whether this phone sent the card.
+     */
+    fun settleUpResource(kind: ActivityKind, readerIsSender: Boolean): StringResource =
+        if (kind.readerPays(readerIsSender)) {
+            Res.string.activity_settle_up_you_owe
+        } else {
+            Res.string.activity_settle_up_owed_to_you
+        }
+
+    /**
+     * What [card]'s sentence is about, decided by the entity the card names:
+     *
+     * - a day swap is its date, which the reader's language writes (`title` is the ISO date; an
+     *   older build prints it as it is);
+     * - a custody proposal is worded — it has no name of its own, and a request's card carries a
+     *   blank title. The cards that existed before carry the family id there, and their sentences
+     *   take no argument, so the worded subject changes nothing they show;
+     * - an expense split proposal is worded the same way, for the same reason;
+     * - anything else is its `title`, as the sender wrote it.
+     *
+     * `when` with no `else`, like [resourceFor]: a new [ActivityEntityType] has to be given a
+     * subject before this builds.
+     */
+    fun subjectOf(card: ActivityAnnouncement): CardSubjectText = when (card.entityType) {
+        ActivityEntityType.DAY_SWAP -> CardSubjectText.IsoDate(card.title)
+        ActivityEntityType.CUSTODY_PROPOSAL -> CardSubjectText.Res(Res.string.activity_subject_custody_schedule)
+        ActivityEntityType.SPLIT_PROPOSAL -> CardSubjectText.Res(Res.string.activity_subject_expense_split)
+        // The sender's neutral phrase on both phones: the card is the thread's record of what was
+        // sent, and the Family tab words it for its receiver.
+        ActivityEntityType.STICKER -> CardSubjectText.Res(
+            StickerKind.fromWire(card.title)?.let { StickerText.phrase(it) } ?: Res.string.activity_subject_sticker
+        )
+        ActivityEntityType.PAYMENT,
+        ActivityEntityType.SUPPORT_AGREEMENT,
+        ActivityEntityType.EVENT,
+        ActivityEntityType.CHANGE_REQUEST,
+        ActivityEntityType.EXPENSE -> CardSubjectText.Raw(card.title)
+    }
+}

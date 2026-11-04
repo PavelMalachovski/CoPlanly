@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- First-run questionnaire. The footnote is the reason the questionnaire is acceptable at all:
+     it says the details are kept for the family's own benefit. It must not claim the data is
+     encrypted (it is not) and must not claim only the user can see it (the co-parent can, by
+     design). -->
+<resources>
+    <string name="onboarding_title">Getting set up</string>
+    <string name="onboarding_progress">Step %1$d of %2$d</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_finish">Finish</string>
+    <string name="onboarding_profile_title">About you</string>
+    <string name="onboarding_profile_name_required">Your name is the one thing the app needs — it labels every event and expense.</string>
+    <string name="onboarding_custody_title">Your custody schedule</string>
+    <string name="onboarding_custody_body">Set out which days are with each of you. You can change it at any time, and your co-parent has to agree to a change.</string>
+    <string name="onboarding_custody_looks_right">Looks right</string>
+    <string name="onboarding_custody_propose_change">Propose a change</string>
+    <string name="onboarding_custody_existing_body">This is the schedule you share with %1$s. A change is proposed to them and waits for their answer.</string>
+    <string name="onboarding_custody_checking">Checking for a schedule you already share…</string>
+    <string name="onboarding_family_children">Children</string>
+    <string name="onboarding_family_pets">Pets</string>
+
+    <!-- The co-parent link, which comes first (September 2026): the link, what it brought back, and
+         the wording the split and custody steps use once there is a co-parent to name. -->
+    <string name="onboarding_coparent_title">Link with your co-parent</string>
+    <string name="onboarding_notifications_title">Turn on notifications</string>
+    <string name="onboarding_notifications_body">Your co-parent\u0027s requests, their answers, event reminders and messages all arrive as notifications. Without them you only see them when you open the app.</string>
+    <string name="onboarding_notifications_allow">Allow notifications</string>
+    <string name="onboarding_notifications_on">Notifications are on.</string>
+    <string name="onboarding_notifications_later">You can change this any time in your phone\u0027s settings.</string>
+    <string name="onboarding_coparent_body">Linking puts the two of you on one calendar. If your co-parent has already set things up, you will see it straight away. If they haven\u0027t joined yet, invite them.</string>
+    <string name="onboarding_coparent_enter_code">I have their code</string>
+    <string name="onboarding_coparent_invite">Invite my co-parent</string>
+    <string name="onboarding_coparent_later">Not now</string>
+    <string name="onboarding_coparent_linked_title">Linked with %1$s</string>
+    <string name="onboarding_coparent_linked_body">Whatever %1$s has already entered is pulled in for you. Check it on the next steps and add anything missing.</string>
+    <string name="onboarding_coparent_fetching">Fetching what %1$s has entered…</string>
+    <string name="onboarding_coparent_fetching_hint">You can go on. Anything still on its way arrives in the background.</string>
+    <string name="onboarding_coparent_found_title">Already entered by %1$s</string>
+    <string name="onboarding_coparent_found_children">Children</string>
+    <string name="onboarding_coparent_found_pets">Pets</string>
+    <string name="onboarding_coparent_found_custody">Custody schedule</string>
+    <string name="onboarding_coparent_found_split">Cost split</string>
+    <string name="onboarding_coparent_found_set">Set up</string>
+    <string name="onboarding_coparent_nothing_yet">Nothing has arrived yet. %1$s\u0027s phone sends their details the next time it is online — you can continue now, and whatever they entered will appear later.</string>
+
+    <!-- Asked when Skip would leave something typed on this step unsaved. -->
+</resources>

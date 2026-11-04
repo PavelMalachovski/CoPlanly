@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.unit.dp
@@ -34,15 +33,17 @@ import com.coparently.app.presentation.home.MonthMoney
 import com.coparently.app.presentation.pairing.InvitationView
 import com.coparently.app.presentation.settings.CUSTOM_COLOUR
 import com.coparently.app.presentation.settings.ParentColorPicker
+import com.coparently.app.testing.RobolectricTestApplication
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -57,7 +58,7 @@ import java.util.Locale
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test
@@ -132,7 +133,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         val money = MonthMoney.of(
             expenses = month,
             view = FamilyView(me = ScreenshotFixtures.MY_UID, onScreen = FAMILY_ID, others = emptySet()),
-            today = ScreenshotFixtures.TODAY,
+            today = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
             fallbackCurrency = SupportedCurrency.CZK,
             userId = ScreenshotFixtures.MY_UID,
             roleByUid = mapOf(ScreenshotFixtures.MY_UID to "mom", ScreenshotFixtures.CO_PARENT_UID to "dad")
@@ -234,7 +235,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         category = ExpenseCategory.CLOTHING,
         paidBy = ScreenshotFixtures.MY_UID,
         splitBetween = listOf(ScreenshotFixtures.MY_UID, ScreenshotFixtures.CO_PARENT_UID),
-        date = ScreenshotFixtures.TODAY,
+        date = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
         createdByFirebaseUid = ScreenshotFixtures.MY_UID,
         familyId = FAMILY_ID
     )
@@ -260,7 +261,7 @@ class FeatureScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant)
         private const val FAMILY_ID = "u1__u2"
 
         /** A Monday far enough ahead that the preview never draws today's month. */
-        private val PREVIEW_START = LocalDate.of(2030, 5, 6)
+        private val PREVIEW_START = LocalDate(2030, 5, 6)
         private const val MOM_PAID = 3_120.0
         private const val DAD_PAID = 1_480.0
         private const val OWED_TO_ME = 820.0

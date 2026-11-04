@@ -1,6 +1,5 @@
 package com.coparently.app.presentation.settings
 
-import android.app.Application
 import android.content.Context
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -11,6 +10,9 @@ import androidx.compose.ui.test.performClick
 import com.coparently.app.R
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.ParentColorChoice
+import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.getString
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -25,7 +27,7 @@ import org.robolectric.annotation.Config
  * separate option that opens the wheel.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w393dp-h851dp")
+@Config(sdk = [34], application = RobolectricTestApplication::class, qualifiers = "w393dp-h851dp")
 class ParentColorPickerTest {
 
     @get:Rule
@@ -53,7 +55,7 @@ class ParentColorPickerTest {
         render(selected = ParentColorChoice.PINK.name)
 
         ParentColorChoice.GRID.forEach { choice ->
-            val node = rule.onNodeWithContentDescription(context.getString(choice.labelRes))
+            val node = rule.onNodeWithContentDescription(runBlocking { getString(choice.label) })
             if (choice == ParentColorChoice.PINK) node.assertIsSelected() else node.assertIsNotSelected()
         }
     }

@@ -2,7 +2,6 @@ package com.coparently.app.data.remote.google
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import androidx.credentials.CreatePasswordRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -13,12 +12,10 @@ import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.coparently.app.R
+import com.coparently.app.data.platform.logger
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** An email and password handed back by the system's password manager. */
 data class SavedPassword(val email: String, val password: String) {
@@ -43,9 +40,8 @@ data class SavedPassword(val email: String, val password: String) {
  * UI on an `Activity`, and the caller is a ViewModel, which outlives one — a stored reference
  * would leak it.
  */
-@Singleton
-class CredentialAuthenticator @Inject constructor(
-    @ApplicationContext private val context: Context
+class CredentialAuthenticator(
+    private val context: Context
 ) {
     private val credentialManager = CredentialManager.create(context)
 
@@ -94,7 +90,7 @@ class CredentialAuthenticator @Inject constructor(
         try {
             credentialManager.createCredential(activity, CreatePasswordRequest(email, password))
         } catch (e: CreateCredentialException) {
-            Log.d(TAG, "Password not saved: ${e.type}")
+            logger.d(TAG, "Password not saved: ${e.type}")
         }
     }
 

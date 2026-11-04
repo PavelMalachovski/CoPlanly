@@ -1,0 +1,255 @@
+@file:OptIn(InternalSharedApi::class)
+
+package com.coparently.app.data.repository
+
+import com.coparently.app.domain.InternalSharedApi
+import com.coparently.app.domain.activity.ActivityAnnouncement
+import com.coparently.app.domain.activity.ActivityEntityType
+import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.domain.model.Message
+import com.coparently.app.domain.model.MessageSendStatus
+import com.coparently.app.domain.model.MessageType
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Before
+import org.junit.Test
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.TimeZone
+
+/**
+ * What a message looks like on the wire, in both formats.
+ *
+ * A message document's `timestamp` used to be a naive ISO local date-time string with no
+ * offset — two devices in different timezones could not agree on what instant it named. It is
+ * now a number: epoch millis, the same unit as the read/delivered marks.
+ *
+ * Both formats have to be readable for as long as either exists in the wild: the owner has real
+ * documents written in the old format, and the co-parent's phone keeps writing them until it
+ * takes this build. Only the new one is ever written.
+ */
+class ChatMappersWireFormatTest {
+
+    private lateinit var originalZone: TimeZone
+
+    @Before
+    fun captureDefaultZone() {
+        originalZone = TimeZone.getDefault()
+    }
+
+    @After
+    fun restoreDefaultZone() {
+        TimeZone.setDefault(originalZone)
+    }
+
+    @Test
+    fun `a message is written with its send instant as a number`() {
+        val document = message().toFirestoreMap()
+
+        assertEquals(SENT_AT_MILLIS, document["timestamp"])
+    }
+
+    @Test
+    fun `a numeric timestamp is read back unchanged, whatever zone the reader is in`() {
+        val document = message().toFirestoreMap()
+
+        val inUtc = inZone(ZoneOffset.UTC) { document.toMessageOrNull() }
+        val inKyiv = inZone(ZoneOffset.ofHours(3)) { document.toMessageOrNull() }
+
+        assertEquals(SENT_AT_MILLIS, inUtc?.sentAtMillis)
+        assertEquals(
+            "an instant on the wire is the same instant in every zone",
+            inUtc?.sentAtMillis,
+            inKyiv?.sentAtMillis
+        )
+    }
+
+    @Test
+    fun `a legacy string timestamp is read as local time in the reading device's zone`() {
+        val document = legacyDocument("2026-08-01T12:00:00")
+
+        val message = inZone(ZoneOffset.ofHours(2)) { document.toMessageOrNull() }
+
+        // 12:00 at UTC+2 is 10:00 UTC. This is the best available reading of a value that never
+        // recorded where it was written, and the one the app applied to it until now.
+        assertEquals(SENT_AT_MILLIS, message?.sentAtMillis)
+    }
+
+    @Test
+    fun `a document whose timestamp is neither a number nor a date is skipped`() {
+        assertNull(legacyDocument("not-a-date").toMessageOrNull())
+        assertNull(message().toFirestoreMap().minus("timestamp").toMessageOrNull())
+        assertNull((message().toFirestoreMap() + ("timestamp" to true)).toMessageOrNull())
+    }
+
+    @Test
+    fun `everything else about a message survives the round trip`() {
+        val original = message()
+
+        val restored = original.toFirestoreMap().toMessageOrNull()
+
+        assertEquals(original.id, restored?.id)
+        assertEquals(original.conversationId, restored?.conversationId)
+        assertEquals(original.senderId, restored?.senderId)
+        assertEquals(original.senderName, restored?.senderName)
+        assertEquals(original.content, restored?.content)
+        assertEquals(original.messageType, restored?.messageType)
+        assertEquals(original.attachments, restored?.attachments)
+        assertEquals(original.replyToMessageId, restored?.replyToMessageId)
+    }
+
+    @Test
+    fun `a message survives the Room round trip`() {
+        val original = message()
+
+        assertEquals(original, original.toEntity().toDomain())
+    }
+
+    private fun message() = Message(
+        id = "message-1",
+        conversationId = "uidA__uidB",
+        senderId = "uidA",
+        senderName = "Anna",
+        content = "See you at 5",
+        sentAtMillis = SENT_AT_MILLIS,
+        messageType = MessageType.TEXT,
+        attachments = listOf("event-1"),
+        replyToMessageId = "message-0",
+        status = MessageSendStatus.SENT
+    )
+
+    /** A message document in the format written before send times became instants. */
+    private fun legacyDocument(timestamp: String): Map<String, Any> =
+        message().toFirestoreMap() + ("timestamp" to timestamp)
+
+    /** Runs [block] with [zone] as the JVM's default, restoring the previous one afterwards. */
+    private fun <T> inZone(zone: ZoneId, block: () -> T): T {
+        val previous = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone(zone))
+        return try {
+            block()
+        } finally {
+            TimeZone.setDefault(previous)
+        }
+    }
+
+    private companion object {
+        /** 2026-08-01T10:00:00Z, which is 12:00 at UTC+2. */
+        const val SENT_AT_MILLIS = 1_785_578_400_000L
+    }
+
+    @Test
+    fun `an activity payload survives the Firestore round trip`() {
+        val announcement = ActivityAnnouncement(
+            kind = ActivityKind.EXPENSE_ADDED,
+            entityType = ActivityEntityType.EXPENSE,
+            entityId = "x1",
+            title = "School trip",
+            amount = "250 Kc",
+            currency = "CZK"
+        )
+        val message = Message(
+            id = "m1",
+            conversationId = "c1",
+            senderId = "uid-mom",
+            senderName = "Olya",
+            content = "New expense: School trip",
+            sentAtMillis = 1_785_565_800_000L,
+            messageType = MessageType.ACTIVITY,
+            activity = announcement
+        )
+
+        val document = message.toFirestoreMap()
+
+        @Suppress("UNCHECKED_CAST")
+        val read = (document as Map<String, Any>).toMessageOrNull()
+
+        assertEquals(announcement, read?.activity)
+        assertEquals(MessageType.ACTIVITY, read?.messageType)
+    }
+
+    @Test
+    fun `an ordinary message carries no activity key at all`() {
+        // Omitted rather than written as null, matching every other optional in this schema —
+        // and so a build that predates the field is not handed a key it will not understand.
+        val message = Message(
+            id = "m1",
+            conversationId = "c1",
+            senderId = "uid-mom",
+            senderName = "Olya",
+            content = "hello",
+            sentAtMillis = 1_785_565_800_000L
+        )
+
+        assertEquals(false, message.toFirestoreMap().containsKey("activity"))
+    }
+
+    @Test
+    fun `a build that has never heard of ACTIVITY reads it as a plain text bubble`() {
+        // This is the whole reason `content` carries a fallback sentence. An older co-parent's
+        // phone parses the type it does not know, degrades to TEXT, and shows the fallback rather
+        // than an empty bubble. Pinned rather than assumed, because it is what stops this change
+        // breaking a phone nobody has upgraded.
+        val document = mapOf<String, Any>(
+            "id" to "m1",
+            "conversationId" to "c1",
+            "senderId" to "uid-mom",
+            "senderName" to "Olya",
+            "content" to "New expense: School trip",
+            "timestamp" to 1_785_565_800_000L,
+            "messageType" to "SOMETHING_NEWER_STILL"
+        )
+
+        val read = document.toMessageOrNull()
+
+        assertEquals(MessageType.TEXT, read?.messageType)
+        assertEquals("New expense: School trip", read?.content)
+        assertNull(read?.activity)
+    }
+
+    @Test
+    fun `a Room row whose type this build does not know degrades the same way`() {
+        // The Room reader used to call `valueOf` unguarded, so one such row threw on the path
+        // that draws the whole thread rather than degrading like its Firestore counterpart.
+        val row = Message(
+            id = "m1",
+            conversationId = "c1",
+            senderId = "uid-mom",
+            senderName = "Olya",
+            content = "New expense: School trip",
+            sentAtMillis = 1_785_565_800_000L
+        ).toEntity().copy(messageType = "SOMETHING_NEWER_STILL")
+
+        assertEquals(MessageType.TEXT, row.toDomain().messageType)
+    }
+
+    @Test
+    fun `a proposal card's plan citation survives both round trips, verbatim`() {
+        // MON-21: the custody document forgets the citation once the proposal is answered; the
+        // chat card is where the export reads it later, so both stores must keep it as written.
+        val announcement = ActivityAnnouncement(
+            kind = ActivityKind.CUSTODY_PROPOSED,
+            entityType = ActivityEntityType.CUSTODY_PROPOSAL,
+            entityId = "uidA__uidB",
+            title = "uidA__uidB",
+            planCitation = "p1|care_weekday|0123456789abcdef"
+        )
+        val message = Message(
+            id = "m2",
+            conversationId = "c1",
+            senderId = "uid-mom",
+            senderName = "Olya",
+            content = "New schedule proposed",
+            sentAtMillis = 1_785_565_800_000L,
+            messageType = MessageType.ACTIVITY,
+            activity = announcement
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val fromFirestore = (message.toFirestoreMap() as Map<String, Any>).toMessageOrNull()
+
+        assertEquals(announcement, fromFirestore?.activity)
+        assertEquals(announcement, message.toEntity().toDomain().activity)
+    }
+}

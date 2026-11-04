@@ -43,6 +43,8 @@ test('globs: ** spans segments, * stays within one, K/ is the Kotlin root', () =
   assert.ok(plan.globToRegExp('K/data/local/**').test(K + 'data/local/dao/EventDao.kt'));
   assert.ok(plan.globToRegExp('app/src/main/res/values*/**')
       .test('app/src/main/res/values-cs/chat_strings.xml'));
+  assert.ok(plan.globToRegExp('S/values*/**').test(plan.S + 'values-cs/chat_strings.xml'));
+  assert.ok(!plan.globToRegExp('S/values*/**').test('app/src/main/res/values-cs/chat_strings.xml'));
 });
 
 test('database and encryption changes need the SEC-2 upgrade run', () => {
@@ -61,7 +63,7 @@ test('maps the request clocks to 5.9', () => {
   assert.ok(sectionsFor([K + 'domain/changerequests/RequestCap.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'presentation/common/AnswerByField.kt']).includes('5.9'));
   assert.ok(sectionsFor([K + 'presentation/changerequests/CardClock.kt']).includes('5.9'));
-  assert.ok(sectionsFor(['app/src/main/res/values-cs/request_deadline_strings.xml']).includes('5.9'));
+  assert.ok(sectionsFor([plan.S + 'values-cs/request_deadline_strings.xml']).includes('5.9'));
   assert.ok(!sectionsFor([K + 'presentation/home/HomeScreen.kt']).includes('5.9'));
 });
 
@@ -90,11 +92,26 @@ test('the Google Calendar connection and its import need the Google Calendar che
 });
 
 test('strings need both language-picker checks', () => {
-  assert.deepEqual(sectionsFor(['app/src/main/res/values-de/expenses_strings.xml']), ['3.6', '4.2']);
+  assert.deepEqual(sectionsFor([plan.S + 'values-de/expenses_strings.xml']), ['3.6', '4.2']);
+});
+
+test('shared-ui code is planned as the app source it was (MON-24 phase 2)', () => {
+  assert.equal(plan.asAppSource('shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/chat/ChatScreen.kt'),
+      K + 'presentation/chat/ChatScreen.kt');
+  assert.equal(plan.asAppSource(plan.S + 'values/chat_strings.xml'), plan.S + 'values/chat_strings.xml');
+});
+
+test('the theme\'s platform halves ask for the checks their common file does (slice 9b)', () => {
+  const theme = 'shared-ui/src/androidMain/kotlin/com/coparently/app/presentation/theme/';
+  assert.ok(sectionsFor([theme + 'Theme.android.kt']).includes('3.14'));
+  assert.ok(sectionsFor([theme + 'ContrastLevel.android.kt']).includes('3.14'));
+  assert.ok(sectionsFor([theme + 'Motion.android.kt']).includes('3.2'));
+  assert.ok(sectionsFor(['shared-ui/src/iosMain/kotlin/com/coparently/app/presentation/theme/Motion.ios.kt'])
+      .includes('3.2'));
 });
 
 test('the push strings add the push check to the locale ones', () => {
-  assert.deepEqual(sectionsFor(['app/src/main/res/values/push_strings.xml']), ['3.6', '3.7', '4.2']);
+  assert.deepEqual(sectionsFor([plan.S + 'values/push_strings.xml']), ['3.6', '3.7', '4.2']);
 });
 
 test('docs, CI and JVM tests need no phone and are not reported as unmapped', () => {
@@ -158,4 +175,34 @@ test('every checklist section the coverage map names exists', () => {
   for (const section of plan.e2eBySection(coverage).keys()) {
     assert.ok(sections.has(section), `tools/e2e/coverage.json names §${section}, which the checklist lacks`);
   }
+});
+
+test('the shared module is mapped as the app domain it came from (MON-24)', () => {
+  const S = 'shared/src/commonMain/kotlin/com/coparently/app/';
+  assert.deepEqual(sectionsFor([S + 'domain/files/HexDigest.kt']), sectionsFor([K + 'domain/files/HexDigest.kt']));
+  assert.ok(sectionsFor([S + 'domain/changerequests/RequestClock.kt']).includes('5.9'));
+  assert.ok(sectionsFor(['shared/src/iosMain/kotlin/com/coparently/app/domain/chat/X.kt']).includes('5.1'));
+  // The module's tests need no phone, as the app's own unit tests do not.
+  const tests = plan.planFor(['shared/src/commonTest/kotlin/com/coparently/app/domain/files/HexDigestTest.kt'], CHECKLIST);
+  assert.deepEqual(tests.items, []);
+  assert.deepEqual(tests.unmapped, []);
+  // A shared source no rule claims is listed under its own path, never dropped.
+  const unclaimed = 'shared/src/commonMain/kotlin/com/coparently/app/domain/zzz/Unclaimed.kt';
+  assert.deepEqual(plan.planFor([unclaimed], CHECKLIST).unmapped, [unclaimed]);
+});
+
+test('the shared-data module is mapped as the app data layer it came from (MON-24 phase 2)', () => {
+  const D = 'shared-data/src/commonMain/kotlin/com/coparently/app/';
+  assert.deepEqual(
+    sectionsFor([D + 'data/school/bakalari/BakalariClient.kt']),
+    sectionsFor([K + 'data/school/bakalari/BakalariClient.kt'])
+  );
+  assert.ok(sectionsFor([D + 'data/school/bakalari/BakalariClient.kt']).includes('3.18'));
+  assert.ok(sectionsFor([D + 'data/remote/google/GoogleCalendarApi.kt']).includes('3.9'));
+  // The HTTP client both imports call through needs both imports checked.
+  const http = sectionsFor(['shared-data/src/androidMain/kotlin/com/coparently/app/data/http/HttpClients.android.kt']);
+  assert.ok(http.includes('3.18') && http.includes('3.9'), http.join(','));
+  const tests = plan.planFor(['shared-data/src/commonTest/kotlin/com/coparently/app/data/http/WebAddressVectorsTest.kt'], CHECKLIST);
+  assert.deepEqual(tests.items, []);
+  assert.deepEqual(tests.unmapped, []);
 });

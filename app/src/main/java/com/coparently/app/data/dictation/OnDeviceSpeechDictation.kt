@@ -10,9 +10,6 @@ import android.speech.SpeechRecognizer
 import com.coparently.app.domain.dictation.DictationFailure
 import com.coparently.app.domain.dictation.DictationListener
 import com.coparently.app.domain.dictation.SpeechDictation
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * [SpeechDictation] over the platform's **on-device** speech recognizer, and nothing else.
@@ -38,9 +35,8 @@ import javax.inject.Singleton
  * are ignored, and only the recognised text is handed on. One session at a time; a new [start]
  * cancels the previous one, and callbacks from a recognizer that is no longer current are dropped.
  */
-@Singleton
-class OnDeviceSpeechDictation @Inject constructor(
-    @ApplicationContext private val context: Context
+class OnDeviceSpeechDictation(
+    private val context: Context
 ) : SpeechDictation {
 
     private var recognizer: SpeechRecognizer? = null

@@ -5,7 +5,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelected
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -13,7 +13,7 @@ import org.junit.runner.RunWith
  * The virtual tester's proof of life: the four tabs open, each step photographed, and the money
  * pattern the visual checks rely on reads Czech, Slovak and German amounts.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class SmokeScenarioTest : QaOnScreenTest() {
 

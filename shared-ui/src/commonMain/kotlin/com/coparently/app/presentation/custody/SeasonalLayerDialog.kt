@@ -1,0 +1,325 @@
+package com.coparently.app.presentation.custody
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.holidays.VacationSuggestion
+import com.coparently.app.domain.parentingplan.PlanReference
+import com.coparently.app.presentation.common.AnswerByField
+import com.coparently.app.presentation.common.AnswerByPickSaver
+import com.coparently.app.presentation.common.LocalDatePickerDialog
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.holidayDisplayName
+import com.coparently.app.presentation.common.rememberAnswerByOffer
+import com.coparently.app.presentation.parentingplan.PlanReferenceCard
+import com.coparently.app.presentation.parentingplan.coParentLabel
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.seasonal_cancel
+import com.coparently.app.resources.seasonal_confirm
+import com.coparently.app.resources.seasonal_delete
+import com.coparently.app.resources.seasonal_dialog_add_title
+import com.coparently.app.resources.seasonal_dialog_edit_title
+import com.coparently.app.resources.seasonal_fill_from_school
+import com.coparently.app.resources.seasonal_from
+import com.coparently.app.resources.seasonal_invalid_range
+import com.coparently.app.resources.seasonal_name_label
+import com.coparently.app.resources.seasonal_ok
+import com.coparently.app.resources.seasonal_shape_all
+import com.coparently.app.resources.seasonal_shape_half
+import com.coparently.app.resources.seasonal_shape_keep
+import com.coparently.app.resources.seasonal_shape_label
+import com.coparently.app.resources.seasonal_shape_weeks
+import com.coparently.app.resources.seasonal_starts_with
+import com.coparently.app.resources.seasonal_to
+import com.coparently.app.resources.seasonal_with
+import com.coparently.app.utils.readerMediumDate
+import com.coparently.app.utils.readerShortDate
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+/** Which end of the range the date picker is open on. */
+private enum class RangeEnd { FROM, TO }
+
+/**
+ * The editor for one seasonal layer (MON-14): a name, a range, and how its days are shared.
+ *
+ * "Fill from school holidays" offers the upcoming breaks of the parent's own holiday calendar as
+ * the range — a suggestion the parent confirms, never a schedule applied by itself. What the
+ * dialog saves goes through the proposal flow like any other schedule change.
+ *
+ * @param initial The draft to open on.
+ * @param isEditing True for an existing layer, which may keep its current pattern.
+ * @param suggestions School vacations to fill the range from; the row is absent when empty.
+ * @param parentNames Resolves a slot to that parent's name.
+ * @param reference The agreed parenting-plan answer the editor was opened for (MON-21), quoted
+ *   read-only above the fields; null for an editor opened any other way.
+ * @param answerByCapOf The cap of the proposal saving a draft would make (phase 3a), or null when
+ *   saving is no proposal and the dialog asks for no deadline. It is worked out again when the draft
+ *   changes, not per frame.
+ * @param onConfirm Receives the draft to save, and the deadline the parent chose for the co-parent's
+ *   answer — null when [answerByCapOf] is null.
+ * @param onDelete Deletes the layer; null for a new one.
+ * @param onDismiss Closes the dialog.
+ */
+@Composable
+@Suppress("LongParameterList") // one dialog, its content and its three outcomes
+fun SeasonalLayerDialog(
+    initial: SeasonalLayerDraft,
+    isEditing: Boolean,
+    suggestions: List<VacationSuggestion>,
+    parentNames: ParentNames,
+    reference: PlanReference? = null,
+    answerByCapOf: ((SeasonalLayerDraft) -> Long?)? = null,
+    onConfirm: (SeasonalLayerDraft, AnswerByPick?) -> Unit,
+    onDelete: (() -> Unit)?,
+    onDismiss: () -> Unit
+) {
+    var draft by remember { mutableStateOf(initial) }
+    var picking by remember { mutableStateOf<RangeEnd?>(null) }
+    var answerBy by rememberSaveable(stateSaver = AnswerByPickSaver) { mutableStateOf(AnswerByPick.DEFAULT) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            val title = if (isEditing) Res.string.seasonal_dialog_edit_title else Res.string.seasonal_dialog_add_title
+            Text(stringResource(title))
+        },
+        text = {
+            LayerEditorBody(
+                draft = draft,
+                isEditing = isEditing,
+                suggestions = suggestions,
+                parentNames = parentNames,
+                reference = reference,
+                onChange = { draft = it },
+                onPick = { picking = it },
+                footer = { LayerDeadline(draft, answerByCapOf, parentNames, answerBy) { answerBy = it } }
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(draft, answerBy.takeIf { answerByCapOf != null }) },
+                enabled = draft.isValid
+            ) {
+                Text(stringResource(Res.string.seasonal_confirm))
+            }
+        },
+        dismissButton = {
+            Row {
+                onDelete?.let {
+                    TextButton(onClick = it) {
+                        Text(stringResource(Res.string.seasonal_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text(stringResource(Res.string.seasonal_cancel)) }
+            }
+        }
+    )
+
+    picking?.let { end ->
+        LocalDatePickerDialog(
+            initialDate = if (end == RangeEnd.FROM) draft.from else draft.to,
+            confirmLabel = stringResource(Res.string.seasonal_ok),
+            dismissLabel = stringResource(Res.string.seasonal_cancel),
+            onConfirm = { date ->
+                draft = if (end == RangeEnd.FROM) draft.copy(from = date) else draft.copy(to = date)
+            },
+            onDismiss = { picking = null }
+        )
+    }
+}
+
+/**
+ * When the co-parent should answer the layer by (phase 3a): the block is absent while saving is no
+ * proposal ([capOf] null). The cap is worked out when the [draft] changes, not per frame.
+ */
+@Composable
+private fun LayerDeadline(
+    draft: SeasonalLayerDraft,
+    capOf: ((SeasonalLayerDraft) -> Long?)?,
+    parentNames: ParentNames,
+    selected: AnswerByPick,
+    onSelect: (AnswerByPick) -> Unit
+) {
+    if (capOf == null) return
+    val cap = remember(draft) { capOf(draft) }
+    AnswerByField(
+        offer = rememberAnswerByOffer(cap),
+        selected = selected,
+        onSelect = onSelect,
+        coParentName = parentNames.coParentLabel()
+    )
+}
+
+/** The dialog's content: name, range, school-holiday suggestions, shape, validation, then [footer]. */
+@Composable
+@Suppress("LongParameterList") // the draft, what it may offer, and its two callbacks
+private fun LayerEditorBody(
+    draft: SeasonalLayerDraft,
+    isEditing: Boolean,
+    suggestions: List<VacationSuggestion>,
+    parentNames: ParentNames,
+    reference: PlanReference?,
+    onChange: (SeasonalLayerDraft) -> Unit,
+    onPick: (RangeEnd) -> Unit,
+    footer: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
+    ) {
+        // MON-21: the agreed answer, above the fields the parent fills in from it by hand.
+        reference?.let { PlanReferenceCard(reference = it, coParentName = parentNames.coParentLabel()) }
+        OutlinedTextField(
+            value = draft.name,
+            onValueChange = { onChange(draft.copy(name = it.take(MAX_NAME_INPUT))) },
+            label = { Text(stringResource(Res.string.seasonal_name_label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        LayerRange(draft = draft, onPick = onPick)
+        if (suggestions.isNotEmpty()) {
+            LayerSuggestions(suggestions) { suggestion, name ->
+                onChange(
+                    draft.copy(
+                        from = suggestion.dates.start,
+                        to = suggestion.dates.endInclusive,
+                        name = draft.name.ifBlank { name }
+                    )
+                )
+            }
+        }
+        LayerShapePicker(draft, isEditing, parentNames, onChange)
+        if (!draft.isValid && draft.name.isNotBlank()) {
+            Text(
+                text = stringResource(Res.string.seasonal_invalid_range),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        footer()
+    }
+}
+
+/** The two ends of the range, each opening the date picker. */
+@Composable
+private fun LayerRange(draft: SeasonalLayerDraft, onPick: (RangeEnd) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        TextButton(onClick = { onPick(RangeEnd.FROM) }) {
+            Text(stringResource(Res.string.seasonal_from, readerMediumDate(draft.from)))
+        }
+        TextButton(onClick = { onPick(RangeEnd.TO) }) {
+            Text(stringResource(Res.string.seasonal_to, readerMediumDate(draft.to)))
+        }
+    }
+}
+
+/** "Fill from school holidays": one chip per upcoming break. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LayerSuggestions(
+    suggestions: List<VacationSuggestion>,
+    onPick: (VacationSuggestion, String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        Text(
+            text = stringResource(Res.string.seasonal_fill_from_school),
+            style = MaterialTheme.typography.labelLarge
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+            verticalArrangement = Arrangement.spacedBy(Spacing.S)
+        ) {
+            suggestions.forEach { suggestion ->
+                val name = suggestion.displayName()
+                PillChip(
+                    label = "$name ${readerShortDate(suggestion.dates.start)}" +
+                        "–${readerShortDate(suggestion.dates.endInclusive)}",
+                    onClick = { onPick(suggestion, name) }
+                )
+            }
+        }
+    }
+}
+
+/** How the days are shared, and which parent has them or starts. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LayerShapePicker(
+    draft: SeasonalLayerDraft,
+    isEditing: Boolean,
+    parentNames: ParentNames,
+    onChange: (SeasonalLayerDraft) -> Unit
+) {
+    val shapes = LayerShape.entries.filter { isEditing || it != LayerShape.KEEP }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        Text(text = stringResource(Res.string.seasonal_shape_label), style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+            shapes.forEach { shape ->
+                FilterChip(
+                    selected = draft.shape == shape,
+                    onClick = { onChange(draft.copy(shape = shape)) },
+                    label = { Text(stringResource(shape.label())) }
+                )
+            }
+        }
+        if (draft.shape != LayerShape.KEEP) {
+            Text(
+                text = stringResource(
+                    if (draft.shape == LayerShape.ALL_WITH) {
+                        Res.string.seasonal_with
+                    } else {
+                        Res.string.seasonal_starts_with
+                    }
+                ),
+                style = MaterialTheme.typography.labelLarge
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+                listOf(ContactWindow.SLOT_ONE, ContactWindow.SLOT_TWO).forEach { slot ->
+                    FilterChip(
+                        selected = draft.firstSlot == slot,
+                        onClick = { onChange(draft.copy(firstSlot = slot)) },
+                        label = { Text(parentNames.labelFor(slot)) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** A shape's chip label. */
+private fun LayerShape.label(): StringResource = when (this) {
+    LayerShape.KEEP -> Res.string.seasonal_shape_keep
+    LayerShape.ALL_WITH -> Res.string.seasonal_shape_all
+    LayerShape.ALTERNATING_WEEKS -> Res.string.seasonal_shape_weeks
+    LayerShape.SPLIT_IN_HALF -> Res.string.seasonal_shape_half
+}
+
+/** The break's name as every holiday is named on screen (`holidayDisplayName`, L-8). */
+@Composable
+private fun VacationSuggestion.displayName(): String = holidayDisplayName(nameEn, nameLocal, localLanguage)
+
+/** Longer input than a layer name may hold is cut rather than refused mid-word by validation. */
+private const val MAX_NAME_INPUT = 80

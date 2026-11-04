@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.unit.dp
@@ -11,6 +10,7 @@ import com.coparently.app.presentation.common.FamilySwitcherState
 import com.coparently.app.presentation.common.FamilySwitcherViewModel
 import com.coparently.app.presentation.common.PillChip
 import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.testing.RobolectricTestApplication
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +33,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class FamilySwitcherScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test

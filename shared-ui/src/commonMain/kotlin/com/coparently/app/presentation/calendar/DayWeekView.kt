@@ -1,0 +1,1744 @@
+package com.coparently.app.presentation.calendar
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import com.coparently.app.data.family.RecordPlace
+import com.coparently.app.data.family.placementFamilyId
+import com.coparently.app.domain.custody.ContactWindow
+import com.coparently.app.domain.events.AllDayEvent
+import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.time.durationUntil
+import com.coparently.app.domain.time.minus
+import com.coparently.app.domain.time.plus
+import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.common.FamilyMember
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.displayName
+import com.coparently.app.presentation.common.placeDescription
+import com.coparently.app.presentation.common.placeOf
+import com.coparently.app.presentation.common.rememberToday
+import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.Motion
+import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyMediumEmphasized
+import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.hourGutterWidthFor
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_action_end_earlier
+import com.coparently.app.resources.calendar_action_end_later
+import com.coparently.app.resources.calendar_contact_window_desc
+import com.coparently.app.resources.calendar_event_chip_description
+import com.coparently.app.resources.calendar_event_chip_description_members
+import com.coparently.app.resources.calendar_event_chip_hint
+import com.coparently.app.resources.calendar_event_dragging
+import com.coparently.app.resources.calendar_event_long_pressed
+import com.coparently.app.resources.calendar_event_pickup_confirmed
+import com.coparently.app.resources.calendar_event_private
+import com.coparently.app.resources.calendar_event_resizing_end
+import com.coparently.app.resources.calendar_event_resizing_start
+import com.coparently.app.resources.calendar_resize_end_handle
+import com.coparently.app.resources.calendar_resize_start_handle
+import com.coparently.app.resources.calendar_time_slot_description
+import com.coparently.app.resources.calendar_week_number
+import com.coparently.app.resources.day_swap_sheet_title
+import com.coparently.app.resources.event_all_day
+import com.coparently.app.resources.event_preview_delete
+import com.coparently.app.utils.ClockFormat
+import com.coparently.app.utils.ReaderDateText
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
+
+/** Virtual center page of the day/week pager (allows ~3 years of swiping each way). */
+private const val PAGER_BASE_PAGE = 1200
+
+/** Full-hue bar on an event block's start edge, carrying parent identity. */
+private val EVENT_ACCENT_BAR_WIDTH = 3.dp
+
+/** The height one line of a block's title takes: `labelSmall`'s line height plus a little room. */
+private val TITLE_LINE_HEIGHT = 16.dp
+
+/** The most lines a block's title takes, however tall the block; past it the title ellipsises. */
+private const val MAX_TITLE_LINES = 4
+
+/** The column width under which a block drops its member initial and gives the title the room. */
+private val MEMBER_MARK_MIN_COLUMN = 56.dp
+
+/**
+ * How many lines of title a block [height] tall shows (UX audit H2): every line the block has room
+ * for, up to [MAX_TITLE_LINES], and at least one. A week's hour-long block used to show one line,
+ * "Pare…", in a column seven characters wide.
+ */
+internal fun titleLinesFor(height: Dp): Int =
+    (height / TITLE_LINE_HEIGHT).toInt().coerceIn(1, MAX_TITLE_LINES)
+
+/** Opacity of the hour-grid outline. Enough to read on DarkSurface without becoming a cage. */
+private const val GRIDLINE_ALPHA = 0.55f
+
+/** Today's tint strength in the week grid, drawn over the cell's base fill. */
+private const val TODAY_TINT_ALPHA = 0.05f
+
+/** Full-hue edge on a contact-window band: the marker that carries whose afternoon it is. */
+private val CONTACT_WINDOW_EDGE_WIDTH = 3.dp
+
+/** Timestamp format of a contact window's label in Day view. */
+
+/**
+ * Hourly view for day/week calendar views.
+ * Horizontal swiping between days/weeks uses a [HorizontalPager], so the content
+ * follows the finger with fling physics instead of a fixed swipe threshold.
+ */
+@Suppress("LongParameterList", "LongMethod") // screen-level composable: callbacks are its API surface
+@Composable
+fun DayWeekView(
+    selectedDate: LocalDate,
+    daysCount: Int,
+    events: List<Event>,
+    getCustody: (LocalDate) -> String?,
+    getProposedCustody: (LocalDate) -> String? = { null },
+    getContactWindows: (LocalDate) -> List<ContactWindow> = { emptyList() },
+    parentNames: ParentNames,
+    onDateChange: (LocalDate) -> Unit,
+    onEventClick: (Event) -> Unit,
+    onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
+    onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
+    onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
+    onEventDelete: ((String) -> Unit)? = null,
+    onEventLongPressStart: ((String) -> Unit)? = null,
+    onEventLongPressEnd: (() -> Unit)? = null,
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    deleteTargetBounds: () -> Rect? = { null },
+    onOfferDay: ((LocalDate) -> Unit)? = null,
+    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap(),
+    familyMembers: List<FamilyMember> = emptyList()
+) {
+    // The pager is anchored at a fixed date; each page offsets it by daysCount.
+    // External date changes (Today button, month picker) re-anchor the pager.
+    var anchorDate by remember { mutableStateOf(selectedDate) }
+    var lastPagerDate by remember { mutableStateOf(selectedDate) }
+    val pagerState = rememberPagerState(initialPage = PAGER_BASE_PAGE) { PAGER_BASE_PAGE * 2 + 1 }
+
+    LaunchedEffect(selectedDate, daysCount) {
+        if (selectedDate != lastPagerDate) {
+            anchorDate = selectedDate
+            lastPagerDate = selectedDate
+            pagerState.scrollToPage(PAGER_BASE_PAGE)
+        }
+    }
+
+    LaunchedEffect(pagerState, daysCount) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            val newDate = anchorDate.plus((page - PAGER_BASE_PAGE) * daysCount, DateTimeUnit.DAY)
+            if (newDate != lastPagerDate) {
+                lastPagerDate = newDate
+                onDateChange(newDate)
+            }
+        }
+    }
+
+    // Hour scroll position shared between pages so swiping keeps the time window
+    var savedHourIndex by remember {
+        mutableIntStateOf((wallClockNow().hour - 1).coerceIn(0, 23))
+    }
+    var savedHourOffset by remember { mutableIntStateOf(0) }
+    var positioned by remember(anchorDate, daysCount) { mutableStateOf(false) }
+    val today by rememberToday()
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        beyondViewportPageCount = 1
+    ) { page ->
+        val pageDate = remember(page, anchorDate, daysCount) {
+            anchorDate.plus((page - PAGER_BASE_PAGE) * daysCount, DateTimeUnit.DAY)
+        }
+        val scrollState = rememberLazyListState(savedHourIndex, savedHourOffset)
+        // Open where the day's events are (second audit), once per span the parent jumps to and
+        // before they scroll: a swipe keeps the hour window, as it always did.
+        if (page == PAGER_BASE_PAGE && page == pagerState.settledPage && !positioned) {
+            val opening = remember(events, pageDate, daysCount, today) {
+                val dates = DateRangeHelper.calculateDateRange(pageDate, daysCount)
+                OpeningHour.of(events, dates, today, wallClockNow().time)
+            }
+            LaunchedEffect(opening, events.isEmpty()) {
+                if (events.isNotEmpty()) {
+                    scrollState.scrollToItem(opening)
+                    positioned = true
+                }
+            }
+        }
+        if (page == pagerState.settledPage) {
+            LaunchedEffect(scrollState) {
+                snapshotFlow {
+                    scrollState.firstVisibleItemIndex to scrollState.firstVisibleItemScrollOffset
+                }.collect { (index, offset) ->
+                    savedHourIndex = index
+                    savedHourOffset = offset
+                }
+            }
+        }
+        CompositionLocalProvider(LocalDeleteTargetBounds provides deleteTargetBounds) {
+            DayWeekPage(
+                selectedDate = pageDate,
+                daysCount = daysCount,
+                events = events,
+                getCustody = getCustody,
+                getProposedCustody = getProposedCustody,
+                getContactWindows = getContactWindows,
+                parentNames = parentNames,
+                scrollState = scrollState,
+                onEventClick = onEventClick,
+                onAddEventClick = onAddEventClick,
+                onEventDragDrop = onEventDragDrop,
+                onEventResize = onEventResize,
+                onEventDelete = onEventDelete,
+                onEventLongPressStart = onEventLongPressStart,
+                onEventLongPressEnd = onEventLongPressEnd,
+                onDragOverDeleteButton = onDragOverDeleteButton,
+                onOfferDay = onOfferDay,
+                holidays = holidays,
+                familyMembers = familyMembers
+            )
+        }
+    }
+}
+
+/**
+ * One pager page: the fixed hour grid plus day columns and event overlay for
+ * [selectedDate] (day view) or the week containing it (week view).
+ */
+// Pre-existing hour-grid body moved out of DayWeekView unchanged; splitting it
+// further is tracked separately (was baselined under the old function name).
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
+@Composable
+private fun DayWeekPage(
+    selectedDate: LocalDate,
+    daysCount: Int,
+    events: List<Event>,
+    getCustody: (LocalDate) -> String?,
+    getProposedCustody: (LocalDate) -> String?,
+    getContactWindows: (LocalDate) -> List<ContactWindow>,
+    parentNames: ParentNames,
+    scrollState: LazyListState,
+    onEventClick: (Event) -> Unit,
+    onAddEventClick: (LocalDate, Int) -> Unit = { _, _ -> },
+    onEventDragDrop: ((String, LocalDate, Int) -> Unit)? = null,
+    onEventResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
+    onEventDelete: ((String) -> Unit)? = null,
+    onEventLongPressStart: ((String) -> Unit)? = null,
+    onEventLongPressEnd: (() -> Unit)? = null,
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    onOfferDay: ((LocalDate) -> Unit)? = null,
+    holidays: Map<LocalDate, com.coparently.app.domain.holidays.Holiday> = emptyMap(),
+    familyMembers: List<FamilyMember> = emptyList()
+) {
+    val dims = dimensions()
+    // The reader's clock (L-7): a 12-hour label carries its day-period marker, and only then is
+    // the gutter wider — a 24-hour layout is exactly what it was.
+    val is24Hour = ClockFormat.is24Hour
+    val gutterWidth = dims.hourGutterWidthFor(is24Hour)
+    val today by rememberToday()
+    val hours = (0..23).toList()
+    val density = LocalDensity.current
+    // Match the actually-rendered theme, not the system one (the app can force light while
+    // the system is dark). Hoisted here because both the day headers and the hour-grid
+    // columns below need it to pick the readable member of a colour pair.
+    val isDarkTheme =
+        MaterialTheme.colorScheme.surface.luminance() < CoPlanlyColors.DARK_LUMINANCE_THRESHOLD
+    val hourCellHeight = dims.buttonHeight * 1.07f
+    val hourCellHeightPx = remember(hourCellHeight, density) {
+        with(density) { hourCellHeight.toPx() }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Fixed header row with modern design - 1.5x larger
+        AnimatedContent(
+            targetState = selectedDate,
+            transitionSpec = {
+                // Pager supplies the horizontal motion; a date change inside one page only fades.
+                fadeIn(tween(Motion.SHORT_MS, easing = LinearEasing)) togetherWith
+                    fadeOut(tween(Motion.SHORT_MS, easing = LinearEasing))
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(dims.buttonHeight * 1.6f) // ~90dp for compact
+        ) { currentDate ->
+            val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(dims.buttonHeight * 1.6f) // ~90dp for compact
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = dims.paddingSmall)
+            ) {
+                // Week number for 3 days and week views (absolutely positioned, doesn't affect layout)
+                if (daysCount >= 3) {
+                    // Always the Monday-first ISO week (`WeekFields.ISO`'s week of week-based year)
+                    val firstDate = currentDates.firstOrNull() ?: currentDate
+                    val weekNumber = DateRangeHelper.isoWeekNumber(firstDate)
+
+                    Box(
+                        modifier = Modifier
+                            .width(WEEK_NUMBER_WIDTH)
+                            .fillMaxHeight()
+                            .align(Alignment.CenterStart),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            // Labelled (UX audit H2): a bare "43" over the hours read as nothing.
+                            text = stringResource(Res.string.calendar_week_number, weekNumber),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                // Main row with time column and dates - exactly matches content structure
+                // This row is identical to content row, ensuring perfect alignment
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
+                ) {
+                    // Time column space - fixed width for consistency (matches content layout)
+                    Box(
+                        modifier = Modifier
+                            .width(gutterWidth)
+                            .fillMaxHeight()
+                    )
+
+                    currentDates.forEach { date ->
+                        val isToday = date == today
+                        val holiday = holidays[date]
+                        val isPublicHoliday = holiday != null && !holiday.isSchoolVacation
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(
+                                    color = if (isToday) {
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    shape = MaterialTheme.shapes.extraSmall
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Day view's visible way to offer the day (D-10): a long-press on a
+                            // month cell used to be the only one. Today onwards, and only where
+                            // the day has a parent to hand it over from.
+                            val offerThisDay = onOfferDay?.takeIf {
+                                daysCount == 1 && date >= today && getCustody(date) != null
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    Spacing.M,
+                                    Alignment.CenterHorizontally
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f, fill = offerThisDay == null),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = ReaderDateText.pattern(date, "EEE"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Normal,
+                                        color = if (isToday) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                    Text(
+                                        text = date.day.toString(),
+                                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                                        color = when {
+                                            isToday -> MaterialTheme.colorScheme.primary
+                                            isPublicHoliday -> if (isDarkTheme) {
+                                                CoPlanlyColors.HolidayRedDark
+                                            } else {
+                                                CoPlanlyColors.HolidayRed
+                                            }
+                                            else -> MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                    // Holiday name shown in single-day view where there is room
+                                    if (holiday != null && daysCount == 1) {
+                                        val holidayName = holiday.displayName()
+                                        Text(
+                                            text = holidayName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            // Holiday/vacation names are text, so each needs the
+                                            // member of its pair that clears AA on this theme.
+                                            color = when {
+                                                isPublicHoliday && isDarkTheme -> CoPlanlyColors.HolidayRedDark
+                                                isPublicHoliday -> CoPlanlyColors.HolidayRed
+                                                isDarkTheme -> CoPlanlyColors.VacationTint
+                                                else -> CoPlanlyColors.VacationTintLight
+                                            }
+                                        )
+                                    }
+                                }
+                                if (offerThisDay != null) {
+                                    OfferDayButton(onClick = { offerThisDay(date) })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Main container: Box to overlay events on top of scrollable grid
+        Box(
+            modifier = Modifier.weight(1f)
+        ) {
+            // Scrollable content - time stays in place, only days animate
+            // Use single scrollState shared across all dates to preserve scroll position
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(hours.size) { hourIndex ->
+                    val hour = hours[hourIndex]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.S),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
+                    ) {
+                        // Hour label - static, outside AnimatedContent
+                        // Fixed width to ensure consistent layout and single-line time display
+                        Box(
+                            modifier = Modifier
+                                .width(gutterWidth)
+                                .height(hourCellHeight) // ~60dp for compact
+                                .padding(top = dims.paddingSmall / 2),
+                            contentAlignment = Alignment.TopCenter
+                        ) {
+                            Text(
+                                // Hour only ("09", or "9 AM" on a 12-hour clock): on an hour
+                                // gridline the ":00" is constant, so it costs gutter width without
+                                // telling the user anything. The accessible time-slot description
+                                // below still spells it out.
+                                text = ReaderDateText.hour(hour, is24Hour = is24Hour),
+                                // labelSmall (11sp) rather than bodyMedium: the hour gutter is
+                                // narrow, and this keeps the rendered size while still scaling
+                                // with the user's font-size setting.
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+
+                        // Day columns (fade on date change; the pager does the sliding)
+                        AnimatedContent(
+                            targetState = selectedDate,
+                            transitionSpec = {
+                                // Pager supplies the horizontal motion; a date change inside one page only fades.
+                                fadeIn(tween(Motion.SHORT_MS, easing = LinearEasing)) togetherWith
+                                    fadeOut(tween(Motion.SHORT_MS, easing = LinearEasing))
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { currentDate ->
+                            // Day columns for this hour - use optimized DateRangeHelper
+                            val currentDates = DateRangeHelper.rememberDateRange(currentDate, daysCount)
+
+                            // Background cells only (no events)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.XS)
+                            ) {
+                                currentDates.forEachIndexed { dayIndex, date ->
+                                    val isToday = date == today
+                                    val custody = getCustody(date)
+                                    val isWeekend = CustodyHelper.isWeekend(date)
+                                    // Custody wins over the today tint, matching MonthView:
+                                    // it is the product's core signal, and today already
+                                    // reads as today from its coloured header above. The old
+                                    // order hid custody on the one column parents check first.
+                                    // The weekend is no longer part of that race — it is the
+                                    // base both are drawn over. See DayCellFills.
+                                    val fill = DayCellFills.weekHourCell(
+                                        isWeekend = isWeekend,
+                                        isToday = isToday,
+                                        custody = custody,
+                                        proposedCustody = getProposedCustody(date)
+                                    )
+                                    val baseColor = when (fill.base) {
+                                        DayCellBase.WEEKEND ->
+                                            if (isDarkTheme) {
+                                                CoPlanlyColors.WeekendBackgroundDark
+                                            } else {
+                                                CoPlanlyColors.WeekendBackgroundLight
+                                            }
+                                        DayCellBase.SURFACE -> MaterialTheme.colorScheme.surface
+                                    }
+                                    val overlayColor = when (fill.overlay) {
+                                        DayCellOverlay.CUSTODY_MOM -> ParentColors.container("mom")
+                                        DayCellOverlay.CUSTODY_DAD -> ParentColors.container("dad")
+                                        DayCellOverlay.TODAY ->
+                                            MaterialTheme.colorScheme.primaryContainer
+                                                .copy(alpha = TODAY_TINT_ALPHA)
+                                        DayCellOverlay.PUBLIC_HOLIDAY,
+                                        DayCellOverlay.NONE -> Color.Transparent
+                                    }
+                                    // A pending proposal's preview, over the agreed tint rather
+                                    // than instead of it — same hue, less of it. The week gets
+                                    // it as well as the month: unlike a handover, which the week
+                                    // already shows as the boundary between two runs of its
+                                    // custody band, a proposal has no other form in this layout,
+                                    // and leaving it out would make the week the one view that
+                                    // shows a schedule as settled while the month says it is not.
+                                    val proposalColor = when (fill.pendingProposalFor) {
+                                        DayCellOverlay.CUSTODY_MOM ->
+                                            ParentColors.container(
+                                                "mom",
+                                                alpha = ParentColors.proposalTintAlpha
+                                            )
+                                        DayCellOverlay.CUSTODY_DAD ->
+                                            ParentColors.container(
+                                                "dad",
+                                                alpha = ParentColors.proposalTintAlpha
+                                            )
+                                        else -> Color.Transparent
+                                    }
+
+                                    // Resolved here: the semantics lambda is not a composable context.
+                                    // Spoken on the reader's clock (R-9), not a fixed "HH:00".
+                                    val slotDescription = stringResource(
+                                        Res.string.calendar_time_slot_description,
+                                        ReaderDateText.time(LocalTime(hour, 0)),
+                                        ReaderDateText.date(date, "MMMd")
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(hourCellHeight)
+                                            .background(
+                                                color = baseColor,
+                                                shape = MaterialTheme.shapes.extraSmall
+                                            )
+                                            .background(
+                                                color = overlayColor,
+                                                shape = MaterialTheme.shapes.extraSmall
+                                            )
+                                            .background(
+                                                color = proposalColor,
+                                                shape = MaterialTheme.shapes.extraSmall
+                                            )
+                                            // Hour cells had no outline at all, so on a dark
+                                            // surface the grid read as one flat block and the
+                                            // hour boundaries were invisible.
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant
+                                                    .copy(alpha = GRIDLINE_ALPHA),
+                                                shape = MaterialTheme.shapes.extraSmall
+                                            )
+                                            .clickable {
+                                                onAddEventClick(date, hour)
+                                            }
+                                            .semantics {
+                                                contentDescription = slotDescription
+                                            }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Events overlay layer - positioned absolutely above the grid
+            val currentDates = DateRangeHelper.rememberDateRange(selectedDate, daysCount)
+            val scrollOffset = scrollState.firstVisibleItemScrollOffset.toFloat()
+            val firstVisibleHour = scrollState.firstVisibleItemIndex
+
+            // Calculate layout dimensions
+            val hourLabelWidth = gutterWidth
+            val horizontalPadding = 8.dp
+            val daySpacing = 4.dp
+
+            Box(
+                modifier = Modifier
+                    .matchParentSize() // Match parent Box size (same as LazyColumn)
+                    .padding(
+                        start = horizontalPadding + hourLabelWidth,
+                        end = horizontalPadding
+                        // No top padding: offsetting by the header height shifted every event.
+                    )
+                    .clipToBounds() // Prevent events from drawing over the header
+            ) {
+                // Track container width for column calculations
+                var containerWidthPx by remember { mutableFloatStateOf(0f) }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned { coordinates ->
+                            containerWidthPx = coordinates.size.width.toFloat()
+                        }
+                ) {
+                    if (containerWidthPx > 0f) {
+                        val spacingPx = with(density) { daySpacing.toPx() }
+                        val totalSpacingPx = spacingPx * (currentDates.size - 1)
+                        val columnWidth = (containerWidthPx - totalSpacingPx) / currentDates.size
+                        val totalScroll = firstVisibleHour * hourCellHeightPx + scrollOffset
+                        val firstHour = hours.first()
+
+                        // Vertical pixel offset (from the top of the visible grid) for a time
+                        fun yOffsetFor(time: LocalDateTime): Float {
+                            val minutesFromTop = (time.hour - firstHour) * 60f + time.minute + time.second / 60f
+                            return minutesFromTop / 60f * hourCellHeightPx - totalScroll
+                        }
+
+                        currentDates.forEachIndexed { dayIndex, date ->
+                            val dayColumnX = dayIndex * (columnWidth + spacingPx)
+
+                            // Contact windows (MON-6b) first, so events sit on top of them: an
+                            // hour band in the window parent's tint over the day's own, on the
+                            // same base (weekend grey or surface) the hour cells use, so the
+                            // weekend layer survives inside the band too (DayCellFills).
+                            val bandBase = if (CustodyHelper.isWeekend(date)) {
+                                if (isDarkTheme) {
+                                    CoPlanlyColors.WeekendBackgroundDark
+                                } else {
+                                    CoPlanlyColors.WeekendBackgroundLight
+                                }
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                            getContactWindows(date).forEach { window ->
+                                ContactWindowBand(
+                                    window = window,
+                                    bounds = Rect(
+                                        left = dayColumnX,
+                                        top = yOffsetFor(LocalDateTime(date, window.start)),
+                                        right = dayColumnX + columnWidth,
+                                        bottom = yOffsetFor(LocalDateTime(date, window.end))
+                                    ),
+                                    baseColor = bandBase,
+                                    parentName = parentNames.labelFor(window.parent),
+                                    showLabel = daysCount == 1
+                                )
+                            }
+
+                            // Multi-day/overnight events are clamped to this day and laid out
+                            // in side-by-side lanes when they overlap in time.
+                            layoutDayEvents(events, date).forEach { seg ->
+                                val laneWidth = columnWidth / seg.laneCount
+                                val x = dayColumnX + seg.lane * laneWidth
+                                val y = yOffsetFor(seg.segStart)
+
+                                Box(
+                                    modifier = Modifier
+                                        .offset(
+                                            x = with(density) { x.toDp() },
+                                            y = with(density) { y.toDp() }
+                                        )
+                                        .width(with(density) { laneWidth.toDp() })
+                                        .padding(horizontal = 1.dp)
+                                ) {
+                                    EventChip(
+                                        event = seg.event,
+                                        onClick = { onEventClick(seg.event) },
+                                        columnWidthPx = laneWidth,
+                                        hourHeightPx = hourCellHeightPx,
+                                        baseDate = date,
+                                        baseHour = seg.segStart.hour,
+                                        parentNames = parentNames,
+                                        onDragDrop = onEventDragDrop,
+                                        onResize = onEventResize,
+                                        onDelete = onEventDelete,
+                                        onLongPressStart = onEventLongPressStart,
+                                        onLongPressEnd = onEventLongPressEnd,
+                                        onDragOverDeleteButton = onDragOverDeleteButton,
+                                        displayStart = seg.segStart,
+                                        displayEnd = seg.segEnd,
+                                        // A recurring event is drawn once per occurrence
+                                        // but stored once: a move or resize would write
+                                        // this occurrence's times onto the whole series.
+                                        resizable = !seg.clamped && !seg.event.isRecurring,
+                                        draggable = !seg.clamped && !seg.event.isRecurring,
+                                        showTime = daysCount == 1,
+                                        // FAM-5: who it is about, at two members and not at one.
+                                        memberMark = remember(seg.event.forMembers, familyMembers) {
+                                            EventMemberMark.of(seg.event.forMembers, familyMembers)
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Current-time indicator (red line + dot) on today's column
+                            if (date == today) {
+                                val nowY = yOffsetFor(wallClockNow())
+                                Row(
+                                    modifier = Modifier
+                                        .offset(
+                                            x = with(density) { dayColumnX.toDp() },
+                                            y = with(density) { nowY.toDp() } - 4.dp
+                                        )
+                                        .width(with(density) { columnWidth.toDp() }),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(NowIndicatorColor, CircleShape)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(2.dp)
+                                            .background(NowIndicatorColor)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One contact window (MON-6b) as an hour band over its day column: the window parent's custody
+ * tint over the cell's own base, and a full-hue edge — the saturation rule's two strengths of one
+ * hue, the tint for the stretch of time and the edge as its marker. Drawn on its own base first
+ * so the two parents' custody tints are not stacked into a third colour, the reasoning `MonthView`'s
+ * handover diagonal already follows.
+ *
+ * Not clickable: an empty hour inside the band still creates an event through the cell beneath,
+ * which is the only route to one in this view. It carries a description instead, so a screen
+ * reader hears the window the eye sees.
+ *
+ * @param window The window.
+ * @param bounds Where it sits, in the overlay's pixels.
+ * @param baseColor The hour cell's base under the band — weekend grey or surface.
+ * @param parentName The window parent's name, for the label and the description.
+ * @param showLabel Day view has room to write the description in the band; a week column does not.
+ */
+@Composable
+private fun ContactWindowBand(
+    window: ContactWindow,
+    bounds: Rect,
+    baseColor: Color,
+    parentName: String,
+    showLabel: Boolean
+) {
+    val density = LocalDensity.current
+    val shape = CoPlanlyCorners.Tag
+    val from = ReaderDateText.time(window.start)
+    val to = ReaderDateText.time(window.end)
+    val description = stringResource(Res.string.calendar_contact_window_desc, parentName, from, to)
+    Box(
+        modifier = Modifier
+            .offset(
+                x = with(density) { bounds.left.toDp() },
+                y = with(density) { bounds.top.toDp() }
+            )
+            .width(with(density) { bounds.width.toDp() })
+            .height(with(density) { bounds.height.toDp() })
+            .clip(shape)
+            .background(baseColor)
+            .background(ParentColors.container(window.parent))
+            .semantics { contentDescription = description }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(CONTACT_WINDOW_EDGE_WIDTH)
+                .background(ParentColors.fill(window.parent))
+        )
+        if (showLabel) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = ParentColors.text(window.parent),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = CONTACT_WINDOW_EDGE_WIDTH + Spacing.XS, top = Spacing.XXS)
+            )
+        }
+    }
+}
+
+/**
+ * The initial of the member an event is about (FAM-5), on a neutral disc at the start of its chip.
+ *
+ * Neutral on purpose — `surfaceVariant` under `onSurfaceVariant` — because a member is a name,
+ * never a colour: every hue on the grid already means a parent, a calendar friend or the weekend.
+ * Hidden from the accessibility tree, since the chip's own description names the members in full.
+ * A fixed size like the chip's other marks, with a minimum rather than an exact width so "E+"
+ * becomes a pill instead of being clipped.
+ */
+@Composable
+private fun MemberInitialDisc(initial: String) {
+    Box(
+        modifier = Modifier
+            .padding(end = Spacing.XXS)
+            .sizeIn(minWidth = IconSizes.Inline, minHeight = IconSizes.Inline)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clearAndSetSemantics { },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initial,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(horizontal = Spacing.XXS)
+        )
+    }
+}
+
+// The chip's size and complexity were baselined under its old signature; FAM-5's `memberMark`
+// changed the signature, not the body's shape. Splitting it further is tracked separately.
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
+@Composable
+private fun EventChip(
+    event: Event,
+    onClick: () -> Unit,
+    columnWidthPx: Float,
+    hourHeightPx: Float,
+    baseDate: LocalDate,
+    baseHour: Int,
+    parentNames: ParentNames,
+    onDragDrop: ((String, LocalDate, Int) -> Unit)?,
+    onResize: ((String, LocalDateTime?, LocalDateTime?) -> Unit)? = null,
+    onDelete: ((String) -> Unit)? = null,
+    onLongPressStart: ((String) -> Unit)? = null,
+    onLongPressEnd: (() -> Unit)? = null,
+    onDragOverDeleteButton: ((Boolean) -> Unit)? = null,
+    // Visible segment of the event within the current day (differs from the real event
+    // times for multi-day / overnight events, which are clamped to each day).
+    displayStart: LocalDateTime = event.startDateTime,
+    displayEnd: LocalDateTime = event.endDateTime ?: event.startDateTime.plus(1, DateTimeUnit.HOUR),
+    // Continuation segments of multi-day events are not resizable/movable (ambiguous).
+    resizable: Boolean = true,
+    draggable: Boolean = true,
+    // Day view spells the time out under the title; week view leaves it to the block's
+    // vertical position and spends the row on the title instead.
+    showTime: Boolean = true,
+    // Who the event is about (FAM-5), or null when nothing is to be marked.
+    memberMark: EventMemberMark? = null
+) {
+    val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
+    // Read through the latest value rather than keyed: the lambda must not restart the drag
+    // gesture, which a new key would do mid-drag.
+    val currentDeleteTarget by rememberUpdatedState(LocalDeleteTargetBounds.current)
+
+    // Sizing/temp times follow the visible segment; edits still act on the real event.
+    val eventStart = displayStart
+    val eventEnd = displayEnd
+
+    // Calculate total event duration in minutes
+    val totalDuration = eventStart.durationUntil(eventEnd)
+    val totalMinutes = totalDuration.inWholeMinutes.coerceAtLeast(15) // Minimum 15 minutes
+    val eventHeightDp = with(density) { (hourHeightPx * totalMinutes / 60f).toDp() }
+
+    // Where the event stands for the family on screen: an earlier family's event is drawn
+    // neutral, because its slot colour would now name the wrong person (design refresh item 12).
+    val place = placeOf(event.placementFamilyId, event.createdByFirebaseUid)
+    val colourOwner = if (place == RecordPlace.EARLIER_FAMILY) "" else event.parentOwner
+
+    // The owner's colour at the block alpha `ParentColorsTest` holds the title to AA on, over
+    // whoever's day the column is washed in.
+    val backgroundColor = when (colourOwner) {
+        "mom", "dad" -> ParentColors.container(colourOwner, alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
+        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = CoPlanlyColors.EVENT_BLOCK_TINT_ALPHA)
+    }
+
+    val borderColor = when (colourOwner) {
+        "mom", "dad" -> ParentColors.container(colourOwner, alpha = 0.8f)
+        else -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+    }
+
+    // Full-hue bar on the start edge. This is what carries parent identity in week view, where
+    // the block has no room for a label at all.
+    val accentColor = when (colourOwner) {
+        "mom", "dad" -> ParentColors.fill(colourOwner)
+        else -> MaterialTheme.colorScheme.tertiary
+    }
+
+    // The title is NOT tinted with the parent colour: pink text on a pink fill (and blue on
+    // blue) was the same hue at three alphas and unreadable. Identity is carried by the
+    // border above; the label just has to be legible.
+    val textColor = MaterialTheme.colorScheme.onSurface
+
+    // Drag states
+    var isDraggingEvent by remember { mutableStateOf(false) }
+    var isResizingStart by remember { mutableStateOf(false) }
+    var isResizingEnd by remember { mutableStateOf(false) }
+    var totalDrag by remember { mutableStateOf(Offset.Zero) }
+    var resizeDragStart by remember { mutableStateOf(Offset.Zero) }
+    var resizeDragAmountStart by remember { mutableStateOf(0f) }
+    var resizeDragAmountEnd by remember { mutableStateOf(0f) }
+
+    // Track if event is over delete button
+    var isOverDeleteButton by remember { mutableStateOf(false) }
+
+    // Long press state - track when user is holding the event
+    var isLongPressing by remember { mutableStateOf(false) }
+    // The times a resize would set, shown live in the badge while the handle is held. They are
+    // the same values the drop writes (UX-16: a corner moves by the minute, never shorter than
+    // MIN_EVENT_MINUTES), so the badge cannot promise a time the drop then rounds away.
+    val tempStartTime = remember(isResizingStart, resizeDragAmountStart, eventStart, eventEnd) {
+        if (isResizingStart) {
+            resizedStart(eventStart, eventEnd, resizeDragAmountStart, hourHeightPx)
+        } else {
+            eventStart
+        }
+    }
+
+    val tempEndTime = remember(isResizingEnd, resizeDragAmountEnd, eventStart, eventEnd) {
+        if (isResizingEnd) {
+            resizedEnd(eventStart, eventEnd, resizeDragAmountEnd, hourHeightPx)
+        } else {
+            eventEnd
+        }
+    }
+
+    // Calculate dynamic height based on resize state
+    val dynamicHeightDp = if (isResizingStart || isResizingEnd) {
+        val heightAdjustment = with(density) {
+            when {
+                isResizingStart -> -resizeDragAmountStart.toDp()
+                isResizingEnd -> resizeDragAmountEnd.toDp()
+                else -> 0.dp
+            }
+        }
+        (eventHeightDp + heightAdjustment).coerceAtLeast(24.dp)
+    } else {
+        eventHeightDp.coerceAtLeast(24.dp)
+    }
+
+    // Calculate vertical offset to keep bottom edge fixed when resizing from top
+    val verticalOffsetDp = if (isResizingStart) {
+        with(density) { resizeDragAmountStart.toDp() }
+    } else {
+        0.dp
+    }
+
+    // Track global position for delete button detection
+    var eventGlobalPosition by remember { mutableStateOf(Offset.Zero) }
+
+    // Accessibility strings resolved in composable scope: the semantics lambdas below are
+    // not composable contexts, so stringResource cannot be called inside them.
+    val chipStateDescription = when {
+        isDraggingEvent -> stringResource(Res.string.calendar_event_dragging)
+        isResizingStart -> stringResource(
+            Res.string.calendar_event_resizing_start,
+            ReaderDateText.time(tempStartTime)
+        )
+        isResizingEnd -> stringResource(
+            Res.string.calendar_event_resizing_end,
+            ReaderDateText.time(tempEndTime)
+        )
+        isLongPressing -> stringResource(Res.string.calendar_event_long_pressed)
+        else -> stringResource(Res.string.calendar_event_chip_hint)
+    }
+    val deleteActionLabel = stringResource(Res.string.event_preview_delete)
+    val openChip = onClick
+    val chipDescription = if (memberMark != null) {
+        stringResource(
+            Res.string.calendar_event_chip_description_members,
+            event.title,
+            memberMark.names.joinToString(", "),
+            chipStateDescription
+        )
+    } else {
+        stringResource(
+            Res.string.calendar_event_chip_description,
+            event.title,
+            chipStateDescription
+        )
+    }.let { described -> placeDescription(place)?.let { "$described. $it" } ?: described }
+    val resizeStartDescription = stringResource(Res.string.calendar_resize_start_handle)
+    val resizeEndDescription = stringResource(Res.string.calendar_resize_end_handle)
+    val endLaterLabel = stringResource(Res.string.calendar_action_end_later)
+    val endEarlierLabel = stringResource(Res.string.calendar_action_end_earlier)
+    // As tall as fits: 48 dp at each edge would leave a one-hour block (about 51 dp) no middle to
+    // tap or move it by, so a handle takes up to a third of the block. The actions below are the
+    // route that does not depend on hitting it (docs/AUDIT-2026-10-design.md D-10).
+    val handleTouchHeight = minOf(RESIZE_HANDLE_TOUCH_HEIGHT, eventHeightDp / 3)
+    val showResizeGrips = onResize != null && resizable
+    val titleLines = titleLinesFor(dynamicHeightDp)
+    // The member's initial takes a third of a week column; under MEMBER_MARK_MIN_COLUMN the title
+    // gets the room, and the chip's description still names every member.
+    val columnWidth = with(LocalDensity.current) { columnWidthPx.toDp() }
+    val shownMark = memberMark.takeIf { columnWidth >= MEMBER_MARK_MIN_COLUMN }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(dynamicHeightDp)
+            .offset(y = verticalOffsetDp)
+            .onGloballyPositioned { coordinates ->
+                // Store global position of event for delete button detection
+                // localToWindow converts local coordinates to window coordinates
+                eventGlobalPosition = coordinates.localToWindow(Offset.Zero)
+            }
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(
+                color = if (isDraggingEvent && isOverDeleteButton) {
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                } else {
+                    backgroundColor
+                }
+            )
+            .drawBehind {
+                drawRect(
+                    color = accentColor,
+                    size = Size(EVENT_ACCENT_BAR_WIDTH.toPx(), size.height)
+                )
+                // The resize grips are drawn here, behind the title, not by the handles: drawn
+                // in the handles' own boxes, which sit over the content, 14 dp pills covered
+                // the only line a short week block has (the UI tour's "Vyzv…" was half hidden).
+                if (showResizeGrips) {
+                    drawResizePill(borderColor, atTop = true)
+                    drawResizePill(borderColor, atTop = false)
+                }
+            }
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = MaterialTheme.shapes.extraSmall
+            )
+            .pointerInput(event.id, onDelete, onLongPressStart, onLongPressEnd) {
+                if (onDelete != null && onLongPressStart != null && onLongPressEnd != null) {
+                    detectTapGestures(
+                        onTap = {
+                            if (!isLongPressing) {
+                                // Normal click - open event
+                                onClick()
+                            }
+                        },
+                        onLongPress = {
+                            isLongPressing = true
+                            onLongPressStart(event.id)
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    )
+                } else {
+                    // If no delete handler, use normal clickable
+                    detectTapGestures(
+                        onTap = { onClick() }
+                    )
+                }
+            }
+            // Track pointer release when long pressing - restart when isLongPressing changes
+            .pointerInput(event.id, isLongPressing) {
+                if (isLongPressing && onLongPressEnd != null) {
+                    awaitPointerEventScope {
+                        while (isLongPressing) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val isPressed = event.changes.firstOrNull()?.pressed == true
+                            if (!isPressed) {
+                                // Released - hide delete button
+                                isLongPressing = false
+                                onLongPressEnd()
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            .graphicsLayer {
+                if (isDraggingEvent) {
+                    shadowElevation = 8.dp.toPx()
+                    translationX = totalDrag.x
+                    translationY = totalDrag.y
+                    // Make event more transparent and red-tinted when over delete button
+                    alpha = if (isOverDeleteButton) 0.5f else 0.8f
+                    if (isOverDeleteButton) {
+                        // Add red tint when over delete button
+                        // This is handled by changing the background color in the Box
+                    }
+                }
+            }
+            .semantics {
+                contentDescription = chipDescription
+                // Taps arrive through pointerInput, which TalkBack cannot activate, and the
+                // drag-to-delete gesture has no accessible form at all. Both as actions.
+                role = Role.Button
+                // `this.` because the chip's own `onClick` parameter shadows the semantics one.
+                this.onClick(label = null) {
+                    openChip()
+                    true
+                }
+                val actions = buildList {
+                    if (onDelete != null) {
+                        add(
+                            CustomAccessibilityAction(deleteActionLabel) {
+                                onDelete(event.id)
+                                true
+                            }
+                        )
+                    }
+                    // The resize handle as actions, a quarter hour at a time. Without them,
+                    // changing a duration needed a drag on a small target. Like the drag, they
+                    // keep the end on its day and the event at least MIN_EVENT_MINUTES long.
+                    if (onResize != null && resizable) {
+                        val laterEnd = eventEnd.plus(RESIZE_ACTION_MINUTES, DateTimeUnit.MINUTE)
+                        if (laterEnd.date == eventEnd.date) {
+                            add(
+                                CustomAccessibilityAction(endLaterLabel) {
+                                    onResize(event.id, null, laterEnd)
+                                    true
+                                }
+                            )
+                        }
+                        val earlierEnd = eventEnd.minus(RESIZE_ACTION_MINUTES, DateTimeUnit.MINUTE)
+                        if (earlierEnd >= eventStart.plus(MIN_EVENT_MINUTES, DateTimeUnit.MINUTE)) {
+                            add(
+                                CustomAccessibilityAction(endEarlierLabel) {
+                                    onResize(event.id, null, earlierEnd)
+                                    true
+                                }
+                            )
+                        }
+                    }
+                }
+                if (actions.isNotEmpty()) customActions = actions
+            }
+    ) {
+        // Event content - center area for drag & drop
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // Asymmetric: the start edge clears the 3dp parent accent bar drawn behind.
+                //
+                // There used to be a further `.padding(start = 12.dp, end = 12.dp)` here,
+                // commented as avoiding the resize handles. It cannot: the handles are pinned
+                // to TopCenter and BottomCenter, so only vertical space moves content clear of
+                // them. What it actually did was eat 24dp of a ~53dp week column, leaving
+                // roughly one and a half characters — which is why week blocks rendered as
+                // nothing but an ellipsis.
+                .padding(start = 5.dp, end = 3.dp, top = Spacing.XS, bottom = Spacing.XS)
+                .pointerInput(
+                    columnWidthPx,
+                    hourHeightPx,
+                    onDragDrop,
+                    onDelete,
+                    onDragOverDeleteButton,
+                    eventGlobalPosition,
+                    draggable
+                ) {
+                    // Center drag for moving event
+                    if (onDragDrop != null && draggable && columnWidthPx > 0f && hourHeightPx > 0f) {
+                        val deleteSlopPx = with(density) { DELETE_TARGET_SLOP.toPx() }
+
+                        // Store initial touch position in window coordinates
+                        var startPositionInWindow = Offset.Zero
+
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { startOffset ->
+                                isDraggingEvent = true
+                                totalDrag = Offset.Zero
+                                // Calculate initial position in window: event position + offset from event top-left
+                                startPositionInWindow = eventGlobalPosition + startOffset
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragCancel = {
+                                isDraggingEvent = false
+                                totalDrag = Offset.Zero
+                                isOverDeleteButton = false
+                                onDragOverDeleteButton?.invoke(false)
+                            },
+                            onDragEnd = {
+                                if (isDraggingEvent) {
+                                    // Check if dropped over delete button area using the last known position
+                                    // The position is already tracked in the drag handler
+                                    if (isOverDeleteButton && onDelete != null) {
+                                        // Delete event
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onDelete(event.id)
+                                        isOverDeleteButton = false
+                                        onDragOverDeleteButton?.invoke(false)
+                                    } else {
+                                        // Normal drag & drop: snap the vertical move to a 15-minute grid
+                                        val dayOffset = (totalDrag.x / columnWidthPx).roundToInt()
+                                        val rawMinuteShift = (totalDrag.y / hourHeightPx * 60f).roundToInt()
+                                        val snapSteps = (rawMinuteShift / MOVE_SNAP_MINUTES.toFloat()).roundToInt()
+                                        val minuteShift = snapSteps * MOVE_SNAP_MINUTES
+                                        if (dayOffset != 0 || minuteShift != 0) {
+                                            val newStart = resizedTime(
+                                                event.startDateTime.plus(dayOffset, DateTimeUnit.DAY),
+                                                minuteShift.toFloat() / 60f * hourHeightPx,
+                                                hourHeightPx,
+                                                MOVE_SNAP_MINUTES
+                                            )
+                                            val targetMinuteOfDay = newStart.hour * 60 + newStart.minute
+                                            onDragDrop(event.id, newStart.date, targetMinuteOfDay)
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        }
+                                    }
+                                }
+                                isDraggingEvent = false
+                                totalDrag = Offset.Zero
+                                isOverDeleteButton = false
+                                onDragOverDeleteButton?.invoke(false)
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            totalDrag += dragAmount
+
+                            // Calculate absolute position of pointer in window
+                            // startPositionInWindow is the initial touch position in window coordinates
+                            // totalDrag is the accumulated drag offset
+                            // So current position = startPositionInWindow + totalDrag
+                            val currentPositionInWindow = startPositionInWindow + totalDrag
+
+                            // Over the red delete button itself, where it is drawn, with a little
+                            // slop. This used to be the screen's bottom-right quadrant, which is
+                            // not where the button sits (it floats 64 dp above the "+" button), so
+                            // a move that ended low on the right deleted the event
+                            // (docs/AUDIT-2026-10-design.md D-10).
+                            val target = currentDeleteTarget()
+                            val isInDeleteArea = target != null &&
+                                target.inflate(deleteSlopPx).contains(currentPositionInWindow)
+
+                            if (isInDeleteArea != isOverDeleteButton) {
+                                isOverDeleteButton = isInDeleteArea
+                                onDragOverDeleteButton?.invoke(isInDeleteArea)
+                                if (isInDeleteArea) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            }
+                        }
+                    }
+                },
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (shownMark != null) {
+                    MemberInitialDisc(initial = shownMark.initial)
+                }
+                if (event.isPrivate) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = stringResource(Res.string.calendar_event_private),
+                        tint = textColor,
+                        modifier = Modifier.size(BLOCK_MARK_SIZE)
+                    )
+                }
+                if (event.pickupConfirmedBy != null) {
+                    // pickupConfirmedBy is a slot; it is shown as that parent's name.
+                    val confirmedByName = parentNames.labelFor(event.pickupConfirmedBy)
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = stringResource(
+                            Res.string.calendar_event_pickup_confirmed,
+                            confirmedByName
+                        ),
+                        tint = textColor,
+                        modifier = Modifier.size(BLOCK_MARK_SIZE)
+                    )
+                }
+                Text(
+                    text = event.title,
+                    // Hyphenated in the reader's language rather than cut ("Pla-/vá-/ní", not
+                    // "Plaván" over "í"), on as many lines as the block is tall (UX audit H2).
+                    // A week column fits about seven characters a line; the one-line fallback this
+                    // replaced left "Pare…" and "E S…" on an ordinary week.
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        hyphens = Hyphens.Auto,
+                        lineBreak = LineBreak.Paragraph
+                    ),
+                    color = textColor,
+                    maxLines = titleLines,
+                    overflow = TextOverflow.Ellipsis,
+                    // Medium rather than SemiBold: at this size the heavier weight is no more
+                    // legible on a tinted fill, and it costs about half a character per line —
+                    // which in a ~54dp column is the difference between fitting a word and not.
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            // The time is spelled out only in day view. In week view the block's vertical
+            // position already encodes it, and the row it would occupy is worth more to the
+            // title. It still appears mid-resize in either mode, where the user is actively
+            // setting a time and needs the feedback.
+            if (showTime && totalMinutes >= 45 || isResizingStart || isResizingEnd) {
+                // An all-day event says so, as every other surface that prints a time does
+                // (`AllDayEvent`), rather than "00:00 - 23:59"; a resize shows what it is setting.
+                val timesBeingSet = isResizingStart || isResizingEnd
+                Text(
+                    text = if (AllDayEvent.isAllDay(event) && !timesBeingSet) {
+                        stringResource(Res.string.event_all_day)
+                    } else {
+                        "${ReaderDateText.time(tempStartTime)} - ${ReaderDateText.time(tempEndTime)}"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor.copy(alpha = 0.8f),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // Time Tracker Badge - Floating overlay for precise feedback during resize
+        if (isResizingStart || isResizingEnd) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(Spacing.XS),
+                shape = CoPlanlyCorners.Tag,
+                color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f),
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    text = "${ReaderDateText.time(tempStartTime)} - ${ReaderDateText.time(tempEndTime)}",
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.labelMediumEmphasized,
+                    modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.XS)
+                )
+            }
+        }
+
+        // Top resize handle (start time) - centered pill, drag up to start earlier, down to start later
+        if (onResize != null && resizable) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .width(RESIZE_HANDLE_TOUCH_WIDTH)
+                    .height(handleTouchHeight)
+                    .semantics { contentDescription = resizeStartDescription }
+                    .pointerInput(hourHeightPx, onResize) {
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                isResizingStart = true
+                                resizeDragStart = startOffset
+                                resizeDragAmountStart = 0f
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragEnd = {
+                                if (isResizingStart) {
+                                    val newStartTime =
+                                        resizedStart(eventStart, eventEnd, resizeDragAmountStart, hourHeightPx)
+                                    if (newStartTime != eventStart) {
+                                        onResize(event.id, newStartTime, null)
+                                    }
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                isResizingStart = false
+                                resizeDragAmountStart = 0f
+                            },
+                            onDragCancel = {
+                                isResizingStart = false
+                                resizeDragAmountStart = 0f
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            resizeDragAmountStart += dragAmount.y
+                        }
+                    }
+            )
+        }
+
+        // Bottom resize handle (end time) - centered pill, drag down to end later, up to end earlier
+        if (onResize != null && resizable) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .width(RESIZE_HANDLE_TOUCH_WIDTH)
+                    .height(handleTouchHeight)
+                    .semantics { contentDescription = resizeEndDescription }
+                    .pointerInput(hourHeightPx, onResize) {
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                isResizingEnd = true
+                                resizeDragStart = startOffset
+                                resizeDragAmountEnd = 0f
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragEnd = {
+                                if (isResizingEnd) {
+                                    val newEndTime =
+                                        resizedEnd(eventStart, eventEnd, resizeDragAmountEnd, hourHeightPx)
+                                    if (newEndTime != eventEnd) {
+                                        onResize(event.id, null, newEndTime)
+                                    }
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                isResizingEnd = false
+                                resizeDragAmountEnd = 0f
+                            },
+                            onDragCancel = {
+                                isResizingEnd = false
+                                resizeDragAmountEnd = 0f
+                            }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            resizeDragAmountEnd += dragAmount.y
+                        }
+                    }
+            )
+        }
+    }
+}
+
+/**
+ * Day view's "Swap this day". It opens the sheet a long-press on a month cell opens, for the day
+ * on screen (docs/AUDIT-2026-10-design.md D-10). The label is the sheet's own title, so the
+ * button says where it leads.
+ */
+@Composable
+private fun OfferDayButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = Spacing.M, vertical = Spacing.XS)
+    ) {
+        Icon(
+            imageVector = Icons.Default.SwapHoriz,
+            contentDescription = null,
+            modifier = Modifier.size(IconSizes.Small)
+        )
+        Spacer(modifier = Modifier.width(Spacing.S))
+        Text(
+            text = stringResource(Res.string.day_swap_sheet_title),
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+/** Width of a resize handle's touch strip; the grip drawn under it is [RESIZE_PILL_SIZE] wide. */
+private val RESIZE_HANDLE_TOUCH_WIDTH = 48.dp
+
+/** Tallest a resize handle's touch strip gets, on a block tall enough to spare it. */
+private val RESIZE_HANDLE_TOUCH_HEIGHT = 24.dp
+
+/**
+ * The visible grip of a resize handle: Material's drag-handle bar, slim enough to sit behind a
+ * line of text without hiding it. It was a 40 × 14 dp pill drawn over the title.
+ */
+private val RESIZE_PILL_SIZE = DpSize(32.dp, 4.dp)
+
+/** How far a resize grip sits in from the block's top or bottom edge. */
+private val RESIZE_PILL_INSET = Spacing.XXS
+
+/** Minutes the accessibility actions move an event's end by, the same step as a move. */
+private const val RESIZE_ACTION_MINUTES = 15L
+
+/**
+ * Draws a resize handle's grip in the event block, behind its content: against the top edge for
+ * the start handle, the bottom edge for the end handle, centred across it, where the handles'
+ * touch strips are.
+ */
+private fun DrawScope.drawResizePill(color: Color, atTop: Boolean) {
+    val pill = RESIZE_PILL_SIZE.toSize()
+    val inset = RESIZE_PILL_INSET.toPx()
+    val left = (size.width - pill.width) / 2f
+    val top = if (atTop) inset else size.height - inset - pill.height
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(left, top),
+        size = pill,
+        cornerRadius = CornerRadius(pill.height / 2f)
+    )
+}
+
+/**
+ * Where the red delete button is, in window coordinates, while it is on screen, or null.
+ * [DayWeekView] provides it and each event's drag reads it (docs/AUDIT-2026-10-design.md D-10).
+ * A local rather than a parameter, so it is not threaded through [DayWeekPage] into every chip.
+ */
+private val LocalDeleteTargetBounds = compositionLocalOf<() -> Rect?> { { null } }
+
+/**
+ * How far outside the red delete button a dragged event still counts as over it. The button is
+ * 56 dp; a finger carrying an event covers part of it, so an exact hit test would feel stingy.
+ */
+private val DELETE_TARGET_SLOP = 16.dp
+
+/**
+ * Minutes a whole event moves by when it is dragged (UX-16): a quarter hour, because a move is a
+ * coarse gesture across a grid drawn in hours and nobody reschedules a dentist to 10:07.
+ */
+private const val MOVE_SNAP_MINUTES = 15
+
+/**
+ * Minutes a resize handle moves by (UX-16): one. A corner is the precise gesture — the one a
+ * parent reaches for when pickup is at 15:40 — and the live time badge over the chip is what
+ * makes single minutes usable under a thumb.
+ */
+private const val RESIZE_STEP_MINUTES = 1
+
+/**
+ * The shortest an event can be made by dragging a corner. The move grid's quarter hour, so a
+ * block stays tall enough to grab again, and so a corner dragged past the other one leaves an
+ * event rather than refusing the drop.
+ */
+private const val MIN_EVENT_MINUTES = 15L
+
+/** Google-Calendar-style red "now" indicator. */
+private val NowIndicatorColor = Color(0xFFEA4335)
+
+/**
+ * The lock and the pickup tick drawn inside an event block. Sized by the block, whose one line of
+ * label text they sit beside, rather than by a step of `IconSizes`: a block can be 15 minutes tall.
+ */
+private val BLOCK_MARK_SIZE = 10.dp
+
+/** Width of the week-number column at the start of the week header. */
+private val WEEK_NUMBER_WIDTH = 32.dp
+
+/**
+ * A single event's visible slice within one day, with its lane assignment for
+ * side-by-side layout of overlapping events.
+ *
+ * @property segStart start of the visible slice (clamped to the day)
+ * @property segEnd end of the visible slice (clamped to the day)
+ * @property clamped true when the event extends beyond this day (multi-day/overnight)
+ * @property lane 0-based column index within its overlap cluster
+ * @property laneCount number of columns in that cluster
+ */
+private data class EventSegment(
+    val event: Event,
+    val segStart: LocalDateTime,
+    val segEnd: LocalDateTime,
+    val clamped: Boolean,
+    val lane: Int,
+    val laneCount: Int
+)
+
+/**
+ * Computes the drawable event slices for [date]: events that overlap the day are
+ * clamped to it (so multi-day/overnight events appear on every day they cover), then
+ * grouped into overlap clusters and assigned side-by-side lanes (greedy first-fit,
+ * optimal for intervals) so concurrent events don't stack on top of each other.
+ */
+private fun layoutDayEvents(events: List<Event>, date: LocalDate): List<EventSegment> {
+    val dayStart = LocalDateTime(date, LocalTime(0, 0))
+    val dayEnd = LocalDateTime(date.plus(1, DateTimeUnit.DAY), LocalTime(0, 0))
+
+    data class Slice(val event: Event, val start: LocalDateTime, val end: LocalDateTime, val clamped: Boolean)
+
+    val slices = events.mapNotNull { e ->
+        val s = e.startDateTime
+        val en = e.endDateTime ?: s.plus(1, DateTimeUnit.HOUR)
+        if (s < dayEnd && en > dayStart) {
+            val cs = if (s < dayStart) dayStart else s
+            val ce = if (en > dayEnd) dayEnd else en
+            Slice(e, cs, ce, s < dayStart || en > dayEnd)
+        } else {
+            null
+        }
+    }.sortedWith(compareBy({ it.start }, { it.end }))
+
+    val result = mutableListOf<EventSegment>()
+    val cluster = mutableListOf<Slice>()
+    var clusterEnd: LocalDateTime? = null
+
+    fun flushCluster() {
+        if (cluster.isEmpty()) return
+        val laneEnds = mutableListOf<LocalDateTime>()
+        val lanes = IntArray(cluster.size)
+        cluster.forEachIndexed { i, slice ->
+            var lane = laneEnds.indexOfFirst { slice.start >= it }
+            if (lane == -1) {
+                laneEnds.add(slice.end)
+                lane = laneEnds.size - 1
+            } else {
+                laneEnds[lane] = slice.end
+            }
+            lanes[i] = lane
+        }
+        val laneCount = laneEnds.size
+        cluster.forEachIndexed { i, slice ->
+            result.add(EventSegment(slice.event, slice.start, slice.end, slice.clamped, lanes[i], laneCount))
+        }
+        cluster.clear()
+        clusterEnd = null
+    }
+
+    for (slice in slices) {
+        val currentEnd = clusterEnd
+        if (currentEnd == null || slice.start < currentEnd) {
+            cluster.add(slice)
+            clusterEnd = if (currentEnd == null || slice.end > currentEnd) slice.end else currentEnd
+        } else {
+            flushCluster()
+            cluster.add(slice)
+            clusterEnd = slice.end
+        }
+    }
+    flushCluster()
+    return result
+}
+
+/**
+ * Applies a vertical drag (in pixels) to a base time and snaps the result to the nearest
+ * multiple of [stepMinutes] within the same day — [MOVE_SNAP_MINUTES] for a move,
+ * [RESIZE_STEP_MINUTES] for a corner.
+ */
+private fun resizedTime(
+    base: LocalDateTime,
+    dragPx: Float,
+    hourHeightPx: Float,
+    stepMinutes: Int
+): LocalDateTime {
+    val deltaMinutes = (dragPx / hourHeightPx * 60f).roundToInt()
+    val shifted = base.plus(deltaMinutes, DateTimeUnit.MINUTE)
+    // `withSecond(0).withNano(0)`: the minute, its seconds dropped.
+    val moved = LocalDateTime(shifted.date, LocalTime(shifted.hour, shifted.minute))
+    val minutesOfDay = moved.hour * 60 + moved.minute
+    val snapped = ((minutesOfDay + stepMinutes / 2) / stepMinutes) * stepMinutes
+    val clamped = snapped.coerceIn(0, 24 * 60 - stepMinutes)
+    return LocalDateTime(moved.date, LocalTime(0, 0)).plus(clamped, DateTimeUnit.MINUTE)
+}
+
+/**
+ * Where the top handle puts the start: [start] moved by the minute, and never later than
+ * [MIN_EVENT_MINUTES] before [end].
+ */
+private fun resizedStart(
+    start: LocalDateTime,
+    end: LocalDateTime,
+    dragPx: Float,
+    hourHeightPx: Float
+): LocalDateTime {
+    val moved = resizedTime(start, dragPx, hourHeightPx, RESIZE_STEP_MINUTES)
+    // An event already shorter than the minimum is not stretched by a drag that did not ask to:
+    // the bound is where it starts, not a quarter hour before its end.
+    val latest = end.minus(MIN_EVENT_MINUTES, DateTimeUnit.MINUTE).let { if (it < start) start else it }
+    return if (moved > latest) latest else moved
+}
+
+/**
+ * Where the bottom handle puts the end: [end] moved by the minute, and never earlier than
+ * [MIN_EVENT_MINUTES] after [start].
+ */
+private fun resizedEnd(
+    start: LocalDateTime,
+    end: LocalDateTime,
+    dragPx: Float,
+    hourHeightPx: Float
+): LocalDateTime {
+    val moved = resizedTime(end, dragPx, hourHeightPx, RESIZE_STEP_MINUTES)
+    val earliest = start.plus(MIN_EVENT_MINUTES, DateTimeUnit.MINUTE).let { if (it > end) end else it }
+    return if (moved < earliest) earliest else moved
+}

@@ -1,3 +1,5 @@
+@file:OptIn(InternalSharedApi::class)
+
 package com.coparently.app.data.notification
 
 import android.Manifest
@@ -10,18 +12,17 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.coparently.app.R
 import com.coparently.app.data.local.dao.EventDao
 import com.coparently.app.data.local.entity.EventEntity
+import com.coparently.app.domain.InternalSharedApi
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.domain.time.IsoText
 import com.coparently.app.presentation.MainActivity
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import java.time.LocalDateTime
+import com.coparently.app.utils.inAppLanguage
 
 /**
  * Worker that fires a local reminder notification before an event starts.
@@ -37,11 +38,13 @@ import java.time.LocalDateTime
  * no longer exists — the worker asks the scheduler for the event's next one, which is how a
  * recurring event keeps reminding every week. The request replaces this very work under its
  * unique name, so it is the last thing done.
+ *
+ * The notification and its channel are worded in the language the app speaks when it fires
+ * ([inAppLanguage]).
  */
-@HiltWorker
-class ReminderWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
+class ReminderWorker(
+    context: Context,
+    params: WorkerParameters,
     private val eventDao: EventDao,
     private val reminderScheduler: ReminderScheduler
 ) : CoroutineWorker(context, params) {
@@ -81,7 +84,8 @@ class ReminderWorker @AssistedInject constructor(
             return
         }
 
-        ensureChannel()
+        val words = applicationContext.inAppLanguage()
+        ensureChannel(words)
 
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -98,7 +102,7 @@ class ReminderWorker @AssistedInject constructor(
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(
-                applicationContext.getString(R.string.reminder_notification_text, startTime)
+                words.getString(R.string.reminder_notification_text, startTime)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -111,14 +115,15 @@ class ReminderWorker @AssistedInject constructor(
         notificationManager.notify(eventId.hashCode(), notification)
     }
 
-    private fun ensureChannel() {
+    /** Creates the reminder channel, or renames it into [words]' language when it exists. */
+    private fun ensureChannel(words: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                applicationContext.getString(R.string.reminder_channel_name),
+                words.getString(R.string.reminder_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = applicationContext.getString(R.string.reminder_channel_description)
+                description = words.getString(R.string.reminder_channel_description)
             }
             val notificationManager =
                 applicationContext.getSystemService(NotificationManager::class.java)
@@ -150,7 +155,9 @@ class ReminderWorker @AssistedInject constructor(
          */
         internal fun shouldFire(stored: EventEntity?, scheduledStartAt: String?): Boolean {
             if (stored == null || stored.deletedAtMillis != null || stored.reminderMinutes == null) return false
-            val scheduled = scheduledStartAt?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+            // `IsoText.parseDateTime` reads what `LocalDateTime.parse` read, so work an older
+            // build enqueued (its `toString()`) is read as before.
+            val scheduled = scheduledStartAt?.let { runCatching { IsoText.parseDateTime(it) }.getOrNull() }
                 ?: return true
             return ReminderPlanner.isOccurrence(stored.toReminderEvent(), scheduled)
         }

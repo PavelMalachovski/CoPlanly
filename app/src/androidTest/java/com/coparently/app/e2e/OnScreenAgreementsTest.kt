@@ -31,8 +31,8 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.repository.EventRepository
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
+import com.coparently.app.testing.UsesFakeFirebase
 import com.coparently.app.utils.swapDateList
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
@@ -40,16 +40,21 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
-import javax.inject.Inject
 
 /**
  * What Alice **sees** when Bob asks her something, and what her answer on screen does on his
@@ -66,15 +71,13 @@ import javax.inject.Inject
  * that tells Alice to look, motion, and the colours of the band — the day cell is asserted by its
  * accessibility description, which names the parent, not by its pixels.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OnScreenAgreementsTest : AliceOnScreenTest() {
 
-    @Inject
-    lateinit var eventRepository: EventRepository
+    val eventRepository: EventRepository by lazy { koinRule.get() }
 
-    @Inject
-    lateinit var custodyRepository: CustodyModelRepository
+    val custodyRepository: CustodyModelRepository by lazy { koinRule.get() }
 
     @Test
     fun bobsChangeRequestRaisesTheCalendarBannerAndAliceAcceptsItInTheInbox() {
@@ -103,7 +106,8 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         runBlocking {
             awaitRequestOnBobsPhone(request.id, ChangeRequestStatus.ACCEPTED)
             withTimeout(EmulatorParent.WAIT_MS) {
-                while (bob.eventRepository.fetchRemoteEvent(event.id)?.startDateTime != request.proposedStartDateTime) {
+                val proposed = request.proposedStartDateTime
+                while (bob.eventRepository.fetchRemoteEvent(event.id)?.startDateTime != proposed) {
                     delay(POLL_MS)
                 }
             }
@@ -112,13 +116,13 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     @Test
     fun bobsCustodyProposalPopsUpOnAlicesHomeAndHerAnswersReachHim() {
-        runBlocking { bobSetsTheFirstPattern(LocalDate.now(), aliceHasTheFirstWeek = true) }
+        runBlocking { bobSetsTheFirstPattern(currentDay(), aliceHasTheFirstWeek = true) }
 
         step("proposal: Bob proposes a 2-2-3")
         runBlocking {
             assertEquals(
                 PatternSubmission.PROPOSED,
-                bob.custodyRepository.createTwoTwoThree(LocalDate.now(), momStartsFirst = true)
+                bob.custodyRepository.createTwoTwoThree(currentDay(), momStartsFirst = true)
             )
         }
         waitFor("Bob's proposal on Alice's Home, naming him", proposalDialogNaming(bob.name))
@@ -135,7 +139,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         runBlocking {
             assertEquals(
                 PatternSubmission.PROPOSED,
-                bob.custodyRepository.createWeekOnWeekOff(LocalDate.now(), momFirst = false)
+                bob.custodyRepository.createWeekOnWeekOff(currentDay(), momFirst = false)
             )
         }
         waitFor("Bob's second proposal on Alice's Home", proposalDialogNaming(bob.name))
@@ -180,9 +184,9 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     @Test
     fun bobsDaySwapPopsUpOnAlicesHomeAndHerAnswersReachHim() {
-        val agreed = runBlocking { bobSetsTheFirstPattern(LocalDate.now(), aliceHasTheFirstWeek = true) }
-        val firstDay = LocalDate.now().plusDays(FIRST_SWAP_OFFSET)
-        val secondDay = LocalDate.now().plusDays(SECOND_SWAP_OFFSET)
+        val agreed = runBlocking { bobSetsTheFirstPattern(currentDay(), aliceHasTheFirstWeek = true) }
+        val firstDay = currentDay().plus(FIRST_SWAP_OFFSET, DateTimeUnit.DAY)
+        val secondDay = currentDay().plus(SECOND_SWAP_OFFSET, DateTimeUnit.DAY)
 
         step("swap: Bob offers a day, Alice accepts on Home")
         runBlocking { bobOffers(agreed, firstDay) }
@@ -205,7 +209,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
 
     @Test
     fun aSeasonalLayerAliceAcceptsNamesBobOnTodaysCell() {
-        val today = LocalDate.now()
+        val today = currentDay()
         val (aliceSlot, bobSlot) = runBlocking { slots() }
         val base = runBlocking { bobSetsTheFirstPattern(today, aliceHasTheFirstWeek = true) }
         assertEquals("the base pattern gives today to Alice", aliceSlot, base.getCustodyFor(today))
@@ -226,7 +230,7 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         step("layer: today's cell on the month grid")
         openTab(BottomNavDestination.CALENDAR)
         val todayCell = hasContentDescription(
-            "${today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))}, " +
+            "${today.toJavaLocalDate().format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))}, " +
                 string(R.string.calendar_day_desc_today),
             substring = true
         )
@@ -242,12 +246,12 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusHours(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusHours(1).toKotlinLocalDateTime(),
             eventType = "appointment",
             parentOwner = checkNotNull(userDao.getUserById(aliceUid)).role,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         eventRepository.insertEvent(event)
         return checkNotNull(eventRepository.getEventById(event.id))
@@ -263,10 +267,10 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
             requestedTo = aliceUid,
             currentStartDateTime = event.startDateTime,
             currentEndDateTime = event.endDateTime,
-            proposedStartDateTime = event.startDateTime.plusHours(2),
-            proposedEndDateTime = event.endDateTime?.plusHours(2),
+            proposedStartDateTime = event.startDateTime.toJavaLocalDateTime().plusHours(2).toKotlinLocalDateTime(),
+            proposedEndDateTime = event.endDateTime?.toJavaLocalDateTime()?.plusHours(2)?.toKotlinLocalDateTime(),
             note = "Could we move it?",
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
         bob.changeRequestRepository.createChangeRequest(request)
         return request
@@ -405,6 +409,9 @@ class OnScreenAgreementsTest : AliceOnScreenTest() {
     private companion object {
         const val START_HOUR = 10
         const val POLL_MS = 250L
+
+        /** Today on this phone, as the custody domain's kotlinx-datetime day (MON-24). */
+        fun currentDay(): LocalDate = java.time.LocalDate.now().toKotlinLocalDate()
 
         /** Both inside the agreed pattern's first fortnight, and after today so the inbox shows them. */
         const val FIRST_SWAP_OFFSET = 2L

@@ -9,12 +9,15 @@ import androidx.work.workDataOf
 import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.notification.ReminderPlanner
 import com.coparently.app.domain.notification.ReminderScheduler
+import com.coparently.app.utils.format
+import com.coparently.app.utils.inAppLanguage
 import com.coparently.app.utils.shortTime
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toLocalDateTime
 import java.time.Duration
-import java.time.LocalDateTime
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlin.time.Clock
 
 /**
  * WorkManager-based implementation of [ReminderScheduler].
@@ -22,13 +25,12 @@ import javax.inject.Singleton
  * rescheduling replaces the previous work request. For a recurring event it is the next
  * occurrence's ([ReminderPlanner]); [ReminderWorker] schedules the one after when it fires.
  */
-@Singleton
-class EventReminderScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+class EventReminderScheduler(
+    private val context: Context
 ) : ReminderScheduler {
 
     override fun schedule(event: Event) {
-        val now = LocalDateTime.now()
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val plan = ReminderPlanner.nextReminder(event, now)
         if (plan == null) {
             cancel(event.id)
@@ -36,7 +38,8 @@ class EventReminderScheduler @Inject constructor(
         }
 
         val request = OneTimeWorkRequestBuilder<ReminderWorker>()
-            .setInitialDelay(Duration.between(now, plan.remindAt))
+            // WorkManager takes a java.time delay; the wall-clock difference, as before.
+            .setInitialDelay(Duration.between(now.toJavaLocalDateTime(), plan.remindAt.toJavaLocalDateTime()))
             .addTag(WORK_TAG)
             .setInputData(
                 workDataOf(
@@ -48,8 +51,10 @@ class EventReminderScheduler @Inject constructor(
                     ReminderWorker.KEY_START_AT to plan.occurrenceStart.toString(),
                     ReminderWorker.KEY_START_TIME to
                         // The reader's clock (release audit R-9), read here: no activity need
-                        // have run in the process that schedules a reminder.
-                        plan.occurrenceStart.format(shortTime(is24Hour = DateFormat.is24HourFormat(context)))
+                        // have run in the process that schedules a reminder. In the language the
+                        // app speaks (inAppLanguage), as the notice's words and every push are, so
+                        // "use locale default" means that language's clock.
+                        startTimeText(plan.occurrenceStart)
                 )
             )
             .build()
@@ -75,6 +80,12 @@ class EventReminderScheduler @Inject constructor(
     }
 
     private fun uniqueWorkName(eventId: String) = "event_reminder_$eventId"
+
+    /** [start]'s time on the reader's clock, in the language the app speaks now. */
+    private fun startTimeText(start: LocalDateTime): String {
+        val words = context.inAppLanguage()
+        return start.format(shortTime(words.resources.configuration.locales[0], DateFormat.is24HourFormat(words)))
+    }
 
     private companion object {
         /** Carried by every reminder this build enqueues, for [cancelAll]. */

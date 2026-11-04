@@ -1,0 +1,260 @@
+package com.coparently.app.data.remote.firebase
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+/**
+ * Data source for managing messages in Firestore.
+ *
+ * There is no general conversation-*list* accessor here any more. The conversation id is a pure
+ * function of the two participants (`ConversationKey`), so a device already knows which
+ * document it wants and does not need to query for it — and the list query is what the
+ * nested-`collect` sync loop was built on. The one list query left, [observeDepartedThreads],
+ * finds only threads the server kept after a co-parent deleted their account: once that account
+ * is gone, no pairing names the co-parent any more, so the id cannot be derived from one.
+ */
+class FirestoreMessageDataSource(
+    private val firestore: FirestoreClient
+) {
+    private val conversationsCollection = "conversations"
+    private val messagesCollection = "messages"
+
+    /**
+     * Observes one conversation document, emitting `null` while it does not exist.
+     *
+     * Mirrors the listener of [getMessages], including closing the flow with the
+     * listener's error so the caller's `catch` sees a denied read or a missing document
+     * rather than a silent stall.
+     *
+     * @param conversationId The deterministic conversation id.
+     */
+    fun observeConversation(conversationId: String): Flow<Map<String, Any>?> =
+        firestore.observe(DocumentPath(conversationsCollection, conversationId))
+            .map { snapshot -> snapshot.data?.plus("id" to snapshot.id)?.asFieldMap() }
+
+    /**
+     * Observes the conversations [uid] is in that the server kept after the other parent deleted
+     * their account — those carrying a numeric `retainedUntilMillis` — each as its fields plus `id`.
+     *
+     * `participants array-contains` is what the conversations read rule keys on, so the query is
+     * provably inside it; the range on `retainedUntilMillis` keeps every ordinary thread out of
+     * the answer (an index in `firestore.indexes.json`). Closes with the listener's error, as
+     * [observeConversation] does.
+     */
+    fun observeDepartedThreads(uid: String): Flow<List<Map<String, Any>>> =
+        firestore.observe(departedThreadsQuery(uid))
+            .map { documents -> documents.map { doc -> (doc.data.orEmpty() + ("id" to doc.id)).asFieldMap() } }
+
+    /**
+     * The same threads as [observeDepartedThreads], read once — for the export, which must find a
+     * kept thread whether or not a chat screen has been opened.
+     *
+     * @throws Exception the SDK's Firestore failure when the read fails.
+     */
+    suspend fun fetchDepartedThreads(uid: String): List<Map<String, Any>> =
+        firestore.get(departedThreadsQuery(uid)).map { doc -> (doc.data.orEmpty() + ("id" to doc.id)).asFieldMap() }
+
+    private fun departedThreadsQuery(uid: String): DocumentQuery =
+        DocumentQuery(conversationsCollection)
+            .whereArrayContains("participants", uid)
+            .whereGreaterThan("retainedUntilMillis", 0)
+
+    /**
+     * Gets the most recent messages of a conversation as a Flow, oldest of them first.
+     *
+     * **Bounded to [MESSAGE_WINDOW]** (CQ-6). This listener had no limit at all, so every
+     * snapshot carried the entire thread — ten messages a day for three years is about eleven
+     * thousand documents, re-delivered on each change, on both parents' phones, for the life of
+     * the process. A chat's cost should scale with how much is being said, not with how long
+     * the pair has been using the app.
+     *
+     * `limitToLast` rather than `limit`: the order is ascending, so `limit` would pin the window
+     * to the *oldest* messages and a live thread would stop updating the moment it passed the
+     * bound. `limitToLast` keeps the newest, which is the window a chat screen is looking at,
+     * and Firestore requires the `orderBy` it already has.
+     *
+     * Nothing is lost on a device that has been running: the mirror writes into Room, Room keeps
+     * every message it has ever received, and that is what the UI reads. What does change is a
+     * **fresh install**, which now receives the last [MESSAGE_WINDOW] messages of the thread
+     * rather than all of them. That is ordinary chat behaviour, and it is a deliberate trade
+     * rather than an oversight — but it is a behaviour change, and history older than the window
+     * is not fetched by anything else yet.
+     */
+    fun getMessages(conversationId: String): Flow<List<Map<String, Any>>> =
+        firestore.observe(
+            DocumentQuery(messagesCollection)
+                .whereEqualTo("conversationId", conversationId)
+                .orderBy("timestamp")
+                .limitToLast(MESSAGE_WINDOW)
+        ).map { documents ->
+            documents.map { doc -> doc.data?.plus("id" to doc.id)?.asFieldMap() ?: emptyMap() }
+        }
+
+    /**
+     * Writes one message document, and nothing else.
+     *
+     * Nothing about the conversation is touched here — [bumpLastMessageAt] does that, and the
+     * split is deliberate; see its KDoc. Nor is the message copied into a `lastMessage` field
+     * on the conversation, as an older version did: that doubled every write, duplicated what
+     * the `messages` collection already holds, and gave the security rules a second place to
+     * police the same data. The domain object still exposes `lastMessage`; it is derived
+     * locally from the newest message in the thread.
+     *
+     * @param messageId Document id of the message.
+     * @param messageData The message document.
+     */
+    suspend fun sendMessage(messageId: String, messageData: Map<String, Any>) {
+        firestore.set(DocumentPath(messagesCollection, messageId), messageData)
+    }
+
+    /**
+     * Advances a conversation's ordering timestamp.
+     *
+     * Separate from [sendMessage] on purpose. The two used to be one awaited pair, so a
+     * successful message write followed by a failed `lastMessageAt` bump threw, and the caller
+     * marked a message the co-parent had already received as failed to send. The message is the
+     * payload; this is metadata, and it must not be able to condemn the payload.
+     *
+     * @param conversationId The thread to bump.
+     * @param lastMessageAtMillis The newest message's timestamp as epoch millis.
+     */
+    suspend fun bumpLastMessageAt(conversationId: String, lastMessageAtMillis: Long) {
+        firestore.update(DocumentPath(conversationsCollection, conversationId), "lastMessageAt", lastMessageAtMillis)
+    }
+
+    /**
+     * Creates or amends a conversation document, **merging** into whatever is already there.
+     *
+     * A plain `set` would replace the document, dropping both mark maps of whichever device
+     * happened to write second — and this runs on every pairing and every chat open, so that
+     * would be a routine loss rather than an edge case.
+     *
+     * @param conversationId The deterministic conversation id.
+     * @param conversationData The fields to write.
+     */
+    suspend fun setConversation(conversationId: String, conversationData: Map<String, Any>) {
+        firestore.set(DocumentPath(conversationsCollection, conversationId), conversationData, SetMerge.Merge)
+    }
+
+    /**
+     * Records that [userId] has read the thread up to [atMillis].
+     *
+     * A single dotted-path update, so it touches only this user's key and satisfies the
+     * `conversations` rule that permits amending your own mark and nothing else.
+     *
+     * @param conversationId The deterministic conversation id.
+     * @param userId The uid whose mark advances.
+     * @param atMillis The mark, as epoch millis.
+     */
+    suspend fun markRead(conversationId: String, userId: String, atMillis: Long) {
+        firestore.update(DocumentPath(conversationsCollection, conversationId), "lastReadAt.$userId", atMillis)
+    }
+
+    /**
+     * Records that [userId]'s device has ingested messages up to [atMillis].
+     *
+     * @param conversationId The deterministic conversation id.
+     * @param userId The uid whose mark advances.
+     * @param atMillis The mark, as epoch millis.
+     */
+    suspend fun markDelivered(conversationId: String, userId: String, atMillis: Long) {
+        firestore.update(DocumentPath(conversationsCollection, conversationId), "lastDeliveredAt.$userId", atMillis)
+    }
+
+    /**
+     * Moves one message onto a different conversation, as the legacy-conversation merge does.
+     *
+     * A single-field update, matching the deployed `messages` rule: a participant of the
+     * message's current conversation may change `conversationId` to the canonical conversation
+     * for that conversation's participants, and nothing else in the same write — never to an
+     * arbitrary conversation, even a same-participants one (see `canRepointMessage` in
+     * `firestore.rules`; a looser, participant-based version of this rule was found to let one
+     * parent permanently hide the other's message in a conversation the other never observes).
+     * Setting it to a value it already has is idempotent and denied by nothing, which is what
+     * makes a retried merge safe.
+     *
+     * @param messageId Document id of the message; unchanged by the move.
+     * @param toConversationId The conversation the message now belongs to — must be the
+     *   canonical conversation for the message's current participants, or the write is denied.
+     */
+    suspend fun repointMessage(messageId: String, toConversationId: String) {
+        firestore.update(DocumentPath(messagesCollection, messageId), "conversationId", toConversationId)
+    }
+
+    /**
+     * The ids of every message currently filed under [conversationId], read once from the
+     * **server** — not a live listener, and never from the offline cache.
+     *
+     * Used by the legacy-conversation merge to find messages Room does not know about: nothing
+     * else ever points a listener at a legacy conversation id, so a message that reached
+     * Firestore under one but never made it into this device's Room would otherwise never be
+     * discovered, re-pointed, or protected from being stranded when the legacy conversation is
+     * archived away.
+     *
+     * [ReadSource.SERVER] is load-bearing, not a preference. With offline persistence on, a
+     * `Source.DEFAULT` one-shot read may be answered from the local cache — and because nothing
+     * ever listens on a legacy conversation id, that cache holds no legacy messages at all. The
+     * read would then succeed with an *empty* result, the caller would union it with Room's rows,
+     * conclude that Room already knows everything, and archive the legacy conversation, stranding
+     * exactly the remote-only message this read exists to find. `Source.SERVER` cannot answer
+     * from the cache: offline, it fails instead, and a failure is unambiguous.
+     *
+     * That is why this throws rather than returning an empty set on failure: an empty set means
+     * "the server says there are none", and nothing else. `ConversationMigrator.collectMessageIds`
+     * turns any exception here into `null` — "the message set is unknown" — which skips the
+     * candidate for this pass and retries it on the next launch. An offline device therefore
+     * postpones the merge instead of completing it on a half-known list.
+     *
+     * @param conversationId The (legacy) conversation to read.
+     * @return The ids of its messages, as the server holds them; empty only if there are none.
+     * @throws Exception the SDK's Firestore failure if the server cannot be
+     *   reached (the device is offline) or the read is denied.
+     */
+    suspend fun fetchMessageIds(conversationId: String): Set<String> =
+        firestore.get(
+            DocumentQuery(messagesCollection).whereEqualTo("conversationId", conversationId),
+            ReadSource.SERVER
+        )
+            .map { it.id }
+            .toSet()
+
+    /**
+     * A thread's messages sent in [fromMillis, untilMillis), as the server holds them (MON-3).
+     *
+     * The export's read, and deliberately not the live listener's: that one keeps a window of
+     * the newest messages, and a record of March cannot depend on March still being recent. Read
+     * from the server, never the cache — a message this phone deleted from Room is still in the
+     * record (`messages` cannot be deleted server-side), and the cache would not have it.
+     *
+     * A message written by a build old enough to store an ISO-string `timestamp` is not matched
+     * by a numeric range; the caller adds this phone's own copy of the thread for that reason.
+     *
+     * @throws Exception the SDK's Firestore failure when the server cannot be
+     *   reached; the caller marks the record incomplete rather than presenting the cache as whole.
+     */
+    suspend fun fetchBetween(
+        conversationId: String,
+        fromMillis: Long,
+        untilMillis: Long
+    ): List<Map<String, Any>> =
+        firestore.get(
+            DocumentQuery(messagesCollection)
+                .whereEqualTo("conversationId", conversationId)
+                .whereGreaterThanOrEqualTo("timestamp", fromMillis)
+                .whereLessThan("timestamp", untilMillis)
+                .orderBy("timestamp"),
+            ReadSource.SERVER
+        )
+            .map { doc -> doc.data?.plus("id" to doc.id)?.asFieldMap() ?: emptyMap() }
+
+    private companion object {
+        /**
+         * How many of a thread's newest messages the live listener carries.
+         *
+         * Large enough that scrolling a normal conversation never reaches the edge, small enough
+         * that the per-snapshot cost stops growing with the pair's tenure. It bounds the network
+         * and the mirror, not what the device knows: Room keeps everything it has ever received.
+         */
+        const val MESSAGE_WINDOW = 200L
+    }
+}

@@ -15,21 +15,16 @@ import com.coparently.app.domain.export.PageGeometry
 import com.coparently.app.domain.export.RecordLabels
 import com.coparently.app.domain.export.RecordLayout
 import com.coparently.app.domain.export.RecordVerificationLayout
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
- * A file the share sheet can hand to another app.
- *
- * @property uri A `content://` URI from this app's `FileProvider`, readable by whoever the parent
- *   shares it with and by nobody else.
+ * [ExportedFile.uri] as the `content://` URI the share sheet takes: what [ExportFileWriter.save]
+ * wrote there with `toString()`, read back as the same [Uri].
  */
-data class ExportedFile(val uri: Uri, val mimeType: String)
+val ExportedFile.contentUri: Uri get() = Uri.parse(uri)
 
 /**
  * Renders a [CommunicationRecord] and writes it to a file on this phone and nowhere else (MON-3).
@@ -43,10 +38,9 @@ data class ExportedFile(val uri: Uri, val mimeType: String)
  * nothing else exposes at all. Every write clears the previous export first: a court record left
  * lying in a cache directory is a copy nobody meant to keep.
  */
-@Singleton
-class ExportFileWriter @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class ExportFileWriter(
+    private val context: Context
+) : RecordFileWriter {
 
     /**
      * The file's exact bytes, before anything is written to disk.
@@ -54,7 +48,7 @@ class ExportFileWriter @Inject constructor(
      * Rendering and saving are separate so the export flow can hash precisely what it will save
      * (MON-16): the SHA-256 the server registers must be of these bytes and no others.
      */
-    suspend fun render(record: CommunicationRecord, labels: RecordLabels, format: ExportFormat): ByteArray =
+    override suspend fun render(record: CommunicationRecord, labels: RecordLabels, format: ExportFormat): ByteArray =
         withContext(Dispatchers.IO) {
             when (format) {
                 ExportFormat.CSV -> CommunicationRecordCsv.render(record, labels).toByteArray(Charsets.UTF_8)
@@ -63,11 +57,11 @@ class ExportFileWriter @Inject constructor(
         }
 
     /** Writes [bytes] — already rendered, and already hashed if they were registered — for sharing. */
-    suspend fun save(bytes: ByteArray, record: CommunicationRecord, format: ExportFormat): ExportedFile =
+    override suspend fun save(bytes: ByteArray, record: CommunicationRecord, format: ExportFormat): ExportedFile =
         withContext(Dispatchers.IO) {
             val file = freshFile(record, format.extension)
             file.writeBytes(bytes)
-            ExportedFile(uriFor(file), format.mimeType)
+            ExportedFile(uriFor(file).toString(), format.mimeType)
         }
 
     /** The record as an A4 PDF, every page carrying the footer that names its record id. */

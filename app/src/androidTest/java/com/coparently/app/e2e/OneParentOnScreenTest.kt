@@ -7,10 +7,12 @@ import com.coparently.app.domain.model.Event
 import com.coparently.app.domain.model.Message
 import com.coparently.app.e2e.EmulatorEnvironment.step
 import com.coparently.app.presentation.navigation.BottomNavDestination
-import dagger.hilt.android.testing.HiltAndroidTest
+import com.coparently.app.testing.UsesFakeFirebase
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -28,7 +30,7 @@ import java.util.UUID
  * Still not covered, and kept on `docs/DEVICE-CHECKLIST.md`: the push that wakes a phone (FCM has
  * no emulator), and anything that needs two *screens* at once.
  */
-@HiltAndroidTest
+@UsesFakeFirebase
 @RunWith(AndroidJUnit4::class)
 class OneParentOnScreenTest : AliceOnScreenTest() {
 
@@ -68,12 +70,20 @@ class OneParentOnScreenTest : AliceOnScreenTest() {
         step("chat: type and send")
         sendInChat(fromAlice)
         step("chat: wait for the reply on Bob's phone")
-        runBlocking {
-            withTimeout(EmulatorParent.WAIT_MS) {
-                bob.messageRepository.observeMessages(conversationId).first { list ->
-                    list.any { it.content == fromAlice && it.senderId == aliceUid }
+        try {
+            runBlocking {
+                withTimeout(EmulatorParent.WAIT_MS) {
+                    bob.messageRepository.observeMessages(conversationId).first { list ->
+                        list.any { it.content == fromAlice && it.senderId == aliceUid }
+                    }
                 }
             }
+        } catch (e: TimeoutCancellationException) {
+            // Where it stopped: no row means the composer never sent it or the send hold still keeps
+            // it (the e2e turns the pause off, so a held row is itself a finding); SENDING or ERROR
+            // means it was sent and the write did not land. A failed read must not replace the timeout.
+            runCatching { logLocalMessages(conversationId) }
+            throw e
         }
     }
 
@@ -85,12 +95,12 @@ class OneParentOnScreenTest : AliceOnScreenTest() {
         return Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = start,
-            endDateTime = start.plusMinutes(1),
+            startDateTime = start.toKotlinLocalDateTime(),
+            endDateTime = start.plusMinutes(1).toKotlinLocalDateTime(),
             eventType = "appointment",
             parentOwner = bob.database.userDao().getUserById(bob.uid)?.role ?: "dad",
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now().toKotlinLocalDateTime(),
+            updatedAt = LocalDateTime.now().toKotlinLocalDateTime()
         )
     }
 

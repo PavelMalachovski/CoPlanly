@@ -21,7 +21,7 @@ import android.content.SharedPreferences
  * key and writes it; without [persist] nothing leaves memory, which is the fallback described
  * above.
  *
- * Synchronised on the backing map because `EncryptedPreferences` is a `@Singleton` reached from
+ * Synchronised on the backing map because `EncryptedPreferences` is a graph `single` reached from
  * several coroutines. Listeners are held and notified so the contract holds for any caller that
  * registers one; nothing in this app does today.
  */

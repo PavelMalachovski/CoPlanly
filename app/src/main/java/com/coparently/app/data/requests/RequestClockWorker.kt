@@ -1,12 +1,9 @@
 package com.coparently.app.data.requests
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.coparently.app.data.notification.RequestClockWork
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 
 /**
  * Runs one step of a request's clock — a reminder, the deadline or the end — when the job that
@@ -21,10 +18,9 @@ import dagger.assisted.AssistedInject
  * deadline that has passed is not armed again. A job this build cannot read — no clock id, or a
  * step it does not know, as a newer build might have enqueued before a downgrade — fails at once.
  */
-@HiltWorker
-class RequestClockWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
+class RequestClockWorker(
+    context: Context,
+    params: WorkerParameters,
     private val steps: RequestClockSteps
 ) : CoroutineWorker(context, params) {
 

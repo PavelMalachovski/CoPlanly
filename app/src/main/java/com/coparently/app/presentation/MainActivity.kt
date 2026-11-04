@@ -1,5 +1,6 @@
 package com.coparently.app.presentation
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -8,7 +9,6 @@ import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +19,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,12 +29,15 @@ import com.coparently.app.data.notification.NotificationManager
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.data.remote.firebase.PushPayload
+import com.coparently.app.data.remote.google.CredentialAuthenticator
+import com.coparently.app.data.remote.google.CredentialManagerService
 import com.coparently.app.domain.chat.ChatUri
 import com.coparently.app.domain.guests.GuestInviteUri
 import com.coparently.app.domain.pairing.InstallReferrer
 import com.coparently.app.domain.pairing.InstallReferrerSource
 import com.coparently.app.domain.pairing.PairingUri
 import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.presentation.auth.AndroidCredentialSignIn
 import com.coparently.app.presentation.common.FamilyViewViewModel
 import com.coparently.app.presentation.common.LocalAppMessages
 import com.coparently.app.presentation.common.LocalFamilyView
@@ -51,25 +53,29 @@ import com.coparently.app.presentation.navigation.PendingDestinationOpen
 import com.coparently.app.presentation.navigation.PendingInviteCodes
 import com.coparently.app.presentation.navigation.Screen
 import com.coparently.app.presentation.navigation.startDestinationFor
+import com.coparently.app.presentation.platform.LocalCredentialSignIn
+import com.coparently.app.presentation.platform.LocalGoogleCalendarSignIn
+import com.coparently.app.presentation.platform.ProvideAndroidPlatform
+import com.coparently.app.presentation.sync.AndroidGoogleCalendarSignIn
 import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
+import com.coparently.app.presentation.sync.signInAnswer
 import com.coparently.app.presentation.theme.CoPlanlyTheme
 import com.coparently.app.presentation.theme.LocalParentPalette
 import com.coparently.app.presentation.widget.TodayWidgetRefresher
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_sign_in_cancelled
+import com.coparently.app.resources.sync_google_sign_in_failed
+import com.coparently.app.utils.AppLocale
 import com.coparently.app.utils.ClockFormat
-import dagger.hilt.android.AndroidEntryPoint
+import com.coparently.app.utils.follow
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-
-/**
- * CompositionLocal for providing Google Sign-In callback throughout the app.
- */
-val LocalGoogleSignInCallback = staticCompositionLocalOf<((android.content.Intent) -> Unit)?> {
-    null
-}
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * The longest the system splash is held for the first screen to be known. As long as the Compose
@@ -85,29 +91,33 @@ private const val SPLASH_HOLD_MAX_MS = 1_500L
  * Extends [AppCompatActivity] (not ComponentActivity) so that per-app language
  * preferences set via AppCompatDelegate.setApplicationLocales are applied to this
  * activity's configuration on every recreation, including on Android < 13.
+ *
+ * It speaks the language [AppLocale] decides (the owner's rule: the per-app choice, else the
+ * phone's first language when the app ships it, else English): its base context is put in that
+ * locale before AppCompat's delegate sees it ([attachBaseContext]), and the process's default
+ * locale follows it once AppCompat has applied a per-app choice ([onCreate], [onResume]).
  */
-@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    @Inject
-    lateinit var notificationManager: NotificationManager
+    private val notificationManager: NotificationManager by inject()
 
-    @Inject
-    lateinit var preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository by inject()
 
-    @Inject
-    lateinit var selectedFamilySource: SelectedFamilySource
+    private val selectedFamilySource: SelectedFamilySource by inject()
 
     /** Source of [LocalPhotoViewerUid]: who is signed in decides which record photos draw (L-4). */
-    @Inject
-    lateinit var firebaseAuthService: FirebaseAuthService
+    private val firebaseAuthService: FirebaseAuthService by inject()
 
-    @Inject
-    lateinit var todayWidgetRefresher: TodayWidgetRefresher
+    /** Google Calendar's sign-in client, and the redeeming of its answer. */
+    private val credentialManagerService: CredentialManagerService by inject()
+
+    /** Credential Manager's sheets for the app's own sign-in, hosted on this activity. */
+    private val credentialAuthenticator: CredentialAuthenticator by inject()
+
+    private val todayWidgetRefresher: TodayWidgetRefresher by inject()
 
     /** The pairing code an invitation's Play link carried through the install, read once. */
-    @Inject
-    lateinit var installReferrerSource: InstallReferrerSource
+    private val installReferrerSource: InstallReferrerSource by inject()
 
     private val _darkThemeState = MutableStateFlow<Boolean?>(null)
     private val darkThemeState: StateFlow<Boolean?> = _darkThemeState
@@ -173,21 +183,21 @@ class MainActivity : AppCompatActivity() {
         onConsumed = { _pendingDestination.value = null }
     )
 
-    private val syncViewModel: SyncViewModel by viewModels()
+    private val syncViewModel: SyncViewModel by viewModel()
 
     /**
      * What the navigation graph decides its first screen from, read here to hold the splash until
-     * that is known. The same instances `NavGraph` gets from `hiltViewModel()`: both are scoped to
+     * that is known. The same instances `NavGraph` gets from `koinViewModel()`: both are scoped to
      * this activity.
      */
-    private val authStateViewModel: AuthStateViewModel by viewModels()
-    private val telemetryConsentViewModel: TelemetryConsentViewModel by viewModels()
+    private val authStateViewModel: AuthStateViewModel by viewModel()
+    private val telemetryConsentViewModel: TelemetryConsentViewModel by viewModel()
 
     /** Source of [LocalParentPalette] for the whole tree (UX-15). */
-    private val parentPaletteViewModel: ParentPaletteViewModel by viewModels()
+    private val parentPaletteViewModel: ParentPaletteViewModel by viewModel()
 
     /** Source of [LocalFamilyView]: where each record stands for the family on screen. */
-    private val familyViewViewModel: FamilyViewViewModel by viewModels()
+    private val familyViewViewModel: FamilyViewViewModel by viewModel()
 
     // Google Sign-In Activity Result launcher for sync
     private val googleSignInLauncher = registerForActivityResult(
@@ -200,15 +210,15 @@ class MainActivity : AppCompatActivity() {
         if (data != null) {
             val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(data)
             lifecycleScope.launch {
-                syncViewModel.handleSignInResult(task)
+                syncViewModel.handleSignInResult(credentialManagerService.signInAnswer(task))
             }
         } else {
             val isCanceled = result.resultCode == RESULT_CANCELED
             val message = UiText.Res(
                 if (isCanceled) {
-                    com.coparently.app.R.string.sync_google_sign_in_cancelled
+                    Res.string.sync_google_sign_in_cancelled
                 } else {
-                    com.coparently.app.R.string.sync_google_sign_in_failed
+                    Res.string.sync_google_sign_in_failed
                 }
             )
             Log.w("MainActivity", "Google sign-in aborted: resultCode=${result.resultCode}")
@@ -223,7 +233,20 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // Again here: the framework resets the default locale on a configuration change, and one
+        // it counts as no change at all reaches no callback that would set it back.
+        AppLocale.follow(this)
         ClockFormat.follow(this)
+    }
+
+    /**
+     * Gives the activity its base context in the language the app speaks ([AppLocale]), before
+     * AppCompat's delegate wraps it. AppCompat keeps a locale it finds on the base context as part
+     * of its configuration overlay, applies night mode beside it, and puts a per-app choice below
+     * Android 13 on top, so a choice still wins.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.inAppLanguage())
     }
 
     /**
@@ -247,6 +270,13 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
+        // After AppCompat has applied a per-app choice (and set the default locale list itself)
+        // and before anything is composed: Compose's Locale.current, and so Compose
+        // Multiplatform's strings, java.time and number formats, follow the process's default,
+        // which this makes the language the app speaks. Below Android 13 the choice is mirrored
+        // for the pushes and workers of a process no activity has started.
+        AppLocale.rememberChoice(this)
+        AppLocale.follow(this)
         // Before the first frame, so no time is ever drawn in the language's format first.
         ClockFormat.follow(this)
 
@@ -256,8 +286,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         // While the app is on screen, the Today widget learns the parents' names from the same
-        // source every screen uses; the widget itself cannot reach the co-parent's.
+        // source every screen uses; the widget itself cannot reach the co-parent's. And its lines
+        // follow a per-app language chosen below Android 13, which recreates this activity and
+        // reaches no other callback.
         todayWidgetRefresher.followParents(this)
+        todayWidgetRefresher.followLanguage()
 
         // Enable edge-to-edge display for modern Android UI
         // This makes the app draw behind the system bars
@@ -265,7 +298,7 @@ class MainActivity : AppCompatActivity() {
 
         // Notification permission is requested contextually (Settings push toggle,
         // event reminder selection) instead of on every cold start — see
-        // NotificationPermission.kt.
+        // :shared-ui's PermissionRequesters.kt.
 
         // Initialize notifications
         try {
@@ -333,38 +366,44 @@ class MainActivity : AppCompatActivity() {
                 firebaseAuthService.getAuthStateFlow().map { it?.uid }
             }.collectAsStateWithLifecycle(initialValue = firebaseAuthService.getCurrentUser()?.uid)
 
-            // Provide Google Sign-In callback through CompositionLocal
-            val googleSignInCallback: (android.content.Intent) -> Unit = remember(googleSignInLauncher) {
-                {
-                        intent ->
-                    googleSignInLauncher.launch(intent)
-                }
+            // Google's sign-in for Google Calendar (`presentation/platform/GoogleCalendarSignIn`),
+            // launched through this activity's result, whose answer reaches [syncViewModel].
+            val googleCalendarSignIn = remember(googleSignInLauncher) {
+                AndroidGoogleCalendarSignIn(credentialManagerService) { intent -> googleSignInLauncher.launch(intent) }
             }
+            // The sign-in screen's credential sheets (`presentation/platform/CredentialSignIn`), on
+            // this activity, which Credential Manager hosts them on; the ViewModel keeps none of it.
+            val credentialSignIn = remember { AndroidCredentialSignIn(this@MainActivity, credentialAuthenticator) }
 
-            CoPlanlyTheme(darkTheme = useDarkTheme) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    // Snackbars that outlive the screen that raised them (D-25), shown by the
-                    // navigation graph's root Scaffold.
-                    val appMessages = rememberAppMessages()
-
-                    CompositionLocalProvider(
-                        LocalGoogleSignInCallback provides googleSignInCallback,
-                        LocalParentPalette provides parentPalette,
-                        LocalFamilyView provides familyView,
-                        LocalAppMessages provides appMessages,
-                        LocalPhotoViewerUid provides photoViewerUid
+            // Every platform capability the shared screens read (`presentation/platform/`, MON-24
+            // phase 2, Task 11), from this activity.
+            ProvideAndroidPlatform {
+                CoPlanlyTheme(darkTheme = useDarkTheme) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
                     ) {
-                        NavGraph(
-                            navController = navController,
-                            syncViewModel = syncViewModel,
-                            pendingInviteCodes = pendingInviteCodes,
-                            pendingChatOpen = pendingChatOpen,
-                            pendingDestinationOpen = pendingDestinationOpen
-                        )
+                        val navController = rememberNavController()
+                        // Snackbars that outlive the screen that raised them (D-25), shown by the
+                        // navigation graph's root Scaffold.
+                        val appMessages = rememberAppMessages()
+
+                        CompositionLocalProvider(
+                            LocalGoogleCalendarSignIn provides googleCalendarSignIn,
+                            LocalCredentialSignIn provides credentialSignIn,
+                            LocalParentPalette provides parentPalette,
+                            LocalFamilyView provides familyView,
+                            LocalAppMessages provides appMessages,
+                            LocalPhotoViewerUid provides photoViewerUid
+                        ) {
+                            NavGraph(
+                                navController = navController,
+                                syncViewModel = syncViewModel,
+                                pendingInviteCodes = pendingInviteCodes,
+                                pendingChatOpen = pendingChatOpen,
+                                pendingDestinationOpen = pendingDestinationOpen
+                            )
+                        }
                     }
                 }
             }

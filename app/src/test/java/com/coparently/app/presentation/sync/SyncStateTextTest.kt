@@ -1,11 +1,18 @@
 package com.coparently.app.presentation.sync
 
-import com.coparently.app.R
 import com.coparently.app.data.remote.google.GoogleAccessFailure
 import com.coparently.app.data.sync.SyncFailure
 import com.coparently.app.data.sync.SyncResult
 import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_error_reconnect
+import com.coparently.app.resources.sync_google_error_unreachable
+import com.coparently.app.resources.sync_google_progress_fetching
+import com.coparently.app.resources.sync_google_progress_found
+import com.coparently.app.resources.sync_google_synced
+import com.coparently.app.resources.sync_google_synced_truncated
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -24,45 +31,50 @@ class SyncStateTextTest {
     private val from = LocalDate.of(2026, 8, 24)
     private val until = LocalDate.of(2027, 8, 24)
 
+    // The import reports kotlinx-datetime dates since it moved to `:shared-data` (MON-24 phase 2,
+    // Task 8g), and `UiText.Date` carries them as they are since it moved to `:shared-ui` (slice 9c).
+    private val start = from.toKotlinLocalDate()
+    private val end = until.toKotlinLocalDate()
+
     @Test
     fun `a truncated import is not worded like a complete one`() {
         // CQ-7: the old import stopped at the 50th event and said what a complete one said.
-        val cutShort = SyncResult.Success(synced = 50, from = from, until = until, truncated = true).toSyncState()
-        val complete = SyncResult.Success(synced = 50, from = from, until = until, truncated = false).toSyncState()
+        val cutShort = SyncResult.Success(synced = 50, from = start, until = end, truncated = true).toSyncState()
+        val complete = SyncResult.Success(synced = 50, from = start, until = end, truncated = false).toSyncState()
 
         assertEquals(
             GoogleCalendarSyncState.Success(
                 UiText.Plural(
-                    R.plurals.sync_google_synced_truncated,
+                    Res.plurals.sync_google_synced_truncated,
                     50,
-                    listOf(50, UiText.Date(from), UiText.Date(until))
+                    listOf(50, UiText.Date(start), UiText.Date(end))
                 )
             ),
             cutShort
         )
         assertNotEquals(cutShort, complete)
         assertEquals(
-            R.plurals.sync_google_synced,
+            Res.plurals.sync_google_synced,
             ((complete as GoogleCalendarSyncState.Success).message as UiText.Plural).id
         )
     }
 
     @Test
     fun `the window read is passed as dates, formatted in the reader's locale`() {
-        val state = SyncResult.Success(synced = 3, from = from, until = until, truncated = false).toSyncState()
+        val state = SyncResult.Success(synced = 3, from = start, until = end, truncated = false).toSyncState()
 
         val text = (state as GoogleCalendarSyncState.Success).message as UiText.Plural
-        assertEquals(listOf(3, UiText.Date(from), UiText.Date(until)), text.args)
+        assertEquals(listOf(3, UiText.Date(start), UiText.Date(end)), text.args)
     }
 
     @Test
     fun `progress names its stage, and the count it found`() {
         assertEquals(
-            GoogleCalendarSyncState.Syncing(UiText.Res(R.string.sync_google_progress_fetching)),
+            GoogleCalendarSyncState.Syncing(UiText.Res(Res.string.sync_google_progress_fetching)),
             SyncResult.Progress(SyncStage.FETCHING).toSyncState()
         )
         assertEquals(
-            GoogleCalendarSyncState.Syncing(UiText.Plural(R.plurals.sync_google_progress_found, 7)),
+            GoogleCalendarSyncState.Syncing(UiText.Plural(Res.plurals.sync_google_progress_found, 7)),
             SyncResult.Progress(SyncStage.FOUND, found = 7).toSyncState()
         )
     }
@@ -83,11 +95,11 @@ class SyncStateTextTest {
         assertEquals(SyncFailure.GOOGLE_UNREACHABLE, SyncFailure.forAccess(GoogleAccessFailure.UNAVAILABLE))
         assertEquals(SyncFailure.NOT_SIGNED_IN_GOOGLE, SyncFailure.forAccess(GoogleAccessFailure.NOT_CONNECTED))
         assertEquals(
-            GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_error_reconnect)),
+            GoogleCalendarSyncState.Error(UiText.Res(Res.string.sync_google_error_reconnect)),
             SyncResult.Error(SyncFailure.RECONNECT).toSyncState()
         )
         assertEquals(
-            GoogleCalendarSyncState.Error(UiText.Res(R.string.sync_google_error_unreachable)),
+            GoogleCalendarSyncState.Error(UiText.Res(Res.string.sync_google_error_unreachable)),
             SyncResult.Error(SyncFailure.GOOGLE_UNREACHABLE).toSyncState()
         )
     }

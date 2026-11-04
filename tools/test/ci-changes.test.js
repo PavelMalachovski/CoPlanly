@@ -5,7 +5,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { decide, format, everything, nothing } = require('../ci-changes.js');
+const {
+  decide, format, everything, nothing, decideEmulators, formatEvent, EMULATOR_SENSITIVE, UPGRADE_INPUTS,
+} = require('../ci-changes.js');
 
 const legs = (decision) => decision.matrix.map((leg) => leg['api-level']);
 
@@ -107,6 +109,43 @@ test('the database, the manifest and the instrumented tests run all three emulat
   }
 });
 
+test('the database moved to shared-data still counts as the database (MON-24 phase 2)', () => {
+  // Any shared-data path runs everything already; these hold the database's own rules should
+  // that ever be narrowed.
+  const database = [
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/entity/EventEntity.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/dao/EventDao.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/local/Converters.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/local/DatabaseMigrations.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/local/security/EncryptedDatabase.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/security/EncryptionManager.kt',
+    'shared-data/src/iosMain/kotlin/com/coparently/app/data/local/IosDatabase.kt',
+  ];
+  for (const path of database) {
+    assert.ok(EMULATOR_SENSITIVE.test(path), path);
+    assert.ok(UPGRADE_INPUTS.test(path), path);
+    assert.deepEqual(legs(decide([path])), [26, 30, 35], path);
+    assert.equal(decide([path]).upgrade, true, path);
+  }
+  for (const path of [
+    'shared-data/src/androidMain/kotlin/com/coparently/app/data/crashlytics/CrashlyticsManager.kt',
+    'shared-data/src/androidMain/kotlin/com/coparently/app/di/DatabaseBuilder.kt',
+    'shared-data/src/commonMain/kotlin/com/coparently/app/di/DatabaseName.kt',
+  ]) {
+    assert.ok(UPGRADE_INPUTS.test(path), path);
+  }
+  // The rest of shared-data is not the database, whatever SHARED decides for it.
+  for (const path of [
+    'shared-data/src/commonMain/kotlin/com/coparently/app/data/http/WebAddress.kt',
+    'shared-data/build.gradle.kts',
+    'shared/src/commonMain/kotlin/com/coparently/app/data/local/Nothing.kt',
+  ]) {
+    assert.equal(EMULATOR_SENSITIVE.test(path), false, path);
+    assert.equal(UPGRADE_INPUTS.test(path), false, path);
+  }
+});
+
 test('the build and the workflow run every Android job; the workflow runs the web job too', () => {
   for (const path of [
     'app/build.gradle.kts',
@@ -131,7 +170,7 @@ test('an unfamiliar path is never skipped by the Android gate', () => {
 test('format writes one GITHUB_OUTPUT line per key, the matrix as one-line JSON', () => {
   const lines = format(decide(['app/src/main/res/values/strings.xml'])).trim().split('\n');
   assert.deepEqual(lines.map((l) => l.split('=')[0]),
-    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web']);
+    ['android', 'e2e', 'screenshots', 'upgrade', 'matrix', 'r8runtime', 'web', 'shared']);
   const matrix = JSON.parse(lines[4].slice('matrix='.length));
   assert.equal(matrix[0]['api-level'], 30);
 });
@@ -151,11 +190,12 @@ test('the upgrade job runs on the database, the stored preferences, the schemas 
     'app/src/main/java/com/coparently/app/data/security/EncryptionManager.kt',
     'app/src/main/java/com/coparently/app/data/crashlytics/CrashlyticsManager.kt',
     'app/src/main/java/com/coparently/app/domain/telemetry/TelemetryConsent.kt',
-    'app/src/main/java/com/coparently/app/di/DatabaseModule.kt',
+    'app/src/main/java/com/coparently/app/di/DatabaseBuilder.kt',
+    'app/src/main/java/com/coparently/app/di/koin/DatabaseModule.kt',
     'app/schemas/com.coparently.app.data.local.CoPlanlyDatabase/44.json',
     'app/src/main/AndroidManifest.xml',
     'app/src/androidTest/java/com/coparently/app/upgrade/UpgradeSeedTest.kt',
-    'app/src/androidTest/java/com/coparently/app/HiltTestRunner.kt',
+    'app/src/androidTest/java/com/coparently/app/KoinTestRunner.kt',
     'tools/upgrade/run-upgrade-test.sh',
     'tools/stop-emulator.sh',
     // A wire-format change: the base build's WireContractTest reads the new documents in this job.
@@ -199,10 +239,10 @@ test('the R8 runtime probe runs for the models, their converters, the probe and 
     'app/src/main/java/com/coparently/app/domain/model/MedicalProfile.kt',
     'app/src/main/java/com/coparently/app/data/repository/ChildInfoRepositoryImpl.kt',
     'app/src/main/java/com/coparently/app/data/local/Converters.kt',
-    'app/src/main/java/com/coparently/app/di/SerializationModule.kt',
+    'shared/src/commonMain/kotlin/com/coparently/app/domain/serialization/StoredJson.kt',
     'app/src/main/java/com/coparently/app/presentation/event/EventViewModel.kt',
     'app/src/main/AndroidManifest.xml',
-    'app/src/r8Test/java/com/coparently/app/r8probe/R8GsonProbe.kt',
+    'app/src/r8Test/java/com/coparently/app/r8probe/R8JsonProbe.kt',
     'app/proguard-r8test.pro',
     'tools/run-r8-probe.sh',
     'tools/check-r8-probe.js',
@@ -213,7 +253,7 @@ test('the R8 runtime probe runs for the models, their converters, the probe and 
   }
 });
 
-test('the R8 runtime probe skips what Gson and R8 never see', () => {
+test('the R8 runtime probe skips what StoredJson and R8 never see', () => {
   for (const path of [
     'app/src/main/java/com/coparently/app/presentation/home/HomeScreen.kt',
     'app/src/main/res/values/strings.xml',
@@ -271,4 +311,146 @@ test('a change to web-tests alone runs no Android job, no e2e and no upgrade', (
   assert.equal(d.e2e, false);
   assert.equal(d.upgrade, false);
   assert.equal(d.web, true);
+});
+
+test('a shared-module change runs the shared jobs and every Android job, on every emulator leg', () => {
+  const d = decide(['shared/src/commonMain/kotlin/x.kt']);
+  assert.equal(d.shared, true);
+  assert.equal(d.android, true);
+  assert.equal(d.e2e, true);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.upgrade, true);
+  assert.equal(d.r8runtime, true);
+  assert.deepEqual(legs(d), [26, 30, 35]);
+  // The Android app and its build do not reach the web page or the calendar feed.
+  assert.equal(d.web, false);
+});
+
+test('a shared-data change is decided as a shared change - every Android job and the shared jobs', () => {
+  // The data layer's module (MON-24 phase 2): the app compiles it, as it compiles `shared/`.
+  const d = decide(['shared-data/src/commonMain/kotlin/com/coparently/app/data/school/bakalari/BakalariClient.kt']);
+  assert.equal(d.shared, true);
+  assert.equal(d.android, true);
+  assert.equal(d.e2e, true);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.upgrade, true);
+  assert.equal(d.r8runtime, true);
+  assert.deepEqual(legs(d), [26, 30, 35]);
+  assert.equal(d.web, false);
+});
+
+test('a shared-ui string or screen change is decided as the app path it stands for, plus the shared jobs', () => {
+  // The strings moved from app/src/main/res/ (MON-24 phase 2, Task 9); the screens follow.
+  const d = decide([
+    'shared-ui/src/commonMain/composeResources/values-de/home_strings.xml',
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/home/HomeScreen.kt',
+  ]);
+  assert.equal(d.shared, true);
+  assert.equal(d.android, true);
+  assert.equal(d.e2e, false);
+  assert.equal(d.screenshots, true);
+  assert.equal(d.upgrade, false);
+  assert.equal(d.r8runtime, false);
+  assert.deepEqual(legs(d), [30]);
+  assert.equal(d.web, false);
+  // As in the app: presentation/common is not UI-only, and presentation/event reaches the R8 probe.
+  assert.equal(decide(['shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/common/ParentsSource.kt']).e2e, true);
+  assert.equal(decide(['shared-ui/src/commonMain/kotlin/com/coparently/app/presentation/event/EventDraft.kt']).r8runtime, true);
+  // Its tests stand for the app's unit tests.
+  const tests = decide(['shared-ui/src/commonTest/kotlin/com/coparently/app/presentation/home/HomeWeekTest.kt']);
+  assert.equal(tests.e2e, false);
+  assert.equal(tests.shared, true);
+});
+
+test('the rest of shared-ui is the build: its build file and Kotlin outside presentation/', () => {
+  for (const path of [
+    'shared-ui/build.gradle.kts',
+    'shared-ui/src/commonMain/kotlin/com/coparently/app/di/UiModules.kt',
+    'shared-ui/src/iosMain/kotlin/com/coparently/app/MainViewController.kt',
+  ]) {
+    const d = decide([path]);
+    assert.equal(d.shared, true, path);
+    assert.equal(d.e2e, true, path);
+    assert.equal(d.upgrade, true, path);
+    assert.deepEqual(legs(d), [26, 30, 35], path);
+  }
+});
+
+test('the shared jobs run on the module, the root and module build files and the workflow', () => {
+  for (const path of [
+    'shared/build.gradle.kts',
+    'shared/src/commonTest/kotlin/com/coparently/app/domain/files/HexDigestTest.kt',
+    'shared/src/iosMain/kotlin/x.kt',
+    'shared-data/build.gradle.kts',
+    'shared-data/src/commonTest/kotlin/com/coparently/app/data/http/WebAddressVectorsTest.kt',
+    'shared-data/src/iosMain/kotlin/com/coparently/app/data/http/HttpClients.ios.kt',
+    'shared-ui/build.gradle.kts',
+    'shared-ui/src/commonMain/composeResources/values/strings.xml',
+    'build.gradle.kts',
+    'settings.gradle.kts',
+    'gradle.properties',
+    'gradle/wrapper/gradle-wrapper.properties',
+    'app/build.gradle.kts',
+    '.github/workflows/ci.yml',
+  ]) {
+    assert.equal(decide([path]).shared, true, path);
+  }
+  assert.equal(everything().shared, true);
+});
+
+test('the shared jobs skip what the module cannot read', () => {
+  for (const path of [
+    'docs/x.md',
+    'CLAUDE.md',
+    'functions/index.js',
+    'firestore.rules',
+    'app/src/main/java/com/coparently/app/presentation/home/HomeScreen.kt',
+    'app/src/main/res/values/strings.xml',
+    'tools/ci-report.js',
+  ]) {
+    assert.equal(decide([path]).shared, false, path);
+  }
+  assert.equal(nothing().shared, false);
+});
+
+test('a draft pull request runs the emulator jobs only with the full-ci label', () => {
+  const draft = { EVENT_NAME: 'pull_request', EVENT_ACTION: 'synchronize', PR_DRAFT: 'true', PR_FULL_CI: 'false' };
+  assert.deepEqual(decideEmulators(draft), { emulators: false, unrelatedLabel: false, skippedOnDraft: true });
+  assert.equal(decideEmulators({ ...draft, PR_FULL_CI: 'true' }).emulators, true);
+  assert.equal(decideEmulators({ ...draft, PR_FULL_CI: 'true' }).skippedOnDraft, false);
+  // Labelling with full-ci starts the run that carries them.
+  const labelled = { ...draft, EVENT_ACTION: 'labeled', LABEL_NAME: 'full-ci', PR_FULL_CI: 'true' };
+  assert.deepEqual(decideEmulators(labelled), { emulators: true, unrelatedLabel: false, skippedOnDraft: false });
+});
+
+test('a pull request that is ready for review runs the emulator jobs', () => {
+  for (const action of ['opened', 'synchronize', 'reopened', 'ready_for_review']) {
+    const decision = decideEmulators({ EVENT_NAME: 'pull_request', EVENT_ACTION: action, PR_DRAFT: 'false', PR_FULL_CI: 'false' });
+    assert.deepEqual(decision, { emulators: true, unrelatedLabel: false, skippedOnDraft: false }, action);
+  }
+  // Missing facts are not a draft: a gate that cannot read its input must not silently stop testing.
+  assert.equal(decideEmulators({ EVENT_NAME: 'pull_request' }).emulators, true);
+});
+
+test('a push to main and a manual run always run the emulator jobs', () => {
+  assert.deepEqual(decideEmulators({ EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main' }),
+    { emulators: true, unrelatedLabel: false, skippedOnDraft: false });
+  assert.equal(decideEmulators({ EVENT_NAME: 'workflow_dispatch' }).emulators, true);
+  // A draft flag only means something on a pull request.
+  assert.equal(decideEmulators({ EVENT_NAME: 'workflow_dispatch', PR_DRAFT: 'true' }).emulators, true);
+});
+
+test('an unrelated label starts a run that does nothing, on a draft or not', () => {
+  for (const draft of ['true', 'false']) {
+    const decision = decideEmulators({ EVENT_NAME: 'pull_request', EVENT_ACTION: 'labeled', LABEL_NAME: 'bug', PR_DRAFT: draft, PR_FULL_CI: 'false' });
+    assert.deepEqual(decision, { emulators: false, unrelatedLabel: true, skippedOnDraft: false }, draft);
+  }
+  // Even when the pull request already carries full-ci: that label's own run did the work.
+  assert.equal(decideEmulators({ EVENT_NAME: 'pull_request', EVENT_ACTION: 'labeled', LABEL_NAME: 'bug', PR_DRAFT: 'true', PR_FULL_CI: 'true' }).emulators, false);
+});
+
+test('the event decision prints three output lines', () => {
+  assert.equal(formatEvent(decideEmulators({ EVENT_NAME: 'pull_request', PR_DRAFT: 'true' })),
+    'emulators=false\nunrelated_label=false\nemulators_skipped_on_draft=true\n');
+  assert.equal(format(nothing()).includes('android=false'), true);
 });

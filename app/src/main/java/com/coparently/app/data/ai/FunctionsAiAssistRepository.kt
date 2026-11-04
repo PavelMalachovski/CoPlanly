@@ -1,27 +1,26 @@
 package com.coparently.app.data.ai
 
-import android.util.Log
+import com.coparently.app.data.platform.logger
 import com.coparently.app.domain.ai.AiAssistRepository
 import com.coparently.app.domain.ai.AiAssistResult
+import com.coparently.app.domain.time.IsoText
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.YearMonth
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.datetime.YearMonth
 
 /**
  * [AiAssistRepository] over the `aiAssist` callable, through the app's one [FirebaseFunctions]
- * instance — `FirebaseModule.FUNCTIONS_REGION`, `europe-west3`, where the model is called too.
+ * instance — `FUNCTIONS_REGION` in `di/koin/FirebaseModule.kt`, `europe-west3`, where the model
+ * is called too.
  *
  * **Every failure is an answer, never an exception**, as in `ExportReceipts`: a refusal is
  * classified by [AiAssistErrors], and offline, a timeout or a network error is
  * [AiAssistResult.Unavailable]. Nothing here logs a request's or an answer's text.
  */
-@Singleton
-class FunctionsAiAssistRepository @Inject constructor(
+class FunctionsAiAssistRepository(
     private val functions: FirebaseFunctions
 ) : AiAssistRepository {
 
@@ -44,7 +43,8 @@ class FunctionsAiAssistRepository @Inject constructor(
             mapOf(
                 KEY_TASK to TASK_MONTH_SUMMARY,
                 KEY_LOCALE to locale,
-                KEY_MONTH to month.toString(),
+                // `java.time.YearMonth.toString()`'s text, which this sent until MON-24.
+                KEY_MONTH to IsoText.yearMonth(month),
                 KEY_STATS to stats
             )
         )
@@ -63,14 +63,14 @@ class FunctionsAiAssistRepository @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: FirebaseFunctionsException) {
-        Log.w(TAG, "aiAssist refused: ${e.code}")
+        logger.w(TAG, "aiAssist refused: ${e.code}")
         AiAssistErrors.classify(e.code.name, e.details, e.message)
     } catch (
         // Offline, a TLS or socket failure, a backend not yet deployed: none of them is the
         // parent's to fix beyond "try again", which is what Unavailable says.
         @Suppress("TooGenericExceptionCaught") e: Exception
     ) {
-        Log.w(TAG, "aiAssist could not be reached", e)
+        logger.w(TAG, "aiAssist could not be reached", e)
         AiAssistResult.Unavailable
     }
 

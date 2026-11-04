@@ -49,7 +49,7 @@ adb logcat -v time EncryptedDatabase:V DatabaseKey:V SyncService:V SyncWorker:V 
   MessageRepo:V ChatViewModel:V CoPlanlyMessaging:V PetsViewModel:V ChildInfoViewModel:V \
   CoPlanlyUpload:V CoPlanlyReceiptScan:V AccountDeletionService:V SelectedFamily:V \
   CustodyModelRepo:V HomeViewModel:V UserRepository:V HealthConsentManager:V \
-  HealthConsentViewModel:V DepartedThreadSource:V TermsOfServiceLink:V AndroidRuntime:E *:S
+  HealthConsentViewModel:V DepartedThreadSource:V AndroidOpenUrl:V AndroidRuntime:E *:S
 ```
 
 `AndroidRuntime:E` is where a crash shows up, including a failed Room migration
@@ -70,8 +70,8 @@ TalkBack, AppCompat's per-app locale switching, or a screen assembled from real 
 checks stay. A check marked **(screenshots)** only needs a glance on the phone, or none.
 
 **What CI now covers.** The `instrumented` job (API 26/30/35 emulators, debug build, Firebase mocked by
-`FakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
-(the minified `r8Test` build, API 30) runs the `R8GsonProbe` row, and the `web` job (no Android
+`fakeFirebaseModule`, Room real) runs these on every Android pull request, the `r8-runtime` job
+(the minified `r8Test` build, API 30) runs the `R8JsonProbe` row, and the `web` job (no Android
 at all: Chromium and Node against the Functions emulator) runs the `web-tests/` row. A check they cover is
 marked **[CI]** below: CI saw the mechanism work, so on the phone it is a quick confirmation, and
 a failure there points at something the emulator does not have — real Firebase, real data, a
@@ -85,7 +85,7 @@ Play install, a vendor skin.
 | `data/remote/firebase/PushNotificationTest` | §3.7 and every push's wording: real data payloads through `PushNotifier` (what `CoPlanlyMessagingService` hands each message to), read back from `NotificationManager.activeNotifications` — every worded type in English and German, composed in all five languages with its names shown; an unknown type (even with a `title`/`body`) and a push for another account post nothing; each tap's PendingIntent matched to its deep link, `familyId` extra and request code, two families kept apart; every type posted to its channel and naming its screen (D-13). Runs on all three legs, 16 KB included (not a Hilt test) | FCM delivering it, the shade as the phone's skin draws it, a tap actually switching family (§5.2), and the language on Android 12 or older when the app language differs from the phone's (a push follows the phone's there) |
 | `presentation/navigation/MainNavigationSmokeTest` | A signed-in launch visiting Home, Calendar (month/week/day), Chat, Expenses and Settings without a crash; bottom bar on the tabs only; icon-only controls named and ≥ 48 dp | Everything that needs data, a co-parent or a server; TalkBack itself (§3.9) |
 | `upgrade/UpgradeSeedTest` → `adb install -r` → `upgrade/UpgradeVerifyTest` (the **`upgrade` job**, API 30, not `instrumented`) | §2.1 and §3.9's SEC-5 box for **one release step**: the base build (the PR's base commit, or the previous `main`) writes a family's rows into eight tables through its own SQLCipher open path, plus a refresh token, settings and the telemetry answer into the sealed store; this build is installed over it keeping the data, and must open the database with the **recovered** passphrase (the wrapped value unchanged), run every migration to the newest exported schema, read every row back (six tables also through its own DAOs), leave the file ciphertext, and keep the preferences and the consent answer | An upgrade from a build older than the base (a longer migration chain), the plaintext → encrypted conversion of an install that predates SEC-2, a hardware-backed Keystore, a reboot between launches, and a real family's volume of data |
-| `app/src/r8Test/.../R8GsonProbe` — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's Gson half: a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision `TypeToken`s, and the Google Calendar `@Key` models parsed | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
+| `app/src/r8Test/.../R8JsonProbe` (`R8GsonProbe` until MON-24) — not an `androidTest`: the **`r8-runtime`** job runs it inside the *minified* `r8Test` build (`release` plus the probe) on API 30 | §4.1's stored-JSON half (Gson's until MON-24, `StoredJson`'s since, with the same bytes): a child's medical profile (blood type, intolerances, hereditary conditions, a dated vaccination), medications, activities, emergency contacts and school, and a pet, written through the real repositories into Room with the source key names and read back equal; custody swaps, the event draft, the chat and revision mappers (the Google Calendar `@Key` models had a case until google-api-client left in MON-24 phase 2; the import now reads Google's JSON by hand) | The Firestore document itself (the probe never signs in), the co-parent's phone reading it, a real Google Calendar import, and the telemetry check — a signed release build with a real `google-services.json` |
 | `web-tests/verify-page.spec.js`, `calendar-feed.spec.js` — not an `androidTest`: the **`web`** job runs them with Playwright and Node against the Auth, Firestore and Functions emulators | §6's **verification page** in Chromium: receipts reserved and registered through the real callables, then the exported file (a match, with registered time, period, format and size), a copy with one byte changed (no match), the file against another record ID, the ID typed as people retype it, an unknown ID and a mere reservation (not found), a rate limit, a hostile server value shown as text; English and Czech, following the browser and switched by hand; 375 px wide with nothing scrolling sideways; only the fingerprint leaves the browser, and no uid, family id, e-mail or name is on the page or in the answer. The **calendar feed** (§3.11 and §3.13's feed boxes) through Mozilla's `ical.js` plus an octet-level RFC 5545 check — CRLF, 75-octet folding never inside a UTF-8 character, TEXT escaping, UID/DTSTAMP/DTSTART on every event, DTEND after DTSTART, UNTIL matching a floating DTSTART, unique and stable UIDs, every title round-tripping — for `buildFeed` in all five languages and for the real `calendarFeed` endpoint behind a link `createCalendarFeed` minted | The page **hosted** over https at its real address, and `EXPORT_VERIFY_URL` printed on a file; a file that travelled (e-mail, Drive, a USB stick) checked on a real computer in Safari or Firefox; a real calendar app (Apple Calendar on an iPhone, Google Calendar) subscribing to the link, refreshing, and drawing it |
 
 **What the `e2e` job covers between two parents.** Two accounts in one emulator, each with the
@@ -326,15 +326,19 @@ Preconditions: `adb uninstall app.coplanly`, set the system to **dark** theme
     Settings → Account. `PRIVACY_POLICY_URL` is blank until REL-4 hosts the policy.
   - *(optional)* Build once with `-PCOPLANLY_PRIVACY_POLICY_URL=https://example.com`: both
     links appear and open the browser.
-  - **If it fails:** `presentation/common/PrivacyPolicyLink.kt`, log tag `PrivacyPolicyLink`.
+  - **If it fails:** `shared-ui/.../consent/TelemetryConsentScreen.kt` and
+    `settings/SettingsScreen.kt`, which draw the link from `AppBuildValues.privacyPolicyUrl`
+    (`androidBuildValues()` in `presentation/platform/AndroidPlatform.kt`); a link no app opens logs
+    under the tag `AndroidOpenUrl`.
 - [ ] **Notification permission is never requested on cold start.**
   - **Expected:** sign in and finish onboarding, and no system notification dialog appears.
   - **Expected:** the dialog appears the first time you (a) turn on Settings → App →
     Push notifications, or (b) pick a reminder chip in the event form.
   - To re-test, run `adb shell pm revoke app.coplanly android.permission.POST_NOTIFICATIONS`,
     then `adb shell pm clear-permission-flags app.coplanly android.permission.POST_NOTIFICATIONS user-set user-fixed`.
-  - **If it fails:** `presentation/common/NotificationPermission.kt`, `SettingsScreen.kt`,
-    `AddEditEventScreen.kt`.
+  - **If it fails:** `presentation/common/PermissionRequesters.kt` (`:shared-ui`),
+    `presentation/common/AndroidPermissionChecks.kt` and `presentation/platform/AndroidPlatform.kt`
+    (the app), `SettingsScreen.kt`, `AddEditEventScreen.kt`.
 - [ ] **After the Firebase BoM 34 move (audit L-2)**: every Firebase SDK moved a major version
       at once (`-ktx` artifacts gone, BoM 33.7 → 34.4). CI compiles and runs the emulator suites
       against them, but not a real project, Google sign-in or FCM.
@@ -376,9 +380,11 @@ Preconditions: signed out (or the fresh install of §2.2, before signing in). Bu
       policy** row and a **Terms of service** row, each opening its address. In build B neither
       row exists.
 - [ ] Check the line in German and Russian at 1.5× text: it wraps, nothing is cut off.
-- **If it fails:** `presentation/auth/AuthLegalNotice.kt`, `presentation/common/TermsOfServiceLink.kt`
-  and `PrivacyPolicyLink.kt` (tags `TermsOfServiceLink`, `PrivacyPolicyLink`), the
-  `publishedTermsUrl`/`publishedPrivacyPolicyUrl` values in `app/build.gradle.kts`.
+- **If it fails:** `shared-ui/.../auth/AuthLegalNotice.kt`, `consent/TelemetryConsentScreen.kt` and
+  `settings/SettingsScreen.kt`, which read `AppBuildValues` (`androidBuildValues()` in
+  `presentation/platform/AndroidPlatform.kt`; a link no app opens logs under the tag
+  `AndroidOpenUrl`), the `publishedTermsUrl`/`publishedPrivacyPolicyUrl` values in
+  `app/build.gradle.kts`.
 
 ---
 
@@ -614,8 +620,11 @@ who does **not** have today.
 
 **[CI]** `PerAppLocaleTest` sets each of cs, de, ru and uk through
 `AppCompatDelegate.setApplicationLocales` and sees Settings render in it on API 30 — so
-`MainActivity` is still an `AppCompatActivity` and composition follows the choice. It does not tap
-the Settings row, and it cannot see Android 13's system setting or a Play install.
+`MainActivity` is still an `AppCompatActivity` and composition follows the choice — and that
+Compose's own `Locale.current`, which the text read through Compose Multiplatform's resources
+follows (MON-24 phase 2: the colour names, the confirm and cancel of a dialog, Retry, the offline
+line), names the same language. It does not tap the Settings row, and it cannot see Android 13's
+system setting or a Play install.
 
 - [ ] Settings → App → **Language** → **Deutsch**, while the phone is in another language. The
       UI switches at once.
@@ -623,6 +632,41 @@ the Settings row, and it cannot see Android 13's system setting or a Play instal
 - [ ] On Android 13+, system Settings → Apps → CoPlanly → Language shows Deutsch. Change it there
       and the app follows.
 - [ ] Go through Čeština, Русский, Українська and English, then back to **System default**.
+- [ ] On Android 12 or older, with the app in Deutsch and the phone in another language: Settings →
+      App → **My colour** names its colours in German, and a dialog's **Abbrechen** is German too
+      (both are read through Compose Multiplatform since MON-24 phase 2).
+- [ ] The owner's rule (4 November 2026, `AppLocale`): the phone's **first** language when the
+      app ships it, otherwise English, and a per-app choice wins. With the app on **System
+      default**:
+  - [ ] Phone languages **Slovak then Czech**: the whole app is **English** — a dialog's confirm
+        and cancel, Retry, the offline line, the colour names, the snackbars and the dates
+        included. Note any line in Czech or Slovak.
+  - [ ] Phone languages **Czech first** (then anything): the whole app is **Czech**, dates
+        included.
+  - [ ] With the phone in Slovak then Czech, a push (ask the co-parent to send a message or a
+        swap), a request reminder and the Today widget are **English** too; with the phone in
+        Czech first, they are Czech.
+  - [ ] With the phone in Slovak, a new expense still offers euros (the phone's region is read
+        from the phone, not from the app's English).
+  - [ ] With the phone in Slovak then Czech and the system clock on its default ("Use locale
+        default" on; 24-hour format not forced either way), the European English formats: every
+        time is **24-hour** — Day and Week view's hour gutter ("09", "13"), an event's time, the
+        event form's time picker, a push's "Answer by", a request reminder, an event reminder and
+        the Today widget; dates put the day first ("Wed, 4 Nov", "4 Nov 2026") with English
+        month names; an amount reads **"1,234.50 €"** (Android 11 and later) or **"1.234,50 €"**
+        (Android 8–10), the symbol after the number. Note anything 12-hour ("6:00 PM") or
+        month-first ("Nov 4").
+  - [ ] The same phone with **24-hour format turned off** in system settings: every one of those
+        times is 12-hour instead — the parent's own setting wins.
+- [ ] A per-app choice wins: Settings → Language → **Deutsch** on a phone in Slovak then Czech, or
+      in Czech: the app, a push and the widget are **German**. On Android 12 or older, force-stop
+      the app, then have a push arrive before opening it: still German.
+- [ ] **Android 12 or older**, phone in Slovak then Czech, app in **Deutsch**: Settings → Language →
+      **System default**. The app closes and opens again on Home by itself, and then reads in the
+      rule's language — **English** here (Czech on a phone in Czech first) — everywhere, dates and
+      the dialogs' buttons included; nothing German or Slovak is left. Force-stop and relaunch:
+      still English. Choosing **System default** again restarts nothing. On Android 13 or later the
+      same steps switch the language without a restart.
 - [ ] Known and not a failure (AUDIT §4.2): Home's dates may keep the old language until the
       process restarts.
 - **(screenshots)** Whether each translation *fits* — clipping, ellipsis, wrapping at 1.5× text
@@ -704,7 +748,11 @@ the tap actually landing on that screen.
       somebody else invited you to, which sits on your calendar too; each imported event opens
       with **Private** on, and the co-parent's phone never shows it. A connection made on the
       previous build (the full `calendar` scope) still imports after this build is installed over
-      it, without reconnecting.
+      it, without reconnecting. Since MON-24 phase 2 the import calls `events.list` through Ktor
+      (`shared-data/`, `GoogleCalendarApi`) instead of google-api-client, with the same request
+      (`GoogleCalendarRequestShapeTest`); run this check once on that build: an all-day event and a
+      weekly one land on their days, and an import past a page (over 250 events in the year) is
+      whole.
   - **If it fails:** an import that ends the connection at once with "Access expired or was
     revoked" (Google's 403 `insufficient_scope`) means `events.list` refused the scope on this
     account. Revert `GoogleCalendarAccess.SCOPE` to `calendar.events.readonly`, with the privacy
@@ -979,15 +1027,20 @@ widget's own `RemoteViews` in each variant. What only a phone shows:
 - [ ] Leave the phone past midnight, or move the date forward a day in the system settings.
       Within minutes the widget shows the new day.
 - [ ] Switch the **system** to dark theme, and the widget follows it. Switch the app's own theme
-      setting instead, and the widget does not: the launcher draws it.
+      setting instead, and the widget does not: it follows the system's night mode.
 - [ ] Tap the widget, and the app opens.
 - [ ] Sign out. The widget says "Sign in to CoPlanly to see your day." and names nobody. Sign in
       as another account: until that account's app has been opened once, the widget names nobody
       from the first account.
-- [ ] On Android 13+, set the app's language to Russian: the widget speaks Russian. On Android 12
-      and older it follows the device language, as pushes do.
+- [ ] Set the app's language to Russian (Settings → Language): the widget speaks Russian within a
+      few seconds, on any Android version. Back to **System default** (on Android 12 or older the
+      app restarts): the widget speaks the rule's language again (§3.6).
+- [ ] With the app on System default and its process stopped (force-stop it), change the
+      **phone's** first language between Czech and German in system settings: the widget follows
+      within a few seconds, without the app being opened. If it does not, note how long it took
+      (the next sync tick, midnight or the hourly backstop redraws it at the latest).
 - **If it fails:** `presentation/widget/` — `TodayWidget.kt` (loading, the redraw stamp),
-  `TodayWidgetRefresher.kt` (Room observer, names, midnight), `TodayWidgetLines.kt` (`TodayWidgetText`, the wording);
+  `TodayWidgetRefresher.kt` (Room observer, names, language, midnight), `TodayWidgetLines.kt` (`TodayWidgetText`, the wording);
   `res/xml/today_widget_info.xml`.
 
 ### 3.16 The tour's defects, fixed in week 7 · 1P, "Later" check 2P
@@ -1064,9 +1117,15 @@ is the first time the import meets a real server. Needs a parent (or student) Ba
       connection is remembered.
 - [ ] Two children at the same school: connect each with its own Bakaláři login (Bakaláři issues
       one per child); each child's events carry that child.
-- **If it fails:** `data/school/bakalari/` (parsers, client), `domain/school/SchoolImportPlanner`,
-  `presentation/school/`. Capture the failing JSON (with names and ids redacted) and add it to
-  `app/src/test/resources/school/bakalari/` with a test.
+- **Since MON-24 phase 2** the client talks to the school through Ktor's OkHttp engine (OkHttp
+  5.3.2, from 4.12), from `shared-data/`. The requests, the timeouts and the redirects are pinned
+  to what OkHttp 4.12 did (`BakalariRequestShapeTest`, `BakalariRedirectsTest`), but no real school has answered the new client yet: this section,
+  run once on that build, is its acceptance.
+- **If it fails:** `data/school/bakalari/` (parsers and the authorizer in the app, the client and
+  the directory in `shared-data/`), `data/http/` (`shared-data/`: the Ktor client, the addresses as
+  OkHttp wrote them), `domain/school/SchoolImportPlanner`, `presentation/school/`. Capture the
+  failing JSON (with names and ids redacted) and add it to `app/src/test/resources/school/bakalari/`
+  with a test.
 
 ### 3.19 A child's health details need a consent first (L-2) · 1P, withdrawal check 2P
 
@@ -1176,7 +1235,8 @@ online recognizer (`OnDeviceSpeechDictation`'s KDoc says why).
 - [ ] **Leaving.** While listening, press Home, or switch tab: listening stops (the system's
       microphone indicator goes off).
 - **If it fails:** `data/dictation/OnDeviceSpeechDictation.kt`, `presentation/chat/DictationViewModel.kt`,
-  `presentation/chat/ChatDictation.kt`, `presentation/common/MicrophonePermission.kt`.
+  `presentation/chat/ChatDictation.kt`, `presentation/common/PermissionRequesters.kt` (`:shared-ui`),
+  `presentation/common/AndroidPermissionChecks.kt` and `presentation/platform/AndroidPlatform.kt`.
 
 ### 3.22 AI reply suggestions and the month in review · 1P, paired account, debug build
 
@@ -1568,14 +1628,29 @@ phones and the deployed index.
   `presentation/changerequests/InboxItems.kt`, `data/family/OtherFamiliesSignals.kt`,
   `data/repository/ProfessionalRepositoryImpl.kt` (`observeFamilyGrants(familyId)`), `firestore.indexes.json`.
 
+### 3.34 Camera buttons on a phone with a camera · 1P
+
+Since MON-24 phase 2 (slices 11e and 11g) a camera button is drawn only where
+`CameraCapture.available` says the phone has a camera. Every CI and UI-tour emulator boots with
+`-camera-back none`, so no automated run shows these buttons.
+
+- [ ] **Receipt** (1P). On a phone with a camera, Expenses → **+** offers to photograph a receipt; the
+      photo is taken, attached and scanned as before.
+- [ ] **Vault** (1P). Family → Documents → add offers the camera beside the file picker; a photo is
+      filed as a document.
+- **If it fails:** `presentation/platform/CameraCapture.kt` (`:shared-ui`) and its Android half in
+  `app/…/presentation/platform/AndroidPlatform.kt`.
+
 ---
 
 ## 4. Release-build checks
 
 ### 4.1 REL-7: R8 and Gson on a device · 2P, fallback 1P
 
-A green `assembleRelease` proves R8 ran. It does not prove that Gson still finds its field names.
-That defect has shipped once before.
+A green `assembleRelease` proves R8 ran. It does not prove that the stored JSON still carries its
+field names. That defect has shipped once before, under Gson. Since MON-24 the app's JSON is
+`StoredJson` (kotlinx.serialization, writing the bytes Gson wrote), whose keys are literals R8
+cannot rename; the checks below are unchanged, because they test the result, not the library.
 
 **[CI] since September 2026, as far as one process can go.** The `r8-runtime` job runs the
 minified `r8Test` build (`release` plus the probe in `app/src/r8Test/`) on an emulator and writes
@@ -1583,7 +1658,7 @@ this section's child — the same medical profile, activity and emergency contac
 `ChildInfoRepositoryImpl` into Room, then checks the stored JSON carries `bloodType`,
 `intolerances`, `hereditaryConditions` and `vaccinations` and reads back complete; a pet, custody
 swaps, the event draft and the chat mappers the same way (CLAUDE.md, the `r8-runtime` job). The
-Firestore map is built from the same Gson call on the same instance, so a green job makes the
+Firestore map is built from the same `StoredJson` text as the Room column, so a green job makes the
 console check below a confirmation. What the job cannot do is below: it never signs in, so the
 document itself, the co-parent's phone and the telemetry check are still the phone's.
 
@@ -1595,15 +1670,20 @@ the same on B's phone if you have one.
       emergency contact. **[CI]** for the Room half (`r8-runtime`).
 - [ ] Firebase console → `child_info/{id}`: `medicalProfile` has **readable keys**
       (`bloodType`, `intolerances`, `hereditaryConditions`, `vaccinations`), not `a`, `b`, `c`.
-      Each list is non-empty. **[CI]** for the keys Gson writes; the document itself is the
-      phone's.
+      Each list is non-empty. **[CI]** for the keys `StoredJson` writes; the document itself is
+      the phone's.
 - [ ] **2P:** on B's phone (also on build C), the same child's medical profile is **complete and
       non-empty**.
 - [ ] **Fallback (1P):** run `adb shell pm clear app.coplanly`, sign in as A again, and let it
       sync. The medical profile comes back from Firestore complete. That covers both directions
-      of the Gson mapping on a release build.
-- [ ] A Google Calendar import on the release build works. It uses the `@Key` models. **[CI]** for
-      parsing a page into them (`r8-runtime`); the OAuth sign-in and the network are the phone's.
+      of the JSON mapping on a release build.
+- [ ] A Google Calendar import on the release build works. It used google-api-client's `@Key`
+      models, which R8 could break, until MON-24 phase 2; it now reads Google's JSON by hand on Ktor
+      (`shared-data/`), with nothing R8 can rename, and Ktor ships its own R8 rules. **[CI]** for the
+      client and the parser on a recorded page in the minified build (`HttpImportProbe`,
+      `r8-runtime`); the OkHttp engine is the phone's. The release
+      build is still where R8 would refuse a class Ktor references (`app/proguard-rules.pro`), so
+      the import on it is worth one run; the OAuth sign-in and the network are the phone's.
 - [ ] **Telemetry end to end** (a release build has `ENABLE_ANALYTICS=true`):
   - Run `adb shell setprop debug.firebase.analytics.app app.coplanly` and open Firebase
     console → Analytics → DebugView.
@@ -1903,6 +1983,9 @@ the screens, the pickers, the camera, a viewer app and a real network.
       Meanwhile B files a new document; A leaves flight mode: the line goes and B's document
       appears without reopening the screen. With two families (M-8), switch family offline:
       the other family's list is never shown under this one.
+- [ ] **On a release (minified) build** (MON-24 phase 2, Task 8j: the first files the shipped app
+      writes through kotlinx-io, which the R8 probe does not touch): A uploads a vault PDF and sends
+      a chat photo; B opens both, and opens each again from the cache.
 - **Fallback (1P):** do A's steps, sign in as B on the same phone and look.
 - **If it fails:** tag `FamilyDocuments` / `ChatAttachments` / `MessageRepo`; `storage.rules`
   (`isOneOfPair`, `isAcceptableSharedFile`), `firestore.rules` `family_documents`,

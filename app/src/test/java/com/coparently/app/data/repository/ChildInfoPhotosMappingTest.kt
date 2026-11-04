@@ -18,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
@@ -50,6 +51,9 @@ class ChildInfoPhotosMappingTest {
         childInfoDao = mockk(relaxed = true)
         userDao = mockk(relaxed = true)
         firebaseAuthService = mockk(relaxed = true)
+        // `inFamilyOnScreen` asks the `SignedInUser` question; answer it from the stubbed user, as
+        // the real service does.
+        every { firebaseAuthService.getCurrentUid() } answers { firebaseAuthService.getCurrentUser()?.uid }
         firestoreChildInfoDataSource = mockk(relaxed = true)
 
         val firebaseUser = mockk<FirebaseUser>(relaxed = true)
@@ -139,8 +143,8 @@ class ChildInfoPhotosMappingTest {
         childName = "Ema",
         dateOfBirth = null,
         medicalPhotos = photos,
-        createdAt = NOW,
-        updatedAt = NOW,
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = false
@@ -157,9 +161,9 @@ class ChildInfoPhotosMappingTest {
         emergencyContactsJson = "[]",
         schoolInfoJson = null,
         medicalPhotosJson = photosJson,
-        createdAt = NOW,
-        updatedAt = NOW,
-        updatedAtMillis = EventTimestamp.ofWallClock(NOW),
+        createdAt = NOW.toKotlinLocalDateTime(),
+        updatedAt = NOW.toKotlinLocalDateTime(),
+        updatedAtMillis = EventTimestamp.ofWallClock(NOW.toKotlinLocalDateTime()),
         createdByFirebaseUid = ALICE,
         lastModifiedBy = ALICE,
         syncedToFirestore = true

@@ -165,6 +165,10 @@
             android:label="@string/widget_today_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- The phone's language changed: Glance's receiver redraws every widget, and the
+                     process it starts redraws them through TodayWidgetRefresher.start when their
+                     lines were worded in another language (design item 18). -->
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -181,8 +185,8 @@
         </service>
 
         <!--
-          WorkManager is initialized on-demand via Hilt (CoPlanlyApplication implements
-          Configuration.Provider). Remove the default WorkManagerInitializer that the
+          WorkManager is initialized on demand with Koin's worker factory (CoPlanlyApplication
+          implements Configuration.Provider). Remove the default WorkManagerInitializer that the
           work-runtime library merges in, so it does not conflict with the custom
           configuration. Required by the RemoveWorkManagerInitializer lint check.
         -->

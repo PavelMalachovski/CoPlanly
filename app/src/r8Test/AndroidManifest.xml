@@ -5,7 +5,7 @@
 
   A self-targeting <instrumentation> rather than an exported activity, receiver or provider: it
   exposes nothing to other apps (only the shell can start one), it runs before
-  Application.onCreate, so the probe can skip the Hilt graph and its Firebase singletons, and
+  Application.onCreate, so the probe can skip the Koin graph and its Firebase singletons, and
   `am instrument -w -r` prints what it reports without a file, a poll or `run-as`. Start it with
   `bash tools/run-r8-probe.sh` (CLAUDE.md, the `r8-runtime` CI job).
 -->
@@ -13,7 +13,7 @@
 
     <instrumentation
         android:name="com.coparently.app.r8probe.R8ProbeInstrumentation"
-        android:label="R8 Gson probe"
+        android:label="R8 JSON probe"
         android:targetPackage="${applicationId}" />
 
 </manifest>

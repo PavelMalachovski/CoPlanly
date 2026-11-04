@@ -1,7 +1,6 @@
 package com.coparently.app.presentation.sync
 
 import android.content.Intent
-import com.coparently.app.R
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
 import com.coparently.app.data.remote.google.CredentialManagerService
@@ -16,6 +15,14 @@ import com.coparently.app.data.sync.SyncService
 import com.coparently.app.data.sync.SyncStage
 import com.coparently.app.data.sync.SyncStatus
 import com.coparently.app.presentation.common.UiText
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sync_google_opening_sign_in
+import com.coparently.app.resources.sync_google_server_failed
+import com.coparently.app.resources.sync_google_sign_in_cancelled
+import com.coparently.app.resources.sync_google_sign_in_failed
+import com.coparently.app.resources.sync_google_sign_in_refused
+import com.coparently.app.resources.sync_google_sign_in_unavailable
+import com.coparently.app.resources.sync_google_signed_in_as
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.tasks.Tasks
@@ -33,10 +40,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -111,8 +118,8 @@ class SyncViewModelTest {
         google.connect()
         val done = SyncResult.Success(
             synced = 3,
-            from = LocalDate.of(2026, 9, 1),
-            until = LocalDate.of(2027, 9, 1),
+            from = LocalDate(2026, 9, 1),
+            until = LocalDate(2027, 9, 1),
             truncated = false
         )
         coEvery { calendarSyncRepository.syncFromGoogle(any(), any()) } returns
@@ -144,8 +151,8 @@ class SyncViewModelTest {
         google.connect(expiresInMillis = -GoogleCredentialsFixture.HOUR)
         val done = SyncResult.Success(
             synced = 1,
-            from = LocalDate.of(2026, 9, 1),
-            until = LocalDate.of(2027, 9, 1),
+            from = LocalDate(2026, 9, 1),
+            until = LocalDate(2027, 9, 1),
             truncated = false
         )
         coEvery { calendarSyncRepository.syncFromGoogle(any(), any()) } returns flowOf(done)
@@ -200,8 +207,15 @@ class SyncViewModelTest {
         val vm = viewModel()
         assertEquals(GoogleCalendarConnection.NEEDS_RECONNECT, vm.connection.value)
 
-        // The Reconnect button's action: the same sign-in a first connection runs.
-        assertSame(intent, vm.createGoogleSignInIntent())
+        // The Reconnect button's action: the same sign-in a first connection runs, opened through
+        // the shell's launcher (MainActivity's activity result).
+        var launched: Intent? = null
+        vm.startGoogleSignIn(AndroidGoogleCalendarSignIn(credentials) { launched = it })
+        assertSame(intent, launched)
+        assertEquals(
+            GoogleCalendarSyncState.Syncing(UiText.Res(Res.string.sync_google_opening_sign_in)),
+            vm.syncState.value
+        )
 
         val account = mockk<GoogleSignInAccount> {
             every { displayName } returns "Olya"
@@ -212,11 +226,11 @@ class SyncViewModelTest {
         coEvery { credentials.accessToken(any()) } returns GoogleAccess.Granted("access-new")
         every { credentials.connection() } returns GoogleCalendarConnection.CONNECTED
 
-        val state = vm.handleSignInResult(task)
+        val state = vm.handleSignInResult(credentials.signInAnswer(task))
 
         assertEquals(GoogleCalendarConnection.CONNECTED, vm.connection.value)
         assertEquals(
-            GoogleCalendarSyncState.Success(UiText.Res(R.string.sync_google_signed_in_as, listOf("Olya"))),
+            GoogleCalendarSyncState.Success(UiText.Res(Res.string.sync_google_signed_in_as, listOf("Olya"))),
             state
         )
     }
@@ -228,19 +242,54 @@ class SyncViewModelTest {
         val vm = viewModel()
         val expected = mapOf(
             GoogleSignInFailure.Server("google-refused: unauthorized_client") to
-                UiText.Res(R.string.sync_google_server_failed, listOf("google-refused: unauthorized_client")),
-            GoogleSignInFailure.Google(10) to UiText.Res(R.string.sync_google_sign_in_refused, listOf(10)),
-            GoogleSignInFailure.Cancelled to UiText.Res(R.string.sync_google_sign_in_cancelled),
-            GoogleSignInFailure.NoAuthCode to UiText.Res(R.string.sync_google_sign_in_failed),
-            GoogleSignInFailure.Unexpected to UiText.Res(R.string.sync_google_sign_in_failed)
+                UiText.Res(Res.string.sync_google_server_failed, listOf("google-refused: unauthorized_client")),
+            GoogleSignInFailure.Google(10) to UiText.Res(Res.string.sync_google_sign_in_refused, listOf(10)),
+            GoogleSignInFailure.Cancelled to UiText.Res(Res.string.sync_google_sign_in_cancelled),
+            GoogleSignInFailure.NoAuthCode to UiText.Res(Res.string.sync_google_sign_in_failed),
+            GoogleSignInFailure.Unexpected to UiText.Res(Res.string.sync_google_sign_in_failed)
         )
 
         expected.forEach { (failure, text) ->
             val task = Tasks.forResult(mockk<GoogleSignInAccount>())
             coEvery { credentials.handleSignInResult(task) } returns Pair(null, failure)
 
-            assertEquals(GoogleCalendarSyncState.Error(text), vm.handleSignInResult(task), "for $failure")
+            assertEquals(
+                GoogleCalendarSyncState.Error(text),
+                vm.handleSignInResult(credentials.signInAnswer(task)),
+                "for $failure"
+            )
         }
+    }
+
+    @Test
+    fun `a build with no Google sign-in client says sign-in is unavailable and opens nothing`() =
+        runTest(dispatcher) {
+            every { credentials.connection() } returns GoogleCalendarConnection.NOT_CONNECTED
+            every { credentials.getGoogleSignInClient() } returns null
+            val vm = viewModel()
+            var launched = false
+
+            vm.startGoogleSignIn(AndroidGoogleCalendarSignIn(credentials) { launched = true })
+
+            assertFalse(launched)
+            assertEquals(
+                GoogleCalendarSyncState.Error(UiText.Res(Res.string.sync_google_sign_in_unavailable)),
+                vm.syncState.value
+            )
+        }
+
+    @Test
+    fun `a sign-in client that cannot be built says sign-in failed`() = runTest(dispatcher) {
+        every { credentials.connection() } returns GoogleCalendarConnection.NOT_CONNECTED
+        every { credentials.getGoogleSignInClient() } throws IllegalStateException("play services")
+        val vm = viewModel()
+
+        vm.startGoogleSignIn(AndroidGoogleCalendarSignIn(credentials) { error("not launched") })
+
+        assertEquals(
+            GoogleCalendarSyncState.Error(UiText.Res(Res.string.sync_google_sign_in_failed)),
+            vm.syncState.value
+        )
     }
 
     @Test

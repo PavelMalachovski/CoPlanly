@@ -1,16 +1,13 @@
 package com.coparently.app.data.session
 
 import android.content.Context
-import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.coparently.app.data.chat.ChatAttachmentOutbox
 import com.coparently.app.data.export.ExportFileWriter
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.coparently.app.data.platform.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Removes what an account leaves on the phone outside the encrypted database: the plaintext
@@ -36,14 +33,16 @@ import javax.inject.Singleton
  *
  * Best effort: a file that cannot be deleted is logged by directory, never by name, and never
  * stops a sign-out or a deletion.
+ *
+ * It is the Android [AccountTraces], which sign-out's ViewModel in `:shared-ui` asks for (MON-24
+ * phase 2, Task 10).
  */
-@Singleton
-class DeviceTraces @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class DeviceTraces(
+    private val context: Context
+) : AccountTraces {
 
     /** What sign-out removes; see the class comment. */
-    suspend fun clearAfterSignOut() {
+    override suspend fun clearAfterSignOut() {
         withContext(Dispatchers.IO) { CACHE_DIRECTORIES.forEach { delete(File(context.cacheDir, it)) } }
         cancelNotifications()
     }
@@ -59,13 +58,13 @@ class DeviceTraces @Inject constructor(
 
     private fun delete(directory: File) {
         if (directory.exists() && !directory.deleteRecursively()) {
-            Log.w(TAG, "Could not delete everything under ${directory.name}")
+            logger.w(TAG, "Could not delete everything under ${directory.name}")
         }
     }
 
     private fun cancelNotifications() {
         runCatching { NotificationManagerCompat.from(context).cancelAll() }
-            .onFailure { Log.w(TAG, "Could not cancel the notifications", it) }
+            .onFailure { logger.w(TAG, "Could not cancel the notifications", it) }
     }
 
     companion object {

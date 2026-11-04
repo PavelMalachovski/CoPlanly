@@ -1,25 +1,29 @@
 package com.coparently.app.data.remote.firebase
 
+import com.coparently.app.data.platform.logger
+import com.coparently.app.data.session.ProfileIdentity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service for Firebase Authentication.
  * Handles user authentication using email/password and provides Firebase UID.
  *
+ * It is also the Android [SignedInUser], the questions the repositories in `:shared-data` ask of
+ * the signed-in account, and the Android [AuthSession], the start's wait and sign-out's end that
+ * `AuthStateViewModel` in `:shared-ui` asks for (Task 10).
+ *
  * @property firebaseAuth Firebase Authentication instance
  */
-@Singleton
-class FirebaseAuthService @Inject constructor(
+class FirebaseAuthService(
     private val firebaseAuth: FirebaseAuth
-) {
+) : SignedInUser, AuthSession, AccountSignIn {
     /**
      * Gets the current Firebase user.
      */
@@ -30,8 +34,48 @@ class FirebaseAuthService @Inject constructor(
     /**
      * Gets the current user's Firebase UID.
      */
-    fun getCurrentUid(): String? {
+    override fun getCurrentUid(): String? {
         return firebaseAuth.currentUser?.uid
+    }
+
+    /**
+     * Gets the current user's display name, as the account carries it.
+     */
+    override fun getCurrentDisplayName(): String? = firebaseAuth.currentUser?.displayName
+
+    /**
+     * Gets the current user's e-mail address, as the account carries it.
+     */
+    override fun getCurrentEmail(): String? = firebaseAuth.currentUser?.email
+
+    /**
+     * Gets the address of the current user's own picture, as the account carries it.
+     */
+    override fun getCurrentPhotoUrl(): String? = firebaseAuth.currentUser?.photoUrl?.toString()
+
+    /** The signed-in uid each time [getAuthStateFlow] reports the sign-in state. */
+    override fun observeCurrentUid(): Flow<String?> = getAuthStateFlow().map { it?.uid }
+
+    /**
+     * The current user's identity as plain values, read from one [FirebaseUser], with each
+     * `providerData` entry projected as [ProfileIdentity] reads it.
+     */
+    override fun getCurrentAccount(): SignedInAccount? = firebaseAuth.currentUser?.let { user ->
+        SignedInAccount(
+            uid = user.uid,
+            displayName = user.displayName,
+            email = user.email,
+            photoUrl = user.photoUrl?.toString(),
+            isAnonymous = user.isAnonymous,
+            providers = user.providerData.map { info ->
+                ProfileIdentity.ProviderIdentity(
+                    providerId = info.providerId,
+                    displayName = info.displayName,
+                    email = info.email,
+                    photoUrl = info.photoUrl?.toString()
+                )
+            }
+        )
     }
 
     /**
@@ -48,7 +92,7 @@ class FirebaseAuthService @Inject constructor(
      * @param password User's password
      * @return Result containing FirebaseUser on success or error message on failure
      */
-    suspend fun signInWithEmail(email: String, password: String): Result<FirebaseUser> {
+    override suspend fun signInWithEmail(email: String, password: String): Result<FirebaseUser> {
         return try {
             val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             Result.success(result.user!!)
@@ -64,12 +108,12 @@ class FirebaseAuthService @Inject constructor(
      * @param password User's password
      * @return Result containing FirebaseUser on success or error message on failure
      */
-    suspend fun createAccountWithEmail(email: String, password: String): Result<FirebaseUser> {
+    override suspend fun createAccountWithEmail(email: String, password: String): Result<FirebaseUser> {
         return try {
             // Log Firebase configuration for debugging
             val projectId = firebaseAuth.app.options.projectId
             val apiKey = firebaseAuth.app.options.apiKey
-            android.util.Log.d(
+            logger.d(
                 "FirebaseAuthService",
                 "Firebase config - projectId: $projectId, apiKey: ${apiKey?.take(10)}..."
             )
@@ -78,8 +122,8 @@ class FirebaseAuthService @Inject constructor(
             Result.success(result.user!!)
         } catch (e: Exception) {
             // Log detailed error information
-            android.util.Log.e("FirebaseAuthService", "Account creation failed", e)
-            android.util.Log.e("FirebaseAuthService", "Error details - message: ${e.message}, cause: ${e.cause}")
+            logger.e("FirebaseAuthService", "Account creation failed", e)
+            logger.e("FirebaseAuthService", "Error details - message: ${e.message}, cause: ${e.cause}")
             Result.failure(e)
         }
     }
@@ -90,13 +134,13 @@ class FirebaseAuthService @Inject constructor(
      * @param idToken Google ID token from Google Sign-In
      * @return Result containing FirebaseUser on success or error message on failure
      */
-    suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = firebaseAuth.signInWithCredential(credential).await()
             Result.success(result.user!!)
         } catch (e: Exception) {
-            android.util.Log.e("FirebaseAuthService", "Google sign-in failed", e)
+            logger.e("FirebaseAuthService", "Google sign-in failed", e)
             Result.failure(e)
         }
     }
@@ -107,7 +151,7 @@ class FirebaseAuthService @Inject constructor(
      * @param email User's email address
      * @return Result indicating success or failure
      */
-    suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
             firebaseAuth.sendPasswordResetEmail(email).await()
             Result.success(Unit)
@@ -127,12 +171,12 @@ class FirebaseAuthService @Inject constructor(
      * Signs out the current user from Firebase authentication.
      * This should be called when the user wants to sign out of the app completely.
      */
-    suspend fun signOutCompletely(): Result<Unit> {
+    override suspend fun signOutCompletely(): Result<Unit> {
         return try {
             firebaseAuth.signOut()
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("FirebaseAuthService", "Error signing out: ${e.message}", e)
+            logger.e("FirebaseAuthService", "Error signing out: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -163,6 +207,9 @@ class FirebaseAuthService @Inject constructor(
         firebaseAuth.addAuthStateListener(listener)
         awaitClose { firebaseAuth.removeAuthStateListener(listener) }
     }
+
+    /** [waitForAuthReady]'s user's uid, with its default wait. */
+    override suspend fun awaitSignedInUid(): String? = waitForAuthReady()?.uid
 
     /**
      * Waits for authentication to be ready and returns the current user.

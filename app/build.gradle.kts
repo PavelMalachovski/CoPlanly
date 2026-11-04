@@ -2,11 +2,10 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("io.gitlab.arturbosch.detekt")
     id("io.github.takahirom.roborazzi")
     id("org.jetbrains.kotlinx.kover")
-    id("com.google.devtools.ksp")
 }
 
 // The Google Services and Firebase Crashlytics Gradle plugins both require a
@@ -156,7 +155,7 @@ android {
         versionCode = (project.findProperty("COPLANLY_VERSION_CODE") as String?)?.toInt() ?: 2
         versionName = "1.1.0"
 
-        testInstrumentationRunner = "com.coparently.app.HiltTestRunner"
+        testInstrumentationRunner = "com.coparently.app.KoinTestRunner"
 
         // REL-4. Where the hosted privacy policy lives, read by the Settings row and the
         // telemetry consent screen. Blank until the policy is published, and blank hides both
@@ -238,8 +237,9 @@ android {
 
         // REL-7's runtime proof: `release` as R8 builds it, plus the probe in `src/r8Test/`, run on
         // an emulator by the `r8-runtime` CI job (`tools/run-r8-probe.sh`). `check-r8-mapping.js`
-        // shows R8 kept the Gson field names; this shows the minified app still *writes and reads*
-        // them — generic signatures, constructors and all. Nothing here changes `debug` or `release`.
+        // shows R8 kept the field names a keep rule names (none since MON-24 phase 2); this shows
+        // the minified app still *writes and reads* its stored JSON — generated serializers,
+        // constructors and all. Nothing here changes `debug` or `release`.
         create("r8Test") {
             initWith(getByName("release"))
             // Installable without the release key, which CI must never hold. Signing is applied
@@ -263,10 +263,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     bundle {
@@ -325,7 +321,7 @@ android {
         }
     }
 
-    // Exported Room schemas (see the "room.schemaLocation" KSP arg below) are the fixtures
+    // Exported Room schemas (`room.schemaLocation` in shared-data/build.gradle.kts) are the fixtures
     // MigrationTestHelper reads to create a database at a past version and to validate the
     // rebuilt schema after a migration — without this, CoPlanlyDatabaseMigrationTest cannot
     // find 11.json/12.json at instrumentation runtime.
@@ -333,10 +329,41 @@ android {
         getByName("androidTest") {
             assets.srcDir("$projectDir/schemas")
         }
+        // The wire contracts' harness lives in `:shared-data`'s commonTest (MON-24 phase 2, Task
+        // 8a), where the contracts move as their writers do. The contracts whose writers are
+        // still here run from this module, so its unit tests compile the same harness from the
+        // same files, beside this module's `WireContracts` (the list of every contract) and its
+        // `WireFixtureLocation`. Only these two directories are shared this way.
+        getByName("test") {
+            java.srcDir("$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/wire")
+            // The recording Firestore and callable fakes the moved contracts and the app's own
+            // data-layer tests drive the data sources with.
+            java.srcDir("$rootDir/shared-data/src/commonTest/kotlin/com/coparently/app/data/remote/firebase/testing")
+        }
     }
 }
 
 dependencies {
+    // The shared Kotlin Multiplatform module (MON-24): the domain the iPhone app runs too. Its
+    // classes keep their `com.coparently.app.domain` packages, so nothing here imports
+    // differently, and R8 shrinks them with the app's own.
+    implementation(project(":shared"))
+    // Its Android unit tests' coverage joins this module's Kover report (`koverXmlReportDebug`
+    // runs `:shared`'s debug tests too), so the one figure in the PR comment still covers the
+    // domain after it moves.
+    kover(project(":shared"))
+    // The data layer both apps share (MON-24 phase 2): so far the school import's and Google
+    // Calendar's HTTP clients, on Ktor. Packages unchanged, as for `:shared`; its tests' coverage
+    // joins the same report.
+    implementation(project(":shared-data"))
+    kover(project(":shared-data"))
+    // The UI both apps share (MON-24 phase 2, Task 9): the strings, as Compose Multiplatform
+    // resources (`Res`), the theme with its fonts and the common components. The app reads the
+    // same string files as Android resources through the `stringsToAndroidRes` task below. Its
+    // tests' coverage (the theme's) joins the same report.
+    implementation(project(":shared-ui"))
+    kover(project(":shared-ui"))
+
     // Core Android - Updated to latest stable versions
     implementation("androidx.core:core-ktx:1.13.1")
     // AppCompat is required for per-app language preferences
@@ -374,18 +401,27 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
-    // Hilt - Updated to latest stable
-    implementation("com.google.dagger:hilt-android:2.56.2")
-    ksp("com.google.dagger:hilt-compiler:2.56.2")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
+    // Koin (MON-24 phase 2): dependency injection resolved at runtime, with no processor, so the
+    // graph is checked by `KoinGraphTest` (`verify()` over every module) instead of at compile time.
+    // 4.1.1, not the newer 4.2.x: 4.2's Compose artifacts depend on Compose Multiplatform 1.10,
+    // activity 1.12 and lifecycle 2.10, which would lift this app's Compose past its BOM above and
+    // move every screenshot baseline inside a DI change. 4.1.1 asks for Compose 1.8.2 (the BOM's
+    // 1.9 wins), lifecycle 2.9.3 and activity 1.10.1 (above the 2.8.7 and 1.9.3 declared here, so
+    // those two resolve up), and is built with Kotlin 2.1.21, which this project's 2.3.21 compiler
+    // reads. `koin-androidx-compose` brings `koinViewModel()` (koin-compose-viewmodel) with it.
+    val koinBom = platform("io.insert-koin:koin-bom:4.1.1")
+    implementation(koinBom)
+    implementation("io.insert-koin:koin-android")
+    implementation("io.insert-koin:koin-androidx-compose")
+    implementation("io.insert-koin:koin-androidx-workmanager")
 
-    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it)
+    // Room - 2.7.x is required for Kotlin 2.x metadata (2.6.x fails on it). The database, its
+    // entities and DAOs live in `:shared-data` since MON-24 phase 2 (Room for Kotlin
+    // Multiplatform), and Room's processor runs there; the app keeps the runtime it calls
+    // (`withTransaction`, `Room.inMemoryDatabaseBuilder` in the tests) and runs no processor.
     val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
     // MigrationTestHelper — instrumented tests that run a real migration against a real
     // SQLite database and validate the result against the exported schema JSON.
     androidTestImplementation("androidx.room:room-testing:$roomVersion")
@@ -396,8 +432,9 @@ dependencies {
     implementation("net.zetetic:sqlcipher-android:4.6.1@aar")
     implementation("androidx.sqlite:sqlite:2.4.0")
 
-    // Coroutines - Updated to latest stable
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Coroutines — 1.11.0, the companion release of Kotlin 2.2.20 and the newest stable; every
+    // kotlinx-coroutines artifact below takes the same version.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // WorkManager for background tasks. 2.10.x (CQ-17) for its Doze and foreground-service
     // fixes, which is what the 15-minute periodic sync runs into; 2.11 raised minSdk and is a
@@ -410,8 +447,9 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
 
-    // Calendar - Check for updates at https://github.com/kizitonwose/Calendar
-    implementation("com.kizitonwose.calendar:compose:2.6.1")
+    // The month grid's calendar library (kizitonwose) is `:shared-ui`'s since MON-24 phase 2 (slice
+    // 11c): `com.kizitonwose.calendar:compose-multiplatform`, whose packages are the ones the Android
+    // 2.6.1 artifact here had, so this one must not come back beside it.
 
     // Google Sign-In - Migrating to Credential Manager API
     // Old deprecated API (will be removed)
@@ -422,9 +460,9 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
-    // Google Calendar API
-    implementation("com.google.api-client:google-api-client-android:2.2.0")
-    implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
+    // Google Calendar's one call, `events.list`, is made on Ktor from `:shared-data` since MON-24
+    // phase 2; google-api-client-android and google-api-services-calendar left with it, and so did
+    // the Gson they brought and the keep rules their `@Key` models needed.
 
     // Read-only since SEC-5: EncryptedPreferences now seals its own file with the Keystore key
     // EncryptionManager holds, and uses this library once, to read the pre-SEC-5 store on the first
@@ -432,8 +470,20 @@ dependencies {
     // older install can remain — never bump it to write with it again.
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Gson for JSON - Updated to latest
-    implementation("com.google.code.gson:gson:2.11.0")
+    // JSON for everything the app stores or sends as text goes through `StoredJson` (`:shared`),
+    // on kotlinx.serialization, which replaced Gson in MON-24 and writes the bytes Gson wrote. The
+    // same version as the shared module's, declared here because the app's own models
+    // (`EventDraft`) and the school import's tree reads use it directly.
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    // Not a dependency: a library on the runtime classpath still brings Gson, asking for 2.10.1,
+    // after Google's calendar client left (MON-24 phase 2). This keeps it at 2.11.0, the version the
+    // app declared and ran until MON-24, so the library runs the Gson it ran before. It is also the
+    // version `GsonParityTest` and `GsonDeviceParityTest` compare with: Android's consistent
+    // resolution pins the test classpaths to the app's runtime version, so without this they
+    // cannot resolve 2.11.0 at all.
+    constraints {
+        implementation("com.google.code.gson:gson:2.11.0")
+    }
 
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.3")
@@ -460,20 +510,24 @@ dependencies {
     // Removed with the AI subsystem (MON-7): `generativeai`, `retrofit`, `converter-gson`,
     // `okhttp` and `logging-interceptor`. All five were declared for it and, after it went,
     // had no consumer left in `app/src` at all — retrofit already had none before.
-    // OkHttp is declared again for the school import (MON-8), which talks to each school's
-    // Bakaláři server directly from the phone. Declared rather than borrowed from Coil's
-    // transitive copy, so a Coil upgrade cannot move or drop the client the import depends on;
-    // the version is the one Coil already brings, so the graph does not change.
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // OkHttp was declared again for the school import (MON-8) and left the app's own dependencies
+    // in MON-24 phase 2, when the import moved to Ktor in `:shared-data`. Its OkHttp engine brings
+    // OkHttp 5.3.2, which Coil 2.7 (built against 4.12) now runs on too: Coil uses only OkHttp's
+    // public API (calls, requests, responses, headers, cache control), which 5.x keeps
+    // binary-compatible, and nothing in the app calls OkHttp itself any more.
 
     // Firebase BoM 34 (audit L-2). 34.0.0 removed the `-ktx` modules; their Kotlin extensions
     // (`Firebase`, `logEvent`, `storageMetadata`, …) have lived in the main modules under the
     // product's own package since BoM 32.5, which is where every import in `app/src` already
-    // points. Don't add a `-ktx` artifact back: it no longer resolves. 34.4.0 rather than the
-    // newest 34.x because it is contemporary with the rest of this toolchain (Compose BOM
-    // 2025.10, AGP 8.10, Kotlin 2.1); move it on a machine that can run
-    // `./gradlew :app:dependencies`.
-    val firebaseBom = platform("com.google.firebase:firebase-bom:34.4.0")
+    // points. Don't add a `-ktx` artifact back: it no longer resolves.
+    //
+    // 34.18.0 since MON-24 phase 2 (Task 8a): GitLive's firebase-kotlin-sdk 2.7.0, which
+    // `:shared-data` reaches Firestore through, imports this BoM, and Gradle resolves one BoM for
+    // the whole graph — the higher one. Declaring the same version here keeps the app's own
+    // Firebase artifacts on the version they actually run at, rather than one this line no longer
+    // decides. GitLive's Android side is this same SDK, so the data layer's calls are the SDK's
+    // own. Move this and `:shared-data`'s together, and only to a BoM a GitLive release names.
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.18.0")
     implementation(firebaseBom)
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
@@ -489,15 +543,39 @@ dependencies {
     // `Task.await()` (kotlinx.coroutines.tasks), which the data layer calls throughout. It used
     // to arrive only transitively through the Firebase modules; declared so a BoM move cannot
     // take it away. Same version as kotlinx-coroutines-android above.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
+
+    // The R8 probe's `FirestoreWriteProbe` encodes a write through GitLive's own encoder
+    // (`dev.gitlive.firebase.internal.encodeAsObject`) in the minified build. GitLive's Android
+    // metadata puts this artifact in its runtime variant only, so the app runs it but cannot
+    // compile against it; the probe alone needs it on the compile path. Same version as
+    // `:shared-data`'s GitLive (2.7.0, built with Kotlin 2.2.21, `minCompileSdk=1`).
+    "r8TestImplementation"("dev.gitlive:firebase-common-internal:2.7.0")
 
     // Coil for async image loading in Compose (receipt photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Testing - Updated to latest stable
     testImplementation("junit:junit:4.13.2")
+    // The oracle `GsonParityTest` compares `StoredJson` with, and the wire contracts' fixture
+    // printer: the Gson the app shipped until MON-24, at the version it shipped. The app's own code
+    // has no Gson since then; a library still brings it, held at this version by the constraint
+    // above.
+    testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test"))
+    // kotlin-reflect at the compiler's own version for the JVM tests. MockK asks for 2.0.0, which
+    // reads Kotlin metadata only up to 2.1, and this module is compiled with Kotlin 2.3; a
+    // reflection library older than the compiler is unsupported. Unversioned, it follows the
+    // Kotlin plugin. Not for androidTest: the test APK carries kotlin-reflect but not the stdlib,
+    // and the `upgrade` job runs it inside the *base* build's process, on the base's stdlib. A
+    // kotlin-reflect newer than that stdlib fails there (2.3's needs
+    // `kotlin.jvm.internal.KotlinGenericDeclaration`, which stdlib 2.1 lacks), so androidTest keeps
+    // MockK's 2.0.0 until main itself ships stdlib 2.3.
+    testImplementation(kotlin("reflect"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    // `GsonDeviceParityTest`'s oracle: the Gson the app shipped until MON-24, on the device's ART,
+    // whose field order the stored bytes follow. Test APK only.
+    androidTestImplementation("com.google.code.gson:gson:2.11.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.10.00"))
@@ -514,27 +592,29 @@ dependencies {
     androidTestImplementation("io.mockk:mockk-android:1.14.0")
 
     // Coroutines Test - Latest stable
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 
     // Turbine for Flow testing
     testImplementation("app.cash.turbine:turbine:1.2.0")
 
-    // A local HTTP server for the Bakaláři client's tests (MON-8): sign-in, token rotation and
-    // the refresh-and-retry on a 401, against real HTTP rather than a mocked OkHttp.
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    // Ktor's in-memory server for the school import's tests (MON-8): token rotation and the
+    // refresh-and-retry on a 401, through the real client. It replaced OkHttp's MockWebServer when
+    // the client moved to Ktor (MON-24); the version is `:shared-data`'s Ktor.
+    testImplementation("io.ktor:ktor-client-mock:3.5.1")
 
     // ArchCore Testing for LiveData and ViewModel
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
-    // Hilt testing - Updated to match Hilt version
-    testImplementation("com.google.dagger:hilt-android-testing:2.56.2")
-    kspTest("com.google.dagger:hilt-compiler:2.56.2")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.56.2")
+    // Koin's graph check for the JVM tests (`KoinGraphTest`). Not for androidTest: koin-test
+    // carries kotlin-reflect, which the test APK must not (see kotlin-reflect above); the
+    // instrumented tests start and stop the graph with koin-android alone (`KoinTestRule`).
+    testImplementation(koinBom)
+    testImplementation("io.insert-koin:koin-test")
+    testImplementation("io.insert-koin:koin-test-junit4")
     // OneParentOnScreenTest: the app's pairing path asks WorkManager for a sync, and
-    // HiltTestApplication is not the Configuration.Provider the manifest expects.
+    // KoinTestApplication is not the Configuration.Provider the manifest expects.
     androidTestImplementation("androidx.work:work-testing:2.10.5")
-    kspAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
 
     // Navigation Testing
     androidTestImplementation("androidx.navigation:navigation-testing:2.9.3")
@@ -545,7 +625,7 @@ dependencies {
     // the tests pin `@Config(sdk = [34])` — see `ScreenshotMatrix`. `ui-test-junit4` provides
     // `createComposeRule`; its activity comes from the `ui-test-manifest` debug dependency above.
     testImplementation("org.robolectric:robolectric:4.16.1")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.60.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.76.0")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     // The widget's layout, composed and asserted on the JVM (TodayWidgetContentTest).
@@ -566,19 +646,87 @@ configurations.named("androidTestImplementation") {
     exclude(group = "org.junit.platform")
 }
 
-// Hilt and Room run on KSP, not kapt: kapt generated Java stubs for every Kotlin file before
-// processing, the single slowest phase of every build in CI. Room writes
-// `schemas/<version>.json` from this argument. It is a plain string, so Gradle does not know the
-// directory is an output — a KSP task restored from the build cache writes nothing there, which
-// is why the Regenerate workflow runs `kspDebugKotlin --rerun`.
-//
-// `room.generateKotlin = false` keeps Room emitting the Java it emitted under kapt. Room's Kotlin
-// output is stricter about nullability in queries; switching to it is a separate change with its
-// own review, not something to ride on a change of processor.
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.generateKotlin", "false")
+// The JVM bytecode target, in the compilerOptions DSL: `android { kotlinOptions { … } }` is an
+// error since Kotlin 2.2.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
+
+// The strings live in `:shared-ui` as Compose Multiplatform resources since MON-24 phase 2 (Task 9):
+// `shared-ui/src/commonMain/composeResources/values*/`, the files that were `res/values*/` here,
+// with the same names. This task copies them, byte for byte, into a generated resource directory
+// of every variant of this app, so `R.string`/`R.plurals`, every Android-only reader (the widget,
+// pushes, notices, AppCompat's per-app locale) and the unit and screenshot tests keep Android's own
+// reading of the same text, while `:shared-ui`'s `Res` is generated from the originals. Nothing is
+// rewritten: where Android and Compose Multiplatform would read a text differently, the source text
+// changes (`StringsParityTest`, `PluralsParityTest`; check 7 of `tools/check-invariants.js`).
+//
+// Only `values*/*.xml`: the fonts (`composeResources/font/`, slice 9b) are not Android resources any
+// more; the theme reads them through Compose Multiplatform, from the APK's assets.
+// Declared in this file, not in a script plugin under `tools/`, because a script applied with
+// `apply(from = …)` cannot see the Android Gradle plugin's classes (they are loaded by the
+// `plugins {}` blocks), and the wiring below needs them. One task serves every variant: AGP places
+// its output under `build/generated/res/stringsToAndroidRes/`, the same for each.
+@CacheableTask
+abstract class StringsToAndroidRes : DefaultTask() {
+    @get:Inject
+    abstract val fileSystem: FileSystemOperations
+
+    /** `shared-ui/src/commonMain/composeResources`. Only its string files are inputs. */
+    @get:Internal
+    abstract val composeResources: DirectoryProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:IgnoreEmptyDirectories
+    val strings: Provider<FileTree> = composeResources.map { dir ->
+        dir.asFileTree.matching { include(STRING_FILES) }
+    }
+
+    /** Set by AGP (`addGeneratedSourceDirectory`). */
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        fileSystem.sync {
+            from(composeResources) { include(STRING_FILES) }
+            into(outputDir)
+        }
+    }
+
+    private companion object {
+        const val STRING_FILES = "values*/*.xml"
+    }
+}
+
+val stringsToAndroidRes = tasks.register<StringsToAndroidRes>("stringsToAndroidRes") {
+    description = "Copies :shared-ui's string resources into this app's generated Android resources."
+    composeResources.set(rootProject.layout.projectDirectory.dir("shared-ui/src/commonMain/composeResources"))
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.res?.addGeneratedSourceDirectory(stringsToAndroidRes, StringsToAndroidRes::outputDir)
+    }
+}
+
+// Lint reads every resource directory of a variant, generated ones included; the dependency is
+// declared outright, as Compose Multiplatform's plugin does for the assets it generates, rather than
+// left to AGP's wiring of lint's model tasks.
+tasks.configureEach {
+    if (name.startsWith("lint") || name.contains("Lint")) dependsOn(stringsToAndroidRes)
+}
+
+// Room ran on KSP here until MON-24 phase 2 moved the database to `:shared-data`, which now runs
+// the processor for Android and the iPhone and writes the exported schema to this module's
+// `schemas/` as before (`room.schemaLocation` in shared-data/build.gradle.kts). Nothing in this
+// module needs KSP any more, so the plugin is not applied. Room generates Kotlin there, the only
+// output Room for Kotlin Multiplatform has; the Kotlin output throws where the Java returned null
+// into a non-null type, on a single-row query that finds no row, so every such query is declared
+// nullable (`DaoEmptyResultTest`). The schema JSON does not depend on it.
 
 // Detekt configuration for static code analysis
 detekt {
@@ -593,6 +741,20 @@ detekt {
 
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+}
+
+// One baseline for every module (MON-24): `:shared:detekt`, `:shared-data:detekt` and
+// `:shared-ui:detekt` read this module's baseline file, and detekt's `detektBaseline` *replaces* a
+// file's findings with the ones it found in its own run. So the other modules' baseline tasks are
+// switched off (their build files) and this one also reads their sources, which makes
+// `./gradlew detektBaseline` (the Regenerate workflow) write one file holding every module's
+// accepted findings. An entry names a
+// file and a signature, never a directory, so a file moved into `shared/`, `shared-data/` or
+// `shared-ui/` keeps the entry it had.
+tasks.named<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>("detektBaseline") {
+    source(rootProject.layout.projectDirectory.dir("shared/src"))
+    source(rootProject.layout.projectDirectory.dir("shared-data/src"))
+    source(rootProject.layout.projectDirectory.dir("shared-ui/src"))
 }
 
 // Screenshots are recorded into, and verified against, the committed baselines in
@@ -646,33 +808,26 @@ tasks.withType<Test>().configureEach {
 // verification rule, deliberately — a gate on a number nobody has yet watched move would be
 // tuned to pass rather than to mean something.
 //
-// The exclusions are code nobody here writes: Hilt/Dagger's generated factories, injectors and
-// components, Room's `_Impl` DAOs and database, Compose's lambda singletons and previews, and
-// BuildConfig. Counting them would make the percentage mostly a measure of how much the annotation processors emit.
+// The exclusions are code nobody here writes: Room's `_Impl` DAOs and database, Compose's lambda
+// singletons and previews, and BuildConfig. Counting them would make the percentage mostly a
+// measure of how much the annotation processors emit.
 // In Kover's class filters `*` matches any characters, dots and `$` included.
 kover {
     reports {
         filters {
             excludes {
                 classes(
-                    "*_Factory*",
-                    "*_MembersInjector",
-                    "*_HiltModules*",
-                    "*_HiltComponents*",
-                    "*_GeneratedInjector",
-                    "*_ComponentTreeDeps",
-                    "*Hilt_*",
                     "*_Impl",
                     "*_Impl$*",
                     "*_AutoMigration_*",
                     "*ComposableSingletons*",
                     "*.BuildConfig",
+                    // `Res` and its accessors, which Compose Multiplatform generates in `:shared-ui`.
+                    "com.coparently.app.resources.*",
                 )
-                packages("hilt_aggregated_deps", "dagger.hilt.internal.aggregatedroot.codegen")
                 annotatedBy(
                     "androidx.compose.ui.tooling.preview.Preview",
                     "javax.annotation.processing.Generated",
-                    "dagger.internal.DaggerGenerated",
                 )
             }
         }

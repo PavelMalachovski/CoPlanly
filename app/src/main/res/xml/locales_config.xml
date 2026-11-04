@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Locales supported by the app. Android 13+ reads this to offer per-app language
-  selection in system settings; keep it in sync with the values-* resource folders
-  and with AppLanguage in presentation/settings.
+  selection in system settings; keep it in sync with the values-* string folders in
+  shared-ui/src/commonMain/composeResources/ (the app's Android copy is generated from
+  them by app/build.gradle.kts's stringsToAndroidRes) and with AppLanguage in
+  presentation/settings.
 -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
     <locale android:name="en" />

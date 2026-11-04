@@ -8,6 +8,7 @@ import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.home.HomeWeek
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.toKotlinLocalDate
 import java.time.LocalDate
 
 /**
@@ -63,20 +64,21 @@ data class TodayWidgetModel(
             overrides: Map<String, DayOverride>
         ): TodayWidgetModel {
             // No legacy fallback, as on Home: one custody lookup per surface.
-            val custodyFor = CustodyResolver.resolver(model, overrides, legacy = { null })
+            val resolve = CustodyResolver.resolver(model, overrides, legacy = { null })
+            val windows = CustodyResolver.contactWindowsResolver(model, resolve)
             val agenda = HomeWeek.todayOf(
                 events = events,
-                today = today,
+                today = today.toKotlinLocalDate(),
                 userId = userId,
-                custodyFor = custodyFor,
-                contactWindowsFor = CustodyResolver.contactWindowsResolver(model, custodyFor)
+                custodyFor = resolve,
+                contactWindowsFor = windows
             )
             return TodayWidgetModel(
                 signedIn = true,
                 today = today,
                 dayParent = agenda.dayParent,
                 contactWindows = agenda.contactWindows,
-                handover = model?.let { HandoverCalculator.nextHandoverFrom(it, today, overrides) },
+                handover = model?.let { HandoverCalculator.nextHandoverFrom(it, today.toKotlinLocalDate(), overrides) },
                 events = agenda.events
             )
         }

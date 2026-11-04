@@ -1,0 +1,616 @@
+package com.coparently.app.presentation.childinfo
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.dp
+import com.coparently.app.domain.files.RecordPhotoKind
+import com.coparently.app.domain.model.*
+import com.coparently.app.domain.time.wallClockNow
+import com.coparently.app.presentation.childinfo.components.*
+import com.coparently.app.presentation.common.ConfirmationDialog
+import com.coparently.app.presentation.common.DatePickerField
+import com.coparently.app.presentation.common.MedicalProfileEditor
+import com.coparently.app.presentation.common.PhotoOwner
+import com.coparently.app.presentation.common.field
+import com.coparently.app.presentation.common.rememberDiscardGuard
+import com.coparently.app.presentation.consent.HealthConsentDialog
+import com.coparently.app.presentation.consent.HealthConsentViewModel
+import com.coparently.app.presentation.consent.LockedMedicalSection
+import com.coparently.app.presentation.platform.LocalFilePicker
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.childinfo_add_child_button
+import com.coparently.app.resources.childinfo_back
+import com.coparently.app.resources.childinfo_child_name_label
+import com.coparently.app.resources.childinfo_delete_action
+import com.coparently.app.resources.childinfo_delete_cancel
+import com.coparently.app.resources.childinfo_delete_confirm
+import com.coparently.app.resources.childinfo_delete_message
+import com.coparently.app.resources.childinfo_delete_title
+import com.coparently.app.resources.childinfo_medical_notes_label
+import com.coparently.app.resources.childinfo_medical_notes_placeholder
+import com.coparently.app.resources.childinfo_save_changes
+import com.coparently.app.resources.childinfo_save_failed
+import com.coparently.app.resources.childinfo_section_activities
+import com.coparently.app.resources.childinfo_section_allergies
+import com.coparently.app.resources.childinfo_section_basic
+import com.coparently.app.resources.childinfo_section_emergency_contacts
+import com.coparently.app.resources.childinfo_section_medical_notes
+import com.coparently.app.resources.childinfo_section_medications
+import com.coparently.app.resources.childinfo_section_school
+import com.coparently.app.resources.childinfo_title_add
+import com.coparently.app.resources.childinfo_title_edit
+import com.coparently.app.resources.medical_photos_delete_failed
+import com.coparently.app.resources.medical_photos_upload_failed
+import com.coparently.app.resources.medical_section_title
+import com.coparently.app.resources.profile_dob_label
+import com.coparently.app.utils.ReaderDateText
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+/**
+ * Screen for adding or editing child information.
+ * Provides comprehensive form for entering child details, medications, activities, etc.
+ *
+ * The medical part of the form — medications, allergies, the medical profile, medical notes and
+ * medical photos — is locked until this parent has consented to entering a child's health
+ * details (GDPR Art. 9(2)(a), [HealthConsentViewModel]): it shows one line and an "Add medical
+ * details" action that opens the consent dialog. "Not now" leaves it locked and the rest of the
+ * form works as before. Values already on the record are carried through a save untouched while
+ * it is locked, so a locked form can never erase what the co-parent entered.
+ *
+ * @param childInfoId ID of the child info to edit, or "new" for creating new
+ * @param onNavigateBack Navigation callback
+ * @param viewModel ViewModel for child info operations
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddEditChildInfoScreen(
+    childInfoId: String?,
+    onNavigateBack: () -> Unit,
+    viewModel: ChildInfoViewModel = koinViewModel()
+) {
+    val haptic = LocalHapticFeedback.current
+    // The consent gate is shared with onboarding and Settings, so it is its own ViewModel.
+    val healthConsentViewModel: HealthConsentViewModel = koinViewModel()
+    val medicalUnlocked by healthConsentViewModel.unlocked.collectAsState()
+    val askingConsent by healthConsentViewModel.asking.collectAsState()
+    if (askingConsent) {
+        HealthConsentDialog(
+            onAgree = healthConsentViewModel::agree,
+            onNotNow = healthConsentViewModel::notNow
+        )
+    }
+
+    // The fields live in the ViewModel (FormDraft), so a rotation keeps what was typed (D-11);
+    // each `var` below reads the draft and assigns into it.
+    val form = viewModel.childForm
+    val draft = form.state.collectAsState()
+    var childName by draft.field(form, { it.childName }) { f, v -> f.copy(childName = v) }
+    var dateOfBirth by draft.field(form, { it.dateOfBirth }) { f, v -> f.copy(dateOfBirth = v) }
+    var medications by draft.field(form, { it.medications }) { f, v -> f.copy(medications = v) }
+    var activities by draft.field(form, { it.activities }) { f, v -> f.copy(activities = v) }
+    var allergies by draft.field(form, { it.allergies }) { f, v -> f.copy(allergies = v) }
+    var medicalNotes by draft.field(form, { it.medicalNotes }) { f, v -> f.copy(medicalNotes = v) }
+    var emergencyContacts by draft.field(form, { it.emergencyContacts }) { f, v -> f.copy(emergencyContacts = v) }
+    var schoolInfo by draft.field(form, { it.schoolInfo }) { f, v -> f.copy(schoolInfo = v) }
+    var medicalProfile by draft.field(form, { it.medicalProfile }) { f, v -> f.copy(medicalProfile = v) }
+    // Photographs already on the record, those picked here and not yet uploaded, and those the
+    // user asked to remove. Three lists rather than one, because the three have different
+    // consequences on save: a picked URI is uploaded, a removed URL has its object deleted
+    // *before* the reference goes, and a kept URL is left alone. The stored ones are the
+    // record's own, read from it rather than copied, so they survive a rotation as it does.
+    var pickedPhotos by draft.field(form, { it.pickedPhotos }) { f, v -> f.copy(pickedPhotos = v) }
+    var removedPhotos by draft.field(form, { it.removedPhotos }) { f, v -> f.copy(removedPhotos = v) }
+    var isSaving by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // The ViewModel says when the write landed. This used to be a `saveCompleted && !isSaving`
+    // guard over two local flags, and nothing ever cleared `isSaving`, so it never fired: the
+    // form stayed disabled behind a spinner while the record had already been written to Room.
+    val saveFailed = stringResource(Res.string.childinfo_save_failed)
+    LaunchedEffect(Unit) {
+        viewModel.saveOutcome.collect { outcome ->
+            when (outcome) {
+                ChildSaveOutcome.SAVED -> {
+                    // Cleared before leaving: a second Save would otherwise re-upload the same
+                    // content URIs, orphaning objects in the bucket and doubling the strip.
+                    pickedPhotos = emptyList()
+                    removedPhotos = emptyList()
+                    onNavigateBack()
+                }
+                ChildSaveOutcome.FAILED -> {
+                    isSaving = false
+                    snackbarHostState.showSnackbar(saveFailed)
+                }
+            }
+        }
+    }
+
+    // Load existing child info if editing
+    LaunchedEffect(childInfoId) {
+        if (childInfoId != null && childInfoId != "new") {
+            viewModel.loadChildInfoById(childInfoId)
+        }
+    }
+
+    // Observe current child info for editing
+    val currentChildInfo by viewModel.currentChildInfo.collectAsState()
+
+    // Seeded once per record (FormDraft.seed): `currentChildInfo` is an observation, so it emits
+    // again on every write to the row — a background sync tick or the co-parent's own edit — and
+    // copying each emission into the fields overwrote whatever the parent was typing.
+    LaunchedEffect(currentChildInfo) {
+        currentChildInfo?.let { info -> form.seed(info.id, ChildFields.of(info)) }
+    }
+    val storedPhotos = currentChildInfo?.medicalPhotos.orEmpty()
+
+    // Asked before an edit is dropped (docs/AUDIT-2026-10-design.md D-11): a parent who typed out
+    // a medication and pressed Back lost it without a word.
+    val leave = rememberDiscardGuard(dirty = draft.value.dirty && !isSaving, onLeave = onNavigateBack)
+
+    if (showDeleteConfirm) {
+        val child = currentChildInfo
+        ConfirmationDialog(
+            title = stringResource(Res.string.childinfo_delete_title, child?.childName.orEmpty()),
+            message = stringResource(Res.string.childinfo_delete_message),
+            confirmText = stringResource(Res.string.childinfo_delete_confirm),
+            dismissText = stringResource(Res.string.childinfo_delete_cancel),
+            isDestructive = true,
+            onDismiss = { showDeleteConfirm = false },
+            onConfirm = {
+                showDeleteConfirm = false
+                if (child != null) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewModel.deleteChildInfo(child)
+                    onNavigateBack()
+                }
+            }
+        )
+    }
+
+    // The same picker the receipt and event-photo flows use. Nothing is uploaded here: the URI
+    // is held until save, so a parent who backs out leaves nothing behind in the bucket.
+    val filePicker = LocalFilePicker.current
+    val photoPicker = filePicker.rememberImagePicker { uri -> pickedPhotos = pickedPhotos + uri }
+
+    // A failed upload or delete has to be said out loud: both leave the record in a state the
+    // user did not ask for, and one of them leaves the photograph still attached.
+    val photoError by viewModel.photoError.collectAsState()
+    val uploadFailed = stringResource(Res.string.medical_photos_upload_failed)
+    val deleteFailed = stringResource(Res.string.medical_photos_delete_failed)
+    LaunchedEffect(photoError) {
+        val message = when (photoError) {
+            MedicalPhotoError.UPLOAD_FAILED -> uploadFailed
+            MedicalPhotoError.DELETE_FAILED -> deleteFailed
+            null -> null
+        }
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearPhotoError()
+        }
+    }
+
+    // Date picker dialog
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDateSelected = { date ->
+                dateOfBirth = date
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false },
+            initialDate = dateOfBirth
+        )
+    }
+
+    Scaffold(
+        // A back gesture over unsaved edits shrinks the form before it asks (D-11).
+        modifier = Modifier.then(leave.backPreview),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        if (childInfoId == "new") {
+                            stringResource(Res.string.childinfo_title_add)
+                        } else {
+                            stringResource(Res.string.childinfo_title_edit)
+                        }
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = leave) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(Res.string.childinfo_back)
+                        )
+                    }
+                },
+                actions = {
+                    // `deleteChildInfo` has existed on the ViewModel since the feature shipped
+                    // and had no caller: with one child a mis-added record was tolerable, with
+                    // several it is a row nobody can remove. Same anatomy as the pet editor's.
+                    if (childInfoId != null && childInfoId != "new" && currentChildInfo != null) {
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(
+                                    Res.string.childinfo_delete_action
+                                ),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(Spacing.L)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Spacing.L)
+        ) {
+            // Basic Information Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.M)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.childinfo_section_basic),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    OutlinedTextField(
+                        value = childName,
+                        onValueChange = { childName = it },
+                        label = { Text(stringResource(Res.string.childinfo_child_name_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving,
+                        singleLine = true
+                    )
+
+                    DatePickerField(
+                        label = stringResource(Res.string.profile_dob_label),
+                        value = dateOfBirth?.let { ReaderDateText.date(it.date, "yMMMd") },
+                        onClick = { showDatePicker = true },
+                        enabled = !isSaving
+                    )
+                }
+            }
+
+            // Medications Section — health data, so behind the consent gate like the three below.
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.childinfo_section_medications),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        MedicationEditor(
+                            medications = medications,
+                            onAdd = { medication ->
+                                medications = medications + medication
+                            },
+                            onEdit = { index, medication ->
+                                medications = medications.toMutableList().apply {
+                                    set(index, medication)
+                                }
+                            },
+                            onRemove = { index ->
+                                medications = medications.toMutableList().apply {
+                                    removeAt(index)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Activities Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.childinfo_section_activities),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    ActivityEditor(
+                        activities = activities,
+                        onAdd = { activity ->
+                            activities = activities + activity
+                        },
+                        onEdit = { index, activity ->
+                            activities = activities.toMutableList().apply {
+                                set(index, activity)
+                            }
+                        },
+                        onRemove = { index ->
+                            activities = activities.toMutableList().apply {
+                                removeAt(index)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Allergies, the medical profile and the medical notes with their photographs; or, until
+            // the parent has consented, one card saying so with the action that asks.
+            if (!medicalUnlocked) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.medical_section_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        LockedMedicalSection(
+                            onAddMedicalDetails = healthConsentViewModel::ask,
+                            enabled = !isSaving
+                        )
+                    }
+                }
+            }
+
+            // Allergies Section
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.childinfo_section_allergies),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        AllergyEditor(
+                            allergies = allergies,
+                            onAdd = { allergy ->
+                                allergies = allergies + allergy
+                            },
+                            onRemove = { index ->
+                                allergies = allergies.toMutableList().apply {
+                                    removeAt(index)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Medical Profile Section (blood type, intolerances, hereditary conditions, vaccinations)
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.medical_section_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        MedicalProfileEditor(
+                            profile = medicalProfile,
+                            onChange = { medicalProfile = it },
+                            enabled = !isSaving
+                        )
+                    }
+                }
+            }
+
+            // Medical Notes Section
+            if (medicalUnlocked) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.L),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.childinfo_section_medical_notes),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        OutlinedTextField(
+                            value = medicalNotes,
+                            onValueChange = { medicalNotes = it },
+                            label = { Text(stringResource(Res.string.childinfo_medical_notes_label)) },
+                            placeholder = { Text(stringResource(Res.string.childinfo_medical_notes_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isSaving,
+                            minLines = 3,
+                            maxLines = 5
+                        )
+
+                        MedicalPhotoStrip(
+                            photos = storedPhotos.filterNot { it in removedPhotos } + pickedPhotos,
+                            owner = PhotoOwner(
+                                kind = RecordPhotoKind.MEDICAL,
+                                recordId = currentChildInfo?.id.orEmpty(),
+                                familyId = currentChildInfo?.familyId
+                            ),
+                            // No add button where the phone has no photo picker (design item 8).
+                            onAdd = if (filePicker.available) {
+                                { photoPicker.launch() }
+                            } else {
+                                null
+                            },
+                            onRemove = { photo ->
+                                // A picked photograph is nowhere yet, so forgetting it is the whole
+                                // removal. A stored one is only marked here — the object is deleted
+                                // on save, before its reference leaves the record.
+                                if (photo in pickedPhotos) {
+                                    pickedPhotos = pickedPhotos - photo
+                                } else {
+                                    removedPhotos = removedPhotos + photo
+                                }
+                            },
+                            enabled = !isSaving
+                        )
+                    }
+                }
+            }
+
+            // Emergency Contacts Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.childinfo_section_emergency_contacts),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    EmergencyContactEditor(
+                        contacts = emergencyContacts,
+                        onAdd = { contact ->
+                            emergencyContacts = emergencyContacts + contact
+                        },
+                        onEdit = { index, contact ->
+                            emergencyContacts = emergencyContacts.toMutableList().apply {
+                                set(index, contact)
+                            }
+                        },
+                        onRemove = { index ->
+                            emergencyContacts = emergencyContacts.toMutableList().apply {
+                                removeAt(index)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // School Information Section
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.L),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.childinfo_section_school),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    SchoolInfoEditor(
+                        schoolInfo = schoolInfo,
+                        onSave = { info ->
+                            schoolInfo = info
+                        }
+                    )
+                }
+            }
+
+            // Save Button
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (childName.isNotBlank()) {
+                        isSaving = true
+                        // Preserve sync/ownership fields of the loaded child when editing;
+                        // rebuilding from defaults would wipe createdByFirebaseUid/medicalProfile
+                        // (the same trap AddEditEventScreen avoids for Event via existingEvent).
+                        val isNewChild = childInfoId == null || childInfoId == "new"
+                        val base = currentChildInfo.takeIf { !isNewChild }
+                        val now = wallClockNow()
+                        val resolvedId = base?.id ?: childInfoId?.takeIf { it != "new" }
+                            ?: newChildId()
+                        val childInfo = (
+                            base ?: ChildInfo(
+                                id = resolvedId,
+                                childName = childName,
+                                dateOfBirth = dateOfBirth,
+                                createdAt = now,
+                                updatedAt = now
+                            )
+                            ).copy(
+                            childName = childName,
+                            dateOfBirth = dateOfBirth,
+                            medications = medications,
+                            activities = activities,
+                            allergies = allergies,
+                            medicalNotes = medicalNotes.ifBlank { null },
+                            emergencyContacts = emergencyContacts,
+                            schoolInfo = schoolInfo,
+                            medicalProfile = medicalProfile,
+                            updatedAt = now
+                        )
+                        viewModel.upsertChildInfoWithPhotos(
+                            childInfo = childInfo,
+                            isNewChild = isNewChild,
+                            newPhotoUris = pickedPhotos,
+                            removedPhotoUrls = removedPhotos
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = childName.isNotBlank() && !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.S))
+                }
+                Text(
+                    if (childInfoId == "new") {
+                        stringResource(Res.string.childinfo_add_child_button)
+                    } else {
+                        stringResource(Res.string.childinfo_save_changes)
+                    }
+                )
+            }
+
+            // Bottom spacing
+            Spacer(modifier = Modifier.height(Spacing.L))
+        }
+    }
+}
+
+/** A new child's id, a random UUID in its usual text, what `UUID.randomUUID().toString()` wrote. */
+@OptIn(ExperimentalUuidApi::class)
+private fun newChildId(): String = Uuid.random().toString()

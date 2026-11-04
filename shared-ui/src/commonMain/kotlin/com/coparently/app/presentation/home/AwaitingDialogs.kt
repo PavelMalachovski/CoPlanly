@@ -1,0 +1,428 @@
+package com.coparently.app.presentation.home
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.coparently.app.domain.custody.CustodyPatternDiff
+import com.coparently.app.domain.custody.CustodyProposal
+import com.coparently.app.domain.custody.DaySwapGroup
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.expenses.SplitRatioProposal
+import com.coparently.app.domain.parentingplan.CitationStatus
+import com.coparently.app.presentation.calendar.MiniMonthModel
+import com.coparently.app.presentation.changerequests.ProposedSchedulePreview
+import com.coparently.app.presentation.changerequests.SwapDayAnswers
+import com.coparently.app.presentation.changerequests.SwapMonths
+import com.coparently.app.presentation.changerequests.SwapNoteQuote
+import com.coparently.app.presentation.changerequests.SwapOfferSides
+import com.coparently.app.presentation.changerequests.sidesAsked
+import com.coparently.app.presentation.changerequests.splitSharesText
+import com.coparently.app.presentation.changerequests.swapAcceptLabel
+import com.coparently.app.presentation.changerequests.swapOfferHeading
+import com.coparently.app.presentation.common.AnswerButtons
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.custody.custodyDiffDescription
+import com.coparently.app.presentation.parentingplan.planCitationLine
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.bodyLargeEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.change_request_accept
+import com.coparently.app.resources.change_request_decline
+import com.coparently.app.resources.custody_proposal_accept
+import com.coparently.app.resources.custody_proposal_decline
+import com.coparently.app.resources.custody_proposal_inbox_body
+import com.coparently.app.resources.custody_proposal_inbox_title
+import com.coparently.app.resources.day_swap_answer_by_day
+import com.coparently.app.resources.day_swap_decline
+import com.coparently.app.resources.expenses_split_proposal_body_named
+import com.coparently.app.resources.expenses_split_proposal_title
+import com.coparently.app.resources.home_dialog_later
+import com.coparently.app.resources.home_dialog_requests_message
+import com.coparently.app.resources.home_dialog_requests_message_named
+import com.coparently.app.resources.home_dialog_requests_title
+import com.coparently.app.resources.home_dialog_review
+import com.coparently.app.resources.home_dialog_swap_title
+import com.coparently.app.resources.split_request_now
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+
+/**
+ * The co-parent's pending custody proposal, as Home's dialog asks about it.
+ *
+ * One value rather than three parameters, so the dialog's signature stays within detekt's limit
+ * as what it shows grows — it grew here by [citation] (MON-21).
+ *
+ * @property proposal The proposal waiting for this parent's answer.
+ * @property diff What it would change, or null when the two patterns cannot be compared.
+ * @property citation Where it came from, derived by `ChangeRequestViewModel.pendingProposalCitation`
+ *   — the same live value the inbox card reads, so the two never disagree.
+ */
+data class ProposalAsk(
+    val proposal: CustodyProposal,
+    val diff: CustodyPatternDiff?,
+    val citation: CitationStatus = CitationStatus.None
+)
+
+/**
+ * The co-parent's proposed expense split, as Home's dialog asks about it.
+ *
+ * @property proposal The proposal waiting for this parent's answer.
+ * @property agreed The split agreed now — what the proposal would replace — or null while it is not
+ *   known; the dialog then shows the proposal alone.
+ */
+data class SplitAsk(
+    val proposal: SplitRatioProposal,
+    val agreed: SplitRatio?
+)
+
+/**
+ * The proposals waiting on this parent's answer, each of which Home asks about in a dialog of its
+ * own. One value, so [AwaitingDialogs] keeps one parameter for them as they grow — it grew here by
+ * [split].
+ *
+ * @property proposal The co-parent's pending custody proposal, or null.
+ * @property split The co-parent's proposed expense split, or null.
+ * @property swapMonths Each waiting swap's months, by group key (21 October 2026); a swap with none
+ *   yet is asked about without them.
+ */
+data class HomeAsks(
+    val proposal: ProposalAsk? = null,
+    val split: SplitAsk? = null,
+    val swapMonths: Map<String, List<MiniMonthModel>> = emptyMap()
+)
+
+/**
+ * The answers Home's dialogs can give, grouped so the dialogs take one parameter for them.
+ *
+ * @property onAcceptSwap Accepts a day-swap offer.
+ * @property onDeclineSwap Declines a day-swap offer.
+ * @property onAcceptProposal Accepts the pending custody proposal.
+ * @property onDeclineProposal Declines the pending custody proposal.
+ * @property onOpenChangeRequests Opens the inbox, where event change requests are answered.
+ * @property onSwapSeen Records that this parent opened a day-swap offer: its dialog was shown
+ *   (phase 3a, spec §4.5).
+ * @property onProposalSeen Records that this parent opened the custody proposal: its dialog was shown.
+ * @property onAcceptSplit Accepts the proposed expense split.
+ * @property onDeclineSplit Declines the proposed expense split.
+ * @property onSplitSeen Records that this parent opened the proposed split: its dialog was shown.
+ * @property onAnswerSwapDays Answers a day-swap offer day by day (21 October 2026): ISO date to
+ *   the answer, a day left out staying open.
+ */
+data class AwaitingActions(
+    val onAcceptSwap: (DaySwapGroup) -> Unit,
+    val onDeclineSwap: (DaySwapGroup) -> Unit,
+    val onAcceptProposal: () -> Unit,
+    val onDeclineProposal: () -> Unit,
+    val onOpenChangeRequests: () -> Unit,
+    val onSwapSeen: (DaySwapGroup) -> Unit,
+    val onProposalSeen: () -> Unit,
+    val onAcceptSplit: () -> Unit,
+    val onDeclineSplit: () -> Unit,
+    val onSplitSeen: () -> Unit,
+    val onAnswerSwapDays: (DaySwapGroup, Map<String, Boolean>) -> Unit = { _, _ -> }
+)
+
+/**
+ * The pop-up ask the owner walkthrough called for (items 4/13): what waits on this parent's
+ * answer confronts them on open, instead of hiding behind a row they may never tap.
+ *
+ * One dialog per visit to Home ([HomeAskQueue.nextThisVisit]) — a custody proposal first, then a
+ * proposed expense split, then day swaps. A proposal, a split and a swap carry enough context to
+ * answer right here (who, what, which day), so they get real Accept/Decline buttons; event change
+ * requests carry times and notes, so their dialog routes to the inbox that can show them. "Later"
+ * (or tapping outside) puts the ask off until it changes ([PutOffAsksViewModel]): it stays in the
+ * calendar's banner and the inbox, but Home stops interrupting with it. It used to return on every
+ * visit, which the UI tour showed as the same dialog five screens running (R-2).
+ *
+ * @param state The dashboard, for the swaps and requests awaiting this parent.
+ * @param parentNames Resolves a uid to that parent's name.
+ * @param asks The co-parent's pending custody proposal and proposed split; either may be absent.
+ * @param actions What each answer does.
+ * @param putOffAsks Which asks this person put off, and until when.
+ */
+@Composable
+internal fun AwaitingDialogs(
+    state: HomeUiState.Dashboard,
+    parentNames: ParentNames,
+    asks: HomeAsks,
+    actions: AwaitingActions,
+    putOffAsks: PutOffAsksViewModel = koinViewModel()
+) {
+    // Stored, not remembered: "Later" puts an ask off until it changes (release audit R-2), and
+    // an ask that followed the screen came back on every visit to Home.
+    val putOff by putOffAsks.putOff.collectAsState()
+
+    // Each ask under its revision, so a fresh proposal, an amended offer or a new request opens
+    // again even after the last was put off. One dialog per *offer*, not per day: a week offered as
+    // one agreement used to raise seven dialogs in a row, each asking the same question.
+    val queue = HomeAskQueue.of(asks, state.awaitingSwaps, state.awaitingRequestIds)
+    val waiting = queue.flatMapTo(mutableSetOf()) { it.keys }
+    val dismiss: (Set<String>) -> Unit = { keys -> putOffAsks.putOff(keys, waiting) }
+
+    // One ask per visit: what already waited beside the first one shown waits for the next visit.
+    // Remembered across a rotation, forgotten when Home leaves the screen.
+    var held by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    val ask = HomeAskQueue.nextThisVisit(queue, putOff, held?.toSet())
+    LaunchedEffect(ask?.keys) {
+        if (held == null && ask != null) held = HomeAskQueue.heldBeside(queue, ask).sorted()
+    }
+
+    when (ask) {
+        is HomeAsk.Proposal ->
+            ProposalDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.keys) }, actions = actions)
+
+        is HomeAsk.Split ->
+            SplitDialog(ask.ask, parentNames, onDismiss = { dismiss(ask.keys) }, actions = actions)
+
+        is HomeAsk.Swap ->
+            SwapDialog(
+                ask.group,
+                asks.swapMonths[ask.group.key].orEmpty(),
+                parentNames,
+                onDismiss = { dismiss(ask.keys) },
+                actions = actions
+            )
+
+        is HomeAsk.Requests ->
+            RequestsDialog(
+                coParentName = parentNames.parents.coParent?.name?.takeIf { it.isNotBlank() },
+                onDismiss = { dismiss(ask.keys) },
+                onReview = actions.onOpenChangeRequests
+            )
+
+        null -> Unit
+    }
+}
+
+/**
+ * Who proposed a new schedule, what it would change, and — when it was built from the parenting
+ * plan — which agreed answer it cites (MON-21), worded by `planCitationLine` exactly as the inbox
+ * card words it. A proposal citing nothing says nothing about it.
+ */
+@Composable
+private fun ProposalDialog(
+    ask: ProposalAsk,
+    parentNames: ParentNames,
+    onDismiss: () -> Unit,
+    actions: AwaitingActions
+) {
+    // Shown is opened (spec §4.5): once per proposal, however often the dialog recomposes.
+    LaunchedEffect(ask.proposal.proposedAt) { actions.onProposalSeen() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.custody_proposal_inbox_title)) },
+        text = {
+            // Who proposed it, and what it would actually do. The agreed pattern and the proposed
+            // one sit on the same document, so the diff costs no extra read.
+            val who = stringResource(
+                Res.string.custody_proposal_inbox_body,
+                parentNames.labelForUid(ask.proposal.proposedBy)
+            )
+            val diff = custodyDiffDescription(ask.diff, parentNames)
+            val citation = planCitationLine(ask.citation)
+            // Scrolls: the mini month makes the dialog taller than a small phone at large text.
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            ) {
+                Text(if (diff == null) who else "$who\n\n$diff")
+                // What it looks like, always — the diff above is missing when the pattern changes.
+                ProposedSchedulePreview(ask.proposal, parentNames)
+                citation?.let { line ->
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            AnswerButtons(
+                acceptLabel = stringResource(Res.string.custody_proposal_accept),
+                declineLabel = stringResource(Res.string.custody_proposal_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptProposal()
+                },
+                onDecline = {
+                    onDismiss()
+                    actions.onDeclineProposal()
+                },
+                later = stringResource(Res.string.home_dialog_later) to onDismiss
+            )
+        }
+    )
+}
+
+/**
+ * Who proposed a new expense split and what it would be, each share beside the name of the parent
+ * who pays it, as the Expenses banner words it; then the split agreed now, so "35 / 65" says what it
+ * replaces. The answer is the inbox's and the Expenses banner's: accepting prices the expenses
+ * recorded from then on, and the ones already recorded keep their split.
+ */
+@Composable
+private fun SplitDialog(
+    ask: SplitAsk,
+    parentNames: ParentNames,
+    onDismiss: () -> Unit,
+    actions: AwaitingActions
+) {
+    // Shown is opened (spec §4.5): once per proposal, however often the dialog recomposes.
+    LaunchedEffect(ask.proposal.proposedAtMillis) { actions.onSplitSeen() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.expenses_split_proposal_title)) },
+        text = {
+            // Scrolls: names and money at the largest text can outgrow a small phone, and an amount
+            // is never cut off (design item 15).
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            ) {
+                Text(
+                    stringResource(
+                        Res.string.expenses_split_proposal_body_named,
+                        parentNames.labelForUid(ask.proposal.proposedBy),
+                        splitSharesText(ask.proposal.ratio, parentNames)
+                    )
+                )
+                ask.agreed?.let { now ->
+                    Text(
+                        text = stringResource(Res.string.split_request_now, splitSharesText(now, parentNames)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            AnswerButtons(
+                acceptLabel = stringResource(Res.string.change_request_accept),
+                declineLabel = stringResource(Res.string.change_request_decline),
+                onAccept = {
+                    onDismiss()
+                    actions.onAcceptSplit()
+                },
+                onDecline = {
+                    onDismiss()
+                    actions.onDeclineSplit()
+                },
+                later = stringResource(Res.string.home_dialog_later) to onDismiss
+            )
+        }
+    )
+}
+
+/**
+ * One day-swap offer, answered in place: whole, or day by day (21 October 2026), with the months
+ * its days fall in, each day in the colour of whom it would go to.
+ */
+@Composable
+private fun SwapDialog(
+    swapGroup: DaySwapGroup,
+    months: List<MiniMonthModel>,
+    parentNames: ParentNames,
+    onDismiss: () -> Unit,
+    actions: AwaitingActions
+) {
+    val myUid = parentNames.parents.me?.uid
+    // Shown is opened (spec §4.5): once per offer, however often the dialog recomposes.
+    LaunchedEffect(swapGroup.revision) { actions.onSwapSeen(swapGroup) }
+    // The days still waiting on this parent (a part-answered offer shows and decides only those),
+    // and the per-day mode in place of the main buttons (board SW-6).
+    val shown = myUid?.let { swapGroup.waitingOn(it) } ?: swapGroup
+    var byDay by rememberSaveable(swapGroup.revision) { mutableStateOf(false) }
+    val offerer = parentNames.labelForUid(swapGroup.swaps.first().override.requestedBy)
+    val sides = shown.sidesAsked(parentNames)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.home_dialog_swap_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.M)
+            ) {
+                Text(swapOfferHeading(sides, offerer), style = MaterialTheme.typography.bodyLargeEmphasized)
+                sides?.let { SwapOfferSides(it, offerer, parentNames) }
+                SwapMonths(months, parentNames)
+                SwapNoteQuote(swapGroup.swaps.first().override.note, offerer)
+                if (byDay && myUid != null) {
+                    SwapDayAnswers(
+                        group = swapGroup,
+                        uid = myUid,
+                        parentNames = parentNames,
+                        onAnswer = { picked ->
+                            onDismiss()
+                            actions.onAnswerSwapDays(swapGroup, picked)
+                        },
+                        onBack = { byDay = false }
+                    )
+                } else if (shown.dayCount >= 2) {
+                    TextButton(onClick = { byDay = true }) { Text(stringResource(Res.string.day_swap_answer_by_day)) }
+                }
+            }
+        },
+        confirmButton = {
+            // Dismissed on tap as well: the answer's round trip through Firestore takes a
+            // moment, and the dialog must not sit there inviting a second tap meanwhile.
+            if (!byDay) {
+                AnswerButtons(
+                    acceptLabel = stringResource(swapAcceptLabel(shown.dayCount)),
+                    declineLabel = stringResource(Res.string.day_swap_decline),
+                    onAccept = {
+                        onDismiss()
+                        actions.onAcceptSwap(swapGroup)
+                    },
+                    onDecline = {
+                        onDismiss()
+                        actions.onDeclineSwap(swapGroup)
+                    },
+                    later = stringResource(Res.string.home_dialog_later) to onDismiss
+                )
+            }
+        }
+    )
+}
+
+/**
+ * The event change requests waiting, as one summary that routes to the inbox. It names the
+ * co-parent when the name is known.
+ */
+@Composable
+private fun RequestsDialog(coParentName: String?, onDismiss: () -> Unit, onReview: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.home_dialog_requests_title)) },
+        text = {
+            Text(
+                coParentName?.let { stringResource(Res.string.home_dialog_requests_message_named, it) }
+                    ?: stringResource(Res.string.home_dialog_requests_message)
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onDismiss()
+                onReview()
+            }) {
+                Text(stringResource(Res.string.home_dialog_review))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.home_dialog_later)) }
+        }
+    )
+}

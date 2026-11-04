@@ -6,6 +6,8 @@ import com.coparently.app.domain.custody.DayOverrideStatus
 import com.coparently.app.domain.model.CustodyModel
 import com.coparently.app.domain.model.CustodyModelType
 import com.coparently.app.domain.model.Event
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -13,7 +15,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 
 /**
  * What the Today widget computes, before any of it is worded.
@@ -31,7 +32,7 @@ class TodayWidgetModelTest {
         modelType = CustodyModelType.WEEK_ON_WEEK_OFF,
         patternDays = 14,
         momDayIndices = (0..6).toSet(),
-        startDate = LocalDate.of(2026, 8, 31)
+        startDate = kotlinx.datetime.LocalDate(2026, 8, 31)
     )
     private val today: LocalDate = LocalDate.of(2026, 9, 2) // cycle day 2, slot 1's
 
@@ -41,7 +42,7 @@ class TodayWidgetModelTest {
 
         assertTrue(model.signedIn)
         assertEquals("mom", model.dayParent)
-        assertEquals(LocalDate.of(2026, 9, 7), model.handover?.date)
+        assertEquals(kotlinx.datetime.LocalDate(2026, 9, 7), model.handover?.date)
         assertEquals(5L, model.handover?.daysUntil)
         assertEquals("dad", model.handover?.toParent)
     }
@@ -59,14 +60,14 @@ class TodayWidgetModelTest {
 
         val model = TodayWidgetModel.of(today, "uid-mom", emptyList(), pattern, mapOf("2026-09-03" to swap))
 
-        assertEquals(LocalDate.of(2026, 9, 3), model.handover?.date)
+        assertEquals(kotlinx.datetime.LocalDate(2026, 9, 3), model.handover?.date)
         assertEquals(1L, model.handover?.daysUntil)
     }
 
     @Test
     fun `a contact window with the other parent is listed, one naming the day's own parent is not`() {
-        val withDad = ContactWindow(dayIndex = 2, LocalTime.of(15, 0), LocalTime.of(19, 0), parent = "dad")
-        val withMom = ContactWindow(dayIndex = 2, LocalTime.of(9, 0), LocalTime.of(10, 0), parent = "mom")
+        val withDad = ContactWindow(dayIndex = 2, LocalTime(15, 0), LocalTime(19, 0), parent = "dad")
+        val withMom = ContactWindow(dayIndex = 2, LocalTime(9, 0), LocalTime(10, 0), parent = "mom")
 
         val model = TodayWidgetModel.of(
             today,
@@ -85,7 +86,8 @@ class TodayWidgetModelTest {
             event("evening", today.atTime(18, 0)),
             event("theirs", today.atTime(12, 0)).copy(isPrivate = true, createdByFirebaseUid = "uid-dad"),
             event("mine", today.atTime(11, 0)).copy(isPrivate = true, createdByFirebaseUid = "uid-mom"),
-            event("overnight", today.minusDays(1).atTime(20, 0)).copy(endDateTime = today.atTime(8, 0)),
+            event("overnight", today.minusDays(1).atTime(20, 0))
+                .copy(endDateTime = today.atTime(8, 0).toKotlinLocalDateTime()),
             event("morning", today.atTime(9, 0))
         )
 
@@ -117,10 +119,10 @@ class TodayWidgetModelTest {
     private fun event(id: String, start: LocalDateTime) = Event(
         id = id,
         title = id,
-        startDateTime = start,
+        startDateTime = start.toKotlinLocalDateTime(),
         eventType = "general",
         parentOwner = "mom",
-        createdAt = start,
-        updatedAt = start
+        createdAt = start.toKotlinLocalDateTime(),
+        updatedAt = start.toKotlinLocalDateTime()
     )
 }

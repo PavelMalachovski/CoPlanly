@@ -20,7 +20,7 @@ function fixture({rules, storage, push, functions, tests, map}) {
   };
   write('firestore.rules', rules);
   write('storage.rules', storage);
-  write('app/src/main/java/com/coparently/app/data/remote/firebase/PushPayload.kt', push);
+  write('shared-data/src/commonMain/kotlin/com/coparently/app/data/remote/firebase/PushPayload.kt', push);
   write('functions/index.js', functions);
   for (const [name, body] of Object.entries(tests)) {
     write(`app/src/androidTest/java/com/coparently/app/e2e/${name}.kt`, body);

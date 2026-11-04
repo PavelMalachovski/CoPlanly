@@ -35,6 +35,8 @@ release/
 # Gradle files
 .gradle/
 build/
+# Kotlin Gradle plugin's project-level state (the multiplatform module's compiler sessions and logs)
+.kotlin/
 
 # Local configuration file (sdk path, etc)
 local.properties

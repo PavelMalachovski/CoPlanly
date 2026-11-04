@@ -5,27 +5,24 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FcmService
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Manager for handling push notification setup and registration.
  * Coordinates FCM token management and notification permissions.
  */
-@Singleton
-class NotificationManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+class NotificationManager(
+    private val context: Context,
     private val fcmService: FcmService,
     private val firebaseAuthService: FirebaseAuthService,
-    private val crashlyticsManager: CrashlyticsManager
+    private val crashReporter: CrashReporter
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -72,8 +69,8 @@ class NotificationManager @Inject constructor(
                 // Push registration failing silently is how a parent stops receiving anything
                 // without either of them learning why. It must not crash the app; it must not be
                 // invisible either.
-                android.util.Log.e(TAG, "FCM token registration failed", e)
-                crashlyticsManager.recordException(e)
+                logger.e(TAG, "FCM token registration failed", e)
+                crashReporter.record(e)
             }
         }
     }
@@ -90,8 +87,8 @@ class NotificationManager @Inject constructor(
                     fcmService.updateUserToken(token)
                 }
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "FCM token refresh failed", e)
-                crashlyticsManager.recordException(e)
+                logger.e(TAG, "FCM token refresh failed", e)
+                crashReporter.record(e)
             }
         }
     }

@@ -5,7 +5,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parse, problemsOf, junit } = require('../check-r8-probe.js');
+const { parse, problemsOf, junit, REQUIRED_CALL_SITES } = require('../check-r8-probe.js');
+const fs = require('fs');
+const path = require('path');
 
 const MED = 'com.coparently.app.domain.model.Medication';
 const VAC = 'com.coparently.app.domain.model.Vaccination';
@@ -60,14 +62,14 @@ test('a crashed process is never a pass, even with every reported case green', (
 test('empty output (the component was never started) fails', () => {
   const problems = problemsOf(parse('android.util.AndroidException: INSTRUMENTATION_FAILED: x\n'), [MED]);
   assert.ok(problems.some((p) => /did not finish/.test(p)));
-  assert.ok(problems.some((p) => /Medication is handed to Gson, but the probe reported no case/.test(p)));
+  assert.ok(problems.some((p) => /Medication is a stored model, but the probe reported no case/.test(p)));
 });
 
-test('a required Gson model with no case fails, so a new model cannot slip past', () => {
+test('a required stored model with no case fails, so a new model cannot slip past', () => {
   const run = parse(output({ cases: [{ type: MED, ok: 'true' }] }));
   const problems = problemsOf(run, [MED, VAC]);
   assert.deepEqual(problems.length, 1);
-  assert.match(problems[0], /Vaccination is handed to Gson/);
+  assert.match(problems[0], /Vaccination is a stored model/);
 });
 
 test('a value continued on the next line stays with its key', () => {
@@ -86,8 +88,29 @@ test('the JUnit document counts one test per case plus the finish check, failure
 });
 
 test('the real discovery requires the models the probe names', () => {
-  const { gsonTargets } = require('../check-invariants.js');
-  const targets = [...gsonTargets().keys()];
-  assert.ok(targets.includes(MED));
-  assert.ok(targets.includes('com.coparently.app.domain.model.SchoolInfo'), 'multi-line fromJson is discovered');
+  const { storedJsonModels } = require('../check-invariants.js');
+  const models = [...storedJsonModels().keys()];
+  assert.ok(models.includes(MED));
+  assert.ok(models.includes('com.coparently.app.domain.custody.DayOverrideStatus'), 'an enum is discovered');
+  assert.ok(models.includes('com.coparently.app.presentation.event.EventDraft'), "shared-ui's models are (EventDraft, slice 10b)");
+});
+
+test('production code imports no Gson', () => {
+  const { gsonImports } = require('../check-invariants.js');
+  assert.deepEqual([...gsonImports().keys()], []);
+});
+
+test('every required call site is a label the probe reports', () => {
+  // The labels are literals in two languages; a renamed one would make the requirement unmeetable.
+  // `HttpImportProbe` reports the imports' call sites, `FirestoreWriteProbe` the Firestore write's.
+  const probes = ['HttpImportProbe.kt', 'FirestoreWriteProbe.kt'];
+  const source = probes
+    .map((name) => fs.readFileSync(
+      path.join(__dirname, '..', '..', 'app/src/r8Test/java/com/coparently/app/r8probe', name),
+      'utf8'
+    ))
+    .join('\n');
+  for (const label of REQUIRED_CALL_SITES) {
+    assert.ok(source.includes(`"${label}"`), `no probe in ${probes.join(' or ')} reports "${label}"`);
+  }
 });

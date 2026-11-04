@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
@@ -31,11 +32,12 @@ import com.coparently.app.presentation.MainActivity
 import com.coparently.app.presentation.common.STACK_CONTROLS_FONT_SCALE
 import com.coparently.app.presentation.theme.DarkColorScheme
 import com.coparently.app.presentation.theme.LightColorScheme
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
+import com.coparently.app.utils.AppLocale
+import com.coparently.app.utils.inAppLanguage
 import kotlinx.coroutines.flow.first
+import kotlinx.datetime.toKotlinLocalDateTime
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import java.time.LocalDate
 
 /**
@@ -49,8 +51,9 @@ import java.time.LocalDate
  * keeps while it is open, because that name lives in Firestore alone.
  *
  * It is redrawn by [TodayWidgetRefresher] — when events or the custody schedule change in Room,
- * when the parents' names change, just after midnight — and hourly by the system as a backstop
- * (`updatePeriodMillis` in `res/xml/today_widget_info.xml`). A tap opens the app.
+ * when the parents' names change, when the language the app speaks changes, just after midnight —
+ * and hourly by the system as a backstop (`updatePeriodMillis` in `res/xml/today_widget_info.xml`).
+ * A tap opens the app.
  *
  * Home screen only (`widgetCategory="home_screen"`): the family's day is not for a lock screen.
  */
@@ -60,7 +63,10 @@ class TodayWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val loadedFor = getAppWidgetState<Preferences>(context, id)[REFRESH_STAMP]
-        val initial = contentState(context)
+        // Worded in the language the app speaks now (the owner's rule, `AppLocale`), each time the
+        // lines load; drawn with the context Glance hands this (the app's own, in its process),
+        // unchanged, whose night mode is the system's, so the widget follows the system's theme.
+        val initial = contentState(context.inAppLanguage())
         TodayWidgetMidnight.ensureScheduled(context)
         provideContent {
             // A redraw asked for while this session is still open recomposes rather than calling
@@ -68,7 +74,7 @@ class TodayWidget : GlanceAppWidget() {
             val stamp = currentState(REFRESH_STAMP)
             var state by remember { mutableStateOf(initial) }
             LaunchedEffect(stamp) {
-                if (stamp != loadedFor) state = contentState(context)
+                if (stamp != loadedFor) state = contentState(context.inAppLanguage())
             }
             TodayWidgetRoot(state, onClick = actionStartActivity<MainActivity>())
         }
@@ -80,11 +86,17 @@ class TodayWidget : GlanceAppWidget() {
         private val REFRESH_STAMP = longPreferencesKey("today_widget_refresh")
 
         /**
+         * The language [refreshAll] last asked the lines for (a BCP 47 tag), which
+         * [refreshIfLanguageChanged] compares with the one the app speaks now.
+         */
+        private val WORDED_IN = stringPreferencesKey("today_widget_language")
+
+        /**
          * Today, read from this device's Room and worded in [context]'s language — what the widget
          * draws, and what the UI tour renders to review it.
          */
         internal suspend fun contentState(context: Context): TodayWidgetContentState {
-            val source = entryPoint(context)
+            val source = entryPoint()
             val today = LocalDate.now()
             val userId = source.userRepository().getCurrentUserId()?.takeIf { it.isNotBlank() }
             val model = if (userId == null) {
@@ -95,7 +107,10 @@ class TodayWidget : GlanceAppWidget() {
                     today = today,
                     userId = userId,
                     events = source.eventRepository()
-                        .getEventsByDateRange(today.atStartOfDay(), today.plusDays(1).atStartOfDay())
+                        .getEventsByDateRange(
+                            today.atStartOfDay().toKotlinLocalDateTime(),
+                            today.plusDays(1).atStartOfDay().toKotlinLocalDateTime()
+                        )
                         .first(),
                     model = custody,
                     overrides = swaps
@@ -108,32 +123,55 @@ class TodayWidget : GlanceAppWidget() {
         /** Redraws every placed Today widget. Does nothing when none is placed. */
         suspend fun refreshAll(context: Context) {
             val widget = TodayWidget()
+            val language = AppLocale.effective(context).toLanguageTag()
             GlanceAppWidgetManager(context).getGlanceIds(TodayWidget::class.java).forEach { id ->
-                updateAppWidgetState(context, id) { it[REFRESH_STAMP] = System.currentTimeMillis() }
+                updateAppWidgetState(context, id) {
+                    it[REFRESH_STAMP] = System.currentTimeMillis()
+                    it[WORDED_IN] = language
+                }
                 widget.update(context, id)
             }
         }
 
-        private fun entryPoint(context: Context): TodayWidgetEntryPoint =
-            EntryPointAccessors.fromApplication(context.applicationContext, TodayWidgetEntryPoint::class.java)
+        /**
+         * Redraws every placed Today widget when one was last asked for its lines in a language
+         * other than the one the app speaks now ([AppLocale]), or was never asked through
+         * [refreshAll] at all (a widget placed or last drawn by the system alone). Nothing
+         * happens when none is placed, or when every one already speaks it.
+         */
+        suspend fun refreshIfLanguageChanged(context: Context) {
+            val widget = TodayWidget()
+            val language = AppLocale.effective(context).toLanguageTag()
+            val wordedIn = GlanceAppWidgetManager(context).getGlanceIds(TodayWidget::class.java)
+                .map { id -> widget.getAppWidgetState<Preferences>(context, id)[WORDED_IN] }
+            if (needsLanguageRedraw(wordedIn, language)) refreshAll(context)
+        }
+
+        private fun entryPoint(): TodayWidgetEntryPoint = TodayWidgetEntryPoint()
     }
 }
 
-/** What the widget reads, from the app's singleton graph: it is not a Hilt-injected class. */
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface TodayWidgetEntryPoint {
+/**
+ * Whether placed widgets whose lines were last asked for in [wordedIn] (one tag per widget, null
+ * for one never redrawn through `refreshAll`) need redrawing for an app that speaks [speaksNow]:
+ * when any of them speaks another, or is not known to speak it. None placed, none to redraw.
+ */
+internal fun needsLanguageRedraw(wordedIn: List<String?>, speaksNow: String): Boolean =
+    wordedIn.any { it != speaksNow }
+
+/** What the widget reads, from the app's Koin graph: the widget itself is not built by Koin. */
+class TodayWidgetEntryPoint : KoinComponent {
     /** Today's events, from Room. */
-    fun eventRepository(): EventRepository
+    fun eventRepository(): EventRepository = get()
 
     /** The stored custody pattern and swaps, from Room. */
-    fun custodyModelRepository(): CustodyModelRepository
+    fun custodyModelRepository(): CustodyModelRepository = get()
 
     /** Who is signed in. */
-    fun userRepository(): UserRepository
+    fun userRepository(): UserRepository = get()
 
     /** The parents' names as the app last loaded them. */
-    fun widgetNames(): TodayWidgetNames
+    fun widgetNames(): TodayWidgetNames = get()
 }
 
 /** Declares [TodayWidget] to the system; see the `<receiver>` in the manifest. */

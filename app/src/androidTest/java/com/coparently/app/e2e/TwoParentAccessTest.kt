@@ -5,7 +5,7 @@ import com.coparently.app.data.chat.DepartedThreadSource
 import com.coparently.app.data.remote.firebase.FirestoreChildInfoDataSource
 import com.coparently.app.data.remote.firebase.FirestoreMessageDataSource
 import com.coparently.app.data.session.AccountDeletionService
-import com.coparently.app.di.FirebaseModule
+import com.coparently.app.di.koin.FUNCTIONS_REGION
 import com.coparently.app.domain.chat.ConversationKey
 import com.coparently.app.domain.chat.DepartedThread
 import com.coparently.app.domain.custody.SharedCustodyRead
@@ -38,6 +38,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toKotlinLocalDateTime
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -242,8 +244,8 @@ class TwoParentAccessTest : TwoParentTest() {
         assertEquals(mapOf(alice.uid to "Alice", bob.uid to "Bob"), grant.parentNames)
 
         EmulatorEnvironment.step("Grandma's calendar holds the shared event and nothing else of Alice's")
-        val today = LocalDate.now()
-        val lastDay = today.plusDays(FRIEND_WINDOW_DAYS)
+        val today = LocalDate.now().toKotlinLocalDate()
+        val lastDay = LocalDate.now().plusDays(FRIEND_WINDOW_DAYS).toKotlinLocalDate()
         val read = withTimeout(EmulatorParent.WAIT_MS) {
             grandma.friendRepository.observeFamilyEvents(grant.familyId, today, lastDay).first()
         }
@@ -271,8 +273,8 @@ class TwoParentAccessTest : TwoParentTest() {
             id = UUID.randomUUID().toString(),
             childName = "Ema",
             dateOfBirth = null,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             createdByFirebaseUid = alice.uid,
             lastModifiedBy = alice.uid
         )
@@ -288,13 +290,13 @@ class TwoParentAccessTest : TwoParentTest() {
         assertEquals(invite.grantExpiresAtMillis, accepted.expiresAtMillis)
 
         // The record, read by id through the production data source on the guest's phone.
-        val record = checkNotNull(FirestoreChildInfoDataSource(nina.firestore).getChildInfoById(child.id)) {
+        val record = checkNotNull(FirestoreChildInfoDataSource(nina.documents).getChildInfoById(child.id)) {
             "The guest cannot read the record she was invited to"
         }
         assertEquals("Ema", record["childName"])
         assertTrue(nina.uid in (record["sharedWith"] as List<*>))
         // Alice's own read shows the grant, so she can see who is reading and revoke it.
-        val asAliceSeesIt = checkNotNull(FirestoreChildInfoDataSource(alice.firestore).getChildInfoById(child.id))
+        val asAliceSeesIt = checkNotNull(FirestoreChildInfoDataSource(alice.documents).getChildInfoById(child.id))
         assertTrue(nina.uid in (asAliceSeesIt["guests"] as Map<*, *>).keys)
 
         EmulatorEnvironment.step("A guest reads; she does not write, and sees no calendar")
@@ -421,8 +423,9 @@ class TwoParentAccessTest : TwoParentTest() {
     @Test
     fun anExportHashIsRegisteredOnceAndVerifiesWithoutAnAccount() = runBlocking<Unit> {
         val familyId = FamilyKey.of(alice.uid, bob.uid)
-        val from = LocalDate.now().minusDays(PERIOD_DAYS)
-        val recordId = checkNotNull(alice.exportReceipts.reserve(familyId, from, LocalDate.now(), ExportFormat.PDF)) {
+        val from = LocalDate.now().minusDays(PERIOD_DAYS).toKotlinLocalDate()
+        val to = LocalDate.now().toKotlinLocalDate()
+        val recordId = checkNotNull(alice.exportReceipts.reserve(familyId, from, to, ExportFormat.PDF)) {
             "reserveExportRecordId returned no id"
         }
         val bytes = "%PDF-1.4 e2e ${UUID.randomUUID()}".toByteArray()
@@ -461,7 +464,7 @@ class TwoParentAccessTest : TwoParentTest() {
 
         EmulatorEnvironment.step("Bob deletes his account")
         AccountDeletionService(
-            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
+            functions = FirebaseFunctions.getInstance(bob.app, FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService,
@@ -501,7 +504,7 @@ class TwoParentAccessTest : TwoParentTest() {
         EmulatorEnvironment.step("Bob deletes his account")
         val deletedAt = System.currentTimeMillis()
         AccountDeletionService(
-            functions = FirebaseFunctions.getInstance(bob.app, FirebaseModule.FUNCTIONS_REGION),
+            functions = FirebaseFunctions.getInstance(bob.app, FUNCTIONS_REGION),
             database = bob.database,
             encryptedPreferences = bob.encryptedPreferences,
             fcmService = bob.fcmService,
@@ -529,7 +532,7 @@ class TwoParentAccessTest : TwoParentTest() {
         assertTrue("Bob's message went with his account", kept.documents.any { it.id == message.id })
 
         // Found the way the chat tab and the export find it, with no pairing left to derive it from.
-        val found = DepartedThreadSource(alice.userRepository, FirestoreMessageDataSource(alice.firestore))
+        val found = DepartedThreadSource(alice.userRepository, FirestoreMessageDataSource(alice.documents))
             .current(alice.uid)
         assertEquals(listOf(DepartedThread(conversationId, bobUid, bob.name, retainedUntil)), found)
 
@@ -574,7 +577,7 @@ class TwoParentAccessTest : TwoParentTest() {
         )
         val onServer = alice.parentingPlanRepository.serverHalves(familyId)[alice.uid]
         assertEquals("Alice's half did not reach the server", PLAN_ANSWER, onServer?.answerTo(PLAN_QUESTION))
-        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now())
+        alice.custodyRepository.createWeekOnWeekOff(LocalDate.now().toKotlinLocalDate())
         assertTrue(
             "the schedule did not reach the server",
             alice.custodyRepository.readShared() is SharedCustodyRead.Found
@@ -616,8 +619,8 @@ class TwoParentAccessTest : TwoParentTest() {
         assertNotNull(custody)
     }
 
-    private fun window(): Pair<LocalDate, LocalDate> =
-        LocalDate.now().minusDays(1) to LocalDate.now().plusDays(PERIOD_DAYS)
+    private fun window(): Pair<kotlinx.datetime.LocalDate, kotlinx.datetime.LocalDate> =
+        LocalDate.now().minusDays(1).toKotlinLocalDate() to LocalDate.now().plusDays(PERIOD_DAYS).toKotlinLocalDate()
 
     // ---- Shared helpers -----------------------------------------------------------------------
 
@@ -627,11 +630,11 @@ class TwoParentAccessTest : TwoParentTest() {
         val event = Event(
             id = UUID.randomUUID().toString(),
             title = title,
-            startDateTime = now.plusDays(2),
+            startDateTime = now.plusDays(2).toKotlinLocalDateTime(),
             eventType = "school",
             parentOwner = parent.database.userDao().getUserById(parent.uid)?.role ?: "mom",
-            createdAt = now,
-            updatedAt = now,
+            createdAt = now.toKotlinLocalDateTime(),
+            updatedAt = now.toKotlinLocalDateTime(),
             isPrivate = isPrivate
         )
         parent.eventRepository.insertEvent(event)
@@ -744,7 +747,7 @@ class TwoParentAccessTest : TwoParentTest() {
         const val PLAN_ANSWER = "Alternate weeks, handover on Monday at school"
 
         /** The functions' region, and so the emulator's URL path. */
-        const val REGION = FirebaseModule.FUNCTIONS_REGION
+        const val REGION = FUNCTIONS_REGION
         const val HTTP_OK = 200
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404

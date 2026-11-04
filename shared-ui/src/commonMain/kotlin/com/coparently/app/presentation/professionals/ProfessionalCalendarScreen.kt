@@ -1,0 +1,220 @@
+package com.coparently.app.presentation.professionals
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.coparently.app.domain.model.Event
+import com.coparently.app.domain.professionals.ProfessionalGrant
+import com.coparently.app.presentation.common.EmptyState
+import com.coparently.app.presentation.common.PillChip
+import com.coparently.app.presentation.common.SectionGroup
+import com.coparently.app.presentation.common.SectionRow
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.common_back
+import com.coparently.app.resources.professional_calendar_custody_with
+import com.coparently.app.resources.professional_calendar_event_supporting
+import com.coparently.app.resources.professional_calendar_next
+import com.coparently.app.resources.professional_calendar_no_events
+import com.coparently.app.resources.professional_calendar_previous
+import com.coparently.app.resources.professional_calendar_read_only
+import com.coparently.app.resources.professional_calendar_title
+import com.coparently.app.resources.professional_unavailable
+import com.coparently.app.utils.ReaderDateText
+import com.coparently.app.utils.readerFullDate
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+
+/**
+ * A professional's read-only calendar of one family (MON-18): four weeks at a time, each day with
+ * whose day it is and the family's shared events.
+ *
+ * A list rather than the parents' grid, and on purpose. The grid is built on Room, which this
+ * phone does not hold for somebody else's family, and it is full of affordances — tap to create,
+ * long-press to swap, drag to reschedule — that a professional must never be offered (design item
+ * 8). Whose day it is is **named**, not coloured: the parents' colours are each parent's own choice
+ * (design item 12), which this phone cannot know, and pink for a parent who chose purple is the
+ * bug that rule forbids.
+ *
+ * @param onNavigateUp Returns to the professionals list.
+ * @param viewModel Screen state.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfessionalCalendarScreen(
+    onNavigateUp: () -> Unit,
+    viewModel: ProfessionalCalendarViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(Res.string.professional_calendar_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(Res.string.common_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        when (val state = uiState) {
+            ProfessionalCalendarUiState.Loading -> Column(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) { CircularProgressIndicator() }
+            ProfessionalCalendarUiState.Unavailable -> EmptyState(
+                icon = Icons.Default.CalendarMonth,
+                title = stringResource(Res.string.professional_unavailable),
+                modifier = Modifier.fillMaxSize().padding(padding)
+            )
+            is ProfessionalCalendarUiState.Ready -> AgendaList(
+                state = state,
+                onPrevious = viewModel::previous,
+                onNext = viewModel::next,
+                modifier = Modifier.padding(padding)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AgendaList(
+    state: ProfessionalCalendarUiState.Ready,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(Spacing.L),
+        verticalArrangement = Arrangement.spacedBy(Spacing.M)
+    ) {
+        item(key = "header") {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+                Text(
+                    text = professionalFamilyLabel(state.grant),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = stringResource(Res.string.professional_calendar_read_only),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                WindowPager(onPrevious, onNext)
+            }
+        }
+        items(state.days, key = { it.date.toString() }) { day ->
+            DayCard(day, state.grant)
+        }
+    }
+}
+
+/**
+ * Previous and next four weeks, at either end of a row. Shared with a family friend's calendar
+ * (phase 2), which pages the same window.
+ */
+@Composable
+internal fun WindowPager(onPrevious: () -> Unit, onNext: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(
+                imageVector = Icons.Default.ChevronLeft,
+                contentDescription = stringResource(Res.string.professional_calendar_previous)
+            )
+        }
+        IconButton(onClick = onNext) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = stringResource(Res.string.professional_calendar_next)
+            )
+        }
+    }
+}
+
+/** One day: its date, whose day it is, and its events — or a quiet "no events". */
+@Composable
+private fun DayCard(day: ProfessionalDay, grant: ProfessionalGrant) {
+    val dateText = remember(day.date) {
+        readerFullDate(day.date)
+    }
+    SectionGroup {
+        SectionRow(
+            title = dateText,
+            trailing = {
+                day.custodySlot?.let { slot ->
+                    PillChip(
+                        label = stringResource(
+                            Res.string.professional_calendar_custody_with,
+                            parentNameForSlot(grant, slot)
+                        ),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        )
+        if (day.events.isEmpty()) {
+            Divider()
+            SectionRow(
+                title = stringResource(Res.string.professional_calendar_no_events),
+                titleColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            day.events.forEach { event ->
+                Divider()
+                EventRow(event, grant)
+            }
+        }
+    }
+}
+
+/**
+ * One event: its time, title and whose it is. Occurrences of a recurring event share the master's
+ * id, so nothing here keys on it (CLAUDE.md "Things that are easy to get wrong", item 4).
+ */
+@Composable
+private fun EventRow(event: Event, grant: ProfessionalGrant) {
+    val time = remember(event.startDateTime) {
+        ReaderDateText.time(event.startDateTime)
+    }
+    SectionRow(
+        title = event.title,
+        supporting = stringResource(
+            Res.string.professional_calendar_event_supporting,
+            time,
+            parentNameForSlot(grant, event.parentOwner)
+        )
+    )
+}

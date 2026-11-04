@@ -16,7 +16,6 @@ import com.coparently.app.domain.files.RecordPhotoKind
 import com.coparently.app.domain.files.RecordPhotoPaths
 import com.coparently.app.domain.files.toHex
 import com.coparently.app.domain.repository.RecordPhotoStorage
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -24,8 +23,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * [RecordPhotoStorage] backed by Firebase Cloud Storage (L-4).
@@ -41,9 +38,8 @@ import javax.inject.Singleton
  * The bytes are also kept in [SharedFileCache] under their digest, so the uploader's own screen
  * shows the photograph without fetching it back.
  */
-@Singleton
-class FirebaseImageStorage @Inject constructor(
-    @ApplicationContext private val context: Context,
+class FirebaseImageStorage(
+    private val context: Context,
     private val authService: FirebaseAuthService,
     private val userDao: UserDao,
     private val storage: SharedFileStorage,

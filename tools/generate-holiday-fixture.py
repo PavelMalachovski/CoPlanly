@@ -2,10 +2,11 @@
 """
 Generates the reference fixture the MON-13 holiday providers are tested against.
 
-The Kotlin providers in `app/src/main/java/com/coparently/app/domain/holidays/` are pure,
-computed code, written by hand. What makes them *verified* rather than remembered is that a
-unit test (`HolidayReferenceTest`) compares every date and both names they produce, year by
-year, with the output of an independently maintained dataset: the Python `holidays` library
+The Kotlin providers in `shared/src/commonMain/kotlin/com/coparently/app/domain/holidays/`
+(the shared multiplatform module since MON-24) are pure, computed code, written by hand. What
+makes them *verified* rather than remembered is that a unit test (`HolidayReferenceTest`)
+compares every date and both names they produce, year by year, with the output of an
+independently maintained dataset: the Python `holidays` library
 (https://github.com/vacanza/holidays, MIT), which cites the legislation behind each rule.
 
 This script writes that expected output as a Kotlin source file, so the test needs no
@@ -16,9 +17,9 @@ provider) or a library correction (check it, then update the provider).
 
     python3 -m venv /tmp/hv && /tmp/hv/bin/pip install holidays==0.105
     /tmp/hv/bin/python tools/generate-holiday-fixture.py \
-        > app/src/test/java/com/coparently/app/domain/holidays/HolidayReferenceFixture.kt
+        > shared/src/commonTest/kotlin/com/coparently/app/domain/holidays/HolidayReferenceFixture.kt
     /tmp/hv/bin/python tools/generate-holiday-fixture.py --regions \
-        > app/src/test/java/com/coparently/app/domain/holidays/HolidayRegionReferenceFixture.kt
+        > shared/src/commonTest/kotlin/com/coparently/app/domain/holidays/HolidayRegionReferenceFixture.kt
 
 `--regions` writes the second, regional fixture (MON-13's regional half): for every German Land,
 the days that state adds **on top of** the nationwide list - not the whole list again, which would

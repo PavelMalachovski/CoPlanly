@@ -456,7 +456,7 @@ Every function is declared through `regional` (`functions.region(FUNCTIONS_REGIO
 child's medical profile, an account being deleted — is processed inside the EEA
 (`docs/legal/LEGAL-REVIEW-2026-09.md`, L-3). Five places name the region and change together:
 `FUNCTIONS_REGION` in `index.js`, and four outside this directory —
-`FirebaseModule.FUNCTIONS_REGION` in the app, `PRODUCTION_FUNCTIONS_BASE` in `web/verify/`, and the
+`FUNCTIONS_REGION` in `shared-data`'s `di/koin/FunctionsRegion.kt`, `PRODUCTION_FUNCTIONS_BASE` in `web/verify/`, and the
 emulator paths in `tools/e2e/pairing-smoke.js` and `web-tests/support/emulators.js`. A callable
 asked for in the wrong region answers `NOT_FOUND`, so a mismatch fails loudly in the e2e and web
 jobs.

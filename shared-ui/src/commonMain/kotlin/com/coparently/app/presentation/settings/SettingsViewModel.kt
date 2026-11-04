@@ -1,0 +1,586 @@
+package com.coparently.app.presentation.settings
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.coparently.app.data.platform.Analytics
+import com.coparently.app.data.platform.logNotificationsToggled
+import com.coparently.app.data.platform.logThemeChanged
+import com.coparently.app.data.remote.firebase.PushRegistration
+import com.coparently.app.data.repository.FamilySettingsRepository
+import com.coparently.app.data.repository.FamilySplit
+import com.coparently.app.data.repository.RatioSubmission
+import com.coparently.app.data.session.AccountDeletion
+import com.coparently.app.data.session.SignedInAccountSource
+import com.coparently.app.domain.changerequests.AnswerByPick
+import com.coparently.app.domain.expenses.SplitRatio
+import com.coparently.app.domain.holidays.HolidayCountry
+import com.coparently.app.domain.model.AccountSummary
+import com.coparently.app.domain.model.FamilyKind
+import com.coparently.app.domain.money.SupportedCurrency
+import com.coparently.app.domain.money.currencyOfRegion
+import com.coparently.app.domain.repository.PreferencesRepository
+import com.coparently.app.domain.repository.UserRepository
+import com.coparently.app.presentation.common.FamilyKindSource
+import com.coparently.app.presentation.common.Parents
+import com.coparently.app.presentation.common.ParentsSource
+import com.coparently.app.presentation.common.UiError
+import com.coparently.app.presentation.common.UiState
+import com.coparently.app.presentation.theme.ParentColor
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.io.IOException
+
+/**
+ * ViewModel for Settings screen.
+ * Manages settings state and user preferences.
+ *
+ * In `:shared-ui` since MON-24 phase 2 (Task 10): the push switch, the account's erasure and the
+ * product events go through [PushRegistration], [AccountDeletion] and [Analytics], which the app's
+ * `FcmService`, `AccountDeletionService` and `AnalyticsManager` answer on Android. The parameter
+ * names are the ones the app's classes gave them.
+ */
+@Suppress("LongParameterList") // one collaborator per section of the screen: push, account, family, money
+class SettingsViewModel(
+    private val fcmService: PushRegistration,
+    private val accountDeletionService: AccountDeletion,
+    private val userRepository: UserRepository,
+    private val preferencesRepository: PreferencesRepository,
+    private val analyticsManager: Analytics,
+    signedInAccountSource: SignedInAccountSource,
+    private val familyKindSource: FamilyKindSource,
+    parentsSource: ParentsSource,
+    private val familySettingsRepository: FamilySettingsRepository
+) : ViewModel() {
+
+    /**
+     * Whether this phone can register for pushes ([PushRegistration.available]); the screen offers the
+     * push switch only when it can (MON-24 phase 2, slice 11f: the iPhone's stand-in cannot).
+     */
+    val pushAvailable: Boolean
+        get() = fcmService.available
+
+    /**
+     * The account the app itself is signed in as — distinct from the Google account used
+     * for calendar sync, which `SyncViewModel` reports separately further up this screen.
+     *
+     * Null while signed out. Unlike [settingsState], this keeps following the profile, so
+     * the name and avatar fill in as soon as `ensureProfile` writes them rather than
+     * staying at whatever a one-shot read saw at startup.
+     */
+    val account: StateFlow<AccountSummary?> = signedInAccountSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS), null)
+
+    /**
+     * The country whose public holidays this parent's calendar draws (MON-13).
+     *
+     * This parent's own answer, not the family's union — unlike [caresFor], which decides which
+     * *sections the app offers* and so must agree between two phones. Two separated parents can
+     * live in two countries, and a public holiday is a fact about where you are.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val country: StateFlow<HolidayCountry> = userRepository.observeCurrentUserId()
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(null) else userRepository.observeUserById(uid)
+        }
+        .map { HolidayCountry.fromCode(it?.countryCode) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS),
+            HolidayCountry.Default
+        )
+
+    /**
+     * The region within [country] whose own public holidays are added (MON-13, regional half),
+     * or null for the nationwide calendar — including when the stored code belongs to a country
+     * the parent has since left, which [HolidayCountry.regionOrNull] drops.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val holidayRegion: StateFlow<String?> = userRepository.observeCurrentUserId()
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(null) else userRepository.observeUserById(uid)
+        }
+        .map { HolidayCountry.fromCode(it?.countryCode).regionOrNull(it?.regionCode) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS), null)
+
+    /**
+     * Whether this family's app offers child records, pet records, or both.
+     *
+     * The union of the two parents' answers, from [FamilyKindSource]; an account that has never
+     * answered — every one that predates the question — reads as both, so an upgrade hides
+     * nothing somebody was already using.
+     */
+    val caresFor: StateFlow<Set<FamilyKind>> = familyKindSource.observe()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS),
+            FamilyKind.ALL
+        )
+
+    /**
+     * Signed-in parent and paired co-parent, for naming the two halves of the split.
+     *
+     * Two bare numbers cannot say which half is yours, and the answer is not guessable: the
+     * stored share is slot 1's and pairing decides which slot this device holds. A parent
+     * dragging that slider without names can propose the opposite of what they meant.
+     */
+    val parents: StateFlow<Parents> = parentsSource.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS), Parents())
+
+    /**
+     * This parent's **own** answer, which is what the Settings dialog edits.
+     *
+     * Not [caresFor]. That is the union of both parents' answers and decides which rows the app
+     * draws; [setCaresFor] writes to this parent's row alone. Seeding the dialog with the union
+     * meant a box ticked only by the co-parent looked like yours: saving without touching
+     * anything copied their answer onto your record, and unticking one put it straight back.
+     */
+    val myCaresFor: StateFlow<Set<FamilyKind>> = familyKindSource.observeMine()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS),
+            FamilyKind.ALL
+        )
+
+    /**
+     * What happened to a family answer, for the one case each where saying nothing would be a lie.
+     */
+    enum class CaresForOutcome {
+        /**
+         * Saved, but a kind this parent removed stays on screen because the co-parent keeps it.
+         * The union is what the app shows; unticking here changes only this parent's record.
+         */
+        KEPT_BY_CO_PARENT,
+
+        /**
+         * Saved, and a kind this parent removed is now hidden — along with every route to the
+         * records under it, which keep existing, keep syncing, and keep holding guest grants.
+         * The switch is reversible; saying nothing would make it look like a deletion.
+         */
+        RECORDS_KEPT,
+
+        /** Not saved at all: this account has no local profile row to write onto. */
+        NOT_SAVED
+    }
+
+    /**
+     * A **conflated `Channel`**, not a `MutableSharedFlow`: a shared flow with `replay = 0`
+     * discards a `tryEmit` outright when nothing is collecting — and returns `true` while doing
+     * it — so a signal raised a moment after the parent left Settings would vanish. The channel
+     * holds the last one until a collector attaches.
+     */
+    private val _caresForOutcome = Channel<CaresForOutcome>(Channel.CONFLATED)
+
+    /** Raised when a family answer needs a word said about it. See [CaresForOutcome]. */
+    val caresForOutcome: Flow<CaresForOutcome> = _caresForOutcome.receiveAsFlow()
+
+    /**
+     * Records a new answer onto this parent's own record.
+     *
+     * Refuses an empty set: with neither kind selected the app would have nothing to offer, and
+     * a family that co-parents nothing is not a state this product has.
+     *
+     * Both non-obvious outcomes are announced rather than swallowed. A missing profile row made
+     * this a silent no-op that read as "the setting resets itself"; and unticking a kind the
+     * co-parent still holds changes this row but nothing on screen, because what the app draws is
+     * the union — a control that appears to do nothing is what CLAUDE.md's design item 8 forbids.
+     */
+    /**
+     * Records the colour this parent wants to be drawn in — a preset, or a hue picked on the wheel.
+     *
+     * Their own choice and nobody else's: the co-parent's colour is on the co-parent's profile,
+     * and the two are reconciled at draw time by [ParentPalette.of] when they happen to collide.
+     * That is why this writes and returns without checking what the other parent holds — a
+     * "that one is taken" refusal would need the two phones to agree on an order they have no
+     * way to establish, and would make one parent's setting depend on the other's.
+     *
+     * The write lands on this parent's `users/{uid}`, which the co-parent's phone listens to
+     * (`PairingRepositoryImpl.observePairingState`), so it reaches them within seconds.
+     */
+    fun setParentColor(colour: ParentColor) {
+        viewModelScope.launch {
+            val fresh = userRepository.getCurrentUser() ?: return@launch
+            if (fresh.colorCode == colour.storedCode) return@launch
+            userRepository.updateUser(fresh.copy(colorCode = colour.storedCode))
+        }
+    }
+
+    /**
+     * Records the country picked in Settings.
+     *
+     * Reads the row fresh rather than from [country], for the reason CLAUDE.md item 17 states:
+     * a `WhileSubscribed` flow's `.value` is the initial value in any instance where nothing has
+     * collected it, and a save path that trusted it would write the default over a real answer.
+     */
+    fun setCountry(chosen: HolidayCountry) {
+        viewModelScope.launch {
+            // The country is a better guess at the family's currency than the device region the
+            // first default came from; a currency the parent picked in Settings stays. Before the
+            // same-country check, so confirming the country already stored counts too.
+            currencyOfRegion(chosen.code)?.let { preferencesRepository.suggestDefaultCurrency(it) }
+            val fresh = userRepository.getCurrentUser() ?: return@launch
+            if (fresh.countryCode == chosen.code) return@launch
+            // A region belongs to its country: moving to Austria clears Bavaria rather than
+            // leaving a code behind that the next country might one day happen to reuse.
+            userRepository.updateUser(
+                fresh.copy(countryCode = chosen.code, regionCode = chosen.regionOrNull(fresh.regionCode))
+            )
+        }
+    }
+
+    /**
+     * Records the region picked in Settings, or null for "nationwide only".
+     *
+     * Fresh read for the reason [setCountry] gives, and validated against the *stored* country
+     * rather than against [country]'s `.value`: a code that is not that country's is dropped.
+     */
+    fun setHolidayRegion(code: String?) {
+        viewModelScope.launch {
+            val fresh = userRepository.getCurrentUser() ?: return@launch
+            val region = HolidayCountry.fromCode(fresh.countryCode).regionOrNull(code)
+            if (fresh.regionCode == region) return@launch
+            userRepository.updateUser(fresh.copy(regionCode = region))
+        }
+    }
+
+    fun setCaresFor(kinds: Set<FamilyKind>) {
+        if (kinds.isEmpty()) return
+        viewModelScope.launch {
+            val fresh = userRepository.getCurrentUser()
+            if (fresh == null) {
+                _caresForOutcome.trySend(CaresForOutcome.NOT_SAVED)
+                return@launch
+            }
+            val dropped = fresh.caresFor - kinds
+            userRepository.updateUser(fresh.copy(caresFor = kinds))
+            // Read at save time, off the shared upstream, rather than from a `WhileSubscribed`
+            // `.value` — invariant 17. `first()` is one emission of a flow that already has a
+            // subscriber on this screen, so it costs no listener.
+            val theirs = familyKindSource.observeTheirs().first()
+            // Both branches judge what the screen actually *draws* — the union — rather than
+            // this parent's row alone. Judging by the row got both answers wrong: `dropped` is
+            // empty for every account that never answered, which is the population that upgrades
+            // into this question, so the one save that really did hide a section said nothing;
+            // and `theirs - kinds` is non-empty whenever the co-parent holds a kind this parent
+            // does not, so an unchanged save told them they had removed one.
+            val hidden = FamilyKind.effective(fresh.caresFor, theirs) -
+                FamilyKind.effective(kinds, theirs)
+            when {
+                // Given up here and still drawn because the co-parent keeps it. Conditioned on a
+                // real removal, so it can never claim one that did not happen.
+                (dropped intersect theirs).isNotEmpty() ->
+                    _caresForOutcome.trySend(CaresForOutcome.KEPT_BY_CO_PARENT)
+                hidden.isNotEmpty() -> _caresForOutcome.trySend(CaresForOutcome.RECORDS_KEPT)
+                else -> Unit
+            }
+        }
+    }
+
+    /**
+     * The agreed split of a shared expense in the family on screen, and which family that is.
+     *
+     * Half each until the family agrees otherwise, and never another family's agreement. Follows
+     * the switcher, which this screen opens itself: the split used to be read once when the screen
+     * opened, so after a switch the row showed the previous family's ratio and a change was written
+     * to whichever family was on screen when it was saved. The repository caches each family's
+     * agreement as it changes, because the expense save path reads it and cannot wait on a
+     * document.
+     */
+    val split: StateFlow<FamilySplit> = familySettingsRepository.observeSplit()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(ACCOUNT_STOP_TIMEOUT_MS),
+            FamilySplit.UNKNOWN
+        )
+
+    /**
+     * How the last submitted ratio landed, for the screen to report once.
+     *
+     * Conflated channel for the reason [caresForOutcome] gives: a `MutableSharedFlow` with
+     * `replay = 0` drops an emission when nothing is collecting, and the round trip to Firestore
+     * easily outlives a parent closing Settings.
+     */
+    private val _ratioSubmission = Channel<RatioSubmission?>(Channel.CONFLATED)
+    val ratioSubmission: Flow<RatioSubmission?> = _ratioSubmission.receiveAsFlow()
+
+    /**
+     * Puts a new split to the co-parent, or applies it when there is nobody to ask.
+     *
+     * Emits null on a refusal — the transition refuses proposing over the co-parent's pending
+     * one, and refuses a "change" to the ratio already agreed. Either way the screen has to say
+     * something: a control that looks like it worked is worse than one that says it did not.
+     *
+     * @param ratio The split chosen.
+     * @param shown The family split the screen showed while it was chosen; the change goes to that
+     *   family, whichever family is on screen by the time it is written.
+     * @param answerBy The deadline picked for the co-parent's answer, or null when the dialog asked
+     *   for none — it asks only when the change will be a proposal. The repository works it out
+     *   again when it sends, and a split that applies outright ignores it.
+     */
+    fun submitRatio(ratio: SplitRatio, shown: FamilySplit, answerBy: AnswerByPick? = null) {
+        viewModelScope.launch {
+            val outcome = if (shown.familyId == null && !shown.answered) {
+                // Chosen before anything had loaded, so the screen showed no family at all: the
+                // family on screen now is the only one the parent can have meant. Nothing was
+                // shown to propose over either, so no deadline was asked for.
+                familySettingsRepository.submitRatio(ratio)
+            } else {
+                familySettingsRepository.submitRatio(ratio, shown.familyId, answerBy)
+            }
+            _ratioSubmission.send(outcome.getOrNull())
+        }
+    }
+
+    private val _settingsState = MutableStateFlow(SettingsUiState())
+    val settingsState: StateFlow<SettingsUiState> = _settingsState.asStateFlow()
+
+    private val _operationState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val operationState: StateFlow<UiState<Unit>> = _operationState.asStateFlow()
+
+    val darkThemeFlow: StateFlow<Boolean?> = preferencesRepository.getDarkThemeFlow()
+        .let { flow ->
+            val stateFlow = MutableStateFlow<Boolean?>(null)
+            viewModelScope.launch {
+                flow.collect { stateFlow.value = it }
+            }
+            stateFlow
+        }
+
+    /** App-wide default currency for new expenses. */
+    val defaultCurrency: StateFlow<SupportedCurrency> =
+        preferencesRepository.getDefaultCurrencyFlow()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, SupportedCurrency.DEFAULT)
+
+    /**
+     * Stores a new app-wide default currency.
+     *
+     * @param currency Currency to use for expenses created from now on
+     */
+    fun setDefaultCurrency(currency: SupportedCurrency) {
+        viewModelScope.launch { preferencesRepository.setDefaultCurrency(currency) }
+    }
+
+    /** Whether chat holds each message briefly with an Undo, and shows the lexical hint (MON-19). */
+    val pauseBeforeSending: StateFlow<Boolean> =
+        preferencesRepository.getPauseBeforeSendingFlow()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * Turns "Pause before sending" on or off.
+     *
+     * @param enabled True to hold each chat message briefly with an Undo before it is sent
+     */
+    fun setPauseBeforeSending(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setPauseBeforeSending(enabled) }
+    }
+
+    init {
+        loadSettings()
+    }
+
+    /**
+     * Loads current settings state.
+     */
+    private fun loadSettings() {
+        viewModelScope.launch {
+            _operationState.value = UiState.Loading()
+            try {
+                // Get current user
+                val currentUser = userRepository.getCurrentUser()
+
+                _settingsState.value = _settingsState.value.copy(
+                    // The stored choice, not "a token exists": a token nearly always exists, so
+                    // the switch read on even for somebody who had turned it off.
+                    notificationsEnabled = fcmService.isPushEnabled(),
+                    userEmail = currentUser?.email,
+                    userName = currentUser?.name,
+                    partnerId = currentUser?.partnerId,
+                    myUid = currentUser?.id,
+                    isLoading = false
+                )
+                _operationState.value = UiState.Success(Unit)
+            } catch (e: Exception) {
+                _settingsState.value = _settingsState.value.copy(isLoading = false)
+                _operationState.value = UiState.Error(
+                    UiError.fromException(e, retry = { loadSettings() })
+                )
+            }
+        }
+    }
+
+    /**
+     * Toggles push notifications on/off.
+     */
+    fun toggleNotifications(enabled: Boolean) {
+        viewModelScope.launch {
+            // No message: nothing renders one (the switch itself is the feedback), and the
+            // English literals this used to carry were the only text here a locale never saw.
+            _operationState.value = UiState.Loading()
+
+            try {
+                // Off used to change the switch and nothing else: the token stayed on the
+                // profile and every push kept arriving. `setPushEnabled` stores the choice and
+                // detaches or re-attaches this device's token.
+                fcmService.setPushEnabled(enabled).getOrElse { throw IOException(it) }
+
+                analyticsManager.logNotificationsToggled(enabled)
+                _settingsState.value = _settingsState.value.copy(notificationsEnabled = enabled)
+                _operationState.value = UiState.Success(Unit)
+            } catch (e: IOException) {
+                _operationState.value = UiState.Error(
+                    UiError.network(retry = { toggleNotifications(enabled) })
+                )
+            } catch (e: Exception) {
+                _operationState.value = UiState.Error(
+                    UiError.fromException(
+                        throwable = e,
+                        retry = { toggleNotifications(enabled) }
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Requests notification permission and registers FCM token.
+     */
+    fun requestNotificationPermission() {
+        viewModelScope.launch {
+            _operationState.value = UiState.Loading()
+
+            try {
+                fcmService.setPushEnabled(true).getOrElse { throw IOException(it) }
+
+                _settingsState.value = _settingsState.value.copy(notificationsEnabled = true)
+                _operationState.value = UiState.Success(Unit)
+            } catch (e: Exception) {
+                _operationState.value = UiState.Error(
+                    UiError.fromException(
+                        throwable = e,
+                        retry = { requestNotificationPermission() }
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Toggles dark theme on/off.
+     *
+     * @param isDarkTheme True to enable dark theme, false to enable light theme
+     */
+    fun toggleDarkTheme(isDarkTheme: Boolean) {
+        viewModelScope.launch {
+            try {
+                preferencesRepository.setDarkTheme(isDarkTheme)
+                analyticsManager.logThemeChanged(isDarkTheme)
+            } catch (e: Exception) {
+                _operationState.value = UiState.Error(
+                    UiError.fromException(e)
+                )
+            }
+        }
+    }
+
+    /**
+     * Resets theme to system default.
+     */
+    fun resetThemeToSystemDefault() {
+        viewModelScope.launch {
+            try {
+                preferencesRepository.clearDarkTheme()
+            } catch (e: Exception) {
+                _operationState.value = UiState.Error(
+                    UiError.fromException(e)
+                )
+            }
+        }
+    }
+
+    /**
+     * Clears the failure flags once the screen has shown them.
+     */
+    fun clearMessages() {
+        _settingsState.value = _settingsState.value.copy(errorMessage = null)
+        _operationState.value = UiState.Idle
+    }
+
+    /**
+     * Erases the account and everything it holds, then wipes this device.
+     *
+     * Irreversible, and the screen says so before calling this — see the confirmation in
+     * `SettingsScreen`. [onDeleted] runs only on success and is where the caller leaves the
+     * screen; on failure the account still exists and the user can try again, which is why
+     * the server deletes the Auth user last.
+     *
+     * @param onDeleted Invoked once the account is gone and local data is cleared.
+     */
+    fun deleteAccount(onDeleted: () -> Unit) {
+        if (_settingsState.value.isDeletingAccount) return
+        _settingsState.value = _settingsState.value.copy(
+            isDeletingAccount = true,
+            errorMessage = null
+        )
+        viewModelScope.launch {
+            accountDeletionService.deleteAccount().fold(
+                onSuccess = {
+                    _settingsState.value = _settingsState.value.copy(isDeletingAccount = false)
+                    onDeleted()
+                },
+                onFailure = { error ->
+                    _settingsState.value = _settingsState.value.copy(
+                        isDeletingAccount = false,
+                        errorMessage = error.message
+                    )
+                }
+            )
+        }
+    }
+
+    private companion object {
+        /** Keeps the account subscription alive across a configuration change. */
+        const val ACCOUNT_STOP_TIMEOUT_MS = 5_000L
+    }
+}
+
+/**
+ * UI state for Settings screen.
+ *
+ * @property notificationsEnabled Whether push notifications are enabled
+ * @property userEmail Current user's email
+ * @property userName Current user's name
+ * @property partnerId Partner's Firebase UID if paired
+ * @property isLoading Loading state
+ * @property errorMessage Non-null when deleting the account failed. Read as a flag only: the
+ *   screen shows its own localised sentence, and this holds the exception's English text for
+ *   nothing but debugging (CQ-14). There is no success message — nothing ever rendered one.
+ */
+data class SettingsUiState(
+    val notificationsEnabled: Boolean = false,
+    val userEmail: String? = null,
+    val userName: String? = null,
+    val partnerId: String? = null,
+    /** The signed-in parent's uid: whose split proposal waits on whom. */
+    val myUid: String? = null,
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+    /**
+     * True while [SettingsViewModel.deleteAccount] is in flight.
+     *
+     * Separate from [isLoading], which describes the screen's initial load: deletion has to
+     * disable its own control and show progress without making the rest of Settings look
+     * unloaded, and it is the one action here that cannot be repeated by accident.
+     */
+    val isDeletingAccount: Boolean = false
+)

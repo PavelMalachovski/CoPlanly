@@ -1,8 +1,11 @@
 package com.coparently.app.presentation.stickers
 
-import com.coparently.app.R
 import com.coparently.app.domain.stickers.ParentRole
 import com.coparently.app.domain.stickers.StickerKind
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.sticker_great_parent_dad
+import com.coparently.app.resources.sticker_great_parent_mom
+import com.coparently.app.resources.sticker_great_parent_parent
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -14,10 +17,16 @@ class StickerTextTest {
 
     @Test
     fun `great parent follows the receiver's answer`() {
-        assertEquals(R.string.sticker_great_parent_dad, StickerText.sentence(StickerKind.GREAT_PARENT, ParentRole.DAD))
-        assertEquals(R.string.sticker_great_parent_mom, StickerText.sentence(StickerKind.GREAT_PARENT, ParentRole.MOM))
         assertEquals(
-            R.string.sticker_great_parent_parent,
+            Res.string.sticker_great_parent_dad,
+            StickerText.sentence(StickerKind.GREAT_PARENT, ParentRole.DAD)
+        )
+        assertEquals(
+            Res.string.sticker_great_parent_mom,
+            StickerText.sentence(StickerKind.GREAT_PARENT, ParentRole.MOM)
+        )
+        assertEquals(
+            Res.string.sticker_great_parent_parent,
             StickerText.sentence(StickerKind.GREAT_PARENT, ParentRole.PARENT)
         )
     }
@@ -42,7 +51,7 @@ class StickerTextTest {
 
     @Test
     fun `a sender reads the neutral phrase`() {
-        assertEquals(R.string.sticker_great_parent_parent, StickerText.phrase(StickerKind.GREAT_PARENT))
+        assertEquals(Res.string.sticker_great_parent_parent, StickerText.phrase(StickerKind.GREAT_PARENT))
         assertEquals(StickerKind.entries.size, StickerKind.entries.map { StickerText.phrase(it) }.toSet().size)
     }
 }

@@ -42,7 +42,7 @@
   },
   "notPreserved": {
     "bloodDonorCard": "this build writes the document back with set(), which replaces it: a top-level key it does not know is dropped. A newer build must not keep anything it cannot afford to lose in a new top-level key of a collection older builds rewrite",
-    "medicalProfile.insuranceNumber": "the medical profile goes through Gson into MedicalProfile and back, so a field the class does not have is dropped on the next save"
+    "medicalProfile.insuranceNumber": "the medical profile goes through StoredJson (Gson before MON-24) into MedicalProfile and back, so a field the class does not have is dropped on the next save"
   },
   "reads": {
     "allergies": [

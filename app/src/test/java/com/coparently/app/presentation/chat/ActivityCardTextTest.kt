@@ -1,9 +1,19 @@
 package com.coparently.app.presentation.chat
 
-import com.coparently.app.R
 import com.coparently.app.domain.activity.ActivityAnnouncement
 import com.coparently.app.domain.activity.ActivityEntityType
 import com.coparently.app.domain.activity.ActivityKind
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.activity_custody_withdrawn
+import com.coparently.app.resources.activity_day_swap_withdrawn
+import com.coparently.app.resources.activity_split_accepted
+import com.coparently.app.resources.activity_split_declined
+import com.coparently.app.resources.activity_split_proposed
+import com.coparently.app.resources.activity_split_withdrawn
+import com.coparently.app.resources.activity_subject_custody_schedule
+import com.coparently.app.resources.activity_subject_expense_split
+import com.coparently.app.resources.activity_subject_sticker
+import com.coparently.app.resources.sticker_great_parent_parent
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -28,10 +38,10 @@ class ActivityCardTextTest {
     fun `an expense split's four cards are worded as a split, not as custody`() {
         assertEquals(
             listOf(
-                R.string.activity_split_proposed,
-                R.string.activity_split_accepted,
-                R.string.activity_split_declined,
-                R.string.activity_split_withdrawn
+                Res.string.activity_split_proposed,
+                Res.string.activity_split_accepted,
+                Res.string.activity_split_declined,
+                Res.string.activity_split_withdrawn
             ),
             listOf(
                 ActivityKind.SPLIT_PROPOSED,
@@ -45,11 +55,11 @@ class ActivityCardTextTest {
     @Test
     fun `a withdrawn swap and a withdrawn custody proposal have their own sentences`() {
         assertEquals(
-            R.string.activity_day_swap_withdrawn,
+            Res.string.activity_day_swap_withdrawn,
             ActivityCardText.resourceFor(ActivityKind.DAY_SWAP_WITHDRAWN)
         )
         assertEquals(
-            R.string.activity_custody_withdrawn,
+            Res.string.activity_custody_withdrawn,
             ActivityCardText.resourceFor(ActivityKind.CUSTODY_WITHDRAWN)
         )
     }
@@ -57,11 +67,11 @@ class ActivityCardTextTest {
     @Test
     fun `a sticker card says the sticker's own phrase, and an unknown kind says it is a sticker`() {
         assertEquals(
-            CardSubjectText.Res(R.string.sticker_great_parent_parent),
+            CardSubjectText.Res(Res.string.sticker_great_parent_parent),
             ActivityCardText.subjectOf(card(ActivityEntityType.STICKER, "great_parent"))
         )
         assertEquals(
-            CardSubjectText.Res(R.string.activity_subject_sticker),
+            CardSubjectText.Res(Res.string.activity_subject_sticker),
             ActivityCardText.subjectOf(card(ActivityEntityType.STICKER, "a_kind_from_a_newer_build"))
         )
     }
@@ -85,7 +95,7 @@ class ActivityCardTextTest {
     @Test
     fun `every kind resolves to a real resource`() {
         ActivityKind.entries.forEach { kind ->
-            assertEquals(true, ActivityCardText.resourceFor(kind) != 0, "$kind has no string")
+            assertEquals(true, ActivityCardText.resourceFor(kind).key.isNotBlank(), "$kind has no string")
         }
     }
 
@@ -101,18 +111,18 @@ class ActivityCardTextTest {
     fun `a custody card's subject is worded, a swap's is its date, anything else its title`() {
         // A proposal has no name of its own, so its card is worded: a request's card carries "".
         assertEquals(
-            CardSubjectText.Res(R.string.activity_subject_custody_schedule),
+            CardSubjectText.Res(Res.string.activity_subject_custody_schedule),
             ActivityCardText.subjectOf(card(ActivityEntityType.CUSTODY_PROPOSAL, title = ""))
         )
         // The cards that existed before carry the family id as their title, and their sentences
         // take no argument at all: the worded subject is what they were already drawn with.
         assertEquals(
-            CardSubjectText.Res(R.string.activity_subject_custody_schedule),
+            CardSubjectText.Res(Res.string.activity_subject_custody_schedule),
             ActivityCardText.subjectOf(card(ActivityEntityType.CUSTODY_PROPOSAL, title = "uidA__uidB"))
         )
         // An expense split has no name of its own either: its "No answer" card says what it was about.
         assertEquals(
-            CardSubjectText.Res(R.string.activity_subject_expense_split),
+            CardSubjectText.Res(Res.string.activity_subject_expense_split),
             ActivityCardText.subjectOf(card(ActivityEntityType.SPLIT_PROPOSAL, title = ""))
         )
         assertEquals(

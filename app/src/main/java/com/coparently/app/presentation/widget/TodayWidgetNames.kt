@@ -3,8 +3,6 @@ package com.coparently.app.presentation.widget
 import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.presentation.common.NamedParent
 import com.coparently.app.presentation.common.Parents
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The two parents' names and colours as the app last loaded them, for the Today widget.
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  * One key per field, never a serialised object: a name is free text, and a separator or a JSON
  * encoder would be one more format to get right for a label.
  */
-@Singleton
-class TodayWidgetNames @Inject constructor(
+class TodayWidgetNames(
     private val preferences: EncryptedPreferences
 ) {
 

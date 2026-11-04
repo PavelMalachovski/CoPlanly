@@ -11,7 +11,8 @@
  *    started) — no `probe=done` is never a pass;
  *  - any case failed — its type, the production path it went through and what was wrong are each
  *    printed as a GitHub `::error::` annotation;
- *  - a type `tools/check-invariants.js` finds handed to Gson has no case at all, so a model added
+ *  - a stored model `tools/check-invariants.js` finds (a `@Serializable` class or enum whose JSON
+ *    `StoredJson` writes; a Gson-reflected type before MON-24) has no case at all, so a model added
  *    without a probe case fails here as well as in `invariants`.
  *
  * Usage: node tools/check-r8-probe.js <am-instrument-output.txt> [--junit <out.xml>]
@@ -79,8 +80,8 @@ function problemsOf(run, required) {
   for (const type of required) {
     if (!run.cases.some((c) => c.type === type)) {
       problems.push(
-        `${type} is handed to Gson, but the probe reported no case for it — add one to ` +
-          'app/src/r8Test/java/com/coparently/app/r8probe/R8GsonProbe.kt'
+        `${type} is a stored model, but the probe reported no case for it — add one to ` +
+          'app/src/r8Test/java/com/coparently/app/r8probe/R8JsonProbe.kt'
       );
     }
   }
@@ -126,6 +127,19 @@ function junit(run, required) {
   );
 }
 
+/**
+ * Probe cases that are not stored models but call sites the minified build must run, each a label
+ * `HttpImportProbe` reports (MON-24 fix round): both imports' HTTP clients and parsers, and the one
+ * `FirestoreWriteProbe` reports (Task 8a): the values GitLive's encoder hands the SDK. Required
+ * like a stored model, so a case that stops running fails here rather than vanishing.
+ */
+const REQUIRED_CALL_SITES = [
+  'Google Calendar events.list page through GoogleCalendarApi',
+  'Bakalari sign-in and events through BakalariClient',
+  // `FirestoreWriteProbe` (MON-24 phase 2, Task 8a): a write's values through GitLive's encoder.
+  'Firestore write values through GitLiveFirestoreClient and the GitLive encoder',
+];
+
 if (require.main === module) {
   const args = process.argv.slice(2);
   const junitAt = args.indexOf('--junit');
@@ -138,7 +152,7 @@ if (require.main === module) {
   }
 
   const run = parse(fs.readFileSync(input, 'utf8'));
-  const required = [...require('./check-invariants.js').gsonTargets().keys()];
+  const required = [...require('./check-invariants.js').storedJsonModels().keys(), ...REQUIRED_CALL_SITES];
   const problems = problemsOf(run, required);
 
   for (const c of run.cases) {
@@ -152,14 +166,14 @@ if (require.main === module) {
   }
 
   const passed = run.cases.filter((c) => c.ok === 'true').length;
-  console.log(`\nr8 probe: ${passed} of ${run.cases.length} case(s) passed; ${required.length} Gson model(s) required`);
+  console.log(`\nr8 probe: ${passed} of ${run.cases.length} case(s) passed; ${required.length} type(s) and call site(s) required`);
   if (problems.length) {
     const annotate = process.env.GITHUB_ACTIONS === 'true' ? '::error::' : '';
     console.error(`\n${problems.length} problem(s) in the minified build:`);
     for (const p of problems) console.error(`${annotate}R8 runtime probe: ${p}`);
     process.exit(1);
   }
-  console.log('Every Gson model wrote its source field names and read back equal in the minified build.');
+  console.log('Every stored model wrote its source field names and read back equal in the minified build.');
 }
 
-module.exports = { parse, problemsOf, junit };
+module.exports = { parse, problemsOf, junit, REQUIRED_CALL_SITES };

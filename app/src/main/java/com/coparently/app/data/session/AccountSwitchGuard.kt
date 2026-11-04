@@ -1,20 +1,17 @@
 package com.coparently.app.data.session
 
 import android.content.Context
-import android.util.Log
 import com.coparently.app.data.local.CoPlanlyDatabase
-import com.coparently.app.data.local.preferences.EncryptedPreferences
 import com.coparently.app.data.local.preferences.PreferenceKeys
+import com.coparently.app.data.platform.SecurePreferences
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.remote.firebase.FirebaseAuthService
 import com.coparently.app.domain.notification.ReminderScheduler
 import com.coparently.app.domain.notification.RequestClockScheduler
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Wipes the local database when a *different* account signs in on this device.
@@ -37,17 +34,17 @@ import javax.inject.Singleton
  * [SessionProfileSynchronizer]'s auth-state collector (the session boundary every sign-in
  * passes through) and the top of `SyncService.performFullSync` (the choke point every upload
  * passes through). The second call is what closes the race — a periodic `SyncWorker` run can
- * fire before the collector has seen the new uid.
+ * fire before the collector has seen the new uid. The sync, in `:shared-data` since MON-24 phase 2
+ * (Task 8g), reaches it as its [AccountConsistency].
  */
-@Singleton
-class AccountSwitchGuard @Inject constructor(
-    @ApplicationContext private val context: Context,
+class AccountSwitchGuard(
+    private val context: Context,
     private val database: CoPlanlyDatabase,
     private val authService: FirebaseAuthService,
-    private val encryptedPreferences: EncryptedPreferences,
+    private val encryptedPreferences: SecurePreferences,
     private val reminderScheduler: ReminderScheduler,
     private val requestClockScheduler: RequestClockScheduler
-) {
+) : AccountConsistency {
     private val mutex = Mutex()
 
     /**
@@ -58,13 +55,13 @@ class AccountSwitchGuard @Inject constructor(
      * `clearAllTables` is blocking. The mutex keeps the two call sites from racing each other
      * into a double wipe.
      */
-    suspend fun ensureAccountConsistency() {
+    override suspend fun ensureAccountConsistency() {
         val uid = authService.getCurrentUser()?.uid ?: return
         mutex.withLock {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val lastUid = prefs.getString(KEY_LAST_UID, null)
             if (lastUid != null && lastUid != uid) {
-                Log.i(TAG, "Different account signed in; clearing local data")
+                logger.i(TAG, "Different account signed in; clearing local data")
                 withContext(Dispatchers.IO) { database.clearAllTables() }
                 // The previous account's pending event reminders, which would otherwise wake for
                 // rows that are gone (and find nothing) or, worse, announce its titles.

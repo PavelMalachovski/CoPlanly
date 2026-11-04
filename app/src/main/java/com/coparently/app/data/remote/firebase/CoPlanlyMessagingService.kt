@@ -1,17 +1,17 @@
 package com.coparently.app.data.remote.firebase
 
-import android.util.Log
-import com.coparently.app.data.crashlytics.CrashlyticsManager
+import com.coparently.app.data.platform.CrashReporter
+import com.coparently.app.data.platform.logger
 import com.coparently.app.data.sync.SyncWorker
+import com.coparently.app.utils.inAppLanguage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
 
 /**
  * Firebase Cloud Messaging service for handling push notifications.
@@ -32,20 +32,19 @@ import javax.inject.Inject
  * that case where a data-only one will not.
  *
  * What a push *says* and where its tap leads is [PushNotifier]'s: this class supplies the
- * signed-in account and the sync, and hands everything else over.
+ * signed-in account and the sync, and hands everything else over. It hands the notifier itself in
+ * the language the app speaks now ([inAppLanguage]: the per-app choice, else the phone's first
+ * language when the app ships it, else English), made afresh for each message.
  */
-@AndroidEntryPoint
 class CoPlanlyMessagingService : FirebaseMessagingService() {
 
-    @Inject
-    lateinit var fcmService: FcmService
+    private val fcmService: FcmService by inject()
 
-    @Inject
-    lateinit var crashlyticsManager: CrashlyticsManager
+    private val crashReporter: CrashReporter by inject()
 
     override fun onCreate() {
         super.onCreate()
-        PushNotifier(this).createChannels()
+        PushNotifier(inAppLanguage()).createChannels()
     }
 
     /**
@@ -74,7 +73,7 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        PushNotifier(this).receive(
+        PushNotifier(inAppLanguage()).receive(
             data = remoteMessage.data,
             signedInUid = FirebaseAuth.getInstance().currentUser?.uid,
             onAccepted = { SyncWorker.syncNow(applicationContext) }
@@ -90,8 +89,8 @@ class CoPlanlyMessagingService : FirebaseMessagingService() {
             } catch (e: Exception) {
                 // A token that never reaches Firestore means the co-parent's pushes go nowhere,
                 // and nothing on either device says so.
-                Log.e(TAG, "Storing the refreshed FCM token failed", e)
-                crashlyticsManager.recordException(e)
+                logger.e(TAG, "Storing the refreshed FCM token failed", e)
+                crashReporter.record(e)
             }
         }
     }

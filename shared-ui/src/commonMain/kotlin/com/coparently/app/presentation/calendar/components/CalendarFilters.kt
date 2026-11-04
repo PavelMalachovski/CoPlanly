@@ -1,0 +1,353 @@
+package com.coparently.app.presentation.calendar.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.coparently.app.presentation.calendar.ParentFilter
+import com.coparently.app.presentation.common.ParentNames
+import com.coparently.app.presentation.common.eventTypeLabel
+import com.coparently.app.presentation.theme.CoPlanlyColors
+import com.coparently.app.presentation.theme.CoPlanlyCorners
+import com.coparently.app.presentation.theme.IconSizes
+import com.coparently.app.presentation.theme.LayoutConstants
+import com.coparently.app.presentation.theme.ParentColors
+import com.coparently.app.presentation.theme.Spacing
+import com.coparently.app.presentation.theme.dimensions
+import com.coparently.app.presentation.theme.labelMediumEmphasized
+import com.coparently.app.resources.Res
+import com.coparently.app.resources.calendar_filter_add_button
+import com.coparently.app.resources.calendar_filter_both
+import com.coparently.app.resources.calendar_filter_event_types
+import com.coparently.app.resources.calendar_filter_hidden_types_hint
+import com.coparently.app.resources.calendar_filter_holidays_subtitle
+import com.coparently.app.resources.calendar_filter_holidays_title
+import com.coparently.app.resources.calendar_filter_new_type_label
+import com.coparently.app.resources.calendar_filter_new_type_placeholder
+import com.coparently.app.resources.calendar_filter_show
+import com.coparently.app.resources.calendar_filter_type_visible
+import org.jetbrains.compose.resources.stringResource
+import androidx.compose.foundation.layout.ExperimentalLayoutApi as FoundationExperimentalLayoutApi
+
+/**
+ * Bottom sheet holding every calendar filter: whose events to show, event type visibility,
+ * custom type creation and the holiday switch.
+ *
+ * The whose-events control used to be a permanent row under the header. It moved in here so the
+ * header could collapse to two rows; the trade-off is one extra tap to switch parent, which the
+ * Filters action in the calendar header makes explicit.
+ */
+@OptIn(ExperimentalMaterial3Api::class, FoundationExperimentalLayoutApi::class)
+@Composable
+fun EventTypeFilterSheet(
+    allEventTypes: List<String>,
+    hiddenEventTypes: Set<String>,
+    showHolidays: Boolean,
+    parentFilter: ParentFilter,
+    parentNames: ParentNames,
+    friendName: String?,
+    onParentFilterChange: (ParentFilter) -> Unit,
+    onToggleType: (String) -> Unit,
+    onAddCustomType: (String) -> Unit,
+    onShowHolidaysChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+    sheetState: SheetState
+) {
+    val dims = dimensions()
+    var newTypeName by remember { mutableStateOf("") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = dims.paddingMedium)
+                .padding(bottom = dims.paddingMedium * 2),
+            verticalArrangement = Arrangement.spacedBy(dims.paddingMedium)
+        ) {
+            Text(
+                text = stringResource(Res.string.calendar_filter_show),
+                style = MaterialTheme.typography.titleMedium
+            )
+            ParentFilterSegments(
+                parentNames = parentNames,
+                selected = parentFilter,
+                onSelected = onParentFilterChange
+            )
+
+            // The friend is a chip below the row rather than a fourth segment: a segment is
+            // about a third of the sheet's width and the three parent labels already clip at
+            // their fallbacks, so a fourth would clip all of them. It also reads correctly —
+            // a friend is not a fourth owner, it is a narrowing of "show me where they are
+            // expected" (item 16). Absent entirely when the family has no friend.
+            friendName?.let { name ->
+                FilterPill(
+                    label = name,
+                    selected = parentFilter == ParentFilter.FRIEND,
+                    color = CoPlanlyColors.FriendTeal,
+                    onClick = {
+                        onParentFilterChange(
+                            if (parentFilter == ParentFilter.FRIEND) {
+                                ParentFilter.BOTH
+                            } else {
+                                ParentFilter.FRIEND
+                            }
+                        )
+                    }
+                )
+            }
+
+            HorizontalDivider()
+
+            Text(
+                text = stringResource(Res.string.calendar_filter_event_types),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(Res.string.calendar_filter_hidden_types_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+            ) {
+                allEventTypes.forEach { type ->
+                    val isVisible = type !in hiddenEventTypes
+                    FilterChip(
+                        selected = isVisible,
+                        onClick = { onToggleType(type) },
+                        label = {
+                            Text(eventTypeLabel(type))
+                        },
+                        leadingIcon = if (isVisible) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = stringResource(Res.string.calendar_filter_type_visible),
+                                    modifier = Modifier.size(IconSizes.Small)
+                                )
+                            }
+                        } else {
+                            null
+                        }
+                    )
+                }
+            }
+
+            // Add custom event type
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+            ) {
+                OutlinedTextField(
+                    value = newTypeName,
+                    onValueChange = { newTypeName = it },
+                    label = { Text(stringResource(Res.string.calendar_filter_new_type_label)) },
+                    placeholder = { Text(stringResource(Res.string.calendar_filter_new_type_placeholder)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(
+                    onClick = {
+                        if (newTypeName.isNotBlank()) {
+                            onAddCustomType(newTypeName)
+                            newTypeName = ""
+                        }
+                    },
+                    enabled = newTypeName.isNotBlank()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(IconSizes.Small)
+                    )
+                    Text(stringResource(Res.string.calendar_filter_add_button))
+                }
+            }
+
+            // Holidays toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(Res.string.calendar_filter_holidays_title),
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = stringResource(Res.string.calendar_filter_holidays_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = showHolidays,
+                    onCheckedChange = onShowHolidaysChange
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A single on/off filter chip in a named colour — the calendar friend's (item 16).
+ *
+ * Its own composable rather than a `FilterChip`: the Material chip's selected state comes from
+ * the theme's neutral `secondary` slot, and this one has to carry a *person's* colour, which is
+ * the distinction `CoPlanlyColors` draws between identity and control.
+ */
+@Composable
+private fun FilterPill(
+    label: String,
+    selected: Boolean,
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(CoPlanlyCorners.Pill)
+            .background(if (selected) color.copy(alpha = 0.15f) else Color.Transparent)
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) color else MaterialTheme.colorScheme.outlineVariant,
+                shape = CoPlanlyCorners.Pill
+            )
+            // A checkbox to TalkBack — on/off was said by colour and weight alone — and 48dp tall.
+            .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onClick() })
+            .heightIn(min = LayoutConstants.MIN_TOUCH_TARGET)
+            .padding(horizontal = Spacing.L, vertical = Spacing.S),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.S)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CoPlanlyCorners.Pill)
+                .background(color)
+        )
+        Text(
+            text = label,
+            style = if (selected) {
+                MaterialTheme.typography.labelMediumEmphasized
+            } else {
+                MaterialTheme.typography.labelMedium
+            },
+            color = if (selected) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * One segment per parent, plus Both.
+ *
+ * The two outer segments are named after the people who hold the slots, not after the slots —
+ * a filter offering "Mom" and "Dad" told half the families using this app that one of them was
+ * somebody they are not.
+ *
+ * Parent colours come from [ParentColors] — the family's chosen palette — rather than through
+ * the theme's `secondary` slot: a parent colour means parent identity in this product and
+ * nothing else.
+ *
+ * @param selected Currently active filter
+ * @param parentNames Resolves a slot to that parent's name
+ * @param onSelected Callback when a segment is chosen
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ParentFilterSegments(
+    selected: ParentFilter,
+    parentNames: ParentNames,
+    onSelected: (ParentFilter) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        // Fill hue for container and border; text-grade partner for the label (design item 2:
+        // the raw pink on a dark surface is under AA as a foreground).
+        data class Segment(val filter: ParentFilter, val label: String, val color: Color, val content: Color)
+        val primary = MaterialTheme.colorScheme.primary
+        val options = listOf(
+            Segment(ParentFilter.MOM, parentNames.labelFor("mom"), ParentColors.fill("mom"), ParentColors.text("mom")),
+            Segment(ParentFilter.BOTH, stringResource(Res.string.calendar_filter_both), primary, primary),
+            Segment(ParentFilter.DAD, parentNames.labelFor("dad"), ParentColors.fill("dad"), ParentColors.text("dad"))
+        )
+        options.forEachIndexed { index, segment ->
+            val filter = segment.filter
+            val color = segment.color
+            SegmentedButton(
+                selected = selected == filter,
+                onClick = { onSelected(filter) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = color.copy(alpha = 0.15f),
+                    activeContentColor = segment.content,
+                    activeBorderColor = color
+                ),
+                icon = {}
+            ) {
+                // A segment is about a third of the sheet's width and SegmentedButton has a
+                // fixed height, so a long label clips rather than wrapping. Names are now
+                // arbitrary length, and the fallbacks are the worst case, not the best:
+                // "Второй родитель" is 15 characters, "Другий з батьків" 16.
+                Text(
+                    text = segment.label,
+                    style = if (selected == filter) {
+                        MaterialTheme.typography.labelMediumEmphasized
+                    } else {
+                        MaterialTheme.typography.labelMedium
+                    },
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}

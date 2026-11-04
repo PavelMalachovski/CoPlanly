@@ -29,11 +29,13 @@ class GoogleCalendarAccessTest {
 
     @Test
     fun `the Calendar wrapper only reads`() {
+        // One call, `events.list`. `GoogleCalendarApi` lives in `:shared-data` on Ktor since MON-24;
+        // google-api-client's `getCalendarService` went with that client.
         val publicMethods = GoogleCalendarApi::class.java.declaredMethods
             .filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic }
             .map { it.name }
             .toSortedSet()
 
-        assertEquals(sortedSetOf("getCalendarService", "listEvents"), publicMethods)
+        assertEquals(sortedSetOf("listEvents"), publicMethods)
     }
 }

@@ -10,6 +10,16 @@
 # checked. The instrumented job runs on three emulators (API 26, 30 and 35 with 16 KB pages);
 # see its comment for what each level is there to catch.
 #
+# ## Draft pull requests skip the emulator jobs (owner decision, 1 November 2026)
+#
+# The four emulator jobs — `instrumented`, `e2e`, `upgrade`, `r8-runtime` — are the expensive ones.
+# On a **draft** pull request they run only when the pull request carries the `full-ci` label;
+# once it is ready for review, or on a push to `main` or a manual run, they run as before. The
+# decision is `changes`' `emulators` output (`tools/ci-changes.js --event`, tested in
+# `tools/test/ci-changes.test.js`), ANDed into each job's own path gate. The `pull_request` trigger
+# lists `labeled` and `ready_for_review` so that adding the label, or marking the pull request
+# ready, starts the run that carries them. Every other job is gated as it was.
+#
 # ## Why the Android work is three jobs and not one
 #
 # It used to be one job running five Gradle invocations in sequence, and the measured cost
@@ -36,12 +46,25 @@ on:
   push:
     branches: [main]
   pull_request:
+    # The first three are the defaults, listed because naming any type drops the rest.
+    # `labeled` starts a run when `full-ci` is added; `ready_for_review` when a draft is marked
+    # ready. A label other than `full-ci` starts a run that does no work: its jobs
+    # are skipped (see `changes`).
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
   # Manual runs on any branch: a session without an Android SDK can push a branch and have this
   # workflow prove the Kotlin before a pull request exists.
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # A `labeled` run for a label other than `full-ci` does no work (its jobs are skipped), so it gets a group of its own
+  # (by run id) instead of the pull request's: in the shared group it would cancel the real run
+  # in progress and replace it with an empty one. A `full-ci` run, and `ready_for_review`, share
+  # the pull request's group on purpose: they supersede a run that skipped the emulators, and a
+  # later push supersedes them in turn. Nothing cancels a run in its own group but a newer one.
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}${{
+    (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name != 'full-ci')
+    && format('-label-{0}', github.run_id) || '' }}
   # Only a pull request's superseded run is cancelled: a run on `main` is the backstop for the legs
   # a pull request skipped, and two quick merges must each get their full matrix.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -61,7 +84,12 @@ jobs:
   #  * nothing the screenshots render or compare against (`presentation/`, `domain/`, `res/`, the
   #    tests, the baselines in `app/src/test/screenshots/`) → no screenshots;
   #  * the emulator matrix is API 30 alone unless the change touches what API 26 and 16 KB exist for
-  #    — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`, `src/debug/` — or the build.
+  #    — `data/local/` (SQLCipher, Room), the manifest, `androidTest/`, `src/debug/` — or the build;
+  #  * the shared modules' own jobs run on `shared/**`, `shared-data/**` and `shared-ui/**`, the
+  #    build files and this workflow. A change in `shared/` or `shared-data/` counts as the build
+  #    does for everything else (the app compiles them); in `shared-ui/`, its strings
+  #    (`composeResources/`), screens (`presentation/`) and tests count as the app's `res/`,
+  #    `presentation/` and tests they stand for, and the rest of it as the build.
   #
   # The build files and `.github/workflows/**` run everything: editing this file is exactly when
   # you want to see the build it describes. A push to `main` and a manual run always run everything
@@ -83,23 +111,53 @@ jobs:
       upgrade: ${{ steps.filter.outputs.upgrade }}
       # The `instrumented` job's matrix, as a JSON array of legs.
       matrix: ${{ steps.filter.outputs.matrix }}
-      # The `r8-runtime` job: Android changes that can reach Gson, R8's rules or the probe.
+      # The `r8-runtime` job: Android changes that can reach the stored JSON, R8's rules or the probe.
       r8runtime: ${{ steps.filter.outputs.r8runtime }}
       # The `web` job: anything but docs and the Android app — web/, web-tests/, functions/,
       # firebase.json, the Firebase CLI's lock file, the workflow, or a path the script does not know.
       web: ${{ steps.filter.outputs.web }}
+      # The `shared` and `shared-ios` jobs: the multiplatform modules (`shared/**`, `shared-data/**`,
+      # `shared-ui/**`), the build files and the workflow. A path in any of them is also an Android
+      # path for every output above (a `shared-ui/` string or screen as the app path it stands for).
+      shared: ${{ steps.filter.outputs.shared }}
+      # The four emulator jobs (`instrumented`, `e2e`, `upgrade`, `r8-runtime`) may run: false on a
+      # draft pull request without the `full-ci` label. ANDed into each of them beside its path
+      # gate; true for a ready pull request, a push to `main` and a manual run.
+      emulators: ${{ steps.event.outputs.emulators }}
+      # A `labeled` run for a label other than `full-ci`: every output is false and `report` stays
+      # quiet, so the real run's comment is not overwritten by an empty one.
+      unrelated_label: ${{ steps.event.outputs.unrelated_label }}
+      # Emulator jobs skipped because the pull request is a draft: the report says so.
+      emulators_skipped_on_draft: ${{ steps.event.outputs.emulators_skipped_on_draft }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Decide whether the emulator jobs may run
+        id: event
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          LABEL_NAME: ${{ github.event.label.name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_FULL_CI: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+        run: node tools/ci-changes.js --event | tee -a "$GITHUB_OUTPUT"
 
       - name: Decide which jobs to run
         id: filter
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          UNRELATED_LABEL: ${{ steps.event.outputs.unrelated_label }}
         run: |
           set -u
+          if [ "$UNRELATED_LABEL" = "true" ]; then
+            echo "A label other than full-ci was added — running nothing."
+            node tools/ci-changes.js --none | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "Not a pull request — running everything."
             node tools/ci-changes.js --all | tee -a "$GITHUB_OUTPUT"
@@ -156,12 +214,31 @@ jobs:
       # One invocation, not two: `testDebugUnitTest` compiles the same debug sources
       # `assembleDebug` does, so running them together shares a configuration phase and a
       # Kotlin compile instead of repeating both.
+      # The current version's schema is deleted before the build, so the check after it can tell
+      # "written again, identical" from "not written at all": `git status --porcelain` is clean in
+      # both cases, and only the first proves the moved database (MON-24 phase 2) still exports
+      # exactly what is committed. `--rerun` on Room's Android processor for the same reason: a
+      # KSP task restored from the build cache writes nothing into `app/schemas/`. Only the current
+      # version's file is touched; the older ones are fixtures nobody rebuilds.
+      - name: Remove the current schema so the build must write it
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 -oE 'version = [0-9]+' shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt | grep -oE '[0-9]+')
+          schema="app/schemas/com.coparently.app.data.local.CoPlanlyDatabase/$version.json"
+          echo "Database version $version; removing $schema so the build has to write it again."
+          rm -f "$schema"
+          echo "SCHEMA_FILE=$schema" >> "$GITHUB_ENV"
+
       - name: Assemble debug and run unit tests
-        run: ./gradlew assembleDebug testDebugUnitTest
+        run: ./gradlew :app:assembleDebug testDebugUnitTest :shared-data:kspDebugKotlinAndroid --rerun
 
       # `DatabaseSchemaExportTest` cannot catch what CQ-1 says it catches, and this is the
       # step that can. KSP (Room) writes `app/schemas/<version>.json` during the build above, from
-      # the `room.schemaLocation` argument — so by the time the unit test reads that directory
+      # the `room.schemaLocation` argument (in shared-data/build.gradle.kts since MON-24 phase 2,
+      # where Room's processor now runs: `:shared-data:kspDebugKotlinAndroid`, which the app's
+      # compile depends on, so this step still follows the task that writes the schema; the
+      # moved database must export exactly the committed `46.json`, identity hash included)
+      # — so by the time the unit test reads that directory
       # the file it is looking for has just been created, whether or not anybody committed it.
       # The test passes on a repository missing the very export it exists to demand.
       #
@@ -175,6 +252,12 @@ jobs:
       - name: The exported schema must be committed, not merely producible
         run: |
           set -euo pipefail
+          if [ ! -f "$SCHEMA_FILE" ]; then
+            echo "::error::Room's Android processor did not write $SCHEMA_FILE: the schema export"
+            echo "::error::did not run (room.schemaLocation in shared-data/build.gradle.kts), so"
+            echo "::error::nothing here proves the committed schema is still the database's."
+            exit 1
+          fi
           dirty=$(git status --porcelain -- app/schemas)
           if [ -n "$dirty" ]; then
             echo "$dirty"
@@ -204,7 +287,7 @@ jobs:
       # which is the one place in this file `continue-on-error` is the right tool.
       - name: Coverage report (Kover)
         continue-on-error: true
-        run: ./gradlew koverXmlReportDebug koverHtmlReportDebug
+        run: ./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug
 
       - name: Upload coverage report
         if: always()
@@ -280,7 +363,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-reports-static
-          path: app/build/reports/
+          path: |
+            app/build/reports/
+            shared/build/reports/
+            shared-data/build/reports/
+            shared-ui/build/reports/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -323,6 +410,11 @@ jobs:
       # violation into a report nobody reads. Either fix the finding or, if it is genuinely
       # accepted debt, regenerate the baseline through the Regenerate workflow so the acceptance
       # is a visible commit.
+      #
+      # `detekt` is a task selector: it runs `:app:detekt`, `:shared:detekt`, `:shared-data:detekt`
+      # and `:shared-ui:detekt`, the shared modules held to the app's configuration and the app's
+      # baseline file (one baseline for all four, which `:app:detektBaseline` writes; see
+      # shared/build.gradle.kts).
       - name: detekt
         run: ./gradlew detekt
 
@@ -331,7 +423,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-reports-detekt
-          path: app/build/reports/detekt/
+          path: |
+            app/build/reports/detekt/
+            shared/build/reports/detekt/
+            shared-data/build/reports/detekt/
+            shared-ui/build/reports/detekt/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -359,19 +455,24 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # A release build is the only place R8 runs, and R8 is what silently rewrote the field
-      # names Gson depends on. Building it here is what stops that class of defect from
-      # reaching a device again. No signing config exists yet, so this produces an unsigned
+      # names Gson depended on (the app's own JSON is StoredJson since MON-24, whose keys R8
+      # cannot rename, and Google's calendar models left with their client in MON-24 phase 2).
+      # It is also where R8 fails on a class a library references and Android lacks (Ktor's
+      # `java.lang.management`, `app/proguard-rules.pro`). Building it here is
+      # what stops that class of defect from reaching a device again. No signing config exists yet, so this produces an unsigned
       # bundle — which is exactly the part worth checking.
       - name: Assemble release (R8)
-        run: ./gradlew assembleRelease
+        run: ./gradlew :app:assembleRelease
 
-      # The comment above says building here is what stops the Gson/R8 defect reaching a device.
-      # Building alone does not: R8 rewriting a kept field raises nothing, emits well-formed
-      # JSON, and cannot happen in debug. This reads R8's own mapping and fails when a field a
-      # `-keepclassmembers ... { <fields>; }` rule names came out renamed. `check-invariants.js`
-      # separately checks that every Gson-reflected type *has* such a rule; this checks the rule
-      # worked, which a typo in a package name would otherwise hide.
-      - name: Verify R8 kept the Gson field names
+      # The comment above says building here is what stops the reflection/R8 defect reaching a
+      # device. Building alone does not: R8 rewriting a kept field raises nothing, emits
+      # well-formed JSON, and cannot happen in debug. This reads R8's own mapping and fails when a
+      # field a `-keepclassmembers ... { <fields>; }` or `-keep class X { *; }` rule names came
+      # out renamed. Since MON-24 phase 2 no rule names one (the app's own models needed them only
+      # while Gson wrote them, and the Google Calendar models left with google-http-client), and
+      # the check says so and passes; it holds the next reflective reader's rule. It checks the
+      # rule worked, which a typo in a package name would otherwise hide.
+      - name: Verify R8 kept the reflected field names
         run: node tools/check-r8-mapping.js
 
       # Week 8 of the release audit: the app ships a hand-written baseline profile
@@ -407,16 +508,16 @@ jobs:
 
   # REL-7 at runtime. The job above proves R8 ran and that the keep rules held for field *names*;
   # it cannot see the minified app *run*. R8 full mode also strips generic signatures (Gson's
-  # TypeToken then throws), drops constructors, merges and inlines classes — failures that raise
+  # TypeToken threw, while the app used Gson), drops constructors, merges and inlines classes — failures that raise
   # nothing at build time and only show when the code executes, which until now meant a person, a
   # phone and docs/DEVICE-CHECKLIST.md §4.1.
   #
   # `assembleR8Test` builds the `r8Test` build type: `release` exactly as R8 shrinks it, plus one
   # kept entry point, a self-targeting instrumentation (app/src/r8Test/), signed with the debug key.
   # tools/run-r8-probe.sh installs it on an API 30 emulator and runs `am instrument`, and the probe
-  # — inside the minified process — writes every model Gson reflects over through the app's own
-  # code (the repositories into Room, DayOverrideJson, the draft Gson, the chat and revision
-  # mappers, the calendar's @Key models) and reads it back. tools/check-r8-probe.js fails on any
+  # — inside the minified process — writes every stored model (StoredJson's, Gson's until MON-24)
+  # through the app's own code (the repositories into Room, DayOverrideJson, the event draft, the
+  # chat and revision mappers, the calendar's @Key models) and reads it back. tools/check-r8-probe.js fails on any
   # key that is not the source field name, any value that does not read back equal, a probe that
   # did not finish, and a model check-invariants.js finds with no case — each as an ::error::.
   #
@@ -428,7 +529,7 @@ jobs:
   r8-runtime:
     name: Android — minified build at runtime (R8)
     needs: changes
-    if: needs.changes.outputs.r8runtime == 'true'
+    if: needs.changes.outputs.r8runtime == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -451,10 +552,15 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       # R8 is the long part (~7 minutes in `release`); it runs while the AVD restores and boots.
       - name: Start building the minified APK in the background
         env:
-          BACKGROUND_BUILD_TASKS: assembleR8Test
+          BACKGROUND_BUILD_TASKS: :app:assembleR8Test
         run: bash tools/ci-background-build.sh start
 
       # The API 30 AVD the `instrumented` job caches — restored only, so no two jobs race to save it.
@@ -739,8 +845,8 @@ jobs:
   #    `NoSuchMethodError` on an old device. Lint's NewApi catches most of it, not all — not a
   #    library that does it for you. 32-bit x86 on purpose: it is a second ABI for SQLCipher's
   #    native library, whose absence is exactly the failure `EncryptedDatabase.fallBackTo` handles.
-  #    **Caveat:** mockk only mocks *final* classes on API 28+, and `FakeFirebaseModule` mocks
-  #    Firebase types. If one of them is final, the Hilt UI tests fail on this leg and only here —
+  #    **Caveat:** mockk only mocks *final* classes on API 28+, and `fakeFirebaseModule` mocks
+  #    Firebase types. If one of them is final, the UI tests that load it fail on this leg and only here —
   #    that is a finding about the test module (swap the mock for an open fake), not a reason to
   #    drop the leg.
   #  * **30 — the level this job was built and first made green on.**
@@ -756,7 +862,7 @@ jobs:
   instrumented:
     name: Android — instrumented tests (API ${{ matrix.api-level }}${{ matrix.label }})
     needs: changes
-    if: needs.changes.outputs.android == 'true'
+    if: needs.changes.outputs.android == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     # The emulator step has its own 10-minute limit; this covers setup, a cold AVD and uploads.
     timeout-minutes: 35
@@ -765,8 +871,10 @@ jobs:
       checks: write
     strategy:
       fail-fast: false
-      # The legs are defined in tools/ci-changes.js (LEG_26, LEG_30, LEG_16KB — the 16 KB leg runs
-      # the non-Hilt tests only, because MockK's agent does not load on 16 KB pages) and chosen per
+      # The legs are defined in tools/ci-changes.js (LEG_26, LEG_30, LEG_16KB — the 16 KB leg skips
+      # every test marked `@UsesFakeFirebase`, through `notAnnotation=
+      # com.coparently.app.testing.UsesFakeFirebase`, because the fake Firebase override mocks
+      # through MockK's agent, which does not load on 16 KB pages) and chosen per
       # pull request by the `changes` job: API 30 always, 26 and 16 KB when the diff reaches what
       # they exist for, all three on `main`.
       matrix:
@@ -787,6 +895,11 @@ jobs:
           # secrets, so it is only stored encrypted). Optional: with the repository secret unset
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
 
       # Compiles while the AVD restores and the emulator boots, which used to happen first and
       # leave the build waiting — the script's first line waits for it (tools/ci-background-build.sh).
@@ -827,7 +940,7 @@ jobs:
 
       # CQ-1 and SEC-2. What runs here: the migration tests against real SQLite files (only the
       # versions whose schemas exist — see CLAUDE.md for why eight of them are @Ignore'd), the
-      # Hilt UI tests, which build the whole graph with Room real, and `EncryptedDatabaseTest`,
+      # UI tests, which build the whole Koin graph with Room real, and `EncryptedDatabaseTest`,
       # which builds every on-disk state `SqlCipherMigration` names — fresh install, plaintext
       # upgrade, an interrupted export, a lost passphrase — and opens each through the production
       # path. What it cannot prove is an upgrade over data an *older build* wrote, on a phone's
@@ -875,7 +988,7 @@ jobs:
           # Waits for the background build, then records the screen in 170 s segments while the
           # tests run (on legs with `record`) and pulls the MP4s after; the exit status is the
           # tests', and a recorder that fails never fails the job.
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       # **A boot that dies before the script starts is booted again, once, cold.** The cached API 30
       # snapshot sometimes comes up without its input service: `sys.boot_completed` reads 1 at once,
@@ -921,7 +1034,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/with-screen-recording.sh ./gradlew connectedDebugAndroidTest ${{ matrix.test-args }}
+          script: touch "$STARTED_FILE"; bash tools/ci-background-build.sh wait && bash tools/clear-system-dialogs.sh && bash tools/with-screen-recording.sh ./gradlew :app:connectedDebugAndroidTest ${{ matrix.test-args }}
 
       - name: The instrumented tests finished and passed
         if: always()
@@ -998,9 +1111,9 @@ jobs:
   #  * **No `google-services.json`, fake or otherwise.** The tests configure their FirebaseApps
   #    from `FirebaseOptions` for the `demo-coplanly` project, which needs no credentials and
   #    cannot reach production. The plugin gate in `app/build.gradle.kts` stays closed.
-  #  * **The `instrumented` job above is untouched.** These tests are not Hilt tests and install
-  #    no module; without the `coplanlyEmulatorHost` argument they skip themselves, so that job
-  #    reports them as skipped and keeps `FakeFirebaseModule` for everything else.
+  #  * **The `instrumented` job above is untouched.** These tests start no Koin graph and install
+  #    no override; without the `coplanlyEmulatorHost` argument they skip themselves, so that job
+  #    reports them as skipped and keeps `fakeFirebaseModule`'s mocks for everything else.
   #  * **A skip is a failure here.** The last step reads the XML and fails on any skipped test,
   #    so a missing argument cannot turn this job green by running nothing.
   #  * **Two JDKs.** The emulators need 21+ on PATH (firestore-tests/README.md); Gradle builds on
@@ -1012,7 +1125,7 @@ jobs:
   e2e:
     name: Android — two parents on the Firebase emulators
     needs: changes
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
@@ -1057,6 +1170,11 @@ jobs:
           # the cache still works within one job, just not across runs.
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
+
       # Built while the AVD restores and the emulator boots; the script's first line waits for it
       # (tools/ci-background-build.sh). It used to run first, and the boot waited behind it.
       - name: Start building the APKs in the background
@@ -1093,7 +1211,7 @@ jobs:
       # itself (tools/stop-emulator.sh); the timeout is the backstop.
       - name: Run the two-parent tests
         id: e2e-tests
-        timeout-minutes: 15
+        timeout-minutes: 20
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -1111,7 +1229,7 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Stops the emulator itself once the tests are done (tools/stop-emulator.sh), since a
           # snapshot boot is what the `instrumented` job's shutdown hang was seen on.
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       # As in the `instrumented` job: a boot that died before the script started is booted again, cold.
       - name: Did the two-parent tests start?
@@ -1132,7 +1250,7 @@ jobs:
       - name: Run the two-parent tests (again, on a cold boot)
         id: e2e-tests-retry
         if: steps.e2e-tests-started.outputs.started == 'false'
-        timeout-minutes: 15
+        timeout-minutes: 20
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -1148,7 +1266,7 @@ jobs:
           force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
+          script: touch "$STARTED_FILE"; adb logcat -G 16M || true; bash tools/ci-background-build.sh wait && bash tools/e2e/run-two-parent-tests.sh; status=$?; echo "$status" > "$STATUS_FILE"; mkdir -p app/build/outputs && adb logcat -d -v time > app/build/outputs/e2e-logcat.txt 2>&1; echo "::group::logcat — E2E steps (timed), failures, crashes"; grep -E "I/E2E|E/E2E.*FAILED|AndroidRuntime|[WE]/(ChatViewModel|MessageRepo|ChatMirror)" app/build/outputs/e2e-logcat.txt | tail -n 400; echo "::endgroup::"; echo "::group::logcat — thread dumps of failed tests"; grep -E "E/E2E" app/build/outputs/e2e-logcat.txt | tail -n 800; echo "::endgroup::"; bash tools/stop-emulator.sh; exit $status
 
       - name: The two-parent tests finished and passed
         if: always()
@@ -1261,7 +1379,7 @@ jobs:
   upgrade:
     name: Android — upgrade over main
     needs: changes
-    if: needs.changes.outputs.upgrade == 'true'
+    if: needs.changes.outputs.upgrade == 'true' && needs.changes.outputs.emulators == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1326,7 +1444,7 @@ jobs:
         working-directory: upgrade-base
         # The base build's daemon would otherwise keep its 4 GB heap beside this branch's
         # daemon and the emulator on a 16 GB runner.
-        run: ./gradlew assembleDebug && ./gradlew --stop
+        run: ./gradlew :app:assembleDebug && ./gradlew --stop
 
       # "A co-parent on the previous build", for the Firestore wire format (CLAUDE.md, the rule
       # under item 5). This branch's `app/src/test/resources/wire/current/` is what it writes; the
@@ -1344,7 +1462,10 @@ jobs:
         run: |
           set -euo pipefail
           current="$GITHUB_WORKSPACE/app/src/test/resources/wire/current"
-          if [ ! -f app/src/test/java/com/coparently/app/wire/WireContractTest.kt ]; then
+          # The harness lives in `:shared-data`'s commonTest from MON-24 phase 2 (Task 8a), which
+          # the base's app unit tests compile and run with every contract; before that, in the app.
+          if [ ! -f app/src/test/java/com/coparently/app/wire/WireContractTest.kt ] \
+            && [ ! -f shared-data/src/commonTest/kotlin/com/coparently/app/wire/WireContractTest.kt ]; then
             echo "::notice::The base build predates WireContractTest; the previous-build wire check starts once the base has it."
             exit 0
           fi
@@ -1359,12 +1480,19 @@ jobs:
           rm -rf app/src/test/resources/wire/current
           cp -R "$current" app/src/test/resources/wire/current
           status=0
-          ./gradlew testDebugUnitTest --tests '*WireContractTest*' || status=$?
+          # `:app:` because a base that has the `:shared` module would otherwise also run its
+          # unit tests under this filter, find none, and fail with "No tests found".
+          ./gradlew :app:testDebugUnitTest --tests '*WireContractTest*' || status=$?
           ./gradlew --stop
           if [ "$status" != "0" ]; then
             echo "::error::The base build cannot read, or would lose, what this branch writes. See the failures above and CLAUDE.md's wire-format rule: declare a key older builds may drop in CurrentWrite.olderBuildsMayDrop, or keep the old shape readable."
           fi
           exit $status
+
+      # Two emulator jobs died with "No space left on device" while the SDK manager unpacked the
+      # emulator or a system image (2 November 2026); this removes toolchains no job here uses.
+      - name: Free disk space
+        run: bash tools/ci-free-disk.sh
 
       # This branch's app and test APKs, while the AVD restores and the emulator boots; the
       # emulator script's first line waits for it (tools/ci-background-build.sh).
@@ -1510,6 +1638,9 @@ jobs:
 
   invariants:
     name: Resource and payload invariants
+    # Skipped on the run a label other than `full-ci` starts (see `changes`): no `needs: changes`, so
+    # they are gated on the event itself.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -1549,6 +1680,9 @@ jobs:
 
   functions:
     name: Cloud Functions
+    # Skipped on the run a label other than `full-ci` starts (see `changes`): no `needs: changes`, so
+    # they are gated on the event itself.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1703,6 +1837,9 @@ jobs:
 
   rules:
     name: Firestore security rules
+    # Skipped on the run a label other than `full-ci` starts (see `changes`): no `needs: changes`, so
+    # they are gated on the event itself.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1763,6 +1900,299 @@ jobs:
           # A job that died before writing results must not publish a green check.
           require_tests: true
 
+  # The shared Kotlin Multiplatform modules (MON-24): `shared/`, the domain the Android app and the
+  # iPhone app both run, `shared-data/`, the data layer (phase 2), and `shared-ui/`, the UI (from
+  # phase 2's Task 9: the strings as Compose Multiplatform resources, the theme and the common
+  # components). Two jobs, gated on `changes`' `shared` output (`shared/**`, `shared-data/**`,
+  # `shared-ui/**`, the build files, the workflow). `build-test` runs these tests too, because Kover
+  # merges `:shared`, `:shared-data` and `:shared-ui` into the app's coverage; this job is where they
+  # get a check run of their own, beside the iOS compile. `:shared-ui`'s own tests are the theme's
+  # (`androidUnitTest`, slice 9b) and the moved ViewModels' and shared state's (Task 10: commonTest
+  # and `androidUnitTest`), run on the JVM; its strings are checked by the app's parity tests
+  # (`StringsParityTest`, `PluralsParityTest`, in `build-test`), and its iOS klib — `Res`, the
+  # theme, the common components and the ViewModels — and its commonTest are compiled here for iOS.
+  # Nothing runs `:shared-ui`'s commonTest on the simulator yet: its test executable would link
+  # `shared-data`'s Firebase pods, which only `shared-data` (CocoaPods, `linkOnly`) provides.
+  #
+  # `compileKotlinIosSimulatorArm64` builds the iOS klib on Linux. Kotlin has done that without a
+  # flag since 2.2.20 ("stable cross-platform compilation"), so a common-code change that does not
+  # compile for iOS — a `java.*` import in commonMain, say — fails here on every pull request,
+  # whether or not the Mac is online. `compileTestKotlinIosSimulatorArm64` does the same for
+  # commonTest: Kotlin/Native refuses names the JVM accepts (a comma or parentheses in a backticked
+  # test name), and the JVM run above never sees it. Linking the framework and running the tests
+  # on a simulator need Xcode: that is `shared-ios` below.
+  shared:
+    name: Shared — JVM tests and iOS compile
+    needs: changes
+    if: needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # The Kotlin/Native compiler and its dependencies (a few hundred MB), keyed on the root
+      # build file, which names the Kotlin version.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('build.gradle.kts') }}
+
+      # Room's processor for the iPhone writes the exported schema into `app/schemas/` too (the
+      # database is common code since MON-24 phase 2). The current version's file is deleted first
+      # and the iOS processor runs on its own, before anything Android's processor would also write
+      # it, so the check below proves this processor wrote it, identical, rather than finding it
+      # untouched. `--rerun`: a KSP task restored from the build cache writes nothing there.
+      - name: Remove the current schema so the iPhone build must write it
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 -oE 'version = [0-9]+' shared-data/src/commonMain/kotlin/com/coparently/app/data/local/CoPlanlyDatabase.kt | grep -oE '[0-9]+')
+          schema="app/schemas/com.coparently.app.data.local.CoPlanlyDatabase/$version.json"
+          echo "Database version $version; removing $schema so the build has to write it again."
+          rm -f "$schema"
+          echo "SCHEMA_FILE=$schema" >> "$GITHUB_ENV"
+
+      - name: Room's processor for iOS
+        run: ./gradlew :shared-data:kspKotlinIosSimulatorArm64 --rerun
+
+      # The same check as `build-test`'s, for the iPhone's processor: the schema it exports must be
+      # the committed one, byte for byte. The schema is common code, so a difference here is a
+      # difference between Room's targets, which no migration could reconcile.
+      - name: The iPhone build exports the committed Room schema
+        run: |
+          set -euo pipefail
+          if [ ! -f "$SCHEMA_FILE" ]; then
+            echo "::error::Room's processor for iOS did not write $SCHEMA_FILE: the schema export"
+            echo "::error::did not run for the iPhone (room.schemaLocation in shared-data/build.gradle.kts)."
+            exit 1
+          fi
+          dirty=$(git status --porcelain -- app/schemas)
+          if [ -n "$dirty" ]; then
+            echo "$dirty"
+            git diff -- app/schemas | head -100
+            echo "::error::Room's processor for iOS exported a schema that differs from app/schemas/."
+            exit 1
+          fi
+
+      - name: Shared tests (JVM) and the iOS compile
+        run: >-
+          ./gradlew
+          :shared:testDebugUnitTest :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
+          :shared-data:testDebugUnitTest :shared-data:compileKotlinIosSimulatorArm64
+          :shared-data:compileTestKotlinIosSimulatorArm64
+          :shared-ui:testDebugUnitTest :shared-ui:compileKotlinIosSimulatorArm64
+          :shared-ui:compileTestKotlinIosSimulatorArm64
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports-shared
+          path: |
+            shared/build/reports/
+            shared/build/test-results/
+            shared-data/build/reports/
+            shared-data/build/test-results/
+            shared-ui/build/reports/
+            shared-ui/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-shared
+          path: shared*/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Shared tests (JVM)
+          report_paths: shared*/build/test-results/testDebugUnitTest/*.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
+
+  # The same tests on an iOS simulator, and the `Shared` framework the iPhone app links, on a
+  # GitHub-hosted macOS runner, because only Xcode links an Apple binary and runs a simulator. The
+  # repository is public, so macOS runners cost nothing, and a fork's code runs on GitHub's machine,
+  # never on anybody's own (owner decision, 1 November 2026: this replaced the self-hosted Mac of
+  # docs/IOS-RUNNER.md, which stays as a fallback). Gated like the Linux job, on `shared`.
+  # `macos-latest` rather than a numbered image, so the job never names an image GitHub retired;
+  # the "Xcode" step prints which one ran. Kotlin 2.3.21 builds and runs these tests on Xcode 26
+  # and, on the owner's Mac, on Xcode 27.2 (ROADMAP MON-24).
+  shared-ios:
+    name: Shared — iOS simulator tests and framework (macOS)
+    needs: changes
+    if: needs.changes.outputs.shared == 'true'
+    runs-on: macos-latest
+    # 75, not 45: since Task 9 the link compiles Compose Multiplatform and skiko for Kotlin/Native
+    # too: a run whose pods missed the cache spent 34 minutes before the tests, and slice 9b's
+    # full run (4 November 2026) stopped at 45 inside the framework link after its tests passed.
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # The Kotlin/Native compiler and its dependencies, as in the Linux job: a few hundred MB that
+      # would otherwise download on every run.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('build.gradle.kts') }}
+
+      # Gradle configures every project before it runs a task, and `:app` and the three shared
+      # modules all apply the Android plugin, which fails configuration with "SDK location
+      # not found" when no ANDROID_HOME or local.properties names one, even when only iOS tasks
+      # were asked for.
+      # The action's default package list includes the long-retired `tools`, which the current
+      # sdkmanager refuses ("Failed to find package 'tools'"), so name only what exists.
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Xcode
+        id: xcode
+        run: |
+          xcodebuild -version
+          echo "version=$(xcodebuild -version | tr '\n' ' ' | tr -s ' ' | sed 's/ *$//' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      # `:shared-data` links the Firebase iOS SDK through the Kotlin CocoaPods plugin (MON-24 phase 2,
+      # Task 8a): GitLive's bindings name the pods, `pod install` fetches them and `xcodebuild`
+      # builds them before the test executable links. The hosted image has CocoaPods; installed only
+      # when it does not, so an image without it still runs.
+      - name: CocoaPods
+        run: |
+          pod --version || sudo gem install cocoapods
+          pod --version
+
+      # What decides the pods: their names, their version and the deployment target, as
+      # `shared-data/build.gradle.kts` states them. The cache key hashes these lines alone, so an edit
+      # elsewhere in that file (the next slices make many) keeps the cache.
+      - name: Firebase pods' spec
+        id: podspec
+        run: |
+          grep -E 'val firebaseIosVersion =|ios\.deploymentTarget =|listOf\("Firebase' shared-data/build.gradle.kts > "$RUNNER_TEMP/firebase-pods.txt"
+          cat "$RUNNER_TEMP/firebase-pods.txt"
+          echo "hash=$(shasum -a 256 "$RUNNER_TEMP/firebase-pods.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      # The pods compile from source — FirebaseFirestoreInternal alone is a large C++ build — about
+      # 20 minutes cold (the Firebase spike, task 1). Cached: CocoaPods' download cache and specs,
+      # the plugin's synthetic Pods project under `shared-data/build/cocoapods` (so `pod install`
+      # finds its pods in place, with the times `xcodebuild` compares), and Xcode's derived data,
+      # where `xcodebuild` keeps what it built, so a warm run builds nothing again. Keyed on the
+      # Xcode version and the pods' spec above; a near miss (another Xcode, another pod list) still
+      # restores what it can through the prefixes, and `xcodebuild` rebuilds only what changed.
+      - name: Restore the Firebase pods
+        id: pods
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+            ~/Library/Developer/Xcode/DerivedData
+            shared-data/build/cocoapods
+          key: pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ steps.podspec.outputs.hash }}
+          restore-keys: |
+            pods-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+            pods-${{ runner.os }}-${{ runner.arch }}-
+
+      # `:shared-data`'s test executable links the Firebase frameworks, so this step is where the
+      # pods are installed and built. Its own step, so the cache below is saved exactly when the
+      # pods were built — never after a compile error stopped Gradle before them, which would save
+      # a cache without them under the key and keep every later run from saving a good one.
+      - name: Build the Firebase pods and link the iOS test executable
+        id: link
+        run: ./gradlew :shared-data:linkDebugTestIosSimulatorArm64
+
+      # The iPhone app's one framework, `Shared`, is `:shared-ui`'s (MON-24 phase 2, Task 9): static,
+      # exporting `:shared` and `:shared-data`, neither of which makes one of its own any more.
+      - name: Shared tests (iOS simulator) and the framework
+        run: ./gradlew :shared:iosSimulatorArm64Test :shared-data:iosSimulatorArm64Test :shared-ui:linkDebugFrameworkIosSimulatorArm64
+
+      - name: Pods resolved
+        if: always()
+        run: find shared-data/build/cocoapods -name Podfile.lock -exec grep -E "^  - Firebase" {} \; | sort -u || true
+
+      # Saved when the pods were built and the key was not already restored exactly, whatever the
+      # tests then did, so a red run does not pay the cold build again.
+      - name: Save the Firebase pods
+        if: always() && steps.link.outcome == 'success' && steps.pods.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+            ~/Library/Developer/Xcode/DerivedData
+            shared-data/build/cocoapods
+          key: ${{ steps.pods.outputs.cache-primary-key }}
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-shared-ios
+          path: |
+            shared/build/reports/
+            shared/build/test-results/
+            shared-data/build/reports/
+            shared-data/build/test-results/
+            shared-ui/build/reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload test results (JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-shared-ios
+          path: shared*/build/test-results/iosSimulatorArm64Test/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish test check run
+        if: always()
+        uses: mikepenz/action-junit-report@v6
+        with:
+          check_name: Shared tests (iOS simulator)
+          report_paths: shared*/build/test-results/iosSimulatorArm64Test/*.xml
+          detailed_summary: true
+          # A job that died before writing results must not publish a green check.
+          require_tests: true
+
   # One sticky comment per pull request, edited on every run, saying what CI found — so a result
   # can be read without opening a log, by a person or by an assistant reading the PR through the
   # API (the comment also carries the facts as JSON in an HTML comment; see tools/ci-report.js).
@@ -1774,8 +2204,10 @@ jobs:
   # `main` there is no pull request: the summary goes to the run's job summary only.
   report:
     name: CI report
-    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules]
-    if: always()
+    needs: [changes, build-test, static, detekt, release, r8-runtime, screenshots, instrumented, e2e, upgrade, invariants, functions, web, rules, shared, shared-ios]
+    # Not for the run an unrelated label starts: it built nothing and would replace the real run's
+    # comment with an empty one.
+    if: always() && needs.changes.outputs.unrelated_label != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1830,6 +2262,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           REPORT_JOB_NAME: CI report
+          EMULATORS_SKIPPED_ON_DRAFT: ${{ needs.changes.outputs.emulators_skipped_on_draft }}
         run: |
           node tools/ci-report.js --artifacts ci-artifacts \
             --plan "$RUNNER_TEMP/manual-test-plan.md" --out "$RUNNER_TEMP/ci-summary.md"

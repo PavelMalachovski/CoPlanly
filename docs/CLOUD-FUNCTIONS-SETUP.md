@@ -117,11 +117,11 @@ announced by its chat activity card, and an upload the sync carries up queues `e
 
 ### Ручная отправка уведомлений
 
-Для ручной отправки уведомлений используйте `FcmService` в Android приложении:
+Для ручной отправки уведомлений используйте `RecordPushes` и `FcmService` в Android приложении:
 
 ```kotlin
 // Пример: отправка уведомления партнеру о новом событии
-val notificationData = fcmService.createEventNotificationPayload(
+val notificationData = RecordPushes.event(
     eventId = event.id,
     eventTitle = event.title,
     action = "created",

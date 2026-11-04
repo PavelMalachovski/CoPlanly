@@ -1,6 +1,5 @@
 package com.coparently.app.screenshots
 
-import android.app.Application
 import androidx.compose.foundation.layout.Column
 import com.coparently.app.domain.custody.HandoverInfo
 import com.coparently.app.domain.expenses.CurrencyBalance
@@ -13,6 +12,9 @@ import com.coparently.app.presentation.home.HandoverHero
 import com.coparently.app.presentation.home.MonthSpend
 import com.coparently.app.presentation.home.StatTiles
 import com.coparently.app.presentation.home.TimelineRow
+import com.coparently.app.testing.RobolectricTestApplication
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -28,14 +30,14 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [SCREENSHOT_SDK], application = Application::class)
+@Config(sdk = [SCREENSHOT_SDK], application = RobolectricTestApplication::class)
 class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
 
     @Test
     fun handoverHero() = snap("home_handover_hero") {
         HandoverHero(
             info = HandoverInfo(
-                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS),
+                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS).toKotlinLocalDate(),
                 daysUntil = HANDOVER_IN_DAYS,
                 fromParent = "mom",
                 toParent = "dad"
@@ -52,7 +54,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     fun handoverHeroChildrenApart() = snap("home_handover_hero_children_apart") {
         HandoverHero(
             info = HandoverInfo(
-                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS),
+                date = ScreenshotFixtures.TODAY.plusDays(HANDOVER_IN_DAYS).toKotlinLocalDate(),
                 daysUntil = HANDOVER_IN_DAYS,
                 fromParent = "dad",
                 toParent = "mom"
@@ -65,7 +67,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     @Test
     fun todayCard() = snap("home_today_card") {
         DayAgendaCard(
-            date = ScreenshotFixtures.TODAY,
+            date = ScreenshotFixtures.TODAY.toKotlinLocalDate(),
             events = ScreenshotFixtures.todayEvents,
             custody = ScreenshotFixtures.custodyFor(ScreenshotFixtures.TODAY),
             parentNames = ScreenshotFixtures.parentNames,
@@ -77,7 +79,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
     @Test
     fun weekTimeline() = snap("home_week_timeline") {
         val entries = ScreenshotFixtures.monthEvents.values.flatten()
-            .filter { it.startDateTime.toLocalDate() >= ScreenshotFixtures.TODAY }
+            .filter { it.startDateTime.date.toJavaLocalDate() >= ScreenshotFixtures.TODAY }
             .sortedBy { it.startDateTime }
             .take(WEEK_ROWS)
         Column {
@@ -85,7 +87,7 @@ class HomeScreenshots(variant: ScreenshotVariant) : ScreenshotMatrix(variant) {
                 TimelineRow(
                     entry = WeekEntry(
                         event = event,
-                        dayParent = ScreenshotFixtures.custodyFor(event.startDateTime.toLocalDate()),
+                        dayParent = ScreenshotFixtures.custodyFor(event.startDateTime.date.toJavaLocalDate()),
                         key = "${event.id}@${event.startDateTime}"
                     ),
                     parentNames = ScreenshotFixtures.parentNames,

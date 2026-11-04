@@ -1,0 +1,109 @@
+package com.coparently.app.data.remote.firebase
+
+import com.coparently.app.data.remote.google.GoogleAccessException
+import com.coparently.app.data.remote.google.GoogleAccessFailure
+import kotlinx.coroutines.test.runTest
+import org.junit.Test
+import kotlin.test.assertEquals
+
+/**
+ * What a failed Google token call means for the connection.
+ *
+ * The two callables used to fail with whatever the server threw, and the app could not tell
+ * "Google ended this connection" from "the network blinked": it kept a revoked token and said
+ * nothing useful. The server now names a dead token `reconnect` (`functions/index.js`,
+ * `googleTokenFailure`), and these pin the reading of it — the one answer that drops a token —
+ * against everything else, which must keep it.
+ */
+class GoogleOAuthFunctionsTest {
+
+    private val functions = RecordingCallableFunctions()
+    private val oauth = GoogleOAuthFunctions(functions)
+
+    @Test
+    fun `a refresh that worked hands the new token back`() = runTest {
+        answer { mapOf("accessToken" to "fresh", "expiresInSeconds" to 3599) }
+
+        val tokens = oauth.refreshAccessToken("refresh-1").getOrThrow()
+
+        assertEquals("fresh", tokens.accessToken)
+        assertEquals(3599L, tokens.expiresInSeconds)
+    }
+
+    @Test
+    fun `the server's reconnect means the connection is over`() = runTest {
+        answer { throw functionsException(CallableCode.FAILED_PRECONDITION, "reconnect") }
+
+        assertEquals(GoogleAccessFailure.NEEDS_RECONNECT, refreshFailure())
+    }
+
+    @Test
+    fun `a server deployed before reconnect existed is read the same way`() = runTest {
+        // An app newer than its backend: the fingerprint refusal still carries its old reason.
+        answer { throw functionsException(CallableCode.PERMISSION_DENIED, "unknown-refresh-token") }
+
+        assertEquals(GoogleAccessFailure.NEEDS_RECONNECT, refreshFailure())
+    }
+
+    @Test
+    fun `everything else keeps the connection, to be tried again`() = runTest {
+        val failures = listOf(
+            functionsException(CallableCode.UNAVAILABLE, "google-unavailable"),
+            functionsException(CallableCode.DEADLINE_EXCEEDED),
+            functionsException(CallableCode.INTERNAL),
+            // Google refused this deployment's own client: the owner's to fix, not the parent's.
+            functionsException(CallableCode.INTERNAL, "google-refused"),
+            functionsException(CallableCode.FAILED_PRECONDITION, "oauth-not-configured"),
+            functionsException(CallableCode.UNAUTHENTICATED),
+            IllegalStateException("not a Firebase failure at all")
+        )
+
+        failures.forEach { failure ->
+            answer { throw failure }
+            assertEquals(GoogleAccessFailure.UNAVAILABLE, refreshFailure(), "for $failure")
+        }
+    }
+
+    @Test
+    fun `an answer without a token keeps the connection too`() = runTest {
+        answer { mapOf("expiresInSeconds" to 3599) }
+
+        assertEquals(GoogleAccessFailure.UNAVAILABLE, refreshFailure())
+    }
+
+    @Test
+    fun `a failed call is described by the reason the server gave, never by its message`() {
+        val cases = mapOf(
+            functionsException(CallableCode.INTERNAL, "google-refused", "unauthorized_client") to
+                "google-refused: unauthorized_client",
+            functionsException(CallableCode.FAILED_PRECONDITION, "oauth-not-configured") to
+                "oauth-not-configured",
+            // A backend without the callable, or one that crashed, names no reason: its code does.
+            functionsException(CallableCode.NOT_FOUND) to "NOT_FOUND",
+            IllegalStateException("a sentence that may carry anything") to "IllegalStateException"
+        )
+
+        cases.forEach { (failure, expected) ->
+            assertEquals(expected, GoogleOAuthFunctions.diagnosisOf(failure), "for $failure")
+            // The exchange hands its failure on wrapped; the wrapper says nothing of its own.
+            val wrapped = GoogleAccessException(GoogleOAuthFunctions.failureOf(failure), failure)
+            assertEquals(expected, GoogleOAuthFunctions.diagnosisOf(wrapped), "for wrapped $failure")
+        }
+    }
+
+    private fun answer(result: () -> Any?) {
+        functions.answer = { name, _ ->
+            check(name == "refreshGoogleAccessToken") { "called $name" }
+            result()
+        }
+    }
+
+    private suspend fun refreshFailure(): GoogleAccessFailure? =
+        (oauth.refreshAccessToken("refresh-1").exceptionOrNull() as? GoogleAccessException)?.failure
+
+    private fun functionsException(
+        code: CallableCode,
+        reason: String? = null,
+        cause: String? = null
+    ): CallableException = RecordingCallableFunctions.refusal(code, reason, cause)
+}

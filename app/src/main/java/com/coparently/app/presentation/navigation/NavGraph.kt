@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -44,7 +43,6 @@ import androidx.navigation.navArgument
 import com.coparently.app.R
 import com.coparently.app.data.remote.firebase.PushDestination
 import com.coparently.app.domain.telemetry.TelemetryConsent
-import com.coparently.app.presentation.LocalGoogleSignInCallback
 import com.coparently.app.presentation.auth.AuthScreen
 import com.coparently.app.presentation.calendar.CalendarScreen
 import com.coparently.app.presentation.changerequests.AgreementScreen
@@ -75,6 +73,7 @@ import com.coparently.app.presentation.sync.AuthStateViewModel
 import com.coparently.app.presentation.sync.SyncViewModel
 import com.coparently.app.presentation.theme.Spacing
 import kotlinx.coroutines.flow.StateFlow
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Navigation graph for the app.
@@ -107,9 +106,9 @@ fun NavGraph(
     pendingChatOpen: PendingChatOpen,
     pendingDestinationOpen: PendingDestinationOpen
 ) {
-    val authStateViewModel: AuthStateViewModel = hiltViewModel()
-    val telemetryConsentViewModel: TelemetryConsentViewModel = hiltViewModel()
-    val connectivityViewModel: ConnectivityViewModel = hiltViewModel()
+    val authStateViewModel: AuthStateViewModel = koinViewModel()
+    val telemetryConsentViewModel: TelemetryConsentViewModel = koinViewModel()
+    val connectivityViewModel: ConnectivityViewModel = koinViewModel()
     val isAuthenticated by authStateViewModel.isAuthenticated.collectAsState()
     val isLoading by authStateViewModel.isLoading.collectAsState()
     val needsOnboarding by authStateViewModel.needsOnboarding.collectAsState()
@@ -364,7 +363,7 @@ fun NavGraph(
                     val dateString = backStackEntry.arguments?.getString(Screen.AddEvent.ARG_DATE)
                     val hourValue = backStackEntry.arguments?.getInt(Screen.AddEvent.ARG_HOUR) ?: -1
                     val hour = if (hourValue >= 0) hourValue else null
-                    val initialDate = dateString?.takeIf { it != "null" }?.let { java.time.LocalDate.parse(it) }
+                    val initialDate = dateString?.takeIf { it != "null" }?.let { kotlinx.datetime.LocalDate.parse(it) }
 
                     AddEditEventScreen(
                         eventId = null,
@@ -481,7 +480,6 @@ fun NavGraph(
                     popEnterTransition = { slideInFromLeft() },
                     popExitTransition = { slideOutToRight() }
                 ) {
-                    val googleSignInCallback = LocalGoogleSignInCallback.current
                     SettingsScreen(
                         // Reached via the gear action in the top-level top bars — it opens as
                         // a detail screen, so it gets a back arrow.
@@ -498,7 +496,6 @@ fun NavGraph(
                         onNavigateToMyProfile = {
                             navController.navigate(Screen.MyProfile.route)
                         },
-                        onStartGoogleSignIn = googleSignInCallback,
                         onSignOut = {
                             navController.navigate(Screen.Auth.route) {
                                 popUpTo(Screen.Home.route) { inclusive = true }
@@ -1248,7 +1245,7 @@ fun NavGraph(
 /**
  * The Chat tab's unread-message count, for [CoPlanlyBottomBar]'s badge.
  *
- * `hiltViewModel()` resolves against [androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner],
+ * `koinViewModel()` resolves against [androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner],
  * which is decided by *composition position*, not by which Kotlin function the call happens
  * to sit in — so calling it here, from the same place [NavGraph] calls it for
  * `authStateViewModel`, keeps this [ChatViewModel] instance scoped to that same ambient owner
@@ -1257,13 +1254,13 @@ fun NavGraph(
  * to avoid growing [NavGraph] — already the codebase's longest function and already flagged
  * by detekt's `LongMethod` check — by lines that have nothing to do with routing.
  *
- * The Chat/Conversations screens keep creating their *own* `hiltViewModel()` instance, scoped
+ * The Chat/Conversations screens keep creating their *own* `koinViewModel()` instance, scoped
  * to their own back-stack entry, independent of this one; both merely observe the same
  * repository-backed flows, so there is no read-mark or state conflict between the two.
  */
 @Composable
 private fun rememberChatUnreadCount(): Int {
-    val chatViewModel: ChatViewModel = hiltViewModel()
+    val chatViewModel: ChatViewModel = koinViewModel()
     val unreadCount by chatViewModel.unreadCount.collectAsState()
     return unreadCount
 }
@@ -1644,7 +1641,7 @@ sealed class Screen(val route: String) {
         const val ARG_DATE = "date"
         const val ARG_HOUR = "hour"
 
-        fun createRoute(date: java.time.LocalDate? = null, hour: Int? = null): String {
+        fun createRoute(date: kotlinx.datetime.LocalDate? = null, hour: Int? = null): String {
             val dateParam = date?.toString() ?: "null"
             val hourParam = hour?.toString() ?: "-1"
             return "add_event?date=$dateParam&hour=$hourParam"
